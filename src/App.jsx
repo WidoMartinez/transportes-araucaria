@@ -55,6 +55,21 @@ function App() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
+		// Identifica si el formulario es el del 'hero' (no tiene campo de nombre)
+		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
+
+		const dataToSend = {
+			...formData,
+			source: isHeroForm
+				? "Formulario Rápido (Hero)"
+				: "Formulario de Contacto - Transportes Araucaria",
+		};
+
+		// Para el formulario del hero, el nombre no es requerido, pero lo seteamos para el backend
+		if (isHeroForm && !dataToSend.nombre) {
+			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
+		}
+
 		// **CORRECCIÓN:** Usar la nueva URL del servidor de Render
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
@@ -66,10 +81,7 @@ function App() {
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({
-					...formData,
-					source: "Formulario de Contacto - Transportes Araucaria",
-				}),
+				body: JSON.stringify(dataToSend),
 			});
 
 			const result = await response.json();
@@ -261,7 +273,7 @@ function App() {
 						<CardContent>
 							<form
 								onSubmit={handleSubmit}
-								className="grid grid-cols-1 md:grid-cols-4 gap-4"
+								className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
 							>
 								<div>
 									<Label htmlFor="destino">Destino</Label>
@@ -294,6 +306,17 @@ function App() {
 										type="time"
 										name="hora"
 										value={formData.hora}
+										onChange={handleInputChange}
+										required
+									/>
+								</div>
+								<div>
+									<Label htmlFor="telefono">Teléfono</Label>
+									<Input
+										type="tel"
+										name="telefono"
+										placeholder="Ej: +569..."
+										value={formData.telefono}
 										onChange={handleInputChange}
 										required
 									/>
