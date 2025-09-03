@@ -180,9 +180,9 @@ function App() {
 	];
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="min-h-screen bg-background text-foreground">
 			{/* Header */}
-			<header className="bg-white shadow-sm sticky top-0 z-50">
+			<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
 				<div className="container mx-auto px-4 py-4">
 					<div className="flex justify-between items-center">
 						<div className="flex items-center space-x-2">
@@ -224,10 +224,13 @@ function App() {
 							</a>
 						</nav>
 						<div className="flex items-center space-x-4">
-							<div className="hidden md:flex items-center space-x-2 text-sm">
+							<a
+								href="tel:+56964355581"
+								className="hidden md:flex items-center space-x-2 text-sm text-foreground hover:text-primary"
+							>
 								<Phone className="h-4 w-4" />
 								<span>+56964355581</span>
-							</div>
+							</a>
 							<a
 								href="https://wa.me/56964355581"
 								target="_blank"
@@ -246,15 +249,15 @@ function App() {
 			{/* Hero Section */}
 			<section
 				id="inicio"
-				className="relative bg-gradient-to-r from-primary to-secondary text-white py-20"
+				className="relative bg-gradient-to-r from-primary to-secondary text-white py-24"
 			>
-				<div className="absolute inset-0 bg-black/20"></div>
+				<div className="absolute inset-0 bg-black/30"></div>
 				<div
 					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
 					style={{ backgroundImage: `url(${heroVan})` }}
 				></div>
 				<div className="relative container mx-auto px-4 text-center">
-					<h2 className="text-5xl md:text-6xl font-bold mb-6">
+					<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
 						Transfer Confiable desde
 						<br />
 						<span className="text-accent">Aeropuerto La Araucanía</span>
@@ -264,9 +267,9 @@ function App() {
 					</p>
 
 					{/* Formulario de reserva rápida */}
-					<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm">
+					<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
 						<CardHeader>
-							<CardTitle className="text-foreground text-center">
+							<CardTitle className="text-foreground text-center text-2xl">
 								Reserva tu Transfer
 							</CardTitle>
 						</CardHeader>
@@ -276,12 +279,14 @@ function App() {
 								className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
 							>
 								<div>
-									<Label htmlFor="destino">Destino</Label>
+									<Label htmlFor="destino" className="text-left">
+										Destino
+									</Label>
 									<select
 										name="destino"
 										value={formData.destino}
 										onChange={handleInputChange}
-										className="w-full p-2 border rounded-md"
+										className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary"
 										required
 									>
 										<option value="">Seleccionar</option>
@@ -291,7 +296,9 @@ function App() {
 									</select>
 								</div>
 								<div>
-									<Label htmlFor="fecha">Fecha</Label>
+									<Label htmlFor="fecha" className="text-left">
+										Fecha
+									</Label>
 									<Input
 										type="date"
 										name="fecha"
@@ -301,7 +308,9 @@ function App() {
 									/>
 								</div>
 								<div>
-									<Label htmlFor="hora">Hora</Label>
+									<Label htmlFor="hora" className="text-left">
+										Hora
+									</Label>
 									<Input
 										type="time"
 										name="hora"
@@ -311,7 +320,9 @@ function App() {
 									/>
 								</div>
 								<div>
-									<Label htmlFor="telefono">Teléfono</Label>
+									<Label htmlFor="telefono" className="text-left">
+										Teléfono
+									</Label>
 									<Input
 										type="tel"
 										name="telefono"
@@ -324,7 +335,7 @@ function App() {
 								<div className="flex items-end">
 									<Button
 										type="submit"
-										className="w-full bg-accent hover:bg-accent/90"
+										className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
 									>
 										Cotizar Ahora
 									</Button>
@@ -336,7 +347,7 @@ function App() {
 			</section>
 
 			{/* Servicios */}
-			<section id="servicios" className="py-20 bg-muted/30">
+			<section id="servicios" className="py-20 bg-muted/40">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
 						<h2 className="text-4xl font-bold mb-4">Nuestros Servicios</h2>
@@ -350,7 +361,7 @@ function App() {
 						{servicios.map((servicio, index) => (
 							<Card
 								key={index}
-								className="text-center hover:shadow-lg transition-shadow"
+								className="text-center hover:shadow-xl transition-all duration-300 hover:scale-105"
 							>
 								<CardHeader>
 									<div className="mx-auto text-primary mb-4">
@@ -384,7 +395,7 @@ function App() {
 						{destinos.map((destino, index) => (
 							<Card
 								key={index}
-								className="overflow-hidden hover:shadow-lg transition-shadow"
+								className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105"
 							>
 								<div
 									className="h-48 bg-cover bg-center"
@@ -506,7 +517,7 @@ function App() {
 			</section>
 
 			{/* Testimonios */}
-			<section className="py-20 bg-muted/30">
+			<section className="py-20 bg-muted/40">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
 						<h2 className="text-4xl font-bold mb-4">
@@ -519,13 +530,13 @@ function App() {
 
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 						{testimonios.map((testimonio, index) => (
-							<Card key={index}>
+							<Card key={index} className="hover:shadow-lg transition-shadow">
 								<CardHeader>
 									<div className="flex items-center space-x-1 mb-2">
 										{[...Array(testimonio.calificacion)].map((_, i) => (
 											<Star
 												key={i}
-												className="h-4 w-4 fill-yellow-400 text-yellow-400"
+												className="h-5 w-5 fill-yellow-400 text-yellow-400"
 											/>
 										))}
 									</div>
@@ -553,7 +564,7 @@ function App() {
 					</div>
 
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-						<Card>
+						<Card className="shadow-lg">
 							<CardHeader>
 								<CardTitle>Información de Contacto</CardTitle>
 								<CardDescription>
@@ -565,7 +576,12 @@ function App() {
 									<Phone className="h-5 w-5 text-primary" />
 									<div>
 										<p className="font-semibold">Teléfono</p>
-										<p className="text-muted-foreground">+56964355581</p>
+										<a
+											href="tel:+56964355581"
+											className="text-muted-foreground hover:text-primary"
+										>
+											+56964355581
+										</a>
 									</div>
 								</div>
 								<div className="flex items-center space-x-3">
@@ -596,7 +612,7 @@ function App() {
 							</CardContent>
 						</Card>
 
-						<Card>
+						<Card className="shadow-lg">
 							<CardHeader>
 								<CardTitle>Solicitar Cotización</CardTitle>
 								<CardDescription>
@@ -780,7 +796,11 @@ function App() {
 						<div>
 							<h4 className="text-lg font-semibold mb-4">Contacto</h4>
 							<div className="space-y-2 opacity-90">
-								<p>+56964355581</p>
+								<p>
+									<a href="tel:+56964355581" className="hover:underline">
+										+56964355581
+									</a>
+								</p>
 								<p>contacto@transportesaraucaria.cl</p>
 								<p>Temuco, La Araucanía</p>
 								<p>Disponible 24/7</p>
