@@ -55,9 +55,10 @@ function App() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
-		// URL del servidor desde las variables de entorno de Vite
+		// **CORRECCIÓN:** Usar la nueva URL del servidor de Render
 		const apiUrl =
-			import.meta.env.VITE_API_URL || "https://anunciads.onrender.com";
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
 
 		try {
 			const response = await fetch(`${apiUrl}/send-email`, {
@@ -67,7 +68,7 @@ function App() {
 				},
 				body: JSON.stringify({
 					...formData,
-					source: "Formulario de Contacto - Transportes Araucaria", // Añade una fuente para identificar el origen
+					source: "Formulario de Contacto - Transportes Araucaria",
 				}),
 			});
 
@@ -75,7 +76,7 @@ function App() {
 
 			if (response.ok) {
 				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
-				// Opcional: Limpiar el formulario después del envío exitoso
+				// Limpiar el formulario después del envío exitoso
 				setFormData({
 					nombre: "",
 					telefono: "",
