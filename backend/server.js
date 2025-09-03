@@ -32,14 +32,8 @@ app.post("/send-email", async (req, res) => {
 		calculatorData,
 	} = req.body;
 
-	// --- Validación ---
-	// Valida campos básicos que ambos formularios deberían tener
-	if (!nombre || !email || !telefono) {
-		console.log("❌ Error: Faltan campos de contacto básicos.");
-		return res
-			.status(400)
-			.json({ message: "El nombre, email y teléfono son obligatorios." });
-	}
+	// --- Se elimina la validación estricta para hacer el servidor más flexible ---
+	// Ahora el servidor procesará la información que reciba, sin requerir campos obligatorios.
 
 	const transporter = nodemailer.createTransport({
 		host: process.env.EMAIL_HOST,
@@ -62,6 +56,15 @@ app.post("/send-email", async (req, res) => {
 	if (isTransportForm) {
 		// --- PLANTILLA PARA TRANSPORTES ARAUCARIA ---
 		emailSubject = `Nueva Cotización de Transfer: ${origen} a ${destino}`;
+
+		// Construcción dinámica de los detalles del cliente para el email
+		let clienteHtml = "";
+		if (nombre) clienteHtml += `<li><strong>Nombre:</strong> ${nombre}</li>`;
+		if (email)
+			clienteHtml += `<li><strong>Email:</strong> <a href="mailto:${email}">${email}</a></li>`;
+		if (telefono)
+			clienteHtml += `<li><strong>Teléfono:</strong> <a href="tel:${telefono}">${telefono}</a></li>`;
+
 		emailHtml = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                 <h1 style="color: #1e40af;">Nueva Solicitud de Cotización de Transfer</h1>
@@ -69,12 +72,15 @@ app.post("/send-email", async (req, res) => {
 									source || "Transportes Araucaria"
 								}</p>
                 
+                ${
+									clienteHtml
+										? `
                 <h2 style="border-bottom: 2px solid #1e40af; padding-bottom: 5px; color: #1e40af;">Detalles del Cliente</h2>
                 <ul>
-                    <li><strong>Nombre:</strong> ${nombre}</li>
-                    <li><strong>Email:</strong> <a href="mailto:${email}">${email}</a></li>
-                    <li><strong>Teléfono:</strong> <a href="tel:${telefono}">${telefono}</a></li>
-                </ul>
+                    ${clienteHtml}
+                </ul>`
+										: ""
+								}
 
                 <h2 style="border-bottom: 2px solid #1e40af; padding-bottom: 5px; color: #1e40af;">Detalles del Viaje</h2>
                 <ul>
@@ -82,7 +88,9 @@ app.post("/send-email", async (req, res) => {
                     <li><strong>Destino:</strong> ${destino}</li>
                     <li><strong>Fecha:</strong> ${fecha}</li>
                     <li><strong>Hora:</strong> ${hora}</li>
-                    <li><strong>Pasajeros:</strong> ${pasajeros}</li>
+                    <li><strong>Pasajeros:</strong> ${
+											pasajeros || "No especificado"
+										}</li>
                 </ul>
 
                 ${
@@ -97,7 +105,7 @@ app.post("/send-email", async (req, res) => {
 								}
 
                 <p style="margin-top: 20px; font-style: italic;">
-                    Contactar al cliente para confirmar la cotización.
+                    Este es un lead de una cotización. Contactar para completar los detalles si es necesario.
                 </p>
             </div>
         `;
@@ -120,9 +128,13 @@ app.post("/send-email", async (req, res) => {
             <p>Has recibido un nuevo mensaje a través de tu sitio web.</p>
             <h2>Detalles del Contacto:</h2>
             <ul>
-                <li><strong>Nombre:</strong> ${nombre}</li>
-                <li><strong>Email:</strong> ${email}</li>
-                <li><strong>Teléfono:</strong> ${telefono}</li>
+                ${nombre ? `<li><strong>Nombre:</strong> ${nombre}</li>` : ""}
+                ${email ? `<li><strong>Email:</strong> ${email}</li>` : ""}
+                ${
+									telefono
+										? `<li><strong>Teléfono:</strong> ${telefono}</li>`
+										: ""
+								}
                 ${
 									website
 										? `<li><strong>Sitio Web:</strong> <a href="${website}">${website}</a></li>`
