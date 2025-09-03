@@ -55,6 +55,7 @@ function App() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
+		// Identifica si el formulario es el del 'hero' (no tiene campo de nombre)
 		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
 
 		const dataToSend = {
@@ -64,10 +65,12 @@ function App() {
 				: "Formulario de Contacto - Transportes Araucaria",
 		};
 
+		// Para el formulario del hero, el nombre no es requerido, pero lo seteamos para el backend
 		if (isHeroForm && !dataToSend.nombre) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
 
+		// **CORRECCIÓN:** Usar la nueva URL del servidor de Render
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
 			"https://transportes-araucaria.onrender.com";
@@ -85,6 +88,19 @@ function App() {
 
 			if (response.ok) {
 				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
+
+				// --- INICIO DE LA MODIFICACIÓN ---
+				// ¡IMPORTANTE! Reemplaza el texto de abajo con la etiqueta que obtuviste de Google Ads.
+				const conversionLabel = "8GVlCLP-05MbEObh6KZB";
+
+				if (typeof gtag === "function") {
+					gtag("event", "conversion", {
+						send_to: `AW-17529712870/${conversionLabel}`,
+					});
+				}
+				// --- FIN DE LA MODIFICACIÓN ---
+
+				// Limpiar el formulario después del envío exitoso
 				setFormData({
 					nombre: "",
 					telefono: "",
@@ -114,7 +130,6 @@ function App() {
 			precio: "$15.000",
 			tiempo: "45 min",
 			imagen: temucoImg,
-			alt: "Vista panorámica de la ciudad de Temuco",
 		},
 		{
 			nombre: "Villarrica",
@@ -122,7 +137,6 @@ function App() {
 			precio: "$50.000",
 			tiempo: "1h 15min",
 			imagen: villarricaImg,
-			alt: "Lago Villarrica con el volcán de fondo",
 		},
 		{
 			nombre: "Pucón",
@@ -130,7 +144,6 @@ function App() {
 			precio: "$60.000",
 			tiempo: "1h 30min",
 			imagen: puconImg,
-			alt: "Volcán Villarrica visto desde Pucón al atardecer",
 		},
 	];
 
@@ -179,7 +192,7 @@ function App() {
 	];
 
 	return (
-		<>
+		<div className="min-h-screen bg-background text-foreground">
 			{/* Header */}
 			<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
 				<div className="container mx-auto px-4 py-4">
@@ -245,524 +258,499 @@ function App() {
 				</div>
 			</header>
 
-			{/* Contenido Principal */}
-			<main>
-				{/* Hero Section */}
-				<section
-					id="inicio"
-					className="relative bg-gradient-to-r from-primary to-secondary text-white py-24"
-				>
-					<div className="absolute inset-0 bg-black/30"></div>
-					<div
-						className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-						style={{ backgroundImage: `url(${heroVan})` }}
-						role="img"
-						aria-label="Van de transportes esperando en el aeropuerto"
-					></div>
-					<div className="relative container mx-auto px-4 text-center">
-						<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-							Transfer Confiable desde
-							<br />
-							<span className="text-accent">Aeropuerto La Araucanía</span>
-						</h2>
-						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-							Traslados seguros y cómodos a Temuco, Villarrica y Pucón
-						</p>
+			{/* Hero Section */}
+			<section
+				id="inicio"
+				className="relative bg-gradient-to-r from-primary to-secondary text-white py-24"
+			>
+				<div className="absolute inset-0 bg-black/30"></div>
+				<div
+					className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+					style={{ backgroundImage: `url(${heroVan})` }}
+				></div>
+				<div className="relative container mx-auto px-4 text-center">
+					<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
+						Transfer Confiable desde
+						<br />
+						<span className="text-accent">Aeropuerto La Araucanía</span>
+					</h2>
+					<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
+						Traslados seguros y cómodos a Temuco, Villarrica y Pucón
+					</p>
 
-						<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
-							<CardHeader>
-								<CardTitle className="text-foreground text-center text-2xl">
-									Reserva tu Transfer
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<form
-									onSubmit={handleSubmit}
-									className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
-								>
-									<div>
-										<Label htmlFor="hero-destino" className="text-left">
-											Destino
-										</Label>
-										<select
-											id="hero-destino"
-											name="destino"
-											value={formData.destino}
-											onChange={handleInputChange}
-											className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary"
-											required
-										>
-											<option value="">Seleccionar</option>
-											<option value="Temuco">Temuco</option>
-											<option value="Villarrica">Villarrica</option>
-											<option value="Pucón">Pucón</option>
-										</select>
-									</div>
-									<div>
-										<Label htmlFor="hero-fecha" className="text-left">
-											Fecha
-										</Label>
-										<Input
-											id="hero-fecha"
-											type="date"
-											name="fecha"
-											value={formData.fecha}
-											onChange={handleInputChange}
-											required
-										/>
-									</div>
-									<div>
-										<Label htmlFor="hero-hora" className="text-left">
-											Hora
-										</Label>
-										<Input
-											id="hero-hora"
-											type="time"
-											name="hora"
-											value={formData.hora}
-											onChange={handleInputChange}
-											required
-										/>
-									</div>
-									<div>
-										<Label htmlFor="hero-telefono" className="text-left">
-											Teléfono
-										</Label>
-										<Input
-											id="hero-telefono"
-											type="tel"
-											name="telefono"
-											placeholder="Ej: +569..."
-											value={formData.telefono}
-											onChange={handleInputChange}
-											required
-										/>
-									</div>
-									<div className="flex items-end">
-										<Button
-											type="submit"
-											className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
-										>
-											Cotizar Ahora
-										</Button>
-									</div>
-								</form>
-							</CardContent>
-						</Card>
-					</div>
-				</section>
-
-				{/* Servicios */}
-				<section id="servicios" className="py-20 bg-muted/40">
-					<div className="container mx-auto px-4">
-						<div className="text-center mb-16">
-							<h2 className="text-4xl font-bold mb-4">Nuestros Servicios</h2>
-							<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-								Ofrecemos diferentes opciones de transporte para satisfacer tus
-								necesidades
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-							{servicios.map((servicio, index) => (
-								<Card
-									key={index}
-									className="text-center hover:shadow-xl transition-all duration-300 hover:scale-105"
-								>
-									<CardHeader>
-										<div className="mx-auto text-primary mb-4">
-											{servicio.icono}
-										</div>
-										<CardTitle className="text-xl">{servicio.titulo}</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-muted-foreground">
-											{servicio.descripcion}
-										</p>
-									</CardContent>
-								</Card>
-							))}
-						</div>
-					</div>
-				</section>
-
-				{/* Destinos */}
-				<section id="destinos" className="py-20">
-					<div className="container mx-auto px-4">
-						<div className="text-center mb-16">
-							<h2 className="text-4xl font-bold mb-4">Principales Destinos</h2>
-							<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-								Conectamos el aeropuerto con los destinos más populares de La
-								Araucanía
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-							{destinos.map((destino, index) => (
-								<Card
-									key={index}
-									className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 flex flex-col"
-								>
-									<img
-										src={destino.imagen}
-										alt={destino.alt}
-										className="w-full h-48 object-cover"
+					{/* Formulario de reserva rápida */}
+					<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
+						<CardHeader>
+							<CardTitle className="text-foreground text-center text-2xl">
+								Reserva tu Transfer
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<form
+								onSubmit={handleSubmit}
+								className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+							>
+								<div>
+									<Label htmlFor="destino" className="text-left">
+										Destino
+									</Label>
+									<select
+										name="destino"
+										value={formData.destino}
+										onChange={handleInputChange}
+										className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary"
+										required
+									>
+										<option value="">Seleccionar</option>
+										<option value="Temuco">Temuco</option>
+										<option value="Villarrica">Villarrica</option>
+										<option value="Pucón">Pucón</option>
+									</select>
+								</div>
+								<div>
+									<Label htmlFor="fecha" className="text-left">
+										Fecha
+									</Label>
+									<Input
+										type="date"
+										name="fecha"
+										value={formData.fecha}
+										onChange={handleInputChange}
+										required
 									/>
-									<CardHeader>
-										<CardTitle className="flex justify-between items-center">
-											{destino.nombre}
-											<span className="text-2xl font-bold text-primary">
-												{destino.precio}
-											</span>
-										</CardTitle>
-										<CardDescription>{destino.descripcion}</CardDescription>
-									</CardHeader>
-									<CardContent className="flex flex-col flex-grow">
-										<div className="flex justify-between items-center mb-4">
-											<div className="flex items-center space-x-2">
-												<Clock className="h-4 w-4 text-muted-foreground" />
-												<span className="text-sm">{destino.tiempo}</span>
-											</div>
-											<div className="flex items-center space-x-2">
-												<Plane className="h-4 w-4 text-muted-foreground" />
-												<span className="text-sm">Desde aeropuerto</span>
-											</div>
-										</div>
-										<a href="#contacto" className="mt-auto">
-											<Button className="w-full">Reservar Transfer</Button>
-										</a>
-									</CardContent>
-								</Card>
-							))}
-						</div>
+								</div>
+								<div>
+									<Label htmlFor="hora" className="text-left">
+										Hora
+									</Label>
+									<Input
+										type="time"
+										name="hora"
+										value={formData.hora}
+										onChange={handleInputChange}
+										required
+									/>
+								</div>
+								<div>
+									<Label htmlFor="telefono" className="text-left">
+										Teléfono
+									</Label>
+									<Input
+										type="tel"
+										name="telefono"
+										placeholder="Ej: +569..."
+										value={formData.telefono}
+										onChange={handleInputChange}
+										required
+									/>
+								</div>
+								<div className="flex items-end">
+									<Button
+										type="submit"
+										className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
+									>
+										Cotizar Ahora
+									</Button>
+								</div>
+							</form>
+						</CardContent>
+					</Card>
+				</div>
+			</section>
+
+			{/* Servicios */}
+			<section id="servicios" className="py-20 bg-muted/40">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-16">
+						<h2 className="text-4xl font-bold mb-4">Nuestros Servicios</h2>
+						<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+							Ofrecemos diferentes opciones de transporte para satisfacer tus
+							necesidades
+						</p>
 					</div>
-				</section>
 
-				{/* ¿Por qué elegirnos? */}
-				<section className="py-20 bg-primary text-white">
-					<div className="container mx-auto px-4">
-						<div className="text-center mb-16">
-							<h2 className="text-4xl font-bold mb-4">
-								¿Por qué elegir Transportes Araucaria?
-							</h2>
-							<p className="text-xl opacity-90 max-w-2xl mx-auto">
-								Más de 10 años de experiencia brindando el mejor servicio de
-								transfer en La Araucanía
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-							<div className="flex items-start space-x-4">
-								<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
-								<div>
-									<h3 className="text-xl font-semibold mb-2">
-										Puntualidad Garantizada
-									</h3>
-									<p className="opacity-90">
-										Llegamos siempre a tiempo para que no pierdas tu vuelo o
-										conexión.
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start space-x-4">
-								<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
-								<div>
-									<h3 className="text-xl font-semibold mb-2">
-										Vehículos Modernos
-									</h3>
-									<p className="opacity-90">
-										Flota renovada con aire acondicionado, WiFi y máxima
-										comodidad.
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start space-x-4">
-								<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
-								<div>
-									<h3 className="text-xl font-semibold mb-2">
-										Conductores Profesionales
-									</h3>
-									<p className="opacity-90">
-										Personal capacitado, con licencia profesional y conocimiento
-										local.
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start space-x-4">
-								<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
-								<div>
-									<h3 className="text-xl font-semibold mb-2">
-										Tarifas Competitivas
-									</h3>
-									<p className="opacity-90">
-										Precios justos sin sorpresas, con descuentos para grupos.
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start space-x-4">
-								<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
-								<div>
-									<h3 className="text-xl font-semibold mb-2">
-										Disponible 24/7
-									</h3>
-									<p className="opacity-90">
-										Servicio disponible todos los días, adaptándonos a tu
-										horario.
-									</p>
-								</div>
-							</div>
-							<div className="flex items-start space-x-4">
-								<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
-								<div>
-									<h3 className="text-xl font-semibold mb-2">
-										Seguimiento en Tiempo Real
-									</h3>
-									<p className="opacity-90">
-										Monitoreo del vuelo y comunicación constante vía WhatsApp.
-									</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				{/* Testimonios */}
-				<section className="py-20 bg-muted/40">
-					<div className="container mx-auto px-4">
-						<div className="text-center mb-16">
-							<h2 className="text-4xl font-bold mb-4">
-								Lo que dicen nuestros clientes
-							</h2>
-							<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-								Miles de pasajeros satisfechos respaldan nuestro servicio
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-							{testimonios.map((testimonio, index) => (
-								<Card key={index} className="hover:shadow-lg transition-shadow">
-									<CardHeader>
-										<div className="flex items-center space-x-1 mb-2">
-											{[...Array(testimonio.calificacion)].map((_, i) => (
-												<Star
-													key={i}
-													className="h-5 w-5 fill-yellow-400 text-yellow-400"
-												/>
-											))}
-										</div>
-										<CardTitle className="text-lg">
-											{testimonio.nombre}
-										</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<p className="text-muted-foreground italic">
-											"{testimonio.comentario}"
-										</p>
-									</CardContent>
-								</Card>
-							))}
-						</div>
-					</div>
-				</section>
-
-				{/* Formulario de Contacto */}
-				<section id="contacto" className="py-20">
-					<div className="container mx-auto px-4">
-						<div className="text-center mb-16">
-							<h2 className="text-4xl font-bold mb-4">
-								Solicita tu Cotización
-							</h2>
-							<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-								Completa el formulario y te contactaremos en menos de 30 minutos
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-							<Card className="shadow-lg">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+						{servicios.map((servicio, index) => (
+							<Card
+								key={index}
+								className="text-center hover:shadow-xl transition-all duration-300 hover:scale-105"
+							>
 								<CardHeader>
-									<CardTitle>Información de Contacto</CardTitle>
-									<CardDescription>
-										Estamos disponibles para atenderte las 24 horas del día
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="space-y-6">
-									<div className="flex items-center space-x-3">
-										<Phone className="h-5 w-5 text-primary" />
-										<div>
-											<p className="font-semibold">Teléfono</p>
-											<a
-												href="tel:+56964355581"
-												className="text-muted-foreground hover:text-primary"
-											>
-												+56964355581
-											</a>
-										</div>
+									<div className="mx-auto text-primary mb-4">
+										{servicio.icono}
 									</div>
-									<div className="flex items-center space-x-3">
-										<Mail className="h-5 w-5 text-primary" />
-										<div>
-											<p className="font-semibold">Email</p>
-											<p className="text-muted-foreground">
-												contacto@transportesaraucaria.cl
-											</p>
-										</div>
-									</div>
-									<div className="flex items-center space-x-3">
-										<MapPin className="h-5 w-5 text-primary" />
-										<div>
-											<p className="font-semibold">Ubicación</p>
-											<p className="text-muted-foreground">
-												Temuco, Región de La Araucanía
-											</p>
-										</div>
-									</div>
-									<div className="flex items-center space-x-3">
-										<Clock className="h-5 w-5 text-primary" />
-										<div>
-											<p className="font-semibold">Horarios</p>
-											<p className="text-muted-foreground">Disponible 24/7</p>
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card className="shadow-lg">
-								<CardHeader>
-									<CardTitle>Solicitar Cotización</CardTitle>
-									<CardDescription>
-										Completa tus datos y te enviaremos una cotización
-										personalizada
-									</CardDescription>
+									<CardTitle className="text-xl">{servicio.titulo}</CardTitle>
 								</CardHeader>
 								<CardContent>
-									<form onSubmit={handleSubmit} className="space-y-4">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div>
-												<Label htmlFor="nombre">Nombre completo</Label>
-												<Input
-													id="nombre"
-													name="nombre"
-													value={formData.nombre}
-													onChange={handleInputChange}
-													required
-												/>
-											</div>
-											<div>
-												<Label htmlFor="telefono">Teléfono</Label>
-												<Input
-													id="telefono"
-													name="telefono"
-													value={formData.telefono}
-													onChange={handleInputChange}
-													required
-												/>
-											</div>
+									<p className="text-muted-foreground">
+										{servicio.descripcion}
+									</p>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* Destinos */}
+			<section id="destinos" className="py-20">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-16">
+						<h2 className="text-4xl font-bold mb-4">Principales Destinos</h2>
+						<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+							Conectamos el aeropuerto con los destinos más populares de La
+							Araucanía
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						{destinos.map((destino, index) => (
+							<Card
+								key={index}
+								className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105"
+							>
+								<div
+									className="h-48 bg-cover bg-center"
+									style={{ backgroundImage: `url(${destino.imagen})` }}
+								></div>
+								<CardHeader>
+									<CardTitle className="flex justify-between items-center">
+										{destino.nombre}
+										<span className="text-2xl font-bold text-primary">
+											{destino.precio}
+										</span>
+									</CardTitle>
+									<CardDescription>{destino.descripcion}</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="flex justify-between items-center mb-4">
+										<div className="flex items-center space-x-2">
+											<Clock className="h-4 w-4 text-muted-foreground" />
+											<span className="text-sm">{destino.tiempo}</span>
 										</div>
+										<div className="flex items-center space-x-2">
+											<Plane className="h-4 w-4 text-muted-foreground" />
+											<span className="text-sm">Desde aeropuerto</span>
+										</div>
+									</div>
+									<a href="#contacto">
+										<Button className="w-full">Reservar Transfer</Button>
+									</a>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* ¿Por qué elegirnos? */}
+			<section className="py-20 bg-primary text-white">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-16">
+						<h2 className="text-4xl font-bold mb-4">
+							¿Por qué elegir Transportes Araucaria?
+						</h2>
+						<p className="text-xl opacity-90 max-w-2xl mx-auto">
+							Más de 10 años de experiencia brindando el mejor servicio de
+							transfer en La Araucanía
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+						<div className="flex items-start space-x-4">
+							<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
+							<div>
+								<h3 className="text-xl font-semibold mb-2">
+									Puntualidad Garantizada
+								</h3>
+								<p className="opacity-90">
+									Llegamos siempre a tiempo para que no pierdas tu vuelo o
+									conexión.
+								</p>
+							</div>
+						</div>
+						<div className="flex items-start space-x-4">
+							<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
+							<div>
+								<h3 className="text-xl font-semibold mb-2">
+									Vehículos Modernos
+								</h3>
+								<p className="opacity-90">
+									Flota renovada con aire acondicionado, WiFi y máxima
+									comodidad.
+								</p>
+							</div>
+						</div>
+						<div className="flex items-start space-x-4">
+							<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
+							<div>
+								<h3 className="text-xl font-semibold mb-2">
+									Conductores Profesionales
+								</h3>
+								<p className="opacity-90">
+									Personal capacitado, con licencia profesional y conocimiento
+									local.
+								</p>
+							</div>
+						</div>
+						<div className="flex items-start space-x-4">
+							<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
+							<div>
+								<h3 className="text-xl font-semibold mb-2">
+									Tarifas Competitivas
+								</h3>
+								<p className="opacity-90">
+									Precios justos sin sorpresas, con descuentos para grupos.
+								</p>
+							</div>
+						</div>
+						<div className="flex items-start space-x-4">
+							<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
+							<div>
+								<h3 className="text-xl font-semibold mb-2">Disponible 24/7</h3>
+								<p className="opacity-90">
+									Servicio disponible todos los días, adaptándonos a tu horario.
+								</p>
+							</div>
+						</div>
+						<div className="flex items-start space-x-4">
+							<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
+							<div>
+								<h3 className="text-xl font-semibold mb-2">
+									Seguimiento en Tiempo Real
+								</h3>
+								<p className="opacity-90">
+									Monitoreo del vuelo y comunicación constante vía WhatsApp.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			{/* Testimonios */}
+			<section className="py-20 bg-muted/40">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-16">
+						<h2 className="text-4xl font-bold mb-4">
+							Lo que dicen nuestros clientes
+						</h2>
+						<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+							Miles de pasajeros satisfechos respaldan nuestro servicio
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						{testimonios.map((testimonio, index) => (
+							<Card key={index} className="hover:shadow-lg transition-shadow">
+								<CardHeader>
+									<div className="flex items-center space-x-1 mb-2">
+										{[...Array(testimonio.calificacion)].map((_, i) => (
+											<Star
+												key={i}
+												className="h-5 w-5 fill-yellow-400 text-yellow-400"
+											/>
+										))}
+									</div>
+									<CardTitle className="text-lg">{testimonio.nombre}</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<p className="text-muted-foreground italic">
+										"{testimonio.comentario}"
+									</p>
+								</CardContent>
+							</Card>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* Formulario de Contacto */}
+			<section id="contacto" className="py-20">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-16">
+						<h2 className="text-4xl font-bold mb-4">Solicita tu Cotización</h2>
+						<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+							Completa el formulario y te contactaremos en menos de 30 minutos
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+						<Card className="shadow-lg">
+							<CardHeader>
+								<CardTitle>Información de Contacto</CardTitle>
+								<CardDescription>
+									Estamos disponibles para atenderte las 24 horas del día
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-6">
+								<div className="flex items-center space-x-3">
+									<Phone className="h-5 w-5 text-primary" />
+									<div>
+										<p className="font-semibold">Teléfono</p>
+										<a
+											href="tel:+56964355581"
+											className="text-muted-foreground hover:text-primary"
+										>
+											+56964355581
+										</a>
+									</div>
+								</div>
+								<div className="flex items-center space-x-3">
+									<Mail className="h-5 w-5 text-primary" />
+									<div>
+										<p className="font-semibold">Email</p>
+										<p className="text-muted-foreground">
+											contacto@transportesaraucaria.cl
+										</p>
+									</div>
+								</div>
+								<div className="flex items-center space-x-3">
+									<MapPin className="h-5 w-5 text-primary" />
+									<div>
+										<p className="font-semibold">Ubicación</p>
+										<p className="text-muted-foreground">
+											Temuco, Región de La Araucanía
+										</p>
+									</div>
+								</div>
+								<div className="flex items-center space-x-3">
+									<Clock className="h-5 w-5 text-primary" />
+									<div>
+										<p className="font-semibold">Horarios</p>
+										<p className="text-muted-foreground">Disponible 24/7</p>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+
+						<Card className="shadow-lg">
+							<CardHeader>
+								<CardTitle>Solicitar Cotización</CardTitle>
+								<CardDescription>
+									Completa tus datos y te enviaremos una cotización
+									personalizada
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<form onSubmit={handleSubmit} className="space-y-4">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
-											<Label htmlFor="email">Email</Label>
+											<Label htmlFor="nombre">Nombre completo</Label>
 											<Input
-												id="email"
-												type="email"
-												name="email"
-												value={formData.email}
+												name="nombre"
+												value={formData.nombre}
 												onChange={handleInputChange}
 												required
 											/>
 										</div>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div>
-												<Label htmlFor="origen">Origen</Label>
-												<Input
-													id="origen"
-													name="origen"
-													value={formData.origen}
-													onChange={handleInputChange}
-													required
-												/>
-											</div>
-											<div>
-												<Label htmlFor="destino-form">Destino</Label>
-												<select
-													id="destino-form"
-													name="destino"
-													value={formData.destino}
-													onChange={handleInputChange}
-													className="w-full p-2 border rounded-md"
-													required
-												>
-													<option value="">Seleccionar destino</option>
-													<option value="Temuco">Temuco</option>
-													<option value="Villarrica">Villarrica</option>
-													<option value="Pucón">Pucón</option>
-													<option value="Otro">Otro destino</option>
-												</select>
-											</div>
-										</div>
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-											<div>
-												<Label htmlFor="fecha-form">Fecha</Label>
-												<Input
-													id="fecha-form"
-													type="date"
-													name="fecha"
-													value={formData.fecha}
-													onChange={handleInputChange}
-													required
-												/>
-											</div>
-											<div>
-												<Label htmlFor="hora-form">Hora</Label>
-												<Input
-													id="hora-form"
-													type="time"
-													name="hora"
-													value={formData.hora}
-													onChange={handleInputChange}
-													required
-												/>
-											</div>
-											<div>
-												<Label htmlFor="pasajeros">Pasajeros</Label>
-												<select
-													id="pasajeros"
-													name="pasajeros"
-													value={formData.pasajeros}
-													onChange={handleInputChange}
-													className="w-full p-2 border rounded-md"
-												>
-													<option value="1">1 pasajero</option>
-													<option value="2">2 pasajeros</option>
-													<option value="3">3 pasajeros</option>
-													<option value="4">4 pasajeros</option>
-													<option value="5+">5+ pasajeros</option>
-												</select>
-											</div>
-										</div>
 										<div>
-											<Label htmlFor="mensaje">
-												Mensaje adicional (opcional)
-											</Label>
-											<Textarea
-												id="mensaje"
-												name="mensaje"
-												value={formData.mensaje}
+											<Label htmlFor="telefono">Teléfono</Label>
+											<Input
+												name="telefono"
+												value={formData.telefono}
 												onChange={handleInputChange}
-												placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
+												required
 											/>
 										</div>
-										<Button
-											type="submit"
-											className="w-full bg-primary hover:bg-primary/90"
-										>
-											Enviar Solicitud
-										</Button>
-									</form>
-								</CardContent>
-							</Card>
-						</div>
+									</div>
+									<div>
+										<Label htmlFor="email">Email</Label>
+										<Input
+											type="email"
+											name="email"
+											value={formData.email}
+											onChange={handleInputChange}
+											required
+										/>
+									</div>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div>
+											<Label htmlFor="origen">Origen</Label>
+											<Input
+												name="origen"
+												value={formData.origen}
+												onChange={handleInputChange}
+												required
+											/>
+										</div>
+										<div>
+											<Label htmlFor="destino-form">Destino</Label>
+											<select
+												name="destino"
+												value={formData.destino}
+												onChange={handleInputChange}
+												className="w-full p-2 border rounded-md"
+												required
+											>
+												<option value="">Seleccionar destino</option>
+												<option value="Temuco">Temuco</option>
+												<option value="Villarrica">Villarrica</option>
+												<option value="Pucón">Pucón</option>
+												<option value="Otro">Otro destino</option>
+											</select>
+										</div>
+									</div>
+									<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+										<div>
+											<Label htmlFor="fecha-form">Fecha</Label>
+											<Input
+												type="date"
+												name="fecha"
+												value={formData.fecha}
+												onChange={handleInputChange}
+												required
+											/>
+										</div>
+										<div>
+											<Label htmlFor="hora-form">Hora</Label>
+											<Input
+												type="time"
+												name="hora"
+												value={formData.hora}
+												onChange={handleInputChange}
+												required
+											/>
+										</div>
+										<div>
+											<Label htmlFor="pasajeros">Pasajeros</Label>
+											<select
+												name="pasajeros"
+												value={formData.pasajeros}
+												onChange={handleInputChange}
+												className="w-full p-2 border rounded-md"
+											>
+												<option value="1">1 pasajero</option>
+												<option value="2">2 pasajeros</option>
+												<option value="3">3 pasajeros</option>
+												<option value="4">4 pasajeros</option>
+												<option value="5+">5+ pasajeros</option>
+											</select>
+										</div>
+									</div>
+									<div>
+										<Label htmlFor="mensaje">
+											Mensaje adicional (opcional)
+										</Label>
+										<Textarea
+											name="mensaje"
+											value={formData.mensaje}
+											onChange={handleInputChange}
+											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
+										/>
+									</div>
+									<Button
+										type="submit"
+										className="w-full bg-primary hover:bg-primary/90"
+									>
+										Enviar Solicitud
+									</Button>
+								</form>
+							</CardContent>
+						</Card>
 					</div>
-				</section>
-			</main>
+				</div>
+			</section>
 
 			{/* Footer */}
 			<footer className="bg-primary text-white py-12">
@@ -839,7 +827,7 @@ function App() {
 					</div>
 				</div>
 			</footer>
-		</>
+		</div>
 	);
 }
 
