@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "./components/ui/button";
 import {
 	Card,
@@ -23,6 +23,7 @@ import {
 	Plane,
 	CheckCircle,
 	MessageCircle,
+	LoaderCircle,
 } from "lucide-react";
 
 // Importar imágenes
@@ -30,8 +31,98 @@ import heroVan from "./assets/hero-van.png";
 import temucoImg from "./assets/temuco.jpg";
 import villarricaImg from "./assets/villarrica.jpg";
 import puconImg from "./assets/pucon.jpg";
-import logo from "./assets/logo.png"; // Logo para el encabezado
-import logoblanco from "./assets/logoblanco.png"; // Logo para el pie de página
+import logo from "./assets/logo.png";
+import logoblanco from "./assets/logoblanco.png";
+
+// --- ESTRUCTURA DE DATOS ACTUALIZADA ---
+const destinos = [
+	{
+		nombre: "Temuco",
+		descripcion: "Centro comercial y administrativo de La Araucanía.",
+		tiempo: "45 min",
+		imagen: temucoImg,
+		maxPasajeros: 4, // Límite específico para Temuco
+		precios: {
+			sedan: {
+				base: 20000, // 1-2 pasajeros
+				porcentajeAdicional: 0.03, // 3% por pasajero extra
+			},
+		},
+	},
+	{
+		nombre: "Villarrica",
+		descripcion: "Turismo y naturaleza junto al lago.",
+		tiempo: "1h 15min",
+		imagen: villarricaImg,
+		maxPasajeros: 7, // Nuevo límite de pasajeros
+		precios: {
+			sedan: {
+				base: 50000,
+				porcentajeAdicional: 0.03,
+			},
+			van: {
+				base: 200000, // Nuevo precio base para Van
+				porcentajeAdicional: 0.03,
+			},
+		},
+	},
+	{
+		nombre: "Pucón",
+		descripcion: "Aventura, termas y volcán.",
+		tiempo: "1h 30min",
+		imagen: puconImg,
+		maxPasajeros: 7, // Nuevo límite de pasajeros
+		precios: {
+			sedan: {
+				base: 60000,
+				porcentajeAdicional: 0.03,
+			},
+			van: {
+				base: 250000, // Nuevo precio base para Van
+				porcentajeAdicional: 0.03,
+			},
+		},
+	},
+];
+
+// --- LÓGICA DE CÁLCULO ACTUALIZADA ---
+const calcularCotizacion = (destino, pasajeros) => {
+	if (!destino || !pasajeros) {
+		return { precio: null, vehiculo: null };
+	}
+
+	const numPasajeros = parseInt(pasajeros);
+	let vehiculoAsignado;
+	let precioFinal;
+
+	if (numPasajeros > 0 && numPasajeros <= 4) {
+		vehiculoAsignado = "Sedan 5 Puertas";
+		const precios = destino.precios.sedan;
+		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
+
+		if (numPasajeros <= 2) {
+			precioFinal = precios.base;
+		} else {
+			const pasajerosAdicionales = numPasajeros - 2;
+			const costoAdicional = precios.base * precios.porcentajeAdicional;
+			precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
+		}
+	} else if (numPasajeros >= 5 && numPasajeros <= 7) {
+		// Límite ajustado a 7
+		vehiculoAsignado = "Van de Pasajeros";
+		const precios = destino.precios.van;
+		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
+
+		const pasajerosAdicionales = numPasajeros - 5;
+		const costoAdicional = precios.base * precios.porcentajeAdicional;
+		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
+	} else {
+		vehiculoAsignado = "Consultar disponibilidad";
+		precioFinal = null;
+	}
+
+	return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado }; // Redondeo para evitar decimales
+};
 
 function App() {
 	const [formData, setFormData] = useState({
@@ -45,113 +136,13 @@ function App() {
 		pasajeros: "1",
 		mensaje: "",
 	});
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
-	const [cotizacion, setCotizacion] = useState({
-		precio: null,
-		vehiculo: null,
-	});
-
-	// --- ESTRUCTURA DE PRECIOS POR TIPO DE VEHÍCULO ---
-	const destinos = [
-		{
-			nombre: "Temuco",
-			descripcion: "Centro comercial y administrativo de La Araucanía",
-			tiempo: "45 min",
-			imagen: temucoImg,
-			precioBase: 20000, // Precio para 1-2 pasajeros (Sedan)
-			precioPorPasajeroAdicional: 3000,
-			maxPasajeros: 4,
-		},
-		{
-			nombre: "Villarrica",
-			descripcion: "Turismo y naturaleza junto al lago",
-			tiempo: "1h 15min",
-			imagen: villarricaImg,
-			precioBase: 50000, // Precio para 1-2 pasajeros (Sedan)
-			precioBaseVan: 150000, // Precio para 5 pasajeros (Van)
-			precioPorPasajeroAdicional: 5000,
-		},
-		{
-			nombre: "Pucón",
-			descripcion: "Aventura, termas y volcán",
-			tiempo: "1h 30min",
-			imagen: puconImg,
-			precioBase: 60000, // Precio para 1-2 pasajeros (Sedan)
-			precioBaseVan: 180000, // Precio para 5 pasajeros (Van)
-			precioPorPasajeroAdicional: 7000,
-		},
-	];
-
-	useEffect(() => {
-		const calcularCotizacion = () => {
-			if (formData.destino && formData.pasajeros) {
-				const destinoSeleccionado = destinos.find(
-					(d) => d.nombre === formData.destino
-				);
-				if (!destinoSeleccionado) {
-					setCotizacion({ precio: null, vehiculo: null });
-					return;
-				}
-
-				const numPasajeros = parseInt(formData.pasajeros);
-				let vehiculoAsignado;
-				let precioFinal;
-
-				// Asignación de vehículo y cálculo de precio
-				if (numPasajeros >= 1 && numPasajeros <= 4) {
-					vehiculoAsignado = "Sedan 5 Puertas";
-					// Lógica de precios para Sedan
-					if (numPasajeros <= 2) {
-						precioFinal = destinoSeleccionado.precioBase;
-					} else {
-						const pasajerosAdicionales = numPasajeros - 2;
-						precioFinal =
-							destinoSeleccionado.precioBase +
-							pasajerosAdicionales *
-								destinoSeleccionado.precioPorPasajeroAdicional;
-					}
-				} else if (numPasajeros >= 5 && numPasajeros <= 15) {
-					vehiculoAsignado = "Van de Pasajeros";
-					// Lógica de precios para Van
-					if (destinoSeleccionado.precioBaseVan) {
-						const pasajerosAdicionales = numPasajeros - 5;
-						precioFinal =
-							destinoSeleccionado.precioBaseVan +
-							pasajerosAdicionales *
-								destinoSeleccionado.precioPorPasajeroAdicional;
-					} else {
-						// Fallback si un destino no tiene precio para Van
-						const pasajerosAdicionales = numPasajeros - 2;
-						precioFinal =
-							destinoSeleccionado.precioBase +
-							pasajerosAdicionales *
-								destinoSeleccionado.precioPorPasajeroAdicional;
-					}
-				} else {
-					vehiculoAsignado = "Consultar disponibilidad";
-					precioFinal = null;
-				}
-
-				setCotizacion({
-					precio: precioFinal,
-					vehiculo: vehiculoAsignado,
-				});
-
-				if (
-					destinoSeleccionado.maxPasajeros &&
-					numPasajeros > destinoSeleccionado.maxPasajeros
-				) {
-					setFormData((prev) => ({
-						...prev,
-						pasajeros: "1",
-					}));
-				}
-			} else {
-				setCotizacion({ precio: null, vehiculo: null });
-			}
-		};
-
-		calcularCotizacion();
+	const cotizacion = useMemo(() => {
+		const destinoSeleccionado = destinos.find(
+			(d) => d.nombre === formData.destino
+		);
+		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
 	}, [formData.destino, formData.pasajeros]);
 
 	const handleInputChange = (e) => {
@@ -162,11 +153,24 @@ function App() {
 		}));
 	};
 
+	useEffect(() => {
+		const destinoSeleccionado = destinos.find(
+			(d) => d.nombre === formData.destino
+		);
+		if (
+			destinoSeleccionado &&
+			parseInt(formData.pasajeros) > destinoSeleccionado.maxPasajeros
+		) {
+			setFormData((prev) => ({ ...prev, pasajeros: "1" }));
+		}
+	}, [formData.destino]);
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		if (isSubmitting) return;
+		setIsSubmitting(true);
 
 		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
-
 		const dataToSend = {
 			...formData,
 			precio: cotizacion.precio,
@@ -187,44 +191,39 @@ function App() {
 		try {
 			const response = await fetch(`${apiUrl}/send-email`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
+				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(dataToSend),
 			});
 
-			const result = await response.json();
-
-			if (response.ok) {
-				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
-
-				const conversionLabel = "8GVlCLP-05MbEObh6KZB";
-
-				if (typeof gtag === "function") {
-					gtag("event", "conversion", {
-						send_to: `AW-17529712870/${conversionLabel}`,
-					});
-				}
-
-				setFormData({
-					nombre: "",
-					telefono: "",
-					email: "",
-					origen: "Aeropuerto La Araucanía",
-					destino: "",
-					fecha: "",
-					hora: "",
-					pasajeros: "1",
-					mensaje: "",
-				});
-			} else {
-				throw new Error(
-					result.message || "Hubo un problema al enviar tu solicitud."
-				);
+			if (!response.ok) {
+				const result = await response.json();
+				throw new Error(result.message || "Error en el servidor.");
 			}
+
+			alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
+
+			if (typeof gtag === "function") {
+				gtag("event", "conversion", {
+					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
+				});
+			}
+
+			setFormData({
+				nombre: "",
+				telefono: "",
+				email: "",
+				origen: "Aeropuerto La Araucanía",
+				destino: "",
+				fecha: "",
+				hora: "",
+				pasajeros: "1",
+				mensaje: "",
+			});
 		} catch (error) {
 			console.error("Error al enviar el formulario:", error);
 			alert(`Error: ${error.message}`);
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -272,8 +271,10 @@ function App() {
 		},
 	];
 
-	const maxPasajeros =
-		destinos.find((d) => d.nombre === formData.destino)?.maxPasajeros || 15;
+	const maxPasajeros = useMemo(() => {
+		const destino = destinos.find((d) => d.nombre === formData.destino);
+		return destino?.maxPasajeros || 7; // Límite por defecto 7
+	}, [formData.destino]);
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -447,8 +448,16 @@ function App() {
 								<Button
 									type="submit"
 									className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
+									disabled={isSubmitting}
 								>
-									Reservar
+									{isSubmitting ? (
+										<>
+											<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+											Enviando...
+										</>
+									) : (
+										"Reservar"
+									)}
 								</Button>
 							</form>
 							{cotizacion.precio && (
@@ -531,7 +540,7 @@ function App() {
 										<p className="text-lg font-semibold text-primary mb-2">
 											Desde $
 											{new Intl.NumberFormat("es-CL").format(
-												destino.precioBase
+												destino.precios.sedan.base
 											)}{" "}
 											CLP
 										</p>
@@ -884,8 +893,16 @@ function App() {
 									<Button
 										type="submit"
 										className="w-full bg-primary hover:bg-primary/90"
+										disabled={isSubmitting}
 									>
-										Enviar Solicitud
+										{isSubmitting ? (
+											<>
+												<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+												Enviando Solicitud...
+											</>
+										) : (
+											"Enviar Solicitud"
+										)}
 									</Button>
 								</form>
 							</CardContent>
