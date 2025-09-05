@@ -44,7 +44,7 @@ import puconImg from "./assets/pucon.jpg";
 import logo from "./assets/logo.png";
 import logoblanco from "./assets/logoblanco.png";
 
-// --- Estructura de datos con descuentos y condición de abono ---
+// --- Estructura de datos con porcentaje de pasajero adicional al 5% ---
 const destinos = [
 	{
 		nombre: "Temuco",
@@ -54,15 +54,16 @@ const destinos = [
 		maxPasajeros: 4,
 		minHorasAnticipacion: 15,
 		descuento: {
-			porcentaje: 0.2, // 20%
+			porcentaje: 0.2,
 			titulo: "¡Descuento Especial para tu Viaje a Temuco!",
 			descripcion:
-				"Si pagas por transferencia bancaria, obtienes un 20% de descuento.",
+				"Si pagas por transferencia bancaria la totalidad del viaje, obtienes un 20% de descuento.",
 			botonTexto: "Coordinar por WhatsApp",
 			link: "https://wa.me/56936643540?text=Hola,%20quisiera%20pagar%20mi%20reserva%20a%20Temuco%20con%20descuento%20por%20transferencia.",
+			requiereAbonoTotal: true,
 		},
 		precios: {
-			sedan: { base: 20000, porcentajeAdicional: 0.03 },
+			sedan: { base: 20000, porcentajeAdicional: 0.1 },
 		},
 	},
 	{
@@ -73,16 +74,17 @@ const destinos = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 24,
 		descuento: {
-			porcentaje: 0.1, // 10%
+			porcentaje: 0.1,
 			titulo: "¡Paga Online y Ahorra en tu Viaje a Villarrica!",
 			descripcion:
 				"Paga ahora a través de Mercado Pago y obtén un 10% de descuento en tu reserva.",
 			botonTexto: "Pagar con Mercado Pago",
 			link: "https://link.mercadopago.cl/transportearaucaria",
+			requiereAbonoTotal: false,
 		},
 		precios: {
-			sedan: { base: 50000, porcentajeAdicional: 0.03 },
-			van: { base: 200000, porcentajeAdicional: 0.03 },
+			sedan: { base: 50000, porcentajeAdicional: 0.05 },
+			van: { base: 200000, porcentajeAdicional: 0.05 },
 		},
 	},
 	{
@@ -93,20 +95,22 @@ const destinos = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 24,
 		descuento: {
-			porcentaje: 0.1, // 10%
+			porcentaje: 0.1,
 			titulo: "¡Paga Online y Ahorra en tu Viaje a Pucón!",
 			descripcion:
 				"Paga ahora a través de Mercado Pago y obtén un 10% de descuento en tu reserva.",
 			botonTexto: "Pagar con Mercado Pago",
 			link: "https://link.mercadopago.cl/transportearaucaria",
+			requiereAbonoTotal: false,
 		},
 		precios: {
-			sedan: { base: 60000, porcentajeAdicional: 0.03 },
-			van: { base: 250000, porcentajeAdicional: 0.03 },
+			sedan: { base: 60000, porcentajeAdicional: 0.05 },
+			van: { base: 250000, porcentajeAdicional: 0.05 },
 		},
 	},
 ];
 
+// --- LÓGICA DE CÁLCULO CORREGIDA ---
 const calcularCotizacion = (destino, pasajeros) => {
 	if (!destino || !pasajeros) {
 		return { precio: null, vehiculo: null };
@@ -121,18 +125,16 @@ const calcularCotizacion = (destino, pasajeros) => {
 		const precios = destino.precios.sedan;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
-		if (numPasajeros <= 2) {
-			precioFinal = precios.base;
-		} else {
-			const pasajerosAdicionales = numPasajeros - 2;
-			const costoAdicional = precios.base * precios.porcentajeAdicional;
-			precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-		}
+		// CORRECCIÓN: El precio base es para 1 pasajero. Se suma el adicional a partir del segundo.
+		const pasajerosAdicionales = numPasajeros - 1;
+		const costoAdicional = precios.base * precios.porcentajeAdicional;
+		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
 	} else if (numPasajeros >= 5 && numPasajeros <= 7) {
 		vehiculoAsignado = "Van de Pasajeros";
 		const precios = destino.precios.van;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
+		// El precio base de la Van es para 5 pasajeros. Se suma el adicional a partir del sexto.
 		const pasajerosAdicionales = numPasajeros - 5;
 		const costoAdicional = precios.base * precios.porcentajeAdicional;
 		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
@@ -363,7 +365,6 @@ function App() {
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			{/* Componente de Diálogo Dinámico para Descuentos */}
 			<AlertDialog open={showDiscountAlert} onOpenChange={setShowDiscountAlert}>
 				{alertContent && (
 					<AlertDialogContent>
@@ -385,13 +386,19 @@ function App() {
 								</strong>
 								<br />
 								<br />
-								<strong className="text-foreground">
-									Abono del 40% para reservar: $
-									{new Intl.NumberFormat("es-CL").format(
-										alertContent.precio * (1 - alertContent.porcentaje) * 0.4
-									)}{" "}
-									CLP
-								</strong>
+								{!alertContent.requiereAbonoTotal ? (
+									<strong className="text-foreground">
+										Abono del 40% para reservar: $
+										{new Intl.NumberFormat("es-CL").format(
+											alertContent.precio * (1 - alertContent.porcentaje) * 0.4
+										)}{" "}
+										CLP
+									</strong>
+								) : (
+									<strong className="text-foreground">
+										Para acceder al descuento, se debe transferir el total.
+									</strong>
+								)}
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
