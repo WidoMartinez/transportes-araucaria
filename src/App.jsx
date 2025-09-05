@@ -1,5 +1,6 @@
 import "./App.css";
 import { useState, useEffect, useMemo } from "react";
+import { Routes, Route } from "react-router-dom";
 import { Button } from "./components/ui/button";
 import {
 	Card,
@@ -35,6 +36,7 @@ import {
 	MessageCircle,
 	LoaderCircle,
 } from "lucide-react";
+import AdminPanel from "./components/AdminPanel";
 
 // Importar imágenes
 import heroVan from "./assets/hero-van.png";
@@ -44,8 +46,7 @@ import puconImg from "./assets/pucon.jpg";
 import logo from "./assets/logo.png";
 import logoblanco from "./assets/logoblanco.png";
 
-// --- Estructura de datos con porcentaje de pasajero adicional al 5% ---
-const destinos = [
+const initialDestinos = [
 	{
 		nombre: "Temuco",
 		descripcion: "Centro comercial y administrativo de La Araucanía.",
@@ -110,276 +111,29 @@ const destinos = [
 	},
 ];
 
-// --- LÓGICA DE CÁLCULO CORREGIDA ---
-const calcularCotizacion = (destino, pasajeros) => {
-	if (!destino || !pasajeros) {
-		return { precio: null, vehiculo: null };
-	}
-
-	const numPasajeros = parseInt(pasajeros);
-	let vehiculoAsignado;
-	let precioFinal;
-
-	if (numPasajeros > 0 && numPasajeros <= 4) {
-		vehiculoAsignado = "Sedan 5 Puertas";
-		const precios = destino.precios.sedan;
-		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
-
-		// CORRECCIÓN: El precio base es para 1 pasajero. Se suma el adicional a partir del segundo.
-		const pasajerosAdicionales = numPasajeros - 1;
-		const costoAdicional = precios.base * precios.porcentajeAdicional;
-		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-	} else if (numPasajeros >= 5 && numPasajeros <= 7) {
-		vehiculoAsignado = "Van de Pasajeros";
-		const precios = destino.precios.van;
-		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
-
-		// El precio base de la Van es para 5 pasajeros. Se suma el adicional a partir del sexto.
-		const pasajerosAdicionales = numPasajeros - 5;
-		const costoAdicional = precios.base * precios.porcentajeAdicional;
-		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-	} else {
-		vehiculoAsignado = "Consultar disponibilidad";
-		precioFinal = null;
-	}
-
-	return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
-};
-
-function App() {
-	const [formData, setFormData] = useState({
-		nombre: "",
-		telefono: "",
-		email: "",
-		origen: "Aeropuerto La Araucanía",
-		destino: "",
-		fecha: "",
-		hora: "",
-		pasajeros: "1",
-		mensaje: "",
-	});
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [showDiscountAlert, setShowDiscountAlert] = useState(false);
-	const [alertContent, setAlertContent] = useState(null);
-	const [phoneError, setPhoneError] = useState("");
-
-	const cotizacion = useMemo(() => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
-		);
-		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
-	}, [formData.destino, formData.pasajeros]);
-
+// Componente para el layout público
+const PublicLayout = ({
+	destinos,
+	formData,
+	setFormData,
+	handleSubmit,
+	cotizacion,
+	phoneError,
+	handleInputChange,
+	isSubmitting,
+	minDateTime,
+	maxPasajeros,
+	testimonios,
+	servicios,
+	handleCloseAlert,
+	showDiscountAlert,
+	setShowDiscountAlert,
+	alertContent,
+}) => {
 	const validarTelefono = (telefono) => {
 		const regex = /^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/;
 		return regex.test(telefono);
 	};
-
-	const validarHorarioReserva = () => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
-		);
-		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
-			return {
-				esValido: false,
-				mensaje: "Por favor, completa la fecha y hora.",
-			};
-		}
-
-		const ahora = new Date();
-		const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
-		const horasDeDiferencia = (fechaReserva - ahora) / (1000 * 60 * 60);
-
-		const { minHorasAnticipacion } = destinoSeleccionado;
-
-		if (horasDeDiferencia < minHorasAnticipacion) {
-			return {
-				esValido: false,
-				mensaje: `Para ${destinoSeleccionado.nombre}, por favor reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
-			};
-		}
-
-		return { esValido: true, mensaje: "" };
-	};
-
-	const handleInputChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
-		if (name === "telefono") {
-			setPhoneError("");
-		}
-	};
-
-	useEffect(() => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
-		);
-		if (
-			destinoSeleccionado &&
-			parseInt(formData.pasajeros) > destinoSeleccionado.maxPasajeros
-		) {
-			setFormData((prev) => ({ ...prev, pasajeros: "1" }));
-		}
-	}, [formData.destino]);
-
-	const resetForm = () => {
-		setFormData({
-			nombre: "",
-			telefono: "",
-			email: "",
-			origen: "Aeropuerto La Araucanía",
-			destino: "",
-			fecha: "",
-			hora: "",
-			pasajeros: "1",
-			mensaje: "",
-		});
-	};
-
-	const handleCloseAlert = () => {
-		setShowDiscountAlert(false);
-		resetForm();
-	};
-
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-
-		if (!validarTelefono(formData.telefono)) {
-			setPhoneError(
-				"Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
-			);
-			return;
-		}
-		setPhoneError("");
-
-		const validacion = validarHorarioReserva();
-		if (!validacion.esValido) {
-			alert(validacion.mensaje);
-			return;
-		}
-
-		if (isSubmitting) return;
-		setIsSubmitting(true);
-
-		const dataToSend = {
-			...formData,
-			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
-			source: e.target.querySelector('input[name="nombre"]')
-				? "Formulario de Contacto - Transportes Araucaria"
-				: "Formulario Rápido (Hero)",
-		};
-		if (!dataToSend.nombre)
-			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
-
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
-
-		try {
-			const response = await fetch(`${apiUrl}/send-email`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(dataToSend),
-			});
-
-			if (!response.ok) {
-				const result = await response.json();
-				throw new Error(result.message || "Error en el servidor.");
-			}
-
-			const destinoSeleccionado = destinos.find(
-				(d) => d.nombre === dataToSend.destino
-			);
-			if (destinoSeleccionado && destinoSeleccionado.descuento) {
-				setAlertContent({
-					...destinoSeleccionado.descuento,
-					precio: cotizacion.precio,
-				});
-				setShowDiscountAlert(true);
-			} else {
-				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
-				resetForm();
-			}
-
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-				});
-			}
-		} catch (error) {
-			console.error("Error al enviar el formulario:", error);
-			alert(`Error: ${error.message}`);
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
-	const servicios = [
-		{
-			icono: <Car className="h-8 w-8" />,
-			titulo: "Transfer Privado",
-			descripcion: "Servicio exclusivo para ti y tu grupo",
-		},
-		{
-			icono: <Users className="h-8 w-8" />,
-			titulo: "Transfer Compartido",
-			descripcion: "Opción económica compartiendo el viaje",
-		},
-		{
-			icono: <Clock className="h-8 w-8" />,
-			titulo: "Disponible 24/7",
-			descripcion: "Servicio disponible todos los días del año",
-		},
-		{
-			icono: <Shield className="h-8 w-8" />,
-			titulo: "Seguro y Confiable",
-			descripcion: "Vehículos modernos y conductores profesionales",
-		},
-	];
-
-	const testimonios = [
-		{
-			nombre: "María González",
-			comentario:
-				"Excelente servicio, muy puntual y cómodo. El conductor fue muy amable.",
-			calificacion: 5,
-		},
-		{
-			nombre: "Carlos Rodríguez",
-			comentario:
-				"Perfecto para llegar a Pucón desde el aeropuerto. Lo recomiendo 100%.",
-			calificacion: 5,
-		},
-		{
-			nombre: "Ana Martínez",
-			comentario:
-				"Muy profesional, vehículo limpio y precio justo. Volveré a usar el servicio.",
-			calificacion: 5,
-		},
-	];
-
-	const maxPasajeros = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
-		return destino?.maxPasajeros || 7;
-	}, [formData.destino]);
-
-	const minDateTime = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
-		const horasAnticipacion = destino?.minHorasAnticipacion || 24;
-
-		const fechaMinima = new Date();
-		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
-
-		const anio = fechaMinima.getFullYear();
-		const mes = String(fechaMinima.getMonth() + 1).padStart(2, "0");
-		const dia = String(fechaMinima.getDate()).padStart(2, "0");
-
-		return `${anio}-${mes}-${dia}`;
-	}, [formData.destino]);
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -493,7 +247,7 @@ function App() {
 								target="_blank"
 								rel="noopener noreferrer"
 							>
-								<Button className="bg-accent hover:bg-accent/90">
+								<Button>
 									<MessageCircle className="h-4 w-4 mr-2" />
 									WhatsApp
 								</Button>
@@ -1159,6 +913,308 @@ function App() {
 				</div>
 			</footer>
 		</div>
+	);
+};
+
+function App() {
+	const [destinos, setDestinos] = useState(initialDestinos);
+	const [formData, setFormData] = useState({
+		nombre: "",
+		telefono: "",
+		email: "",
+		origen: "Aeropuerto La Araucanía",
+		destino: "",
+		fecha: "",
+		hora: "",
+		pasajeros: "1",
+		mensaje: "",
+	});
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showDiscountAlert, setShowDiscountAlert] = useState(false);
+	const [alertContent, setAlertContent] = useState(null);
+	const [phoneError, setPhoneError] = useState("");
+
+	const calcularCotizacion = (destino, pasajeros) => {
+		if (!destino || !pasajeros) {
+			return { precio: null, vehiculo: null };
+		}
+
+		const numPasajeros = parseInt(pasajeros);
+		let vehiculoAsignado;
+		let precioFinal;
+
+		if (numPasajeros > 0 && numPasajeros <= 4) {
+			vehiculoAsignado = "Sedan 5 Puertas";
+			const precios = destino.precios.sedan;
+			if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
+
+			const pasajerosAdicionales = numPasajeros - 1;
+			const costoAdicional = precios.base * precios.porcentajeAdicional;
+			precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
+		} else if (numPasajeros >= 5 && numPasajeros <= 7) {
+			vehiculoAsignado = "Van de Pasajeros";
+			const precios = destino.precios.van;
+			if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
+
+			const pasajerosAdicionales = numPasajeros - 5;
+			const costoAdicional = precios.base * precios.porcentajeAdicional;
+			precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
+		} else {
+			vehiculoAsignado = "Consultar disponibilidad";
+			precioFinal = null;
+		}
+
+		return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
+	};
+
+	const cotizacion = useMemo(() => {
+		const destinoSeleccionado = destinos.find(
+			(d) => d.nombre === formData.destino
+		);
+		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
+	}, [formData.destino, formData.pasajeros, destinos]);
+
+	const validarTelefono = (telefono) => {
+		const regex = /^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/;
+		return regex.test(telefono);
+	};
+
+	const validarHorarioReserva = () => {
+		const destinoSeleccionado = destinos.find(
+			(d) => d.nombre === formData.destino
+		);
+		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
+			return {
+				esValido: false,
+				mensaje: "Por favor, completa la fecha y hora.",
+			};
+		}
+
+		const ahora = new Date();
+		const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
+		const horasDeDiferencia = (fechaReserva - ahora) / (1000 * 60 * 60);
+
+		const { minHorasAnticipacion } = destinoSeleccionado;
+
+		if (horasDeDiferencia < minHorasAnticipacion) {
+			return {
+				esValido: false,
+				mensaje: `Para ${destinoSeleccionado.nombre}, por favor reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
+			};
+		}
+
+		return { esValido: true, mensaje: "" };
+	};
+
+	const handleInputChange = (e) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+		if (name === "telefono") {
+			setPhoneError("");
+		}
+	};
+
+	useEffect(() => {
+		const destinoSeleccionado = destinos.find(
+			(d) => d.nombre === formData.destino
+		);
+		if (
+			destinoSeleccionado &&
+			parseInt(formData.pasajeros) > destinoSeleccionado.maxPasajeros
+		) {
+			setFormData((prev) => ({ ...prev, pasajeros: "1" }));
+		}
+	}, [formData.destino, destinos]);
+
+	const resetForm = () => {
+		setFormData({
+			nombre: "",
+			telefono: "",
+			email: "",
+			origen: "Aeropuerto La Araucanía",
+			destino: "",
+			fecha: "",
+			hora: "",
+			pasajeros: "1",
+			mensaje: "",
+		});
+	};
+
+	const handleCloseAlert = () => {
+		setShowDiscountAlert(false);
+		resetForm();
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+
+		if (!validarTelefono(formData.telefono)) {
+			setPhoneError(
+				"Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
+			);
+			return;
+		}
+		setPhoneError("");
+
+		const validacion = validarHorarioReserva();
+		if (!validacion.esValido) {
+			alert(validacion.mensaje);
+			return;
+		}
+
+		if (isSubmitting) return;
+		setIsSubmitting(true);
+
+		const dataToSend = {
+			...formData,
+			precio: cotizacion.precio,
+			vehiculo: cotizacion.vehiculo,
+			source: e.target.querySelector('input[name="nombre"]')
+				? "Formulario de Contacto - Transportes Araucaria"
+				: "Formulario Rápido (Hero)",
+		};
+		if (!dataToSend.nombre)
+			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
+
+		const apiUrl =
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
+
+		try {
+			const response = await fetch(`${apiUrl}/send-email`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(dataToSend),
+			});
+
+			if (!response.ok) {
+				const result = await response.json();
+				throw new Error(result.message || "Error en el servidor.");
+			}
+
+			const destinoSeleccionado = destinos.find(
+				(d) => d.nombre === dataToSend.destino
+			);
+			if (destinoSeleccionado && destinoSeleccionado.descuento) {
+				setAlertContent({
+					...destinoSeleccionado.descuento,
+					precio: cotizacion.precio,
+				});
+				setShowDiscountAlert(true);
+			} else {
+				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
+				resetForm();
+			}
+
+			if (typeof gtag === "function") {
+				gtag("event", "conversion", {
+					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
+				});
+			}
+		} catch (error) {
+			console.error("Error al enviar el formulario:", error);
+			alert(`Error: ${error.message}`);
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	const servicios = [
+		{
+			icono: <Car className="h-8 w-8" />,
+			titulo: "Transfer Privado",
+			descripcion: "Servicio exclusivo para ti y tu grupo",
+		},
+		{
+			icono: <Users className="h-8 w-8" />,
+			titulo: "Transfer Compartido",
+			descripcion: "Opción económica compartiendo el viaje",
+		},
+		{
+			icono: <Clock className="h-8 w-8" />,
+			titulo: "Disponible 24/7",
+			descripcion: "Servicio disponible todos los días del año",
+		},
+		{
+			icono: <Shield className="h-8 w-8" />,
+			titulo: "Seguro y Confiable",
+			descripcion: "Vehículos modernos y conductores profesionales",
+		},
+	];
+
+	const testimonios = [
+		{
+			nombre: "María González",
+			comentario:
+				"Excelente servicio, muy puntual y cómodo. El conductor fue muy amable.",
+			calificacion: 5,
+		},
+		{
+			nombre: "Carlos Rodríguez",
+			comentario:
+				"Perfecto para llegar a Pucón desde el aeropuerto. Lo recomiendo 100%.",
+			calificacion: 5,
+		},
+		{
+			nombre: "Ana Martínez",
+			comentario:
+				"Muy profesional, vehículo limpio y precio justo. Volveré a usar el servicio.",
+			calificacion: 5,
+		},
+	];
+
+	const maxPasajeros = useMemo(() => {
+		const destino = destinos.find((d) => d.nombre === formData.destino);
+		return destino?.maxPasajeros || 7;
+	}, [formData.destino, destinos]);
+
+	const minDateTime = useMemo(() => {
+		const destino = destinos.find((d) => d.nombre === formData.destino);
+		const horasAnticipacion = destino?.minHorasAnticipacion || 24;
+
+		const fechaMinima = new Date();
+		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
+
+		const anio = fechaMinima.getFullYear();
+		const mes = String(fechaMinima.getMonth() + 1).padStart(2, "0");
+		const dia = String(fechaMinima.getDate()).padStart(2, "0");
+
+		return `${anio}-${mes}-${dia}`;
+	}, [formData.destino, destinos]);
+
+	return (
+		<Routes>
+			<Route
+				path="/"
+				element={
+					<PublicLayout
+						destinos={destinos}
+						formData={formData}
+						setFormData={setFormData}
+						handleSubmit={handleSubmit}
+						cotizacion={cotizacion}
+						phoneError={phoneError}
+						handleInputChange={handleInputChange}
+						isSubmitting={isSubmitting}
+						minDateTime={minDateTime}
+						maxPasajeros={maxPasajeros}
+						testimonios={testimonios}
+						servicios={servicios}
+						handleCloseAlert={handleCloseAlert}
+						showDiscountAlert={showDiscountAlert}
+						setShowDiscountAlert={setShowDiscountAlert}
+						alertContent={alertContent}
+					/>
+				}
+			/>
+			<Route
+				path="/admin"
+				element={<AdminPanel destinos={destinos} setDestinos={setDestinos} />}
+			/>
+		</Routes>
 	);
 }
 
