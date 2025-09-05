@@ -44,7 +44,7 @@ import puconImg from "./assets/pucon.jpg";
 import logo from "./assets/logo.png";
 import logoblanco from "./assets/logoblanco.png";
 
-// --- MEJORA: Añadir horas de anticipación a la estructura de datos ---
+// --- Estructura de datos con descuentos y condición de abono ---
 const destinos = [
 	{
 		nombre: "Temuco",
@@ -52,7 +52,15 @@ const destinos = [
 		tiempo: "45 min",
 		imagen: temucoImg,
 		maxPasajeros: 4,
-		minHorasAnticipacion: 15, // 15 horas para Temuco
+		minHorasAnticipacion: 15,
+		descuento: {
+			porcentaje: 0.2, // 20%
+			titulo: "¡Descuento Especial para tu Viaje a Temuco!",
+			descripcion:
+				"Si pagas por transferencia bancaria, obtienes un 20% de descuento.",
+			botonTexto: "Coordinar por WhatsApp",
+			link: "https://wa.me/56936643540?text=Hola,%20quisiera%20pagar%20mi%20reserva%20a%20Temuco%20con%20descuento%20por%20transferencia.",
+		},
 		precios: {
 			sedan: { base: 20000, porcentajeAdicional: 0.03 },
 		},
@@ -63,7 +71,15 @@ const destinos = [
 		tiempo: "1h 15min",
 		imagen: villarricaImg,
 		maxPasajeros: 7,
-		minHorasAnticipacion: 24, // 24 horas para otros destinos
+		minHorasAnticipacion: 24,
+		descuento: {
+			porcentaje: 0.1, // 10%
+			titulo: "¡Paga Online y Ahorra en tu Viaje a Villarrica!",
+			descripcion:
+				"Paga ahora a través de Mercado Pago y obtén un 10% de descuento en tu reserva.",
+			botonTexto: "Pagar con Mercado Pago",
+			link: "https://link.mercadopago.cl/transportearaucaria",
+		},
 		precios: {
 			sedan: { base: 50000, porcentajeAdicional: 0.03 },
 			van: { base: 200000, porcentajeAdicional: 0.03 },
@@ -75,7 +91,15 @@ const destinos = [
 		tiempo: "1h 30min",
 		imagen: puconImg,
 		maxPasajeros: 7,
-		minHorasAnticipacion: 24, // 24 horas para otros destinos
+		minHorasAnticipacion: 24,
+		descuento: {
+			porcentaje: 0.1, // 10%
+			titulo: "¡Paga Online y Ahorra en tu Viaje a Pucón!",
+			descripcion:
+				"Paga ahora a través de Mercado Pago y obtén un 10% de descuento en tu reserva.",
+			botonTexto: "Pagar con Mercado Pago",
+			link: "https://link.mercadopago.cl/transportearaucaria",
+		},
 		precios: {
 			sedan: { base: 60000, porcentajeAdicional: 0.03 },
 			van: { base: 250000, porcentajeAdicional: 0.03 },
@@ -133,9 +157,8 @@ function App() {
 		mensaje: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [showTemucoAlert, setShowTemucoAlert] = useState(false);
-	const [precioFinalParaDescuento, setPrecioFinalParaDescuento] =
-		useState(null);
+	const [showDiscountAlert, setShowDiscountAlert] = useState(false);
+	const [alertContent, setAlertContent] = useState(null);
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -144,7 +167,6 @@ function App() {
 		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
 	}, [formData.destino, formData.pasajeros]);
 
-	// --- MEJORA: Lógica para validar la fecha y hora de la reserva ---
 	const validarHorarioReserva = () => {
 		const destinoSeleccionado = destinos.find(
 			(d) => d.nombre === formData.destino
@@ -192,8 +214,7 @@ function App() {
 		}
 	}, [formData.destino]);
 
-	const handleCloseAlert = () => {
-		setShowTemucoAlert(false);
+	const resetForm = () => {
 		setFormData({
 			nombre: "",
 			telefono: "",
@@ -207,10 +228,13 @@ function App() {
 		});
 	};
 
+	const handleCloseAlert = () => {
+		setShowDiscountAlert(false);
+		resetForm();
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-
-		// --- MEJORA: Ejecutar la validación antes de enviar ---
 		const validacion = validarHorarioReserva();
 		if (!validacion.esValido) {
 			alert(validacion.mensaje);
@@ -220,19 +244,16 @@ function App() {
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 
-		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
 		const dataToSend = {
 			...formData,
 			precio: cotizacion.precio,
 			vehiculo: cotizacion.vehiculo,
-			source: isHeroForm
-				? "Formulario Rápido (Hero)"
-				: "Formulario de Contacto - Transportes Araucaria",
+			source: e.target.querySelector('input[name="nombre"]')
+				? "Formulario de Contacto - Transportes Araucaria"
+				: "Formulario Rápido (Hero)",
 		};
-
-		if (isHeroForm && !dataToSend.nombre) {
+		if (!dataToSend.nombre)
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
-		}
 
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
@@ -250,22 +271,18 @@ function App() {
 				throw new Error(result.message || "Error en el servidor.");
 			}
 
-			if (dataToSend.destino === "Temuco") {
-				setPrecioFinalParaDescuento(cotizacion.precio);
-				setShowTemucoAlert(true);
+			const destinoSeleccionado = destinos.find(
+				(d) => d.nombre === dataToSend.destino
+			);
+			if (destinoSeleccionado && destinoSeleccionado.descuento) {
+				setAlertContent({
+					...destinoSeleccionado.descuento,
+					precio: cotizacion.precio,
+				});
+				setShowDiscountAlert(true);
 			} else {
 				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
-				setFormData({
-					nombre: "",
-					telefono: "",
-					email: "",
-					origen: "Aeropuerto La Araucanía",
-					destino: "",
-					fecha: "",
-					hora: "",
-					pasajeros: "1",
-					mensaje: "",
-				});
+				resetForm();
 			}
 
 			if (typeof gtag === "function") {
@@ -330,7 +347,6 @@ function App() {
 		return destino?.maxPasajeros || 7;
 	}, [formData.destino]);
 
-	// --- MEJORA: Calcular dinámicamente la fecha y hora mínimas permitidas ---
 	const minDateTime = useMemo(() => {
 		const destino = destinos.find((d) => d.nombre === formData.destino);
 		const horasAnticipacion = destino?.minHorasAnticipacion || 24;
@@ -347,47 +363,53 @@ function App() {
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			<AlertDialog open={showTemucoAlert} onOpenChange={setShowTemucoAlert}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							¡Descuento Especial para tu Viaje a Temuco!
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							Hemos recibido tu cotización. Si pagas por transferencia bancaria,
-							obtienes un **20% de descuento**.
-							<br />
-							<br />
-							Precio Normal: $
-							{new Intl.NumberFormat("es-CL").format(
-								precioFinalParaDescuento
-							)}{" "}
-							CLP
-							<br />
-							<strong className="text-primary text-lg">
-								Precio con Descuento: $
-								{new Intl.NumberFormat("es-CL").format(
-									precioFinalParaDescuento * 0.8
-								)}{" "}
-								CLP
-							</strong>
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel onClick={handleCloseAlert}>
-							Cerrar
-						</AlertDialogCancel>
-						<AlertDialogAction asChild>
-							<a
-								href="https://wa.me/56936643540?text=Hola,%20quisiera%20pagar%20mi%20reserva%20a%20Temuco%20con%20descuento%20por%20transferencia."
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								Pagar por WhatsApp
-							</a>
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
+			{/* Componente de Diálogo Dinámico para Descuentos */}
+			<AlertDialog open={showDiscountAlert} onOpenChange={setShowDiscountAlert}>
+				{alertContent && (
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>{alertContent.titulo}</AlertDialogTitle>
+							<AlertDialogDescription>
+								{alertContent.descripcion}
+								<br />
+								<br />
+								Precio Normal: $
+								{new Intl.NumberFormat("es-CL").format(alertContent.precio)} CLP
+								<br />
+								<strong className="text-primary text-lg">
+									Precio con Descuento: $
+									{new Intl.NumberFormat("es-CL").format(
+										alertContent.precio * (1 - alertContent.porcentaje)
+									)}{" "}
+									CLP
+								</strong>
+								<br />
+								<br />
+								<strong className="text-foreground">
+									Abono del 40% para reservar: $
+									{new Intl.NumberFormat("es-CL").format(
+										alertContent.precio * (1 - alertContent.porcentaje) * 0.4
+									)}{" "}
+									CLP
+								</strong>
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel onClick={handleCloseAlert}>
+								Cerrar
+							</AlertDialogCancel>
+							<AlertDialogAction asChild>
+								<a
+									href={alertContent.link}
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									{alertContent.botonTexto}
+								</a>
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				)}
 			</AlertDialog>
 
 			{/* Header */}
@@ -531,7 +553,7 @@ function App() {
 										name="fecha"
 										value={formData.fecha}
 										onChange={handleInputChange}
-										min={minDateTime} // Limitar fechas pasadas
+										min={minDateTime}
 										required
 									/>
 								</div>
@@ -939,7 +961,7 @@ function App() {
 												name="fecha"
 												value={formData.fecha}
 												onChange={handleInputChange}
-												min={minDateTime} // Limitar fechas pasadas
+												min={minDateTime}
 												required
 											/>
 										</div>
