@@ -23,7 +23,6 @@ import {
 	Plane,
 	CheckCircle,
 	MessageCircle,
-	LoaderCircle, // Icono de carga
 } from "lucide-react";
 
 // Importar imágenes
@@ -52,25 +51,24 @@ function App() {
 		vehiculo: null,
 	});
 
-	// **NUEVO ESTADO**: para controlar el estado de envío del formulario
-	const [isSubmitting, setIsSubmitting] = useState(false);
-
-	// --- ESTRUCTURA DE PRECIOS ESCALONADOS ---
+	// --- ESTRUCTURA DE PRECIOS POR TIPO DE VEHÍCULO ---
 	const destinos = [
 		{
 			nombre: "Temuco",
 			descripcion: "Centro comercial y administrativo de La Araucanía",
 			tiempo: "45 min",
 			imagen: temucoImg,
-			precioBase: 20000, // Precio para 1-2 pasajeros
-			precioPorPasajeroAdicional: 3000, // Costo por cada pasajero a partir del tercero
+			precioBase: 20000, // Precio para 1-2 pasajeros (Sedan)
+			precioPorPasajeroAdicional: 3000,
+			maxPasajeros: 4,
 		},
 		{
 			nombre: "Villarrica",
 			descripcion: "Turismo y naturaleza junto al lago",
 			tiempo: "1h 15min",
 			imagen: villarricaImg,
-			precioBase: 50000,
+			precioBase: 50000, // Precio para 1-2 pasajeros (Sedan)
+			precioBaseVan: 150000, // Precio para 5 pasajeros (Van)
 			precioPorPasajeroAdicional: 5000,
 		},
 		{
@@ -78,7 +76,8 @@ function App() {
 			descripcion: "Aventura, termas y volcán",
 			tiempo: "1h 30min",
 			imagen: puconImg,
-			precioBase: 60000,
+			precioBase: 60000, // Precio para 1-2 pasajeros (Sedan)
+			precioBaseVan: 180000, // Precio para 5 pasajeros (Van)
 			precioPorPasajeroAdicional: 7000,
 		},
 	];
@@ -98,20 +97,36 @@ function App() {
 				let vehiculoAsignado;
 				let precioFinal;
 
-				if (numPasajeros <= 2) {
-					precioFinal = destinoSeleccionado.precioBase;
-				} else {
-					const pasajerosAdicionales = numPasajeros - 2;
-					precioFinal =
-						destinoSeleccionado.precioBase +
-						pasajerosAdicionales *
-							destinoSeleccionado.precioPorPasajeroAdicional;
-				}
-
+				// Asignación de vehículo y cálculo de precio
 				if (numPasajeros >= 1 && numPasajeros <= 4) {
 					vehiculoAsignado = "Sedan 5 Puertas";
+					// Lógica de precios para Sedan
+					if (numPasajeros <= 2) {
+						precioFinal = destinoSeleccionado.precioBase;
+					} else {
+						const pasajerosAdicionales = numPasajeros - 2;
+						precioFinal =
+							destinoSeleccionado.precioBase +
+							pasajerosAdicionales *
+								destinoSeleccionado.precioPorPasajeroAdicional;
+					}
 				} else if (numPasajeros >= 5 && numPasajeros <= 15) {
 					vehiculoAsignado = "Van de Pasajeros";
+					// Lógica de precios para Van
+					if (destinoSeleccionado.precioBaseVan) {
+						const pasajerosAdicionales = numPasajeros - 5;
+						precioFinal =
+							destinoSeleccionado.precioBaseVan +
+							pasajerosAdicionales *
+								destinoSeleccionado.precioPorPasajeroAdicional;
+					} else {
+						// Fallback si un destino no tiene precio para Van
+						const pasajerosAdicionales = numPasajeros - 2;
+						precioFinal =
+							destinoSeleccionado.precioBase +
+							pasajerosAdicionales *
+								destinoSeleccionado.precioPorPasajeroAdicional;
+					}
 				} else {
 					vehiculoAsignado = "Consultar disponibilidad";
 					precioFinal = null;
@@ -121,13 +136,23 @@ function App() {
 					precio: precioFinal,
 					vehiculo: vehiculoAsignado,
 				});
+
+				if (
+					destinoSeleccionado.maxPasajeros &&
+					numPasajeros > destinoSeleccionado.maxPasajeros
+				) {
+					setFormData((prev) => ({
+						...prev,
+						pasajeros: "1",
+					}));
+				}
 			} else {
 				setCotizacion({ precio: null, vehiculo: null });
 			}
 		};
 
 		calcularCotizacion();
-	}, [formData.destino, formData.pasajeros, destinos]);
+	}, [formData.destino, formData.pasajeros]);
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -139,11 +164,6 @@ function App() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		// **MODIFICACIÓN**: Si ya se está enviando, no hacer nada
-		if (isSubmitting) return;
-
-		// **MODIFICACIÓN**: Iniciar el estado de envío
-		setIsSubmitting(true);
 
 		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
 
@@ -205,9 +225,6 @@ function App() {
 		} catch (error) {
 			console.error("Error al enviar el formulario:", error);
 			alert(`Error: ${error.message}`);
-		} finally {
-			// **MODIFICACIÓN**: Restablecer el estado de envío, tanto si hay éxito como si hay error
-			setIsSubmitting(false);
 		}
 	};
 
@@ -254,6 +271,9 @@ function App() {
 			calificacion: 5,
 		},
 	];
+
+	const maxPasajeros =
+		destinos.find((d) => d.nombre === formData.destino)?.maxPasajeros || 15;
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -383,7 +403,7 @@ function App() {
 										className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary text-foreground"
 										required
 									>
-										{[...Array(15)].map((_, i) => (
+										{[...Array(maxPasajeros)].map((_, i) => (
 											<option key={i + 1} value={i + 1}>
 												{i + 1} pasajero(s)
 											</option>
@@ -424,20 +444,11 @@ function App() {
 										required
 									/>
 								</div>
-								{/* **MODIFICACIÓN**: Deshabilitar botón y cambiar texto durante el envío */}
 								<Button
 									type="submit"
 									className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
-									disabled={isSubmitting}
 								>
-									{isSubmitting ? (
-										<>
-											<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-											Enviando...
-										</>
-									) : (
-										"Reservar"
-									)}
+									Reservar
 								</Button>
 							</form>
 							{cotizacion.precio && (
@@ -830,7 +841,7 @@ function App() {
 											onChange={handleInputChange}
 											className="w-full p-2 border rounded-md"
 										>
-											{[...Array(15)].map((_, i) => (
+											{[...Array(maxPasajeros)].map((_, i) => (
 												<option key={i + 1} value={i + 1}>
 													{i + 1} pasajero(s)
 												</option>
@@ -870,20 +881,11 @@ function App() {
 											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
 										/>
 									</div>
-									{/* **MODIFICACIÓN**: Deshabilitar botón y cambiar texto durante el envío */}
 									<Button
 										type="submit"
 										className="w-full bg-primary hover:bg-primary/90"
-										disabled={isSubmitting}
 									>
-										{isSubmitting ? (
-											<>
-												<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-												Enviando Solicitud...
-											</>
-										) : (
-											"Enviar Solicitud"
-										)}
+										Enviar Solicitud
 									</Button>
 								</form>
 							</CardContent>
