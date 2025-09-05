@@ -493,7 +493,7 @@ function App() {
 								target="_blank"
 								rel="noopener noreferrer"
 							>
-								<Button>
+								<Button className="bg-accent hover:bg-accent/90">
 									<MessageCircle className="h-4 w-4 mr-2" />
 									WhatsApp
 								</Button>
