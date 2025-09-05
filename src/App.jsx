@@ -12,6 +12,16 @@ import { Input } from "./components/ui/input";
 import { Label } from "./components/ui/label";
 import { Textarea } from "./components/ui/textarea";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "./components/ui/alert-dialog";
+import {
 	Phone,
 	Mail,
 	MapPin,
@@ -34,19 +44,17 @@ import puconImg from "./assets/pucon.jpg";
 import logo from "./assets/logo.png";
 import logoblanco from "./assets/logoblanco.png";
 
-// --- ESTRUCTURA DE DATOS ACTUALIZADA ---
+// --- MEJORA: Añadir horas de anticipación a la estructura de datos ---
 const destinos = [
 	{
 		nombre: "Temuco",
 		descripcion: "Centro comercial y administrativo de La Araucanía.",
 		tiempo: "45 min",
 		imagen: temucoImg,
-		maxPasajeros: 4, // Límite específico para Temuco
+		maxPasajeros: 4,
+		minHorasAnticipacion: 15, // 15 horas para Temuco
 		precios: {
-			sedan: {
-				base: 20000, // 1-2 pasajeros
-				porcentajeAdicional: 0.03, // 3% por pasajero extra
-			},
+			sedan: { base: 20000, porcentajeAdicional: 0.03 },
 		},
 	},
 	{
@@ -54,16 +62,11 @@ const destinos = [
 		descripcion: "Turismo y naturaleza junto al lago.",
 		tiempo: "1h 15min",
 		imagen: villarricaImg,
-		maxPasajeros: 7, // Nuevo límite de pasajeros
+		maxPasajeros: 7,
+		minHorasAnticipacion: 24, // 24 horas para otros destinos
 		precios: {
-			sedan: {
-				base: 50000,
-				porcentajeAdicional: 0.03,
-			},
-			van: {
-				base: 200000, // Nuevo precio base para Van
-				porcentajeAdicional: 0.03,
-			},
+			sedan: { base: 50000, porcentajeAdicional: 0.03 },
+			van: { base: 200000, porcentajeAdicional: 0.03 },
 		},
 	},
 	{
@@ -71,21 +74,15 @@ const destinos = [
 		descripcion: "Aventura, termas y volcán.",
 		tiempo: "1h 30min",
 		imagen: puconImg,
-		maxPasajeros: 7, // Nuevo límite de pasajeros
+		maxPasajeros: 7,
+		minHorasAnticipacion: 24, // 24 horas para otros destinos
 		precios: {
-			sedan: {
-				base: 60000,
-				porcentajeAdicional: 0.03,
-			},
-			van: {
-				base: 250000, // Nuevo precio base para Van
-				porcentajeAdicional: 0.03,
-			},
+			sedan: { base: 60000, porcentajeAdicional: 0.03 },
+			van: { base: 250000, porcentajeAdicional: 0.03 },
 		},
 	},
 ];
 
-// --- LÓGICA DE CÁLCULO ACTUALIZADA ---
 const calcularCotizacion = (destino, pasajeros) => {
 	if (!destino || !pasajeros) {
 		return { precio: null, vehiculo: null };
@@ -108,7 +105,6 @@ const calcularCotizacion = (destino, pasajeros) => {
 			precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
 		}
 	} else if (numPasajeros >= 5 && numPasajeros <= 7) {
-		// Límite ajustado a 7
 		vehiculoAsignado = "Van de Pasajeros";
 		const precios = destino.precios.van;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
@@ -121,7 +117,7 @@ const calcularCotizacion = (destino, pasajeros) => {
 		precioFinal = null;
 	}
 
-	return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado }; // Redondeo para evitar decimales
+	return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
 };
 
 function App() {
@@ -137,6 +133,9 @@ function App() {
 		mensaje: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showTemucoAlert, setShowTemucoAlert] = useState(false);
+	const [precioFinalParaDescuento, setPrecioFinalParaDescuento] =
+		useState(null);
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -144,6 +143,34 @@ function App() {
 		);
 		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
 	}, [formData.destino, formData.pasajeros]);
+
+	// --- MEJORA: Lógica para validar la fecha y hora de la reserva ---
+	const validarHorarioReserva = () => {
+		const destinoSeleccionado = destinos.find(
+			(d) => d.nombre === formData.destino
+		);
+		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
+			return {
+				esValido: false,
+				mensaje: "Por favor, completa la fecha y hora.",
+			};
+		}
+
+		const ahora = new Date();
+		const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
+		const horasDeDiferencia = (fechaReserva - ahora) / (1000 * 60 * 60);
+
+		const { minHorasAnticipacion } = destinoSeleccionado;
+
+		if (horasDeDiferencia < minHorasAnticipacion) {
+			return {
+				esValido: false,
+				mensaje: `Para ${destinoSeleccionado.nombre}, por favor reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
+			};
+		}
+
+		return { esValido: true, mensaje: "" };
+	};
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -165,8 +192,31 @@ function App() {
 		}
 	}, [formData.destino]);
 
+	const handleCloseAlert = () => {
+		setShowTemucoAlert(false);
+		setFormData({
+			nombre: "",
+			telefono: "",
+			email: "",
+			origen: "Aeropuerto La Araucanía",
+			destino: "",
+			fecha: "",
+			hora: "",
+			pasajeros: "1",
+			mensaje: "",
+		});
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+
+		// --- MEJORA: Ejecutar la validación antes de enviar ---
+		const validacion = validarHorarioReserva();
+		if (!validacion.esValido) {
+			alert(validacion.mensaje);
+			return;
+		}
+
 		if (isSubmitting) return;
 		setIsSubmitting(true);
 
@@ -200,25 +250,29 @@ function App() {
 				throw new Error(result.message || "Error en el servidor.");
 			}
 
-			alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
+			if (dataToSend.destino === "Temuco") {
+				setPrecioFinalParaDescuento(cotizacion.precio);
+				setShowTemucoAlert(true);
+			} else {
+				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
+				setFormData({
+					nombre: "",
+					telefono: "",
+					email: "",
+					origen: "Aeropuerto La Araucanía",
+					destino: "",
+					fecha: "",
+					hora: "",
+					pasajeros: "1",
+					mensaje: "",
+				});
+			}
 
 			if (typeof gtag === "function") {
 				gtag("event", "conversion", {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
 				});
 			}
-
-			setFormData({
-				nombre: "",
-				telefono: "",
-				email: "",
-				origen: "Aeropuerto La Araucanía",
-				destino: "",
-				fecha: "",
-				hora: "",
-				pasajeros: "1",
-				mensaje: "",
-			});
 		} catch (error) {
 			console.error("Error al enviar el formulario:", error);
 			alert(`Error: ${error.message}`);
@@ -273,11 +327,69 @@ function App() {
 
 	const maxPasajeros = useMemo(() => {
 		const destino = destinos.find((d) => d.nombre === formData.destino);
-		return destino?.maxPasajeros || 7; // Límite por defecto 7
+		return destino?.maxPasajeros || 7;
+	}, [formData.destino]);
+
+	// --- MEJORA: Calcular dinámicamente la fecha y hora mínimas permitidas ---
+	const minDateTime = useMemo(() => {
+		const destino = destinos.find((d) => d.nombre === formData.destino);
+		const horasAnticipacion = destino?.minHorasAnticipacion || 24;
+
+		const fechaMinima = new Date();
+		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
+
+		const anio = fechaMinima.getFullYear();
+		const mes = String(fechaMinima.getMonth() + 1).padStart(2, "0");
+		const dia = String(fechaMinima.getDate()).padStart(2, "0");
+
+		return `${anio}-${mes}-${dia}`;
 	}, [formData.destino]);
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
+			<AlertDialog open={showTemucoAlert} onOpenChange={setShowTemucoAlert}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							¡Descuento Especial para tu Viaje a Temuco!
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							Hemos recibido tu cotización. Si pagas por transferencia bancaria,
+							obtienes un **20% de descuento**.
+							<br />
+							<br />
+							Precio Normal: $
+							{new Intl.NumberFormat("es-CL").format(
+								precioFinalParaDescuento
+							)}{" "}
+							CLP
+							<br />
+							<strong className="text-primary text-lg">
+								Precio con Descuento: $
+								{new Intl.NumberFormat("es-CL").format(
+									precioFinalParaDescuento * 0.8
+								)}{" "}
+								CLP
+							</strong>
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={handleCloseAlert}>
+							Cerrar
+						</AlertDialogCancel>
+						<AlertDialogAction asChild>
+							<a
+								href="https://wa.me/56936643540?text=Hola,%20quisiera%20pagar%20mi%20reserva%20a%20Temuco%20con%20descuento%20por%20transferencia."
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								Pagar por WhatsApp
+							</a>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
 			{/* Header */}
 			<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
 				<div className="container mx-auto px-4">
@@ -419,6 +531,7 @@ function App() {
 										name="fecha"
 										value={formData.fecha}
 										onChange={handleInputChange}
+										min={minDateTime} // Limitar fechas pasadas
 										required
 									/>
 								</div>
@@ -826,6 +939,7 @@ function App() {
 												name="fecha"
 												value={formData.fecha}
 												onChange={handleInputChange}
+												min={minDateTime} // Limitar fechas pasadas
 												required
 											/>
 										</div>
