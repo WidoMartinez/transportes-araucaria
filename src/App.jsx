@@ -30,6 +30,8 @@ import heroVan from "./assets/hero-van.png";
 import temucoImg from "./assets/temuco.jpg";
 import villarricaImg from "./assets/villarrica.jpg";
 import puconImg from "./assets/pucon.jpg";
+import logo from "./assets/logo.png"; // Logo para el encabezado
+import logoblanco from "./assets/logoblanco.png"; // Logo para el pie de página
 
 function App() {
 	const [formData, setFormData] = useState({
@@ -55,7 +57,6 @@ function App() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
-		// Identifica si el formulario es el del 'hero' (no tiene campo de nombre)
 		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
 
 		const dataToSend = {
@@ -65,12 +66,10 @@ function App() {
 				: "Formulario de Contacto - Transportes Araucaria",
 		};
 
-		// Para el formulario del hero, el nombre no es requerido, pero lo seteamos para el backend
 		if (isHeroForm && !dataToSend.nombre) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
 
-		// **CORRECCIÓN:** Usar la nueva URL del servidor de Render
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
 			"https://transportes-araucaria.onrender.com";
@@ -89,8 +88,6 @@ function App() {
 			if (response.ok) {
 				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
 
-				// --- INICIO DE LA MODIFICACIÓN ---
-				// ¡IMPORTANTE! Reemplaza el texto de abajo con la etiqueta que obtuviste de Google Ads.
 				const conversionLabel = "8GVlCLP-05MbEObh6KZB";
 
 				if (typeof gtag === "function") {
@@ -98,9 +95,7 @@ function App() {
 						send_to: `AW-17529712870/${conversionLabel}`,
 					});
 				}
-				// --- FIN DE LA MODIFICACIÓN ---
 
-				// Limpiar el formulario después del envío exitoso
 				setFormData({
 					nombre: "",
 					telefono: "",
@@ -195,13 +190,14 @@ function App() {
 		<div className="min-h-screen bg-background text-foreground">
 			{/* Header */}
 			<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
-				<div className="container mx-auto px-4 py-4">
-					<div className="flex justify-between items-center">
-						<div className="flex items-center space-x-2">
-							<Car className="h-8 w-8 text-primary" />
-							<h1 className="text-2xl font-bold text-primary">
-								Transportes Araucaria
-							</h1>
+				<div className="container mx-auto px-4">
+					<div className="flex justify-between items-center h-19">
+						<div>
+							<img
+								src={logo}
+								alt="Transportes Araucaria Logo"
+								className="h-28"
+							/>
 						</div>
 						<nav className="hidden md:flex space-x-6">
 							<a
@@ -237,14 +233,14 @@ function App() {
 						</nav>
 						<div className="flex items-center space-x-4">
 							<a
-								href="tel:+56964355581"
+								href="tel:+56936643540"
 								className="hidden md:flex items-center space-x-2 text-sm text-foreground hover:text-primary"
 							>
 								<Phone className="h-4 w-4" />
-								<span>+56964355581</span>
+								<span>+56 9 3664 3540</span>
 							</a>
 							<a
-								href="https://wa.me/56964355581"
+								href="https://wa.me/56936643540"
 								target="_blank"
 								rel="noopener noreferrer"
 							>
@@ -589,10 +585,10 @@ function App() {
 									<div>
 										<p className="font-semibold">Teléfono</p>
 										<a
-											href="tel:+56964355581"
+											href="tel:+56936643540"
 											className="text-muted-foreground hover:text-primary"
 										>
-											+56964355581
+											+56 9 3664 3540
 										</a>
 									</div>
 								</div>
@@ -757,9 +753,12 @@ function App() {
 				<div className="container mx-auto px-4">
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-8">
 						<div>
-							<div className="flex items-center space-x-2 mb-4">
-								<Car className="h-8 w-8" />
-								<h3 className="text-xl font-bold">Transportes Araucaria</h3>
+							<div>
+								<img
+									src={logoblanco}
+									alt="Transportes Araucaria Logo"
+									className="h-26 mb-4"
+								/>
 							</div>
 							<p className="opacity-90 mb-4">
 								Tu mejor opción para traslados desde el Aeropuerto La Araucanía
@@ -809,8 +808,8 @@ function App() {
 							<h4 className="text-lg font-semibold mb-4">Contacto</h4>
 							<div className="space-y-2 opacity-90">
 								<p>
-									<a href="tel:+56964355581" className="hover:underline">
-										+56964355581
+									<a href="tel:+56936643540" className="hover:underline">
+										+56 9 3664 3540
 									</a>
 								</p>
 								<p>contacto@transportesaraucaria.cl</p>
