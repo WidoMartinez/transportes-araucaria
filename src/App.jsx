@@ -122,7 +122,7 @@ function App() {
 		{
 			nombre: "Temuco",
 			descripcion: "Centro comercial y administrativo de La Araucanía",
-			precio: "$15.000",
+			precio: "$20.000",
 			tiempo: "45 min",
 			imagen: temucoImg,
 		},
