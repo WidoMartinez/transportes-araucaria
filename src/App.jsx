@@ -161,6 +161,7 @@ function App() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showDiscountAlert, setShowDiscountAlert] = useState(false);
 	const [alertContent, setAlertContent] = useState(null);
+	const [phoneError, setPhoneError] = useState("");
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -168,6 +169,11 @@ function App() {
 		);
 		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
 	}, [formData.destino, formData.pasajeros]);
+
+	const validarTelefono = (telefono) => {
+		const regex = /^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/;
+		return regex.test(telefono);
+	};
 
 	const validarHorarioReserva = () => {
 		const destinoSeleccionado = destinos.find(
@@ -202,6 +208,9 @@ function App() {
 			...prev,
 			[name]: value,
 		}));
+		if (name === "telefono") {
+			setPhoneError("");
+		}
 	};
 
 	useEffect(() => {
@@ -237,6 +246,15 @@ function App() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+
+		if (!validarTelefono(formData.telefono)) {
+			setPhoneError(
+				"Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
+			);
+			return;
+		}
+		setPhoneError("");
+
 		const validacion = validarHorarioReserva();
 		if (!validacion.esValido) {
 			alert(validacion.mensaje);
@@ -586,6 +604,9 @@ function App() {
 										onChange={handleInputChange}
 										required
 									/>
+									{phoneError && (
+										<p className="text-red-500 text-xs mt-1">{phoneError}</p>
+									)}
 								</div>
 								<Button
 									type="submit"
@@ -917,6 +938,11 @@ function App() {
 												onChange={handleInputChange}
 												required
 											/>
+											{phoneError && (
+												<p className="text-red-500 text-xs mt-1">
+													{phoneError}
+												</p>
+											)}
 										</div>
 									</div>
 									<div>
