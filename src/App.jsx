@@ -23,6 +23,7 @@ import {
 	Plane,
 	CheckCircle,
 	MessageCircle,
+	LoaderCircle, // Icono de carga
 } from "lucide-react";
 
 // Importar imágenes
@@ -50,6 +51,9 @@ function App() {
 		precio: null,
 		vehiculo: null,
 	});
+
+	// **NUEVO ESTADO**: para controlar el estado de envío del formulario
+	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	// --- ESTRUCTURA DE PRECIOS ESCALONADOS ---
 	const destinos = [
@@ -94,7 +98,6 @@ function App() {
 				let vehiculoAsignado;
 				let precioFinal;
 
-				// --- LÓGICA DE CÁLCULO ESCALONADO ---
 				if (numPasajeros <= 2) {
 					precioFinal = destinoSeleccionado.precioBase;
 				} else {
@@ -105,14 +108,13 @@ function App() {
 							destinoSeleccionado.precioPorPasajeroAdicional;
 				}
 
-				// Asignación de vehículo
 				if (numPasajeros >= 1 && numPasajeros <= 4) {
 					vehiculoAsignado = "Sedan 5 Puertas";
 				} else if (numPasajeros >= 5 && numPasajeros <= 15) {
 					vehiculoAsignado = "Van de Pasajeros";
 				} else {
 					vehiculoAsignado = "Consultar disponibilidad";
-					precioFinal = null; // No se puede cotizar automáticamente
+					precioFinal = null;
 				}
 
 				setCotizacion({
@@ -137,10 +139,14 @@ function App() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		// **MODIFICACIÓN**: Si ya se está enviando, no hacer nada
+		if (isSubmitting) return;
+
+		// **MODIFICACIÓN**: Iniciar el estado de envío
+		setIsSubmitting(true);
 
 		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
 
-		// **CORRECCIÓN CLAVE**: Se construye el objeto final para enviar, incluyendo la cotización.
 		const dataToSend = {
 			...formData,
 			precio: cotizacion.precio,
@@ -199,6 +205,9 @@ function App() {
 		} catch (error) {
 			console.error("Error al enviar el formulario:", error);
 			alert(`Error: ${error.message}`);
+		} finally {
+			// **MODIFICACIÓN**: Restablecer el estado de envío, tanto si hay éxito como si hay error
+			setIsSubmitting(false);
 		}
 	};
 
@@ -415,11 +424,20 @@ function App() {
 										required
 									/>
 								</div>
+								{/* **MODIFICACIÓN**: Deshabilitar botón y cambiar texto durante el envío */}
 								<Button
 									type="submit"
 									className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
+									disabled={isSubmitting}
 								>
-									Reservar
+									{isSubmitting ? (
+										<>
+											<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+											Enviando...
+										</>
+									) : (
+										"Reservar"
+									)}
 								</Button>
 							</form>
 							{cotizacion.precio && (
@@ -852,11 +870,20 @@ function App() {
 											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
 										/>
 									</div>
+									{/* **MODIFICACIÓN**: Deshabilitar botón y cambiar texto durante el envío */}
 									<Button
 										type="submit"
 										className="w-full bg-primary hover:bg-primary/90"
+										disabled={isSubmitting}
 									>
-										Enviar Solicitud
+										{isSubmitting ? (
+											<>
+												<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+												Enviando Solicitud...
+											</>
+										) : (
+											"Enviar Solicitud"
+										)}
 									</Button>
 								</form>
 							</CardContent>
