@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
 import {
 	Card,
@@ -46,6 +46,87 @@ function App() {
 		mensaje: "",
 	});
 
+	const [cotizacion, setCotizacion] = useState({
+		precio: null,
+		vehiculo: null,
+	});
+
+	// --- ESTRUCTURA DE PRECIOS ESCALONADOS ---
+	const destinos = [
+		{
+			nombre: "Temuco",
+			descripcion: "Centro comercial y administrativo de La Araucanía",
+			tiempo: "45 min",
+			imagen: temucoImg,
+			precioBase: 20000, // Precio para 1-2 pasajeros
+			precioPorPasajeroAdicional: 3000, // Costo por cada pasajero a partir del tercero
+		},
+		{
+			nombre: "Villarrica",
+			descripcion: "Turismo y naturaleza junto al lago",
+			tiempo: "1h 15min",
+			imagen: villarricaImg,
+			precioBase: 50000,
+			precioPorPasajeroAdicional: 5000,
+		},
+		{
+			nombre: "Pucón",
+			descripcion: "Aventura, termas y volcán",
+			tiempo: "1h 30min",
+			imagen: puconImg,
+			precioBase: 60000,
+			precioPorPasajeroAdicional: 7000,
+		},
+	];
+
+	useEffect(() => {
+		const calcularCotizacion = () => {
+			if (formData.destino && formData.pasajeros) {
+				const destinoSeleccionado = destinos.find(
+					(d) => d.nombre === formData.destino
+				);
+				if (!destinoSeleccionado) {
+					setCotizacion({ precio: null, vehiculo: null });
+					return;
+				}
+
+				const numPasajeros = parseInt(formData.pasajeros);
+				let vehiculoAsignado;
+				let precioFinal;
+
+				// --- LÓGICA DE CÁLCULO ESCALONADO ---
+				if (numPasajeros <= 2) {
+					precioFinal = destinoSeleccionado.precioBase;
+				} else {
+					const pasajerosAdicionales = numPasajeros - 2;
+					precioFinal =
+						destinoSeleccionado.precioBase +
+						pasajerosAdicionales *
+							destinoSeleccionado.precioPorPasajeroAdicional;
+				}
+
+				// Asignación de vehículo
+				if (numPasajeros >= 1 && numPasajeros <= 4) {
+					vehiculoAsignado = "Sedan 5 Puertas";
+				} else if (numPasajeros >= 5 && numPasajeros <= 15) {
+					vehiculoAsignado = "Van de Pasajeros";
+				} else {
+					vehiculoAsignado = "Consultar disponibilidad";
+					precioFinal = null; // No se puede cotizar automáticamente
+				}
+
+				setCotizacion({
+					precio: precioFinal,
+					vehiculo: vehiculoAsignado,
+				});
+			} else {
+				setCotizacion({ precio: null, vehiculo: null });
+			}
+		};
+
+		calcularCotizacion();
+	}, [formData.destino, formData.pasajeros, destinos]);
+
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
 		setFormData((prev) => ({
@@ -59,8 +140,11 @@ function App() {
 
 		const isHeroForm = !e.target.querySelector('input[name="nombre"]');
 
+		// **CORRECCIÓN CLAVE**: Se construye el objeto final para enviar, incluyendo la cotización.
 		const dataToSend = {
 			...formData,
+			precio: cotizacion.precio,
+			vehiculo: cotizacion.vehiculo,
 			source: isHeroForm
 				? "Formulario Rápido (Hero)"
 				: "Formulario de Contacto - Transportes Araucaria",
@@ -117,30 +201,6 @@ function App() {
 			alert(`Error: ${error.message}`);
 		}
 	};
-
-	const destinos = [
-		{
-			nombre: "Temuco",
-			descripcion: "Centro comercial y administrativo de La Araucanía",
-			precio: "$20.000",
-			tiempo: "45 min",
-			imagen: temucoImg,
-		},
-		{
-			nombre: "Villarrica",
-			descripcion: "Turismo y naturaleza junto al lago",
-			precio: "$50.000",
-			tiempo: "1h 15min",
-			imagen: villarricaImg,
-		},
-		{
-			nombre: "Pucón",
-			descripcion: "Aventura, termas y volcán",
-			precio: "$60.000",
-			tiempo: "1h 30min",
-			imagen: puconImg,
-		},
-	];
 
 	const servicios = [
 		{
@@ -275,39 +335,56 @@ function App() {
 					</p>
 
 					{/* Formulario de reserva rápida */}
-					<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
+					<Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
 						<CardHeader>
 							<CardTitle className="text-foreground text-center text-2xl">
-								Reserva tu Transfer
+								Cotiza y Reserva tu Transfer
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<form
 								onSubmit={handleSubmit}
-								className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+								className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end"
 							>
-								<div>
-									<Label htmlFor="destino" className="text-left">
-										Destino
-									</Label>
+								<div className="text-left">
+									<Label htmlFor="destino-hero">Destino</Label>
 									<select
+										id="destino-hero"
 										name="destino"
 										value={formData.destino}
 										onChange={handleInputChange}
-										className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary"
+										className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary text-foreground"
 										required
 									>
 										<option value="">Seleccionar</option>
-										<option value="Temuco">Temuco</option>
-										<option value="Villarrica">Villarrica</option>
-										<option value="Pucón">Pucón</option>
+										{destinos.map((d) => (
+											<option key={d.nombre} value={d.nombre}>
+												{d.nombre}
+											</option>
+										))}
 									</select>
 								</div>
-								<div>
-									<Label htmlFor="fecha" className="text-left">
-										Fecha
-									</Label>
+								<div className="text-left">
+									<Label htmlFor="pasajeros-hero">Pasajeros</Label>
+									<select
+										id="pasajeros-hero"
+										name="pasajeros"
+										value={formData.pasajeros}
+										onChange={handleInputChange}
+										className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary text-foreground"
+										required
+									>
+										{[...Array(15)].map((_, i) => (
+											<option key={i + 1} value={i + 1}>
+												{i + 1} pasajero(s)
+											</option>
+										))}
+									</select>
+								</div>
+								<div className="text-left">
+									<Label htmlFor="fecha-hero">Fecha</Label>
 									<Input
+										id="fecha-hero"
 										type="date"
 										name="fecha"
 										value={formData.fecha}
@@ -315,11 +392,10 @@ function App() {
 										required
 									/>
 								</div>
-								<div>
-									<Label htmlFor="hora" className="text-left">
-										Hora
-									</Label>
+								<div className="text-left">
+									<Label htmlFor="hora-hero">Hora</Label>
 									<Input
+										id="hora-hero"
 										type="time"
 										name="hora"
 										value={formData.hora}
@@ -327,11 +403,10 @@ function App() {
 										required
 									/>
 								</div>
-								<div>
-									<Label htmlFor="telefono" className="text-left">
-										Teléfono
-									</Label>
+								<div className="text-left">
+									<Label htmlFor="telefono-hero">Teléfono</Label>
 									<Input
+										id="telefono-hero"
 										type="tel"
 										name="telefono"
 										placeholder="Ej: +569..."
@@ -340,15 +415,22 @@ function App() {
 										required
 									/>
 								</div>
-								<div className="flex items-end">
-									<Button
-										type="submit"
-										className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
-									>
-										Cotizar Ahora
-									</Button>
-								</div>
+								<Button
+									type="submit"
+									className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
+								>
+									Reservar
+								</Button>
 							</form>
+							{cotizacion.precio && (
+								<div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800 text-center transition-all duration-300 ease-in-out">
+									<p className="font-bold">
+										Precio Cotizado: $
+										{new Intl.NumberFormat("es-CL").format(cotizacion.precio)}
+									</p>
+									<p>Vehículo Asignado: {cotizacion.vehiculo}</p>
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</div>
@@ -403,7 +485,7 @@ function App() {
 						{destinos.map((destino, index) => (
 							<Card
 								key={index}
-								className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105"
+								className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 flex flex-col"
 							>
 								<div
 									className="h-48 bg-cover bg-center"
@@ -412,25 +494,31 @@ function App() {
 								<CardHeader>
 									<CardTitle className="flex justify-between items-center">
 										{destino.nombre}
-										<span className="text-2xl font-bold text-primary">
-											{destino.precio}
-										</span>
 									</CardTitle>
 									<CardDescription>{destino.descripcion}</CardDescription>
 								</CardHeader>
-								<CardContent>
-									<div className="flex justify-between items-center mb-4">
-										<div className="flex items-center space-x-2">
-											<Clock className="h-4 w-4 text-muted-foreground" />
-											<span className="text-sm">{destino.tiempo}</span>
-										</div>
-										<div className="flex items-center space-x-2">
-											<Plane className="h-4 w-4 text-muted-foreground" />
-											<span className="text-sm">Desde aeropuerto</span>
+								<CardContent className="flex-grow flex flex-col justify-between">
+									<div>
+										<p className="text-lg font-semibold text-primary mb-2">
+											Desde $
+											{new Intl.NumberFormat("es-CL").format(
+												destino.precioBase
+											)}{" "}
+											CLP
+										</p>
+										<div className="flex justify-between items-center mb-4">
+											<div className="flex items-center space-x-2">
+												<Clock className="h-4 w-4 text-muted-foreground" />
+												<span className="text-sm">{destino.tiempo}</span>
+											</div>
+											<div className="flex items-center space-x-2">
+												<Plane className="h-4 w-4 text-muted-foreground" />
+												<span className="text-sm">Desde aeropuerto</span>
+											</div>
 										</div>
 									</div>
 									<a href="#contacto">
-										<Button className="w-full">Reservar Transfer</Button>
+										<Button className="w-full mt-2">Reservar Transfer</Button>
 									</a>
 								</CardContent>
 							</Card>
@@ -641,8 +729,9 @@ function App() {
 											/>
 										</div>
 										<div>
-											<Label htmlFor="telefono">Teléfono</Label>
+											<Label htmlFor="telefono-form">Teléfono</Label>
 											<Input
+												id="telefono-form"
 												name="telefono"
 												value={formData.telefono}
 												onChange={handleInputChange}
@@ -673,6 +762,7 @@ function App() {
 										<div>
 											<Label htmlFor="destino-form">Destino</Label>
 											<select
+												id="destino-form"
 												name="destino"
 												value={formData.destino}
 												onChange={handleInputChange}
@@ -680,18 +770,21 @@ function App() {
 												required
 											>
 												<option value="">Seleccionar destino</option>
-												<option value="Temuco">Temuco</option>
-												<option value="Villarrica">Villarrica</option>
-												<option value="Pucón">Pucón</option>
+												{destinos.map((d) => (
+													<option key={d.nombre} value={d.nombre}>
+														{d.nombre}
+													</option>
+												))}
 												<option value="Otro">Otro destino</option>
 											</select>
 										</div>
 									</div>
-									<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
 											<Label htmlFor="fecha-form">Fecha</Label>
 											<Input
 												type="date"
+												id="fecha-form"
 												name="fecha"
 												value={formData.fecha}
 												onChange={handleInputChange}
@@ -702,28 +795,52 @@ function App() {
 											<Label htmlFor="hora-form">Hora</Label>
 											<Input
 												type="time"
+												id="hora-form"
 												name="hora"
 												value={formData.hora}
 												onChange={handleInputChange}
 												required
 											/>
 										</div>
-										<div>
-											<Label htmlFor="pasajeros">Pasajeros</Label>
-											<select
-												name="pasajeros"
-												value={formData.pasajeros}
-												onChange={handleInputChange}
-												className="w-full p-2 border rounded-md"
-											>
-												<option value="1">1 pasajero</option>
-												<option value="2">2 pasajeros</option>
-												<option value="3">3 pasajeros</option>
-												<option value="4">4 pasajeros</option>
-												<option value="5+">5+ pasajeros</option>
-											</select>
-										</div>
 									</div>
+									<div>
+										<Label htmlFor="pasajeros-form">Pasajeros</Label>
+										<select
+											id="pasajeros-form"
+											name="pasajeros"
+											value={formData.pasajeros}
+											onChange={handleInputChange}
+											className="w-full p-2 border rounded-md"
+										>
+											{[...Array(15)].map((_, i) => (
+												<option key={i + 1} value={i + 1}>
+													{i + 1} pasajero(s)
+												</option>
+											))}
+										</select>
+									</div>
+									{cotizacion.precio && (
+										<div className="p-4 bg-blue-100 rounded-lg text-blue-800 text-center transition-all duration-300 ease-in-out">
+											<div className="flex justify-center items-center gap-4">
+												<div>
+													<p className="font-semibold">Precio Total:</p>
+													<p className="text-2xl font-bold">
+														$
+														{new Intl.NumberFormat("es-CL").format(
+															cotizacion.precio
+														)}
+													</p>
+												</div>
+												<div className="border-l-2 border-blue-300 h-12"></div>
+												<div>
+													<p className="font-semibold">Vehículo:</p>
+													<p className="text-lg font-bold">
+														{cotizacion.vehiculo}
+													</p>
+												</div>
+											</div>
+										</div>
+									)}
 									<div>
 										<Label htmlFor="mensaje">
 											Mensaje adicional (opcional)

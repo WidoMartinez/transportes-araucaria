@@ -15,25 +15,19 @@ app.post("/send-email", async (req, res) => {
 	console.log("✅ Datos recibidos:", req.body);
 
 	const {
-		// Campos comunes
 		nombre,
 		email,
 		telefono,
 		source,
 		mensaje,
-		// Campos de Transportes Araucaria
 		origen,
 		destino,
 		fecha,
 		hora,
 		pasajeros,
-		// Campos del formulario original (AnunciAds)
-		website,
-		calculatorData,
+		precio, // Campo de cotización
+		vehiculo, // Campo de cotización
 	} = req.body;
-
-	// --- Se elimina la validación estricta para hacer el servidor más flexible ---
-	// Ahora el servidor procesará la información que reciba, sin requerir campos obligatorios.
 
 	const transporter = nodemailer.createTransport({
 		host: process.env.EMAIL_HOST,
@@ -47,103 +41,79 @@ app.post("/send-email", async (req, res) => {
 		socketTimeout: 15000,
 	});
 
-	let emailSubject = `Nuevo Contacto desde ${source || "Sitio Web"}`;
-	let emailHtml;
+	const emailSubject = `Nueva Cotización de Transfer: ${
+		destino || "Destino no especificado"
+	}`;
+	const formattedPrice = precio
+		? `$${new Intl.NumberFormat("es-CL").format(precio)} CLP`
+		: "A consultar";
 
-	// --- Lógica para determinar el tipo de formulario ---
-	const isTransportForm = origen && destino && fecha && hora;
-
-	if (isTransportForm) {
-		// --- PLANTILLA PARA TRANSPORTES ARAUCARIA ---
-		emailSubject = `Nueva Cotización de Transfer: ${origen} a ${destino}`;
-
-		// Construcción dinámica de los detalles del cliente para el email
-		let clienteHtml = "";
-		if (nombre) clienteHtml += `<li><strong>Nombre:</strong> ${nombre}</li>`;
-		if (email)
-			clienteHtml += `<li><strong>Email:</strong> <a href="mailto:${email}">${email}</a></li>`;
-		if (telefono)
-			clienteHtml += `<li><strong>Teléfono:</strong> <a href="tel:${telefono}">${telefono}</a></li>`;
-
-		emailHtml = `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-                <h1 style="color: #1e40af;">Nueva Solicitud de Cotización de Transfer</h1>
-                <p><strong>Origen del Formulario:</strong> ${
-									source || "Transportes Araucaria"
+	const emailHtml = `
+        <div style="font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #003366; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Nueva Solicitud de Cotización</h1>
+                <p style="margin: 5px 0 0; color: #b3cde0;">Recibida desde: ${
+									source || "Sitio Web"
 								}</p>
-                
-                ${
-									clienteHtml
-										? `
-                <h2 style="border-bottom: 2px solid #1e40af; padding-bottom: 5px; color: #1e40af;">Detalles del Cliente</h2>
-                <ul>
-                    ${clienteHtml}
-                </ul>`
-										: ""
-								}
+            </div>
+            
+            <div style="padding: 20px;">
+                <div style="background-color: #e0f2fe; border: 2px solid #3b82f6; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 25px;">
+                    <h2 style="margin: 0 0 10px; font-size: 20px; color: #1e3a8a;">Resumen de la Cotización</h2>
+                    <p style="margin: 5px 0; font-size: 18px;"><strong>Valor del Viaje:</strong> <span style="font-size: 22px; font-weight: bold; color: #1e3a8a;">${formattedPrice}</span></p>
+                    <p style="margin: 5px 0; font-size: 16px;"><strong>Vehículo Sugerido:</strong> ${
+											vehiculo || "No asignado"
+										}</p>
+                </div>
 
-                <h2 style="border-bottom: 2px solid #1e40af; padding-bottom: 5px; color: #1e40af;">Detalles del Viaje</h2>
-                <ul>
-                    <li><strong>Origen:</strong> ${origen}</li>
-                    <li><strong>Destino:</strong> ${destino}</li>
-                    <li><strong>Fecha:</strong> ${fecha}</li>
-                    <li><strong>Hora:</strong> ${hora}</li>
-                    <li><strong>Pasajeros:</strong> ${
+                <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px;">Detalles del Viaje</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Origen:</td><td style="padding: 8px;">${
+											origen || "No especificado"
+										}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Destino:</td><td style="padding: 8px;">${
+											destino || "No especificado"
+										}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Fecha:</td><td style="padding: 8px;">${
+											fecha || "No especificada"
+										}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Hora:</td><td style="padding: 8px;">${
+											hora || "No especificada"
+										}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold;">Nº de Pasajeros:</td><td style="padding: 8px;">${
 											pasajeros || "No especificado"
-										}</li>
-                </ul>
+										}</td></tr>
+                </table>
+
+                <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px; margin-top: 25px;">Información del Cliente</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Nombre:</td><td style="padding: 8px;">${
+											nombre || "No especificado"
+										}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Teléfono:</td><td style="padding: 8px;"><a href="tel:${telefono}" style="color: #3b82f6;">${
+		telefono || "No especificado"
+	}</a></td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold;">Email:</td><td style="padding: 8px;"><a href="mailto:${email}" style="color: #3b82f6;">${
+		email || "No especificado"
+	}</a></td></tr>
+                </table>
 
                 ${
 									mensaje
 										? `
-                <h2 style="border-bottom: 2px solid #1e40af; padding-bottom: 5px; color: #1e40af;">Mensaje Adicional</h2>
-                <div style="background-color: #f8f9fa; border-left: 4px solid #ccc; padding: 10px; margin-top: 10px;">
-                    <p style="margin: 0;">${mensaje}</p>
+                <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px; margin-top: 25px;">Mensaje Adicional</h2>
+                <div style="background-color: #f8f9fa; border-left: 4px solid #ccc; padding: 15px; margin-top: 10px;">
+                    <p style="margin: 0; font-style: italic;">"${mensaje}"</p>
                 </div>
                 `
 										: ""
 								}
-
-                <p style="margin-top: 20px; font-style: italic;">
-                    Este es un lead de una cotización. Contactar para completar los detalles si es necesario.
-                </p>
             </div>
-        `;
-	} else {
-		// --- PLANTILLA GENÉRICA PARA ANUNCIADS U OTROS ---
-		let additionalDataHtml = "";
-		if (calculatorData) {
-			additionalDataHtml = `
-                <h2>Detalles de la Calculadora:</h2>
-                <ul>
-                    <li><strong>Presupuesto Mensual:</strong> ${calculatorData.budget}</li>
-                    <li><strong>Objetivos:</strong> ${calculatorData.goals}</li>
-                </ul>`;
-		} else if (mensaje) {
-			additionalDataHtml = `<h2>Mensaje Adicional:</h2><pre>${mensaje}</pre>`;
-		}
-
-		emailHtml = `
-            <h1>Nuevo Contacto desde ${source || "tu sitio web"}</h1>
-            <p>Has recibido un nuevo mensaje a través de tu sitio web.</p>
-            <h2>Detalles del Contacto:</h2>
-            <ul>
-                ${nombre ? `<li><strong>Nombre:</strong> ${nombre}</li>` : ""}
-                ${email ? `<li><strong>Email:</strong> ${email}</li>` : ""}
-                ${
-									telefono
-										? `<li><strong>Teléfono:</strong> ${telefono}</li>`
-										: ""
-								}
-                ${
-									website
-										? `<li><strong>Sitio Web:</strong> <a href="${website}">${website}</a></li>`
-										: ""
-								}
-            </ul>
-            ${additionalDataHtml}
-        `;
-	}
+            <div style="background-color: #f1f5f9; padding: 15px; text-align: center; font-size: 12px; color: #64748b;">
+                <p>Este correo fue enviado automáticamente desde el sitio web de Transportes Araucaria.</p>
+            </div>
+        </div>
+    `;
 
 	const mailOptions = {
 		from: `"Notificación Sitio Web" <${process.env.EMAIL_USER}>`,
