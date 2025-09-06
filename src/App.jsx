@@ -35,6 +35,7 @@ import {
 	MessageCircle,
 	LoaderCircle,
 } from "lucide-react";
+import Destacados from "@/components/Destacados."; // <-- 1. IMPORTAR EL NUEVO COMPONENTE
 
 // Importar imágenes
 import heroVan from "./assets/hero-van.png";
@@ -43,6 +44,7 @@ import villarricaImg from "./assets/villarrica.jpg";
 import puconImg from "./assets/pucon.jpg";
 import logo from "./assets/logo.png";
 import logoblanco from "./assets/logoblanco.png";
+import corralcoImg from "./assets/corralco.jpg"; // <-- 2. IMPORTAR LA NUEVA IMAGEN
 
 // --- Estructura de datos con porcentaje de pasajero adicional al 5% ---
 const destinos = [
@@ -108,6 +110,19 @@ const destinos = [
 			van: { base: 250000, porcentajeAdicional: 0.05 },
 		},
 	},
+];
+
+// --- 3. DATOS PARA LA NUEVA SECCIÓN DE DESTACADOS ---
+const destacadosData = [
+	{
+		nombre: "Corralco",
+		titulo: "Visita Corralco en Temporada de Nieve",
+		subtitulo: "Una Aventura Invernal Inolvidable",
+		descripcion:
+			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
+		imagen: corralcoImg,
+	},
+	// Puedes añadir más destinos aquí en el futuro
 ];
 
 // --- LÓGICA DE CÁLCULO CORREGIDA ---
@@ -468,10 +483,10 @@ function App() {
 								Destinos
 							</a>
 							<a
-								href="#destinos"
+								href="#destacados"
 								className="text-foreground hover:text-primary transition-colors"
 							>
-								Tarifas
+								Temporada
 							</a>
 							<a
 								href="#contacto"
@@ -506,7 +521,7 @@ function App() {
 			{/* Hero Section */}
 			<section
 				id="inicio"
-				className="relative bg-gradient-to-r from-primary to-secondary text-white py-24"
+				className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center" // <-- CORRECCIÓN APLICADA AQUÍ
 			>
 				<div className="absolute inset-0 bg-black/30"></div>
 				<div
@@ -727,6 +742,9 @@ function App() {
 					</div>
 				</div>
 			</section>
+
+			{/* 4. RENDERIZAR EL NUEVO COMPONENTE */}
+			<Destacados destinos={destacadosData} />
 
 			{/* ¿Por qué elegirnos? */}
 			<section className="py-20 bg-primary text-white">
