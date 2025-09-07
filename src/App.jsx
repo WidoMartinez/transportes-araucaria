@@ -29,6 +29,9 @@ import temucoImg from "./assets/temuco.jpg";
 import villarricaImg from "./assets/villarrica.jpg";
 import puconImg from "./assets/pucon.jpg";
 import corralcoImg from "./assets/corralco.jpg";
+import lonquimayImg from "./assets/lonquimay.jpg";
+import conguillioImg from "./assets/conguilllio.jpg";
+import icalmaImg from "./assets/icalma.jpg";
 
 // --- DATOS Y LÓGICA ---
 
@@ -105,6 +108,30 @@ const destacadosData = [
 		descripcion:
 			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
 		imagen: corralcoImg,
+	},
+	{
+		nombre: "Lonquimay",
+		titulo: "Descubre Lonquimay y sus Araucarias",
+		subtitulo: "Naturaleza y cultura pehuenche te esperan",
+		descripcion:
+			"Explora los paisajes únicos de Lonquimay, con sus bosques de araucarias milenarias y la imponente presencia del volcán. Un destino ideal para el ecoturismo y la aventura.",
+		imagen: lonquimayImg,
+	},
+	{
+		nombre: "Parque Nacional Conguillío",
+		titulo: "Maravíllate en el Parque Nacional Conguillío",
+		subtitulo: "Un viaje a la tierra de los dinosaurios",
+		descripcion:
+			"Conocido por sus paisajes prehistóricos, lagos de aguas cristalinas y el majestuoso Volcán Llaima. Un lugar imperdible para los amantes del trekking y la fotografía.",
+		imagen: conguillioImg,
+	},
+	{
+		nombre: "Lago Icalma",
+		titulo: "Relajo y desconexión en Lago Icalma",
+		subtitulo: "Un paraíso escondido en la Araucanía Andina",
+		descripcion:
+			"Disfruta de la tranquilidad de sus aguas y la belleza de sus paisajes. Ideal para deportes acuáticos, pesca y caminatas en un entorno natural privilegiado.",
+		imagen: icalmaImg,
 	},
 ];
 
