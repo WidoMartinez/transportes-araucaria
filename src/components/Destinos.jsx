@@ -7,60 +7,71 @@ import {
 	CardTitle,
 } from "./ui/card";
 import { Button } from "./ui/button";
-import { Clock, Plane } from "lucide-react";
+import { Clock, Plane, ArrowRight } from "lucide-react";
 
 function Destinos({ destinos }) {
 	return (
-		<section id="destinos" className="py-20">
+		<section id="destinos" className="py-20 bg-white">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
-					<h2 className="text-4xl font-bold mb-4">Principales Destinos</h2>
+					<h2 className="text-4xl font-bold mb-4 text-gray-800">
+						Principales Destinos
+					</h2>
 					<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
 						Conectamos el aeropuerto con los destinos más populares de La
 						Araucanía
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 					{destinos.map((destino, index) => (
 						<Card
 							key={index}
-							className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 flex flex-col"
+							className="group relative overflow-hidden rounded-lg shadow-lg hover:shadow-2xl transition-all duration-500 ease-in-out transform hover:-translate-y-2"
 						>
 							<div
-								className="h-48 bg-cover bg-center"
+								className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-in-out group-hover:scale-110"
 								style={{ backgroundImage: `url(${destino.imagen})` }}
-							></div>
-							<CardHeader>
-								<CardTitle className="flex justify-between items-center">
-									{destino.nombre}
-								</CardTitle>
-								<CardDescription>{destino.descripcion}</CardDescription>
-							</CardHeader>
-							<CardContent className="flex-grow flex flex-col justify-between">
-								<div>
-									<p className="text-lg font-semibold text-primary mb-2">
-										Desde $
-										{new Intl.NumberFormat("es-CL").format(
-											destino.precios.sedan.base
-										)}{" "}
-										CLP
-									</p>
-									<div className="flex justify-between items-center mb-4">
+							/>
+							<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+							<div className="relative flex flex-col h-full p-6 text-white justify-end">
+								<CardHeader className="p-0">
+									<CardTitle className="text-3xl font-bold text-shadow-lg">
+										{destino.nombre}
+									</CardTitle>
+									<CardDescription className="text-white/90 text-shadow">
+										{destino.descripcion}
+									</CardDescription>
+								</CardHeader>
+								<CardContent className="p-0 mt-4">
+									<div className="flex justify-between items-center mb-6">
 										<div className="flex items-center space-x-2">
-											<Clock className="h-4 w-4 text-muted-foreground" />
-											<span className="text-sm">{destino.tiempo}</span>
+											<Clock className="h-5 w-5" />
+											<span>{destino.tiempo}</span>
 										</div>
 										<div className="flex items-center space-x-2">
-											<Plane className="h-4 w-4 text-muted-foreground" />
-											<span className="text-sm">Desde aeropuerto</span>
+											<Plane className="h-5 w-5" />
+											<span>Desde aeropuerto</span>
 										</div>
 									</div>
-								</div>
-								<a href="#contacto">
-									<Button className="w-full mt-2">Reservar Transfer</Button>
-								</a>
-							</CardContent>
+
+									<div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+										<p className="text-2xl font-bold mb-4">
+											Desde ${" "}
+											{new Intl.NumberFormat("es-CL").format(
+												destino.precios.sedan.base
+											)}{" "}
+											CLP
+										</p>
+										<a href="#contacto">
+											<Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg py-3">
+												Reservar Ahora <ArrowRight className="ml-2 h-5 w-5" />
+											</Button>
+										</a>
+									</div>
+								</CardContent>
+							</div>
 						</Card>
 					))}
 				</div>

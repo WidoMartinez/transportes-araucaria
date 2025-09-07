@@ -1,82 +1,115 @@
 import React from "react";
-import { Button } from "./ui/button";
-import logoblanco from "../assets/logoblanco.png";
+import logoBlanco from "../assets/logoblanco.png";
+import { Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
+
+// Componente interno para manejar los enlaces del footer de manera consistente
+const FooterLink = ({ href, children }) => (
+	<a
+		href={href}
+		className="text-muted-foreground hover:text-white transition-colors duration-300"
+	>
+		{children}
+	</a>
+);
+
+// Componente interno para los iconos de redes sociales
+const SocialIcon = ({ href, icon: Icon }) => (
+	<a
+		href={href}
+		target="_blank"
+		rel="noopener noreferrer"
+		className="text-muted-foreground hover:text-white transition-colors duration-300"
+	>
+		<Icon className="h-6 w-6" />
+	</a>
+);
 
 function Footer() {
 	return (
-		<footer className="bg-primary text-white py-12">
-			<div className="container mx-auto px-4">
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-					<div>
-						<div>
-							<img
-								src={logoblanco}
-								alt="Transportes Araucaria Logo"
-								className="h-26 mb-4"
-							/>
-						</div>
-						<p className="opacity-90 mb-4">
-							Tu mejor opción para traslados desde el Aeropuerto La Araucanía
-							hacia toda la región.
+		<footer className="bg-gray-900 text-white">
+			<div className="container mx-auto px-4 py-16">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+					{/* Columna 1: Logo y Descripción */}
+					<div className="space-y-4">
+						<img
+							src={logoBlanco}
+							alt="Transportes Araucanía Logo"
+							className="h-20"
+						/>
+						<p className="text-muted-foreground">
+							Ofrecemos servicios de transporte privado de pasajeros con la más
+							alta calidad, seguridad y puntualidad en la Región de La
+							Araucanía.
 						</p>
-						<div className="flex space-x-4">
-							<Button
-								variant="outline"
-								size="sm"
-								className="text-white border-white hover:bg-white hover:text-primary"
+					</div>
+
+					{/* Columna 2: Navegación */}
+					<div className="space-y-4">
+						<h3 className="font-semibold text-lg tracking-wider uppercase">
+							Navegación
+						</h3>
+						<nav className="flex flex-col space-y-2">
+							<FooterLink href="#servicios">Servicios</FooterLink>
+							<FooterLink href="#destinos">Destinos</FooterLink>
+							<FooterLink href="#contacto">Contacto</FooterLink>
+							<FooterLink href="#">Términos y Condiciones</FooterLink>
+						</nav>
+					</div>
+
+					{/* Columna 3: Contacto */}
+					<div className="space-y-4">
+						<h3 className="font-semibold text-lg tracking-wider uppercase">
+							Contacto
+						</h3>
+						<div className="flex flex-col space-y-2 text-muted-foreground">
+							<p>Temuco, Chile</p>
+							<a
+								href="tel:+56936643540"
+								className="hover:text-white transition-colors duration-300"
 							>
-								Facebook
-							</Button>
-							<Button
-								variant="outline"
-								size="sm"
-								className="text-white border-white hover:bg-white hover:text-primary"
+								+56 9 3664 3540
+							</a>
+							<a
+								href="mailto:contacto@transportesaraucaria.cl"
+								className="hover:text-white transition-colors duration-300"
 							>
-								Instagram
-							</Button>
+								contacto@transportesaraucaria.cl
+							</a>
 						</div>
 					</div>
 
-					<div>
-						<h4 className="text-lg font-semibold mb-4">Servicios</h4>
-						<ul className="space-y-2 opacity-90">
-							<li>Transfer Aeropuerto - Temuco</li>
-							<li>Transfer Aeropuerto - Villarrica</li>
-							<li>Transfer Aeropuerto - Pucón</li>
-							<li>Tours personalizados</li>
-							<li>Traslados empresariales</li>
-						</ul>
-					</div>
-
-					<div>
-						<h4 className="text-lg font-semibold mb-4">Destinos</h4>
-						<ul className="space-y-2 opacity-90">
-							<li>Temuco Centro</li>
-							<li>Villarrica</li>
-							<li>Pucón</li>
-							<li>Lican Ray</li>
-							<li>Curarrehue</li>
-						</ul>
-					</div>
-
-					<div>
-						<h4 className="text-lg font-semibold mb-4">Contacto</h4>
-						<div className="space-y-2 opacity-90">
-							<p>
-								<a href="tel:+56936643540" className="hover:underline">
-									+56 9 3664 3540
-								</a>
-							</p>
-							<p>contacto@transportesaraucaria.cl</p>
-							<p>Temuco, La Araucanía</p>
-							<p>Disponible 24/7</p>
+					{/* Columna 4: Redes Sociales */}
+					<div className="space-y-4">
+						<h3 className="font-semibold text-lg tracking-wider uppercase">
+							Síguenos
+						</h3>
+						<div className="flex space-x-4">
+							<SocialIcon href="#" icon={Facebook} />
+							<SocialIcon href="#" icon={Instagram} />
+							<SocialIcon href="#" icon={Twitter} />
+							<SocialIcon href="#" icon={Linkedin} />
 						</div>
 					</div>
 				</div>
+			</div>
 
-				<div className="border-t border-white/20 mt-8 pt-8 text-center opacity-90">
+			{/* Barra inferior del Footer */}
+			<div className="border-t border-gray-800">
+				<div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
 					<p>
-						&copy; 2024 Transportes Araucaria. Todos los derechos reservados.
+						&copy; {new Date().getFullYear()} Transportes Araucanía. Todos los
+						derechos reservados.
+					</p>
+					<p className="mt-4 md:mt-0">
+						Diseñado y desarrollado por{" "}
+						<a
+							href="https://widomartinez.com"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="hover:text-white font-semibold transition-colors duration-300"
+						>
+							Wido Martinez
+						</a>
 					</p>
 				</div>
 			</div>
