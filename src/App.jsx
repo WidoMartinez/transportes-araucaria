@@ -35,7 +35,7 @@ import {
 	MessageCircle,
 	LoaderCircle,
 } from "lucide-react";
-import Destacados from "@/components/Destacados."; // <-- 1. IMPORTAR EL NUEVO COMPONENTE
+import Destacados from "./components/Destacados.";
 
 // Importar imágenes
 import heroVan from "./assets/hero-van.png";
@@ -44,9 +44,11 @@ import villarricaImg from "./assets/villarrica.jpg";
 import puconImg from "./assets/pucon.jpg";
 import logo from "./assets/logo.png";
 import logoblanco from "./assets/logoblanco.png";
-import corralcoImg from "./assets/corralco.jpg"; // <-- 2. IMPORTAR LA NUEVA IMAGEN
+import corralcoImg from "./assets/corralco.jpg";
+import conguillioImg from "./assets/conguilllio.jpg"; // <-- NUEVA IMAGEN
+import lonquimayImg from "./assets/lonquimay.jpg"; // <-- NUEVA IMAGEN
+import icalmaImg from "./assets/icalma.jpg"; // <-- NUEVA IMAGEN
 
-// --- Estructura de datos con porcentaje de pasajero adicional al 5% ---
 const destinos = [
 	{
 		nombre: "Temuco",
@@ -112,20 +114,42 @@ const destinos = [
 	},
 ];
 
-// --- 3. DATOS PARA LA NUEVA SECCIÓN DE DESTACADOS ---
+// --- DATOS PARA LA NUEVA SECCIÓN DE DESTACADOS (ACTUALIZADO) ---
 const destacadosData = [
 	{
 		nombre: "Corralco",
 		titulo: "Visita Corralco en Temporada de Nieve",
 		subtitulo: "Una Aventura Invernal Inolvidable",
 		descripcion:
-			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
+			"Disfruta de la majestuosa nieve en el centro de ski Corralco. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes a los pies del volcán Lonquimay.",
 		imagen: corralcoImg,
 	},
-	// Puedes añadir más destinos aquí en el futuro
+	{
+		nombre: "Conguillío",
+		titulo: "Explora el Parque Nacional Conguillío",
+		subtitulo: "Un Viaje a la Prehistoria de la Tierra",
+		descripcion:
+			"Te llevamos al corazón de la Araucanía Andina para descubrir paisajes únicos, bosques de araucarias milenarias, lagos de origen volcánico y el imponente Volcán Llaima. Un destino ideal para el trekking y la fotografía.",
+		imagen: conguillioImg,
+	},
+	{
+		nombre: "Lonquimay",
+		titulo: "Descubre Lonquimay y sus Túneles",
+		subtitulo: "Cultura Pehuenche y Paisajes Nevados",
+		descripcion:
+			"Recorre la Cuesta Las Raíces y atraviesa el histórico túnel Las Raíces, el más largo de su tipo en Sudamérica. Conoce la cultura local y disfruta de paisajes que te dejarán sin aliento, especialmente en invierno.",
+		imagen: lonquimayImg,
+	},
+	{
+		nombre: "Icalma",
+		titulo: "Relájate en el Lago Icalma",
+		subtitulo: "Naturaleza Pura en la Frontera",
+		descripcion:
+			"Visita la Villa Ecológica de Icalma y su hermoso lago de aguas cristalinas, rodeado de bosques de araucarias. Un lugar perfecto para la desconexión, la pesca deportiva y el contacto directo con la naturaleza.",
+		imagen: icalmaImg,
+	},
 ];
 
-// --- LÓGICA DE CÁLCULO CORREGIDA ---
 const calcularCotizacion = (destino, pasajeros) => {
 	if (!destino || !pasajeros) {
 		return { precio: null, vehiculo: null };
@@ -140,7 +164,6 @@ const calcularCotizacion = (destino, pasajeros) => {
 		const precios = destino.precios.sedan;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
-		// CORRECCIÓN: El precio base es para 1 pasajero. Se suma el adicional a partir del segundo.
 		const pasajerosAdicionales = numPasajeros - 1;
 		const costoAdicional = precios.base * precios.porcentajeAdicional;
 		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
@@ -149,7 +172,6 @@ const calcularCotizacion = (destino, pasajeros) => {
 		const precios = destino.precios.van;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
-		// El precio base de la Van es para 5 pasajeros. Se suma el adicional a partir del sexto.
 		const pasajerosAdicionales = numPasajeros - 5;
 		const costoAdicional = precios.base * precios.porcentajeAdicional;
 		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
@@ -452,7 +474,6 @@ function App() {
 				)}
 			</AlertDialog>
 
-			{/* Header */}
 			<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
 				<div className="container mx-auto px-4">
 					<div className="flex justify-between items-center h-19">
@@ -518,10 +539,9 @@ function App() {
 				</div>
 			</header>
 
-			{/* Hero Section */}
 			<section
 				id="inicio"
-				className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center" // <-- CORRECCIÓN APLICADA AQUÍ
+				className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
 			>
 				<div className="absolute inset-0 bg-black/30"></div>
 				<div
@@ -530,7 +550,7 @@ function App() {
 				></div>
 				<div className="relative container mx-auto px-4 text-center">
 					<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-						Transfer Confiable desde
+						Transfer Privado desde
 						<br />
 						<span className="text-accent">Aeropuerto La Araucanía</span>
 					</h2>
@@ -538,7 +558,6 @@ function App() {
 						Traslados seguros y cómodos a Temuco, Villarrica y Pucón
 					</p>
 
-					{/* Formulario de reserva rápida */}
 					<Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
 						<CardHeader>
 							<CardTitle className="text-foreground text-center text-2xl">
@@ -652,7 +671,6 @@ function App() {
 				</div>
 			</section>
 
-			{/* Servicios */}
 			<section id="servicios" className="py-20 bg-muted/40">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
@@ -686,7 +704,6 @@ function App() {
 				</div>
 			</section>
 
-			{/* Destinos */}
 			<section id="destinos" className="py-20">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
@@ -743,10 +760,8 @@ function App() {
 				</div>
 			</section>
 
-			{/* 4. RENDERIZAR EL NUEVO COMPONENTE */}
 			<Destacados destinos={destacadosData} />
 
-			{/* ¿Por qué elegirnos? */}
 			<section className="py-20 bg-primary text-white">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
@@ -831,7 +846,6 @@ function App() {
 				</div>
 			</section>
 
-			{/* Testimonios */}
 			<section className="py-20 bg-muted/40">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
@@ -868,7 +882,6 @@ function App() {
 				</div>
 			</section>
 
-			{/* Formulario de Contacto */}
 			<section id="contacto" className="py-20">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-16">
@@ -1098,7 +1111,6 @@ function App() {
 				</div>
 			</section>
 
-			{/* Footer */}
 			<footer className="bg-primary text-white py-12">
 				<div className="container mx-auto px-4">
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-8">

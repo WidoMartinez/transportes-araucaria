@@ -1,13 +1,14 @@
 import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card"; // <-- CORRECCIÓN: Usando alias de ruta
-import { Button } from "@/components/ui/button"; // <-- CORRECCIÓN: Usando alias de ruta
-import { ArrowRight } from "lucide-react";
+	Carousel,
+	CarouselContent,
+	CarouselItem,
+	CarouselNext,
+	CarouselPrevious,
+} from "@/components/ui/carousel"; // Importamos el carrusel
 
 // El componente recibe una lista de 'destinos' como propiedad
 function Destacados({ destinos }) {
@@ -16,7 +17,7 @@ function Destacados({ destinos }) {
 	}
 
 	return (
-		<section id="destacados" className="py-20 bg-muted/40">
+		<section id="destacados" className="py-20 bg-muted/40 overflow-hidden">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
 					<h2 className="text-4xl font-bold mb-4">
@@ -28,37 +29,57 @@ function Destacados({ destinos }) {
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-					{destinos.map((destino, index) => (
-						<Card
-							key={index}
-							className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 flex flex-col group"
-						>
-							<div className="relative overflow-hidden">
-								<div
-									className="h-56 bg-cover bg-center transition-transform duration-500 ease-in-out group-hover:scale-110"
-									style={{ backgroundImage: `url(${destino.imagen})` }}
-								></div>
-								<div className="absolute inset-0 bg-black/30"></div>
-							</div>
-							<CardHeader>
-								<CardTitle className="text-2xl">{destino.titulo}</CardTitle>
-								<CardDescription>{destino.subtitulo}</CardDescription>
-							</CardHeader>
-							<CardContent className="flex-grow flex flex-col justify-between">
-								<p className="text-muted-foreground mb-6">
-									{destino.descripcion}
-								</p>
-								<a href="#contacto">
-									<Button className="w-full mt-2">
-										Cotizar Viaje a {destino.nombre}
-										<ArrowRight className="ml-2 h-4 w-4" />
-									</Button>
-								</a>
-							</CardContent>
-						</Card>
-					))}
-				</div>
+				<Carousel
+					opts={{
+						align: "start",
+						loop: true,
+					}}
+					className="w-full max-w-6xl mx-auto"
+				>
+					<CarouselContent>
+						{destinos.map((destino, index) => (
+							<CarouselItem key={index}>
+								<div className="p-1">
+									<Card className="overflow-hidden border-0 shadow-2xl">
+										<CardContent className="relative p-0 aspect-video md:aspect-[2.4/1] flex items-center justify-center text-white">
+											{/* Contenedor de la Imagen de Fondo */}
+											<div
+												className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-in-out group-hover:scale-105"
+												style={{ backgroundImage: `url(${destino.imagen})` }}
+											></div>
+											{/* Capa Oscura para Contraste */}
+											<div className="absolute inset-0 bg-black/50"></div>
+
+											{/* Contenido de Texto Superpuesto */}
+											<div className="relative z-10 p-8 md:p-12 text-center max-w-2xl">
+												<h3 className="text-3xl md:text-4xl font-bold mb-2 text-shadow-lg">
+													{destino.titulo}
+												</h3>
+												<p className="text-lg text-shadow md:text-xl mb-4 font-light opacity-90">
+													{destino.subtitulo}
+												</p>
+												<p className="mb-8 text-shadow-sm opacity-95">
+													{destino.descripcion}
+												</p>
+												<a href="#contacto">
+													<Button
+														size="lg"
+														className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3 px-6"
+													>
+														Cotizar Viaje a {destino.nombre}
+														<ArrowRight className="ml-2 h-5 w-5" />
+													</Button>
+												</a>
+											</div>
+										</CardContent>
+									</Card>
+								</div>
+							</CarouselItem>
+						))}
+					</CarouselContent>
+					<CarouselPrevious className="absolute left-[-50px] top-1/2 -translate-y-1/2 hidden md:inline-flex h-12 w-12 bg-white/80 hover:bg-white text-primary" />
+					<CarouselNext className="absolute right-[-50px] top-1/2 -translate-y-1/2 hidden md:inline-flex h-12 w-12 bg-white/80 hover:bg-white text-primary" />
+				</Carousel>
 			</div>
 		</section>
 	);
