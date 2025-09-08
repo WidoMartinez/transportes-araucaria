@@ -18,7 +18,7 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
-import Destacados from "./components/Destacados.";
+import Destacados from "./components/Destacados";
 import PorQueElegirnos from "./components/PorQueElegirnos";
 import Testimonios from "./components/Testimonios";
 import Contacto from "./components/Contacto";

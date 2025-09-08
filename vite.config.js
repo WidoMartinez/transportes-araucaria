@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-// CORRECCIÓN: Se quitan las llaves {} de la importación
 import sitemap from "vite-plugin-sitemap";
 
 // https://vite.dev/config/
@@ -12,15 +11,11 @@ export default defineConfig({
 		tailwindcss(),
 		sitemap({
 			hostname: "https://www.transportesaraucaria.cl",
-			dynamicRoutes: [
-				"/",
-				"/#inicio",
-				"/#servicios",
-				"/#destinos",
-				"/#contacto",
-			],
+			// CORRECCIÓN: Se elimina el resto de las rutas con hash.
+			// Solo se necesita la ruta raíz para una SPA.
+			dynamicRoutes: ["/"],
 			changefreq: "weekly",
-			priority: 0.8,
+			priority: 1.0, // La página principal debe tener la máxima prioridad.
 		}),
 	],
 	resolve: {
