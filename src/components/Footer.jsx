@@ -103,12 +103,12 @@ function Footer() {
 					<p className="mt-4 md:mt-0">
 						Diseñado y desarrollado por{" "}
 						<a
-							href="https://widomartinez.com"
+							href="https://anunciads.cl"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="hover:text-white font-semibold transition-colors duration-300"
 						>
-							Wido Martinez
+							anunciAds
 						</a>
 					</p>
 				</div>
