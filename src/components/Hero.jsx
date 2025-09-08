@@ -64,8 +64,21 @@ function Hero({
 											{d.nombre}
 										</option>
 									))}
+									<option value="Otro">Otro</option>
 								</select>
 							</div>
+							{formData.destino === "Otro" && (
+								<div className="text-left">
+									<Label htmlFor="otroDestino-hero">Otro Destino</Label>
+									<Input
+										id="otroDestino-hero"
+										name="otroDestino"
+										value={formData.otroDestino}
+										onChange={handleInputChange}
+										required
+									/>
+								</div>
+							)}
 							<div className="text-left">
 								<Label htmlFor="pasajeros-hero">Pasajeros</Label>
 								<select

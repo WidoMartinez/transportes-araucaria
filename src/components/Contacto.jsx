@@ -175,6 +175,24 @@ function Contacto({
 											</select>
 										</div>
 									</div>
+
+									{/* Campo condicional para "Otro" destino */}
+									{formData.destino === "Otro" && (
+										<div className="space-y-2">
+											<Label htmlFor="otroDestino-form">
+												Especificar otro destino
+											</Label>
+											<Input
+												id="otroDestino-form"
+												name="otroDestino"
+												value={formData.otroDestino}
+												onChange={handleInputChange}
+												placeholder="Ingresa el destino aquí"
+												required
+											/>
+										</div>
+									)}
+
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div className="space-y-2">
 											<Label htmlFor="fecha-form">Fecha</Label>

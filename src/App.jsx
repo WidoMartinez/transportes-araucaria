@@ -29,9 +29,6 @@ import temucoImg from "./assets/temuco.jpg";
 import villarricaImg from "./assets/villarrica.jpg";
 import puconImg from "./assets/pucon.jpg";
 import corralcoImg from "./assets/corralco.jpg";
-import lonquimayImg from "./assets/lonquimay.jpg";
-import conguillioImg from "./assets/conguilllio.jpg";
-import icalmaImg from "./assets/icalma.jpg";
 
 // --- DATOS Y LÓGICA ---
 
@@ -42,7 +39,7 @@ const destinos = [
 		tiempo: "45 min",
 		imagen: temucoImg,
 		maxPasajeros: 4,
-		minHorasAnticipacion: 15,
+		minHorasAnticipacion: 5,
 		descuento: {
 			porcentaje: 0.2,
 			titulo: "¡Descuento Especial para tu Viaje a Temuco!",
@@ -62,7 +59,7 @@ const destinos = [
 		tiempo: "1h 15min",
 		imagen: villarricaImg,
 		maxPasajeros: 7,
-		minHorasAnticipacion: 24,
+		minHorasAnticipacion: 5,
 		descuento: {
 			porcentaje: 0.1,
 			titulo: "¡Paga Online y Ahorra en tu Viaje a Villarrica!",
@@ -83,7 +80,7 @@ const destinos = [
 		tiempo: "1h 30min",
 		imagen: puconImg,
 		maxPasajeros: 7,
-		minHorasAnticipacion: 24,
+		minHorasAnticipacion: 5,
 		descuento: {
 			porcentaje: 0.1,
 			titulo: "¡Paga Online y Ahorra en tu Viaje a Pucón!",
@@ -109,34 +106,10 @@ const destacadosData = [
 			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
 		imagen: corralcoImg,
 	},
-	{
-		nombre: "Lonquimay",
-		titulo: "Descubre Lonquimay y sus Araucarias",
-		subtitulo: "Naturaleza y cultura pehuenche te esperan",
-		descripcion:
-			"Explora los paisajes únicos de Lonquimay, con sus bosques de araucarias milenarias y la imponente presencia del volcán. Un destino ideal para el ecoturismo y la aventura.",
-		imagen: lonquimayImg,
-	},
-	{
-		nombre: "Parque Nacional Conguillío",
-		titulo: "Maravíllate en el Parque Nacional Conguillío",
-		subtitulo: "Un viaje a la tierra de los dinosaurios",
-		descripcion:
-			"Conocido por sus paisajes prehistóricos, lagos de aguas cristalinas y el majestuoso Volcán Llaima. Un lugar imperdible para los amantes del trekking y la fotografía.",
-		imagen: conguillioImg,
-	},
-	{
-		nombre: "Lago Icalma",
-		titulo: "Relajo y desconexión en Lago Icalma",
-		subtitulo: "Un paraíso escondido en la Araucanía Andina",
-		descripcion:
-			"Disfruta de la tranquilidad de sus aguas y la belleza de sus paisajes. Ideal para deportes acuáticos, pesca y caminatas en un entorno natural privilegiado.",
-		imagen: icalmaImg,
-	},
 ];
 
 const calcularCotizacion = (destino, pasajeros) => {
-	if (!destino || !pasajeros) {
+	if (!destino || !pasajeros || destino.nombre === "Otro") {
 		return { precio: null, vehiculo: null };
 	}
 
@@ -175,6 +148,7 @@ function App() {
 		email: "",
 		origen: "Aeropuerto La Araucanía",
 		destino: "",
+		otroDestino: "",
 		fecha: "",
 		hora: "",
 		pasajeros: "1",
@@ -245,7 +219,7 @@ function App() {
 		) {
 			setFormData((prev) => ({ ...prev, pasajeros: "1" }));
 		}
-	}, [formData.destino]);
+	}, [formData.destino, formData.pasajeros]);
 
 	const resetForm = () => {
 		setFormData({
@@ -254,6 +228,7 @@ function App() {
 			email: "",
 			origen: "Aeropuerto La Araucanía",
 			destino: "",
+			otroDestino: "",
 			fecha: "",
 			hora: "",
 			pasajeros: "1",
@@ -278,7 +253,7 @@ function App() {
 		setPhoneError("");
 
 		const validacion = validarHorarioReserva();
-		if (!validacion.esValido) {
+		if (!validacion.esValido && formData.destino !== "Otro") {
 			alert(validacion.mensaje);
 			return;
 		}
@@ -296,6 +271,10 @@ function App() {
 		};
 		if (!dataToSend.nombre)
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
+
+		if (dataToSend.destino === "Otro") {
+			dataToSend.destino = dataToSend.otroDestino;
+		}
 
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
@@ -347,7 +326,7 @@ function App() {
 
 	const minDateTime = useMemo(() => {
 		const destino = destinos.find((d) => d.nombre === formData.destino);
-		const horasAnticipacion = destino?.minHorasAnticipacion || 24;
+		const horasAnticipacion = destino?.minHorasAnticipacion || 5;
 
 		const fechaMinima = new Date();
 		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
