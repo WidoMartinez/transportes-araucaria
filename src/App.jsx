@@ -18,6 +18,7 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
+import Tours from "./components/Tours"; // <-- IMPORTAR NUEVO COMPONENTE
 import Destacados from "./components/Destacados";
 import PorQueElegirnos from "./components/PorQueElegirnos";
 import Testimonios from "./components/Testimonios";
@@ -410,6 +411,7 @@ function App() {
 				/>
 				<Servicios />
 				<Destinos destinos={destinos} />
+				<Tours /> {/* <-- AGREGAR EL NUEVO COMPONENTE AQUÍ */}
 				<Destacados destinos={destacadosData} />
 				<PorQueElegirnos />
 				<Testimonios />

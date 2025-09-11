@@ -30,6 +30,13 @@ function Header() {
 						>
 							Destinos
 						</a>
+						{/* NUEVO ENLACE A TOURS */}
+						<a
+							href="#tours"
+							className="text-foreground hover:text-primary transition-colors"
+						>
+							Tours
+						</a>
 						<a
 							href="#destacados"
 							className="text-foreground hover:text-primary transition-colors"
