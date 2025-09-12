@@ -139,7 +139,7 @@ function Contacto({
 											name="email"
 											value={formData.email}
 											onChange={handleInputChange}
-											placeholder="tu@email.com"
+											placeholder="tu@email.cl"
 											required
 										/>
 									</div>
