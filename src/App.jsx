@@ -18,12 +18,13 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
-import Tours from "./components/Tours"; // <-- IMPORTAR NUEVO COMPONENTE
+import Tours from "./components/Tours";
 import Destacados from "./components/Destacados";
 import PorQueElegirnos from "./components/PorQueElegirnos";
 import Testimonios from "./components/Testimonios";
 import Contacto from "./components/Contacto";
 import Footer from "./components/Footer";
+import Fidelizacion from "./components/Fidelizacion";
 
 // Importar imágenes
 import temucoImg from "./assets/temuco.jpg";
@@ -41,17 +42,8 @@ const destinos = [
 		imagen: temucoImg,
 		maxPasajeros: 4,
 		minHorasAnticipacion: 5,
-		descuento: {
-			porcentaje: 0.2,
-			titulo: "¡Descuento Especial para tu Viaje a Temuco!",
-			descripcion:
-				"Si pagas por transferencia bancaria la totalidad del viaje, obtienes un 20% de descuento.",
-			botonTexto: "Coordinar por WhatsApp",
-			link: "https://wa.me/56936643540?text=Hola,%20quisiera%20pagar%20mi%20reserva%20a%20Temuco%20con%20descuento%20por%20transferencia.",
-			requiereAbonoTotal: true,
-		},
 		precios: {
-			sedan: { base: 20000, porcentajeAdicional: 0.1 },
+			auto: { base: 20000, porcentajeAdicional: 0.1 },
 		},
 	},
 	{
@@ -61,17 +53,8 @@ const destinos = [
 		imagen: villarricaImg,
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
-		descuento: {
-			porcentaje: 0.1,
-			titulo: "¡Paga Online y Ahorra en tu Viaje a Villarrica!",
-			descripcion:
-				"Paga ahora a través de Mercado Pago y obtén un 10% de descuento en tu reserva.",
-			botonTexto: "Pagar con Mercado Pago",
-			link: "https://link.mercadopago.cl/transportearaucaria",
-			requiereAbonoTotal: false,
-		},
 		precios: {
-			sedan: { base: 50000, porcentajeAdicional: 0.05 },
+			auto: { base: 50000, porcentajeAdicional: 0.05 },
 			van: { base: 200000, porcentajeAdicional: 0.05 },
 		},
 	},
@@ -82,17 +65,8 @@ const destinos = [
 		imagen: puconImg,
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
-		descuento: {
-			porcentaje: 0.1,
-			titulo: "¡Paga Online y Ahorra en tu Viaje a Pucón!",
-			descripcion:
-				"Paga ahora a través de Mercado Pago y obtén un 10% de descuento en tu reserva.",
-			botonTexto: "Pagar con Mercado Pago",
-			link: "https://link.mercadopago.cl/transportearaucaria",
-			requiereAbonoTotal: false,
-		},
 		precios: {
-			sedan: { base: 60000, porcentajeAdicional: 0.05 },
+			auto: { base: 60000, porcentajeAdicional: 0.05 },
 			van: { base: 250000, porcentajeAdicional: 0.05 },
 		},
 	},
@@ -119,8 +93,8 @@ const calcularCotizacion = (destino, pasajeros) => {
 	let precioFinal;
 
 	if (numPasajeros > 0 && numPasajeros <= 4) {
-		vehiculoAsignado = "Sedan 5 Puertas";
-		const precios = destino.precios.sedan;
+		vehiculoAsignado = "Auto Privado";
+		const precios = destino.precios.auto;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
 		const pasajerosAdicionales = numPasajeros - 1;
@@ -156,8 +130,7 @@ function App() {
 		mensaje: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [showDiscountAlert, setShowDiscountAlert] = useState(false);
-	const [alertContent, setAlertContent] = useState(null);
+	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [phoneError, setPhoneError] = useState("");
 
 	const cotizacion = useMemo(() => {
@@ -238,7 +211,7 @@ function App() {
 	};
 
 	const handleCloseAlert = () => {
-		setShowDiscountAlert(false);
+		setShowConfirmationAlert(false);
 		resetForm();
 	};
 
@@ -293,19 +266,7 @@ function App() {
 				throw new Error(result.message || "Error en el servidor.");
 			}
 
-			const destinoSeleccionado = destinos.find(
-				(d) => d.nombre === dataToSend.destino
-			);
-			if (destinoSeleccionado && destinoSeleccionado.descuento) {
-				setAlertContent({
-					...destinoSeleccionado.descuento,
-					precio: cotizacion.precio,
-				});
-				setShowDiscountAlert(true);
-			} else {
-				alert("¡Gracias por tu solicitud! Te contactaremos pronto.");
-				resetForm();
-			}
+			setShowConfirmationAlert(true);
 
 			if (typeof gtag === "function") {
 				gtag("event", "conversion", {
@@ -319,6 +280,13 @@ function App() {
 			setIsSubmitting(false);
 		}
 	};
+
+	const whatsappUrl = useMemo(() => {
+		const destinoFinal =
+			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
+		const message = `Hola, acabo de cotizar desde el sitio web. Mi nombre es ${formData.nombre} y quisiera confirmar mi reserva a ${destinoFinal} para el día ${formData.fecha} a las ${formData.hora}.`;
+		return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
+	}, [formData]);
 
 	const maxPasajeros = useMemo(() => {
 		const destino = destinos.find((d) => d.nombre === formData.destino);
@@ -341,58 +309,33 @@ function App() {
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			<AlertDialog open={showDiscountAlert} onOpenChange={setShowDiscountAlert}>
-				{alertContent && (
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>{alertContent.titulo}</AlertDialogTitle>
-							<AlertDialogDescription>
-								{alertContent.descripcion}
-								<br />
-								<br />
-								Precio Normal: $
-								{new Intl.NumberFormat("es-CL").format(alertContent.precio)} CLP
-								<br />
-								<strong className="text-primary text-lg">
-									Precio con Descuento: $
-									{new Intl.NumberFormat("es-CL").format(
-										alertContent.precio * (1 - alertContent.porcentaje)
-									)}{" "}
-									CLP
-								</strong>
-								<br />
-								<br />
-								{!alertContent.requiereAbonoTotal ? (
-									<strong className="text-foreground">
-										Abono del 40% para reservar: $
-										{new Intl.NumberFormat("es-CL").format(
-											alertContent.precio * (1 - alertContent.porcentaje) * 0.4
-										)}{" "}
-										CLP
-									</strong>
-								) : (
-									<strong className="text-foreground">
-										Para acceder al descuento, se debe transferir el total.
-									</strong>
-								)}
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel onClick={handleCloseAlert}>
-								Cerrar
-							</AlertDialogCancel>
-							<AlertDialogAction asChild>
-								<a
-									href={alertContent.link}
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									{alertContent.botonTexto}
-								</a>
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				)}
+			<AlertDialog
+				open={showConfirmationAlert}
+				onOpenChange={setShowConfirmationAlert}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¡Solicitud Recibida!</AlertDialogTitle>
+						<AlertDialogDescription>
+							Hemos enviado la cotización a tu correo. Para finalizar, confirma
+							los detalles con nuestro equipo por WhatsApp.
+							<br />
+							<br />
+							Al confirmar, tu viaje quedará registrado y empezarás a acumular
+							beneficios en nuestro club <strong>"Viajero Frecuente"</strong>.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel onClick={handleCloseAlert}>
+							Cerrar
+						</AlertDialogCancel>
+						<AlertDialogAction asChild>
+							<a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+								Confirmar por WhatsApp
+							</a>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
 			</AlertDialog>
 
 			<Header />
@@ -411,8 +354,9 @@ function App() {
 				/>
 				<Servicios />
 				<Destinos destinos={destinos} />
-				<Tours /> {/* <-- AGREGAR EL NUEVO COMPONENTE AQUÍ */}
+				<Tours />
 				<Destacados destinos={destacadosData} />
+				<Fidelizacion />
 				<PorQueElegirnos />
 				<Testimonios />
 				<Contacto

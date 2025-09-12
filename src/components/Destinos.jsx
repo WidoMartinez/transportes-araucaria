@@ -19,7 +19,11 @@ function Destinos({ destinos }) {
 					</h2>
 					<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
 						Conectamos el aeropuerto con los destinos más populares de La
-						Araucanía
+						Araucanía.
+					</p>
+					<p className="text-sm text-muted-foreground max-w-2xl mx-auto mt-2">
+						Tarifas base para nuestro servicio exclusivo en auto (hasta 4
+						pasajeros).
 					</p>
 				</div>
 
@@ -60,7 +64,7 @@ function Destinos({ destinos }) {
 										<p className="text-2xl font-bold mb-4">
 											Desde ${" "}
 											{new Intl.NumberFormat("es-CL").format(
-												destino.precios.sedan.base
+												destino.precios.auto.base
 											)}{" "}
 											CLP
 										</p>

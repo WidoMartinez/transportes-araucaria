@@ -1,27 +1,31 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Car, Users, Clock, Shield } from "lucide-react";
+import { Car, Users, MapPin, Shield } from "lucide-react";
 
 const servicios = [
 	{
 		icono: <Car className="h-8 w-8" />,
-		titulo: "Transfer Privado",
-		descripcion: "Servicio exclusivo para ti y tu grupo",
+		titulo: "Traslado Privado en Auto",
+		descripcion:
+			"Servicio exclusivo para ti y tu grupo (hasta 4 personas) en un moderno y confortable vehículo.",
 	},
 	{
 		icono: <Users className="h-8 w-8" />,
-		titulo: "Transfer Compartido",
-		descripcion: "Opción económica compartiendo el viaje",
-	},
-	{
-		icono: <Clock className="h-8 w-8" />,
-		titulo: "Disponible 24/7",
-		descripcion: "Servicio disponible todos los días del año",
+		titulo: "Disponibilidad para Grupos",
+		descripcion:
+			"¿Viajan más de 4 personas? Consulta por nuestras cómodas y seguras Vans de pasajeros.",
 	},
 	{
 		icono: <Shield className="h-8 w-8" />,
-		titulo: "Seguro y Confiable",
-		descripcion: "Vehículos modernos y conductores profesionales",
+		titulo: "Puntualidad y Confianza",
+		descripcion:
+			"Monitoreamos tu vuelo y te esperamos a tiempo. Conductores profesionales para un viaje seguro.",
+	},
+	{
+		icono: <MapPin className="h-8 w-8" />,
+		titulo: "Tours a Medida",
+		descripcion:
+			"Descubre la Araucanía Andina con nuestros tours privados. Creamos una ruta perfecta para ti.",
 	},
 ];
 
@@ -30,10 +34,12 @@ function Servicios() {
 		<section id="servicios" className="py-20 bg-muted/40">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
-					<h2 className="text-4xl font-bold mb-4">Nuestros Servicios</h2>
+					<h2 className="text-4xl font-bold mb-4">
+						Un Servicio Pensado para Tu Comodidad
+					</h2>
 					<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
 						Ofrecemos diferentes opciones de transporte para satisfacer tus
-						necesidades
+						necesidades, con un enfoque en la calidad y el servicio privado.
 					</p>
 				</div>
 

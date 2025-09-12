@@ -29,18 +29,19 @@ function Hero({
 			></div>
 			<div className="relative container mx-auto px-4 text-center">
 				<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-					Transfer Confiable desde
+					Tu Traslado Privado y Exclusivo
 					<br />
-					<span className="text-accent">Aeropuerto La Araucanía</span>
+					<span className="text-accent">en un Auto Confortable</span>
 				</h2>
 				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Traslados seguros y cómodos a Temuco, Villarrica y Pucón
+					Viaja con la comodidad y discreción que mereces. Servicio premium
+					desde el Aeropuerto La Araucanía.
 				</p>
 
 				<Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
 					<CardHeader>
 						<CardTitle className="text-foreground text-center text-2xl">
-							Cotiza y Reserva tu Transfer
+							Cotiza y Reserva tu Viaje
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
@@ -155,7 +156,7 @@ function Hero({
 									Precio Cotizado: $
 									{new Intl.NumberFormat("es-CL").format(cotizacion.precio)}
 								</p>
-								<p>Vehículo Asignado: {cotizacion.vehiculo}</p>
+								<p>Vehículo Sugerido: {cotizacion.vehiculo}</p>
 							</div>
 						)}
 					</CardContent>

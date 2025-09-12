@@ -11,7 +11,7 @@ function PorQueElegirnos() {
 					</h2>
 					<p className="text-xl opacity-90 max-w-2xl mx-auto">
 						Más de 10 años de experiencia brindando el mejor servicio de
-						transfer en La Araucanía
+						traslados en La Araucanía
 					</p>
 				</div>
 
@@ -31,9 +31,12 @@ function PorQueElegirnos() {
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
-							<h3 className="text-xl font-semibold mb-2">Vehículos Modernos</h3>
+							<h3 className="text-xl font-semibold mb-2">
+								Confort y Privacidad
+							</h3>
 							<p className="opacity-90">
-								Flota renovada con aire acondicionado, WiFi y máxima comodidad.
+								Nuestros vehículos privados te ofrecen un viaje cómodo, discreto
+								y con espacio suficiente para tu equipaje.
 							</p>
 						</div>
 					</div>
