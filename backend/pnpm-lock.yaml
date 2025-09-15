@@ -8,9 +8,9 @@ importers:
 
   .:
     dependencies:
-      '@nicotordev/flowcl-pagos':
-        specifier: ^1.1.2
-        version: 1.4.0
+      axios:
+        specifier: ^1.7.2
+        version: 1.12.2
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -28,10 +28,6 @@ importers:
         version: 6.10.1
 
 packages:
-
-  '@nicotordev/flowcl-pagos@1.4.0':
-    resolution: {integrity: sha512-Oq3k6GH51LtteF79csyS5IGT6KQV4EC9Wd6qy2NrxYqE/8ntz7p08iBPsApIhE2gwOcfeubSjmwm428AkQVoBA==}
-    deprecated: Esta versión está obsoleta, utiliza la última versión disponible.
 
   accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
@@ -84,9 +80,6 @@ packages:
   cors@2.8.5:
     resolution: {integrity: sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g==}
     engines: {node: '>= 0.10'}
-
-  crypto-js@4.2.0:
-    resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
 
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
@@ -385,14 +378,6 @@ packages:
 
 snapshots:
 
-  '@nicotordev/flowcl-pagos@1.4.0':
-    dependencies:
-      axios: 1.12.2
-      crypto-js: 4.2.0
-      dotenv: 16.6.1
-    transitivePeerDependencies:
-      - debug
-
   accepts@1.3.8:
     dependencies:
       mime-types: 2.1.35
@@ -457,8 +442,6 @@ snapshots:
     dependencies:
       object-assign: 4.1.1
       vary: 1.1.2
-
-  crypto-js@4.2.0: {}
 
   debug@2.6.9:
     dependencies:
