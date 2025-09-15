@@ -70,7 +70,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: amount,
-			email: "test@transportesaraucaria.cl", // <-- ÚNICO CAMBIO AQUÍ
+			email: "contacto@transportesaraucaria.cl", // <-- ÚNICO CAMBIO AQUÍ
 			urlConfirmation: `${process.env.YOUR_BACKEND_URL}/flow-confirmation`,
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
