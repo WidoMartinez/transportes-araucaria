@@ -3,12 +3,81 @@ import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import mercadopago from "mercadopago";
+import flow from "flow-cl-sdk";
 
 dotenv.config();
+
+// --- CONFIGURACIÓN DE MERCADO PAGO ---
+mercadopago.configure({
+	access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+});
+
+// --- CONFIGURACIÓN DE FLOW ---
+const Flow = new flow.Flow({
+	apiKey: process.env.FLOW_API_KEY,
+	secretKey: process.env.FLOW_SECRET_KEY,
+	apiURL: process.env.FLOW_API_URL || "https://sandbox.flow.cl/api", // URL de sandbox por defecto
+});
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// ... (tu endpoint /send-email existente se mantiene igual)
+
+// --- NUEVO ENDPOINT PARA CREAR PAGOS ---
+app.post("/create-payment", async (req, res) => {
+	const { gateway, amount, description } = req.body;
+
+	if (gateway === "mercadopago") {
+		const preference = {
+			items: [
+				{
+					title: description,
+					unit_price: amount,
+					quantity: 1,
+				},
+			],
+			back_urls: {
+				success: "https://www.transportesaraucaria.cl/pago-exitoso",
+				failure: "https://www.transportesaraucaria.cl/pago-fallido",
+				pending: "https://www.transportesaraucaria.cl/pago-pendiente",
+			},
+			auto_return: "approved",
+		};
+
+		try {
+			const response = await mercadopago.preferences.create(preference);
+			res.json({ url: response.body.init_point });
+		} catch (error) {
+			console.error("Error al crear preferencia de Mercado Pago:", error);
+			res
+				.status(500)
+				.json({ message: "Error al generar el pago con Mercado Pago." });
+		}
+	} else if (gateway === "flow") {
+		const paymentData = {
+			commerceOrder: `ORDEN-${Date.now()}`,
+			subject: description,
+			currency: "CLP",
+			amount: amount,
+			email: "cliente@example.com", // Puedes obtenerlo del formulario si lo necesitas
+			urlConfirmation: `${process.env.YOUR_BACKEND_URL}/flow-confirmation`,
+			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
+		};
+		try {
+			const payment = await Flow.Payment.create(paymentData);
+			const redirectUrl = `${payment.url}?token=${payment.token}`;
+			res.json({ url: redirectUrl });
+		} catch (error) {
+			console.error("Error al crear el pago con Flow:", error);
+			res.status(500).json({ message: "Error al generar el pago con Flow." });
+		}
+	} else {
+		res.status(400).json({ message: "Pasarela de pago no válida." });
+	}
+});
 
 app.post("/send-email", async (req, res) => {
 	console.log("✅ Petición recibida en /send-email");

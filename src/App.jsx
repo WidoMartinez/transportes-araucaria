@@ -12,6 +12,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "./components/ui/alert-dialog";
+import { Button } from "./components/ui/button"; // <--- LÍNEA AÑADIDA
 
 // Importar nuevos componentes de sección
 import Header from "./components/Header";
@@ -132,6 +133,7 @@ function App() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [phoneError, setPhoneError] = useState("");
+	const [paymentUrl, setPaymentUrl] = useState(""); // Nuevo estado para la URL de pago
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -212,7 +214,36 @@ function App() {
 
 	const handleCloseAlert = () => {
 		setShowConfirmationAlert(false);
+		setPaymentUrl(""); // Limpiar la URL de pago al cerrar
 		resetForm();
+	};
+
+	const handlePayment = async (gateway) => {
+		const { precio, vehiculo } = cotizacion;
+		const amount = Math.round(precio * 0.4); // 40% del total
+		const description = `Abono reserva para ${formData.destino} (${vehiculo})`;
+		const apiUrl =
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
+
+		try {
+			const response = await fetch(`${apiUrl}/create-payment`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ gateway, amount, description }),
+			});
+			const data = await response.json();
+			if (data.url) {
+				window.open(data.url, "_blank");
+			} else {
+				throw new Error("No se pudo generar el enlace de pago.");
+			}
+		} catch (error) {
+			console.error("Error al crear el pago:", error);
+			alert(
+				"Hubo un problema al generar el enlace de pago. Por favor, intenta de nuevo."
+			);
+		}
 	};
 
 	const handleSubmit = async (e) => {
@@ -317,12 +348,9 @@ function App() {
 					<AlertDialogHeader>
 						<AlertDialogTitle>¡Solicitud Recibida!</AlertDialogTitle>
 						<AlertDialogDescription>
-							Hemos enviado la cotización a tu correo. Para finalizar, confirma
-							los detalles con nuestro equipo por WhatsApp.
-							<br />
-							<br />
-							Al confirmar, tu viaje quedará registrado y empezarás a acumular
-							beneficios en nuestro club <strong>"Viajero Frecuente"</strong>.
+							Hemos enviado la cotización a tu correo. Para finalizar, puedes
+							confirmar directamente por WhatsApp o asegurar tu reserva pagando
+							el 40% del abono.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -334,6 +362,16 @@ function App() {
 								Confirmar por WhatsApp
 							</a>
 						</AlertDialogAction>
+						{cotizacion.precio && (
+							<>
+								<Button onClick={() => handlePayment("flow")}>
+									Pagar Abono con Flow
+								</Button>
+								<Button onClick={() => handlePayment("mercadopago")}>
+									Pagar Abono con Mercado Pago
+								</Button>
+							</>
+						)}
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
