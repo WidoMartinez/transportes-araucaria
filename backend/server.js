@@ -4,7 +4,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import mercadopago from "mercadopago";
-import FlowApi from "flow-api-sdk"; // <-- CORRECCIÓN: Nombre del paquete y variable
+import Flow from "@nicotordev/flowcl-pagos"; // <-- CORRECCIÓN DEFINITIVA
 
 dotenv.config();
 
@@ -14,18 +14,20 @@ mercadopago.configure({
 });
 
 // --- CONFIGURACIÓN DE FLOW ---
-const Flow = new FlowApi({
-	// <-- CORRECCIÓN: Usar la variable importada
+const flow = new Flow({
 	apiKey: process.env.FLOW_API_KEY,
 	secretKey: process.env.FLOW_SECRET_KEY,
-	apiURL: process.env.FLOW_API_URL || "https://sandbox.flow.cl/api", // URL de sandbox por defecto
+	ambiente:
+		process.env.FLOW_API_URL === "https://www.flow.cl/api"
+			? "produccion"
+			: "sandbox", // El SDK usa 'ambiente'
 });
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- NUEVO ENDPOINT PARA CREAR PAGOS ---
+// --- ENDPOINT PARA CREAR PAGOS ---
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description } = req.body;
 
@@ -66,11 +68,12 @@ app.post("/create-payment", async (req, res) => {
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
 		try {
-			const payment = await Flow.Payment.create(paymentData);
+			// El método correcto para este SDK es 'payments.create'
+			const payment = await flow.payments.create(paymentData);
 			const redirectUrl = `${payment.url}?token=${payment.token}`;
 			res.json({ url: redirectUrl });
 		} catch (error) {
-			console.error("Error al crear el pago con Flow:", error);
+			console.error("Error al crear el pago con Flow:", error.body || error);
 			res.status(500).json({ message: "Error al generar el pago con Flow." });
 		}
 	} else {
@@ -78,6 +81,7 @@ app.post("/create-payment", async (req, res) => {
 	}
 });
 
+// ... (Tu endpoint /send-email se mantiene igual)
 app.post("/send-email", async (req, res) => {
 	console.log("✅ Petición recibida en /send-email");
 	console.log("✅ Datos recibidos:", req.body);
