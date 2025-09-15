@@ -354,7 +354,7 @@ function App() {
 				/>
 				<Servicios />
 				<Destinos destinos={destinos} />
-				<Tours />
+
 				<Destacados destinos={destacadosData} />
 				<Fidelizacion />
 				<PorQueElegirnos />

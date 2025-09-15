@@ -3,6 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle } from "lucide-react";
 import logo from "../assets/logo.png";
 
+// Función para encapsular el seguimiento de la conversión con el NUEVO ID
+const trackWhatsAppClick = () => {
+	if (typeof gtag === "function") {
+		gtag("event", "conversion", {
+			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB", // ID de conversión actualizado
+		});
+		console.log("Conversión de clic en WhatsApp (Header) enviada.");
+	}
+};
+
 function Header() {
 	return (
 		<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
@@ -30,7 +40,6 @@ function Header() {
 						>
 							Destinos
 						</a>
-						{/* NUEVO ENLACE A TOURS */}
 						<a
 							href="#tours"
 							className="text-foreground hover:text-primary transition-colors"
@@ -58,10 +67,12 @@ function Header() {
 							<Phone className="h-4 w-4" />
 							<span>+56 9 3664 3540</span>
 						</a>
+						{/* Se mantiene el evento onClick con la nueva función de seguimiento */}
 						<a
 							href="https://wa.me/56936643540"
 							target="_blank"
 							rel="noopener noreferrer"
+							onClick={trackWhatsAppClick}
 						>
 							<Button className="bg-accent hover:bg-accent/90">
 								<MessageCircle className="h-4 w-4 mr-2" />
