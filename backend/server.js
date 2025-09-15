@@ -65,8 +65,7 @@ app.post("/create-payment", async (req, res) => {
 		console.log("Verificando API Key:", process.env.FLOW_API_KEY);
 		console.log("Verificando Secret Key:", process.env.FLOW_SECRET_KEY); // <-- AÑADE ESTA LÍNEA
 		// ---------------------------
-		const flowApiUrl =
-			process.env.FLOW_API_URL || "https://sandbox.flow.cl/api";
+		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
 
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
