@@ -1,26 +1,26 @@
-// server.js
+// backend/server.js
 import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import mercadopago from "mercadopago";
-import Flow from "@nicotordev/flowcl-pagos"; // <-- CORRECCIÓN DEFINITIVA
+import { MercadoPagoConfig, Preference } from "mercadopago";
+import Flow from "@nicotordev/flowcl-pagos";
 
 dotenv.config();
 
-// --- CONFIGURACIÓN DE MERCADO PAGO ---
-mercadopago.configure({
-	access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+// --- CONFIGURACIÓN DE MERCADO PAGO (SINTAXIS NUEVA Y CORRECTA) ---
+const client = new MercadoPagoConfig({
+	accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
 });
 
-// --- CONFIGURACIÓN DE FLOW ---
+// --- CONFIGURACIÓN DE FLOW (CON EL PAQUETE CORRECTO) ---
 const flow = new Flow({
 	apiKey: process.env.FLOW_API_KEY,
 	secretKey: process.env.FLOW_SECRET_KEY,
 	ambiente:
 		process.env.FLOW_API_URL === "https://www.flow.cl/api"
 			? "produccion"
-			: "sandbox", // El SDK usa 'ambiente'
+			: "sandbox",
 });
 
 const app = express();
@@ -32,11 +32,11 @@ app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description } = req.body;
 
 	if (gateway === "mercadopago") {
-		const preference = {
+		const preferenceData = {
 			items: [
 				{
 					title: description,
-					unit_price: amount,
+					unit_price: Number(amount),
 					quantity: 1,
 				},
 			],
@@ -49,8 +49,9 @@ app.post("/create-payment", async (req, res) => {
 		};
 
 		try {
-			const response = await mercadopago.preferences.create(preference);
-			res.json({ url: response.body.init_point });
+			const preference = new Preference(client);
+			const result = await preference.create({ body: preferenceData });
+			res.json({ url: result.init_point });
 		} catch (error) {
 			console.error("Error al crear preferencia de Mercado Pago:", error);
 			res
@@ -68,7 +69,6 @@ app.post("/create-payment", async (req, res) => {
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
 		try {
-			// El método correcto para este SDK es 'payments.create'
 			const payment = await flow.payments.create(paymentData);
 			const redirectUrl = `${payment.url}?token=${payment.token}`;
 			res.json({ url: redirectUrl });
@@ -97,8 +97,8 @@ app.post("/send-email", async (req, res) => {
 		fecha,
 		hora,
 		pasajeros,
-		precio, // Campo de cotización
-		vehiculo, // Campo de cotización
+		precio,
+		vehiculo,
 	} = req.body;
 
 	const transporter = nodemailer.createTransport({
@@ -172,12 +172,7 @@ app.post("/send-email", async (req, res) => {
 
                 ${
 									mensaje
-										? `
-                <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px; margin-top: 25px;">Mensaje Adicional</h2>
-                <div style="background-color: #f8f9fa; border-left: 4px solid #ccc; padding: 15px; margin-top: 10px;">
-                    <p style="margin: 0; font-style: italic;">"${mensaje}"</p>
-                </div>
-                `
+										? `<h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px; margin-top: 25px;">Mensaje Adicional</h2><div style="background-color: #f8f9fa; border-left: 4px solid #ccc; padding: 15px; margin-top: 10px;"><p style="margin: 0; font-style: italic;">"${mensaje}"</p></div>`
 										: ""
 								}
             </div>
