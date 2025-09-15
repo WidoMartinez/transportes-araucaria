@@ -61,6 +61,10 @@ app.post("/create-payment", async (req, res) => {
 				.json({ message: "Error al generar el pago con Mercado Pago." });
 		}
 	} else if (gateway === "flow") {
+		// --- LÍNEAS DE DEPURACIÓN ---
+		console.log("Verificando API Key:", process.env.FLOW_API_KEY);
+		console.log("Verificando Secret Key:", process.env.FLOW_SECRET_KEY); // <-- AÑADE ESTA LÍNEA
+		// ---------------------------
 		const flowApiUrl =
 			process.env.FLOW_API_URL || "https://sandbox.flow.cl/api";
 
