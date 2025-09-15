@@ -4,7 +4,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import mercadopago from "mercadopago";
-import flow from "flow-cl-sdk";
+import FlowApi from "flow-api-sdk"; // <-- CORRECCIÓN: Nombre del paquete y variable
 
 dotenv.config();
 
@@ -14,7 +14,8 @@ mercadopago.configure({
 });
 
 // --- CONFIGURACIÓN DE FLOW ---
-const Flow = new flow.Flow({
+const Flow = new FlowApi({
+	// <-- CORRECCIÓN: Usar la variable importada
 	apiKey: process.env.FLOW_API_KEY,
 	secretKey: process.env.FLOW_SECRET_KEY,
 	apiURL: process.env.FLOW_API_URL || "https://sandbox.flow.cl/api", // URL de sandbox por defecto
@@ -23,8 +24,6 @@ const Flow = new flow.Flow({
 const app = express();
 app.use(express.json());
 app.use(cors());
-
-// ... (tu endpoint /send-email existente se mantiene igual)
 
 // --- NUEVO ENDPOINT PARA CREAR PAGOS ---
 app.post("/create-payment", async (req, res) => {
