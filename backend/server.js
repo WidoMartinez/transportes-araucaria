@@ -61,10 +61,6 @@ app.post("/create-payment", async (req, res) => {
 				.json({ message: "Error al generar el pago con Mercado Pago." });
 		}
 	} else if (gateway === "flow") {
-		console.log(
-			"Verificando API Key de Flow leída por el servidor:",
-			process.env.FLOW_API_KEY
-		);
 		const flowApiUrl =
 			process.env.FLOW_API_URL || "https://sandbox.flow.cl/api";
 
@@ -81,6 +77,9 @@ app.post("/create-payment", async (req, res) => {
 
 		// Firmar los parámetros
 		params.s = signParams(params);
+
+		// Log para depuración final
+		console.log("Parámetros finales enviados a Flow:", params);
 
 		try {
 			const response = await axios.post(
@@ -107,7 +106,7 @@ app.post("/create-payment", async (req, res) => {
 	}
 });
 
-// ... (Tu endpoint /send-email se mantiene igual)
+// --- ENDPOINT PARA ENVÍO DE CORREO ---
 app.post("/send-email", async (req, res) => {
 	console.log("✅ Petición recibida en /send-email");
 	console.log("✅ Datos recibidos:", req.body);
