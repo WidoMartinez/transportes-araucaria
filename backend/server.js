@@ -4,8 +4,8 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { MercadoPagoConfig, Preference } from "mercadopago";
-import Pkg from "@nicotordev/flowcl-pagos"; // <-- 1. Importar el paquete
-const { Flow } = Pkg; // <-- 2. Extraer la clase 'Flow' del paquete
+import axios from "axios";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -14,15 +14,16 @@ const client = new MercadoPagoConfig({
 	accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
 });
 
-// --- CONFIGURACIÓN DE FLOW ---
-const flow = new Flow({
-	apiKey: process.env.FLOW_API_KEY,
-	secretKey: process.env.FLOW_SECRET_KEY,
-	ambiente:
-		process.env.FLOW_API_URL === "https://www.flow.cl/api"
-			? "produccion"
-			: "sandbox",
-});
+// --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
+const signParams = (params) => {
+	const secretKey = process.env.FLOW_SECRET_KEY;
+	const sortedKeys = Object.keys(params).sort();
+	let toSign = "";
+	sortedKeys.forEach((key) => {
+		toSign += key + params[key];
+	});
+	return crypto.createHmac("sha256", secretKey).update(toSign).digest("hex");
+};
 
 const app = express();
 app.use(express.json());
@@ -60,21 +61,41 @@ app.post("/create-payment", async (req, res) => {
 				.json({ message: "Error al generar el pago con Mercado Pago." });
 		}
 	} else if (gateway === "flow") {
-		const paymentData = {
+		const flowApiUrl =
+			process.env.FLOW_API_URL || "https://sandbox.flow.cl/api";
+
+		const params = {
+			apiKey: process.env.FLOW_API_KEY,
 			commerceOrder: `ORDEN-${Date.now()}`,
 			subject: description,
 			currency: "CLP",
 			amount: amount,
-			email: "cliente@example.com",
+			email: "cliente@example.com", // Puedes obtenerlo del formulario si lo necesitas
 			urlConfirmation: `${process.env.YOUR_BACKEND_URL}/flow-confirmation`,
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
+
+		// Firmar los parámetros
+		params.s = signParams(params);
+
 		try {
-			const payment = await flow.payments.create(paymentData);
+			const response = await axios.post(
+				`${flowApiUrl}/payment/create`,
+				new URLSearchParams(params).toString(),
+				{
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				}
+			);
+			const payment = response.data;
 			const redirectUrl = `${payment.url}?token=${payment.token}`;
 			res.json({ url: redirectUrl });
 		} catch (error) {
-			console.error("Error al crear el pago con Flow:", error.body || error);
+			console.error(
+				"Error al crear el pago con Flow:",
+				error.response ? error.response.data : error.message
+			);
 			res.status(500).json({ message: "Error al generar el pago con Flow." });
 		}
 	} else {
