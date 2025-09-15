@@ -12,7 +12,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "./components/ui/alert-dialog";
-import { Button } from "./components/ui/button"; // <--- LÍNEA AÑADIDA
+import { Button } from "./components/ui/button";
 
 // Importar nuevos componentes de sección
 import Header from "./components/Header";
@@ -44,7 +44,7 @@ const destinos = [
 		maxPasajeros: 4,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 20000, porcentajeAdicional: 0.1 },
+			auto: { base: 15000, porcentajeAdicional: 0.1 },
 		},
 	},
 	{
@@ -55,7 +55,7 @@ const destinos = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 50000, porcentajeAdicional: 0.05 },
+			auto: { base: 40000, porcentajeAdicional: 0.05 },
 			van: { base: 200000, porcentajeAdicional: 0.05 },
 		},
 	},
@@ -67,7 +67,7 @@ const destinos = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 60000, porcentajeAdicional: 0.05 },
+			auto: { base: 50000, porcentajeAdicional: 0.05 },
 			van: { base: 250000, porcentajeAdicional: 0.05 },
 		},
 	},
@@ -133,7 +133,7 @@ function App() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [phoneError, setPhoneError] = useState("");
-	const [paymentUrl, setPaymentUrl] = useState(""); // Nuevo estado para la URL de pago
+	const [paymentUrl, setPaymentUrl] = useState("");
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -214,13 +214,13 @@ function App() {
 
 	const handleCloseAlert = () => {
 		setShowConfirmationAlert(false);
-		setPaymentUrl(""); // Limpiar la URL de pago al cerrar
+		setPaymentUrl("");
 		resetForm();
 	};
 
 	const handlePayment = async (gateway) => {
 		const { precio, vehiculo } = cotizacion;
-		const amount = Math.round(precio * 0.4); // 40% del total
+		const amount = Math.round(precio * 0.4);
 		const description = `Abono reserva para ${formData.destino} (${vehiculo})`;
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
@@ -338,40 +338,127 @@ function App() {
 		return `${anio}-${mes}-${dia}`;
 	}, [formData.destino]);
 
+	// --- CÁLCULOS PARA EL DIÁLOGO ---
+	const abono = cotizacion.precio ? Math.round(cotizacion.precio * 0.4) : 0;
+	const saldoPendiente = cotizacion.precio ? cotizacion.precio - abono : 0;
+
 	return (
 		<div className="min-h-screen bg-background text-foreground">
 			<AlertDialog
 				open={showConfirmationAlert}
 				onOpenChange={setShowConfirmationAlert}
 			>
-				<AlertDialogContent>
+				{/* ⬇️ AUMENTAMOS ANCHO EN PANTALLAS MEDIANAS */}
+				<AlertDialogContent className="sm:max-w-[520px] md:max-w-[720px]">
 					<AlertDialogHeader>
-						<AlertDialogTitle>¡Solicitud Recibida!</AlertDialogTitle>
-						<AlertDialogDescription>
-							Hemos enviado la cotización a tu correo. Para finalizar, puedes
-							confirmar directamente por WhatsApp o asegurar tu reserva pagando
-							el 40% del abono.
+						<AlertDialogTitle className="text-2xl">
+							¡Gracias, {formData.nombre || "viajero"}!
+						</AlertDialogTitle>
+						<AlertDialogDescription className="space-y-4 pt-2">
+							<p>
+								Hemos recibido tu solicitud y enviado una copia a tu correo.
+								Aquí tienes el resumen de tu reserva:
+							</p>
+
+							{/* Resumen de la Reserva */}
+							<div className="p-4 bg-muted/50 rounded-lg space-y-2 text-sm">
+								<div className="flex justify-between">
+									<span className="text-muted-foreground">Destino:</span>
+									<span className="font-semibold text-foreground">
+										{formData.destino === "Otro"
+											? formData.otroDestino
+											: formData.destino}
+									</span>
+								</div>
+								<div className="flex justify-between">
+									<span className="text-muted-foreground">Valor Total:</span>
+									<span className="font-semibold text-foreground">
+										{new Intl.NumberFormat("es-CL", {
+											style: "currency",
+											currency: "CLP",
+										}).format(cotizacion.precio || 0)}
+									</span>
+								</div>
+								<div className="flex justify-between font-bold text-primary">
+									<span>Abono para reservar (40%):</span>
+									<span>
+										{new Intl.NumberFormat("es-CL", {
+											style: "currency",
+											currency: "CLP",
+										}).format(abono)}
+									</span>
+								</div>
+								<div className="flex justify-between text-xs text-muted-foreground">
+									<span>Saldo pendiente (a pagar al conductor):</span>
+									<span>
+										{new Intl.NumberFormat("es-CL", {
+											style: "currency",
+											currency: "CLP",
+										}).format(saldoPendiente)}
+									</span>
+								</div>
+							</div>
+
+							<div>
+								<h4 className="font-semibold text-foreground mb-2">
+									¿Cómo confirmar tu reserva?
+								</h4>
+								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+									<li>
+										<strong>Opción 1:</strong> Abona el 40% de forma segura a
+										través de Flow o Mercado Pago.
+									</li>
+									<li>
+										<strong>Opción 2:</strong> Contáctanos por WhatsApp para
+										confirmar y coordinar el pago.
+									</li>
+								</ol>
+							</div>
+							<div className="text-xs text-center pt-2 text-muted-foreground">
+								Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
+								<strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de
+								descuento!
+							</div>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
+
+					{/* ⬇️ FOOTER: COLUMNA EN MOBILE, FILA DESDE md */}
+					<AlertDialogFooter className="flex-col-reverse md:flex-row md:justify-end md:gap-2">
 						<AlertDialogCancel onClick={handleCloseAlert}>
 							Cerrar
 						</AlertDialogCancel>
-						<AlertDialogAction asChild>
-							<a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-								Confirmar por WhatsApp
-							</a>
-						</AlertDialogAction>
-						{cotizacion.precio && (
-							<>
-								<Button onClick={() => handlePayment("flow")}>
-									Pagar Abono con Flow
-								</Button>
-								<Button onClick={() => handlePayment("mercadopago")}>
-									Pagar Abono con Mercado Pago
-								</Button>
-							</>
-						)}
+
+						{/* ⬇️ ACCIONES: 1 COL EN MOBILE, 3 COLS DESDE md */}
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
+							<AlertDialogAction asChild className="w-full">
+								<a
+									href={whatsappUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="w-full !whitespace-normal break-words leading-tight text-center bg-green-500 hover:bg-green-600"
+								>
+									Confirmar por WhatsApp
+								</a>
+							</AlertDialogAction>
+
+							{cotizacion.precio && (
+								<>
+									<Button
+										onClick={() => handlePayment("flow")}
+										className="w-full !whitespace-normal break-words leading-tight text-center"
+									>
+										Abono con (Flow)
+									</Button>
+
+									<Button
+										onClick={() => handlePayment("mercadopago")}
+										className="w-full !whitespace-normal break-words leading-tight text-center"
+									>
+										Abono con (Mercado Pago)
+									</Button>
+								</>
+							)}
+						</div>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
