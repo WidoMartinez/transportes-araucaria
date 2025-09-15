@@ -4,16 +4,17 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { MercadoPagoConfig, Preference } from "mercadopago";
-import Flow from "@nicotordev/flowcl-pagos";
+import Pkg from "@nicotordev/flowcl-pagos"; // <-- 1. Importar el paquete
+const { Flow } = Pkg; // <-- 2. Extraer la clase 'Flow' del paquete
 
 dotenv.config();
 
-// --- CONFIGURACIÓN DE MERCADO PAGO (SINTAXIS NUEVA Y CORRECTA) ---
+// --- CONFIGURACIÓN DE MERCADO PAGO ---
 const client = new MercadoPagoConfig({
 	accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
 });
 
-// --- CONFIGURACIÓN DE FLOW (CON EL PAQUETE CORRECTO) ---
+// --- CONFIGURACIÓN DE FLOW ---
 const flow = new Flow({
 	apiKey: process.env.FLOW_API_KEY,
 	secretKey: process.env.FLOW_SECRET_KEY,
@@ -64,7 +65,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: amount,
-			email: "cliente@example.com", // Puedes obtenerlo del formulario si lo necesitas
+			email: "cliente@example.com",
 			urlConfirmation: `${process.env.YOUR_BACKEND_URL}/flow-confirmation`,
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
