@@ -1,169 +1,143 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Label } from "./ui/label";
-import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { LoaderCircle } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { CheckCircle2, MapPin, ShieldCheck, Timer } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
+import { useReservaWizard } from "./ReservaWizard";
 
-function Hero({
-	formData,
-	handleInputChange,
-	handleSubmit,
-	cotizacion,
-	destinos,
-	maxPasajeros,
-	minDateTime,
-	phoneError,
-	isSubmitting,
-}) {
-	return (
-		<section
-			id="inicio"
-			className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
-		>
-			<div className="absolute inset-0 bg-black/30"></div>
-			<div
-				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-				style={{ backgroundImage: `url(${heroVan})` }}
-			></div>
-			<div className="relative container mx-auto px-4 text-center">
-				<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-					Tu Traslado Privado y Exclusivo
-					<br />
-					<span className="text-accent">en un Auto Confortable</span>
-				</h2>
-				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Viaja con la comodidad y discreción que mereces. Servicio premium
-					desde el Aeropuerto La Araucanía.
-				</p>
+function Hero({ destinos = [] }) {
+        const { startWizard, hasProgress, currentStep, steps } = useReservaWizard();
 
-				<Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
-					<CardHeader>
-						<CardTitle className="text-foreground text-center text-2xl">
-							Cotiza y Reserva tu Viaje
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form
-							onSubmit={handleSubmit}
-							className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end"
-						>
-							<div className="text-left">
-								<Label htmlFor="destino-hero">Destino</Label>
-								<select
-									id="destino-hero"
-									name="destino"
-									value={formData.destino}
-									onChange={handleInputChange}
-									className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary text-foreground"
-									required
-								>
-									<option value="">Seleccionar</option>
-									{destinos.map((d) => (
-										<option key={d.nombre} value={d.nombre}>
-											{d.nombre}
-										</option>
-									))}
-									<option value="Otro">Otro</option>
-								</select>
-							</div>
-							{formData.destino === "Otro" && (
-								<div className="text-left">
-									<Label htmlFor="otroDestino-hero">Otro Destino</Label>
-									<Input
-										id="otroDestino-hero"
-										name="otroDestino"
-										value={formData.otroDestino}
-										onChange={handleInputChange}
-										required
-									/>
-								</div>
-							)}
-							<div className="text-left">
-								<Label htmlFor="pasajeros-hero">Pasajeros</Label>
-								<select
-									id="pasajeros-hero"
-									name="pasajeros"
-									value={formData.pasajeros}
-									onChange={handleInputChange}
-									className="w-full p-2 border rounded-md focus:ring-2 focus:ring-primary text-foreground"
-									required
-								>
-									{[...Array(maxPasajeros)].map((_, i) => (
-										<option key={i + 1} value={i + 1}>
-											{i + 1} pasajero(s)
-										</option>
-									))}
-								</select>
-							</div>
-							<div className="text-left">
-								<Label htmlFor="fecha-hero">Fecha</Label>
-								<Input
-									id="fecha-hero"
-									type="date"
-									name="fecha"
-									value={formData.fecha}
-									onChange={handleInputChange}
-									min={minDateTime}
-									required
-								/>
-							</div>
-							<div className="text-left">
-								<Label htmlFor="hora-hero">Hora</Label>
-								<Input
-									id="hora-hero"
-									type="time"
-									name="hora"
-									value={formData.hora}
-									onChange={handleInputChange}
-									required
-								/>
-							</div>
-							<div className="text-left">
-								<Label htmlFor="telefono-hero">Teléfono</Label>
-								<Input
-									id="telefono-hero"
-									type="tel"
-									name="telefono"
-									placeholder="Ej: +569..."
-									value={formData.telefono}
-									onChange={handleInputChange}
-									required
-								/>
-								{phoneError && (
-									<p className="text-red-500 text-xs mt-1">{phoneError}</p>
-								)}
-							</div>
-							<Button
-								type="submit"
-								className="w-full bg-accent hover:bg-accent/90 text-lg py-3"
-								disabled={isSubmitting}
-							>
-								{isSubmitting ? (
-									<>
-										<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-										Enviando...
-									</>
-								) : (
-									"Reservar"
-								)}
-							</Button>
-						</form>
-						{cotizacion.precio && (
-							<div className="mt-4 p-4 bg-green-100 rounded-lg text-green-800 text-center transition-all duration-300 ease-in-out">
-								<p className="font-bold">
-									Precio Cotizado: $
-									{new Intl.NumberFormat("es-CL").format(cotizacion.precio)}
-								</p>
-								<p>Vehículo Sugerido: {cotizacion.vehiculo}</p>
-							</div>
-						)}
-					</CardContent>
-				</Card>
-			</div>
-		</section>
-	);
+        const highlightedDestinos = destinos.slice(0, 3).map((destino) => destino.nombre);
+        const currentStepTitle = steps?.[currentStep]?.title || "Datos del viaje";
+        const destinosTexto = highlightedDestinos.length
+                ? `Destinos frecuentes: ${highlightedDestinos.join(", ")}${
+                          destinos.length > highlightedDestinos.length
+                                  ? " y más ciudades de la región."
+                                  : "."
+                  }`
+                : "Cobertura completa en la Región de La Araucanía.";
+
+        const handleStart = () => {
+                startWizard();
+        };
+
+        return (
+                <section
+                        id="inicio"
+                        className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
+                >
+                        <div className="absolute inset-0 bg-black/30" />
+                        <div
+                                className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                                style={{ backgroundImage: `url(${heroVan})` }}
+                        />
+                        <div className="relative container mx-auto px-4 text-center space-y-10">
+                                <div className="space-y-6">
+                                        <h2 className="text-5xl md:text-6xl font-bold leading-tight animate-fade-in-down">
+                                                Tu viaje privado en La Araucanía
+                                                <br />
+                                                <span className="text-accent">ahora con reserva guiada paso a paso</span>
+                                        </h2>
+                                        <p className="text-xl md:text-2xl max-w-3xl mx-auto">
+                                                Coordina traslados desde y hacia el Aeropuerto La Araucanía con choferes
+                                                certificados. Guarda tu progreso, añade extras y recibe confirmación en
+                                                minutos.
+                                        </p>
+                                </div>
+                                <Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border">
+                                        <CardHeader className="space-y-2">
+                                                <CardTitle className="text-foreground text-center text-2xl">
+                                                        Completa tu reserva en 4 pasos
+                                                </CardTitle>
+                                                <p className="text-sm text-muted-foreground text-center">
+                                                        El asistente conserva tu información aunque cierres la página.
+                                                </p>
+                                        </CardHeader>
+                                        <CardContent className="space-y-8">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+                                                        {(steps || []).map((step, index) => (
+                                                                <div
+                                                                        key={step.title}
+                                                                        className="flex items-start space-x-3 rounded-lg border border-muted/60 bg-muted/20 p-4"
+                                                                >
+                                                                        <Badge variant="secondary" className="mt-0.5">
+                                                                                Paso {index + 1}
+                                                                        </Badge>
+                                                                        <div>
+                                                                                <p className="font-semibold text-foreground">
+                                                                                        {step.title}
+                                                                                </p>
+                                                                                <p className="text-sm text-muted-foreground">
+                                                                                        {step.description}
+                                                                                </p>
+                                                                        </div>
+                                                                </div>
+                                                        ))}
+                                                </div>
+                                                {hasProgress && (
+                                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 p-4 text-left">
+                                                                <div className="flex items-center space-x-3">
+                                                                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                                                                        <div>
+                                                                                <p className="font-semibold text-primary">
+                                                                                        ¡Tienes un borrador guardado!
+                                                                                </p>
+                                                                                <p className="text-sm text-muted-foreground">
+                                                                                        Retomaremos tu reserva en "{currentStepTitle}".
+                                                                                </p>
+                                                                        </div>
+                                                                </div>
+                                                                <Button variant="outline" onClick={handleStart}>
+                                                                        Continuar donde quedé
+                                                                </Button>
+                                                        </div>
+                                                )}
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                                                        <div className="flex items-start space-x-3">
+                                                                <MapPin className="h-5 w-5 text-primary mt-0.5" />
+                                                                <div>
+                                                                        <p className="font-semibold text-foreground">Rutas a medida</p>
+                                                                        <p className="text-sm text-muted-foreground">
+                                                                                Define origen, destino y paradas intermedias según tus planes.
+                                                                        </p>
+                                                                </div>
+                                                        </div>
+                                                        <div className="flex items-start space-x-3">
+                                                                <Timer className="h-5 w-5 text-primary mt-0.5" />
+                                                                <div>
+                                                                        <p className="font-semibold text-foreground">Confirmación rápida</p>
+                                                                        <p className="text-sm text-muted-foreground">
+                                                                                Recibe el resumen con abono sugerido y recordatorios automáticos.
+                                                                        </p>
+                                                                </div>
+                                                        </div>
+                                                        <div className="flex items-start space-x-3">
+                                                                <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
+                                                                <div>
+                                                                        <p className="font-semibold text-foreground">Seguridad y soporte</p>
+                                                                        <p className="text-sm text-muted-foreground">
+                                                                                Conductores certificados, monitoreo de vuelos y asistencia 24/7.
+                                                                        </p>
+                                                                </div>
+                                                        </div>
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                        <Button
+                                                                size="lg"
+                                                                className="bg-accent hover:bg-accent/90 text-lg px-10"
+                                                                onClick={handleStart}
+                                                        >
+                                                                Iniciar mi reserva ahora
+                                                        </Button>
+                                                        <p className="text-sm text-muted-foreground">{destinosTexto}</p>
+                                                </div>
+                                        </CardContent>
+                                </Card>
+                        </div>
+                </section>
+        );
 }
 
 export default Hero;

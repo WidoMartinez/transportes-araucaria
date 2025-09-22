@@ -1,302 +1,152 @@
 import React from "react";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle,
 } from "./ui/card";
-import { Label } from "./ui/label";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
-import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, CheckCircle2, CalendarDays, ShieldCheck } from "lucide-react";
+import { useReservaWizard } from "./ReservaWizard";
 
-// Componente interno para reutilizar la lógica de mostrar información de contacto
 const InfoItem = ({ icon: Icon, title, children }) => (
-	<div className="flex items-start space-x-4">
-		<div className="flex-shrink-0">
-			<Icon className="h-6 w-6 text-primary mt-1" />
-		</div>
-		<div>
-			<p className="font-semibold text-lg">{title}</p>
-			<div className="text-muted-foreground">{children}</div>
-		</div>
-	</div>
+        <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                        <Icon className="h-6 w-6 text-primary mt-1" />
+                </div>
+                <div>
+                        <p className="font-semibold text-lg">{title}</p>
+                        <div className="text-muted-foreground">{children}</div>
+                </div>
+        </div>
 );
 
-function Contacto({
-	formData,
-	handleInputChange,
-	handleSubmit,
-	cotizacion,
-	destinos,
-	maxPasajeros,
-	minDateTime,
-	phoneError,
-	isSubmitting,
-}) {
-	return (
-		<section id="contacto" className="py-24 bg-gray-50/50">
-			<div className="container mx-auto px-4">
-				<div className="text-center mb-16">
-					<h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-						Hablemos
-					</h2>
-					<p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-						Completa el formulario y nuestro equipo se pondrá en contacto
-						contigo en menos de 30 minutos para entregarte una cotización a tu
-						medida.
-					</p>
-				</div>
+function Contacto() {
+        const { startWizard, hasProgress, currentStep, steps } = useReservaWizard();
+        const currentStepTitle = steps?.[currentStep]?.title || "Datos del viaje";
 
-				<div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
-					{/* Columna de Información de Contacto */}
-					<div className="lg:col-span-2">
-						<Card className="shadow-md border-transparent h-full bg-transparent">
-							<CardHeader>
-								<CardTitle className="text-2xl">
-									Información de Contacto
-								</CardTitle>
-								<CardDescription>
-									Estamos disponibles para atenderte 24/7.
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-8">
-								<InfoItem icon={Phone} title="Teléfono">
-									<a
-										href="tel:+56936643540"
-										className="hover:text-primary transition-colors duration-300"
-									>
-										+56 9 3664 3540
-									</a>
-								</InfoItem>
-								<InfoItem icon={Mail} title="Email">
-									<a
-										href="mailto:contacto@transportesaraucaria.cl"
-										className="hover:text-primary transition-colors duration-300"
-									>
-										contacto@transportesaraucaria.cl
-									</a>
-								</InfoItem>
-								<InfoItem icon={MapPin} title="Ubicación">
-									<p>Temuco, Región de La Araucanía</p>
-								</InfoItem>
-								<InfoItem icon={Clock} title="Horarios">
-									<p>Disponible 24 horas, 7 días a la semana.</p>
-								</InfoItem>
-							</CardContent>
-						</Card>
-					</div>
+        return (
+                <section id="contacto" className="py-24 bg-gray-50/50">
+                        <div className="container mx-auto px-4">
+                                <div className="text-center mb-16">
+                                        <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+                                                Estamos para ayudarte
+                                        </h2>
+                                        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                                                Nuestro equipo responde en menos de 30 minutos. Puedes iniciar el asistente de
+                                                reservas o contactarnos directamente por los canales disponibles.
+                                        </p>
+                                </div>
 
-					{/* Columna del Formulario */}
-					<div className="lg:col-span-3">
-						<Card className="shadow-md border">
-							<CardHeader>
-								<CardTitle className="text-2xl">
-									Solicita tu Cotización
-								</CardTitle>
-								<CardDescription>
-									Completa tus datos y te enviaremos una oferta personalizada.
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<form onSubmit={handleSubmit} className="space-y-6">
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-										<div className="space-y-2">
-											<Label htmlFor="nombre">Nombre completo</Label>
-											<Input
-												id="nombre"
-												name="nombre"
-												value={formData.nombre}
-												onChange={handleInputChange}
-												placeholder="Ej: Juan Pérez"
-												required
-											/>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="telefono-form">Teléfono</Label>
-											<Input
-												id="telefono-form"
-												name="telefono"
-												value={formData.telefono}
-												onChange={handleInputChange}
-												placeholder="+56 9 1234 5678"
-												required
-											/>
-											{phoneError && (
-												<p className="text-red-500 text-sm mt-1">
-													{phoneError}
-												</p>
-											)}
-										</div>
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="email">Email</Label>
-										<Input
-											id="email"
-											type="email"
-											name="email"
-											value={formData.email}
-											onChange={handleInputChange}
-											placeholder="tu@email.cl"
-											required
-										/>
-									</div>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-										<div className="space-y-2">
-											<Label htmlFor="origen">Origen</Label>
-											<Input
-												id="origen"
-												name="origen"
-												value={formData.origen}
-												onChange={handleInputChange}
-												placeholder="Ej: Aeropuerto de Temuco"
-												required
-											/>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="destino-form">Destino</Label>
-											<select
-												id="destino-form"
-												name="destino"
-												value={formData.destino}
-												onChange={handleInputChange}
-												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-												required
-											>
-												<option value="">Seleccionar destino</option>
-												{destinos.map((d) => (
-													<option key={d.nombre} value={d.nombre}>
-														{d.nombre}
-													</option>
-												))}
-												<option value="Otro">Otro destino</option>
-											</select>
-										</div>
-									</div>
+                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+                                        <div className="lg:col-span-2">
+                                                <Card className="shadow-md border-transparent h-full bg-transparent">
+                                                        <CardHeader>
+                                                                <CardTitle className="text-2xl">Información de Contacto</CardTitle>
+                                                                <CardDescription>
+                                                                        Disponibilidad 24/7 y seguimiento personalizado.
+                                                                </CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-8">
+                                                                <InfoItem icon={Phone} title="Teléfono">
+                                                                        <a
+                                                                                href="tel:+56936643540"
+                                                                                className="hover:text-primary transition-colors duration-300"
+                                                                        >
+                                                                                +56 9 3664 3540
+                                                                        </a>
+                                                                </InfoItem>
+                                                                <InfoItem icon={Mail} title="Email">
+                                                                        <a
+                                                                                href="mailto:contacto@transportesaraucaria.cl"
+                                                                                className="hover:text-primary transition-colors duration-300"
+                                                                        >
+                                                                                contacto@transportesaraucaria.cl
+                                                                        </a>
+                                                                </InfoItem>
+                                                                <InfoItem icon={MapPin} title="Ubicación">
+                                                                        <p>Temuco, Región de La Araucanía</p>
+                                                                </InfoItem>
+                                                                <InfoItem icon={Clock} title="Horarios">
+                                                                        <p>Atención continua, todos los días del año.</p>
+                                                                </InfoItem>
+                                                        </CardContent>
+                                                </Card>
+                                        </div>
 
-									{/* Campo condicional para "Otro" destino */}
-									{formData.destino === "Otro" && (
-										<div className="space-y-2">
-											<Label htmlFor="otroDestino-form">
-												Especificar otro destino
-											</Label>
-											<Input
-												id="otroDestino-form"
-												name="otroDestino"
-												value={formData.otroDestino}
-												onChange={handleInputChange}
-												placeholder="Ingresa el destino aquí"
-												required
-											/>
-										</div>
-									)}
-
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-										<div className="space-y-2">
-											<Label htmlFor="fecha-form">Fecha</Label>
-											<Input
-												type="date"
-												id="fecha-form"
-												name="fecha"
-												value={formData.fecha}
-												onChange={handleInputChange}
-												min={minDateTime}
-												required
-											/>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="hora-form">Hora</Label>
-											<Input
-												type="time"
-												id="hora-form"
-												name="hora"
-												value={formData.hora}
-												onChange={handleInputChange}
-												required
-											/>
-										</div>
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="pasajeros-form">N° de Pasajeros</Label>
-										<select
-											id="pasajeros-form"
-											name="pasajeros"
-											value={formData.pasajeros}
-											onChange={handleInputChange}
-											className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-										>
-											{[...Array(maxPasajeros)].map((_, i) => (
-												<option key={i + 1} value={i + 1}>
-													{i + 1} pasajero(s)
-												</option>
-											))}
-										</select>
-									</div>
-
-									{cotizacion.precio && (
-										<div className="p-4 bg-primary/10 rounded-lg text-center transition-all duration-300 ease-in-out">
-											<div className="flex justify-around items-center gap-4 text-primary">
-												<div>
-													<p className="font-semibold text-sm uppercase tracking-wider">
-														Precio Total
-													</p>
-													<p className="text-3xl font-bold">
-														$
-														{new Intl.NumberFormat("es-CL").format(
-															cotizacion.precio
-														)}
-													</p>
-												</div>
-												<div className="border-l-2 border-primary/20 h-12"></div>
-												<div>
-													<p className="font-semibold text-sm uppercase tracking-wider">
-														Vehículo
-													</p>
-													<p className="text-xl font-bold">
-														{cotizacion.vehiculo}
-													</p>
-												</div>
-											</div>
-										</div>
-									)}
-
-									<div className="space-y-2">
-										<Label htmlFor="mensaje">
-											Mensaje adicional (opcional)
-										</Label>
-										<Textarea
-											id="mensaje"
-											name="mensaje"
-											value={formData.mensaje}
-											onChange={handleInputChange}
-											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
-										/>
-									</div>
-									<Button
-										type="submit"
-										size="lg"
-										className="w-full text-lg"
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<>
-												<LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
-												Enviando...
-											</>
-										) : (
-											"Enviar Solicitud"
-										)}
-									</Button>
-								</form>
-							</CardContent>
-						</Card>
-					</div>
-				</div>
-			</div>
-		</section>
-	);
+                                        <div className="lg:col-span-3">
+                                                <Card className="shadow-md border">
+                                                        <CardHeader>
+                                                                <CardTitle className="text-2xl">Agenda tu traslado ahora</CardTitle>
+                                                                <CardDescription>
+                                                                        Abre el wizard para definir tu viaje, personalizar extras y confirmar la reserva en minutos.
+                                                                </CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="space-y-8">
+                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                        <div className="flex items-start space-x-3">
+                                                                                <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
+                                                                                <div>
+                                                                                        <p className="font-semibold text-foreground">Progreso guardado</p>
+                                                                                        <p className="text-sm text-muted-foreground">
+                                                                                                Recupera tu información aunque cierres la página.
+                                                                                        </p>
+                                                                                </div>
+                                                                        </div>
+                                                                        <div className="flex items-start space-x-3">
+                                                                                <CalendarDays className="h-5 w-5 text-primary mt-0.5" />
+                                                                                <div>
+                                                                                        <p className="font-semibold text-foreground">Fechas flexibles</p>
+                                                                                        <p className="text-sm text-muted-foreground">
+                                                                                                Validamos horarios mínimos y seguimiento de vuelos.
+                                                                                        </p>
+                                                                                </div>
+                                                                        </div>
+                                                                        <div className="flex items-start space-x-3">
+                                                                                <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
+                                                                                <div>
+                                                                                        <p className="font-semibold text-foreground">Confirmación segura</p>
+                                                                                        <p className="text-sm text-muted-foreground">
+                                                                                                Recibe resumen, políticas y enlaces para abonar.
+                                                                                        </p>
+                                                                                </div>
+                                                                        </div>
+                                                                </div>
+                                                                {hasProgress && (
+                                                                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                                                                                <div>
+                                                                                        <p className="font-semibold text-primary">
+                                                                                                Continúa donde quedaste
+                                                                                        </p>
+                                                                                        <p className="text-sm text-muted-foreground">
+                                                                                                Abriremos el paso "{currentStepTitle}" para completar tu solicitud.
+                                                                                        </p>
+                                                                                </div>
+                                                                                <Button variant="outline" onClick={() => startWizard()}>
+                                                                                        Reanudar reserva
+                                                                                </Button>
+                                                                        </div>
+                                                                )}
+                                                                <div className="space-y-3 text-left">
+                                                                        <p className="text-sm text-muted-foreground">
+                                                                                Nuestro asistente contempla paradas intermedias, equipaje especial y códigos promocionales.
+                                                                                También puedes añadir comentarios para facturación y preferencias de viaje.
+                                                                        </p>
+                                                                        <Button size="lg" className="w-full" onClick={() => startWizard()}>
+                                                                                Abrir asistente de reservas
+                                                                        </Button>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                                ¿Prefieres coordinar por WhatsApp? Escríbenos al +56 9 3664 3540 y uno de nuestros coordinadores te guiará paso a paso.
+                                                                        </p>
+                                                                </div>
+                                                        </CardContent>
+                                                </Card>
+                                        </div>
+                                </div>
+                        </div>
+                </section>
+        );
 }
 
 export default Contacto;
