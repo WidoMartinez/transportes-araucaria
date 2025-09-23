@@ -1,9 +1,10 @@
+/* eslint-env node */
 // backend/server.js
 import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import { MercadoPagoConfig, Preference } from "mercadopago";
+import { MercadoPagoConfig, Preference, Payment } from "mercadopago";
 import axios from "axios";
 import crypto from "crypto";
 
@@ -11,8 +12,9 @@ dotenv.config();
 
 // --- CONFIGURACIÓN DE MERCADO PAGO ---
 const client = new MercadoPagoConfig({
-	accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+        accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
 });
+const paymentClient = new Payment(client);
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -31,7 +33,7 @@ app.use(cors());
 
 // --- ENDPOINT PARA CREAR PAGOS ---
 app.post("/create-payment", async (req, res) => {
-	const { gateway, amount, description } = req.body;
+        const { gateway, amount, description } = req.body;
 
 	if (gateway === "mercadopago") {
 		const preferenceData = {
@@ -100,7 +102,76 @@ app.post("/create-payment", async (req, res) => {
 		}
 	} else {
 		res.status(400).json({ message: "Pasarela de pago no válida." });
-	}
+        }
+});
+
+app.post("/process-payment", async (req, res) => {
+        const {
+                token,
+                amount,
+                description,
+                installments,
+                paymentMethodId,
+                issuerId,
+                email,
+                identification,
+                metadata,
+        } = req.body;
+
+        if (!token || !amount || !paymentMethodId) {
+                return res
+                        .status(400)
+                        .json({ message: "Faltan datos obligatorios para procesar el pago." });
+        }
+
+        const transactionAmount = Number(amount);
+        if (Number.isNaN(transactionAmount) || transactionAmount <= 0) {
+                return res.status(400).json({ message: "Monto de pago inválido." });
+        }
+
+        try {
+                const paymentResponse = await paymentClient.create({
+                        body: {
+                                token,
+                                transaction_amount: transactionAmount,
+                                description: description || "Reserva Transportes Araucaria",
+                                installments: installments || 1,
+                                payment_method_id: paymentMethodId,
+                                issuer_id: issuerId || undefined,
+                                payer: {
+                                        email: email || process.env.MERCADOPAGO_PAYER_EMAIL,
+                                        identification,
+                                },
+                                metadata,
+                                capture: true,
+                                binary_mode: false,
+                                statement_descriptor: "ARAUCA TRAVEL",
+                                additional_info: {
+                                        payer: {
+                                                registration_date: new Date().toISOString(),
+                                        },
+                                },
+                        },
+                });
+
+                res.json({
+                        id: paymentResponse.id,
+                        status: paymentResponse.status,
+                        statusDetail: paymentResponse.status_detail,
+                        receiptUrl:
+                                paymentResponse.point_of_interaction?.transaction_data?.ticket_url ||
+                                paymentResponse.transaction_details?.external_resource_url ||
+                                null,
+                });
+        } catch (error) {
+                console.error("Error al procesar el pago:", error);
+                const message =
+                        error?.message ||
+                        error?.error?.message ||
+                        error?.cause?.[0]?.description ||
+                        "No se pudo procesar el pago.";
+                res.status(500).json({ message });
+        }
 });
 
 // ... (Tu endpoint /send-email se mantiene igual)
@@ -108,20 +179,25 @@ app.post("/send-email", async (req, res) => {
 	console.log("✅ Petición recibida en /send-email");
 	console.log("✅ Datos recibidos:", req.body);
 
-	const {
-		nombre,
-		email,
-		telefono,
-		source,
-		mensaje,
-		origen,
-		destino,
-		fecha,
-		hora,
-		pasajeros,
-		precio,
-		vehiculo,
-	} = req.body;
+        const {
+                nombre,
+                email,
+                telefono,
+                source,
+                mensaje,
+                origen,
+                destino,
+                fecha,
+                hora,
+                pasajeros,
+                precio,
+                vehiculo,
+                extras = [],
+                coupon = null,
+                clubBenefit = null,
+                pricing = null,
+                payment = null,
+        } = req.body;
 
 	const transporter = nodemailer.createTransport({
 		host: process.env.EMAIL_HOST,
@@ -138,9 +214,75 @@ app.post("/send-email", async (req, res) => {
 	const emailSubject = `Nueva Cotización de Transfer: ${
 		destino || "Destino no especificado"
 	}`;
-	const formattedPrice = precio
-		? `$${new Intl.NumberFormat("es-CL").format(precio)} CLP`
-		: "A consultar";
+        const formatCLP = (value) =>
+                `$${new Intl.NumberFormat("es-CL").format(Math.round(Number(value) || 0))} CLP`;
+
+        const totalPrice = pricing?.total ?? precio;
+        const formattedPrice = totalPrice ? formatCLP(totalPrice) : "A consultar";
+        const baseFareFormatted = pricing?.baseFare ? formatCLP(pricing.baseFare) : formatCLP(precio || 0);
+        const extrasTotalFormatted = formatCLP(pricing?.extrasTotal || 0);
+        const discountTotalFormatted = formatCLP(pricing?.totalDiscounts || 0);
+        const taxesFormatted = formatCLP(pricing?.taxes || 0);
+
+        const extrasListHtml =
+                extras.length > 0
+                        ? `<ul style="margin: 0; padding-left: 18px;">${extras
+                                  .map(
+                                          (extra) =>
+                                                  `<li><strong>${extra.name || extra.descripcion || "Extra"}</strong> (${formatCLP(
+                                                          extra.amount || extra.precio || 0
+                                                  )})</li>`
+                                  )
+                                  .join("")}</ul>`
+                        : '<p style="margin: 0;">Sin extras adicionales.</p>';
+
+        const discountDetails = [];
+        if (pricing?.onlineDiscountValue) {
+                discountDetails.push(
+                        `Descuento online ${Math.round((pricing.onlineDiscountRate || 0) * 100)}%: <strong>- ${formatCLP(
+                                pricing.onlineDiscountValue
+                        )}</strong>`
+                );
+        }
+        if (pricing?.couponValue && coupon?.code) {
+                discountDetails.push(
+                        `Cupón ${coupon.code}: <strong>- ${formatCLP(pricing.couponValue)}</strong>`
+                );
+        }
+        if (pricing?.clubBenefitValue && clubBenefit?.label) {
+                discountDetails.push(
+                        `${clubBenefit.label}: <strong>- ${formatCLP(pricing.clubBenefitValue)}</strong>`
+                );
+        }
+        const discountsHtml = discountDetails.length
+                ? `<ul style="margin: 0; padding-left: 18px;">${discountDetails
+                          .map((line) => `<li>${line}</li>`)
+                          .join("")}</ul>`
+                : '<p style="margin: 0;">No se aplicaron descuentos adicionales.</p>';
+
+        const paymentHtml =
+                payment?.status === "succeeded"
+                        ? `<div style="padding: 15px; background-color: #dcfce7; border: 1px solid #16a34a; border-radius: 8px; margin-top: 20px;">
+                                <h3 style="margin: 0 0 10px; color: #166534;">Pago procesado en línea</h3>
+                                <p style="margin: 0;"><strong>Método:</strong> ${payment.methodLabel || payment.method}</p>
+                                <p style="margin: 4px 0;"><strong>Monto acreditado:</strong> ${formatCLP(payment.amount)}</p>
+                                ${
+                                        payment.mode === "deposit"
+                                                ? `<p style="margin: 4px 0;"><strong>Saldo pendiente:</strong> ${formatCLP(
+                                                          payment.balance
+                                                  )}</p>`
+                                                : ""
+                                }
+                                ${
+                                        payment.receiptUrl
+                                                ? `<p style="margin: 10px 0 0;"><a href="${payment.receiptUrl}" target="_blank" rel="noopener" style="color: #0f172a; font-weight: bold;">Ver comprobante de pago</a></p>`
+                                                : ""
+                                }
+                        </div>`
+                        : `<div style="padding: 15px; background-color: #fff7ed; border: 1px solid #f97316; border-radius: 8px; margin-top: 20px;">
+                                <h3 style="margin: 0 0 10px; color: #c2410c;">Pago pendiente</h3>
+                                <p style="margin: 0;">Puedes completar el abono online o coordinar con el equipo comercial.</p>
+                        </div>`;
 
 	const emailHtml = `
         <div style="font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
@@ -156,28 +298,56 @@ app.post("/send-email", async (req, res) => {
                     <h2 style="margin: 0 0 10px; font-size: 20px; color: #1e3a8a;">Resumen de la Cotización</h2>
                     <p style="margin: 5px 0; font-size: 18px;"><strong>Valor del Viaje:</strong> <span style="font-size: 22px; font-weight: bold; color: #1e3a8a;">${formattedPrice}</span></p>
                     <p style="margin: 5px 0; font-size: 16px;"><strong>Vehículo Sugerido:</strong> ${
-											vehiculo || "No asignado"
-										}</p>
+                                                                                        vehiculo || "No asignado"
+                                                                                }</p>
+                    ${
+                            payment?.status === "succeeded" && payment.mode === "deposit"
+                                    ? `<p style="margin: 5px 0; font-size: 14px;"><strong>Saldo pendiente:</strong> ${formatCLP(
+                                              payment.balance
+                                      )}</p>`
+                                    : ""
+                    }
                 </div>
 
                 <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px;">Detalles del Viaje</h2>
                 <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
                     <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Origen:</td><td style="padding: 8px;">${
-											origen || "No especificado"
-										}</td></tr>
+                                                                                        origen || "No especificado"
+                                                                                }</td></tr>
                     <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Destino:</td><td style="padding: 8px;">${
-											destino || "No especificado"
-										}</td></tr>
+                                                                                        destino || "No especificado"
+                                                                                }</td></tr>
                     <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Fecha:</td><td style="padding: 8px;">${
-											fecha || "No especificada"
-										}</td></tr>
+                                                                                        fecha || "No especificada"
+                                                                                }</td></tr>
                     <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Hora:</td><td style="padding: 8px;">${
-											hora || "No especificada"
-										}</td></tr>
+                                                                                        hora || "No especificada"
+                                                                                }</td></tr>
                     <tr><td style="padding: 8px; font-weight: bold;">Nº de Pasajeros:</td><td style="padding: 8px;">${
-											pasajeros || "No especificado"
-										}</td></tr>
+                                                                                        pasajeros || "No especificado"
+                                                                                }</td></tr>
                 </table>
+
+                <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px; margin-top: 25px;">Resumen Económico</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Tarifa base</td><td style="padding: 8px;">${baseFareFormatted}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Extras</td><td style="padding: 8px;">${extrasTotalFormatted}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Descuentos</td><td style="padding: 8px;">-${discountTotalFormatted}</td></tr>
+                    <tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; font-weight: bold;">Impuestos</td><td style="padding: 8px;">${taxesFormatted}</td></tr>
+                    <tr><td style="padding: 8px; font-weight: bold;">Total confirmado</td><td style="padding: 8px; font-size: 16px; font-weight: bold; color: #0f172a;">${formattedPrice}</td></tr>
+                </table>
+
+                <div style="background-color: #f8fafc; border: 1px solid #cbd5f5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <h3 style="margin: 0 0 8px; color: #1e3a8a;">Detalle de descuentos y beneficios</h3>
+                    ${discountsHtml}
+                </div>
+
+                <div style="background-color: #f8fafc; border: 1px solid #cbd5f5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <h3 style="margin: 0 0 8px; color: #1e3a8a;">Extras confirmados</h3>
+                    ${extrasListHtml}
+                </div>
+
+                ${paymentHtml}
 
                 <h2 style="border-bottom: 2px solid #eee; padding-bottom: 10px; color: #003366; font-size: 20px; margin-top: 25px;">Información del Cliente</h2>
                 <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">

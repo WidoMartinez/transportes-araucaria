@@ -5,12 +5,12 @@ import logo from "../assets/logo.png";
 
 // Función para encapsular el seguimiento de la conversión con el NUEVO ID
 const trackWhatsAppClick = () => {
-	if (typeof gtag === "function") {
-		gtag("event", "conversion", {
-			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB", // ID de conversión actualizado
-		});
-		console.log("Conversión de clic en WhatsApp (Header) enviada.");
-	}
+        if (typeof window !== "undefined" && typeof window.gtag === "function") {
+                window.gtag("event", "conversion", {
+                        send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB", // ID de conversión actualizado
+                });
+                console.log("Conversión de clic en WhatsApp (Header) enviada.");
+        }
 };
 
 function Header() {

@@ -30,4 +30,16 @@ export default [
       ],
     },
   },
+  {
+    files: ['backend/**/*.js', 'vite.config.js'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.node,
+      },
+      parserOptions: {
+        sourceType: 'module',
+      },
+    },
+  },
 ]

@@ -13,17 +13,20 @@ import { Button } from "./ui/button";
 import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
 
 // Componente interno para reutilizar la lógica de mostrar información de contacto
-const InfoItem = ({ icon: Icon, title, children }) => (
-	<div className="flex items-start space-x-4">
-		<div className="flex-shrink-0">
-			<Icon className="h-6 w-6 text-primary mt-1" />
-		</div>
-		<div>
-			<p className="font-semibold text-lg">{title}</p>
-			<div className="text-muted-foreground">{children}</div>
-		</div>
-	</div>
-);
+const InfoItem = ({ icon, title, children }) => {
+        const IconComponent = icon;
+        return (
+                <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                                <IconComponent className="h-6 w-6 text-primary mt-1" />
+                        </div>
+                        <div>
+                                <p className="font-semibold text-lg">{title}</p>
+                                <div className="text-muted-foreground">{children}</div>
+                        </div>
+                </div>
+        );
+};
 
 function Contacto({
 	formData,

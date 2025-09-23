@@ -28,112 +28,39 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 
 // Importar imágenes
-import temucoImg from "./assets/temuco.jpg";
-import villarricaImg from "./assets/villarrica.jpg";
-import puconImg from "./assets/pucon.jpg";
-import corralcoImg from "./assets/corralco.jpg";
+import { destinos as destinosConfig, destacadosData } from "./lib/data";
+import {
+        calcularCotizacion,
+        obtenerDesgloseTarifa,
+        formatoMonedaCLP,
+} from "./lib/pricing";
+import ReservaWizard from "./components/ReservaWizard";
 
 // --- DATOS Y LÓGICA ---
 
-const destinos = [
-	{
-		nombre: "Temuco",
-		descripcion: "Centro comercial y administrativo de La Araucanía.",
-		tiempo: "45 min",
-		imagen: temucoImg,
-		maxPasajeros: 4,
-		minHorasAnticipacion: 5,
-		precios: {
-			auto: { base: 15000, porcentajeAdicional: 0.1 },
-		},
-	},
-	{
-		nombre: "Villarrica",
-		descripcion: "Turismo y naturaleza junto al lago.",
-		tiempo: "1h 15min",
-		imagen: villarricaImg,
-		maxPasajeros: 7,
-		minHorasAnticipacion: 5,
-		precios: {
-			auto: { base: 40000, porcentajeAdicional: 0.05 },
-			van: { base: 200000, porcentajeAdicional: 0.05 },
-		},
-	},
-	{
-		nombre: "Pucón",
-		descripcion: "Aventura, termas y volcán.",
-		tiempo: "1h 30min",
-		imagen: puconImg,
-		maxPasajeros: 7,
-		minHorasAnticipacion: 5,
-		precios: {
-			auto: { base: 50000, porcentajeAdicional: 0.05 },
-			van: { base: 250000, porcentajeAdicional: 0.05 },
-		},
-	},
-];
+const destinos = destinosConfig;
 
-const destacadosData = [
-	{
-		nombre: "Corralco",
-		titulo: "Visita Corralco en Temporada de Nieve",
-		subtitulo: "Una Aventura Invernal Inolvidable",
-		descripcion:
-			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
-		imagen: corralcoImg,
-	},
-];
-
-const calcularCotizacion = (destino, pasajeros) => {
-	if (!destino || !pasajeros || destino.nombre === "Otro") {
-		return { precio: null, vehiculo: null };
-	}
-
-	const numPasajeros = parseInt(pasajeros);
-	let vehiculoAsignado;
-	let precioFinal;
-
-	if (numPasajeros > 0 && numPasajeros <= 4) {
-		vehiculoAsignado = "Auto Privado";
-		const precios = destino.precios.auto;
-		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
-
-		const pasajerosAdicionales = numPasajeros - 1;
-		const costoAdicional = precios.base * precios.porcentajeAdicional;
-		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-	} else if (numPasajeros >= 5 && numPasajeros <= 7) {
-		vehiculoAsignado = "Van de Pasajeros";
-		const precios = destino.precios.van;
-		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
-
-		const pasajerosAdicionales = numPasajeros - 5;
-		const costoAdicional = precios.base * precios.porcentajeAdicional;
-		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-	} else {
-		vehiculoAsignado = "Consultar disponibilidad";
-		precioFinal = null;
-	}
-
-	return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
-};
+const ONLINE_DISCOUNT_RATE = Number(import.meta.env.VITE_ONLINE_DISCOUNT ?? 0.1);
+const TAX_RATE = Number(import.meta.env.VITE_TAX_RATE ?? 0.19);
+const DEFAULT_DEPOSIT_RATE = Number(import.meta.env.VITE_DEPOSIT_RATE ?? 0.4);
 
 function App() {
-	const [formData, setFormData] = useState({
-		nombre: "",
-		telefono: "",
-		email: "",
-		origen: "Aeropuerto La Araucanía",
-		destino: "",
-		otroDestino: "",
-		fecha: "",
-		hora: "",
-		pasajeros: "1",
-		mensaje: "",
-	});
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
-	const [phoneError, setPhoneError] = useState("");
-	const [paymentUrl, setPaymentUrl] = useState("");
+        const [formData, setFormData] = useState({
+                nombre: "",
+                telefono: "",
+                email: "",
+                origen: "Aeropuerto La Araucanía",
+                destino: "",
+                otroDestino: "",
+                fecha: "",
+                hora: "",
+                pasajeros: "1",
+                mensaje: "",
+        });
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
+        const [phoneError, setPhoneError] = useState("");
+        const [reservationData, setReservationData] = useState(null);
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -197,61 +124,62 @@ function App() {
 		}
 	}, [formData.destino, formData.pasajeros]);
 
-	const resetForm = () => {
-		setFormData({
-			nombre: "",
-			telefono: "",
-			email: "",
-			origen: "Aeropuerto La Araucanía",
-			destino: "",
-			otroDestino: "",
-			fecha: "",
-			hora: "",
-			pasajeros: "1",
-			mensaje: "",
-		});
-	};
+        const resetForm = () => {
+                setFormData({
+                        nombre: "",
+                        telefono: "",
+                        email: "",
+                        origen: "Aeropuerto La Araucanía",
+                        destino: "",
+                        otroDestino: "",
+                        fecha: "",
+                        hora: "",
+                        pasajeros: "1",
+                        mensaje: "",
+                });
+        };
 
-	const handleCloseAlert = () => {
-		setShowConfirmationAlert(false);
-		setPaymentUrl("");
-		resetForm();
-	};
+        const handleCloseAlert = () => {
+                setShowConfirmationAlert(false);
+                setReservationData(null);
+                resetForm();
+        };
 
-	const handlePayment = async (gateway) => {
-		const { precio, vehiculo } = cotizacion;
-		const amount = Math.round(precio * 0.4);
-		const description = `Abono reserva para ${formData.destino} (${vehiculo})`;
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
+        const sendReservation = async (payload) => {
+                const apiUrl =
+                        import.meta.env.VITE_API_URL ||
+                        "https://transportes-araucaria.onrender.com";
 
-		try {
-			const response = await fetch(`${apiUrl}/create-payment`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ gateway, amount, description }),
-			});
-			const data = await response.json();
-			if (data.url) {
-				window.open(data.url, "_blank");
-			} else {
-				throw new Error("No se pudo generar el enlace de pago.");
-			}
-		} catch (error) {
-			console.error("Error al crear el pago:", error);
-			alert(
-				"Hubo un problema al generar el enlace de pago. Por favor, intenta de nuevo."
-			);
-		}
-	};
+                const response = await fetch(`${apiUrl}/send-email`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                });
 
-	const handleSubmit = async (e) => {
-		e.preventDefault();
+                const result = await response.json().catch(() => ({ message: "" }));
 
-		if (!validarTelefono(formData.telefono)) {
-			setPhoneError(
-				"Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
+                if (!response.ok) {
+                        throw new Error(result.message || "Error en el servidor.");
+                }
+
+                setReservationData(payload);
+                setShowConfirmationAlert(true);
+
+                if (typeof window !== "undefined" && typeof window.gtag === "function") {
+                        window.gtag("event", "conversion", {
+                                send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
+                        });
+                }
+
+                return result;
+        };
+
+        const handleSubmit = async (e) => {
+                e.preventDefault();
+
+                if (!validarTelefono(formData.telefono)) {
+                        setPhoneError(
+                                "Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
 			);
 			return;
 		}
@@ -263,73 +191,101 @@ function App() {
 			return;
 		}
 
-		if (isSubmitting) return;
-		setIsSubmitting(true);
+                if (isSubmitting) return;
+                setIsSubmitting(true);
 
-		const dataToSend = {
-			...formData,
-			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
-			source: e.target.querySelector('input[name="nombre"]')
-				? "Formulario de Contacto - Transportes Araucaria"
-				: "Formulario Rápido (Hero)",
-		};
-		if (!dataToSend.nombre)
-			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
+                const source = e.target.querySelector('input[name="nombre"]')
+                        ? "Formulario de Contacto - Transportes Araucaria"
+                        : "Formulario Rápido (Hero)";
 
-		if (dataToSend.destino === "Otro") {
-			dataToSend.destino = dataToSend.otroDestino;
-		}
+                const destinoFinal =
+                        formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
+                const pricingBreakdown = obtenerDesgloseTarifa({
+                        baseFare: cotizacion.precio || 0,
+                        extrasTotal: 0,
+                        onlineDiscountRate: 0,
+                        coupon: null,
+                        clubBenefit: null,
+                        taxRate: TAX_RATE,
+                });
 
-		try {
-			const response = await fetch(`${apiUrl}/send-email`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(dataToSend),
-			});
+                const dataToSend = {
+                        ...formData,
+                        destino: destinoFinal,
+                        precio: cotizacion.precio,
+                        vehiculo: cotizacion.vehiculo,
+                        source,
+                        extras: [],
+                        coupon: null,
+                        clubBenefit: null,
+                        pricing: pricingBreakdown,
+                        payment: null,
+                };
 
-			if (!response.ok) {
-				const result = await response.json();
-				throw new Error(result.message || "Error en el servidor.");
-			}
+                if (!dataToSend.nombre) {
+                        dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
+                }
 
-			setShowConfirmationAlert(true);
-
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-				});
-			}
-		} catch (error) {
-			console.error("Error al enviar el formulario:", error);
-			alert(`Error: ${error.message}`);
-		} finally {
-			setIsSubmitting(false);
+                try {
+                        await sendReservation(dataToSend);
+                } catch (error) {
+                        console.error("Error al enviar el formulario:", error);
+                        alert(`Error: ${error.message}`);
+                } finally {
+                        setIsSubmitting(false);
 		}
 	};
 
-	const whatsappUrl = useMemo(() => {
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-		const message = `Hola, acabo de cotizar desde el sitio web. Mi nombre es ${formData.nombre} y quisiera confirmar mi reserva a ${destinoFinal} para el día ${formData.fecha} a las ${formData.hora}.`;
-		return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
-	}, [formData]);
+        const resumenReserva = useMemo(() => {
+                if (reservationData) {
+                        return reservationData;
+                }
+
+                const destinoFinal =
+                        formData.destino === "Otro" ? formData.otroDestino : formData.destino;
+
+                return {
+                        ...formData,
+                        destino: destinoFinal,
+                        precio: cotizacion.precio,
+                        vehiculo: cotizacion.vehiculo,
+                        extras: [],
+                        coupon: null,
+                        clubBenefit: null,
+                        pricing: obtenerDesgloseTarifa({
+                                baseFare: cotizacion.precio || 0,
+                                extrasTotal: 0,
+                                onlineDiscountRate: 0,
+                                coupon: null,
+                                clubBenefit: null,
+                                taxRate: TAX_RATE,
+                        }),
+                        payment: null,
+                };
+        }, [reservationData, formData, cotizacion.precio, cotizacion.vehiculo]);
+
+        const whatsappUrl = useMemo(() => {
+                const destinoFinal = resumenReserva?.destino || "";
+                const fecha = resumenReserva?.fecha || formData.fecha;
+                const hora = resumenReserva?.hora || formData.hora;
+                const nombre = resumenReserva?.nombre || formData.nombre;
+
+                const message = `Hola, acabo de cotizar desde el sitio web. Mi nombre es ${nombre} y quisiera confirmar mi reserva a ${destinoFinal} para el día ${fecha} a las ${hora}.`;
+                return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
+        }, [formData.fecha, formData.hora, formData.nombre, resumenReserva]);
 
 	const maxPasajeros = useMemo(() => {
 		const destino = destinos.find((d) => d.nombre === formData.destino);
 		return destino?.maxPasajeros || 7;
 	}, [formData.destino]);
 
-	const minDateTime = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
-		const horasAnticipacion = destino?.minHorasAnticipacion || 5;
+        const minDateTime = useMemo(() => {
+                const destino = destinos.find((d) => d.nombre === formData.destino);
+                const horasAnticipacion = destino?.minHorasAnticipacion || 5;
 
-		const fechaMinima = new Date();
-		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
+                const fechaMinima = new Date();
+                fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
 
 		const anio = fechaMinima.getFullYear();
 		const mes = String(fechaMinima.getMonth() + 1).padStart(2, "0");
@@ -338,9 +294,21 @@ function App() {
 		return `${anio}-${mes}-${dia}`;
 	}, [formData.destino]);
 
-	// --- CÁLCULOS PARA EL DIÁLOGO ---
-	const abono = cotizacion.precio ? Math.round(cotizacion.precio * 0.4) : 0;
-	const saldoPendiente = cotizacion.precio ? cotizacion.precio - abono : 0;
+        const pricing = resumenReserva?.pricing || {
+                baseFare: 0,
+                extrasTotal: 0,
+                onlineDiscountRate: 0,
+                onlineDiscountValue: 0,
+                couponValue: 0,
+                clubBenefitValue: 0,
+                taxes: 0,
+                total: 0,
+                totalDiscounts: 0,
+        };
+        const extrasSeleccionados = resumenReserva?.extras || [];
+        const couponInfo = resumenReserva?.coupon;
+        const clubBenefitInfo = resumenReserva?.clubBenefit;
+        const paymentInfo = resumenReserva?.payment;
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -349,138 +317,228 @@ function App() {
 				onOpenChange={setShowConfirmationAlert}
 			>
 				{/* ⬇️ AUMENTAMOS ANCHO EN PANTALLAS MEDIANAS */}
-				<AlertDialogContent className="sm:max-w-[520px] md:max-w-[720px]">
-					<AlertDialogHeader>
-						<AlertDialogTitle className="text-2xl">
-							¡Gracias, {formData.nombre || "viajero"}!
-						</AlertDialogTitle>
-						<AlertDialogDescription className="space-y-4 pt-2">
-							<p>
-								Hemos recibido tu solicitud y enviado una copia a tu correo.
-								Aquí tienes el resumen de tu reserva:
-							</p>
+                                <AlertDialogContent className="sm:max-w-[520px] md:max-w-[720px]">
+                                        <AlertDialogHeader>
+                                                <AlertDialogTitle className="text-2xl">
+                                                        ¡Gracias, {resumenReserva?.nombre || "viajero"}!
+                                                </AlertDialogTitle>
+                                                <AlertDialogDescription className="space-y-4 pt-2 text-sm">
+                                                        <p>
+                                                                Hemos recibido tu solicitud y enviado un detalle a tu correo.
+                                                                Aquí tienes el resumen de tu reserva:
+                                                        </p>
 
-							{/* Resumen de la Reserva */}
-							<div className="p-4 bg-muted/50 rounded-lg space-y-2 text-sm">
-								<div className="flex justify-between">
-									<span className="text-muted-foreground">Destino:</span>
-									<span className="font-semibold text-foreground">
-										{formData.destino === "Otro"
-											? formData.otroDestino
-											: formData.destino}
-									</span>
-								</div>
-								<div className="flex justify-between">
-									<span className="text-muted-foreground">Valor Total:</span>
-									<span className="font-semibold text-foreground">
-										{new Intl.NumberFormat("es-CL", {
-											style: "currency",
-											currency: "CLP",
-										}).format(cotizacion.precio || 0)}
-									</span>
-								</div>
-								<div className="flex justify-between font-bold text-primary">
-									<span>Abono para reservar (40%):</span>
-									<span>
-										{new Intl.NumberFormat("es-CL", {
-											style: "currency",
-											currency: "CLP",
-										}).format(abono)}
-									</span>
-								</div>
-								<div className="flex justify-between text-xs text-muted-foreground">
-									<span>Saldo pendiente (a pagar al conductor):</span>
-									<span>
-										{new Intl.NumberFormat("es-CL", {
-											style: "currency",
-											currency: "CLP",
-										}).format(saldoPendiente)}
-									</span>
-								</div>
-							</div>
+                                                        <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                                                                <div className="flex justify-between">
+                                                                        <span className="text-muted-foreground">Destino:</span>
+                                                                        <span className="font-semibold text-foreground">
+                                                                                {resumenReserva?.destino || "Por confirmar"}
+                                                                        </span>
+                                                                </div>
+                                                                {resumenReserva?.vehiculo && (
+                                                                        <div className="flex justify-between">
+                                                                                <span className="text-muted-foreground">
+                                                                                        Vehículo sugerido:
+                                                                                </span>
+                                                                                <span className="font-semibold text-foreground">
+                                                                                        {resumenReserva.vehiculo}
+                                                                                </span>
+                                                                        </div>
+                                                                )}
+                                                                <div className="pt-3 border-t border-border/60 space-y-2">
+                                                                        <div className="flex justify-between">
+                                                                                <span>Tarifa base</span>
+                                                                                <span>{formatoMonedaCLP(pricing.baseFare)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                                <span>Extras</span>
+                                                                                <span>{formatoMonedaCLP(pricing.extrasTotal)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-emerald-700">
+                                                                                <span>Descuentos aplicados</span>
+                                                                                <span>
+                                                                                        -{formatoMonedaCLP(pricing.totalDiscounts)}
+                                                                                </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                                <span>Impuestos</span>
+                                                                                <span>{formatoMonedaCLP(pricing.taxes)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between font-bold text-primary">
+                                                                                <span>Total confirmado</span>
+                                                                                <span>{formatoMonedaCLP(pricing.total)}</span>
+                                                                        </div>
+                                                                </div>
+                                                        </div>
 
-							<div>
-								<h4 className="font-semibold text-foreground mb-2">
-									¿Cómo confirmar tu reserva?
-								</h4>
-								<ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-									<li>
-										<strong>Opción 1:</strong> Abona el 40% de forma segura a
-										través de Flow o Mercado Pago.
-									</li>
-									<li>
-										<strong>Opción 2:</strong> Contáctanos por WhatsApp para
-										confirmar y coordinar el pago.
-									</li>
-								</ol>
-							</div>
-							<div className="text-xs text-center pt-2 text-muted-foreground">
-								Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
-								<strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de
-								descuento!
-							</div>
-						</AlertDialogDescription>
-					</AlertDialogHeader>
+                                                        {extrasSeleccionados.length > 0 && (
+                                                                <div className="bg-muted/30 border border-muted rounded-lg p-4 space-y-2">
+                                                                        <h4 className="font-semibold text-foreground text-base">
+                                                                                Extras incluidos
+                                                                        </h4>
+                                                                        <ul className="list-disc pl-4 text-muted-foreground space-y-1">
+                                                                                {extrasSeleccionados.map((extra) => (
+                                                                                        <li key={extra.id || extra.nombre || extra.name}>
+                                                                                                {extra.label || extra.name || extra.descripcion} (
+                                                                                                {formatoMonedaCLP(extra.amount || extra.precio || 0)})
+                                                                                        </li>
+                                                                                ))}
+                                                                        </ul>
+                                                                </div>
+                                                        )}
 
-					{/* ⬇️ FOOTER: COLUMNA EN MOBILE, FILA DESDE md */}
-					<AlertDialogFooter className="flex-col-reverse md:flex-row md:justify-end md:gap-2">
-						<AlertDialogCancel onClick={handleCloseAlert}>
-							Cerrar
-						</AlertDialogCancel>
+                                                        {(pricing.onlineDiscountValue > 0 ||
+                                                                pricing.couponValue > 0 ||
+                                                                pricing.clubBenefitValue > 0) && (
+                                                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+                                                                        <h4 className="font-semibold text-emerald-900 text-base">
+                                                                                Beneficios y descuentos
+                                                                        </h4>
+                                                                        <ul className="list-disc pl-4 text-emerald-800 space-y-1">
+                                                                                {pricing.onlineDiscountValue > 0 && (
+                                                                                        <li>
+                                                                                                Descuento online {Math.round((pricing.onlineDiscountRate || 0) * 100)}%: -
+                                                                                                {" "}
+                                                                                                {formatoMonedaCLP(pricing.onlineDiscountValue)}
+                                                                                        </li>
+                                                                                )}
+                                                                                {pricing.couponValue > 0 && (
+                                                                                        <li>
+                                                                                                Cupón {couponInfo?.code?.toUpperCase() || "aplicado"}
+                                                                                                {couponInfo?.description
+                                                                                                        ? ` (${couponInfo.description})`
+                                                                                                        : ""}
+                                                                                                : - {formatoMonedaCLP(pricing.couponValue)}
+                                                                                        </li>
+                                                                                )}
+                                                                                {pricing.clubBenefitValue > 0 && (
+                                                                                        <li>
+                                                                                                Club Araucanía - {clubBenefitInfo?.label || "Beneficio"}: -
+                                                                                                {" "}
+                                                                                                {formatoMonedaCLP(pricing.clubBenefitValue)}
+                                                                                        </li>
+                                                                                )}
+                                                                        </ul>
+                                                                </div>
+                                                        )}
 
-						{/* ⬇️ ACCIONES: 1 COL EN MOBILE, 3 COLS DESDE md */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
-							<AlertDialogAction asChild className="w-full">
-								<a
-									href={whatsappUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="w-full !whitespace-normal break-words leading-tight text-center bg-green-500 hover:bg-green-600"
-								>
-									Confirmar por WhatsApp
-								</a>
-							</AlertDialogAction>
+                                                        {paymentInfo?.status === "succeeded" ? (
+                                                                <div className="rounded-lg border border-emerald-300 bg-emerald-100 p-4 space-y-2">
+                                                                        <h4 className="font-semibold text-emerald-900 text-base">
+                                                                                Pago confirmado en línea
+                                                                        </h4>
+                                                                        <p className="text-emerald-900">
+                                                                                Método: {paymentInfo.methodLabel || paymentInfo.method}
+                                                                        </p>
+                                                                        <p className="text-emerald-900">
+                                                                                Monto acreditado: {formatoMonedaCLP(paymentInfo.amount)}
+                                                                        </p>
+                                                                        {paymentInfo.mode === "deposit" && (
+                                                                                <p className="text-emerald-900">
+                                                                                        Saldo pendiente: {formatoMonedaCLP(paymentInfo.balance)}
+                                                                                </p>
+                                                                        )}
+                                                                        {paymentInfo.receiptUrl && (
+                                                                                <p>
+                                                                                        <a
+                                                                                                href={paymentInfo.receiptUrl}
+                                                                                                target="_blank"
+                                                                                                rel="noopener noreferrer"
+                                                                                                className="text-primary underline font-semibold"
+                                                                                        >
+                                                                                                Ver comprobante de pago
+                                                                                        </a>
+                                                                                </p>
+                                                                        )}
+                                                                </div>
+                                                        ) : (
+                                                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-2">
+                                                                        <h4 className="font-semibold text-amber-900 text-base">
+                                                                                Próximo paso
+                                                                        </h4>
+                                                                        <p className="text-amber-900">
+                                                                                Puedes completar tu abono seguro desde el asistente digital
+                                                                                o coordinar con nuestro equipo por WhatsApp.
+                                                                        </p>
+                                                                </div>
+                                                        )}
 
-							{cotizacion.precio && (
-								<>
-									<Button
-										onClick={() => handlePayment("flow")}
-										className="w-full !whitespace-normal break-words leading-tight text-center"
-									>
-										Abono con (Flow)
-									</Button>
+                                                        <div className="text-xs text-center pt-2 text-muted-foreground">
+                                                                Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
+                                                                <strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de
+                                                                descuento!
+                                                        </div>
+                                                </AlertDialogDescription>
+                                        </AlertDialogHeader>
 
-									<Button
-										onClick={() => handlePayment("mercadopago")}
-										className="w-full !whitespace-normal break-words leading-tight text-center"
-									>
-										Abono con (Mercado Pago)
-									</Button>
-								</>
-							)}
-						</div>
-					</AlertDialogFooter>
-				</AlertDialogContent>
+                                        <AlertDialogFooter className="flex-col-reverse md:flex-row md:justify-end md:gap-2">
+                                                <AlertDialogCancel onClick={handleCloseAlert}>
+                                                        Cerrar
+                                                </AlertDialogCancel>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 w-full">
+                                                        <AlertDialogAction asChild className="w-full">
+                                                                <a
+                                                                        href={whatsappUrl}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="w-full !whitespace-normal break-words leading-tight text-center bg-green-500 hover:bg-green-600"
+                                                                >
+                                                                        Confirmar por WhatsApp
+                                                                </a>
+                                                        </AlertDialogAction>
+
+                                                        {!paymentInfo && (
+                                                                <Button asChild className="w-full !whitespace-normal break-words leading-tight text-center">
+                                                                        <a href="#reserva-digital">Abrir asistente de pago</a>
+                                                                </Button>
+                                                        )}
+
+                                                        {paymentInfo?.receiptUrl && (
+                                                                <Button
+                                                                        asChild
+                                                                        variant="outline"
+                                                                        className="w-full !whitespace-normal break-words leading-tight text-center"
+                                                                >
+                                                                        <a
+                                                                                href={paymentInfo.receiptUrl}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                        >
+                                                                                Ver comprobante
+                                                                        </a>
+                                                                </Button>
+                                                        )}
+                                                </div>
+                                        </AlertDialogFooter>
+                                </AlertDialogContent>
 			</AlertDialog>
 
 			<Header />
 
-			<main>
-				<Hero
-					formData={formData}
-					handleInputChange={handleInputChange}
-					handleSubmit={handleSubmit}
-					cotizacion={cotizacion}
-					destinos={destinos}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					isSubmitting={isSubmitting}
-				/>
-				<Servicios />
-				<Destinos destinos={destinos} />
+                        <main>
+                                <Hero
+                                        formData={formData}
+                                        handleInputChange={handleInputChange}
+                                        handleSubmit={handleSubmit}
+                                        cotizacion={cotizacion}
+                                        destinos={destinos}
+                                        maxPasajeros={maxPasajeros}
+                                        minDateTime={minDateTime}
+                                        phoneError={phoneError}
+                                        isSubmitting={isSubmitting}
+                                />
+                                <ReservaWizard
+                                        destinos={destinos}
+                                        onReservationConfirmed={sendReservation}
+                                        onlineDiscountRate={ONLINE_DISCOUNT_RATE}
+                                        taxRate={TAX_RATE}
+                                        defaultDepositRate={DEFAULT_DEPOSIT_RATE}
+                                />
+                                <Servicios />
+                                <Destinos destinos={destinos} />
 
-				<Destacados destinos={destacadosData} />
+                                <Destacados destinos={destacadosData} />
 				<Fidelizacion />
 				<PorQueElegirnos />
 				<Testimonios />
