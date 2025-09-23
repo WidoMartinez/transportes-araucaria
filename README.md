@@ -158,6 +158,53 @@ Reemplazar archivos en `src/assets/`:
 ### Actualizaciones Recomendadas
 - Actualizar precios estacionalmente
 - Agregar nuevos testimonios regularmente
+- Mantener actualizados los catálogos de vehículos y conductores
+
+## Backend de Reservas y Pagos
+
+El proyecto incluye un backend en `backend/server.js` que maneja reservas, pagos y notificaciones automáticas.
+
+### Configuración rápida
+
+```bash
+cd backend
+pnpm install
+pnpm start
+```
+
+### Variables de entorno relevantes
+
+- `MONGODB_URI` y `MONGODB_DB_NAME`: conexión a MongoDB para almacenar reservas (`Booking`).
+- `MERCADOPAGO_ACCESS_TOKEN`: credencial para generar preferencias y recibir webhooks de Mercado Pago.
+- `FLOW_API_KEY`, `FLOW_SECRET_KEY`, `FLOW_API_URL`: credenciales para la pasarela Flow.
+- `YOUR_BACKEND_URL`, `YOUR_FRONTEND_URL`: URLs utilizadas en callbacks de Flow.
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_TO`: configuración SMTP para notificaciones y el endpoint `/send-email`.
+- `OPERATING_HOUR_START`, `OPERATING_HOUR_END`, `BOOKING_TIME_BUFFER_MINUTES`: reglas de disponibilidad de flota.
+
+### Principales endpoints REST
+
+- `POST /bookings/availability`: valida capacidad y horarios antes de confirmar.
+- `POST /bookings`: crea una reserva preliminar y almacena pasajeros, extras y totales.
+- `PATCH /bookings/:id/status`: actualiza estados operativos o de pago tras la pasarela.
+- `POST /bookings/:id/self-service`: permite modificaciones o cancelaciones autenticadas con token.
+- `POST /create-payment`: genera enlaces de pago en Flow o Mercado Pago vinculados a la reserva.
+- `POST /webhooks/mercadopago` y `POST /webhooks/flow`: reciben notificaciones de pago y disparan voucher, factura y recordatorios.
+
+### Modelo `Booking`
+
+La colección persiste:
+
+- Datos del viaje (`trip`): origen, destino, horario, tipo/capacidad de vehículo.
+- Pasajeros, extras contratados y descuentos aplicados.
+- Totales desglosados (`baseAmount`, `extrasAmount`, `discountAmount`, `grandTotal`).
+- Estados (`paymentStatus`, `lifecycleStatus`) con historial y bitácora de auditoría.
+- Información de contacto, conductor asignado y token de autoservicio.
+
+### Automatizaciones internas
+
+- Cola interna que sincroniza con operaciones/CRM, notifica conductores y envía recordatorios.
+- Webhooks de Flow y Mercado Pago actualizan estados, generan voucher y factura en PDF/JSON y envían SMS simulados.
+- Todos los cambios quedan auditados en MongoDB para trazabilidad.
 - Revisar y actualizar información de contacto
 - Optimizar imágenes periódicamente
 
