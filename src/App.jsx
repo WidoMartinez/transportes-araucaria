@@ -476,10 +476,9 @@ function App() {
 				onOpenChange={setShowConfirmationAlert}
 			>
 				{/* ⬇️ AUMENTAMOS ANCHO EN PANTALLAS MEDIANAS */}
-                <AlertDialogContent className="flex w-full max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[560px] md:max-w-[780px]">
-                                        <div className="flex h-full flex-col">
-                                                <div className="flex-1 overflow-y-auto px-6 py-6">
-                                                        <AlertDialogHeader>
+                                <AlertDialogContent className="grid w-full max-h-[85vh] grid-rows-[1fr_auto] gap-0 overflow-hidden p-0 sm:max-w-[560px] md:max-w-[780px]">
+                                        <div className="min-h-0 overflow-y-auto px-6 py-6">
+                                                <AlertDialogHeader>
                                                                 <AlertDialogTitle className="text-2xl">
                                                                         ¡Gracias, {formData.nombre || "viajero"}!
                                                                 </AlertDialogTitle>
@@ -627,7 +626,7 @@ function App() {
                                                         </AlertDialogHeader>
                                                 </div>
 
-                                                <AlertDialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
+                                        <AlertDialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
                                                         {totalConDescuento > 0 ? (
                                                                 <div className="space-y-4">
                                                                         <div className="space-y-2">
@@ -713,7 +712,6 @@ function App() {
                                                                 </AlertDialogAction>
                                                         </div>
                                                 </AlertDialogFooter>
-                                        </div>
                                 </AlertDialogContent>
 
 			</AlertDialog>
