@@ -476,240 +476,244 @@ function App() {
 				onOpenChange={setShowConfirmationAlert}
 			>
 				{/* ⬇️ AUMENTAMOS ANCHO EN PANTALLAS MEDIANAS */}
-				                                                                                                                <AlertDialogContent className="sm:max-w-[560px] md:max-w-[780px]">
-                                        <AlertDialogHeader>
-                                                <AlertDialogTitle className="text-2xl">
-                                                        ¡Gracias, {formData.nombre || "viajero"}!
-                                                </AlertDialogTitle>
-                                                <AlertDialogDescription className="space-y-6 pt-2 text-left">
-                                                        <p>
-                                                                Tu solicitud quedó registrada y enviamos un resumen a tu correo. Revisa los datos y elige cómo quieres confirmar tu reserva:
-                                                        </p>
-                                
-                                                        <div className="rounded-xl border border-muted bg-muted/40 p-4 space-y-3 text-sm">
-                                                                <div className="grid gap-2 sm:grid-cols-2">
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-muted-foreground">Origen:</span>
-                                                                                <span className="font-semibold text-foreground text-right">
-                                                                                        {formData.origen || "Por confirmar"}
-                                                                                </span>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-muted-foreground">Destino:</span>
-                                                                                <span className="font-semibold text-foreground text-right">
-                                                                                        {destinoFinal || "Por confirmar"}
-                                                                                </span>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-muted-foreground">Fecha:</span>
-                                                                                <span className="font-semibold text-foreground text-right">
-                                                                                        {formData.fecha || "Por definir"}
-                                                                                </span>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-muted-foreground">Hora:</span>
-                                                                                <span className="font-semibold text-foreground text-right">
-                                                                                        {formData.hora || "Por definir"}
-                                                                                </span>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-muted-foreground">Pasajeros:</span>
-                                                                                <span className="font-semibold text-foreground">{formData.pasajeros}</span>
-                                                                        </div>
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                                <span className="text-muted-foreground">Vehículo:</span>
-                                                                                <span className="font-semibold text-foreground">
-                                                                                        {cotizacion.vehiculo || "A confirmar"}
-                                                                                </span>
-                                                                        </div>
-                                                                </div>
-                                                                {extrasList.length > 0 && (
-                                                                        <div className="grid gap-2 text-xs sm:grid-cols-2">
-                                                                                {extrasList.map((extra) => (
-                                                                                        <div
-                                                                                                key={extra.label}
-                                                                                                className={`flex items-start justify-between gap-2 ${extra.fullWidth ? "sm:col-span-2" : ""}`}
-                                                                                        >
-                                                                                                <span className="text-muted-foreground">{extra.label}:</span>
-                                                                                                <span className="font-medium text-foreground text-right whitespace-pre-wrap">
-                                                                                                        {extra.value}
+                <AlertDialogContent className="flex w-full max-h-[85vh] flex-col overflow-hidden p-0 sm:max-w-[560px] md:max-w-[780px]">
+                                        <div className="flex h-full flex-col">
+                                                <div className="flex-1 overflow-y-auto px-6 py-6">
+                                                        <AlertDialogHeader>
+                                                                <AlertDialogTitle className="text-2xl">
+                                                                        ¡Gracias, {formData.nombre || "viajero"}!
+                                                                </AlertDialogTitle>
+                                                                <AlertDialogDescription className="space-y-6 pt-2 text-left">
+                                                                        <p>
+                                                                                Tu solicitud quedó registrada y enviamos un resumen a tu correo. Revisa los datos y elige cómo quieres confirmar tu reserva:
+                                                                        </p>
+
+                                                                        <div className="rounded-xl border border-muted bg-muted/40 p-4 space-y-3 text-sm">
+                                                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-muted-foreground">Origen:</span>
+                                                                                                <span className="font-semibold text-foreground text-right">
+                                                                                                        {formData.origen || "Por confirmar"}
                                                                                                 </span>
                                                                                         </div>
-                                                                                ))}
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-muted-foreground">Destino:</span>
+                                                                                                <span className="font-semibold text-foreground text-right">
+                                                                                                        {destinoFinal || "Por confirmar"}
+                                                                                                </span>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-muted-foreground">Fecha:</span>
+                                                                                                <span className="font-semibold text-foreground text-right">
+                                                                                                        {formData.fecha || "Por definir"}
+                                                                                                </span>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-muted-foreground">Hora:</span>
+                                                                                                <span className="font-semibold text-foreground text-right">
+                                                                                                        {formData.hora || "Por definir"}
+                                                                                                </span>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-muted-foreground">Pasajeros:</span>
+                                                                                                <span className="font-semibold text-foreground">{formData.pasajeros}</span>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between gap-2">
+                                                                                                <span className="text-muted-foreground">Vehículo:</span>
+                                                                                                <span className="font-semibold text-foreground">
+                                                                                                        {cotizacion.vehiculo || "A confirmar"}
+                                                                                                </span>
+                                                                                        </div>
+                                                                                </div>
+                                                                                {extrasList.length > 0 && (
+                                                                                        <div className="grid gap-2 text-xs sm:grid-cols-2">
+                                                                                                {extrasList.map((extra) => (
+                                                                                                        <div
+                                                                                                                key={extra.label}
+                                                                                                                className={`flex items-start justify-between gap-2 ${extra.fullWidth ? "sm:col-span-2" : ""}`}
+                                                                                                        >
+                                                                                                                <span className="text-muted-foreground">{extra.label}:</span>
+                                                                                                                <span className="font-medium text-foreground text-right whitespace-pre-wrap">
+                                                                                                                        {extra.value}
+                                                                                                                </span>
+                                                                                                        </div>
+                                                                                                ))}
+                                                                                        </div>
+                                                                                )}
                                                                         </div>
-                                                                )}
-                                                        </div>
-                                
-                                                        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 space-y-3 text-sm">
-                                                                <div className="flex items-center justify-between">
-                                                                        <span className="text-muted-foreground">Precio estándar</span>
-                                                                        <span className="font-semibold text-foreground">
-                                                                                {formatCurrency(precioBase)}
-                                                                        </span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between text-emerald-600">
-                                                                        <span>Descuento online ({discountPercentage}%)</span>
-                                                                        <span>-{formatCurrency(descuentoOnline)}</span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between text-lg font-semibold text-accent">
-                                                                        <span>Total con descuento</span>
-                                                                        <span>{formatCurrency(totalConDescuento)}</span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between">
-                                                                        <span>Abono sugerido (40%)</span>
-                                                                        <span>{formatCurrency(abono)}</span>
-                                                                </div>
-                                                                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                                        <span>Saldo pendiente</span>
-                                                                        <span>{formatCurrency(saldoPendiente)}</span>
-                                                                </div>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                        El descuento se asegura pagando en línea. Si eliges abonar, el saldo se cancela al conductor el día del servicio.
-                                                                </p>
-                                                        </div>
-                                
-                                                        <div className="space-y-3 rounded-lg border border-muted bg-muted/30 p-4 text-sm">
-                                                                <label className="flex items-start gap-3">
-                                                                        <Checkbox
-                                                                                id="check-viaje"
-                                                                                checked={reviewChecklist.viaje}
-                                                                                onCheckedChange={(checked) =>
-                                                                                        setReviewChecklist((prev) => ({
-                                                                                                ...prev,
-                                                                                                viaje: Boolean(checked),
-                                                                                        }))
-                                                                                }
-                                                                        />
-                                                                        <div>
-                                                                                <p className="font-medium text-foreground">
-                                                                                        Los datos del viaje están correctos.
-                                                                                </p>
+
+                                                                        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 space-y-3 text-sm">
+                                                                                <div className="flex items-center justify-between">
+                                                                                        <span className="text-muted-foreground">Precio estándar</span>
+                                                                                        <span className="font-semibold text-foreground">
+                                                                                                {formatCurrency(precioBase)}
+                                                                                        </span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between text-emerald-600">
+                                                                                        <span>Descuento online ({discountPercentage}%)</span>
+                                                                                        <span>-{formatCurrency(descuentoOnline)}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between text-lg font-semibold text-accent">
+                                                                                        <span>Total con descuento</span>
+                                                                                        <span>{formatCurrency(totalConDescuento)}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between">
+                                                                                        <span>Abono sugerido (40%)</span>
+                                                                                        <span>{formatCurrency(abono)}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                                                        <span>Saldo pendiente</span>
+                                                                                        <span>{formatCurrency(saldoPendiente)}</span>
+                                                                                </div>
                                                                                 <p className="text-xs text-muted-foreground">
-                                                                                        {formData.origen || "Origen por confirmar"} → {destinoFinal || "Destino por confirmar"}
+                                                                                        El descuento se asegura pagando en línea. Si eliges abonar, el saldo se cancela al conductor el día del servicio.
                                                                                 </p>
                                                                         </div>
-                                                                </label>
-                                                                <label className="flex items-start gap-3">
-                                                                        <Checkbox
-                                                                                id="check-contacto"
-                                                                                checked={reviewChecklist.contacto}
-                                                                                onCheckedChange={(checked) =>
-                                                                                        setReviewChecklist((prev) => ({
-                                                                                                ...prev,
-                                                                                                contacto: Boolean(checked),
-                                                                                        }))
-                                                                                }
-                                                                        />
-                                                                        <div>
-                                                                                <p className="font-medium text-foreground">
-                                                                                        Mis datos de contacto están bien.
-                                                                                </p>
+
+                                                                        <div className="space-y-3 rounded-lg border border-muted bg-muted/30 p-4 text-sm">
+                                                                                <label className="flex items-start gap-3">
+                                                                                        <Checkbox
+                                                                                                id="check-viaje"
+                                                                                                checked={reviewChecklist.viaje}
+                                                                                                onCheckedChange={(checked) =>
+                                                                                                        setReviewChecklist((prev) => ({
+                                                                                                                ...prev,
+                                                                                                                viaje: Boolean(checked),
+                                                                                                        }))
+                                                                                                }
+                                                                                        />
+                                                                                        <div>
+                                                                                                <p className="font-medium text-foreground">
+                                                                                                        Los datos del viaje están correctos.
+                                                                                                </p>
+                                                                                                <p className="text-xs text-muted-foreground">
+                                                                                                        {formData.origen || "Origen por confirmar"} → {destinoFinal || "Destino por confirmar"}
+                                                                                                </p>
+                                                                                        </div>
+                                                                                </label>
+                                                                                <label className="flex items-start gap-3">
+                                                                                        <Checkbox
+                                                                                                id="check-contacto"
+                                                                                                checked={reviewChecklist.contacto}
+                                                                                                onCheckedChange={(checked) =>
+                                                                                                        setReviewChecklist((prev) => ({
+                                                                                                                ...prev,
+                                                                                                                contacto: Boolean(checked),
+                                                                                                        }))
+                                                                                                }
+                                                                                        />
+                                                                                        <div>
+                                                                                                <p className="font-medium text-foreground">
+                                                                                                        Mis datos de contacto están bien.
+                                                                                                </p>
+                                                                                                <p className="text-xs text-muted-foreground">
+                                                                                                        {formData.telefono || "Teléfono por confirmar"} · {formData.email || "Email por confirmar"}
+                                                                                                </p>
+                                                                                        </div>
+                                                                                </label>
                                                                                 <p className="text-xs text-muted-foreground">
-                                                                                        {formData.telefono || "Teléfono por confirmar"} · {formData.email || "Email por confirmar"}
+                                                                                        ¿Necesitas corregir algo? Cierra este resumen, ajusta los datos y vuelve a abrirlo antes de pagar.
                                                                                 </p>
                                                                         </div>
-                                                                </label>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                        ¿Necesitas corregir algo? Cierra este resumen, ajusta los datos y vuelve a abrirlo antes de pagar.
-                                                                </p>
-                                                        </div>
-                                
-                                                        <div className="rounded-lg border border-emerald-500/40 bg-emerald-100/40 p-3 text-xs text-emerald-700">
-                                                                Tus pagos se procesan de forma segura con Flow y Mercado Pago (certificación PCI DSS). Revisa las políticas de cambios y cancelaciones en el correo de confirmación.
-                                                        </div>
-                                
-                                                        <div className="text-xs text-center text-muted-foreground">
-                                                                Recuerda que con cada viaje acumulas beneficios en nuestro <strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de descuento!
-                                                        </div>
-                                                </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                
-                                        <AlertDialogFooter className="flex flex-col gap-4">
-                                                {totalConDescuento > 0 ? (
-                                                        <div className="space-y-4">
-                                                                <div className="space-y-2">
-                                                                        <div className="flex items-center justify-between">
-                                                                                <h4 className="text-sm font-semibold uppercase text-foreground">
-                                                                                        Abonar 40% ahora
-                                                                                </h4>
-                                                                                <span className="text-xs text-muted-foreground">
-                                                                                        Pagarás {formatCurrency(abono)} hoy.
-                                                                                </span>
+
+                                                                        <div className="rounded-lg border border-emerald-500/40 bg-emerald-100/40 p-3 text-xs text-emerald-700">
+                                                                                Tus pagos se procesan de forma segura con Flow y Mercado Pago (certificación PCI DSS). Revisa las políticas de cambios y cancelaciones en el correo de confirmación.
                                                                         </div>
-                                                                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                                                                                <Button
-                                                                                        onClick={() => handlePayment("flow", "abono")}
-                                                                                        disabled={!canPay}
-                                                                                        className="w-full"
-                                                                                >
-                                                                                        Abonar con Flow
-                                                                                </Button>
-                                                                                <Button
-                                                                                        onClick={() => handlePayment("mercadopago", "abono")}
-                                                                                        disabled={!canPay}
-                                                                                        variant="secondary"
-                                                                                        className="w-full"
-                                                                                >
-                                                                                        Abonar con Mercado Pago
-                                                                                </Button>
+
+                                                                        <div className="text-xs text-center text-muted-foreground">
+                                                                                Recuerda que con cada viaje acumulas beneficios en nuestro <strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de descuento!
                                                                         </div>
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                        <div className="flex items-center justify-between">
-                                                                                <h4 className="text-sm font-semibold uppercase text-foreground">
-                                                                                        Pagar total con descuento
-                                                                                </h4>
-                                                                                <span className="text-xs text-muted-foreground">
-                                                                                        Cancela {formatCurrency(totalConDescuento)} ahora y olvídate del saldo.
-                                                                                </span>
-                                                                        </div>
-                                                                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                                                                                <Button
-                                                                                        onClick={() => handlePayment("flow", "total")}
-                                                                                        disabled={!canPay}
-                                                                                        className="w-full"
-                                                                                >
-                                                                                        Pagar total con Flow
-                                                                                </Button>
-                                                                                <Button
-                                                                                        onClick={() => handlePayment("mercadopago", "total")}
-                                                                                        disabled={!canPay}
-                                                                                        variant="secondary"
-                                                                                        className="w-full"
-                                                                                >
-                                                                                        Pagar total con Mercado Pago
-                                                                                </Button>
-                                                                        </div>
-                                                                </div>
-                                                                {!canPay && (
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                                Marca las casillas del checklist para habilitar los enlaces de pago.
-                                                                        </p>
-                                                                )}
-                                                        </div>
-                                                ) : (
-                                                        <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary">
-                                                                Definiremos el valor final contigo antes de enviar un enlace de pago. Nuestro equipo te contactará a la brevedad.
-                                                        </div>
-                                                )}
-                                
-                                                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                        <AlertDialogCancel onClick={handleCloseAlert} className="w-full sm:w-auto">
-                                                                Editar datos
-                                                        </AlertDialogCancel>
-                                                        <AlertDialogAction asChild className="w-full sm:w-auto">
-                                                                <Button
-                                                                        asChild
-                                                                        variant="secondary"
-                                                                        className="w-full sm:w-auto !whitespace-normal text-center"
-                                                                >
-                                                                        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                                                                                ¿Problemas con el pago? Escríbenos por WhatsApp
-                                                                        </a>
-                                                                </Button>
-                                                        </AlertDialogAction>
+                                                                </AlertDialogDescription>
+                                                        </AlertDialogHeader>
                                                 </div>
-                                        </AlertDialogFooter>
+
+                                                <AlertDialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
+                                                        {totalConDescuento > 0 ? (
+                                                                <div className="space-y-4">
+                                                                        <div className="space-y-2">
+                                                                                <div className="flex items-center justify-between">
+                                                                                        <h4 className="text-sm font-semibold uppercase text-foreground">
+                                                                                                Abonar 40% ahora
+                                                                                        </h4>
+                                                                                        <span className="text-xs text-muted-foreground">
+                                                                                                Pagarás {formatCurrency(abono)} hoy.
+                                                                                        </span>
+                                                                                </div>
+                                                                                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                                                                        <Button
+                                                                                                onClick={() => handlePayment("flow", "abono")}
+                                                                                                disabled={!canPay}
+                                                                                                className="w-full"
+                                                                                        >
+                                                                                                Abonar con Flow
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                                onClick={() => handlePayment("mercadopago", "abono")}
+                                                                                                disabled={!canPay}
+                                                                                                variant="secondary"
+                                                                                                className="w-full"
+                                                                                        >
+                                                                                                Abonar con Mercado Pago
+                                                                                        </Button>
+                                                                                </div>
+                                                                        </div>
+                                                                        <div className="space-y-2">
+                                                                                <div className="flex items-center justify-between">
+                                                                                        <h4 className="text-sm font-semibold uppercase text-foreground">
+                                                                                                Pagar total con descuento
+                                                                                        </h4>
+                                                                                        <span className="text-xs text-muted-foreground">
+                                                                                                Cancela {formatCurrency(totalConDescuento)} ahora y olvídate del saldo.
+                                                                                        </span>
+                                                                                </div>
+                                                                                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                                                                        <Button
+                                                                                                onClick={() => handlePayment("flow", "total")}
+                                                                                                disabled={!canPay}
+                                                                                                className="w-full"
+                                                                                        >
+                                                                                                Pagar total con Flow
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                                onClick={() => handlePayment("mercadopago", "total")}
+                                                                                                disabled={!canPay}
+                                                                                                variant="secondary"
+                                                                                                className="w-full"
+                                                                                        >
+                                                                                                Pagar total con Mercado Pago
+                                                                                        </Button>
+                                                                                </div>
+                                                                        </div>
+                                                                        {!canPay && (
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                        Marca las casillas del checklist para habilitar los enlaces de pago.
+                                                                                </p>
+                                                                        )}
+                                                                </div>
+                                                        ) : (
+                                                                <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary">
+                                                                        Definiremos el valor final contigo antes de enviar un enlace de pago. Nuestro equipo te contactará a la brevedad.
+                                                                </div>
+                                                        )}
+
+                                                        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                                <AlertDialogCancel onClick={handleCloseAlert} className="w-full sm:w-auto">
+                                                                        Editar datos
+                                                                </AlertDialogCancel>
+                                                                <AlertDialogAction asChild className="w-full sm:w-auto">
+                                                                        <Button
+                                                                                asChild
+                                                                                variant="secondary"
+                                                                                className="w-full sm:w-auto !whitespace-normal text-center"
+                                                                        >
+                                                                                <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                                                                                        ¿Problemas con el pago? Escríbenos por WhatsApp
+                                                                                </a>
+                                                                        </Button>
+                                                                </AlertDialogAction>
+                                                        </div>
+                                                </AlertDialogFooter>
+                                        </div>
                                 </AlertDialogContent>
 
 			</AlertDialog>
