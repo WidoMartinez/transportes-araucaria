@@ -157,32 +157,37 @@ function App() {
 		return regex.test(telefono);
 	};
 
-	const validarHorarioReserva = () => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
-		);
-		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
-			return {
-				esValido: false,
-				mensaje: "Por favor, completa la fecha y hora.",
-			};
-		}
+        const validarHorarioReserva = () => {
+                if (!formData.fecha || !formData.hora) {
+                        return {
+                                esValido: false,
+                                mensaje: "Por favor, completa la fecha y hora.",
+                        };
+                }
 
-		const ahora = new Date();
-		const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
-		const horasDeDiferencia = (fechaReserva - ahora) / (1000 * 60 * 60);
+                const destinoSeleccionado = destinos.find(
+                        (d) => d.nombre === formData.destino
+                );
 
-		const { minHorasAnticipacion } = destinoSeleccionado;
+                if (!destinoSeleccionado) {
+                        return { esValido: true, mensaje: "" };
+                }
 
-		if (horasDeDiferencia < minHorasAnticipacion) {
-			return {
-				esValido: false,
-				mensaje: `Para ${destinoSeleccionado.nombre}, por favor reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
-			};
-		}
+                const ahora = new Date();
+                const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
+                const horasDeDiferencia = (fechaReserva - ahora) / (1000 * 60 * 60);
 
-		return { esValido: true, mensaje: "" };
-	};
+                const { minHorasAnticipacion } = destinoSeleccionado;
+
+                if (horasDeDiferencia < minHorasAnticipacion) {
+                        return {
+                                esValido: false,
+                                mensaje: `Para ${destinoSeleccionado.nombre}, por favor reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
+                        };
+                }
+
+                return { esValido: true, mensaje: "" };
+        };
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -743,17 +748,16 @@ function App() {
 				<Fidelizacion />
 				<PorQueElegirnos />
 				<Testimonios />
-				<Contacto
-					formData={formData}
-					handleInputChange={handleInputChange}
-					handleSubmit={handleSubmit}
-					cotizacion={cotizacion}
-					destinos={destinos}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					isSubmitting={isSubmitting}
-				/>
+                                <Contacto
+                                        formData={formData}
+                                        handleInputChange={handleInputChange}
+                                        handleSubmit={handleSubmit}
+                                        cotizacion={cotizacion}
+                                        maxPasajeros={maxPasajeros}
+                                        minDateTime={minDateTime}
+                                        phoneError={phoneError}
+                                        isSubmitting={isSubmitting}
+                                />
 			</main>
 
 			<Footer />

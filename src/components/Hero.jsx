@@ -174,6 +174,12 @@ function Hero({
 
         const discountPercentage = Math.round(descuentoRate * 100);
         const mostrarPrecio = Boolean(cotizacion.precio);
+        const destinoFueraDeLista = useMemo(
+                () =>
+                        formData.destino === "Otro" ||
+                        (formData.destino && !destinos.some((d) => d.nombre === formData.destino)),
+                [formData.destino, destinos]
+        );
 
         return (
                 <section
@@ -298,6 +304,19 @@ function Hero({
                                                                                         onChange={handleInputChange}
                                                                                         placeholder="Ingresa el destino aquí"
                                                                                 />
+                                                                        </div>
+                                                                )}
+
+                                                                {destinoFueraDeLista && (
+                                                                        <div className="rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm text-primary">
+                                                                                <p className="font-semibold">¿No encuentras tu destino en la lista?</p>
+                                                                                <p className="text-primary/90">
+                                                                                        Solicita una cotización personalizada con nuestro{" "}
+                                                                                        <a className="underline font-semibold" href="#contacto">
+                                                                                                formulario de contacto
+                                                                                        </a>{" "}
+                                                                                        en la sección de contacto.
+                                                                                </p>
                                                                         </div>
                                                                 )}
 

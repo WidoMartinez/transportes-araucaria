@@ -26,18 +26,31 @@ const InfoItem = ({ icon: Icon, title, children }) => (
 );
 
 function Contacto({
-	formData,
-	handleInputChange,
-	handleSubmit,
-	cotizacion,
-	destinos,
-	maxPasajeros,
-	minDateTime,
-	phoneError,
-	isSubmitting,
+        formData,
+        handleInputChange,
+        handleSubmit,
+        cotizacion,
+        maxPasajeros,
+        minDateTime,
+        phoneError,
+        isSubmitting,
 }) {
-	return (
-		<section id="contacto" className="py-24 bg-gray-50/50">
+        const destinoFormValue =
+                formData.destino === "Otro" && formData.otroDestino
+                        ? formData.otroDestino
+                        : formData.destino;
+
+        const handleDestinoManualChange = (event) => {
+                const { value } = event.target;
+                handleInputChange({ target: { name: "destino", value } });
+
+                if (formData.otroDestino) {
+                        handleInputChange({ target: { name: "otroDestino", value: "" } });
+                }
+        };
+
+        return (
+                <section id="contacto" className="py-24 bg-gray-50/50">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
 					<h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
@@ -155,43 +168,21 @@ function Contacto({
 												required
 											/>
 										</div>
-										<div className="space-y-2">
-											<Label htmlFor="destino-form">Destino</Label>
-											<select
-												id="destino-form"
-												name="destino"
-												value={formData.destino}
-												onChange={handleInputChange}
-												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-												required
-											>
-												<option value="">Seleccionar destino</option>
-												{destinos.map((d) => (
-													<option key={d.nombre} value={d.nombre}>
-														{d.nombre}
-													</option>
-												))}
-												<option value="Otro">Otro destino</option>
-											</select>
-										</div>
-									</div>
-
-									{/* Campo condicional para "Otro" destino */}
-									{formData.destino === "Otro" && (
-										<div className="space-y-2">
-											<Label htmlFor="otroDestino-form">
-												Especificar otro destino
-											</Label>
-											<Input
-												id="otroDestino-form"
-												name="otroDestino"
-												value={formData.otroDestino}
-												onChange={handleInputChange}
-												placeholder="Ingresa el destino aquí"
-												required
-											/>
-										</div>
-									)}
+                                                                                <div className="space-y-2">
+                                                                                        <Label htmlFor="destino-form">Destino</Label>
+                                                                                        <Input
+                                                                                                id="destino-form"
+                                                                                                name="destino"
+                                                                                                value={destinoFormValue}
+                                                                                                onChange={handleDestinoManualChange}
+                                                                                                placeholder="Escribe tu destino o dirección final"
+                                                                                                required
+                                                                                        />
+                                                                                        <p className="text-xs text-muted-foreground">
+                                                                                                Describe la ciudad, localidad o dirección a la que necesitas el traslado.
+                                                                                        </p>
+                                                                                </div>
+                                                                        </div>
 
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div className="space-y-2">
