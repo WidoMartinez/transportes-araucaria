@@ -1,3 +1,4 @@
+/* global gtag */
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Phone, MessageCircle } from "lucide-react";
