@@ -4,20 +4,19 @@
 import "./App.css";
 import { useState, useEffect, useMemo } from "react";
 
-// Componentes de la interfaz de usuario y AlertDialog
+// Componentes de la interfaz de usuario y Dialog
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "./components/ui/alert-dialog";
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "./components/ui/dialog"; // Cambiado de AlertDialog a Dialog
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
-import { LoaderCircle } from "lucide-react"; // Importar el ícono de carga
+import { LoaderCircle } from "lucide-react";
 
 // Importar nuevos componentes de sección
 import Header from "./components/Header";
@@ -48,7 +47,7 @@ const destinos = [
 		maxPasajeros: 4,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 15000, porcentajeAdicional: 0.1 },
+			auto: { base: 20000, porcentajeAdicional: 0.1 },
 		},
 	},
 	{
@@ -59,7 +58,7 @@ const destinos = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 40000, porcentajeAdicional: 0.05 },
+			auto: { base: 55000, porcentajeAdicional: 0.05 },
 			van: { base: 200000, porcentajeAdicional: 0.05 },
 		},
 	},
@@ -71,7 +70,7 @@ const destinos = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 50000, porcentajeAdicional: 0.05 },
+			auto: { base: 60000, porcentajeAdicional: 0.05 },
 			van: { base: 250000, porcentajeAdicional: 0.05 },
 		},
 	},
@@ -147,7 +146,6 @@ function App() {
 		viaje: false,
 		contacto: false,
 	});
-	// NUEVO ESTADO: para controlar la carga de los botones de pago
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
 	const cotizacion = useMemo(() => {
@@ -238,7 +236,6 @@ function App() {
 	};
 
 	const handlePayment = async (gateway, type = "abono") => {
-		// Iniciar estado de carga
 		setLoadingGateway(`${gateway}-${type}`);
 
 		const destinoFinal =
@@ -251,7 +248,7 @@ function App() {
 			alert(
 				"Aún no tenemos un valor disponible para generar el enlace de pago. Por favor, revisa tu cotización o contáctanos."
 			);
-			setLoadingGateway(null); // Detener estado de carga
+			setLoadingGateway(null);
 			return;
 		}
 
@@ -291,7 +288,6 @@ function App() {
 			console.error("Error al crear el pago:", error);
 			alert(`Hubo un problema al generar el enlace de pago: ${error.message}`);
 		} finally {
-			// Detener estado de carga independientemente del resultado
 			setLoadingGateway(null);
 		}
 	};
@@ -504,134 +500,137 @@ function App() {
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
-			<AlertDialog
+			<Dialog
 				open={showConfirmationAlert}
 				onOpenChange={setShowConfirmationAlert}
 			>
-				<AlertDialogContent className="grid w-full max-h-[85vh] grid-rows-[1fr_auto] gap-0 overflow-hidden p-0 sm:max-w-[560px] md:max-w-[780px]">
-					<div className="min-h-0 overflow-y-auto px-6 py-6">
-						<AlertDialogHeader>
-							<AlertDialogTitle className="text-2xl">
+				<DialogContent className="grid w-full max-h-[85vh] grid-rows-[1fr_auto] gap-0 overflow-hidden p-0 sm:max-w-[560px] md:max-w-[780px]">
+					<div className="min-h-0 overflow-y-auto px-6 pt-6 pb-2">
+						<DialogHeader>
+							<DialogTitle className="text-2xl">
 								¡Gracias, {formData.nombre || "viajero"}!
-							</AlertDialogTitle>
-							<AlertDialogDescription className="space-y-6 pt-2 text-left">
-								{/* ... (contenido del modal sin cambios) ... */}
-								<p>
-									Tu solicitud quedó registrada y enviaremos un resumen a tu
-									correo. Revisa los datos y elige cómo quieres confirmar tu
-									reserva:
-								</p>
-
-								<div className="rounded-xl border border-muted bg-muted/40 p-4 space-y-3 text-sm">
-									<div className="grid gap-2 sm:grid-cols-2">
-										<div className="flex items-center justify-between gap-2">
-											<span className="text-muted-foreground">Origen:</span>
-											<span className="font-semibold text-foreground text-right">
-												{formData.origen || "Por confirmar"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between gap-2">
-											<span className="text-muted-foreground">Destino:</span>
-											<span className="font-semibold text-foreground text-right">
-												{destinoFinal || "Por confirmar"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between gap-2">
-											<span className="text-muted-foreground">Fecha:</span>
-											<span className="font-semibold text-foreground text-right">
-												{formData.fecha || "Por definir"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between gap-2">
-											<span className="text-muted-foreground">Hora:</span>
-											<span className="font-semibold text-foreground text-right">
-												{formData.hora || "Por definir"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between gap-2">
-											<span className="text-muted-foreground">Pasajeros:</span>
-											<span className="font-semibold text-foreground">
-												{formData.pasajeros}
-											</span>
-										</div>
-										<div className="flex items-center justify-between gap-2">
-											<span className="text-muted-foreground">Vehículo:</span>
-											<span className="font-semibold text-foreground">
-												{cotizacion.vehiculo || "A confirmar"}
-											</span>
-										</div>
-									</div>
-									{extrasList.length > 0 && (
-										<div className="grid gap-2 text-xs sm:grid-cols-2">
-											{extrasList.map((extra) => (
-												<div
-													key={extra.label}
-													className={`flex items-start justify-between gap-2 ${
-														extra.fullWidth ? "sm:col-span-2" : ""
-													}`}
-												>
-													<span className="text-muted-foreground">
-														{extra.label}:
-													</span>
-													<span className="font-medium text-foreground text-right whitespace-pre-wrap">
-														{extra.value}
-													</span>
-												</div>
-											))}
-										</div>
-									)}
-								</div>
-
-								<div className="rounded-xl border border-primary/30 bg-primary/10 p-4 space-y-3 text-sm">
-									<div className="flex items-center justify-between">
-										<span className="text-muted-foreground">
-											Precio estándar
-										</span>
-										<span className="font-semibold text-foreground">
-											{formatCurrency(precioBase)}
-										</span>
-									</div>
-									<div className="flex items-center justify-between text-emerald-600">
-										<span>Descuento online ({discountPercentage}%)</span>
-										<span>-{formatCurrency(descuentoOnline)}</span>
-									</div>
-									<div className="flex items-center justify-between text-lg font-semibold text-accent">
-										<span>Total con descuento</span>
-										<span>{formatCurrency(totalConDescuento)}</span>
-									</div>
-									<div className="flex items-center justify-between">
-										<span>Abono sugerido (40%)</span>
-										<span>{formatCurrency(abono)}</span>
-									</div>
-									<div className="flex items-center justify-between text-xs text-muted-foreground">
-										<span>Saldo pendiente</span>
-										<span>{formatCurrency(saldoPendiente)}</span>
-									</div>
-									<p className="text-xs text-muted-foreground">
-										El descuento se asegura pagando en línea. Si eliges abonar,
-										el saldo se cancela al conductor el día del servicio.
+							</DialogTitle>
+							<DialogDescription asChild>
+								<div className="space-y-6 pt-2 text-left">
+									<p>
+										Tu solicitud quedó registrada y enviaremos un resumen a tu
+										correo. Revisa los datos y elige cómo quieres confirmar tu
+										reserva:
 									</p>
-								</div>
 
-								<div className="rounded-lg border border-emerald-500/40 bg-emerald-100/40 p-3 text-xs text-emerald-700">
-									Tus pagos se procesan de forma segura con Flow y Mercado Pago
-									(certificación PCI DSS). Revisa las políticas de cambios y
-									cancelaciones en el correo de confirmación.
-								</div>
+									<div className="rounded-xl border border-muted bg-muted/40 p-4 space-y-3 text-sm">
+										<div className="grid gap-2 sm:grid-cols-2">
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-muted-foreground">Origen:</span>
+												<span className="font-semibold text-foreground text-right">
+													{formData.origen || "Por confirmar"}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-muted-foreground">Destino:</span>
+												<span className="font-semibold text-foreground text-right">
+													{destinoFinal || "Por confirmar"}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-muted-foreground">Fecha:</span>
+												<span className="font-semibold text-foreground text-right">
+													{formData.fecha || "Por definir"}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-muted-foreground">Hora:</span>
+												<span className="font-semibold text-foreground text-right">
+													{formData.hora || "Por definir"}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-muted-foreground">
+													Pasajeros:
+												</span>
+												<span className="font-semibold text-foreground">
+													{formData.pasajeros}
+												</span>
+											</div>
+											<div className="flex items-center justify-between gap-2">
+												<span className="text-muted-foreground">Vehículo:</span>
+												<span className="font-semibold text-foreground">
+													{cotizacion.vehiculo || "A confirmar"}
+												</span>
+											</div>
+										</div>
+										{extrasList.length > 0 && (
+											<div className="grid gap-2 text-xs sm:grid-cols-2">
+												{extrasList.map((extra) => (
+													<div
+														key={extra.label}
+														className={`flex items-start justify-between gap-2 ${
+															extra.fullWidth ? "sm:col-span-2" : ""
+														}`}
+													>
+														<span className="text-muted-foreground">
+															{extra.label}:
+														</span>
+														<span className="font-medium text-foreground text-right whitespace-pre-wrap">
+															{extra.value}
+														</span>
+													</div>
+												))}
+											</div>
+										)}
+									</div>
 
-								<div className="text-xs text-center text-muted-foreground">
-									Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
-									<strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de
-									descuento!
+									<div className="rounded-xl border border-primary/30 bg-primary/10 p-4 space-y-3 text-sm">
+										<div className="flex items-center justify-between">
+											<span className="text-muted-foreground">
+												Precio estándar
+											</span>
+											<span className="font-semibold text-foreground">
+												{formatCurrency(precioBase)}
+											</span>
+										</div>
+										<div className="flex items-center justify-between text-emerald-600">
+											<span>Descuento online ({discountPercentage}%)</span>
+											<span>-{formatCurrency(descuentoOnline)}</span>
+										</div>
+										<div className="flex items-center justify-between text-lg font-semibold text-accent">
+											<span>Total con descuento</span>
+											<span>{formatCurrency(totalConDescuento)}</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<span>Abono sugerido (40%)</span>
+											<span>{formatCurrency(abono)}</span>
+										</div>
+										<div className="flex items-center justify-between text-xs text-muted-foreground">
+											<span>Saldo pendiente</span>
+											<span>{formatCurrency(saldoPendiente)}</span>
+										</div>
+										<p className="text-xs text-muted-foreground">
+											El descuento se asegura pagando en línea. Si eliges
+											abonar, el saldo se cancela al conductor el día del
+											servicio.
+										</p>
+									</div>
+
+									<div className="rounded-lg border border-emerald-500/40 bg-emerald-100/40 p-3 text-xs text-emerald-700">
+										Tus pagos se procesan de forma segura con Flow y Mercado
+										Pago (certificación PCI DSS). Revisa las políticas de
+										cambios y cancelaciones en el correo de confirmación.
+									</div>
+
+									<div className="text-xs text-center text-muted-foreground">
+										Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
+										<strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15%
+										de descuento!
+									</div>
 								</div>
-							</AlertDialogDescription>
-						</AlertDialogHeader>
+							</DialogDescription>
+						</DialogHeader>
 					</div>
 
-					<AlertDialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
+					<DialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
 						{totalConDescuento > 0 ? (
 							<div className="space-y-4">
-								{/* --- CHECKBOXES MOVIDOS AQUÍ --- */}
 								<div className="space-y-3 rounded-lg border border-muted bg-muted/30 p-4 text-sm">
 									<label className="flex items-start gap-3">
 										<Checkbox
@@ -646,7 +645,7 @@ function App() {
 										/>
 										<div>
 											<p className="font-medium text-foreground">
-												Los datos del viaje están correctos.
+												Los datos del viaje son correctos.
 											</p>
 											<p className="text-xs text-muted-foreground">
 												{formData.origen || "Origen por confirmar"} →{" "}
@@ -676,7 +675,6 @@ function App() {
 										</div>
 									</label>
 								</div>
-								{/* --- FIN DEL BLOQUE MOVIDO --- */}
 
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
@@ -776,31 +774,28 @@ function App() {
 						)}
 
 						<div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-							<AlertDialogCancel
-								onClick={handleCloseAlert}
-								className="w-full sm:w-auto"
-							>
-								Editar datos
-							</AlertDialogCancel>
-							<AlertDialogAction asChild className="w-full sm:w-auto">
+							<DialogClose asChild>
 								<Button
-									asChild
-									variant="secondary"
-									className="w-full sm:w-auto !whitespace-normal text-center"
+									variant="outline"
+									onClick={handleCloseAlert}
+									className="w-full sm:w-auto"
 								>
-									<a
-										href={whatsappUrl}
-										target="_blank"
-										rel="noopener noreferrer"
-									>
-										¿Problemas con el pago? Escríbenos por WhatsApp
-									</a>
+									Editar datos
 								</Button>
-							</AlertDialogAction>
+							</DialogClose>
+							<Button
+								asChild
+								variant="secondary"
+								className="w-full sm:w-auto !whitespace-normal text-center"
+							>
+								<a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+									¿Problemas con el pago? Escríbenos por WhatsApp
+								</a>
+							</Button>
 						</div>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 
 			<Header />
 
