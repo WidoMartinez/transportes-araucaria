@@ -11,11 +11,9 @@ export default defineConfig({
 		tailwindcss(),
 		sitemap({
 			hostname: "https://www.transportesaraucaria.cl",
-			// CORRECCIÓN: Se elimina el resto de las rutas con hash.
-			// Solo se necesita la ruta raíz para una SPA.
 			dynamicRoutes: ["/"],
 			changefreq: "weekly",
-			priority: 1.0, // La página principal debe tener la máxima prioridad.
+			priority: 1.0,
 		}),
 	],
 	resolve: {

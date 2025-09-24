@@ -326,7 +326,7 @@ function App() {
 
 		// --- ¡CAMBIO IMPORTANTE! ---
 		// Ahora apuntamos al script PHP en el mismo dominio.
-		const emailApiUrl = "/enviar_correo.php";
+		const emailApiUrl = "https://www.transportesaraucaria.cl/enviar_correo.php"; // O la URL correcta donde hayas subido el script.
 
 		try {
 			const response = await fetch(emailApiUrl, {
