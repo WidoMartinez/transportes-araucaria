@@ -31,7 +31,15 @@ app.use(cors());
 
 // --- ENDPOINT PARA CREAR PAGOS ---
 app.post("/create-payment", async (req, res) => {
-	const { gateway, amount, description } = req.body;
+	const { gateway, amount, description, email } = req.body; // Se añade email para Flow
+
+	// Validación básica de entrada
+	if (!gateway || !amount || !description || !email) {
+		return res.status(400).json({
+			message:
+				"Faltan parámetros requeridos: gateway, amount, description, email.",
+		});
+	}
 
 	if (gateway === "mercadopago") {
 		const preferenceData = {
@@ -48,6 +56,9 @@ app.post("/create-payment", async (req, res) => {
 				pending: "https://www.transportesaraucaria.cl/pago-pendiente",
 			},
 			auto_return: "approved",
+			payer: {
+				email: email,
+			},
 		};
 
 		try {
@@ -55,13 +66,16 @@ app.post("/create-payment", async (req, res) => {
 			const result = await preference.create({ body: preferenceData });
 			res.json({ url: result.init_point });
 		} catch (error) {
-			console.error("Error al crear preferencia de Mercado Pago:", error);
+			console.error(
+				"Error al crear preferencia de Mercado Pago:",
+				error.response ? error.response.data : error.message
+			);
 			res
 				.status(500)
 				.json({ message: "Error al generar el pago con Mercado Pago." });
 		}
 	} else if (gateway === "flow") {
-		const flowApiUrl = process.env.FLOW_API_URL || "https://wwww.flow.cl/api";
+		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
 
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
@@ -69,7 +83,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: amount,
-			email: "contacto@transportesaraucaria.cl", // <-- ÚNICO CAMBIO AQUÍ
+			email: email, // Usamos el email del cliente que viene en la petición
 			urlConfirmation: `${process.env.YOUR_BACKEND_URL}/flow-confirmation`,
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
@@ -88,6 +102,9 @@ app.post("/create-payment", async (req, res) => {
 				}
 			);
 			const payment = response.data;
+			if (!payment.url || !payment.token) {
+				throw new Error("Respuesta inválida desde Flow");
+			}
 			const redirectUrl = `${payment.url}?token=${payment.token}`;
 			res.json({ url: redirectUrl });
 		} catch (error) {
@@ -102,7 +119,6 @@ app.post("/create-payment", async (req, res) => {
 	}
 });
 
-// ... (Tu endpoint /send-email se mantiene igual)
 app.post("/send-email", async (req, res) => {
 	console.log("✅ Petición recibida en /send-email");
 	console.log("✅ Datos recibidos:", req.body);
@@ -122,16 +138,32 @@ app.post("/send-email", async (req, res) => {
 		vehiculo,
 	} = req.body;
 
-	const transporter = nodemailer.createTransport({
+	// --- MEJORA: Configuración de Nodemailer más explícita ---
+	const transportConfig = {
 		host: process.env.EMAIL_HOST,
 		port: parseInt(process.env.EMAIL_PORT, 10),
-		secure: process.env.EMAIL_PORT == 465,
+		// 'true' para 465, 'false' para otros puertos como 587
+		secure: process.env.EMAIL_PORT === "465",
 		auth: {
 			user: process.env.EMAIL_USER,
 			pass: process.env.EMAIL_PASS,
 		},
+		// Opción para permitir conexiones TLS en entornos que lo requieran (como el puerto 587)
+		tls: {
+			rejectUnauthorized: false,
+		},
 		connectionTimeout: 15000,
 		socketTimeout: 15000,
+	};
+
+	const transporter = nodemailer.createTransport(transportConfig);
+
+	// --- Log para depuración ---
+	console.log("📬 Configuración del transporte de correo:", {
+		host: transportConfig.host,
+		port: transportConfig.port,
+		secure: transportConfig.secure,
+		user: transportConfig.auth.user ? "***" : "(no definido)",
 	});
 
 	const emailSubject = `Nueva Cotización de Transfer: ${
@@ -217,7 +249,10 @@ app.post("/send-email", async (req, res) => {
 		res.status(200).json({ message: "Mensaje enviado exitosamente." });
 	} catch (error) {
 		console.error("❌ Error al enviar el correo:", error);
-		res.status(500).json({ message: "Error interno al enviar el correo." });
+		// Devolvemos un mensaje de error más específico para el frontend
+		res.status(500).json({
+			message: `Error interno al enviar el correo. Detalles: ${error.message}`,
+		});
 	}
 });
 
