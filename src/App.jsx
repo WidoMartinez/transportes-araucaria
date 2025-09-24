@@ -1,3 +1,5 @@
+// Archivo corregido: src/App.jsx
+
 /* global gtag */
 import "./App.css";
 import { useState, useEffect, useMemo } from "react";
@@ -15,6 +17,7 @@ import {
 } from "./components/ui/alert-dialog";
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
+import { LoaderCircle } from "lucide-react"; // Importar el ícono de carga
 
 // Importar nuevos componentes de sección
 import Header from "./components/Header";
@@ -144,6 +147,8 @@ function App() {
 		viaje: false,
 		contacto: false,
 	});
+	// NUEVO ESTADO: para controlar la carga de los botones de pago
+	const [loadingGateway, setLoadingGateway] = useState(null);
 
 	const cotizacion = useMemo(() => {
 		const destinoSeleccionado = destinos.find(
@@ -233,6 +238,9 @@ function App() {
 	};
 
 	const handlePayment = async (gateway, type = "abono") => {
+		// Iniciar estado de carga
+		setLoadingGateway(`${gateway}-${type}`);
+
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
@@ -243,6 +251,7 @@ function App() {
 			alert(
 				"Aún no tenemos un valor disponible para generar el enlace de pago. Por favor, revisa tu cotización o contáctanos."
 			);
+			setLoadingGateway(null); // Detener estado de carga
 			return;
 		}
 
@@ -255,7 +264,6 @@ function App() {
 						vehiculo || "Vehículo a confirmar"
 				  })`;
 
-		// IMPORTANTE: La URL de pagos sigue apuntando a Render
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
 			"https://transportes-araucaria.onrender.com";
@@ -282,6 +290,9 @@ function App() {
 		} catch (error) {
 			console.error("Error al crear el pago:", error);
 			alert(`Hubo un problema al generar el enlace de pago: ${error.message}`);
+		} finally {
+			// Detener estado de carga independientemente del resultado
+			setLoadingGateway(null);
 		}
 	};
 
@@ -324,9 +335,7 @@ function App() {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
 
-		// --- ¡CAMBIO IMPORTANTE! ---
-		// Ahora apuntamos al script PHP en el mismo dominio.
-		const emailApiUrl = "https://www.transportesaraucaria.cl/enviar_correo.php"; // O la URL correcta donde hayas subido el script.
+		const emailApiUrl = "https://www.transportesaraucaria.cl/enviar_correo.php";
 
 		try {
 			const response = await fetch(emailApiUrl, {
@@ -506,6 +515,7 @@ function App() {
 								¡Gracias, {formData.nombre || "viajero"}!
 							</AlertDialogTitle>
 							<AlertDialogDescription className="space-y-6 pt-2 text-left">
+								{/* ... (contenido del modal sin cambios) ... */}
 								<p>
 									Tu solicitud quedó registrada y enviaremos un resumen a tu
 									correo. Revisa los datos y elige cómo quieres confirmar tu
@@ -682,18 +692,32 @@ function App() {
 									<div className="grid grid-cols-1 gap-2 md:grid-cols-2">
 										<Button
 											onClick={() => handlePayment("flow", "abono")}
-											disabled={!canPay}
+											disabled={!canPay || loadingGateway}
 											className="w-full"
 										>
-											Abonar con Flow
+											{loadingGateway === "flow-abono" ? (
+												<>
+													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />{" "}
+													Procesando...
+												</>
+											) : (
+												"Abonar con Flow"
+											)}
 										</Button>
 										<Button
 											onClick={() => handlePayment("mercadopago", "abono")}
-											disabled={!canPay}
+											disabled={!canPay || loadingGateway}
 											variant="secondary"
 											className="w-full"
 										>
-											Abonar con Mercado Pago
+											{loadingGateway === "mercadopago-abono" ? (
+												<>
+													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />{" "}
+													Procesando...
+												</>
+											) : (
+												"Abonar con Mercado Pago"
+											)}
 										</Button>
 									</div>
 								</div>
@@ -710,18 +734,32 @@ function App() {
 									<div className="grid grid-cols-1 gap-2 md:grid-cols-2">
 										<Button
 											onClick={() => handlePayment("flow", "total")}
-											disabled={!canPay}
+											disabled={!canPay || loadingGateway}
 											className="w-full"
 										>
-											Pagar total con Flow
+											{loadingGateway === "flow-total" ? (
+												<>
+													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />{" "}
+													Procesando...
+												</>
+											) : (
+												"Pagar total con Flow"
+											)}
 										</Button>
 										<Button
 											onClick={() => handlePayment("mercadopago", "total")}
-											disabled={!canPay}
+											disabled={!canPay || loadingGateway}
 											variant="secondary"
 											className="w-full"
 										>
-											Pagar total con Mercado Pago
+											{loadingGateway === "mercadopago-total" ? (
+												<>
+													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />{" "}
+													Procesando...
+												</>
+											) : (
+												"Pagar total con Mercado Pago"
+											)}
 										</Button>
 									</div>
 								</div>
