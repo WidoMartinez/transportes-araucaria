@@ -13,16 +13,20 @@ const FooterLink = ({ href, children }) => (
 );
 
 // Componente interno para los iconos de redes sociales
-const SocialIcon = ({ href, icon: Icon }) => (
-	<a
-		href={href}
-		target="_blank"
-		rel="noopener noreferrer"
-		className="text-muted-foreground hover:text-white transition-colors duration-300"
-	>
-		<Icon className="h-6 w-6" />
-	</a>
-);
+const SocialIcon = ({ href, icon }) => {
+        const IconComponent = icon;
+
+        return (
+                <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-white transition-colors duration-300"
+                >
+                        {IconComponent ? <IconComponent className="h-6 w-6" /> : null}
+                </a>
+        );
+};
 
 function Footer() {
 	return (

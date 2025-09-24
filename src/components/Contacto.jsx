@@ -13,39 +13,70 @@ import { Button } from "./ui/button";
 import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
 
 // Componente interno para reutilizar la lógica de mostrar información de contacto
-const InfoItem = ({ icon: Icon, title, children }) => (
-	<div className="flex items-start space-x-4">
-		<div className="flex-shrink-0">
-			<Icon className="h-6 w-6 text-primary mt-1" />
-		</div>
-		<div>
-			<p className="font-semibold text-lg">{title}</p>
-			<div className="text-muted-foreground">{children}</div>
-		</div>
-	</div>
-);
+const InfoItem = ({ icon, title, children }) => {
+        const IconComponent = icon;
+
+        return (
+                <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                                {IconComponent ? (
+                                        <IconComponent className="h-6 w-6 text-primary mt-1" />
+                                ) : null}
+                        </div>
+                        <div>
+                                <p className="font-semibold text-lg">{title}</p>
+                                <div className="text-muted-foreground">{children}</div>
+                        </div>
+                </div>
+        );
+};
 
 function Contacto({
         formData,
         handleInputChange,
         handleSubmit,
         cotizacion,
+        destinos = [],
         maxPasajeros,
         minDateTime,
         phoneError,
         isSubmitting,
+        submitError,
 }) {
-        const destinoFormValue =
+        const destinoTexto =
                 formData.destino === "Otro" && formData.otroDestino
                         ? formData.otroDestino
                         : formData.destino;
 
+        const destinosDisponibles = destinos.map((d) => d.nombre);
+
+        const normalizarTexto = (valor = "") =>
+                valor
+                        .toString()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .toLowerCase()
+                        .trim();
+
         const handleDestinoManualChange = (event) => {
                 const { value } = event.target;
-                handleInputChange({ target: { name: "destino", value } });
+                const normalizado = normalizarTexto(value);
+                const coincidencia = destinosDisponibles.find(
+                        (nombre) => normalizarTexto(nombre) === normalizado
+                );
 
-                if (formData.otroDestino) {
-                        handleInputChange({ target: { name: "otroDestino", value: "" } });
+                if (coincidencia) {
+                        if (formData.destino !== coincidencia) {
+                                handleInputChange({ target: { name: "destino", value: coincidencia } });
+                        }
+                        if (formData.otroDestino) {
+                                handleInputChange({ target: { name: "otroDestino", value: "" } });
+                        }
+                } else {
+                        if (formData.destino !== "Otro") {
+                                handleInputChange({ target: { name: "destino", value: "Otro" } });
+                        }
+                        handleInputChange({ target: { name: "otroDestino", value } });
                 }
         };
 
@@ -173,13 +204,15 @@ function Contacto({
                                                                                         <Input
                                                                                                 id="destino-form"
                                                                                                 name="destino"
-                                                                                                value={destinoFormValue}
+                                                                                                value={destinoTexto}
                                                                                                 onChange={handleDestinoManualChange}
                                                                                                 placeholder="Escribe tu destino o dirección final"
                                                                                                 required
                                                                                         />
                                                                                         <p className="text-xs text-muted-foreground">
                                                                                                 Describe la ciudad, localidad o dirección a la que necesitas el traslado.
+                                                                                                {" "}
+                                                                                                Si coincide con un destino habitual lo reconoceremos automáticamente.
                                                                                         </p>
                                                                                 </div>
                                                                         </div>
@@ -265,10 +298,18 @@ function Contacto({
 											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
 										/>
 									</div>
-									<Button
-										type="submit"
-										size="lg"
-										className="w-full text-lg"
+                                                                        {submitError && (
+                                                                                <div
+                                                                                        role="alert"
+                                                                                        className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                                                                                >
+                                                                                        {submitError}
+                                                                                </div>
+                                                                        )}
+                                                                        <Button
+                                                                                type="submit"
+                                                                                size="lg"
+                                                                                className="w-full text-lg"
 										disabled={isSubmitting}
 									>
 										{isSubmitting ? (

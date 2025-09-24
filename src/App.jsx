@@ -119,6 +119,8 @@ const calcularCotizacion = (destino, pasajeros) => {
 };
 
 const DESCUENTO_ONLINE = 0.1;
+const CONTACTO_FALLBACK_MENSAJE =
+        "No pudimos enviar tu solicitud. Escríbenos al WhatsApp +56 9 3664 3540 o al correo contacto@transportesaraucaria.cl para coordinar tu viaje.";
 
 function App() {
         const [formData, setFormData] = useState({
@@ -140,6 +142,7 @@ function App() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
         const [phoneError, setPhoneError] = useState("");
+        const [submitError, setSubmitError] = useState("");
         const [reviewChecklist, setReviewChecklist] = useState({
                 viaje: false,
                 contacto: false,
@@ -229,6 +232,7 @@ function App() {
                         sillaInfantil: "no",
                         mensaje: "",
                 });
+                setSubmitError("");
         };
 
         const handleCloseAlert = () => {
@@ -299,6 +303,7 @@ function App() {
                 }
 
                 setIsSubmitting(true);
+                setSubmitError("");
 
                 const destinoFinal =
                         formData.destino === "Otro" ? formData.otroDestino : formData.destino;
@@ -331,8 +336,20 @@ function App() {
                         });
 
                         if (!response.ok) {
-                                const result = await response.json();
-                                throw new Error(result.message || "Error en el servidor.");
+                                let serverMessage = "";
+                                try {
+                                        const result = await response.json();
+                                        serverMessage = result?.message || "";
+                                } catch (parseError) {
+                                        console.warn("No se pudo interpretar la respuesta del servidor:", parseError);
+                                }
+
+                                const friendlyMessage = serverMessage
+                                        ? `${serverMessage}. ${CONTACTO_FALLBACK_MENSAJE}`
+                                        : CONTACTO_FALLBACK_MENSAJE;
+
+                                setSubmitError(CONTACTO_FALLBACK_MENSAJE);
+                                throw new Error(friendlyMessage);
                         }
 
                         setReviewChecklist({ viaje: false, contacto: false });
@@ -344,13 +361,15 @@ function App() {
                                 });
                         }
 
+                        setSubmitError("");
                         return { success: true };
                 } catch (error) {
                         console.error("Error al enviar el formulario:", error);
+                        setSubmitError(CONTACTO_FALLBACK_MENSAJE);
                         return {
                                 success: false,
                                 error: "server",
-                                message: error.message,
+                                message: error.message || CONTACTO_FALLBACK_MENSAJE,
                         };
                 } finally {
                         setIsSubmitting(false);
@@ -366,8 +385,6 @@ function App() {
                 if (!result.success) {
                         if (result.error === "horario" && result.message) {
                                 alert(result.message);
-                        } else if (result.error === "server" && result.message) {
-                                alert(`Error: ${result.message}`);
                         }
                 }
         };
@@ -753,10 +770,12 @@ function App() {
                                         handleInputChange={handleInputChange}
                                         handleSubmit={handleSubmit}
                                         cotizacion={cotizacion}
+                                        destinos={destinos}
                                         maxPasajeros={maxPasajeros}
                                         minDateTime={minDateTime}
                                         phoneError={phoneError}
                                         isSubmitting={isSubmitting}
+                                        submitError={submitError}
                                 />
 			</main>
 

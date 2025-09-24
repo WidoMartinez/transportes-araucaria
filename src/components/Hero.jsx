@@ -161,7 +161,7 @@ function Hero({
                                 setStepError(result.message);
                                 setCurrentStep(0);
                         } else if (result.error === "server" && result.message) {
-                                setStepError(`No pudimos enviar tu reserva: ${result.message}`);
+                                setStepError(result.message);
                         } else if (result.error === "telefono") {
                                 setStepError("Revisa el número de teléfono ingresado.");
                         }
