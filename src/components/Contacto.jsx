@@ -13,31 +13,75 @@ import { Button } from "./ui/button";
 import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
 
 // Componente interno para reutilizar la lógica de mostrar información de contacto
-const InfoItem = ({ icon: Icon, title, children }) => (
-	<div className="flex items-start space-x-4">
-		<div className="flex-shrink-0">
-			<Icon className="h-6 w-6 text-primary mt-1" />
-		</div>
-		<div>
-			<p className="font-semibold text-lg">{title}</p>
-			<div className="text-muted-foreground">{children}</div>
-		</div>
-	</div>
-);
+const InfoItem = ({ icon, title, children }) => {
+        const IconComponent = icon;
+
+        return (
+                <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                                {IconComponent ? (
+                                        <IconComponent className="h-6 w-6 text-primary mt-1" />
+                                ) : null}
+                        </div>
+                        <div>
+                                <p className="font-semibold text-lg">{title}</p>
+                                <div className="text-muted-foreground">{children}</div>
+                        </div>
+                </div>
+        );
+};
 
 function Contacto({
-	formData,
-	handleInputChange,
-	handleSubmit,
-	cotizacion,
-	destinos,
-	maxPasajeros,
-	minDateTime,
-	phoneError,
-	isSubmitting,
+        formData,
+        handleInputChange,
+        handleSubmit,
+        cotizacion,
+        destinos = [],
+        maxPasajeros,
+        minDateTime,
+        phoneError,
+        isSubmitting,
+        submitError,
 }) {
-	return (
-		<section id="contacto" className="py-24 bg-gray-50/50">
+        const destinoTexto =
+                formData.destino === "Otro" && formData.otroDestino
+                        ? formData.otroDestino
+                        : formData.destino;
+
+        const destinosDisponibles = destinos.map((d) => d.nombre);
+
+        const normalizarTexto = (valor = "") =>
+                valor
+                        .toString()
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .toLowerCase()
+                        .trim();
+
+        const handleDestinoManualChange = (event) => {
+                const { value } = event.target;
+                const normalizado = normalizarTexto(value);
+                const coincidencia = destinosDisponibles.find(
+                        (nombre) => normalizarTexto(nombre) === normalizado
+                );
+
+                if (coincidencia) {
+                        if (formData.destino !== coincidencia) {
+                                handleInputChange({ target: { name: "destino", value: coincidencia } });
+                        }
+                        if (formData.otroDestino) {
+                                handleInputChange({ target: { name: "otroDestino", value: "" } });
+                        }
+                } else {
+                        if (formData.destino !== "Otro") {
+                                handleInputChange({ target: { name: "destino", value: "Otro" } });
+                        }
+                        handleInputChange({ target: { name: "otroDestino", value } });
+                }
+        };
+
+        return (
+                <section id="contacto" className="py-24 bg-gray-50/50">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
 					<h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
@@ -155,43 +199,23 @@ function Contacto({
 												required
 											/>
 										</div>
-										<div className="space-y-2">
-											<Label htmlFor="destino-form">Destino</Label>
-											<select
-												id="destino-form"
-												name="destino"
-												value={formData.destino}
-												onChange={handleInputChange}
-												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-												required
-											>
-												<option value="">Seleccionar destino</option>
-												{destinos.map((d) => (
-													<option key={d.nombre} value={d.nombre}>
-														{d.nombre}
-													</option>
-												))}
-												<option value="Otro">Otro destino</option>
-											</select>
-										</div>
-									</div>
-
-									{/* Campo condicional para "Otro" destino */}
-									{formData.destino === "Otro" && (
-										<div className="space-y-2">
-											<Label htmlFor="otroDestino-form">
-												Especificar otro destino
-											</Label>
-											<Input
-												id="otroDestino-form"
-												name="otroDestino"
-												value={formData.otroDestino}
-												onChange={handleInputChange}
-												placeholder="Ingresa el destino aquí"
-												required
-											/>
-										</div>
-									)}
+                                                                                <div className="space-y-2">
+                                                                                        <Label htmlFor="destino-form">Destino</Label>
+                                                                                        <Input
+                                                                                                id="destino-form"
+                                                                                                name="destino"
+                                                                                                value={destinoTexto}
+                                                                                                onChange={handleDestinoManualChange}
+                                                                                                placeholder="Escribe tu destino o dirección final"
+                                                                                                required
+                                                                                        />
+                                                                                        <p className="text-xs text-muted-foreground">
+                                                                                                Describe la ciudad, localidad o dirección a la que necesitas el traslado.
+                                                                                                {" "}
+                                                                                                Si coincide con un destino habitual lo reconoceremos automáticamente.
+                                                                                        </p>
+                                                                                </div>
+                                                                        </div>
 
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div className="space-y-2">
@@ -274,10 +298,18 @@ function Contacto({
 											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
 										/>
 									</div>
-									<Button
-										type="submit"
-										size="lg"
-										className="w-full text-lg"
+                                                                        {submitError && (
+                                                                                <div
+                                                                                        role="alert"
+                                                                                        className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+                                                                                >
+                                                                                        {submitError}
+                                                                                </div>
+                                                                        )}
+                                                                        <Button
+                                                                                type="submit"
+                                                                                size="lg"
+                                                                                className="w-full text-lg"
 										disabled={isSubmitting}
 									>
 										{isSubmitting ? (
