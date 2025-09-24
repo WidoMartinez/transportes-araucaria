@@ -1,7 +1,7 @@
 {
 	"name": "transporte-araucaria-server",
 	"version": "1.0.0",
-	"description": "Servidor para manejar envíos de correo para el sitio de Transportes Araucaria.",
+	"description": "Servidor para manejar pagos para el sitio de Transportes Araucaria.",
 	"main": "server.js",
 	"type": "module",
 	"scripts": {
@@ -15,8 +15,7 @@
 		"cors": "^2.8.5",
 		"dotenv": "^16.4.5",
 		"express": "^4.19.2",
-		"mercadopago": "^2.0.10",
-		"nodemailer": "^6.9.14"
+		"mercadopago": "^2.0.10"
 	},
 	"engines": {
 		"node": ">=18.0.0"
