@@ -613,6 +613,25 @@ function App() {
 									</p>
 								</div>
 
+								<div className="rounded-lg border border-emerald-500/40 bg-emerald-100/40 p-3 text-xs text-emerald-700">
+									Tus pagos se procesan de forma segura con Flow y Mercado Pago
+									(certificación PCI DSS). Revisa las políticas de cambios y
+									cancelaciones en el correo de confirmación.
+								</div>
+
+								<div className="text-xs text-center text-muted-foreground">
+									Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
+									<strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de
+									descuento!
+								</div>
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+					</div>
+
+					<AlertDialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
+						{totalConDescuento > 0 ? (
+							<div className="space-y-4">
+								{/* --- CHECKBOXES MOVIDOS AQUÍ --- */}
 								<div className="space-y-3 rounded-lg border border-muted bg-muted/30 p-4 text-sm">
 									<label className="flex items-start gap-3">
 										<Checkbox
@@ -656,30 +675,9 @@ function App() {
 											</p>
 										</div>
 									</label>
-									<p className="text-xs text-muted-foreground">
-										¿Necesitas corregir algo? Cierra este resumen, ajusta los
-										datos y vuelve a abrirlo antes de pagar.
-									</p>
 								</div>
+								{/* --- FIN DEL BLOQUE MOVIDO --- */}
 
-								<div className="rounded-lg border border-emerald-500/40 bg-emerald-100/40 p-3 text-xs text-emerald-700">
-									Tus pagos se procesan de forma segura con Flow y Mercado Pago
-									(certificación PCI DSS). Revisa las políticas de cambios y
-									cancelaciones en el correo de confirmación.
-								</div>
-
-								<div className="text-xs text-center text-muted-foreground">
-									Recuerda que con cada viaje acumulas beneficios en nuestro{" "}
-									<strong>Club Araucanía</strong>. ¡Tu 3er viaje tiene un 15% de
-									descuento!
-								</div>
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-					</div>
-
-					<AlertDialogFooter className="w-full shrink-0 flex-col gap-4 border-t border-muted bg-background/95 px-6 py-4 shadow-[0_-12px_24px_-20px_rgba(15,23,42,0.45)] sm:flex-col">
-						{totalConDescuento > 0 ? (
-							<div className="space-y-4">
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
 										<h4 className="text-sm font-semibold uppercase text-foreground">
@@ -764,9 +762,9 @@ function App() {
 									</div>
 								</div>
 								{!canPay && (
-									<p className="text-xs text-muted-foreground">
-										Marca las casillas del checklist para habilitar los enlaces
-										de pago.
+									<p className="text-xs text-center text-muted-foreground">
+										Marca las casillas de arriba para habilitar los enlaces de
+										pago.
 									</p>
 								)}
 							</div>
