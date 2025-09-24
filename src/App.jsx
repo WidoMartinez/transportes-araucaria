@@ -1,6 +1,7 @@
 /* global gtag */
 import "./App.css";
 import { useState, useEffect, useMemo } from "react";
+import { Loader2 } from "lucide-react";
 
 // Componentes de la interfaz de usuario y AlertDialog
 import {
@@ -138,6 +139,11 @@ function App() {
 		mensaje: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+	const [paymentInProgress, setPaymentInProgress] = useState({
+                gateway: null,
+                type: null,
+        });
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [phoneError, setPhoneError] = useState("");
 	const [reviewChecklist, setReviewChecklist] = useState({
@@ -233,6 +239,10 @@ function App() {
 	};
 
 	const handlePayment = async (gateway, type = "abono") => {
+		if (isCreatingPayment) {
+			return;
+		}
+
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
@@ -260,6 +270,9 @@ function App() {
 			import.meta.env.VITE_API_URL ||
 			"https://transportes-araucaria.onrender.com";
 
+		setIsCreatingPayment(true);
+		setPaymentInProgress({ gateway, type });
+
 		try {
 			const response = await fetch(`${apiUrl}/create-payment`, {
 				method: "POST",
@@ -282,8 +295,26 @@ function App() {
 		} catch (error) {
 			console.error("Error al crear el pago:", error);
 			alert(`Hubo un problema al generar el enlace de pago: ${error.message}`);
+		} finally {
+			setIsCreatingPayment(false);
+			setPaymentInProgress({ gateway: null, type: null });
 		}
 	};
+
+	const isButtonLoading = (gateway, type) =>
+		isCreatingPayment &&
+		paymentInProgress.gateway === gateway &&
+		paymentInProgress.type === type;
+
+	const renderPaymentLabel = (defaultLabel, gateway, type) =>
+                isButtonLoading(gateway, type) ? (
+                        <>
+                                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                                Generando enlace...
+                        </>
+		) : (
+			defaultLabel
+		);
 
 	const enviarReserva = async (source) => {
 		if (!validarTelefono(formData.telefono)) {
@@ -680,21 +711,21 @@ function App() {
 										</span>
 									</div>
 									<div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-										<Button
-											onClick={() => handlePayment("flow", "abono")}
-											disabled={!canPay}
-											className="w-full"
-										>
-											Abonar con Flow
-										</Button>
-										<Button
-											onClick={() => handlePayment("mercadopago", "abono")}
-											disabled={!canPay}
-											variant="secondary"
-											className="w-full"
-										>
-											Abonar con Mercado Pago
-										</Button>
+                                                                                <Button
+                                                                                        onClick={() => handlePayment("flow", "abono")}
+                                                                                        disabled={!canPay || isCreatingPayment}
+                                                                                        className="w-full"
+                                                                                >
+                                                                                        {renderPaymentLabel("Abonar con Flow", "flow", "abono")}
+                                                                                </Button>
+                                                                                <Button
+                                                                                        onClick={() => handlePayment("mercadopago", "abono")}
+                                                                                        disabled={!canPay || isCreatingPayment}
+                                                                                        variant="secondary"
+                                                                                        className="w-full"
+                                                                                >
+                                                                                        {renderPaymentLabel("Abonar con Mercado Pago", "mercadopago", "abono")}
+                                                                                </Button>
 									</div>
 								</div>
 								<div className="space-y-2">
@@ -708,21 +739,21 @@ function App() {
 										</span>
 									</div>
 									<div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-										<Button
-											onClick={() => handlePayment("flow", "total")}
-											disabled={!canPay}
-											className="w-full"
-										>
-											Pagar total con Flow
-										</Button>
-										<Button
-											onClick={() => handlePayment("mercadopago", "total")}
-											disabled={!canPay}
-											variant="secondary"
-											className="w-full"
-										>
-											Pagar total con Mercado Pago
-										</Button>
+                                                                                <Button
+                                                                                        onClick={() => handlePayment("flow", "total")}
+                                                                                        disabled={!canPay || isCreatingPayment}
+                                                                                        className="w-full"
+                                                                                >
+                                                                                        {renderPaymentLabel("Pagar total con Flow", "flow", "total")}
+                                                                                </Button>
+                                                                                <Button
+                                                                                        onClick={() => handlePayment("mercadopago", "total")}
+                                                                                        disabled={!canPay || isCreatingPayment}
+                                                                                        variant="secondary"
+                                                                                        className="w-full"
+                                                                                >
+                                                                                        {renderPaymentLabel("Pagar total con Mercado Pago", "mercadopago", "total")}
+                                                                                </Button>
 									</div>
 								</div>
 								{!canPay && (
