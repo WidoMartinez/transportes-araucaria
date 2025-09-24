@@ -31,7 +31,7 @@ app.use(cors());
 
 // --- ENDPOINT PARA CREAR PAGOS ---
 app.post("/create-payment", async (req, res) => {
-	const { gateway, amount, description } = req.body;
+	const { gateway, amount, description, email } = req.body;
 
 	if (gateway === "mercadopago") {
 		const preferenceData = {
@@ -70,7 +70,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: amount,
-			email: "contacto@transportesaraucaria.cl", // <-- ÚNICO CAMBIO AQUÍ
+			email: email,
 			urlConfirmation: `${process.env.YOUR_BACKEND_URL}/flow-confirmation`,
 			urlReturn: `${process.env.YOUR_FRONTEND_URL}/flow-return`,
 		};
