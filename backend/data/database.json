@@ -1,0 +1,68 @@
+{
+  "destinations": [
+    {
+      "id": "dest-temuco",
+      "name": "Temuco",
+      "description": "Centro comercial y administrativo de La Araucanía.",
+      "travelTime": "45 min",
+      "maxPassengers": 4,
+      "minAdvanceHours": 5,
+      "image": "/assets/temuco.jpg",
+      "vehicles": {
+        "auto": {
+          "label": "Auto Privado",
+          "basePrice": 20000,
+          "additionalPassengerPercentage": 0.1,
+          "includedPassengers": 1
+        }
+      }
+    },
+    {
+      "id": "dest-villarrica",
+      "name": "Villarrica",
+      "description": "Turismo y naturaleza junto al lago.",
+      "travelTime": "1h 15min",
+      "maxPassengers": 7,
+      "minAdvanceHours": 5,
+      "image": "/assets/villarrica.jpg",
+      "vehicles": {
+        "auto": {
+          "label": "Auto Privado",
+          "basePrice": 55000,
+          "additionalPassengerPercentage": 0.05,
+          "includedPassengers": 1
+        },
+        "van": {
+          "label": "Van de Pasajeros",
+          "basePrice": 200000,
+          "additionalPassengerPercentage": 0.05,
+          "includedPassengers": 5
+        }
+      }
+    },
+    {
+      "id": "dest-pucon",
+      "name": "Pucón",
+      "description": "Aventura, termas y volcán.",
+      "travelTime": "1h 30min",
+      "maxPassengers": 7,
+      "minAdvanceHours": 5,
+      "image": "/assets/pucon.jpg",
+      "vehicles": {
+        "auto": {
+          "label": "Auto Privado",
+          "basePrice": 60000,
+          "additionalPassengerPercentage": 0.05,
+          "includedPassengers": 1
+        },
+        "van": {
+          "label": "Van de Pasajeros",
+          "basePrice": 250000,
+          "additionalPassengerPercentage": 0.05,
+          "includedPassengers": 5
+        }
+      }
+    }
+  ],
+  "promotions": []
+}

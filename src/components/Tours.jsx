@@ -21,15 +21,18 @@ import conguillioImage from "../assets/conguilllio.jpg";
 import corralcoImage from "../assets/corralco.jpg";
 
 // Componente interno para los puntos del itinerario
-const ItineraryStop = ({ icon: Icon, title, description }) => (
-	<div className="flex items-start">
-		<Icon className="h-6 w-6 text-primary mr-4 mt-1 flex-shrink-0" />
-		<div>
-			<p className="font-semibold">{title}</p>
-			<p className="text-muted-foreground text-sm">{description}</p>
-		</div>
-	</div>
-);
+const ItineraryStop = ({ icon, title, description }) => {
+        const Icon = icon;
+        return (
+                <div className="flex items-start">
+                        <Icon className="h-6 w-6 text-primary mr-4 mt-1 flex-shrink-0" />
+                        <div>
+                                <p className="font-semibold">{title}</p>
+                                <p className="text-muted-foreground text-sm">{description}</p>
+                        </div>
+                </div>
+        );
+};
 
 function Tours() {
 	return (

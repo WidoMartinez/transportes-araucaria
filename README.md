@@ -176,3 +176,69 @@ Este proyecto es una plantilla personalizada para Transportes Araucaria.
 **Desarrollado con ❤️ para Transportes Araucaria**
 *Tu mejor opción para traslados desde el Aeropuerto La Araucanía*
 
+
+## Backend de administración de destinos y promociones
+
+El proyecto incluye un **servidor Express** (carpeta `backend/`) para administrar los destinos, precios y promociones sin tocar el código del frontend.
+
+### Ejecutar el backend localmente
+```bash
+cd backend
+npm install
+npm run start
+```
+
+El servidor se levanta en `http://localhost:8080` por defecto y guarda la información en el archivo `backend/data/database.json`.
+
+### Endpoints disponibles
+- `GET /api/destinations` – Lista todos los destinos configurados.
+- `POST /api/destinations` – Crea un destino nuevo. Requiere nombre, descripción, configuración de vehículos y restricciones.
+- `PUT /api/destinations/:id` – Actualiza un destino existente (permite actualizaciones parciales).
+- `DELETE /api/destinations/:id` – Elimina un destino.
+- `GET /api/promotions` – Obtiene todas las promociones disponibles.
+- `POST /api/promotions` – Crea una promoción, con porcentaje de descuento y destinos asociados opcionales.
+- `PUT /api/promotions/:id` – Modifica una promoción.
+- `DELETE /api/promotions/:id` – Elimina una promoción.
+
+Todas las operaciones validan los datos enviados y almacenan los cambios en `database.json`, por lo que puedes mantener los precios y promociones actualizados de forma manual.
+
+### Estructura de un destino
+```json
+{
+  "name": "Nuevo destino",
+  "description": "Descripción visible en el sitio",
+  "travelTime": "1h 20min",
+  "maxPassengers": 7,
+  "minAdvanceHours": 6,
+  "image": "/assets/nuevo-destino.jpg",
+  "vehicles": {
+    "auto": {
+      "label": "Auto Privado",
+      "basePrice": 45000,
+      "additionalPassengerPercentage": 0.05,
+      "includedPassengers": 1
+    },
+    "van": {
+      "label": "Van de Pasajeros",
+      "basePrice": 210000,
+      "additionalPassengerPercentage": 0.05,
+      "includedPassengers": 5
+    }
+  }
+}
+```
+
+### Estructura de una promoción
+```json
+{
+  "title": "Promo Invierno",
+  "description": "10% de descuento a Corralco",
+  "discountPercentage": 10,
+  "active": true,
+  "appliesToDestinations": ["dest-corralco"],
+  "startsAt": "2024-06-01",
+  "endsAt": "2024-08-31"
+}
+```
+
+> **Nota:** Si prefieres editar la información directamente, puedes modificar el archivo `backend/data/database.json` y reiniciar el servidor.
