@@ -94,7 +94,10 @@ const destacadosData = [
 ];
 
 const calcularCotizacion = (origen, destino, pasajeros) => {
-	const destinoInfo = destinosBase.find((d) => d.nombre === destino);
+	const tramo = [origen, destino].find(
+		(lugar) => lugar !== "Aeropuerto La Araucanía"
+	);
+	const destinoInfo = destinosBase.find((d) => d.nombre === tramo);
 
 	if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
 		return { precio: null, vehiculo: null };
@@ -848,7 +851,6 @@ function App() {
 					formData={formData}
 					handleInputChange={handleInputChange}
 					handleSubmit={handleSubmit}
-					cotizacion={cotizacion}
 					origenes={origenesContacto}
 					destinos={destinosBase}
 					maxPasajeros={maxPasajeros}

@@ -29,9 +29,7 @@ function Contacto({
 	formData,
 	handleInputChange,
 	handleSubmit,
-	cotizacion,
 	origenes,
-	destinos,
 	maxPasajeros,
 	minDateTime,
 	phoneError,
@@ -190,7 +188,6 @@ function Contacto({
 											/>
 										</div>
 									)}
-
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div className="space-y-2">
 											<Label htmlFor="fecha-form">Fecha</Label>
@@ -232,7 +229,6 @@ function Contacto({
 											))}
 										</select>
 									</div>
-
 									<div className="space-y-2">
 										<Label htmlFor="mensaje">
 											Mensaje adicional (opcional)
