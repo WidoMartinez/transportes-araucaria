@@ -206,10 +206,18 @@ function App() {
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
+		setFormData((prev) => {
+			const newFormData = { ...prev, [name]: value };
+
+			if (name === "origen" && value !== "Aeropuerto La Araucanía") {
+				newFormData.destino = "Aeropuerto La Araucanía";
+			} else if (name === "destino" && value !== "Aeropuerto La Araucanía") {
+				newFormData.origen = "Aeropuerto La Araucanía";
+			}
+
+			return newFormData;
+		});
+
 		if (name === "telefono") {
 			setPhoneError("");
 		}
@@ -852,7 +860,6 @@ function App() {
 					handleInputChange={handleInputChange}
 					handleSubmit={handleSubmit}
 					origenes={origenesContacto}
-					destinos={destinosBase}
 					maxPasajeros={maxPasajeros}
 					minDateTime={minDateTime}
 					phoneError={phoneError}

@@ -229,6 +229,7 @@ function Contacto({
 											))}
 										</select>
 									</div>
+
 									<div className="space-y-2">
 										<Label htmlFor="mensaje">
 											Mensaje adicional (opcional)
