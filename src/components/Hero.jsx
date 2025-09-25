@@ -375,7 +375,7 @@ function Hero({
                                                                                                         {formatCurrency(pricing.totalConDescuento)}
                                                                                                 </p>
                                                                                                 <p className="text-sm font-medium text-emerald-500">
-                                                                                                        Ahorro inmediato {formatCurrency(pricing.descuentoOnline)}
+                                                                                                        Ahorro inmediato {formatCurrency(pricing.descuentoAplicado)}
                                                                                                 </p>
                                                                                         </div>
                                                                                 </div>
@@ -520,7 +520,7 @@ function Hero({
                                                                                         <div className="flex items-center justify-between text-emerald-600">
                                                                                                 <span>Ahorro asegurado</span>
                                                                                                 <span className="font-semibold">
-                                                                                                        {formatCurrency(pricing.descuentoOnline)}
+                                                                                                        {formatCurrency(pricing.descuentoAplicado)}
                                                                                                 </span>
                                                                                         </div>
                                                                                 </div>

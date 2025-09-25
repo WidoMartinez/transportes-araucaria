@@ -30,6 +30,7 @@ import Testimonios from "./components/Testimonios";
 import Contacto from "./components/Contacto";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
+import AdminPanel from "./components/AdminPanel";
 
 // Importar imágenes
 import temucoImg from "./assets/temuco.jpg";
@@ -39,12 +40,12 @@ import corralcoImg from "./assets/corralco.jpg";
 
 // --- DATOS Y LÓGICA ---
 
-const destinos = [
-	{
-		nombre: "Temuco",
-		descripcion: "Centro comercial y administrativo de La Araucanía.",
-		tiempo: "45 min",
-		imagen: temucoImg,
+const initialDestinos = [
+        {
+                nombre: "Temuco",
+                descripcion: "Centro comercial y administrativo de La Araucanía.",
+                tiempo: "45 min",
+                imagen: temucoImg,
 		maxPasajeros: 4,
 		minHorasAnticipacion: 5,
 		precios: {
@@ -78,20 +79,35 @@ const destinos = [
 ];
 
 const destacadosData = [
-	{
-		nombre: "Corralco",
+        {
+                nombre: "Corralco",
 		titulo: "Visita Corralco en Temporada de Nieve",
 		subtitulo: "Una Aventura Invernal Inolvidable",
 		descripcion:
 			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
 		imagen: corralcoImg,
-	},
+        },
 ];
 
+const DEFAULT_DESCUENTO_ONLINE = 0.1;
+const DESTINOS_STORAGE_KEY = "transportes-araucaria-tarifas";
+const DESCUENTO_STORAGE_KEY = "transportes-araucaria-descuento";
+
+const cloneDestinos = (lista) =>
+        lista.map((destino) => ({
+                ...destino,
+                precios: Object.fromEntries(
+                        Object.entries(destino.precios || {}).map(([vehiculo, datos]) => [
+                                vehiculo,
+                                { ...datos },
+                        ])
+                ),
+        }));
+
 const calcularCotizacion = (destino, pasajeros) => {
-	if (!destino || !pasajeros || destino.nombre === "Otro") {
-		return { precio: null, vehiculo: null };
-	}
+        if (!destino || !pasajeros || destino.nombre === "Otro") {
+                return { precio: null, vehiculo: null };
+        }
 
 	const numPasajeros = parseInt(pasajeros);
 	let vehiculoAsignado;
@@ -118,13 +134,48 @@ const calcularCotizacion = (destino, pasajeros) => {
 		precioFinal = null;
 	}
 
-	return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
+        return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
 };
 
-const DESCUENTO_ONLINE = 0.1;
-
 function App() {
-	const [formData, setFormData] = useState({
+        const [destinos, setDestinos] = useState(() => {
+                if (typeof window !== "undefined") {
+                        const storedDestinos = window.localStorage.getItem(
+                                DESTINOS_STORAGE_KEY
+                        );
+                        if (storedDestinos) {
+                                try {
+                                        const parsed = JSON.parse(storedDestinos);
+                                        if (Array.isArray(parsed) && parsed.length) {
+                                                return cloneDestinos(parsed);
+                                        }
+                                } catch (error) {
+                                        console.warn(
+                                                "No se pudieron cargar las tarifas guardadas, se usarán los valores por defecto.",
+                                                error
+                                        );
+                                }
+                        }
+                }
+                return cloneDestinos(initialDestinos);
+        });
+
+        const [descuentoOnline, setDescuentoOnline] = useState(() => {
+                if (typeof window !== "undefined") {
+                        const storedDiscount = window.localStorage.getItem(
+                                DESCUENTO_STORAGE_KEY
+                        );
+                        if (storedDiscount) {
+                                const parsed = Number.parseFloat(storedDiscount);
+                                if (!Number.isNaN(parsed)) {
+                                        return parsed;
+                                }
+                        }
+                }
+                return DEFAULT_DESCUENTO_ONLINE;
+        });
+
+        const [formData, setFormData] = useState({
 		nombre: "",
 		telefono: "",
 		email: "",
@@ -143,19 +194,47 @@ function App() {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [phoneError, setPhoneError] = useState("");
-	const [reviewChecklist, setReviewChecklist] = useState({
-		viaje: false,
-		contacto: false,
-	});
-	// NUEVO ESTADO: para controlar la carga de los botones de pago
-	const [loadingGateway, setLoadingGateway] = useState(null);
+        const [reviewChecklist, setReviewChecklist] = useState({
+                viaje: false,
+                contacto: false,
+        });
+        // NUEVO ESTADO: para controlar la carga de los botones de pago
+        const [loadingGateway, setLoadingGateway] = useState(null);
 
-	const cotizacion = useMemo(() => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
-		);
-		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
-	}, [formData.destino, formData.pasajeros]);
+        useEffect(() => {
+                if (typeof window !== "undefined") {
+                        window.localStorage.setItem(
+                                DESTINOS_STORAGE_KEY,
+                                JSON.stringify(destinos)
+                        );
+                }
+        }, [destinos]);
+
+        useEffect(() => {
+                if (typeof window !== "undefined") {
+                        window.localStorage.setItem(
+                                DESCUENTO_STORAGE_KEY,
+                                JSON.stringify(descuentoOnline)
+                        );
+                }
+        }, [descuentoOnline]);
+
+        const handleResetTarifas = () => {
+                setDestinos(cloneDestinos(initialDestinos));
+                setDescuentoOnline(DEFAULT_DESCUENTO_ONLINE);
+
+                if (typeof window !== "undefined") {
+                        window.localStorage.removeItem(DESTINOS_STORAGE_KEY);
+                        window.localStorage.removeItem(DESCUENTO_STORAGE_KEY);
+                }
+        };
+
+        const cotizacion = useMemo(() => {
+                const destinoSeleccionado = destinos.find(
+                        (d) => d.nombre === formData.destino
+                );
+                return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
+        }, [destinos, formData.destino, formData.pasajeros]);
 
 	const validarTelefono = (telefono) => {
 		const regex = /^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/;
@@ -200,17 +279,17 @@ function App() {
 		}
 	};
 
-	useEffect(() => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
-		);
-		if (
-			destinoSeleccionado &&
-			parseInt(formData.pasajeros) > destinoSeleccionado.maxPasajeros
-		) {
-			setFormData((prev) => ({ ...prev, pasajeros: "1" }));
-		}
-	}, [formData.destino, formData.pasajeros]);
+        useEffect(() => {
+                const destinoSeleccionado = destinos.find(
+                        (d) => d.nombre === formData.destino
+                );
+                if (
+                        destinoSeleccionado &&
+                        parseInt(formData.pasajeros, 10) > destinoSeleccionado.maxPasajeros
+                ) {
+                        setFormData((prev) => ({ ...prev, pasajeros: "1" }));
+                }
+        }, [destinos, formData.destino, formData.pasajeros]);
 
 	const resetForm = () => {
 		setFormData({
@@ -418,48 +497,48 @@ function App() {
 		return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
 	}, [formData]);
 
-	const maxPasajeros = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
-		return destino?.maxPasajeros || 7;
-	}, [formData.destino]);
+        const maxPasajeros = useMemo(() => {
+                const destino = destinos.find((d) => d.nombre === formData.destino);
+                return destino?.maxPasajeros || 7;
+        }, [destinos, formData.destino]);
 
-	const minDateTime = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
-		const horasAnticipacion = destino?.minHorasAnticipacion || 5;
+        const minDateTime = useMemo(() => {
+                const destino = destinos.find((d) => d.nombre === formData.destino);
+                const horasAnticipacion = destino?.minHorasAnticipacion || 5;
 
-		const fechaMinima = new Date();
-		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
+                const fechaMinima = new Date();
+                fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
 
-		const anio = fechaMinima.getFullYear();
-		const mes = String(fechaMinima.getMonth() + 1).padStart(2, "0");
-		const dia = String(fechaMinima.getDate()).padStart(2, "0");
+                const anio = fechaMinima.getFullYear();
+                const mes = String(fechaMinima.getMonth() + 1).padStart(2, "0");
+                const dia = String(fechaMinima.getDate()).padStart(2, "0");
 
-		return `${anio}-${mes}-${dia}`;
-	}, [formData.destino]);
+                return `${anio}-${mes}-${dia}`;
+        }, [destinos, formData.destino]);
 
-	const pricing = useMemo(() => {
-		const precioBase = cotizacion.precio || 0;
-		const descuentoOnline = Math.round(precioBase * DESCUENTO_ONLINE);
-		const totalConDescuento = Math.max(precioBase - descuentoOnline, 0);
-		const abono = Math.round(totalConDescuento * 0.4);
-		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
+        const pricing = useMemo(() => {
+                const precioBase = cotizacion.precio || 0;
+                const descuentoAplicado = Math.round(precioBase * descuentoOnline);
+                const totalConDescuento = Math.max(precioBase - descuentoAplicado, 0);
+                const abono = Math.round(totalConDescuento * 0.4);
+                const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
-		return {
-			precioBase,
-			descuentoOnline,
-			totalConDescuento,
-			abono,
-			saldoPendiente,
-		};
-	}, [cotizacion.precio]);
+                return {
+                        precioBase,
+                        descuentoAplicado,
+                        totalConDescuento,
+                        abono,
+                        saldoPendiente,
+                };
+        }, [cotizacion.precio, descuentoOnline]);
 
-	const {
-		precioBase,
-		descuentoOnline,
-		totalConDescuento,
-		abono,
-		saldoPendiente,
-	} = pricing;
+        const {
+                precioBase,
+                descuentoAplicado,
+                totalConDescuento,
+                abono,
+                saldoPendiente,
+        } = pricing;
 
 	const currencyFormatter = useMemo(
 		() =>
@@ -473,7 +552,7 @@ function App() {
 	const formatCurrency = (value) => currencyFormatter.format(value || 0);
 
 	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
-	const discountPercentage = Math.round(DESCUENTO_ONLINE * 100);
+        const discountPercentage = Math.round(descuentoOnline * 100);
 	const destinoFinal =
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
@@ -503,11 +582,18 @@ function App() {
 	}
 
 	return (
-		<div className="min-h-screen bg-background text-foreground">
-			<AlertDialog
-				open={showConfirmationAlert}
-				onOpenChange={setShowConfirmationAlert}
-			>
+                <div className="min-h-screen bg-background text-foreground">
+                        <AdminPanel
+                                destinos={destinos}
+                                setDestinos={setDestinos}
+                                descuentoOnline={descuentoOnline}
+                                setDescuentoOnline={setDescuentoOnline}
+                                onResetTarifas={handleResetTarifas}
+                        />
+                        <AlertDialog
+                                open={showConfirmationAlert}
+                                onOpenChange={setShowConfirmationAlert}
+                        >
 				<AlertDialogContent className="grid w-full max-h-[85vh] grid-rows-[1fr_auto] gap-0 overflow-hidden p-0 sm:max-w-[560px] md:max-w-[780px]">
 					<div className="min-h-0 overflow-y-auto px-6 py-6">
 						<AlertDialogHeader>
@@ -591,9 +677,9 @@ function App() {
 											{formatCurrency(precioBase)}
 										</span>
 									</div>
-									<div className="flex items-center justify-between text-emerald-600">
-										<span>Descuento online ({discountPercentage}%)</span>
-										<span>-{formatCurrency(descuentoOnline)}</span>
+                                                                        <div className="flex items-center justify-between text-emerald-600">
+                                                                                <span>Descuento online ({discountPercentage}%)</span>
+                                                                                <span>-{formatCurrency(descuentoAplicado)}</span>
 									</div>
 									<div className="flex items-center justify-between text-lg font-semibold text-accent">
 										<span>Total con descuento</span>
@@ -805,23 +891,23 @@ function App() {
 			<Header />
 
 			<main>
-				<Hero
-					formData={formData}
-					handleInputChange={handleInputChange}
-					destinos={destinos}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					setPhoneError={setPhoneError}
-					isSubmitting={isSubmitting}
-					cotizacion={cotizacion}
-					pricing={pricing}
-					descuentoRate={DESCUENTO_ONLINE}
-					onSubmitWizard={handleWizardSubmit}
-					validarTelefono={validarTelefono}
-					validarHorarioReserva={validarHorarioReserva}
-					showSummary={showConfirmationAlert}
-				/>
+                                <Hero
+                                        formData={formData}
+                                        handleInputChange={handleInputChange}
+                                        destinos={destinos}
+                                        maxPasajeros={maxPasajeros}
+                                        minDateTime={minDateTime}
+                                        phoneError={phoneError}
+                                        setPhoneError={setPhoneError}
+                                        isSubmitting={isSubmitting}
+                                        cotizacion={cotizacion}
+                                        pricing={pricing}
+                                        descuentoRate={descuentoOnline}
+                                        onSubmitWizard={handleWizardSubmit}
+                                        validarTelefono={validarTelefono}
+                                        validarHorarioReserva={validarHorarioReserva}
+                                        showSummary={showConfirmationAlert}
+                                />
 				<Servicios />
 				<Destinos destinos={destinos} />
 
