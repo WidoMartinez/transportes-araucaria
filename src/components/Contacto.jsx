@@ -30,6 +30,7 @@ function Contacto({
 	handleInputChange,
 	handleSubmit,
 	cotizacion,
+	origenes,
 	destinos,
 	maxPasajeros,
 	minDateTime,
@@ -146,48 +147,45 @@ function Contacto({
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 										<div className="space-y-2">
 											<Label htmlFor="origen">Origen</Label>
-											<Input
+											<select
 												id="origen"
 												name="origen"
 												value={formData.origen}
 												onChange={handleInputChange}
-												placeholder="Ej: Aeropuerto de Temuco"
+												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 												required
-											/>
+											>
+												{origenes.map((origen) => (
+													<option key={origen} value={origen}>
+														{origen}
+													</option>
+												))}
+											</select>
 										</div>
 										<div className="space-y-2">
 											<Label htmlFor="destino-form">Destino</Label>
-											<select
+											<Input
 												id="destino-form"
 												name="destino"
 												value={formData.destino}
 												onChange={handleInputChange}
-												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+												placeholder="Ej: Pucón"
 												required
-											>
-												<option value="">Seleccionar destino</option>
-												{destinos.map((d) => (
-													<option key={d.nombre} value={d.nombre}>
-														{d.nombre}
-													</option>
-												))}
-												<option value="Otro">Otro destino</option>
-											</select>
+											/>
 										</div>
 									</div>
 
-									{/* Campo condicional para "Otro" destino */}
-									{formData.destino === "Otro" && (
+									{formData.origen === "Otro" && (
 										<div className="space-y-2">
-											<Label htmlFor="otroDestino-form">
-												Especificar otro destino
+											<Label htmlFor="otroOrigen-form">
+												Especificar otro origen
 											</Label>
 											<Input
-												id="otroDestino-form"
-												name="otroDestino"
-												value={formData.otroDestino}
+												id="otroOrigen-form"
+												name="otroOrigen"
+												value={formData.otroOrigen}
 												onChange={handleInputChange}
-												placeholder="Ingresa el destino aquí"
+												placeholder="Ingresa el origen aquí"
 												required
 											/>
 										</div>
@@ -234,33 +232,6 @@ function Contacto({
 											))}
 										</select>
 									</div>
-
-									{cotizacion.precio && (
-										<div className="p-4 bg-primary/10 rounded-lg text-center transition-all duration-300 ease-in-out">
-											<div className="flex justify-around items-center gap-4 text-primary">
-												<div>
-													<p className="font-semibold text-sm uppercase tracking-wider">
-														Precio Total
-													</p>
-													<p className="text-3xl font-bold">
-														$
-														{new Intl.NumberFormat("es-CL").format(
-															cotizacion.precio
-														)}
-													</p>
-												</div>
-												<div className="border-l-2 border-primary/20 h-12"></div>
-												<div>
-													<p className="font-semibold text-sm uppercase tracking-wider">
-														Vehículo
-													</p>
-													<p className="text-xl font-bold">
-														{cotizacion.vehiculo}
-													</p>
-												</div>
-											</div>
-										</div>
-									)}
 
 									<div className="space-y-2">
 										<Label htmlFor="mensaje">

@@ -13,7 +13,7 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "./components/ui/dialog"; // Cambiado de AlertDialog a Dialog
+} from "./components/ui/dialog";
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
 import { LoaderCircle } from "lucide-react";
@@ -38,7 +38,7 @@ import corralcoImg from "./assets/corralco.jpg";
 
 // --- DATOS Y LÓGICA ---
 
-const destinos = [
+const destinosBase = [
 	{
 		nombre: "Temuco",
 		descripcion: "Centro comercial y administrativo de La Araucanía.",
@@ -76,6 +76,12 @@ const destinos = [
 	},
 ];
 
+const todosLosTramos = [
+	"Aeropuerto La Araucanía",
+	...destinosBase.map((d) => d.nombre),
+];
+const origenesContacto = ["Aeropuerto La Araucanía", "Otro"];
+
 const destacadosData = [
 	{
 		nombre: "Corralco",
@@ -87,8 +93,10 @@ const destacadosData = [
 	},
 ];
 
-const calcularCotizacion = (destino, pasajeros) => {
-	if (!destino || !pasajeros || destino.nombre === "Otro") {
+const calcularCotizacion = (origen, destino, pasajeros) => {
+	const destinoInfo = destinosBase.find((d) => d.nombre === destino);
+
+	if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
 		return { precio: null, vehiculo: null };
 	}
 
@@ -98,7 +106,7 @@ const calcularCotizacion = (destino, pasajeros) => {
 
 	if (numPasajeros > 0 && numPasajeros <= 4) {
 		vehiculoAsignado = "Auto Privado";
-		const precios = destino.precios.auto;
+		const precios = destinoInfo.precios.auto;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
 		const pasajerosAdicionales = numPasajeros - 1;
@@ -106,7 +114,7 @@ const calcularCotizacion = (destino, pasajeros) => {
 		precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
 	} else if (numPasajeros >= 5 && numPasajeros <= 7) {
 		vehiculoAsignado = "Van de Pasajeros";
-		const precios = destino.precios.van;
+		const precios = destinoInfo.precios.van;
 		if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
 		const pasajerosAdicionales = numPasajeros - 5;
@@ -128,6 +136,7 @@ function App() {
 		telefono: "",
 		email: "",
 		origen: "Aeropuerto La Araucanía",
+		otroOrigen: "",
 		destino: "",
 		otroDestino: "",
 		fecha: "",
@@ -148,12 +157,17 @@ function App() {
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
+	const destinosDisponibles = useMemo(() => {
+		return todosLosTramos.filter((d) => d !== formData.origen);
+	}, [formData.origen]);
+
 	const cotizacion = useMemo(() => {
-		const destinoSeleccionado = destinos.find(
-			(d) => d.nombre === formData.destino
+		return calcularCotizacion(
+			formData.origen,
+			formData.destino,
+			formData.pasajeros
 		);
-		return calcularCotizacion(destinoSeleccionado, formData.pasajeros);
-	}, [formData.destino, formData.pasajeros]);
+	}, [formData.origen, formData.destino, formData.pasajeros]);
 
 	const validarTelefono = (telefono) => {
 		const regex = /^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/;
@@ -161,7 +175,7 @@ function App() {
 	};
 
 	const validarHorarioReserva = () => {
-		const destinoSeleccionado = destinos.find(
+		const destinoSeleccionado = destinosBase.find(
 			(d) => d.nombre === formData.destino
 		);
 		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
@@ -199,7 +213,7 @@ function App() {
 	};
 
 	useEffect(() => {
-		const destinoSeleccionado = destinos.find(
+		const destinoSeleccionado = destinosBase.find(
 			(d) => d.nombre === formData.destino
 		);
 		if (
@@ -216,6 +230,7 @@ function App() {
 			telefono: "",
 			email: "",
 			origen: "Aeropuerto La Araucanía",
+			otroOrigen: "",
 			destino: "",
 			otroDestino: "",
 			fecha: "",
@@ -315,8 +330,12 @@ function App() {
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
+		const origenFinal =
+			formData.origen === "Otro" ? formData.otroOrigen : formData.origen;
+
 		const dataToSend = {
 			...formData,
+			origen: origenFinal,
 			destino: destinoFinal,
 			precio: cotizacion.precio,
 			vehiculo: cotizacion.vehiculo,
@@ -415,12 +434,12 @@ function App() {
 	}, [formData]);
 
 	const maxPasajeros = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
+		const destino = destinosBase.find((d) => d.nombre === formData.destino);
 		return destino?.maxPasajeros || 7;
 	}, [formData.destino]);
 
 	const minDateTime = useMemo(() => {
-		const destino = destinos.find((d) => d.nombre === formData.destino);
+		const destino = destinosBase.find((d) => d.nombre === formData.destino);
 		const horasAnticipacion = destino?.minHorasAnticipacion || 5;
 
 		const fechaMinima = new Date();
@@ -803,7 +822,8 @@ function App() {
 				<Hero
 					formData={formData}
 					handleInputChange={handleInputChange}
-					destinos={destinos}
+					origenes={todosLosTramos}
+					destinos={destinosDisponibles}
 					maxPasajeros={maxPasajeros}
 					minDateTime={minDateTime}
 					phoneError={phoneError}
@@ -818,7 +838,7 @@ function App() {
 					showSummary={showConfirmationAlert}
 				/>
 				<Servicios />
-				<Destinos destinos={destinos} />
+				<Destinos destinos={destinosBase} />
 
 				<Destacados destinos={destacadosData} />
 				<Fidelizacion />
@@ -829,7 +849,8 @@ function App() {
 					handleInputChange={handleInputChange}
 					handleSubmit={handleSubmit}
 					cotizacion={cotizacion}
-					destinos={destinos}
+					origenes={origenesContacto}
+					destinos={destinosBase}
 					maxPasajeros={maxPasajeros}
 					minDateTime={minDateTime}
 					phoneError={phoneError}
