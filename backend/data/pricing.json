@@ -1,0 +1,19 @@
+{
+  "basePrice": 35000,
+  "tramoPromotions": [
+    {
+      "id": "tramo-inicial",
+      "nombre": "Aeropuerto - Centro",
+      "descripcion": "Tarifa especial para viajes entre el aeropuerto y el centro de Temuco.",
+      "precio": 35000
+    }
+  ],
+  "dayPromotions": [
+    {
+      "id": "promo-fin-semana",
+      "dia": "Fin de semana",
+      "descripcion": "10% de descuento para viajes realizados los sábados y domingos.",
+      "descuento": 10
+    }
+  ]
+}

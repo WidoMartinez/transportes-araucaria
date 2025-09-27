@@ -29,6 +29,7 @@ import Testimonios from "./components/Testimonios";
 import Contacto from "./components/Contacto";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
+import AdminPricing from "./components/AdminPricing";
 
 // Importar imágenes
 import temucoImg from "./assets/temuco.jpg";
@@ -133,10 +134,19 @@ const calcularCotizacion = (origen, destino, pasajeros) => {
 
 const DESCUENTO_ONLINE = 0.1;
 
+const resolveIsAdminView = () => {
+        if (typeof window === "undefined") {
+                return false;
+        }
+
+        return window.location.pathname.toLowerCase().startsWith("/admin/precios");
+};
+
 function App() {
-	const [formData, setFormData] = useState({
-		nombre: "",
-		telefono: "",
+        const [isAdminView, setIsAdminView] = useState(() => resolveIsAdminView());
+        const [formData, setFormData] = useState({
+                nombre: "",
+                telefono: "",
 		email: "",
 		origen: "Aeropuerto La Araucanía",
 		otroOrigen: "",
@@ -160,12 +170,28 @@ function App() {
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
-	const destinosDisponibles = useMemo(() => {
-		return todosLosTramos.filter((d) => d !== formData.origen);
-	}, [formData.origen]);
+        const destinosDisponibles = useMemo(() => {
+                return todosLosTramos.filter((d) => d !== formData.origen);
+        }, [formData.origen]);
 
-	const cotizacion = useMemo(() => {
-		return calcularCotizacion(
+        useEffect(() => {
+                if (typeof window === "undefined") {
+                        return undefined;
+                }
+
+                const handleLocationChange = () => {
+                        setIsAdminView(resolveIsAdminView());
+                };
+
+                window.addEventListener("popstate", handleLocationChange);
+
+                return () => {
+                        window.removeEventListener("popstate", handleLocationChange);
+                };
+        }, []);
+
+        const cotizacion = useMemo(() => {
+                return calcularCotizacion(
 			formData.origen,
 			formData.destino,
 			formData.pasajeros
@@ -223,10 +249,10 @@ function App() {
 		}
 	};
 
-	useEffect(() => {
-		const destinoSeleccionado = destinosBase.find(
-			(d) => d.nombre === formData.destino
-		);
+        useEffect(() => {
+                const destinoSeleccionado = destinosBase.find(
+                        (d) => d.nombre === formData.destino
+                );
 		if (
 			destinoSeleccionado &&
 			parseInt(formData.pasajeros) > destinoSeleccionado.maxPasajeros
@@ -235,8 +261,8 @@ function App() {
 		}
 	}, [formData.destino, formData.pasajeros]);
 
-	const resetForm = () => {
-		setFormData({
+        const resetForm = () => {
+                setFormData({
 			nombre: "",
 			telefono: "",
 			email: "",
@@ -255,13 +281,13 @@ function App() {
 		});
 	};
 
-	const handleCloseAlert = () => {
-		setShowConfirmationAlert(false);
-		setReviewChecklist({ viaje: false, contacto: false });
-		resetForm();
-	};
+        const handleCloseAlert = () => {
+                setShowConfirmationAlert(false);
+                setReviewChecklist({ viaje: false, contacto: false });
+                resetForm();
+        };
 
-	const handlePayment = async (gateway, type = "abono") => {
+        const handlePayment = async (gateway, type = "abono") => {
 		setLoadingGateway(`${gateway}-${type}`);
 
 		const destinoFinal =
@@ -520,15 +546,19 @@ function App() {
 			fullWidth: true,
 		});
 	}
-	if (formData.mensaje) {
-		extrasList.push({
-			label: "Notas",
-			value: formData.mensaje,
-			fullWidth: true,
-		});
-	}
+        if (formData.mensaje) {
+                extrasList.push({
+                        label: "Notas",
+                        value: formData.mensaje,
+                        fullWidth: true,
+                });
+        }
 
-	return (
+        if (isAdminView) {
+                return <AdminPricing />;
+        }
+
+        return (
 		<div className="min-h-screen bg-background text-foreground">
 			<Dialog
 				open={showConfirmationAlert}
