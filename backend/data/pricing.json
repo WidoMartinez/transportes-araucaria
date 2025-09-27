@@ -1,19 +1,56 @@
 {
-  "basePrice": 35000,
-  "tramoPromotions": [
+  "destinos": [
     {
-      "id": "tramo-inicial",
-      "nombre": "Aeropuerto - Centro",
-      "descripcion": "Tarifa especial para viajes entre el aeropuerto y el centro de Temuco.",
-      "precio": 35000
+      "nombre": "Temuco",
+      "descripcion": "Centro comercial y administrativo de La Araucanía.",
+      "tiempo": "45 min",
+      "imagen": "/src/assets/temuco.jpg",
+      "maxPasajeros": 4,
+      "minHorasAnticipacion": 5,
+      "precios": {
+        "auto": {
+          "base": 200000,
+          "porcentajeAdicional": 0.1
+        }
+      }
+    },
+    {
+      "nombre": "Villarrica",
+      "descripcion": "Turismo y naturaleza junto al lago.",
+      "tiempo": "1h 15min",
+      "imagen": "/src/assets/villarrica.jpg",
+      "maxPasajeros": 7,
+      "minHorasAnticipacion": 5,
+      "precios": {
+        "auto": {
+          "base": 55000,
+          "porcentajeAdicional": 0.05
+        },
+        "van": {
+          "base": 200000,
+          "porcentajeAdicional": 0.05
+        }
+      }
+    },
+    {
+      "nombre": "Pucón",
+      "descripcion": "Aventura, termas y volcán.",
+      "tiempo": "1h 30min",
+      "imagen": "/src/assets/pucon.jpg",
+      "maxPasajeros": 7,
+      "minHorasAnticipacion": 5,
+      "precios": {
+        "auto": {
+          "base": 60000,
+          "porcentajeAdicional": 0.05
+        },
+        "van": {
+          "base": 250000,
+          "porcentajeAdicional": 0.05
+        }
+      }
     }
   ],
-  "dayPromotions": [
-    {
-      "id": "promo-fin-semana",
-      "dia": "Fin de semana",
-      "descripcion": "10% de descuento para viajes realizados los sábados y domingos.",
-      "descuento": 10
-    }
-  ]
+  "dayPromotions": [],
+  "updatedAt": "2025-09-27T14:26:28.516Z"
 }

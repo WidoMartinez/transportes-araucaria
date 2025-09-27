@@ -39,99 +39,84 @@ const DATA_DIR = path.join(__dirname, "data");
 const PRICING_FILE_PATH = path.join(DATA_DIR, "pricing.json");
 
 const defaultPricing = {
-        basePrice: 35000,
-        tramoPromotions: [],
-        dayPromotions: [],
-        updatedAt: new Date().toISOString(),
+	destinos: [], // Nueva estructura para almacenar las tarifas por destino
+	dayPromotions: [],
+	updatedAt: new Date().toISOString(),
 };
 
 const ensurePricingFile = async () => {
-        try {
-                await access(PRICING_FILE_PATH);
-        } catch {
-                await mkdir(DATA_DIR, { recursive: true });
-                await writeFile(PRICING_FILE_PATH, JSON.stringify(defaultPricing, null, 2), "utf-8");
-        }
+	try {
+		await access(PRICING_FILE_PATH);
+	} catch {
+		await mkdir(DATA_DIR, { recursive: true });
+		await writeFile(
+			PRICING_FILE_PATH,
+			JSON.stringify(defaultPricing, null, 2),
+			"utf-8"
+		);
+	}
 };
 
 const readPricingData = async () => {
-        await ensurePricingFile();
-        const fileContents = await readFile(PRICING_FILE_PATH, "utf-8");
-        try {
-                return JSON.parse(fileContents);
-        } catch (error) {
-                console.error("No se pudo parsear pricing.json, usando valores por defecto.", error);
-                return { ...defaultPricing, updatedAt: new Date().toISOString() };
-        }
+	await ensurePricingFile();
+	const fileContents = await readFile(PRICING_FILE_PATH, "utf-8");
+	try {
+		return JSON.parse(fileContents);
+	} catch (error) {
+		console.error(
+			"No se pudo parsear pricing.json, usando valores por defecto.",
+			error
+		);
+		return { ...defaultPricing, updatedAt: new Date().toISOString() };
+	}
 };
 
 const writePricingData = async (data) => {
-        await mkdir(DATA_DIR, { recursive: true });
-        const payload = {
-                ...data,
-                updatedAt: new Date().toISOString(),
-        };
-        await writeFile(PRICING_FILE_PATH, JSON.stringify(payload, null, 2), "utf-8");
-        return payload;
+	await mkdir(DATA_DIR, { recursive: true });
+	const payload = {
+		...data,
+		updatedAt: new Date().toISOString(),
+	};
+	await writeFile(PRICING_FILE_PATH, JSON.stringify(payload, null, 2), "utf-8");
+	return payload;
 };
 
 app.get("/pricing", async (req, res) => {
-        try {
-                const pricing = await readPricingData();
-                res.json(pricing);
-        } catch (error) {
-                console.error("Error al obtener la información de precios:", error);
-                res.status(500).json({ message: "No se pudo obtener la configuración de precios." });
-        }
+	try {
+		const pricing = await readPricingData();
+		res.json(pricing);
+	} catch (error) {
+		console.error("Error al obtener la información de precios:", error);
+		res.status(500).json({
+			message: "No se pudo obtener la configuración de precios.",
+		});
+	}
 });
 
+// Endpoint PUT actualizado para manejar la nueva estructura de datos
 app.put("/pricing", async (req, res) => {
-        const { basePrice, tramoPromotions, dayPromotions } = req.body || {};
+	const { destinos, dayPromotions } = req.body || {};
 
-        const errors = [];
+	// Validación robusta para la nueva estructura
+	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
+		return res.status(400).json({
+			message:
+				"La estructura de datos enviada es incorrecta. Se esperaba un objeto con 'destinos' y 'dayPromotions'.",
+		});
+	}
 
-        if (typeof basePrice !== "number" || Number.isNaN(basePrice) || basePrice < 0) {
-                errors.push("El precio base debe ser un número mayor o igual a cero.");
-        }
-
-        if (!Array.isArray(tramoPromotions)) {
-                errors.push("Las promociones por tramo deben ser un arreglo.");
-        } else if (
-                tramoPromotions.some(
-                        (promo) => typeof promo !== "object" || promo === null || typeof promo.id !== "string"
-                )
-        ) {
-                errors.push(
-                        "Cada promoción por tramo debe incluir al menos un identificador (id) y ser un objeto válido."
-                );
-        }
-
-        if (!Array.isArray(dayPromotions)) {
-                errors.push("Las promociones por día deben ser un arreglo.");
-        } else if (
-                dayPromotions.some(
-                        (promo) => typeof promo !== "object" || promo === null || typeof promo.id !== "string"
-                )
-        ) {
-                errors.push(
-                        "Cada promoción por día debe incluir al menos un identificador (id) y ser un objeto válido."
-                );
-        }
-
-        if (errors.length > 0) {
-                return res.status(400).json({ message: "Datos inválidos para la configuración de precios.", errors });
-        }
-
-        try {
-                const savedData = await writePricingData({ basePrice, tramoPromotions, dayPromotions });
-                res.json(savedData);
-        } catch (error) {
-                console.error("Error al guardar la configuración de precios:", error);
-                res.status(500).json({ message: "No se pudo guardar la configuración de precios." });
-        }
+	try {
+		const savedData = await writePricingData({ destinos, dayPromotions });
+		res.json(savedData);
+	} catch (error) {
+		console.error("Error al guardar la configuración de precios:", error);
+		res.status(500).json({
+			message: "No se pudo guardar la configuración de precios.",
+		});
+	}
 });
 
-// --- ENDPOINT PARA CREAR PAGOS ---
+// --- ENDPOINT PARA CREAR PAGOS (sin cambios) ---
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description, email } = req.body;
 
