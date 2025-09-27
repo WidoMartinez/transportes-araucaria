@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global process */
 // backend/server.js
 import express from "express";
 import cors from "cors";
@@ -5,6 +7,9 @@ import dotenv from "dotenv";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 import axios from "axios";
 import crypto from "crypto";
+import { access, mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -28,7 +33,90 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// --- ENDPOINT PARA CREAR PAGOS ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.join(__dirname, "data");
+const PRICING_FILE_PATH = path.join(DATA_DIR, "pricing.json");
+
+const defaultPricing = {
+	destinos: [], // Nueva estructura para almacenar las tarifas por destino
+	dayPromotions: [],
+	updatedAt: new Date().toISOString(),
+};
+
+const ensurePricingFile = async () => {
+	try {
+		await access(PRICING_FILE_PATH);
+	} catch {
+		await mkdir(DATA_DIR, { recursive: true });
+		await writeFile(
+			PRICING_FILE_PATH,
+			JSON.stringify(defaultPricing, null, 2),
+			"utf-8"
+		);
+	}
+};
+
+const readPricingData = async () => {
+	await ensurePricingFile();
+	const fileContents = await readFile(PRICING_FILE_PATH, "utf-8");
+	try {
+		return JSON.parse(fileContents);
+	} catch (error) {
+		console.error(
+			"No se pudo parsear pricing.json, usando valores por defecto.",
+			error
+		);
+		return { ...defaultPricing, updatedAt: new Date().toISOString() };
+	}
+};
+
+const writePricingData = async (data) => {
+	await mkdir(DATA_DIR, { recursive: true });
+	const payload = {
+		...data,
+		updatedAt: new Date().toISOString(),
+	};
+	await writeFile(PRICING_FILE_PATH, JSON.stringify(payload, null, 2), "utf-8");
+	return payload;
+};
+
+app.get("/pricing", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		res.json(pricing);
+	} catch (error) {
+		console.error("Error al obtener la información de precios:", error);
+		res.status(500).json({
+			message: "No se pudo obtener la configuración de precios.",
+		});
+	}
+});
+
+// Endpoint PUT actualizado para manejar la nueva estructura de datos
+app.put("/pricing", async (req, res) => {
+	const { destinos, dayPromotions } = req.body || {};
+
+	// Validación robusta para la nueva estructura
+	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
+		return res.status(400).json({
+			message:
+				"La estructura de datos enviada es incorrecta. Se esperaba un objeto con 'destinos' y 'dayPromotions'.",
+		});
+	}
+
+	try {
+		const savedData = await writePricingData({ destinos, dayPromotions });
+		res.json(savedData);
+	} catch (error) {
+		console.error("Error al guardar la configuración de precios:", error);
+		res.status(500).json({
+			message: "No se pudo guardar la configuración de precios.",
+		});
+	}
+});
+
+// --- ENDPOINT PARA CREAR PAGOS (sin cambios) ---
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description, email } = req.body;
 
