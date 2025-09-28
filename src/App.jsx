@@ -125,20 +125,27 @@ function App() {
 	// LÓGICA CORREGIDA PARA ACTUALIZACIÓN DINÁMICA DE PASAJEROS
 	// ==================================================================
 	const destinoSeleccionado = useMemo(() => {
-		if (!formData.destino) return null;
-		return destinosData.find((d) => d.nombre === formData.destino);
-	}, [formData.destino, destinosData]);
+		const tramo = [formData.origen, formData.destino].find(
+			(lugar) =>
+				lugar &&
+				lugar !== "Aeropuerto La Araucanía" &&
+				lugar !== "Otro"
+		);
+		if (!tramo) return null;
+		return destinosData.find((d) => d.nombre === tramo) || null;
+	}, [formData.origen, formData.destino, destinosData]);
 
-	const maxPasajeros = destinoSeleccionado
-		? destinoSeleccionado.maxPasajeros
-		: 7;
+	const maxPasajeros = destinoSeleccionado?.maxPasajeros ?? 7;
 
 	useEffect(() => {
-		if (
-			destinoSeleccionado &&
-			parseInt(formData.pasajeros) > destinoSeleccionado.maxPasajeros
-		) {
-			setFormData((prev) => ({ ...prev, pasajeros: "1" }));
+		if (!destinoSeleccionado) return;
+		const limite = destinoSeleccionado.maxPasajeros;
+		const pasajerosSeleccionados = parseInt(formData.pasajeros, 10);
+		if (Number.isFinite(pasajerosSeleccionados) && pasajerosSeleccionados > limite) {
+			setFormData((prev) => ({
+				...prev,
+				pasajeros: limite.toString(),
+			}));
 		}
 	}, [destinoSeleccionado, formData.pasajeros]);
 

@@ -5,7 +5,7 @@
       "descripcion": "dfsdf",
       "tiempo": "",
       "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 2,
+      "maxPasajeros": 4,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
@@ -24,7 +24,7 @@
       "descripcion": "xfsd",
       "tiempo": "",
       "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 4,
+      "maxPasajeros": 5,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
@@ -40,5 +40,5 @@
     }
   ],
   "dayPromotions": [],
-  "updatedAt": "2025-09-28T16:00:32.727Z"
+  "updatedAt": "2025-09-28T16:17:42.128Z"
 }
