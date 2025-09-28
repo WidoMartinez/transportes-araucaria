@@ -50,12 +50,11 @@ function AdminPricing() {
 			}
 			const data = await response.json();
 
-			// Lógica Corregida: La fuente de verdad son los datos del servidor.
-			// Si el servidor no tiene destinos, se muestra una lista vacía.
-			// El fallback a `destinosIniciales` solo ocurre si la carga falla por completo.
 			setPricing({
 				destinos:
-					data.destinos && Array.isArray(data.destinos) ? data.destinos : [],
+					data.destinos && data.destinos.length > 0
+						? data.destinos
+						: destinosIniciales,
 				dayPromotions: Array.isArray(data.dayPromotions)
 					? data.dayPromotions
 					: [],
@@ -66,7 +65,6 @@ function AdminPricing() {
 			setError(
 				fetchError.message || "Ocurrió un error al cargar la configuración."
 			);
-			// Fallback a los datos iniciales solo si hay un error de conexión
 			setPricing({
 				destinos: destinosIniciales,
 				dayPromotions: [],
@@ -104,6 +102,16 @@ function AdminPricing() {
 							},
 					  }
 					: dest
+			),
+		}));
+	};
+
+	const handleGeneralDestinoChange = (nombre, field, value) => {
+		const numValue = Number(value);
+		setPricing((prev) => ({
+			...prev,
+			destinos: prev.destinos.map((dest) =>
+				dest.nombre === nombre ? { ...dest, [field]: numValue || 0 } : dest
 			),
 		}));
 	};
@@ -200,8 +208,7 @@ function AdminPricing() {
 						Panel de Tarifas y Destinos
 					</h1>
 					<p className="mt-2 max-w-3xl text-sm text-slate-300">
-						Administra las tarifas para cada destino y vehículo. También puedes
-						añadir o eliminar destinos.
+						Administra las tarifas, máximo de pasajeros y más para cada destino.
 					</p>
 					{pricing.updatedAt && (
 						<p className="mt-3 text-xs text-slate-400">
@@ -250,18 +257,18 @@ function AdminPricing() {
 											/>
 										</label>
 										<label className="text-sm text-slate-300">
-											Tiempo de Viaje
+											Máx. Pasajeros
 											<input
-												type="text"
-												value={newDestino.tiempo}
+												type="number"
+												min="1"
+												value={newDestino.maxPasajeros}
 												onChange={(e) =>
 													setNewDestino((d) => ({
 														...d,
-														tiempo: e.target.value,
+														maxPasajeros: Number(e.target.value),
 													}))
 												}
 												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-												placeholder="Ej: 1h 45min"
 											/>
 										</label>
 										<label className="text-sm text-slate-300 sm:col-span-2">
@@ -340,38 +347,36 @@ function AdminPricing() {
 							)}
 
 							{pricing.destinos.length > 0 ? (
-								pricing.destinos.map((destino) => (
-									<div
-										key={destino.nombre}
-										className="rounded-md border border-slate-800 bg-slate-950/60 p-4"
-									>
-										<div className="flex items-center justify-between">
-											<h3 className="text-lg font-medium text-emerald-400">
-												{destino.nombre}
-											</h3>
-											<button
-												type="button"
-												onClick={() => handleRemoveDestino(destino.nombre)}
-												className="rounded-md border border-red-400/50 px-3 py-1 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
-											>
-												Eliminar
-											</button>
-										</div>
-										<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-											{Object.keys(destino.precios).map((vehiculo) => (
-												<label
-													key={vehiculo}
-													className="text-sm capitalize text-slate-300"
+								pricing.destinos.map((destino) => {
+									const isVanDisabled = destino.maxPasajeros <= 4;
+									return (
+										<div
+											key={destino.nombre}
+											className="rounded-md border border-slate-800 bg-slate-950/60 p-4"
+										>
+											<div className="flex items-center justify-between">
+												<h3 className="text-lg font-medium text-emerald-400">
+													{destino.nombre}
+												</h3>
+												<button
+													type="button"
+													onClick={() => handleRemoveDestino(destino.nombre)}
+													className="rounded-md border border-red-400/50 px-3 py-1 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
 												>
-													Precio Base ({vehiculo})
+													Eliminar
+												</button>
+											</div>
+											<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+												<label className="text-sm text-slate-300">
+													Precio Base (Auto)
 													<input
 														type="number"
 														min="0"
-														value={destino.precios[vehiculo].base}
+														value={destino.precios.auto.base}
 														onChange={(e) =>
 															handleDestinoChange(
 																destino.nombre,
-																vehiculo,
+																"auto",
 																"base",
 																e.target.value
 															)
@@ -379,10 +384,57 @@ function AdminPricing() {
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 													/>
 												</label>
-											))}
+												<label
+													className={`text-sm ${
+														isVanDisabled ? "text-slate-500" : "text-slate-300"
+													}`}
+												>
+													Precio Base (Van)
+													<input
+														type="number"
+														min="0"
+														value={destino.precios.van.base}
+														onChange={(e) =>
+															handleDestinoChange(
+																destino.nombre,
+																"van",
+																"base",
+																e.target.value
+															)
+														}
+														disabled={isVanDisabled}
+														className={`mt-1 w-full rounded-md border px-3 py-2 text-sm text-white ${
+															isVanDisabled
+																? "border-slate-800 bg-slate-900/50 cursor-not-allowed"
+																: "border-slate-700 bg-slate-900"
+														}`}
+													/>
+													{isVanDisabled && (
+														<p className="text-xs text-slate-500 mt-1">
+															Habilitado para más de 4 pasajeros.
+														</p>
+													)}
+												</label>
+												<label className="text-sm text-slate-300">
+													Máx. Pasajeros
+													<input
+														type="number"
+														min="1"
+														value={destino.maxPasajeros}
+														onChange={(e) =>
+															handleGeneralDestinoChange(
+																destino.nombre,
+																"maxPasajeros",
+																e.target.value
+															)
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+													/>
+												</label>
+											</div>
 										</div>
-									</div>
-								))
+									);
+								})
 							) : (
 								<p className="text-center text-sm text-slate-400 py-4">
 									No hay destinos configurados. ¡Añade el primero para empezar!

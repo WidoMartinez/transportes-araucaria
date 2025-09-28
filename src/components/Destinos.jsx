@@ -10,6 +10,23 @@ import { Button } from "./ui/button";
 import { Clock, Plane, ArrowRight } from "lucide-react";
 
 function Destinos({ destinos }) {
+	// Manejo por si no llegan destinos para evitar errores
+	if (!destinos || destinos.length === 0) {
+		return (
+			<section id="destinos" className="py-20 bg-white">
+				<div className="container mx-auto px-4 text-center">
+					<h2 className="text-4xl font-bold mb-4 text-gray-800">
+						Principales Destinos
+					</h2>
+					<p className="text-xl text-muted-foreground">
+						Actualmente no hay destinos disponibles. Por favor, contacta para
+						más información.
+					</p>
+				</div>
+			</section>
+		);
+	}
+
 	return (
 		<section id="destinos" className="py-20 bg-white">
 			<div className="container mx-auto px-4">
@@ -23,7 +40,7 @@ function Destinos({ destinos }) {
 					</p>
 					<p className="text-sm text-muted-foreground max-w-2xl mx-auto mt-2">
 						Tarifas base para nuestro servicio exclusivo en auto (hasta 4
-						pasajeros).
+						pasajeros). Consulta en el cotizador para Vans.
 					</p>
 				</div>
 

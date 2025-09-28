@@ -1,58 +1,44 @@
 {
   "destinos": [
     {
-      "nombre": "Temuco",
-      "descripcion": "Centro comercial y administrativo de La Araucanía.",
-      "tiempo": "45 min",
-      "imagen": "/src/assets/temuco.jpg",
-      "maxPasajeros": 4,
+      "nombre": "pam",
+      "descripcion": "dfsdf",
+      "tiempo": "",
+      "imagen": "URL_de_imagen_por_defecto.jpg",
+      "maxPasajeros": 2,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 2000086,
+          "base": 23235,
           "porcentajeAdicional": 0.1
+        },
+        "van": {
+          "base": 3445646,
+          "porcentajeAdicional": 0.05
         }
-      }
+      },
+      "id": "dest-1759066488691"
     },
     {
-      "nombre": "Coñaripe",
-      "descripcion": "lsdfjdslfkj",
-      "tiempo": "2h",
+      "nombre": "sdfds",
+      "descripcion": "xfsd",
+      "tiempo": "",
       "imagen": "URL_de_imagen_por_defecto.jpg",
       "maxPasajeros": 4,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 70000,
+          "base": 5,
           "porcentajeAdicional": 0.1
         },
         "van": {
-          "base": 509867677,
+          "base": 5,
           "porcentajeAdicional": 0.05
         }
       },
-      "id": "dest-1759064230201"
-    },
-    {
-      "nombre": "lican",
-      "descripcion": "edf",
-      "tiempo": "1h",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 7,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 50000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 100000,
-          "porcentajeAdicional": 0.05
-        }
-      },
-      "id": "dest-1759065359929"
+      "id": "dest-1759075231687"
     }
   ],
   "dayPromotions": [],
-  "updatedAt": "2025-09-28T13:16:02.595Z"
+  "updatedAt": "2025-09-28T16:00:32.727Z"
 }
