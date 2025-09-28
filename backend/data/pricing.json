@@ -9,48 +9,50 @@
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 200000,
+          "base": 2000086,
           "porcentajeAdicional": 0.1
         }
       }
     },
     {
-      "nombre": "Villarrica",
-      "descripcion": "Turismo y naturaleza junto al lago.",
-      "tiempo": "1h 15min",
-      "imagen": "/src/assets/villarrica.jpg",
-      "maxPasajeros": 7,
+      "nombre": "Coñaripe",
+      "descripcion": "lsdfjdslfkj",
+      "tiempo": "2h",
+      "imagen": "URL_de_imagen_por_defecto.jpg",
+      "maxPasajeros": 4,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 55000,
-          "porcentajeAdicional": 0.05
+          "base": 70000,
+          "porcentajeAdicional": 0.1
         },
         "van": {
-          "base": 200000,
+          "base": 509867677,
           "porcentajeAdicional": 0.05
         }
-      }
+      },
+      "id": "dest-1759064230201"
     },
     {
-      "nombre": "Pucón",
-      "descripcion": "Aventura, termas y volcán.",
-      "tiempo": "1h 30min",
-      "imagen": "/src/assets/pucon.jpg",
+      "nombre": "lican",
+      "descripcion": "edf",
+      "tiempo": "1h",
+      "imagen": "URL_de_imagen_por_defecto.jpg",
       "maxPasajeros": 7,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 60000,
-          "porcentajeAdicional": 0.05
+          "base": 50000,
+          "porcentajeAdicional": 0.1
         },
         "van": {
-          "base": 250000,
+          "base": 100000,
           "porcentajeAdicional": 0.05
         }
-      }
+      },
+      "id": "dest-1759065359929"
     }
   ],
   "dayPromotions": [],
-  "updatedAt": "2025-09-27T14:26:28.516Z"
+  "updatedAt": "2025-09-28T13:16:02.595Z"
 }

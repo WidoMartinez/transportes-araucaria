@@ -4,7 +4,7 @@
 import "./App.css";
 import { useState, useEffect, useMemo, useCallback } from "react";
 
-// Componentes de la interfaz de usuario y Dialog
+// --- Componentes UI ---
 import {
 	Dialog,
 	DialogClose,
@@ -18,7 +18,7 @@ import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
 import { LoaderCircle } from "lucide-react";
 
-// Importar componentes de sección
+// --- Componentes de Sección ---
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import Servicios from "./components/Servicios";
@@ -31,30 +31,22 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminPricing from "./components/AdminPricing";
 
-// Corregido: Importar datos desde el archivo centralizado
-import {
-	destinosBase,
-	todosLosTramos,
-	origenesContacto,
-	destacadosData,
-} from "./data/destinos";
-
-// --- LÓGICA ---
+// --- Datos Iniciales y Lógica ---
+import { destinosBase, destacadosData } from "./data/destinos";
 
 const DESCUENTO_ONLINE = 0.1;
 
 const resolveIsAdminView = () => {
-	if (typeof window === "undefined") {
-		return false;
-	}
+	if (typeof window === "undefined") return false;
 	return window.location.pathname.toLowerCase().startsWith("/admin/precios");
 };
 
 function App() {
-	const [isAdminView, setIsAdminView] = useState(() => resolveIsAdminView());
+	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [loadingPrecios, setLoadingPrecios] = useState(true);
 
+	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
 	const [formData, setFormData] = useState({
 		nombre: "",
 		telefono: "",
@@ -81,27 +73,21 @@ function App() {
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
+	// --- CARGA DE DATOS DINÁMICA ---
 	useEffect(() => {
 		const fetchPreciosDesdeAPI = async () => {
 			try {
 				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
 				const response = await fetch(`${apiUrl}/pricing`);
-				if (!response.ok) {
-					throw new Error("Respuesta de red no fue exitosa.");
-				}
+				if (!response.ok)
+					throw new Error("La respuesta de la red no fue exitosa.");
+
 				const data = await response.json();
 
 				if (data.destinos && data.destinos.length > 0) {
-					const synchronizedDestinos = destinosBase.map((baseDest) => {
-						const savedDest = data.destinos.find(
-							(d) => d.nombre === baseDest.nombre
-						);
-						// Fusiona los precios guardados con la estructura base
-						return savedDest
-							? { ...baseDest, precios: savedDest.precios }
-							: baseDest;
-					});
-					setDestinosData(synchronizedDestinos);
+					setDestinosData(data.destinos);
+				} else {
+					setDestinosData(destinosBase);
 				}
 			} catch (error) {
 				console.error(
@@ -115,6 +101,25 @@ function App() {
 		};
 		fetchPreciosDesdeAPI();
 	}, []);
+
+	// --- LÓGICA DE RUTAS DINÁMICAS (CORREGIDO) ---
+	const todosLosTramos = useMemo(
+		() => ["Aeropuerto La Araucanía", ...destinosData.map((d) => d.nombre)],
+		[destinosData]
+	);
+
+	const destinosDisponibles = useMemo(() => {
+		return todosLosTramos.filter((d) => d !== formData.origen);
+	}, [formData.origen, todosLosTramos]);
+
+	const origenesContacto = useMemo(
+		() => [
+			"Aeropuerto La Araucanía",
+			...destinosData.map((d) => d.nombre),
+			"Otro",
+		],
+		[destinosData]
+	);
 
 	const calcularCotizacion = useCallback(
 		(origen, destino, pasajeros) => {
@@ -153,10 +158,6 @@ function App() {
 		},
 		[destinosData]
 	);
-
-	const destinosDisponibles = useMemo(() => {
-		return todosLosTramos.filter((d) => d !== formData.origen);
-	}, [formData.origen]);
 
 	useEffect(() => {
 		const handleLocationChange = () => {
@@ -396,11 +397,7 @@ function App() {
 			return { success: true };
 		} catch (error) {
 			console.error("Error al enviar el formulario a PHP:", error);
-			return {
-				success: false,
-				error: "server",
-				message: error.message,
-			};
+			return { success: false, error: "server", message: error.message };
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -454,13 +451,9 @@ function App() {
 
 	const currencyFormatter = useMemo(
 		() =>
-			new Intl.NumberFormat("es-CL", {
-				style: "currency",
-				currency: "CLP",
-			}),
+			new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }),
 		[]
 	);
-
 	const formatCurrency = (value) => currencyFormatter.format(value || 0);
 
 	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
@@ -474,10 +467,7 @@ function App() {
 	if (formData.hotel)
 		extrasList.push({ label: "Alojamiento", value: formData.hotel });
 	if (formData.sillaInfantil && formData.sillaInfantil !== "no")
-		extrasList.push({
-			label: "Silla infantil",
-			value: formData.sillaInfantil,
-		});
+		extrasList.push({ label: "Silla infantil", value: formData.sillaInfantil });
 	if (formData.equipajeEspecial)
 		extrasList.push({
 			label: "Equipaje",
@@ -823,7 +813,6 @@ function App() {
 				/>
 				<Servicios />
 				<Destinos destinos={destinosData} />
-
 				<Destacados destinos={destacadosData} />
 				<Fidelizacion />
 				<PorQueElegirnos />

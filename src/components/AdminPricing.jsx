@@ -1,16 +1,21 @@
 // src/components/AdminPricing.jsx
 
 import { useCallback, useEffect, useState } from "react";
-// Corregido: Importamos los destinos desde el nuevo archivo de datos
 import { destinosBase as destinosIniciales } from "@/data/destinos";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-// Estructura de datos por defecto, ahora funciona sin error
-const defaultState = {
-	destinos: destinosIniciales,
-	dayPromotions: [],
-	updatedAt: null,
+const nuevoDestinoTemplate = {
+	nombre: "",
+	descripcion: "",
+	tiempo: "",
+	imagen: "URL_de_imagen_por_defecto.jpg",
+	maxPasajeros: 7,
+	minHorasAnticipacion: 5,
+	precios: {
+		auto: { base: 0, porcentajeAdicional: 0.1 },
+		van: { base: 0, porcentajeAdicional: 0.05 },
+	},
 };
 
 const daysOfWeek = [
@@ -26,7 +31,8 @@ const daysOfWeek = [
 ];
 
 function AdminPricing() {
-	const [pricing, setPricing] = useState(defaultState);
+	const [pricing, setPricing] = useState({ destinos: [], dayPromotions: [] });
+	const [newDestino, setNewDestino] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
@@ -38,19 +44,18 @@ function AdminPricing() {
 		try {
 			const response = await fetch(`${API_BASE_URL}/pricing`);
 			if (!response.ok) {
-				throw new Error("No se pudo obtener la configuración de precios.");
+				throw new Error(
+					"No se pudo obtener la configuración de precios del servidor."
+				);
 			}
 			const data = await response.json();
 
-			const synchronizedDestinos = destinosIniciales.map((baseDest) => {
-				const savedDest = data.destinos?.find(
-					(d) => d.nombre === baseDest.nombre
-				);
-				return savedDest ? { ...baseDest, ...savedDest } : baseDest;
-			});
-
+			// Lógica Corregida: La fuente de verdad son los datos del servidor.
+			// Si el servidor no tiene destinos, se muestra una lista vacía.
+			// El fallback a `destinosIniciales` solo ocurre si la carga falla por completo.
 			setPricing({
-				destinos: synchronizedDestinos,
+				destinos:
+					data.destinos && Array.isArray(data.destinos) ? data.destinos : [],
 				dayPromotions: Array.isArray(data.dayPromotions)
 					? data.dayPromotions
 					: [],
@@ -61,6 +66,7 @@ function AdminPricing() {
 			setError(
 				fetchError.message || "Ocurrió un error al cargar la configuración."
 			);
+			// Fallback a los datos iniciales solo si hay un error de conexión
 			setPricing({
 				destinos: destinosIniciales,
 				dayPromotions: [],
@@ -102,39 +108,48 @@ function AdminPricing() {
 		}));
 	};
 
-	const handleDayChange = (id, field, value) => {
+	const handleAddNewDestino = () => {
+		if (newDestino.nombre.trim() === "") {
+			alert("El nombre del destino no puede estar vacío.");
+			return;
+		}
+		if (
+			pricing.destinos.some(
+				(d) => d.nombre.toLowerCase() === newDestino.nombre.toLowerCase()
+			)
+		) {
+			alert("Ya existe un destino con ese nombre.");
+			return;
+		}
+
 		setPricing((prev) => ({
 			...prev,
-			dayPromotions: prev.dayPromotions.map((promo) =>
-				promo.id === id ? { ...promo, [field]: value } : promo
-			),
+			destinos: [...prev.destinos, { ...newDestino, id: `dest-${Date.now()}` }],
 		}));
+		setNewDestino(null);
 	};
 
-	const addDayPromotion = () => {
-		setPricing((prev) => ({
-			...prev,
-			dayPromotions: [
-				...prev.dayPromotions,
-				{
-					id: `promo-${Date.now()}`,
-					dia: "Lunes",
-					descripcion: "",
-					descuento: 0,
-				},
-			],
-		}));
-	};
-
-	const removeDayPromotion = (id) => {
-		setPricing((prev) => ({
-			...prev,
-			dayPromotions: prev.dayPromotions.filter((promo) => promo.id !== id),
-		}));
+	const handleRemoveDestino = (nombre) => {
+		if (
+			window.confirm(
+				`¿Estás seguro de que quieres eliminar el destino "${nombre}"?`
+			)
+		) {
+			setPricing((prev) => ({
+				...prev,
+				destinos: prev.destinos.filter((d) => d.nombre !== nombre),
+			}));
+		}
 	};
 
 	const handleSubmit = async (event) => {
 		event.preventDefault();
+		if (newDestino) {
+			alert(
+				"Por favor, guarda o cancela el nuevo destino antes de guardar los cambios generales."
+			);
+			return;
+		}
 		setSaving(true);
 		setError("");
 		setSuccess("");
@@ -145,10 +160,7 @@ function AdminPricing() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					destinos: pricing.destinos,
-					dayPromotions: pricing.dayPromotions.map((promo) => ({
-						...promo,
-						descuento: Number(promo.descuento) || 0,
-					})),
+					dayPromotions: pricing.dayPromotions,
 				}),
 			});
 
@@ -160,18 +172,7 @@ function AdminPricing() {
 			}
 
 			const savedData = await response.json();
-			// Re-sincronizar después de guardar para mantener la estructura completa
-			const synchronizedDestinos = destinosIniciales.map((baseDest) => {
-				const savedDest = savedData.destinos?.find(
-					(d) => d.nombre === baseDest.nombre
-				);
-				return savedDest ? { ...baseDest, ...savedDest } : baseDest;
-			});
-
-			setPricing({
-				...savedData,
-				destinos: synchronizedDestinos,
-			});
+			setPricing(savedData);
 			setSuccess("Configuración guardada correctamente.");
 		} catch (submitError) {
 			console.error(submitError);
@@ -186,7 +187,7 @@ function AdminPricing() {
 	if (loading) {
 		return (
 			<div className="flex h-screen items-center justify-center bg-slate-950 text-white">
-				Cargando configuración de tarifas...
+				Cargando...
 			</div>
 		);
 	}
@@ -196,11 +197,11 @@ function AdminPricing() {
 			<div className="mx-auto w-full max-w-5xl px-4 py-10">
 				<header className="mb-10">
 					<h1 className="text-3xl font-semibold text-white">
-						Panel de Tarifas y Promociones
+						Panel de Tarifas y Destinos
 					</h1>
 					<p className="mt-2 max-w-3xl text-sm text-slate-300">
-						Administra las tarifas base para cada destino y vehículo. Los
-						cambios se reflejarán en tiempo real en el cotizador del sitio web.
+						Administra las tarifas para cada destino y vehículo. También puedes
+						añadir o eliminar destinos.
 					</p>
 					{pricing.updatedAt && (
 						<p className="mt-3 text-xs text-slate-400">
@@ -212,113 +213,181 @@ function AdminPricing() {
 
 				<form onSubmit={handleSubmit} className="space-y-10">
 					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
-						<h2 className="text-xl font-semibold text-white">
-							Tarifas por Destino
-						</h2>
-						<div className="space-y-6">
-							{pricing.destinos.map((destino) => (
-								<div
-									key={destino.nombre}
-									className="rounded-md border border-slate-800 bg-slate-950/60 p-4"
-								>
-									<h3 className="text-lg font-medium text-emerald-400">
-										{destino.nombre}
-									</h3>
-									<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-										{Object.keys(destino.precios).map((vehiculo) => (
-											<label
-												key={vehiculo}
-												className="text-sm capitalize text-slate-300"
-											>
-												Precio Base ({vehiculo})
-												<input
-													type="number"
-													min="0"
-													value={destino.precios[vehiculo].base}
-													onChange={(e) =>
-														handleDestinoChange(
-															destino.nombre,
-															vehiculo,
-															"base",
-															e.target.value
-														)
-													}
-													className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-												/>
-											</label>
-										))}
-									</div>
-								</div>
-							))}
-						</div>
-					</section>
-
-					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
 						<div className="flex flex-wrap items-center justify-between gap-4">
-							<div>
-								<h2 className="text-xl font-semibold text-white">
-									Promociones por Día
-								</h2>
-								<p className="mt-2 text-sm text-slate-300">
-									Configura descuentos para días específicos.
-								</p>
-							</div>
+							<h2 className="text-xl font-semibold text-white">
+								Tarifas por Destino
+							</h2>
 							<button
 								type="button"
-								onClick={addDayPromotion}
-								className="inline-flex items-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/60"
+								onClick={() => setNewDestino({ ...nuevoDestinoTemplate })}
+								className="inline-flex items-center rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+								disabled={!!newDestino}
 							>
-								Añadir Promoción
+								Añadir Nuevo Destino
 							</button>
 						</div>
-						<div className="space-y-4">
-							{pricing.dayPromotions.map((promo) => (
-								<div
-									key={promo.id}
-									className="rounded-md border border-slate-800 bg-slate-950/60 p-4"
-								>
-									<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+						<div className="space-y-6">
+							{newDestino && (
+								<div className="rounded-md border-2 border-dashed border-blue-500 bg-slate-950/80 p-4">
+									<h3 className="text-lg font-medium text-blue-400">
+										Nuevo Destino
+									</h3>
+									<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 										<label className="text-sm text-slate-300">
-											Día o Rango
-											<select
-												value={promo.dia || ""}
+											Nombre del Destino
+											<input
+												type="text"
+												value={newDestino.nombre}
 												onChange={(e) =>
-													handleDayChange(promo.id, "dia", e.target.value)
+													setNewDestino((d) => ({
+														...d,
+														nombre: e.target.value,
+													}))
 												}
-												className="mt-1 block w-full rounded-md border-slate-700 bg-slate-900 text-white"
-											>
-												{daysOfWeek.map((day) => (
-													<option key={day} value={day}>
-														{day}
-													</option>
-												))}
-											</select>
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="Ej: Lican Ray"
+											/>
 										</label>
 										<label className="text-sm text-slate-300">
-											Descuento (%)
+											Tiempo de Viaje
+											<input
+												type="text"
+												value={newDestino.tiempo}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														tiempo: e.target.value,
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="Ej: 1h 45min"
+											/>
+										</label>
+										<label className="text-sm text-slate-300 sm:col-span-2">
+											Descripción
+											<input
+												type="text"
+												value={newDestino.descripcion}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														descripcion: e.target.value,
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="Breve descripción del lugar"
+											/>
+										</label>
+										<label className="text-sm text-slate-300">
+											Precio Base (Auto)
 											<input
 												type="number"
-												min="0"
-												max="100"
-												value={promo.descuento || 0}
+												value={newDestino.precios.auto.base}
 												onChange={(e) =>
-													handleDayChange(promo.id, "descuento", e.target.value)
+													setNewDestino((d) => ({
+														...d,
+														precios: {
+															...d.precios,
+															auto: {
+																...d.precios.auto,
+																base: Number(e.target.value),
+															},
+														},
+													}))
 												}
 												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 											/>
 										</label>
-										<div className="flex items-end">
+										<label className="text-sm text-slate-300">
+											Precio Base (Van)
+											<input
+												type="number"
+												value={newDestino.precios.van.base}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														precios: {
+															...d.precios,
+															van: {
+																...d.precios.van,
+																base: Number(e.target.value),
+															},
+														},
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+											/>
+										</label>
+									</div>
+									<div className="mt-4 flex justify-end gap-3">
+										<button
+											type="button"
+											onClick={() => setNewDestino(null)}
+											className="rounded-md px-3 py-1 text-xs font-semibold text-slate-300 transition hover:bg-slate-800"
+										>
+											Cancelar
+										</button>
+										<button
+											type="button"
+											onClick={handleAddNewDestino}
+											className="rounded-md bg-blue-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-400"
+										>
+											Guardar Destino
+										</button>
+									</div>
+								</div>
+							)}
+
+							{pricing.destinos.length > 0 ? (
+								pricing.destinos.map((destino) => (
+									<div
+										key={destino.nombre}
+										className="rounded-md border border-slate-800 bg-slate-950/60 p-4"
+									>
+										<div className="flex items-center justify-between">
+											<h3 className="text-lg font-medium text-emerald-400">
+												{destino.nombre}
+											</h3>
 											<button
 												type="button"
-												onClick={() => removeDayPromotion(promo.id)}
-												className="w-full rounded-md border border-red-400/50 px-3 py-2 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
+												onClick={() => handleRemoveDestino(destino.nombre)}
+												className="rounded-md border border-red-400/50 px-3 py-1 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
 											>
 												Eliminar
 											</button>
 										</div>
+										<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+											{Object.keys(destino.precios).map((vehiculo) => (
+												<label
+													key={vehiculo}
+													className="text-sm capitalize text-slate-300"
+												>
+													Precio Base ({vehiculo})
+													<input
+														type="number"
+														min="0"
+														value={destino.precios[vehiculo].base}
+														onChange={(e) =>
+															handleDestinoChange(
+																destino.nombre,
+																vehiculo,
+																"base",
+																e.target.value
+															)
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+													/>
+												</label>
+											))}
+										</div>
 									</div>
-								</div>
-							))}
+								))
+							) : (
+								<p className="text-center text-sm text-slate-400 py-4">
+									No hay destinos configurados. ¡Añade el primero para empezar!
+								</p>
+							)}
 						</div>
 					</section>
 
@@ -336,7 +405,7 @@ function AdminPricing() {
 							disabled={saving || loading}
 							className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-500 px-6 py-2 text-sm font-semibold text-slate-950 shadow transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
 						>
-							{saving ? "Guardando..." : "Guardar Cambios"}
+							{saving ? "Guardando..." : "Guardar Cambios y Publicar"}
 						</button>
 					</footer>
 				</form>
