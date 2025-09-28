@@ -39,19 +39,17 @@ const ROUND_TRIP_DISCOUNT = 0.05;
 
 const normalizePromotions = (promotions = []) => {
 	if (!Array.isArray(promotions)) return [];
-	return promotions
-		.filter(Boolean)
-		.map((promo, index) => ({
-			id: promo.id || `promo-${index}`,
-			destino: promo.destino || "",
-			descripcion: promo.descripcion || "",
-			dias: Array.isArray(promo.dias) ? promo.dias : [],
-			aplicaPorDias: Boolean(promo.aplicaPorDias),
-			aplicaPorHorario: Boolean(promo.aplicaPorHorario),
-			horaInicio: promo.horaInicio || "",
-			horaFin: promo.horaFin || "",
-			descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
-		}));
+	return promotions.filter(Boolean).map((promo, index) => ({
+		id: promo.id || `promo-${index}`,
+		destino: promo.destino || "",
+		descripcion: promo.descripcion || "",
+		dias: Array.isArray(promo.dias) ? promo.dias : [],
+		aplicaPorDias: Boolean(promo.aplicaPorDias),
+		aplicaPorHorario: Boolean(promo.aplicaPorHorario),
+		horaInicio: promo.horaInicio || "",
+		horaFin: promo.horaFin || "",
+		descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
+	}));
 };
 
 const getDayTagsFromDate = (dateString) => {
@@ -181,9 +179,7 @@ function App() {
 	const destinoSeleccionado = useMemo(() => {
 		const tramo = [formData.origen, formData.destino].find(
 			(lugar) =>
-				lugar &&
-				lugar !== "Aeropuerto La Araucanía" &&
-				lugar !== "Otro"
+				lugar && lugar !== "Aeropuerto La Araucanía" && lugar !== "Otro"
 		);
 		if (!tramo) return null;
 		return destinosData.find((d) => d.nombre === tramo) || null;
@@ -208,7 +204,10 @@ function App() {
 				const horaSeleccionada = formData.hora;
 				if (!horaSeleccionada) return false;
 				if (!promo.horaInicio || !promo.horaFin) return false;
-				if (!isTimeWithinRange(horaSeleccionada, promo.horaInicio, promo.horaFin)) return false;
+				if (
+					!isTimeWithinRange(horaSeleccionada, promo.horaInicio, promo.horaFin)
+				)
+					return false;
 			}
 			return true;
 		});
@@ -216,8 +215,11 @@ function App() {
 
 	const activePromotion = useMemo(() => {
 		if (!applicablePromotions.length) return null;
-		return applicablePromotions.reduce((best, promo) =>
-			promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0) ? promo : best,
+		return applicablePromotions.reduce(
+			(best, promo) =>
+				promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0)
+					? promo
+					: best,
 			null
 		);
 	}, [applicablePromotions]);
@@ -236,7 +238,10 @@ function App() {
 		if (!destinoSeleccionado) return;
 		const limite = destinoSeleccionado.maxPasajeros;
 		const pasajerosSeleccionados = parseInt(formData.pasajeros, 10);
-		if (Number.isFinite(pasajerosSeleccionados) && pasajerosSeleccionados > limite) {
+		if (
+			Number.isFinite(pasajerosSeleccionados) &&
+			pasajerosSeleccionados > limite
+		) {
 			setFormData((prev) => ({
 				...prev,
 				pasajeros: limite.toString(),
@@ -407,7 +412,12 @@ function App() {
 			abono,
 			saldoPendiente,
 		};
-	}, [cotizacion.precio, promotionDiscountRate, roundTripDiscountRate, formData.idaVuelta]);
+	}, [
+		cotizacion.precio,
+		promotionDiscountRate,
+		roundTripDiscountRate,
+		formData.idaVuelta,
+	]);
 
 	const {
 		precioBase,
@@ -418,16 +428,24 @@ function App() {
 	} = pricing;
 
 	const handlePayment = async (gateway, type = "abono") => {
+		// Prevenir múltiples peticiones
+		if (loadingGateway) {
+			console.log("Ya hay una petición de pago en proceso");
+			return;
+		}
+
 		setLoadingGateway(`${gateway}-${type}`);
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
 		const amount = type === "total" ? totalConDescuento : abono;
+
 		if (!amount) {
 			alert("Aún no tenemos un valor para generar el enlace de pago.");
 			setLoadingGateway(null);
 			return;
 		}
+
 		const description =
 			type === "total"
 				? `Pago total con descuento para ${destinoFinal} (${
@@ -436,7 +454,11 @@ function App() {
 				: `Abono reserva (40%) para ${destinoFinal} (${
 						vehiculo || "A confirmar"
 				  })`;
-		const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+		const apiUrl =
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
+
 		try {
 			const response = await fetch(`${apiUrl}/create-payment`, {
 				method: "POST",
@@ -448,6 +470,11 @@ function App() {
 					email: formData.email,
 				}),
 			});
+
+			if (!response.ok) {
+				throw new Error(`Error del servidor: ${response.status}`);
+			}
+
 			const data = await response.json();
 			if (data.url) {
 				window.open(data.url, "_blank");
@@ -460,6 +487,7 @@ function App() {
 			console.error("Error al crear el pago:", error);
 			alert(`Hubo un problema: ${error.message}`);
 		} finally {
+			// Asegurar que siempre se resetee el estado de carga
 			setLoadingGateway(null);
 		}
 	};
@@ -482,21 +510,21 @@ function App() {
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const origenFinal =
 			formData.origen === "Otro" ? formData.otroOrigen : formData.origen;
-			const dataToSend = {
-				...formData,
-				origen: origenFinal,
-				destino: destinoFinal,
-				precio: cotizacion.precio,
-				vehiculo: cotizacion.vehiculo,
-				descuentoBase: pricing.descuentoBase,
-				descuentoPromocion: pricing.descuentoPromocion,
-				descuentoRoundTrip: pricing.descuentoRoundTrip,
-				descuentoOnline,
-				totalConDescuento,
-				abonoSugerido: abono,
-				saldoPendiente,
-				source,
-			};
+		const dataToSend = {
+			...formData,
+			origen: origenFinal,
+			destino: destinoFinal,
+			precio: cotizacion.precio,
+			vehiculo: cotizacion.vehiculo,
+			descuentoBase: pricing.descuentoBase,
+			descuentoPromocion: pricing.descuentoPromocion,
+			descuentoRoundTrip: pricing.descuentoRoundTrip,
+			descuentoOnline,
+			totalConDescuento,
+			abonoSugerido: abono,
+			saldoPendiente,
+			source,
+		};
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
@@ -541,7 +569,7 @@ function App() {
 		const regresoInfo = formData.idaVuelta
 			? ` Regreso el ${formData.fechaRegreso || "por definir"} a las ${
 					formData.horaRegreso || "por definir"
-				}`
+			  }`
 			: "";
 		const extras = [];
 		if (formData.numeroVuelo) extras.push(`Vuelo: ${formData.numeroVuelo}`);

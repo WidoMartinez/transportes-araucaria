@@ -43,7 +43,6 @@ function Hero({
 	const [stepError, setStepError] = useState("");
 	const [selectedCharge, setSelectedCharge] = useState(null);
 	const [selectedMethod, setSelectedMethod] = useState(null);
-	const [selectedPayment, setSelectedPayment] = useState(null);
 
 	const steps = useMemo(
 		() => [
@@ -268,8 +267,12 @@ function Hero({
 	};
 
 	const baseDiscountPercentage = Math.round((baseDiscountRate || 0) * 100);
-	const promoDiscountPercentage = Math.round((promotionDiscountRate || 0) * 100);
-	const roundTripDiscountPercentage = Math.round((roundTripDiscountRate || 0) * 100);
+	const promoDiscountPercentage = Math.round(
+		(promotionDiscountRate || 0) * 100
+	);
+	const roundTripDiscountPercentage = Math.round(
+		(roundTripDiscountRate || 0) * 100
+	);
 	const totalDiscountPercentage = Math.round(descuentoRate * 100);
 	const mostrarPrecio = Boolean(cotizacion.precio);
 
@@ -327,40 +330,6 @@ function Hero({
 		[paymentMethods, selectedMethod]
 	);
 
-	// Create combined payment options for the payment selection UI
-	const paymentOptions = useMemo(() => {
-		const options = [];
-		chargeOptions.forEach((charge) => {
-			if (!charge.disabled) {
-				paymentMethods.forEach((method) => {
-					options.push({
-						id: `${charge.id}-${method.id}`,
-						gateway: method.gateway,
-						type: charge.type,
-						title: method.title,
-						subtitle: method.subtitle,
-						image: method.image,
-						amount: charge.amount,
-						disabled: charge.disabled,
-						chargeTitle: charge.title,
-					});
-				});
-			}
-		});
-		return options;
-	}, [chargeOptions, paymentMethods]);
-
-	// Find the selected option based on selectedPayment
-	const selectedOption = useMemo(() => {
-		return paymentOptions.find((option) => option.id === selectedPayment) || null;
-	}, [paymentOptions, selectedPayment]);
-
-	// Check if the selected option is loading
-	const selectedOptionLoading = useMemo(() => {
-		if (!selectedOption) return false;
-		return loadingGateway === `${selectedOption.gateway}-${selectedOption.type}`;
-	}, [selectedOption, loadingGateway]);
-
 	useEffect(() => {
 		const defaultCharge = chargeOptions.find((option) => !option.disabled);
 		setSelectedCharge((prev) =>
@@ -379,28 +348,23 @@ function Hero({
 		);
 	}, [paymentMethods]);
 
-	// Auto-select default payment option
-	useEffect(() => {
-		if (paymentOptions.length > 0 && !selectedPayment) {
-			const defaultOption = paymentOptions[0];
-			setSelectedPayment(defaultOption?.id || null);
-		}
-	}, [paymentOptions, selectedPayment]);
-
-const selectedCombinationLoading =
-	selectedChargeData && selectedMethodData
-		? loadingGateway === `${selectedMethodData.gateway}-${selectedChargeData.type}`
-		: false;
-const isAnotherGatewayLoading = Boolean(
-	loadingGateway && !selectedOptionLoading
-);
-const canTriggerPayment = Boolean(
-	selectedOption &&
-	!selectedOption.disabled &&
-	canPay &&
-	!isSubmitting &&
-	!isAnotherGatewayLoading
-);
+	const selectedCombinationLoading =
+		selectedChargeData && selectedMethodData
+			? loadingGateway ===
+			  `${selectedMethodData.gateway}-${selectedChargeData.type}`
+			: false;
+	const isAnotherGatewayLoading = Boolean(
+		loadingGateway && !selectedCombinationLoading
+	);
+	const canTriggerPayment = Boolean(
+		selectedChargeData &&
+			!selectedChargeData.disabled &&
+			selectedMethodData &&
+			canPay &&
+			!isSubmitting &&
+			!isAnotherGatewayLoading &&
+			!selectedCombinationLoading
+	);
 
 	return (
 		<section
@@ -419,8 +383,8 @@ const canTriggerPayment = Boolean(
 					<span className="text-accent">en un Auto Confortable</span>
 				</h2>
 				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Diseñamos una reserva guiada paso a paso para que confirmes y pagues tu
-					viaje de forma autónoma, asegurando el {baseDiscountPercentage}% de
+					Diseñamos una reserva guiada paso a paso para que confirmes y pagues
+					tu viaje de forma autónoma, asegurando el {baseDiscountPercentage}% de
 					descuento online garantizado
 					{promoDiscountPercentage > 0
 						? ` + ${promoDiscountPercentage}% extra por promociones activas`
@@ -437,21 +401,27 @@ const canTriggerPayment = Boolean(
 							<CardTitle className="text-foreground text-2xl">
 								Reserva tu viaje en línea
 							</CardTitle>
-								<div className="flex items-center gap-2">
-									<Badge variant="secondary" className="text-sm">
-										Descuento base {baseDiscountPercentage}%
+							<div className="flex items-center gap-2">
+								<Badge variant="secondary" className="text-sm">
+									Descuento base {baseDiscountPercentage}%
+								</Badge>
+								{promoDiscountPercentage > 0 && (
+									<Badge
+										variant="default"
+										className="text-sm bg-emerald-500 text-slate-950"
+									>
+										Promo extra +{promoDiscountPercentage}%
 									</Badge>
-									{promoDiscountPercentage > 0 && (
-										<Badge variant="default" className="text-sm bg-emerald-500 text-slate-950">
-											Promo extra +{promoDiscountPercentage}%
-										</Badge>
-									)}
-									{roundTripDiscountPercentage > 0 && (
-										<Badge variant="default" className="text-sm bg-sky-500 text-slate-950">
-											Ida & vuelta +{roundTripDiscountPercentage}%
-										</Badge>
-									)}
-								</div>
+								)}
+								{roundTripDiscountPercentage > 0 && (
+									<Badge
+										variant="default"
+										className="text-sm bg-sky-500 text-slate-950"
+									>
+										Ida & vuelta +{roundTripDiscountPercentage}%
+									</Badge>
+								)}
+							</div>
 						</div>
 						<div className="space-y-4">
 							<div className="grid gap-4 md:grid-cols-3">
@@ -609,8 +579,12 @@ const canTriggerPayment = Boolean(
 												});
 											}}
 										/>
-										<label htmlFor="ida-vuelta" className="text-sm text-muted-foreground">
-											¿Deseas reservar también el regreso? Coordina ida y vuelta en una sola solicitud.
+										<label
+											htmlFor="ida-vuelta"
+											className="text-sm text-muted-foreground"
+										>
+											¿Deseas reservar también el regreso? Coordina ida y vuelta
+											en una sola solicitud.
 										</label>
 									</div>
 									{formData.idaVuelta && (
@@ -640,9 +614,11 @@ const canTriggerPayment = Boolean(
 											</div>
 										</div>
 									)}
-										<p className="text-xs text-muted-foreground">
-											Validaremos la disponibilidad del retorno junto con tu reserva inicial. Al reservar ida y vuelta obtienes un 5% adicional de descuento.
-										</p>
+									<p className="text-xs text-muted-foreground">
+										Validaremos la disponibilidad del retorno junto con tu
+										reserva inicial. Al reservar ida y vuelta obtienes un 5%
+										adicional de descuento.
+									</p>
 								</div>
 								<div className="text-center text-sm text-muted-foreground">
 									¿No encuentras tu destino?{" "}
@@ -671,7 +647,10 @@ const canTriggerPayment = Boolean(
 														Base {baseDiscountPercentage}%
 													</Badge>
 													{promoDiscountPercentage > 0 && (
-														<Badge className="mb-1 bg-emerald-500 text-slate-950" variant="default">
+														<Badge
+															className="mb-1 bg-emerald-500 text-slate-950"
+															variant="default"
+														>
 															Extra +{promoDiscountPercentage}%
 														</Badge>
 													)}
@@ -688,37 +667,39 @@ const canTriggerPayment = Boolean(
 												<p className="text-2xl font-bold text-accent">
 													{formatCurrency(pricing.totalConDescuento)}
 												</p>
-											<div className="space-y-1 text-sm">
-												<p className="font-medium text-emerald-500">
-													Descuento base (10%): {formatCurrency(pricing.descuentoBase)}
-												</p>
-												{promoDiscountPercentage > 0 && (
-													<p className="font-medium text-emerald-600">
-														Promo adicional (+{promoDiscountPercentage}%): {formatCurrency(
-															pricing.descuentoPromocion
-														)}
+												<div className="space-y-1 text-sm">
+													<p className="font-medium text-emerald-500">
+														Descuento base (10%):{" "}
+														{formatCurrency(pricing.descuentoBase)}
 													</p>
-												)}
-												{roundTripDiscountPercentage > 0 && (
-													<p className="font-medium text-sky-500">
-														Ida y vuelta (+{roundTripDiscountPercentage}%): {formatCurrency(
-															pricing.descuentoRoundTrip
-														)}
+													{promoDiscountPercentage > 0 && (
+														<p className="font-medium text-emerald-600">
+															Promo adicional (+{promoDiscountPercentage}%):{" "}
+															{formatCurrency(pricing.descuentoPromocion)}
+														</p>
+													)}
+													{roundTripDiscountPercentage > 0 && (
+														<p className="font-medium text-sky-500">
+															Ida y vuelta (+{roundTripDiscountPercentage}%):{" "}
+															{formatCurrency(pricing.descuentoRoundTrip)}
+														</p>
+													)}
+													<p className="text-emerald-500 font-semibold">
+														Ahorro total:{" "}
+														{formatCurrency(pricing.descuentoOnline)}
+														<span className="ml-1 text-xs text-emerald-300">
+															({totalDiscountPercentage}% aplicado)
+														</span>
 													</p>
-												)}
-												<p className="text-emerald-500 font-semibold">
-													Ahorro total: {formatCurrency(pricing.descuentoOnline)}
-													<span className="ml-1 text-xs text-emerald-300">
-														({totalDiscountPercentage}% aplicado)
-													</span>
-												</p>
-												{activePromotion && (
-													<p className="text-xs font-semibold text-emerald-600">
-														Promo activa: {activePromotion.descripcion || `Descuento ${activePromotion.descuentoPorcentaje}%`}
-														{promotionDetails ? ` · ${promotionDetails}` : ""}
-													</p>
-												)}
-											</div>
+													{activePromotion && (
+														<p className="text-xs font-semibold text-emerald-600">
+															Promo activa:{" "}
+															{activePromotion.descripcion ||
+																`Descuento ${activePromotion.descuentoPorcentaje}%`}
+															{promotionDetails ? ` · ${promotionDetails}` : ""}
+														</p>
+													)}
+												</div>
 											</div>
 										</div>
 									</div>
@@ -862,7 +843,9 @@ const canTriggerPayment = Boolean(
 											</div>
 											{promoDiscountPercentage > 0 && (
 												<div className="flex items-center justify-between">
-													<span>Promo adicional (+{promoDiscountPercentage}%)</span>
+													<span>
+														Promo adicional (+{promoDiscountPercentage}%)
+													</span>
 													<span className="font-semibold">
 														{formatCurrency(pricing.descuentoPromocion)}
 													</span>
@@ -936,27 +919,41 @@ const canTriggerPayment = Boolean(
 										<div className="grid gap-3 text-sm md:grid-cols-2">
 											<div>
 												<p className="text-muted-foreground">Origen</p>
-												<p className="font-medium text-foreground">{origenFinal}</p>
+												<p className="font-medium text-foreground">
+													{origenFinal}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground">Destino</p>
-												<p className="font-medium text-foreground">{destinoFinal}</p>
+												<p className="font-medium text-foreground">
+													{destinoFinal}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground">Fecha</p>
-												<p className="font-medium text-foreground">{fechaLegible}</p>
+												<p className="font-medium text-foreground">
+													{fechaLegible}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground">Hora</p>
-												<p className="font-medium text-foreground">{horaLegible}</p>
+												<p className="font-medium text-foreground">
+													{horaLegible}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground">Pasajeros</p>
-												<p className="font-medium text-foreground">{pasajerosLabel}</p>
+												<p className="font-medium text-foreground">
+													{pasajerosLabel}
+												</p>
 											</div>
 											<div>
-												<p className="text-muted-foreground">Vehículo sugerido</p>
-												<p className="font-medium text-foreground">{vehiculoSugerido}</p>
+												<p className="text-muted-foreground">
+													Vehículo sugerido
+												</p>
+												<p className="font-medium text-foreground">
+													{vehiculoSugerido}
+												</p>
 											</div>
 										</div>
 										{formData.idaVuelta && (
@@ -965,7 +962,8 @@ const canTriggerPayment = Boolean(
 													Regreso confirmado
 												</p>
 												<p className="text-sm text-muted-foreground">
-													{formData.fechaRegreso || "Por definir"} · {formData.horaRegreso || "Por definir"} hrs
+													{formData.fechaRegreso || "Por definir"} ·{" "}
+													{formData.horaRegreso || "Por definir"} hrs
 												</p>
 											</div>
 										)}
@@ -977,12 +975,18 @@ const canTriggerPayment = Boolean(
 										<div className="space-y-2">
 											<div className="flex items-center justify-between">
 												<span>Descuento base (10%)</span>
-												<span className="font-semibold">-{formatCurrency(pricing.descuentoBase)}</span>
+												<span className="font-semibold">
+													-{formatCurrency(pricing.descuentoBase)}
+												</span>
 											</div>
 											{promoDiscountPercentage > 0 && (
 												<div className="flex items-center justify-between">
-													<span>Promo adicional (+{promoDiscountPercentage}%)</span>
-													<span className="font-semibold">-{formatCurrency(pricing.descuentoPromocion)}</span>
+													<span>
+														Promo adicional (+{promoDiscountPercentage}%)
+													</span>
+													<span className="font-semibold">
+														-{formatCurrency(pricing.descuentoPromocion)}
+													</span>
 												</div>
 											)}
 											<div className="flex items-center justify-between text-emerald-600">
@@ -996,19 +1000,26 @@ const canTriggerPayment = Boolean(
 											</div>
 											<div className="flex items-center justify-between">
 												<span>Precio con descuento</span>
-												<span className="font-semibold">{formatCurrency(pricing.totalConDescuento)}</span>
+												<span className="font-semibold">
+													{formatCurrency(pricing.totalConDescuento)}
+												</span>
 											</div>
 											<div className="flex items-center justify-between">
 												<span>Abono sugerido (40%)</span>
-												<span className="font-semibold">{formatCurrency(pricing.abono)}</span>
+												<span className="font-semibold">
+													{formatCurrency(pricing.abono)}
+												</span>
 											</div>
 											<div className="flex items-center justify-between">
 												<span>Saldo al llegar</span>
-												<span className="font-semibold">{formatCurrency(pricing.saldoPendiente)}</span>
+												<span className="font-semibold">
+													{formatCurrency(pricing.saldoPendiente)}
+												</span>
 											</div>
 										</div>
 										<p className="mt-3 text-xs text-muted-foreground">
-											Elige si deseas abonar ahora o pagar el total con descuento.
+											Elige si deseas abonar ahora o pagar el total con
+											descuento.
 										</p>
 									</div>
 								</div>
@@ -1016,13 +1027,118 @@ const canTriggerPayment = Boolean(
 								{activePromotion && (
 									<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
 										<p className="font-semibold">
-											Descuento especial {activePromotion.descuentoPorcentaje}% — {activePromotion.descripcion || `Tramo ${activePromotion.destino}`}
+											Descuento especial {activePromotion.descuentoPorcentaje}%
+											—{" "}
+											{activePromotion.descripcion ||
+												`Tramo ${activePromotion.destino}`}
 										</p>
 										{promotionDetails && (
 											<p className="mt-1">{promotionDetails}</p>
 										)}
 									</div>
 								)}
+
+								<div className="space-y-4">
+									<p className="text-sm font-medium text-foreground">
+										Selecciona el monto a pagar
+									</p>
+									<div className="grid gap-4 md:grid-cols-2">
+										{chargeOptions.map((option) => {
+											const isSelected = selectedCharge === option.id;
+											const isDisabled = option.disabled;
+											return (
+												<button
+													key={option.id}
+													type="button"
+													onClick={() =>
+														!isDisabled && setSelectedCharge(option.id)
+													}
+													disabled={isDisabled}
+													className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
+														isSelected
+															? "border-primary ring-2 ring-primary/40"
+															: "border-slate-300 hover:border-primary/60"
+													} ${
+														isDisabled
+															? "cursor-not-allowed opacity-60"
+															: "cursor-pointer"
+													}`}
+												>
+													<div className="flex-1">
+														<p className="font-semibold text-slate-900">
+															{option.title}
+														</p>
+														<p className="text-sm text-muted-foreground">
+															{option.subtitle}
+														</p>
+														<p className="mt-2 text-sm font-semibold text-foreground">
+															{formatCurrency(option.amount)}
+														</p>
+													</div>
+													{isSelected && (
+														<span className="text-xs font-semibold uppercase text-primary">
+															Seleccionado
+														</span>
+													)}
+												</button>
+											);
+										})}
+									</div>
+								</div>
+
+								<div className="space-y-4">
+									<p className="text-sm font-medium text-foreground">
+										Selecciona tu medio de pago
+									</p>
+									<div className="grid gap-4 md:grid-cols-2">
+										{paymentMethods.map((method) => {
+											const isSelected = selectedMethod === method.id;
+											const methodLoading =
+												loadingGateway ===
+												`${method.gateway}-${selectedChargeData?.type}`;
+											return (
+												<button
+													key={method.id}
+													type="button"
+													onClick={() => setSelectedMethod(method.id)}
+													disabled={isAnotherGatewayLoading}
+													className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
+														isSelected
+															? "border-primary ring-2 ring-primary/40"
+															: "border-slate-300 hover:border-primary/60"
+													}`}
+												>
+													<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
+														<img
+															src={method.image}
+															alt={method.title}
+															className="h-full w-full object-contain p-2"
+															loading="lazy"
+														/>
+													</div>
+													<div className="flex-1">
+														<p className="font-semibold text-slate-900">
+															{method.title}
+														</p>
+														<p className="text-sm text-muted-foreground">
+															{method.subtitle}
+														</p>
+														{methodLoading && (
+															<p className="mt-1 text-xs text-primary">
+																Generando enlace...
+															</p>
+														)}
+													</div>
+													{isSelected && !methodLoading && (
+														<span className="text-xs font-semibold uppercase text-primary">
+															Seleccionado
+														</span>
+													)}
+												</button>
+											);
+										})}
+									</div>
+								</div>
 
 								<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
 									<p className="text-sm font-medium text-foreground">
@@ -1043,7 +1159,8 @@ const canTriggerPayment = Boolean(
 											htmlFor="check-viaje"
 											className="text-sm leading-relaxed text-muted-foreground"
 										>
-											Confirmo que revisé origen, destino, fecha y hora de mi traslado.
+											Confirmo que revisé origen, destino, fecha y hora de mi
+											traslado.
 										</label>
 									</div>
 									<div className="flex items-start gap-3">
@@ -1061,7 +1178,8 @@ const canTriggerPayment = Boolean(
 											htmlFor="check-contacto"
 											className="text-sm leading-relaxed text-muted-foreground"
 										>
-											Acepto recibir la confirmación y enlace de pago por email y WhatsApp.
+											Acepto recibir la confirmación y enlace de pago por email
+											y WhatsApp.
 										</label>
 									</div>
 									{!canPay && (
@@ -1069,59 +1187,6 @@ const canTriggerPayment = Boolean(
 											Marca ambas casillas para habilitar las opciones de pago.
 										</p>
 									)}
-								</div>
-
-								<div className="space-y-4">
-									<p className="text-sm font-medium text-foreground">
-										Selecciona tu medio de pago online
-									</p>
-									<div className="grid gap-4 md:grid-cols-2">
-										{paymentOptions.map((option) => {
-											const isSelected = selectedPayment === option.id;
-											const optionLoading =
-												loadingGateway === `${option.gateway}-${option.type}`;
-											const isDisabled = option.disabled;
-											return (
-												<button
-													key={option.id}
-													type="button"
-													onClick={() => !isDisabled && setSelectedPayment(option.id)}
-													disabled={isDisabled || isAnotherGatewayLoading}
-													className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-slate-300 hover:border-primary/60"} ${isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-												>
-													<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
-														<img
-															src={option.image}
-															alt={option.title}
-															className="h-full w-full object-contain p-2"
-															loading="lazy"
-														/>
-													</div>
-													<div className="flex-1">
-														<p className="font-semibold text-slate-900">
-															{option.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{option.subtitle}
-														</p>
-														<p className="mt-2 text-sm font-semibold text-foreground">
-															{formatCurrency(option.amount)}
-														</p>
-														{optionLoading && (
-															<p className="mt-1 text-xs text-primary">
-																Generando enlace...
-															</p>
-														)}
-													</div>
-													{isSelected && !optionLoading && (
-														<span className="text-xs font-semibold uppercase text-primary">
-															Seleccionado
-														</span>
-													)}
-												</button>
-											);
-										})}
-									</div>
 								</div>
 
 								<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -1148,16 +1213,31 @@ const canTriggerPayment = Boolean(
 										<Button
 											type="button"
 											className="w-full bg-accent hover:bg-accent/90"
-											onClick={() => selectedOption && handlePayment(selectedOption.gateway, selectedOption.type)}
-											disabled={!canTriggerPayment}
+											onClick={() => {
+												if (
+													selectedMethodData &&
+													selectedChargeData &&
+													!selectedCombinationLoading
+												) {
+													handlePayment(
+														selectedMethodData.gateway,
+														selectedChargeData.type
+													);
+												}
+											}}
+											disabled={
+												!canTriggerPayment || selectedCombinationLoading
+											}
 										>
-											{selectedOptionLoading ? (
+											{selectedCombinationLoading ? (
 												<>
 													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-													Procesando...
+													Procesando pago...
 												</>
-											) : selectedOption ? (
-												`Pagar ${formatCurrency(selectedOption.amount)} con ${selectedOption.title}`
+											) : selectedMethodData && selectedChargeData ? (
+												`Pagar ${formatCurrency(
+													selectedChargeData.amount
+												)} con ${selectedMethodData.title}`
 											) : (
 												"Selecciona un medio de pago"
 											)}
