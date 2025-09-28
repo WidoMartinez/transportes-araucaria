@@ -43,6 +43,7 @@ function Hero({
 	const [stepError, setStepError] = useState("");
 	const [selectedCharge, setSelectedCharge] = useState(null);
 	const [selectedMethod, setSelectedMethod] = useState(null);
+	const [selectedPayment, setSelectedPayment] = useState(null);
 
 	const steps = useMemo(
 		() => [
@@ -326,6 +327,40 @@ function Hero({
 		[paymentMethods, selectedMethod]
 	);
 
+	// Create combined payment options for the payment selection UI
+	const paymentOptions = useMemo(() => {
+		const options = [];
+		chargeOptions.forEach((charge) => {
+			if (!charge.disabled) {
+				paymentMethods.forEach((method) => {
+					options.push({
+						id: `${charge.id}-${method.id}`,
+						gateway: method.gateway,
+						type: charge.type,
+						title: method.title,
+						subtitle: method.subtitle,
+						image: method.image,
+						amount: charge.amount,
+						disabled: charge.disabled,
+						chargeTitle: charge.title,
+					});
+				});
+			}
+		});
+		return options;
+	}, [chargeOptions, paymentMethods]);
+
+	// Find the selected option based on selectedPayment
+	const selectedOption = useMemo(() => {
+		return paymentOptions.find((option) => option.id === selectedPayment) || null;
+	}, [paymentOptions, selectedPayment]);
+
+	// Check if the selected option is loading
+	const selectedOptionLoading = useMemo(() => {
+		if (!selectedOption) return false;
+		return loadingGateway === `${selectedOption.gateway}-${selectedOption.type}`;
+	}, [selectedOption, loadingGateway]);
+
 	useEffect(() => {
 		const defaultCharge = chargeOptions.find((option) => !option.disabled);
 		setSelectedCharge((prev) =>
@@ -344,17 +379,24 @@ function Hero({
 		);
 	}, [paymentMethods]);
 
+	// Auto-select default payment option
+	useEffect(() => {
+		if (paymentOptions.length > 0 && !selectedPayment) {
+			const defaultOption = paymentOptions[0];
+			setSelectedPayment(defaultOption?.id || null);
+		}
+	}, [paymentOptions, selectedPayment]);
+
 const selectedCombinationLoading =
 	selectedChargeData && selectedMethodData
 		? loadingGateway === `${selectedMethodData.gateway}-${selectedChargeData.type}`
 		: false;
 const isAnotherGatewayLoading = Boolean(
-	loadingGateway && !selectedCombinationLoading
+	loadingGateway && !selectedOptionLoading
 );
 const canTriggerPayment = Boolean(
-	selectedChargeData &&
-	!selectedChargeData.disabled &&
-	selectedMethodData &&
+	selectedOption &&
+	!selectedOption.disabled &&
 	canPay &&
 	!isSubmitting &&
 	!isAnotherGatewayLoading
