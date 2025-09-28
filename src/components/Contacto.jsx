@@ -11,6 +11,7 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
 
 // Componente interno para reutilizar la lógica de mostrar información de contacto
 const InfoItem = ({ icon: Icon, title, children }) => (
@@ -34,6 +35,7 @@ function Contacto({
 	minDateTime,
 	phoneError,
 	isSubmitting,
+	setFormData,
 }) {
 	return (
 		<section id="contacto" className="py-24 bg-gray-50/50">
@@ -212,6 +214,66 @@ function Contacto({
 												required
 											/>
 										</div>
+									</div>
+									<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
+										<div className="flex items-start gap-3">
+											<Checkbox
+												id="ida-vuelta-form"
+												checked={formData.idaVuelta}
+												onCheckedChange={(value) => {
+													const isRoundTrip = Boolean(value);
+													setFormData((prev) => {
+														if (isRoundTrip) {
+															return {
+																...prev,
+																idaVuelta: true,
+																fechaRegreso: prev.fechaRegreso || prev.fecha,
+																horaRegreso: prev.horaRegreso,
+															};
+														}
+														return {
+															...prev,
+															idaVuelta: false,
+															fechaRegreso: "",
+															horaRegreso: "",
+														};
+													});
+											}}
+											/>
+											<label htmlFor="ida-vuelta-form" className="text-sm text-muted-foreground">
+												¿También necesitas coordinar el regreso?
+											</label>
+										</div>
+										{formData.idaVuelta && (
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+												<div className="space-y-2">
+													<Label htmlFor="fecha-regreso-form">Fecha regreso</Label>
+													<Input
+														id="fecha-regreso-form"
+														type="date"
+														name="fechaRegreso"
+														min={formData.fecha || minDateTime}
+														value={formData.fechaRegreso}
+														onChange={handleInputChange}
+														required={formData.idaVuelta}
+													/>
+												</div>
+												<div className="space-y-2">
+													<Label htmlFor="hora-regreso-form">Hora regreso</Label>
+													<Input
+														id="hora-regreso-form"
+														type="time"
+														name="horaRegreso"
+														value={formData.horaRegreso}
+														onChange={handleInputChange}
+														required={formData.idaVuelta}
+													/>
+												</div>
+											</div>
+										)}
+										<p className="text-xs text-muted-foreground">
+											Coordinaremos ambos trayectos, te confirmaremos horarios y obtendrás un 5% adicional por reservar ida y vuelta.
+										</p>
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="pasajeros-form">N° de Pasajeros</Label>

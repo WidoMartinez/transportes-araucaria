@@ -35,6 +35,54 @@ import AdminPricing from "./components/AdminPricing";
 import { destinosBase, destacadosData } from "./data/destinos";
 
 const DESCUENTO_ONLINE = 0.1;
+const ROUND_TRIP_DISCOUNT = 0.05;
+
+const normalizePromotions = (promotions = []) => {
+	if (!Array.isArray(promotions)) return [];
+	return promotions
+		.filter(Boolean)
+		.map((promo, index) => ({
+			id: promo.id || `promo-${index}`,
+			destino: promo.destino || "",
+			descripcion: promo.descripcion || "",
+			dias: Array.isArray(promo.dias) ? promo.dias : [],
+			aplicaPorDias: Boolean(promo.aplicaPorDias),
+			aplicaPorHorario: Boolean(promo.aplicaPorHorario),
+			horaInicio: promo.horaInicio || "",
+			horaFin: promo.horaFin || "",
+			descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
+		}));
+};
+
+const getDayTagsFromDate = (dateString) => {
+	if (!dateString) return [];
+	const parsed = new Date(`${dateString}T00:00:00`);
+	if (Number.isNaN(parsed.getTime())) return [];
+	const formatter = new Intl.DateTimeFormat("es-CL", {
+		weekday: "long",
+		timeZone: "America/Santiago",
+	});
+	const dayName = formatter.format(parsed);
+	const capitalized = dayName
+		? dayName.charAt(0).toUpperCase() + dayName.slice(1)
+		: "";
+	if (!capitalized) return [];
+	const tags = [capitalized];
+	const normalized = capitalized
+		.normalize("NFD")
+		.replace(/\p{Diacritic}/gu, "")
+		.toLowerCase();
+	if (normalized === "sabado" || normalized === "domingo") {
+		tags.push("Fin de semana");
+	}
+	return tags;
+};
+
+const isTimeWithinRange = (time, start, end) => {
+	if (!time || !start || !end) return false;
+	if (start <= end) return time >= start && time <= end;
+	return time >= start || time <= end;
+};
 
 const resolveIsAdminView = () => {
 	if (typeof window === "undefined") return false;
@@ -44,6 +92,7 @@ const resolveIsAdminView = () => {
 function App() {
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
+	const [promotions, setPromotions] = useState([]);
 	const [loadingPrecios, setLoadingPrecios] = useState(true);
 
 	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
@@ -63,6 +112,9 @@ function App() {
 		equipajeEspecial: "",
 		sillaInfantil: "no",
 		mensaje: "",
+		idaVuelta: false,
+		fechaRegreso: "",
+		horaRegreso: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
@@ -89,12 +141,14 @@ function App() {
 				} else {
 					setDestinosData(destinosBase);
 				}
+				setPromotions(normalizePromotions(data.dayPromotions));
 			} catch (error) {
 				console.error(
 					"Error al cargar precios desde la API, usando valores por defecto.",
 					error
 				);
 				setDestinosData(destinosBase);
+				setPromotions([]);
 			} finally {
 				setLoadingPrecios(false);
 			}
@@ -137,6 +191,47 @@ function App() {
 
 	const maxPasajeros = destinoSeleccionado?.maxPasajeros ?? 7;
 
+	const applicablePromotions = useMemo(() => {
+		if (!destinoSeleccionado) return [];
+		if (!promotions.length) return [];
+		const tramo = destinoSeleccionado.nombre;
+		return promotions.filter((promo) => {
+			if (!promo.destino || promo.destino !== tramo) return false;
+			if (promo.descuentoPorcentaje <= 0) return false;
+			if (promo.aplicaPorDias) {
+				const tags = getDayTagsFromDate(formData.fecha);
+				if (!tags.length) return false;
+				const hasMatch = tags.some((tag) => promo.dias.includes(tag));
+				if (!hasMatch) return false;
+			}
+			if (promo.aplicaPorHorario) {
+				const horaSeleccionada = formData.hora;
+				if (!horaSeleccionada) return false;
+				if (!promo.horaInicio || !promo.horaFin) return false;
+				if (!isTimeWithinRange(horaSeleccionada, promo.horaInicio, promo.horaFin)) return false;
+			}
+			return true;
+		});
+	}, [promotions, destinoSeleccionado, formData.fecha, formData.hora]);
+
+	const activePromotion = useMemo(() => {
+		if (!applicablePromotions.length) return null;
+		return applicablePromotions.reduce((best, promo) =>
+			promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0) ? promo : best,
+			null
+		);
+	}, [applicablePromotions]);
+
+	const promotionDiscountRate = activePromotion
+		? activePromotion.descuentoPorcentaje / 100
+		: 0;
+	const roundTripDiscountRate = formData.idaVuelta ? ROUND_TRIP_DISCOUNT : 0;
+
+	const effectiveDiscountRate = Math.min(
+		DESCUENTO_ONLINE + promotionDiscountRate + roundTripDiscountRate,
+		0.75
+	);
+
 	useEffect(() => {
 		if (!destinoSeleccionado) return;
 		const limite = destinoSeleccionado.maxPasajeros;
@@ -148,6 +243,17 @@ function App() {
 			}));
 		}
 	}, [destinoSeleccionado, formData.pasajeros]);
+
+	useEffect(() => {
+		setFormData((prev) => {
+			if (!prev.idaVuelta) return prev;
+			if (!prev.fecha || !prev.fechaRegreso) return prev;
+			if (prev.fechaRegreso < prev.fecha) {
+				return { ...prev, fechaRegreso: prev.fecha };
+			}
+			return prev;
+		});
+	}, [formData.fecha, formData.fechaRegreso, formData.idaVuelta]);
 
 	const calcularCotizacion = useCallback(
 		(origen, destino, pasajeros) => {
@@ -264,6 +370,9 @@ function App() {
 			equipajeEspecial: "",
 			sillaInfantil: "no",
 			mensaje: "",
+			idaVuelta: false,
+			fechaRegreso: "",
+			horaRegreso: "",
 		});
 	};
 
@@ -274,19 +383,31 @@ function App() {
 	};
 
 	const pricing = useMemo(() => {
-		const precioBase = cotizacion.precio || 0;
-		const descuentoOnline = Math.round(precioBase * DESCUENTO_ONLINE);
+		const precioIda = cotizacion.precio || 0;
+		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
+		const descuentoBase = Math.round(precioBase * DESCUENTO_ONLINE);
+		const descuentoPromocion = Math.round(
+			precioBase * (promotionDiscountRate || 0)
+		);
+		const descuentoRoundTrip = Math.round(
+			precioBase * (roundTripDiscountRate || 0)
+		);
+		const descuentoOnline =
+			descuentoBase + descuentoPromocion + descuentoRoundTrip;
 		const totalConDescuento = Math.max(precioBase - descuentoOnline, 0);
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 		return {
 			precioBase,
+			descuentoBase,
+			descuentoPromocion,
+			descuentoRoundTrip,
 			descuentoOnline,
 			totalConDescuento,
 			abono,
 			saldoPendiente,
 		};
-	}, [cotizacion.precio]);
+	}, [cotizacion.precio, promotionDiscountRate, roundTripDiscountRate, formData.idaVuelta]);
 
 	const {
 		precioBase,
@@ -361,18 +482,21 @@ function App() {
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const origenFinal =
 			formData.origen === "Otro" ? formData.otroOrigen : formData.origen;
-		const dataToSend = {
-			...formData,
-			origen: origenFinal,
-			destino: destinoFinal,
-			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
-			descuentoOnline,
-			totalConDescuento,
-			abonoSugerido: abono,
-			saldoPendiente,
-			source,
-		};
+			const dataToSend = {
+				...formData,
+				origen: origenFinal,
+				destino: destinoFinal,
+				precio: cotizacion.precio,
+				vehiculo: cotizacion.vehiculo,
+				descuentoBase: pricing.descuentoBase,
+				descuentoPromocion: pricing.descuentoPromocion,
+				descuentoRoundTrip: pricing.descuentoRoundTrip,
+				descuentoOnline,
+				totalConDescuento,
+				abonoSugerido: abono,
+				saldoPendiente,
+				source,
+			};
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
@@ -414,6 +538,11 @@ function App() {
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const viajeInfo = `${destinoFinal} el ${formData.fecha} a las ${formData.hora}`;
+		const regresoInfo = formData.idaVuelta
+			? ` Regreso el ${formData.fechaRegreso || "por definir"} a las ${
+					formData.horaRegreso || "por definir"
+				}`
+			: "";
 		const extras = [];
 		if (formData.numeroVuelo) extras.push(`Vuelo: ${formData.numeroVuelo}`);
 		if (formData.hotel) extras.push(`Alojamiento: ${formData.hotel}`);
@@ -424,7 +553,7 @@ function App() {
 		const detalles = extras.length ? ` Detalles: ${extras.join(" | ")}.` : "";
 		const message = `Hola, acabo de reservar en el sitio web. Mi nombre es ${
 			formData.nombre || "Cliente"
-		} y quisiera confirmar mi traslado a ${viajeInfo}.${detalles}`;
+		} y quisiera confirmar mi traslado a ${viajeInfo}.${regresoInfo}${detalles}`;
 		return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
 	}, [formData]);
 
@@ -443,29 +572,8 @@ function App() {
 	const formatCurrency = (value) => currencyFormatter.format(value || 0);
 
 	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
-	const discountPercentage = Math.round(DESCUENTO_ONLINE * 100);
 	const destinoFinal =
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-
-	const extrasList = [];
-	if (formData.numeroVuelo)
-		extrasList.push({ label: "Vuelo", value: formData.numeroVuelo });
-	if (formData.hotel)
-		extrasList.push({ label: "Alojamiento", value: formData.hotel });
-	if (formData.sillaInfantil !== "no")
-		extrasList.push({ label: "Silla infantil", value: formData.sillaInfantil });
-	if (formData.equipajeEspecial)
-		extrasList.push({
-			label: "Equipaje",
-			value: formData.equipajeEspecial,
-			fullWidth: true,
-		});
-	if (formData.mensaje)
-		extrasList.push({
-			label: "Notas",
-			value: formData.mensaje,
-			fullWidth: true,
-		});
 
 	if (isAdminView) {
 		return <AdminPricing />;
@@ -501,14 +609,25 @@ function App() {
 					isSubmitting={isSubmitting}
 					cotizacion={cotizacion}
 					pricing={pricing}
-					descuentoRate={DESCUENTO_ONLINE}
+					descuentoRate={effectiveDiscountRate}
+					baseDiscountRate={DESCUENTO_ONLINE}
+					promotionDiscountRate={promotionDiscountRate}
+					roundTripDiscountRate={roundTripDiscountRate}
+					activePromotion={activePromotion}
+					reviewChecklist={reviewChecklist}
+					setReviewChecklist={setReviewChecklist}
+					setFormData={setFormData}
+					canPay={canPay}
+					handlePayment={handlePayment}
+					loadingGateway={loadingGateway}
+					whatsappUrl={whatsappUrl}
 					onSubmitWizard={handleWizardSubmit}
 					validarTelefono={validarTelefono}
 					validarHorarioReserva={validarHorarioReserva}
 					showSummary={showConfirmationAlert}
 				/>
 				<Servicios />
-				<Destinos destinos={destinosData} />
+				<Destinos />
 				<Destacados destinos={destacadosData} />
 				<Fidelizacion />
 				<PorQueElegirnos />
@@ -522,6 +641,7 @@ function App() {
 					minDateTime={minDateTime}
 					phoneError={phoneError}
 					isSubmitting={isSubmitting}
+					setFormData={setFormData}
 				/>
 			</main>
 

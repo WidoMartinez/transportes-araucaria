@@ -8,8 +8,10 @@ import {
 } from "./ui/card";
 import { Button } from "./ui/button";
 import { Clock, Plane, ArrowRight } from "lucide-react";
+import { destinosBase } from "@/data/destinos";
 
-function Destinos({ destinos }) {
+function Destinos() {
+	const destinos = destinosBase;
 	// Manejo por si no llegan destinos para evitar errores
 	if (!destinos || destinos.length === 0) {
 		return (

@@ -30,6 +30,40 @@ const daysOfWeek = [
 	"Feriados",
 ];
 
+const generatePromotionId = () =>
+	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const nuevaPromocionTemplate = {
+	id: "",
+	destino: "",
+	descripcion: "",
+	aplicaPorDias: false,
+	dias: [],
+	aplicaPorHorario: false,
+	horaInicio: "",
+	horaFin: "",
+	descuentoPorcentaje: 0,
+};
+
+const normalizePromotions = (promociones = []) => {
+	if (!Array.isArray(promociones)) return [];
+	return promociones.map((promo, index) => {
+		const id = promo.id || generatePromotionId() || `promo-${index}`;
+		return {
+			...nuevaPromocionTemplate,
+			...promo,
+			id,
+			dias: Array.isArray(promo.dias) ? promo.dias : [],
+			descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
+			aplicaPorDias: Boolean(promo.aplicaPorDias),
+			aplicaPorHorario: Boolean(promo.aplicaPorHorario),
+			horaInicio: promo.horaInicio || "",
+			horaFin: promo.horaFin || "",
+			descripcion: promo.descripcion || "",
+		};
+	});
+};
+
 function AdminPricing() {
 	const [pricing, setPricing] = useState({ destinos: [], dayPromotions: [] });
 	const [newDestino, setNewDestino] = useState(null);
@@ -55,9 +89,7 @@ function AdminPricing() {
 					data.destinos && data.destinos.length > 0
 						? data.destinos
 						: destinosIniciales,
-				dayPromotions: Array.isArray(data.dayPromotions)
-					? data.dayPromotions
-					: [],
+				dayPromotions: normalizePromotions(data.dayPromotions),
 				updatedAt: data.updatedAt || null,
 			});
 		} catch (fetchError) {
@@ -116,6 +148,91 @@ function AdminPricing() {
 		}));
 	};
 
+	const handleAddPromotion = () => {
+		if (pricing.destinos.length === 0) {
+			alert(
+				"Agrega al menos un destino antes de crear un descuento personalizado."
+			);
+			return;
+		}
+
+		const nuevaPromocion = {
+			...nuevaPromocionTemplate,
+			id: generatePromotionId(),
+		};
+
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: [...prev.dayPromotions, nuevaPromocion],
+		}));
+	};
+
+	const handlePromotionFieldChange = (id, field, value) => {
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: prev.dayPromotions.map((promo) => {
+				if (promo.id !== id) return promo;
+				if (field === "descuentoPorcentaje") {
+					const parsed = Number(value);
+					const bounded = Number.isFinite(parsed)
+						? Math.min(Math.max(parsed, 0), 100)
+						: 0;
+					return { ...promo, descuentoPorcentaje: bounded };
+				}
+				return { ...promo, [field]: value };
+			}),
+		}));
+	};
+
+	const handleTogglePromotionDay = (id, day) => {
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: prev.dayPromotions.map((promo) => {
+				if (promo.id !== id) return promo;
+				if (!promo.aplicaPorDias) return promo;
+				const isActive = promo.dias.includes(day);
+				const updatedDays = isActive
+					? promo.dias.filter((d) => d !== day)
+					: [...promo.dias, day];
+				return { ...promo, dias: updatedDays };
+			}),
+		}));
+	};
+
+	const handleTogglePromotionSetting = (id, field) => {
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: prev.dayPromotions.map((promo) => {
+				if (promo.id !== id) return promo;
+				if (field === "aplicaPorDias") {
+					const nextValue = !promo.aplicaPorDias;
+					return {
+						...promo,
+						aplicaPorDias: nextValue,
+						dias: nextValue ? promo.dias : [],
+					};
+				}
+				if (field === "aplicaPorHorario") {
+					const nextValue = !promo.aplicaPorHorario;
+					return {
+						...promo,
+						aplicaPorHorario: nextValue,
+						horaInicio: nextValue ? promo.horaInicio : "",
+						horaFin: nextValue ? promo.horaFin : "",
+					};
+				}
+				return promo;
+			}),
+		}));
+	};
+
+	const handleRemovePromotion = (id) => {
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: prev.dayPromotions.filter((promo) => promo.id !== id),
+		}));
+	};
+
 	const handleAddNewDestino = () => {
 		if (newDestino.nombre.trim() === "") {
 			alert("El nombre del destino no puede estar vacío.");
@@ -146,6 +263,9 @@ function AdminPricing() {
 			setPricing((prev) => ({
 				...prev,
 				destinos: prev.destinos.filter((d) => d.nombre !== nombre),
+				dayPromotions: prev.dayPromotions.filter(
+					(promo) => promo.destino !== nombre
+				),
 			}));
 		}
 	};
@@ -158,6 +278,27 @@ function AdminPricing() {
 			);
 			return;
 		}
+
+		const promocionInvalida = pricing.dayPromotions.find((promo) => {
+			if (!promo.destino) return true;
+			if (promo.descuentoPorcentaje <= 0) return true;
+			if (promo.aplicaPorDias && promo.dias.length === 0) return true;
+			if (
+				promo.aplicaPorHorario &&
+				(!promo.horaInicio || !promo.horaFin || promo.horaInicio >= promo.horaFin)
+			) {
+				return true;
+			}
+			return false;
+		});
+
+		if (promocionInvalida) {
+			alert(
+				"Revisa los descuentos: cada promoción debe tener destino, porcentaje y configuración válida."
+			);
+			return;
+		}
+
 		setSaving(true);
 		setError("");
 		setSuccess("");
@@ -180,7 +321,10 @@ function AdminPricing() {
 			}
 
 			const savedData = await response.json();
-			setPricing(savedData);
+			setPricing({
+				...savedData,
+				dayPromotions: normalizePromotions(savedData.dayPromotions),
+			});
 			setSuccess("Configuración guardada correctamente.");
 		} catch (submitError) {
 			console.error(submitError);
@@ -270,23 +414,8 @@ function AdminPricing() {
 												}
 												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 											/>
-										</label>
-										<label className="text-sm text-slate-300 sm:col-span-2">
-											Descripción
-											<input
-												type="text"
-												value={newDestino.descripcion}
-												onChange={(e) =>
-													setNewDestino((d) => ({
-														...d,
-														descripcion: e.target.value,
-													}))
-												}
-												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-												placeholder="Breve descripción del lugar"
-											/>
-										</label>
-										<label className="text-sm text-slate-300">
+									</label>
+									<label className="text-sm text-slate-300">
 											Precio Base (Auto)
 											<input
 												type="number"
@@ -441,6 +570,219 @@ function AdminPricing() {
 								</p>
 							)}
 						</div>
+					</section>
+
+					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
+						<div className="flex flex-wrap items-center justify-between gap-4">
+							<div>
+								<h2 className="text-xl font-semibold text-white">
+									Descuentos Personalizados
+								</h2>
+								<p className="mt-1 text-xs text-slate-400 max-w-xl">
+									Configura promociones por tramo con restricciones por día u horario.
+									Estos porcentajes se aplican como descuento adicional al 10% base
+									del canal web.
+								</p>
+							</div>
+							<button
+								type="button"
+								onClick={handleAddPromotion}
+								disabled={pricing.destinos.length === 0}
+								className="inline-flex items-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+							>
+								Añadir Descuento
+							</button>
+						</div>
+
+						{pricing.destinos.length === 0 && (
+							<p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+								Primero crea un destino para asociar descuentos.
+							</p>
+						)}
+
+						{pricing.dayPromotions.length > 0 ? (
+							<div className="space-y-5">
+								{pricing.dayPromotions.map((promo) => {
+									const destinoOptions = pricing.destinos.map((dest) => dest.nombre);
+									return (
+										<div
+											key={promo.id}
+											className="rounded-md border border-slate-800 bg-slate-950/60 p-4"
+										>
+											<div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+												<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:flex-1 lg:grid-cols-3">
+													<label className="text-sm text-slate-300">
+														Tramo / Destino
+														<select
+															className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+															value={promo.destino}
+															onChange={(e) =>
+																handlePromotionFieldChange(
+																	promo.id,
+																	"destino",
+																	e.target.value
+																)
+															}
+														>
+															<option value="">Selecciona un destino</option>
+															{destinoOptions.map((nombre) => (
+																<option key={nombre} value={nombre}>
+																	{nombre}
+																</option>
+															))}
+														</select>
+													</label>
+												<label className="text-sm text-slate-300">
+													% Descuento adicional
+														<input
+															type="number"
+															min="0"
+															max="100"
+															value={promo.descuentoPorcentaje}
+															onChange={(e) =>
+																handlePromotionFieldChange(
+																	promo.id,
+																	"descuentoPorcentaje",
+																	e.target.value
+																)
+															}
+															className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+														/>
+													</label>
+													<label className="text-sm text-slate-300 sm:col-span-2 lg:col-span-1">
+														Descripción interna
+														<input
+															type="text"
+															value={promo.descripcion}
+															onChange={(e) =>
+																handlePromotionFieldChange(
+																	promo.id,
+																	"descripcion",
+																	e.target.value
+																)
+															}
+															placeholder="Ej: Promo finde"
+															className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+														/>
+													</label>
+												</div>
+												<button
+													type="button"
+													onClick={() => handleRemovePromotion(promo.id)}
+													className="self-start rounded-md border border-red-400/50 px-3 py-1 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
+												>
+													Eliminar
+												</button>
+											</div>
+
+											<div className="mt-4 space-y-4">
+												<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaPorDias}
+															onChange={() =>
+																handleTogglePromotionSetting(
+																	promo.id,
+																	"aplicaPorDias"
+																)
+														}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														Aplicar solo en días específicos
+													</label>
+												</div>
+												<div className="flex flex-wrap gap-2">
+													{daysOfWeek.map((day) => {
+														const isActive = promo.dias.includes(day);
+														return (
+															<button
+																type="button"
+																key={day}
+																onClick={() => handleTogglePromotionDay(promo.id, day)}
+																disabled={!promo.aplicaPorDias}
+																className={`rounded-full border px-3 py-1 text-xs transition ${
+																	isActive
+																		? "border-emerald-400 bg-emerald-500/20 text-emerald-100"
+																	: "border-slate-700 bg-slate-900 text-slate-300"
+																} ${
+																	promo.aplicaPorDias ? "hover:border-emerald-400 hover:bg-emerald-500/10" : "opacity-50"
+																}`}
+															>
+																{day}
+															</button>
+														);
+													})}
+												</div>
+											</div>
+
+											<div className="space-y-3">
+												<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+													<input
+														type="checkbox"
+														checked={promo.aplicaPorHorario}
+														onChange={() =>
+															handleTogglePromotionSetting(
+																promo.id,
+																"aplicaPorHorario"
+															)
+														}
+														className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+													/>
+													Aplicar solo en un rango horario
+												</label>
+												<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+													<label className="text-sm text-slate-300">
+														Hora inicio
+														<input
+															type="time"
+															value={promo.horaInicio}
+															onChange={(e) =>
+																handlePromotionFieldChange(
+																	promo.id,
+																	"horaInicio",
+																	e.target.value
+																)
+															}
+															disabled={!promo.aplicaPorHorario}
+															className={`mt-1 w-full rounded-md border px-3 py-2 text-sm text-white ${
+																promo.aplicaPorHorario
+																	? "border-slate-700 bg-slate-900"
+																	: "border-slate-800 bg-slate-900/50 cursor-not-allowed"
+															}`}
+														/>
+													</label>
+													<label className="text-sm text-slate-300">
+														Hora fin
+														<input
+															type="time"
+															value={promo.horaFin}
+															onChange={(e) =>
+																handlePromotionFieldChange(
+																	promo.id,
+																	"horaFin",
+																	e.target.value
+																)
+															}
+															disabled={!promo.aplicaPorHorario}
+															className={`mt-1 w-full rounded-md border px-3 py-2 text-sm text-white ${
+																promo.aplicaPorHorario
+																	? "border-slate-700 bg-slate-900"
+																	: "border-slate-800 bg-slate-900/50 cursor-not-allowed"
+															}`}
+														/>
+													</label>
+												</div>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						) : (
+							<p className="text-center text-sm text-slate-400 py-4">
+								No hay descuentos configurados todavía.
+							</p>
+						)}
 					</section>
 
 					<footer className="flex flex-col gap-4 border-t border-slate-800 pt-6 sm:flex-row sm:items-center sm:justify-between">

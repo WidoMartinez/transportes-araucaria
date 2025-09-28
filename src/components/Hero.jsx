@@ -6,6 +6,7 @@ import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
+import { Checkbox } from "./ui/checkbox";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 
@@ -22,6 +23,17 @@ function Hero({
 	cotizacion,
 	pricing,
 	descuentoRate,
+	baseDiscountRate,
+	promotionDiscountRate,
+	roundTripDiscountRate,
+	activePromotion,
+	reviewChecklist,
+	setReviewChecklist,
+	canPay,
+	handlePayment,
+	loadingGateway,
+	whatsappUrl,
+	setFormData,
 	onSubmitWizard,
 	validarTelefono,
 	validarHorarioReserva,
@@ -29,6 +41,8 @@ function Hero({
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
+	const [selectedCharge, setSelectedCharge] = useState(null);
+	const [selectedMethod, setSelectedMethod] = useState(null);
 
 	const steps = useMemo(
 		() => [
@@ -63,6 +77,53 @@ function Hero({
 	);
 
 	const formatCurrency = (value) => currencyFormatter.format(value || 0);
+
+	const origenFinal =
+		formData.origen === "Otro"
+			? formData.otroOrigen || "Por confirmar"
+			: formData.origen || "Por confirmar";
+	const destinoFinal =
+		formData.destino === "Otro"
+			? formData.otroDestino || "Por confirmar"
+			: formData.destino || "Por confirmar";
+
+	const fechaLegible = useMemo(() => {
+		if (!formData.fecha) return "Por confirmar";
+		const parsed = new Date(`${formData.fecha}T00:00:00`);
+		if (Number.isNaN(parsed.getTime())) return formData.fecha;
+		return parsed.toLocaleDateString("es-CL", {
+			dateStyle: "long",
+			timeZone: "America/Santiago",
+		});
+	}, [formData.fecha]);
+
+	const horaLegible = formData.hora ? `${formData.hora} hrs` : "Por confirmar";
+	const pasajerosLabel = `${formData.pasajeros || "1"} pasajero(s)`;
+	const vehiculoSugerido = cotizacion.vehiculo || "A confirmar";
+
+	const promotionDetails = useMemo(() => {
+		if (!activePromotion) return null;
+		const parts = [];
+		if (activePromotion.aplicaPorDias && activePromotion.dias.length) {
+			parts.push(`Días: ${activePromotion.dias.join(", ")}`);
+		}
+		if (
+			activePromotion.aplicaPorHorario &&
+			activePromotion.horaInicio &&
+			activePromotion.horaFin
+		) {
+			parts.push(
+				`Horario: ${activePromotion.horaInicio} - ${activePromotion.horaFin} hrs`
+			);
+		}
+		return parts.join(" · ");
+	}, [activePromotion]);
+
+	const handleOpenWhatsApp = () => {
+		if (typeof window !== "undefined") {
+			window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+		}
+	};
 
 	useEffect(() => {
 		if (showSummary) {
@@ -119,6 +180,31 @@ function Hero({
 			return;
 		}
 
+		if (formData.idaVuelta) {
+			if (!formData.fechaRegreso) {
+				setStepError("Selecciona la fecha de regreso.");
+				return;
+			}
+			if (!formData.horaRegreso) {
+				setStepError("Selecciona la hora del regreso.");
+				return;
+			}
+			const salida = new Date(`${formData.fecha}T${formData.hora}`);
+			const regreso = new Date(
+				`${formData.fechaRegreso}T${formData.horaRegreso}`
+			);
+			if (Number.isNaN(regreso.getTime())) {
+				setStepError("La fecha de regreso no es válida.");
+				return;
+			}
+			if (regreso <= salida) {
+				setStepError(
+					"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora seleccionadas."
+				);
+				return;
+			}
+		}
+
 		setStepError("");
 		setCurrentStep(1);
 	};
@@ -169,15 +255,110 @@ function Hero({
 			} else if (result.error === "telefono") {
 				setStepError("Revisa el número de teléfono ingresado.");
 			}
+			return;
 		}
+
+		setStepError("");
+		setCurrentStep(2);
 	};
 
 	const handleStepBack = () => {
 		setCurrentStep((prev) => Math.max(prev - 1, 0));
 	};
 
-	const discountPercentage = Math.round(descuentoRate * 100);
+	const baseDiscountPercentage = Math.round((baseDiscountRate || 0) * 100);
+	const promoDiscountPercentage = Math.round((promotionDiscountRate || 0) * 100);
+	const roundTripDiscountPercentage = Math.round((roundTripDiscountRate || 0) * 100);
+	const totalDiscountPercentage = Math.round(descuentoRate * 100);
 	const mostrarPrecio = Boolean(cotizacion.precio);
+
+	const chargeOptions = useMemo(
+		() => [
+			{
+				id: "abono",
+				type: "abono",
+				title: "Pagar 40% ahora",
+				subtitle: "Reserva tu cupo abonando el 40%",
+				amount: pricing.abono,
+				disabled: pricing.abono <= 0,
+			},
+			{
+				id: "total",
+				type: "total",
+				title: "Pagar el 100%",
+				subtitle: "Cancela ahora y aprovecha todo el descuento",
+				amount: pricing.totalConDescuento,
+				disabled: pricing.totalConDescuento <= 0,
+			},
+		],
+		[pricing.abono, pricing.totalConDescuento]
+	);
+
+	const paymentMethods = useMemo(
+		() => [
+			{
+				id: "flow",
+				gateway: "flow",
+				title: "Flow",
+				subtitle: "Webpay, tarjetas y transferencia",
+				image:
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Logo_Flow_Pago.png/320px-Logo_Flow_Pago.png",
+			},
+			{
+				id: "mercadopago",
+				gateway: "mercadopago",
+				title: "Mercado Pago",
+				subtitle: "Tarjetas y billetera Mercado Pago",
+				image:
+					"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Mercado_Pago_logo.svg/512px-Mercado_Pago_logo.svg.png",
+			},
+		],
+		[]
+	);
+
+	const selectedChargeData = useMemo(
+		() => chargeOptions.find((option) => option.id === selectedCharge) || null,
+		[chargeOptions, selectedCharge]
+	);
+
+	const selectedMethodData = useMemo(
+		() => paymentMethods.find((method) => method.id === selectedMethod) || null,
+		[paymentMethods, selectedMethod]
+	);
+
+	useEffect(() => {
+		const defaultCharge = chargeOptions.find((option) => !option.disabled);
+		setSelectedCharge((prev) =>
+			prev && chargeOptions.some((opt) => opt.id === prev && !opt.disabled)
+				? prev
+				: defaultCharge?.id || null
+		);
+	}, [chargeOptions]);
+
+	useEffect(() => {
+		const defaultMethod = paymentMethods[0];
+		setSelectedMethod((prev) =>
+			prev && paymentMethods.some((opt) => opt.id === prev)
+				? prev
+				: defaultMethod?.id || null
+		);
+	}, [paymentMethods]);
+
+const selectedCombinationLoading =
+	selectedChargeData && selectedMethodData
+		? loadingGateway === `${selectedMethodData.gateway}-${selectedChargeData.type}`
+		: false;
+const isAnotherGatewayLoading = Boolean(
+	loadingGateway && !selectedCombinationLoading
+);
+const canTriggerPayment = Boolean(
+	selectedChargeData &&
+	!selectedChargeData.disabled &&
+	selectedMethodData &&
+	canPay &&
+	!isSubmitting &&
+	!isAnotherGatewayLoading
+);
 
 	return (
 		<section
@@ -196,9 +377,16 @@ function Hero({
 					<span className="text-accent">en un Auto Confortable</span>
 				</h2>
 				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Diseñamos una reserva guiada paso a paso para que confirmes y pagues
-					tu viaje de forma autónoma, asegurando el {discountPercentage}% de
-					descuento online.
+					Diseñamos una reserva guiada paso a paso para que confirmes y pagues tu
+					viaje de forma autónoma, asegurando el {baseDiscountPercentage}% de
+					descuento online garantizado
+					{promoDiscountPercentage > 0
+						? ` + ${promoDiscountPercentage}% extra por promociones activas`
+						: ""}
+					{roundTripDiscountPercentage > 0
+						? ` + ${roundTripDiscountPercentage}% adicional por reservar ida y vuelta`
+						: ""}
+					.
 				</p>
 
 				<Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left">
@@ -207,9 +395,21 @@ function Hero({
 							<CardTitle className="text-foreground text-2xl">
 								Reserva tu viaje en línea
 							</CardTitle>
-							<Badge variant="secondary" className="text-sm">
-								Descuento web {discountPercentage}%
-							</Badge>
+								<div className="flex items-center gap-2">
+									<Badge variant="secondary" className="text-sm">
+										Descuento base {baseDiscountPercentage}%
+									</Badge>
+									{promoDiscountPercentage > 0 && (
+										<Badge variant="default" className="text-sm bg-emerald-500 text-slate-950">
+											Promo extra +{promoDiscountPercentage}%
+										</Badge>
+									)}
+									{roundTripDiscountPercentage > 0 && (
+										<Badge variant="default" className="text-sm bg-sky-500 text-slate-950">
+											Ida & vuelta +{roundTripDiscountPercentage}%
+										</Badge>
+									)}
+								</div>
 						</div>
 						<div className="space-y-4">
 							<div className="grid gap-4 md:grid-cols-3">
@@ -341,6 +541,67 @@ function Hero({
 										</select>
 									</div>
 								</div>
+
+								<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
+									<div className="flex items-start gap-3">
+										<Checkbox
+											id="ida-vuelta"
+											checked={formData.idaVuelta}
+											onCheckedChange={(value) => {
+												const isRoundTrip = Boolean(value);
+												setFormData((prev) => {
+													if (isRoundTrip) {
+														return {
+															...prev,
+															idaVuelta: true,
+															fechaRegreso: prev.fechaRegreso || prev.fecha,
+															horaRegreso: prev.horaRegreso,
+														};
+													}
+													return {
+														...prev,
+														idaVuelta: false,
+														fechaRegreso: "",
+														horaRegreso: "",
+													};
+												});
+											}}
+										/>
+										<label htmlFor="ida-vuelta" className="text-sm text-muted-foreground">
+											¿Deseas reservar también el regreso? Coordina ida y vuelta en una sola solicitud.
+										</label>
+									</div>
+									{formData.idaVuelta && (
+										<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+											<div className="space-y-2">
+												<Label htmlFor="fecha-regreso">Fecha regreso</Label>
+												<Input
+													id="fecha-regreso"
+													type="date"
+													name="fechaRegreso"
+													min={formData.fecha || minDateTime}
+													value={formData.fechaRegreso}
+													onChange={handleInputChange}
+													required={formData.idaVuelta}
+												/>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="hora-regreso">Hora regreso</Label>
+												<Input
+													id="hora-regreso"
+													type="time"
+													name="horaRegreso"
+													value={formData.horaRegreso}
+													onChange={handleInputChange}
+													required={formData.idaVuelta}
+												/>
+											</div>
+										</div>
+									)}
+										<p className="text-xs text-muted-foreground">
+											Validaremos la disponibilidad del retorno junto con tu reserva inicial. Al reservar ida y vuelta obtienes un 5% adicional de descuento.
+										</p>
+								</div>
 								<div className="text-center text-sm text-muted-foreground">
 									¿No encuentras tu destino?{" "}
 									<a href="#contacto" className="text-primary hover:underline">
@@ -363,9 +624,16 @@ function Hero({
 												</p>
 											</div>
 											<div className="text-left md:text-right space-y-1">
-												<Badge className="mb-1 md:ml-auto" variant="default">
-													Ahorra {discountPercentage}% online
-												</Badge>
+												<div className="flex flex-wrap gap-2 md:justify-end">
+													<Badge className="mb-1" variant="default">
+														Base {baseDiscountPercentage}%
+													</Badge>
+													{promoDiscountPercentage > 0 && (
+														<Badge className="mb-1 bg-emerald-500 text-slate-950" variant="default">
+															Extra +{promoDiscountPercentage}%
+														</Badge>
+													)}
+												</div>
 												<p className="text-xs text-muted-foreground uppercase tracking-wide">
 													Precio estándar
 												</p>
@@ -378,10 +646,37 @@ function Hero({
 												<p className="text-2xl font-bold text-accent">
 													{formatCurrency(pricing.totalConDescuento)}
 												</p>
-												<p className="text-sm font-medium text-emerald-500">
-													Ahorro inmediato{" "}
-													{formatCurrency(pricing.descuentoOnline)}
+											<div className="space-y-1 text-sm">
+												<p className="font-medium text-emerald-500">
+													Descuento base (10%): {formatCurrency(pricing.descuentoBase)}
 												</p>
+												{promoDiscountPercentage > 0 && (
+													<p className="font-medium text-emerald-600">
+														Promo adicional (+{promoDiscountPercentage}%): {formatCurrency(
+															pricing.descuentoPromocion
+														)}
+													</p>
+												)}
+												{roundTripDiscountPercentage > 0 && (
+													<p className="font-medium text-sky-500">
+														Ida y vuelta (+{roundTripDiscountPercentage}%): {formatCurrency(
+															pricing.descuentoRoundTrip
+														)}
+													</p>
+												)}
+												<p className="text-emerald-500 font-semibold">
+													Ahorro total: {formatCurrency(pricing.descuentoOnline)}
+													<span className="ml-1 text-xs text-emerald-300">
+														({totalDiscountPercentage}% aplicado)
+													</span>
+												</p>
+												{activePromotion && (
+													<p className="text-xs font-semibold text-emerald-600">
+														Promo activa: {activePromotion.descripcion || `Descuento ${activePromotion.descuentoPorcentaje}%`}
+														{promotionDetails ? ` · ${promotionDetails}` : ""}
+													</p>
+												)}
+											</div>
 											</div>
 										</div>
 									</div>
@@ -518,6 +813,29 @@ function Hero({
 										</h4>
 										<div className="grid gap-2 text-sm">
 											<div className="flex items-center justify-between">
+												<span>Ahorro base (10%)</span>
+												<span className="font-semibold">
+													{formatCurrency(pricing.descuentoBase)}
+												</span>
+											</div>
+											{promoDiscountPercentage > 0 && (
+												<div className="flex items-center justify-between">
+													<span>Promo adicional (+{promoDiscountPercentage}%)</span>
+													<span className="font-semibold">
+														{formatCurrency(pricing.descuentoPromocion)}
+													</span>
+												</div>
+											)}
+											<div className="flex items-center justify-between text-emerald-600">
+												<span>Ahorro total aplicado</span>
+												<span className="font-semibold">
+													{formatCurrency(pricing.descuentoOnline)}
+													<span className="ml-1 text-xs text-emerald-400">
+														({totalDiscountPercentage}% total)
+													</span>
+												</span>
+											</div>
+											<div className="flex items-center justify-between">
 												<span>Abono online (40%)</span>
 												<span className="font-semibold">
 													{formatCurrency(pricing.abono)}
@@ -527,12 +845,6 @@ function Hero({
 												<span>Saldo con descuento</span>
 												<span className="font-semibold">
 													{formatCurrency(pricing.saldoPendiente)}
-												</span>
-											</div>
-											<div className="flex items-center justify-between text-emerald-600">
-												<span>Ahorro asegurado</span>
-												<span className="font-semibold">
-													{formatCurrency(pricing.descuentoOnline)}
 												</span>
 											</div>
 										</div>
@@ -568,6 +880,247 @@ function Hero({
 											"Revisar resumen y pagar"
 										)}
 									</Button>
+								</div>
+							</div>
+						)}
+
+						{currentStep === 2 && (
+							<div className="space-y-6">
+								<div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+									<div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+										<h4 className="text-lg font-semibold text-primary mb-3">
+											Confirma tu traslado
+										</h4>
+										<div className="grid gap-3 text-sm md:grid-cols-2">
+											<div>
+												<p className="text-muted-foreground">Origen</p>
+												<p className="font-medium text-foreground">{origenFinal}</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Destino</p>
+												<p className="font-medium text-foreground">{destinoFinal}</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Fecha</p>
+												<p className="font-medium text-foreground">{fechaLegible}</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Hora</p>
+												<p className="font-medium text-foreground">{horaLegible}</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Pasajeros</p>
+												<p className="font-medium text-foreground">{pasajerosLabel}</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Vehículo sugerido</p>
+												<p className="font-medium text-foreground">{vehiculoSugerido}</p>
+											</div>
+										</div>
+										{formData.idaVuelta && (
+											<div className="mt-4 space-y-1 rounded-lg border border-primary/30 bg-primary/10 p-3">
+												<p className="text-sm font-semibold text-primary">
+													Regreso confirmado
+												</p>
+												<p className="text-sm text-muted-foreground">
+													{formData.fechaRegreso || "Por definir"} · {formData.horaRegreso || "Por definir"} hrs
+												</p>
+											</div>
+										)}
+									</div>
+									<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-sm">
+										<h4 className="text-lg font-semibold mb-3">
+											Resumen de pago
+										</h4>
+										<div className="space-y-2">
+											<div className="flex items-center justify-between">
+												<span>Descuento base (10%)</span>
+												<span className="font-semibold">-{formatCurrency(pricing.descuentoBase)}</span>
+											</div>
+											{promoDiscountPercentage > 0 && (
+												<div className="flex items-center justify-between">
+													<span>Promo adicional (+{promoDiscountPercentage}%)</span>
+													<span className="font-semibold">-{formatCurrency(pricing.descuentoPromocion)}</span>
+												</div>
+											)}
+											<div className="flex items-center justify-between text-emerald-600">
+												<span>Ahorro total aplicado</span>
+												<span className="font-semibold">
+													-{formatCurrency(pricing.descuentoOnline)}
+													<span className="ml-1 text-xs text-emerald-400">
+														({totalDiscountPercentage}% total)
+													</span>
+												</span>
+											</div>
+											<div className="flex items-center justify-between">
+												<span>Precio con descuento</span>
+												<span className="font-semibold">{formatCurrency(pricing.totalConDescuento)}</span>
+											</div>
+											<div className="flex items-center justify-between">
+												<span>Abono sugerido (40%)</span>
+												<span className="font-semibold">{formatCurrency(pricing.abono)}</span>
+											</div>
+											<div className="flex items-center justify-between">
+												<span>Saldo al llegar</span>
+												<span className="font-semibold">{formatCurrency(pricing.saldoPendiente)}</span>
+											</div>
+										</div>
+										<p className="mt-3 text-xs text-muted-foreground">
+											Elige si deseas abonar ahora o pagar el total con descuento.
+										</p>
+									</div>
+								</div>
+
+								{activePromotion && (
+									<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
+										<p className="font-semibold">
+											Descuento especial {activePromotion.descuentoPorcentaje}% — {activePromotion.descripcion || `Tramo ${activePromotion.destino}`}
+										</p>
+										{promotionDetails && (
+											<p className="mt-1">{promotionDetails}</p>
+										)}
+									</div>
+								)}
+
+								<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
+									<p className="text-sm font-medium text-foreground">
+										Antes de continuar
+									</p>
+									<div className="flex items-start gap-3">
+										<Checkbox
+											id="check-viaje"
+											checked={reviewChecklist.viaje}
+											onCheckedChange={(value) =>
+												setReviewChecklist((prev) => ({
+													...prev,
+													viaje: Boolean(value),
+												}))
+											}
+										/>
+										<label
+											htmlFor="check-viaje"
+											className="text-sm leading-relaxed text-muted-foreground"
+										>
+											Confirmo que revisé origen, destino, fecha y hora de mi traslado.
+										</label>
+									</div>
+									<div className="flex items-start gap-3">
+										<Checkbox
+											id="check-contacto"
+											checked={reviewChecklist.contacto}
+											onCheckedChange={(value) =>
+												setReviewChecklist((prev) => ({
+													...prev,
+													contacto: Boolean(value),
+												}))
+											}
+										/>
+										<label
+											htmlFor="check-contacto"
+											className="text-sm leading-relaxed text-muted-foreground"
+										>
+											Acepto recibir la confirmación y enlace de pago por email y WhatsApp.
+										</label>
+									</div>
+									{!canPay && (
+										<p className="text-xs text-muted-foreground">
+											Marca ambas casillas para habilitar las opciones de pago.
+										</p>
+									)}
+								</div>
+
+								<div className="space-y-4">
+									<p className="text-sm font-medium text-foreground">
+										Selecciona tu medio de pago online
+									</p>
+									<div className="grid gap-4 md:grid-cols-2">
+										{paymentOptions.map((option) => {
+											const isSelected = selectedPayment === option.id;
+											const optionLoading =
+												loadingGateway === `${option.gateway}-${option.type}`;
+											const isDisabled = option.disabled;
+											return (
+												<button
+													key={option.id}
+													type="button"
+													onClick={() => !isDisabled && setSelectedPayment(option.id)}
+													disabled={isDisabled || isAnotherGatewayLoading}
+													className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-slate-300 hover:border-primary/60"} ${isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+												>
+													<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
+														<img
+															src={option.image}
+															alt={option.title}
+															className="h-full w-full object-contain p-2"
+															loading="lazy"
+														/>
+													</div>
+													<div className="flex-1">
+														<p className="font-semibold text-slate-900">
+															{option.title}
+														</p>
+														<p className="text-sm text-muted-foreground">
+															{option.subtitle}
+														</p>
+														<p className="mt-2 text-sm font-semibold text-foreground">
+															{formatCurrency(option.amount)}
+														</p>
+														{optionLoading && (
+															<p className="mt-1 text-xs text-primary">
+																Generando enlace...
+															</p>
+														)}
+													</div>
+													{isSelected && !optionLoading && (
+														<span className="text-xs font-semibold uppercase text-primary">
+															Seleccionado
+														</span>
+													)}
+												</button>
+											);
+										})}
+									</div>
+								</div>
+
+								<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+									<div className="flex flex-wrap gap-3 w-full lg:w-auto">
+										<Button
+											type="button"
+											variant="outline"
+											className="w-full lg:w-auto"
+											onClick={handleStepBack}
+											disabled={isSubmitting || Boolean(loadingGateway)}
+										>
+											Editar información
+										</Button>
+										<Button
+											type="button"
+											variant="secondary"
+											className="w-full lg:w-auto"
+											onClick={handleOpenWhatsApp}
+										>
+											Confirmar por WhatsApp
+										</Button>
+									</div>
+									<div className="w-full lg:w-auto">
+										<Button
+											type="button"
+											className="w-full bg-accent hover:bg-accent/90"
+											onClick={() => selectedOption && handlePayment(selectedOption.gateway, selectedOption.type)}
+											disabled={!canTriggerPayment}
+										>
+											{selectedOptionLoading ? (
+												<>
+													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+													Procesando...
+												</>
+											) : selectedOption ? (
+												`Pagar ${formatCurrency(selectedOption.amount)} con ${selectedOption.title}`
+											) : (
+												"Selecciona un medio de pago"
+											)}
+										</Button>
+									</div>
 								</div>
 							</div>
 						)}

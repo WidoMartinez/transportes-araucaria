@@ -1,44 +1,72 @@
 {
   "destinos": [
     {
-      "nombre": "pam",
-      "descripcion": "dfsdf",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
+      "nombre": "Temuco",
+      "descripcion": "Centro comercial y administrativo de La Araucanía.",
+      "tiempo": "45 min",
+      "imagen": "/src/assets/temuco.jpg",
       "maxPasajeros": 4,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 23235,
+          "base": 25000,
           "porcentajeAdicional": 0.1
         },
         "van": {
-          "base": 3445646,
-          "porcentajeAdicional": 0.05
+          "base": 45000,
+          "porcentajeAdicional": 0.1
         }
-      },
-      "id": "dest-1759066488691"
+      }
     },
     {
-      "nombre": "sdfds",
-      "descripcion": "xfsd",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 5,
+      "nombre": "Villarrica",
+      "descripcion": "Turismo y naturaleza junto al lago.",
+      "tiempo": "1h 15min",
+      "imagen": "/src/assets/villarrica.jpg",
+      "maxPasajeros": 7,
       "minHorasAnticipacion": 5,
       "precios": {
         "auto": {
-          "base": 5,
-          "porcentajeAdicional": 0.1
+          "base": 55000,
+          "porcentajeAdicional": 0.05
         },
         "van": {
-          "base": 5,
+          "base": 200000,
           "porcentajeAdicional": 0.05
         }
-      },
-      "id": "dest-1759075231687"
+      }
+    },
+    {
+      "nombre": "Pucón",
+      "descripcion": "Aventura, termas y volcán.",
+      "tiempo": "1h 30min",
+      "imagen": "/src/assets/pucon.jpg",
+      "maxPasajeros": 7,
+      "minHorasAnticipacion": 5,
+      "precios": {
+        "auto": {
+          "base": 60000,
+          "porcentajeAdicional": 0.05
+        },
+        "van": {
+          "base": 250000,
+          "porcentajeAdicional": 0.05
+        }
+      }
     }
   ],
-  "dayPromotions": [],
-  "updatedAt": "2025-09-28T16:17:42.128Z"
+  "dayPromotions": [
+    {
+      "id": "promo-1759088776861-ng5y28",
+      "destino": "Temuco",
+      "descripcion": "finde",
+      "aplicaPorDias": false,
+      "dias": [],
+      "aplicaPorHorario": false,
+      "horaInicio": "",
+      "horaFin": "",
+      "descuentoPorcentaje": 3
+    }
+  ],
+  "updatedAt": "2025-09-28T20:19:55.660Z"
 }
