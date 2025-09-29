@@ -1,98 +1,130 @@
 {
-  "destinos": [
-    {
-      "nombre": "Temuco",
-      "descripcion": "Centro comercial y administrativo de La Araucanía.",
-      "tiempo": "45 min",
-      "imagen": "/src/assets/temuco.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 25000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 45000,
-          "porcentajeAdicional": 0.1
-        }
-      }
-    },
-    {
-      "nombre": "Villarrica",
-      "descripcion": "Turismo y naturaleza junto al lago.",
-      "tiempo": "1h 15min",
-      "imagen": "/src/assets/villarrica.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 55000,
-          "porcentajeAdicional": 0.05
-        },
-        "van": {
-          "base": 200000,
-          "porcentajeAdicional": 0.05
-        }
-      }
-    },
-    {
-      "nombre": "Pucón",
-      "descripcion": "Aventura, termas y volcán.",
-      "tiempo": "1h 30min",
-      "imagen": "/src/assets/pucon.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 60000,
-          "porcentajeAdicional": 0.05
-        },
-        "van": {
-          "base": 250000,
-          "porcentajeAdicional": 0.05
-        }
-      }
-    },
-    {
-      "nombre": "Lican Ray",
-      "descripcion": "",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 65000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 0,
-          "porcentajeAdicional": 0.05
-        }
-      },
-      "id": "dest-1759158635460"
-    },
-    {
-      "nombre": "Coñaripe",
-      "descripcion": "",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 70000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 0,
-          "porcentajeAdicional": 0.05
-        }
-      },
-      "id": "dest-1759158648040"
-    }
-  ],
-  "dayPromotions": [],
-  "updatedAt": "2025-09-29T15:10:54.084Z"
+	"descuentosGlobales": {
+		"descuentoOnline": {
+			"valor": 5,
+			"activo": true,
+			"nombre": "Descuento por Reserva Online"
+		},
+		"descuentoRoundTrip": {
+			"valor": 10,
+			"activo": true,
+			"nombre": "Descuento por Ida y Vuelta"
+		},
+		"descuentosPersonalizados": []
+	},
+	"destinos": [
+		{
+			"nombre": "Temuco",
+			"descripcion": "Centro comercial y administrativo de La Araucanía.",
+			"tiempo": "45 min",
+			"imagen": "/src/assets/temuco.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 25000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 45000,
+					"porcentajeAdicional": 0.1
+				}
+			}
+		},
+		{
+			"nombre": "Villarrica",
+			"descripcion": "Turismo y naturaleza junto al lago.",
+			"tiempo": "1h 15min",
+			"imagen": "/src/assets/villarrica.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 55000,
+					"porcentajeAdicional": 0.05
+				},
+				"van": {
+					"base": 200000,
+					"porcentajeAdicional": 0.05
+				}
+			}
+		},
+		{
+			"nombre": "Pucón",
+			"descripcion": "Aventura, termas y volcán.",
+			"tiempo": "1h 30min",
+			"imagen": "/src/assets/pucon.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 60000,
+					"porcentajeAdicional": 0.05
+				},
+				"van": {
+					"base": 250000,
+					"porcentajeAdicional": 0.05
+				}
+			}
+		},
+		{
+			"nombre": "Lican Ray",
+			"descripcion": "",
+			"tiempo": "",
+			"imagen": "URL_de_imagen_por_defecto.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 65000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 0,
+					"porcentajeAdicional": 0.05
+				}
+			},
+			"id": "dest-1759158635460"
+		},
+		{
+			"nombre": "Coñaripe",
+			"descripcion": "",
+			"tiempo": "",
+			"imagen": "URL_de_imagen_por_defecto.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 70000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 0,
+					"porcentajeAdicional": 0.05
+				}
+			},
+			"id": "dest-1759158648040"
+		},
+		{
+			"nombre": "Panguipulli",
+			"descripcion": "",
+			"tiempo": "",
+			"imagen": "URL_de_imagen_por_defecto.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 75000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 0,
+					"porcentajeAdicional": 0.05
+				}
+			},
+			"id": "dest-1759159595773"
+		}
+	],
+	"dayPromotions": [],
+	"updatedAt": "2025-09-29T15:53:11.030Z"
 }

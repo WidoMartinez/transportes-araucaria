@@ -41,6 +41,19 @@ const PRICING_FILE_PATH = path.join(DATA_DIR, "pricing.json");
 const defaultPricing = {
 	destinos: [], // Nueva estructura para almacenar las tarifas por destino
 	dayPromotions: [],
+	descuentosGlobales: {
+		descuentoOnline: {
+			valor: 5,
+			activo: true,
+			nombre: "Descuento por Reserva Online",
+		},
+		descuentoRoundTrip: {
+			valor: 10,
+			activo: true,
+			nombre: "Descuento por Ida y Vuelta",
+		},
+		descuentosPersonalizados: [],
+	},
 	updatedAt: new Date().toISOString(),
 };
 
@@ -95,7 +108,7 @@ app.get("/pricing", async (req, res) => {
 
 // Endpoint PUT actualizado para manejar la nueva estructura de datos
 app.put("/pricing", async (req, res) => {
-	const { destinos, dayPromotions } = req.body || {};
+	const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
 
 	// Validación robusta para la nueva estructura
 	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
@@ -106,7 +119,24 @@ app.put("/pricing", async (req, res) => {
 	}
 
 	try {
-		const savedData = await writePricingData({ destinos, dayPromotions });
+		const dataToSave = {
+			destinos,
+			dayPromotions,
+			descuentosGlobales: descuentosGlobales || {
+				descuentoOnline: {
+					valor: 5,
+					activo: true,
+					nombre: "Descuento por Reserva Online",
+				},
+				descuentoRoundTrip: {
+					valor: 10,
+					activo: true,
+					nombre: "Descuento por Ida y Vuelta",
+				},
+				descuentosPersonalizados: [],
+			},
+		};
+		const savedData = await writePricingData(dataToSave);
 		res.json(savedData);
 	} catch (error) {
 		console.error("Error al guardar la configuración de precios:", error);
