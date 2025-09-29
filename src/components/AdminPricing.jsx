@@ -1213,7 +1213,7 @@ function AdminPricing() {
 								<p className="mt-1 text-xs text-slate-400 max-w-xl">
 									Configura promociones por tramo con restricciones por día u
 									horario. Estos porcentajes se aplican como descuento adicional
-									al 10% base del canal web.
+									al descuento base configurado en "Descuentos Globales".
 								</p>
 							</div>
 							<button

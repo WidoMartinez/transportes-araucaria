@@ -28,6 +28,8 @@ function Hero({
 	baseDiscountRate,
 	promotionDiscountRate,
 	roundTripDiscountRate,
+	personalizedDiscountRate,
+	descuentosPersonalizados,
 	activePromotion,
 	reviewChecklist,
 	setReviewChecklist,
@@ -288,7 +290,26 @@ function Hero({
 	const roundTripDiscountPercentage = Math.round(
 		(roundTripDiscountRate || 0) * 100
 	);
+	const personalizedDiscountPercentage = Math.round(
+		(personalizedDiscountRate || 0) * 100
+	);
 	const totalDiscountPercentage = Math.round(descuentoRate * 100);
+
+	// Debug: mostrar información de descuentos personalizados
+	useEffect(() => {
+		console.log("🔍 DEBUG DESCUENTOS PERSONALIZADOS:", {
+			personalizedDiscountRate,
+			personalizedDiscountPercentage,
+			descuentosPersonalizados,
+			pricingDescuentosPersonalizados: pricing?.descuentosPersonalizados,
+			descuentosPersonalizadosArray: descuentosPersonalizados,
+		});
+	}, [
+		personalizedDiscountRate,
+		personalizedDiscountPercentage,
+		descuentosPersonalizados,
+		pricing?.descuentosPersonalizados,
+	]);
 
 	const chargeOptions = useMemo(
 		() => [
@@ -411,6 +432,9 @@ function Hero({
 							{roundTripDiscountPercentage > 0
 								? ` + ${roundTripDiscountPercentage}% adicional por reservar ida y vuelta`
 								: ""}
+							{personalizedDiscountPercentage > 0
+								? ` + ${personalizedDiscountPercentage}% por descuentos especiales`
+								: ""}
 							.
 						</p>
 					</>
@@ -453,6 +477,12 @@ function Hero({
 										+ {roundTripDiscountPercentage}% adicional por ida y vuelta
 									</span>
 								)}
+								{personalizedDiscountPercentage > 0 && (
+									<span className="block text-accent font-bold">
+										+ {personalizedDiscountPercentage}% por descuentos
+										especiales
+									</span>
+								)}
 							</p>
 						</div>
 
@@ -469,7 +499,7 @@ function Hero({
 									</Button>
 									<div className="flex items-center gap-2">
 										<Badge variant="secondary" className="text-sm">
-											Descuento base {baseDiscountPercentage}%
+											Descuento en linea {baseDiscountPercentage}%
 										</Badge>
 										{promoDiscountPercentage > 0 && (
 											<Badge
@@ -485,6 +515,14 @@ function Hero({
 												className="text-sm bg-sky-500 text-slate-950"
 											>
 												Ida & vuelta +{roundTripDiscountPercentage}%
+											</Badge>
+										)}
+										{personalizedDiscountPercentage > 0 && (
+											<Badge
+												variant="default"
+												className="text-sm bg-purple-500 text-slate-950"
+											>
+												Especial +{personalizedDiscountPercentage}%
 											</Badge>
 										)}
 									</div>
@@ -744,7 +782,7 @@ function Hero({
 														</p>
 														<div className="space-y-1 text-sm">
 															<p className="font-medium text-emerald-500">
-																Descuento base (10%):{" "}
+																Descuento base ({baseDiscountPercentage}%):{" "}
 																{formatCurrency(pricing.descuentoBase)}
 															</p>
 															{promoDiscountPercentage > 0 && (
@@ -758,6 +796,16 @@ function Hero({
 																	Ida y vuelta (+{roundTripDiscountPercentage}
 																	%):{" "}
 																	{formatCurrency(pricing.descuentoRoundTrip)}
+																</p>
+															)}
+															{personalizedDiscountPercentage > 0 && (
+																<p className="font-medium text-purple-500">
+																	Descuentos especiales (+
+																	{personalizedDiscountPercentage}
+																	%):{" "}
+																	{formatCurrency(
+																		pricing.descuentosPersonalizados
+																	)}
 																</p>
 															)}
 															<p className="text-emerald-500 font-semibold">
@@ -916,7 +964,7 @@ function Hero({
 												</h4>
 												<div className="grid gap-2 text-sm">
 													<div className="flex items-center justify-between">
-														<span>Ahorro base (10%)</span>
+														<span>Ahorro base ({baseDiscountPercentage}%)</span>
 														<span className="font-semibold">
 															{formatCurrency(pricing.descuentoBase)}
 														</span>
@@ -1099,7 +1147,9 @@ function Hero({
 												</h4>
 												<div className="space-y-2">
 													<div className="flex items-center justify-between">
-														<span>Descuento base (10%)</span>
+														<span>
+															Descuento base ({baseDiscountPercentage}%)
+														</span>
 														<span className="font-semibold">
 															-{formatCurrency(pricing.descuentoBase)}
 														</span>

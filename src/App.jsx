@@ -613,6 +613,8 @@ function App() {
 	const pricing = useMemo(() => {
 		const precioIda = cotizacion.precio || 0;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
+
+		// Calcular descuentos individuales (sin límite)
 		const descuentoBase = Math.round(precioBase * onlineDiscountRate);
 		const descuentoPromocion = Math.round(
 			precioBase * (promotionDiscountRate || 0)
@@ -623,14 +625,39 @@ function App() {
 		const descuentosPersonalizados = Math.round(
 			precioBase * (personalizedDiscountRate || 0)
 		);
-		const descuentoOnline =
+
+		// Calcular descuento total sin límite
+		const descuentoTotalSinLimite =
 			descuentoBase +
 			descuentoPromocion +
 			descuentoRoundTrip +
 			descuentosPersonalizados;
+
+		// Aplicar límite del 75% al precio base
+		const descuentoMaximo = Math.round(precioBase * 0.75);
+		const descuentoOnline = Math.min(descuentoTotalSinLimite, descuentoMaximo);
+
 		const totalConDescuento = Math.max(precioBase - descuentoOnline, 0);
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
+
+		// Debug: mostrar información de descuentos
+		console.log("💰 DEBUG PRICING:", {
+			precioBase,
+			onlineDiscountRate,
+			promotionDiscountRate,
+			roundTripDiscountRate,
+			personalizedDiscountRate,
+			descuentoBase,
+			descuentoPromocion,
+			descuentoRoundTrip,
+			descuentosPersonalizados,
+			descuentoTotalSinLimite,
+			descuentoMaximo,
+			descuentoOnline,
+			effectiveDiscountRate,
+		});
+
 		return {
 			precioBase,
 			descuentoBase,
@@ -852,6 +879,10 @@ function App() {
 					baseDiscountRate={onlineDiscountRate}
 					promotionDiscountRate={promotionDiscountRate}
 					roundTripDiscountRate={roundTripDiscountRate}
+					personalizedDiscountRate={personalizedDiscountRate}
+					descuentosPersonalizados={
+						descuentosGlobales?.descuentosPersonalizados || []
+					}
 					activePromotion={activePromotion}
 					reviewChecklist={reviewChecklist}
 					setReviewChecklist={setReviewChecklist}
