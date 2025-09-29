@@ -1,143 +1,183 @@
 {
-  "descuentosGlobales": {
-    "descuentoOnline": {
-      "valor": 5,
-      "activo": true,
-      "nombre": "Descuento por Reserva Online"
-    },
-    "descuentoRoundTrip": {
-      "valor": 10,
-      "activo": true,
-      "nombre": "Descuento por Ida y Vuelta"
-    },
-    "descuentosPersonalizados": [
-      {
-        "id": "desc_estudiantes",
-        "nombre": "Descuento Estudiantes",
-        "valor": 8,
-        "activo": true
-      },
-      {
-        "id": "desc_tercera_edad",
-        "nombre": "Descuento Tercera Edad",
-        "valor": 5,
-        "activo": true
-      }
-    ]
-  },
-  "destinos": [
-    {
-      "nombre": "Temuco",
-      "descripcion": "Centro comercial y administrativo de La Araucanía.",
-      "tiempo": "45 min",
-      "imagen": "/src/assets/temuco.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 25000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 45000,
-          "porcentajeAdicional": 0.1
-        }
-      }
-    },
-    {
-      "nombre": "Villarrica",
-      "descripcion": "Turismo y naturaleza junto al lago.",
-      "tiempo": "1h 15min",
-      "imagen": "/src/assets/villarrica.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 55000,
-          "porcentajeAdicional": 0.05
-        },
-        "van": {
-          "base": 200000,
-          "porcentajeAdicional": 0.05
-        }
-      }
-    },
-    {
-      "nombre": "Pucón",
-      "descripcion": "Aventura, termas y volcán.",
-      "tiempo": "1h 30min",
-      "imagen": "/src/assets/pucon.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 60000,
-          "porcentajeAdicional": 0.05
-        },
-        "van": {
-          "base": 250000,
-          "porcentajeAdicional": 0.05
-        }
-      }
-    },
-    {
-      "nombre": "Lican Ray",
-      "descripcion": "",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 65000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 0,
-          "porcentajeAdicional": 0.05
-        }
-      },
-      "id": "dest-1759158635460"
-    },
-    {
-      "nombre": "Coñaripe",
-      "descripcion": "",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 70000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 0,
-          "porcentajeAdicional": 0.05
-        }
-      },
-      "id": "dest-1759158648040"
-    },
-    {
-      "nombre": "Panguipulli",
-      "descripcion": "",
-      "tiempo": "",
-      "imagen": "URL_de_imagen_por_defecto.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 75000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 0,
-          "porcentajeAdicional": 0.05
-        }
-      },
-      "id": "dest-1759159595773"
-    }
-  ],
-  "dayPromotions": [],
-  "updatedAt": "2025-09-29T16:07:08.367Z"
+	"descuentosGlobales": {
+		"descuentoOnline": {
+			"valor": 5,
+			"activo": true,
+			"nombre": "Descuento por Reserva Online"
+		},
+		"descuentoRoundTrip": {
+			"valor": 10,
+			"activo": true,
+			"nombre": "Descuento por Ida y Vuelta"
+		},
+		"descuentosPersonalizados": [
+			{
+				"id": "desc_estudiantes",
+				"nombre": "Descuento Estudiantes",
+				"valor": 8,
+				"activo": true
+			},
+			{
+				"id": "desc_tercera_edad",
+				"nombre": "Descuento Tercera Edad",
+				"valor": 5,
+				"activo": true
+			}
+		]
+	},
+	"destinos": [
+		{
+			"nombre": "Temuco",
+			"descripcion": "Centro comercial y administrativo de La Araucanía.",
+			"tiempo": "45 min",
+			"imagen": "/src/assets/temuco.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 25000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 45000,
+					"porcentajeAdicional": 0.1
+				}
+			}
+		},
+		{
+			"nombre": "Villarrica",
+			"descripcion": "Turismo y naturaleza junto al lago.",
+			"tiempo": "1h 15min",
+			"imagen": "/src/assets/villarrica.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 55000,
+					"porcentajeAdicional": 0.05
+				},
+				"van": {
+					"base": 200000,
+					"porcentajeAdicional": 0.05
+				}
+			}
+		},
+		{
+			"nombre": "Pucón",
+			"descripcion": "Aventura, termas y volcán.",
+			"tiempo": "1h 30min",
+			"imagen": "/src/assets/pucon.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 60000,
+					"porcentajeAdicional": 0.05
+				},
+				"van": {
+					"base": 250000,
+					"porcentajeAdicional": 0.05
+				}
+			}
+		},
+		{
+			"nombre": "Lican Ray",
+			"descripcion": "",
+			"tiempo": "",
+			"imagen": "URL_de_imagen_por_defecto.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 65000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 0,
+					"porcentajeAdicional": 0.05
+				}
+			},
+			"id": "dest-1759158635460"
+		},
+		{
+			"nombre": "Coñaripe",
+			"descripcion": "",
+			"tiempo": "",
+			"imagen": "URL_de_imagen_por_defecto.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 70000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 0,
+					"porcentajeAdicional": 0.05
+				}
+			},
+			"id": "dest-1759158648040"
+		},
+		{
+			"nombre": "Panguipulli",
+			"descripcion": "",
+			"tiempo": "",
+			"imagen": "URL_de_imagen_por_defecto.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 75000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 0,
+					"porcentajeAdicional": 0.05
+				}
+			},
+			"id": "dest-1759159595773"
+		}
+	],
+	"dayPromotions": [
+		{
+			"id": "promo_temuco_ida",
+			"nombre": "Promoción Temuco Ida",
+			"destino": "Temuco",
+			"descuentoPorcentaje": 2,
+			"activo": true,
+			"aplicaTipoViaje": {
+				"ida": true,
+				"vuelta": false,
+				"ambos": false
+			},
+			"descripcion": "Descuento especial para viajes de ida a Temuco"
+		},
+		{
+			"id": "promo_temuco_vuelta",
+			"nombre": "Promoción Temuco Vuelta",
+			"destino": "Temuco",
+			"descuentoPorcentaje": 3,
+			"activo": true,
+			"aplicaTipoViaje": {
+				"ida": false,
+				"vuelta": true,
+				"ambos": false
+			},
+			"descripcion": "Descuento especial para viajes de vuelta desde Temuco"
+		},
+		{
+			"id": "promo_villarrica_ambos",
+			"nombre": "Promoción Villarrica",
+			"destino": "Villarrica",
+			"descuentoPorcentaje": 4,
+			"activo": true,
+			"aplicaTipoViaje": {
+				"ida": true,
+				"vuelta": true,
+				"ambos": true
+			},
+			"descripcion": "Descuento especial para viajes a Villarrica"
+		}
+	],
+	"updatedAt": "2025-09-29T16:07:08.367Z"
 }

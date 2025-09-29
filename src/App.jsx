@@ -614,57 +614,79 @@ function App() {
 		const precioIda = cotizacion.precio || 0;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
 
-		// Calcular descuentos individuales (sin límite)
-		const descuentoBase = Math.round(precioBase * onlineDiscountRate);
+		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
+		// Descuento online por reservar (se aplica a cada tramo)
+		const descuentoOnlinePorTramo = Math.round(precioIda * onlineDiscountRate);
+		const descuentoOnline = formData.idaVuelta
+			? descuentoOnlinePorTramo * 2
+			: descuentoOnlinePorTramo;
+
+		// Descuentos personalizados (se aplican a cada tramo)
+		const descuentosPersonalizadosPorTramo = Math.round(
+			precioIda * personalizedDiscountRate
+		);
+		const descuentosPersonalizados = formData.idaVuelta
+			? descuentosPersonalizadosPorTramo * 2
+			: descuentosPersonalizadosPorTramo;
+
+		// 2. PROMOCIONES POR TRAMO (se aplican según configuración específica)
+		// Estas se calculan según las promociones activas para el tramo específico
 		const descuentoPromocion = Math.round(
 			precioBase * (promotionDiscountRate || 0)
 		);
-		const descuentoRoundTrip = Math.round(
-			precioBase * (roundTripDiscountRate || 0)
-		);
-		const descuentosPersonalizados = Math.round(
-			precioBase * (personalizedDiscountRate || 0)
-		);
 
-		// Calcular descuento total sin límite
+		// 3. DESCUENTO IDA Y VUELTA (solo cuando se selecciona ida y vuelta)
+		const descuentoRoundTrip = formData.idaVuelta
+			? Math.round(precioBase * (roundTripDiscountRate || 0))
+			: 0;
+
+		// Calcular descuento total
 		const descuentoTotalSinLimite =
-			descuentoBase +
+			descuentoOnline +
 			descuentoPromocion +
 			descuentoRoundTrip +
 			descuentosPersonalizados;
 
 		// Aplicar límite del 75% al precio base
 		const descuentoMaximo = Math.round(precioBase * 0.75);
-		const descuentoOnline = Math.min(descuentoTotalSinLimite, descuentoMaximo);
+		const descuentoOnlineTotal = Math.min(
+			descuentoTotalSinLimite,
+			descuentoMaximo
+		);
 
-		const totalConDescuento = Math.max(precioBase - descuentoOnline, 0);
+		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0);
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
 		// Debug: mostrar información de descuentos
-		console.log("💰 DEBUG PRICING:", {
+		console.log("💰 DEBUG PRICING CORREGIDO:", {
+			precioIda,
 			precioBase,
+			idaVuelta: formData.idaVuelta,
 			onlineDiscountRate,
 			promotionDiscountRate,
 			roundTripDiscountRate,
 			personalizedDiscountRate,
-			descuentoBase,
+			descuentoOnlinePorTramo,
+			descuentoOnline,
 			descuentoPromocion,
 			descuentoRoundTrip,
 			descuentosPersonalizados,
 			descuentoTotalSinLimite,
 			descuentoMaximo,
-			descuentoOnline,
+			descuentoOnlineTotal,
 			effectiveDiscountRate,
+			activePromotion,
+			applicablePromotions,
 		});
 
 		return {
 			precioBase,
-			descuentoBase,
+			descuentoBase: descuentoOnline, // Para mantener compatibilidad
 			descuentoPromocion,
 			descuentoRoundTrip,
 			descuentosPersonalizados,
-			descuentoOnline,
+			descuentoOnline: descuentoOnlineTotal,
 			totalConDescuento,
 			abono,
 			saldoPendiente,
