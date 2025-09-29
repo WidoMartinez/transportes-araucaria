@@ -30,6 +30,8 @@ import Contacto from "./components/Contacto";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminPricing from "./components/AdminPricing";
+import AdminCodigos from "./components/AdminCodigos";
+import CodigoDescuento from "./components/CodigoDescuento";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -130,6 +132,11 @@ function App() {
 		descuentoRoundTrip: { valor: 10, activo: true },
 		descuentosPersonalizados: [],
 	});
+
+	// Estados para códigos de descuento
+	const [codigoAplicado, setCodigoAplicado] = useState(null);
+	const [codigoError, setCodigoError] = useState(null);
+	const [validandoCodigo, setValidandoCodigo] = useState(false);
 	const [loadingPrecios, setLoadingPrecios] = useState(true);
 
 	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
@@ -222,6 +229,45 @@ function App() {
 			console.error("Error al recargar precios:", error);
 			return false;
 		}
+	};
+
+	// Funciones para manejar códigos de descuento
+	const validarCodigo = async (codigo) => {
+		setValidandoCodigo(true);
+		setCodigoError(null);
+
+		try {
+			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					codigo,
+					destino: formData.destino,
+					monto: cotizacion.precio || 0,
+				}),
+			});
+
+			const result = await response.json();
+
+			if (result.valido) {
+				setCodigoAplicado(result.codigo);
+				setCodigoError(null);
+			} else {
+				setCodigoError(result.error);
+				setCodigoAplicado(null);
+			}
+		} catch (error) {
+			setCodigoError("Error validando código");
+			setCodigoAplicado(null);
+		} finally {
+			setValidandoCodigo(false);
+		}
+	};
+
+	const removerCodigo = () => {
+		setCodigoAplicado(null);
+		setCodigoError(null);
 	};
 
 	// --- CARGA DE DATOS DINÁMICA ---
@@ -677,12 +723,23 @@ function App() {
 			? Math.round(precioBase * (roundTripDiscountRate || 0))
 			: 0;
 
+		// 4. DESCUENTO POR CÓDIGO
+		let descuentoCodigo = 0;
+		if (codigoAplicado) {
+			if (codigoAplicado.tipo === "porcentaje") {
+				descuentoCodigo = Math.round(precioBase * (codigoAplicado.valor / 100));
+			} else {
+				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
+			}
+		}
+
 		// Calcular descuento total
 		const descuentoTotalSinLimite =
 			descuentoOnline +
 			descuentoPromocion +
 			descuentoRoundTrip +
-			descuentosPersonalizados;
+			descuentosPersonalizados +
+			descuentoCodigo;
 
 		// Aplicar límite del 75% al precio base
 		const descuentoMaximo = Math.round(precioBase * 0.75);
@@ -724,6 +781,7 @@ function App() {
 			descuentoPromocion,
 			descuentoRoundTrip,
 			descuentosPersonalizados,
+			descuentoCodigo,
 			descuentoOnline: descuentoOnlineTotal,
 			totalConDescuento,
 			abono,
@@ -736,6 +794,7 @@ function App() {
 		onlineDiscountRate,
 		personalizedDiscountRate,
 		formData.idaVuelta,
+		codigoAplicado,
 	]);
 
 	const {
@@ -902,6 +961,14 @@ function App() {
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
 	if (isAdminView) {
+		// Verificar si es panel de códigos
+		const urlParams = new URLSearchParams(window.location.search);
+		const panel = urlParams.get("panel");
+
+		if (panel === "codigos") {
+			return <AdminCodigos />;
+		}
+
 		return <AdminPricing />;
 	}
 
@@ -954,6 +1021,11 @@ function App() {
 					validarTelefono={validarTelefono}
 					validarHorarioReserva={validarHorarioReserva}
 					showSummary={showConfirmationAlert}
+					codigoAplicado={codigoAplicado}
+					codigoError={codigoError}
+					validandoCodigo={validandoCodigo}
+					onAplicarCodigo={validarCodigo}
+					onRemoverCodigo={removerCodigo}
 				/>
 				<Servicios />
 				<Destinos />

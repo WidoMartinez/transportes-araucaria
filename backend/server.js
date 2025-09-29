@@ -146,6 +146,131 @@ app.put("/pricing", async (req, res) => {
 	}
 });
 
+// --- ENDPOINTS PARA CÓDIGOS DE DESCUENTO ---
+app.get("/api/codigos", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+		res.json(codigos);
+	} catch (error) {
+		console.error("Error leyendo códigos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+app.post("/api/codigos", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		const nuevoCodigo = {
+			...req.body,
+			id: req.body.codigo,
+			usosActuales: 0,
+			fechaCreacion: new Date().toISOString().split("T")[0],
+			creadoPor: "admin",
+		};
+
+		if (!pricing.codigosDescuento) {
+			pricing.codigosDescuento = [];
+		}
+
+		pricing.codigosDescuento.push(nuevoCodigo);
+		await writePricingData(pricing);
+
+		res.json(nuevoCodigo);
+	} catch (error) {
+		console.error("Error creando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+app.put("/api/codigos/:id", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		const codigoIndex = pricing.codigosDescuento.findIndex(
+			(c) => c.id === req.params.id
+		);
+
+		if (codigoIndex === -1) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		pricing.codigosDescuento[codigoIndex] = {
+			...pricing.codigosDescuento[codigoIndex],
+			...req.body,
+			id: req.params.id,
+		};
+
+		await writePricingData(pricing);
+		res.json(pricing.codigosDescuento[codigoIndex]);
+	} catch (error) {
+		console.error("Error actualizando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+app.delete("/api/codigos/:id", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		pricing.codigosDescuento = pricing.codigosDescuento.filter(
+			(c) => c.id !== req.params.id
+		);
+
+		await writePricingData(pricing);
+		res.json({ success: true });
+	} catch (error) {
+		console.error("Error eliminando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para validar código de descuento
+app.post("/api/codigos/validar", async (req, res) => {
+	try {
+		const { codigo, destino, monto } = req.body;
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+
+		const codigoEncontrado = codigos.find(
+			(c) => c.codigo === codigo && c.activo && c.usosActuales < c.limiteUsos
+		);
+
+		if (!codigoEncontrado) {
+			return res.json({ valido: false, error: "Código no válido o agotado" });
+		}
+
+		// Verificar fecha de vencimiento
+		const ahora = new Date();
+		const vencimiento = new Date(codigoEncontrado.fechaVencimiento);
+		if (vencimiento < ahora) {
+			return res.json({ valido: false, error: "Código vencido" });
+		}
+
+		// Verificar destino aplicable
+		if (
+			codigoEncontrado.destinosAplicables.length > 0 &&
+			!codigoEncontrado.destinosAplicables.includes(destino)
+		) {
+			return res.json({
+				valido: false,
+				error: "Código no aplicable para este destino",
+			});
+		}
+
+		// Verificar monto mínimo
+		if (monto < codigoEncontrado.montoMinimo) {
+			return res.json({
+				valido: false,
+				error: `Monto mínimo requerido: $${codigoEncontrado.montoMinimo.toLocaleString()}`,
+			});
+		}
+
+		res.json({ valido: true, codigo: codigoEncontrado });
+	} catch (error) {
+		console.error("Error validando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // --- ENDPOINT PARA CREAR PAGOS (sin cambios) ---
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description, email } = req.body;

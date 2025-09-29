@@ -179,5 +179,58 @@
 			"descripcion": "Descuento especial para viajes a Villarrica"
 		}
 	],
+	"codigosDescuento": [
+		{
+			"id": "VERANO2024",
+			"codigo": "VERANO2024",
+			"descripcion": "Descuento de Verano 2024",
+			"tipo": "porcentaje",
+			"valor": 15,
+			"activo": true,
+			"limiteUsos": 100,
+			"usosActuales": 0,
+			"fechaVencimiento": "2024-12-31",
+			"destinosAplicables": ["Temuco", "Villarrica"],
+			"montoMinimo": 20000,
+			"combinable": true,
+			"exclusivo": false,
+			"fechaCreacion": "2024-01-15",
+			"creadoPor": "admin"
+		},
+		{
+			"id": "ESTUDIANTE10K",
+			"codigo": "ESTUDIANTE10K",
+			"descripcion": "Descuento para Estudiantes",
+			"tipo": "monto_fijo",
+			"valor": 10000,
+			"activo": true,
+			"limiteUsos": 50,
+			"usosActuales": 0,
+			"fechaVencimiento": "2024-06-30",
+			"destinosAplicables": ["Temuco"],
+			"montoMinimo": 25000,
+			"combinable": false,
+			"exclusivo": true,
+			"fechaCreacion": "2024-01-15",
+			"creadoPor": "admin"
+		},
+		{
+			"id": "PRIMERAVEZ",
+			"codigo": "PRIMERAVEZ",
+			"descripcion": "Descuento Primera Reserva",
+			"tipo": "porcentaje",
+			"valor": 20,
+			"activo": true,
+			"limiteUsos": 200,
+			"usosActuales": 0,
+			"fechaVencimiento": "2024-12-31",
+			"destinosAplicables": [],
+			"montoMinimo": 15000,
+			"combinable": true,
+			"exclusivo": false,
+			"fechaCreacion": "2024-01-15",
+			"creadoPor": "admin"
+		}
+	],
 	"updatedAt": "2025-09-29T16:07:08.367Z"
 }
