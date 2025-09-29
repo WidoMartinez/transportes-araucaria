@@ -226,7 +226,7 @@ app.delete("/api/codigos/:id", async (req, res) => {
 // Endpoint para validar código de descuento
 app.post("/api/codigos/validar", async (req, res) => {
 	try {
-		const { codigo, destino, monto } = req.body;
+		const { codigo, destino, monto, usuarioId } = req.body;
 		const pricing = await readPricingData();
 		const codigos = pricing.codigosDescuento || [];
 
@@ -243,6 +243,18 @@ app.post("/api/codigos/validar", async (req, res) => {
 		const vencimiento = new Date(codigoEncontrado.fechaVencimiento);
 		if (vencimiento < ahora) {
 			return res.json({ valido: false, error: "Código vencido" });
+		}
+
+		// Verificar si el usuario ya usó este código
+		if (usuarioId && codigoEncontrado.usuariosQueUsaron) {
+			const usuarioYaUso =
+				codigoEncontrado.usuariosQueUsaron.includes(usuarioId);
+			if (usuarioYaUso) {
+				return res.json({
+					valido: false,
+					error: "Ya has usado este código de descuento",
+				});
+			}
 		}
 
 		// Verificar destino aplicable
@@ -267,6 +279,56 @@ app.post("/api/codigos/validar", async (req, res) => {
 		res.json({ valido: true, codigo: codigoEncontrado });
 	} catch (error) {
 		console.error("Error validando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para registrar el uso de un código por un usuario
+app.post("/api/codigos/usar", async (req, res) => {
+	try {
+		const { codigo, usuarioId } = req.body;
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+
+		const codigoIndex = codigos.findIndex((c) => c.codigo === codigo);
+		if (codigoIndex === -1) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const codigoEncontrado = codigos[codigoIndex];
+
+		// Verificar si el usuario ya usó este código
+		if (usuarioId && codigoEncontrado.usuariosQueUsaron) {
+			const usuarioYaUso =
+				codigoEncontrado.usuariosQueUsaron.includes(usuarioId);
+			if (usuarioYaUso) {
+				return res.json({
+					exito: false,
+					error: "Ya has usado este código de descuento",
+				});
+			}
+		}
+
+		// Registrar el uso
+		codigos[codigoIndex].usosActuales += 1;
+		if (usuarioId) {
+			if (!codigos[codigoIndex].usuariosQueUsaron) {
+				codigos[codigoIndex].usuariosQueUsaron = [];
+			}
+			codigos[codigoIndex].usuariosQueUsaron.push(usuarioId);
+		}
+
+		// Guardar los cambios
+		pricing.codigosDescuento = codigos;
+		await writePricingData(pricing);
+
+		res.json({
+			exito: true,
+			usosActuales: codigos[codigoIndex].usosActuales,
+			usuariosQueUsaron: codigos[codigoIndex].usuariosQueUsaron,
+		});
+	} catch (error) {
+		console.error("Error registrando uso del código:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });

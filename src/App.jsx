@@ -232,12 +232,32 @@ function App() {
 	};
 
 	// Funciones para manejar códigos de descuento
+	// Generar ID único del usuario basado en datos del navegador
+	const generarUsuarioId = () => {
+		// Intentar obtener un ID persistente del localStorage
+		let usuarioId = localStorage.getItem("usuarioId");
+		if (!usuarioId) {
+			// Generar un ID único basado en características del navegador
+			const timestamp = Date.now();
+			const random = Math.random().toString(36).substring(2);
+			const userAgent = navigator.userAgent.substring(0, 20);
+			usuarioId = `user_${timestamp}_${random}_${btoa(userAgent).substring(
+				0,
+				8
+			)}`;
+			localStorage.setItem("usuarioId", usuarioId);
+		}
+		return usuarioId;
+	};
+
 	const validarCodigo = async (codigo) => {
 		setValidandoCodigo(true);
 		setCodigoError(null);
 
 		try {
 			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			const usuarioId = generarUsuarioId();
+
 			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -245,6 +265,7 @@ function App() {
 					codigo,
 					destino: formData.destino,
 					monto: cotizacion.precio || 0,
+					usuarioId,
 				}),
 			});
 
@@ -925,6 +946,30 @@ function App() {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
 				});
 			}
+
+			// Registrar el uso del código si hay uno aplicado
+			if (codigoAplicado) {
+				try {
+					const apiUrl =
+						import.meta.env.VITE_API_URL || "http://localhost:8080";
+					const usuarioId = generarUsuarioId();
+
+					await fetch(`${apiUrl}/api/codigos/usar`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							codigo: codigoAplicado.codigo,
+							usuarioId,
+						}),
+					});
+
+					console.log("✅ Uso del código registrado exitosamente");
+				} catch (error) {
+					console.error("Error registrando uso del código:", error);
+					// No mostramos error al usuario ya que la reserva ya se procesó
+				}
+			}
+
 			return { success: true };
 		} catch (error) {
 			console.error("Error al enviar el formulario a PHP:", error);

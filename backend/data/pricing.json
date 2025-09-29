@@ -195,7 +195,9 @@
 			"combinable": true,
 			"exclusivo": false,
 			"fechaCreacion": "2024-01-15",
-			"creadoPor": "admin"
+			"creadoPor": "admin",
+			"limiteUsosPorUsuario": 1,
+			"usuariosQueUsaron": []
 		},
 		{
 			"id": "ESTUDIANTE10K",
@@ -212,7 +214,9 @@
 			"combinable": false,
 			"exclusivo": true,
 			"fechaCreacion": "2024-01-15",
-			"creadoPor": "admin"
+			"creadoPor": "admin",
+			"limiteUsosPorUsuario": 1,
+			"usuariosQueUsaron": []
 		},
 		{
 			"id": "PRIMERAVEZ",
@@ -229,7 +233,9 @@
 			"combinable": true,
 			"exclusivo": false,
 			"fechaCreacion": "2024-01-15",
-			"creadoPor": "admin"
+			"creadoPor": "admin",
+			"limiteUsosPorUsuario": 1,
+			"usuariosQueUsaron": []
 		}
 	],
 	"updatedAt": "2025-09-29T16:07:08.367Z"

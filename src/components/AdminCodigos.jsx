@@ -387,6 +387,34 @@ function AdminCodigos() {
 										</div>
 									</div>
 
+									{/* Información de usuarios que usaron el código */}
+									{codigo.usuariosQueUsaron &&
+										codigo.usuariosQueUsaron.length > 0 && (
+											<div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+												<p className="text-sm font-medium text-blue-800 mb-2">
+													Usuarios que han usado este código (
+													{codigo.usuariosQueUsaron.length}):
+												</p>
+												<div className="flex flex-wrap gap-1">
+													{codigo.usuariosQueUsaron
+														.slice(0, 5)
+														.map((usuario, index) => (
+															<span
+																key={index}
+																className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+															>
+																{usuario.substring(0, 8)}...
+															</span>
+														))}
+													{codigo.usuariosQueUsaron.length > 5 && (
+														<span className="text-xs text-blue-600">
+															+{codigo.usuariosQueUsaron.length - 5} más
+														</span>
+													)}
+												</div>
+											</div>
+										)}
+
 									<div className="flex gap-2 mt-3">
 										{codigo.combinable && (
 											<Badge variant="secondary" className="text-xs">

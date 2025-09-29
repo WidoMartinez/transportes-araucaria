@@ -971,6 +971,33 @@ function Hero({
 											/>
 										</div>
 
+										{/* Código de descuento - Más visible y cerca del resumen */}
+										<div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 shadow-lg">
+											<div className="flex items-center gap-3 mb-4">
+												<div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+													<span className="text-white font-bold text-sm">
+														🎟️
+													</span>
+												</div>
+												<div>
+													<h3 className="text-lg font-bold text-purple-900">
+														¿Tienes un código de descuento?
+													</h3>
+													<p className="text-sm text-purple-700">
+														Ingresa tu código para obtener descuentos
+														adicionales
+													</p>
+												</div>
+											</div>
+											<CodigoDescuento
+												codigoAplicado={codigoAplicado}
+												codigoError={codigoError}
+												validandoCodigo={validandoCodigo}
+												onAplicarCodigo={onAplicarCodigo}
+												onRemoverCodigo={onRemoverCodigo}
+											/>
+										</div>
+
 										{mostrarPrecio && (
 											<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-foreground">
 												<h4 className="text-lg font-semibold mb-2">
@@ -991,6 +1018,16 @@ function Hero({
 															</span>
 															<span className="font-semibold">
 																{formatCurrency(pricing.descuentoPromocion)}
+															</span>
+														</div>
+													)}
+													{codigoAplicado && (
+														<div className="flex items-center justify-between bg-purple-50 p-2 rounded-lg border border-purple-200">
+															<span className="text-purple-800 font-medium">
+																🎟️ Código {codigoAplicado.codigo}
+															</span>
+															<span className="font-semibold text-purple-900">
+																-{formatCurrency(pricing.descuentoCodigo || 0)}
 															</span>
 														</div>
 													)}
@@ -1054,15 +1091,6 @@ function Hero({
 
 								{currentStep === 2 && (
 									<div className="max-h-[80vh] overflow-y-auto space-y-8 p-4 -m-4">
-										{/* Código de descuento */}
-										<CodigoDescuento
-											codigoAplicado={codigoAplicado}
-											codigoError={codigoError}
-											validandoCodigo={validandoCodigo}
-											onAplicarCodigo={onAplicarCodigo}
-											onRemoverCodigo={onRemoverCodigo}
-										/>
-
 										{/* Resumen del viaje */}
 										<div className="bg-white rounded-lg border border-gray-200 p-6">
 											<h4 className="text-xl font-semibold text-gray-900 mb-6 border-b pb-2">
