@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -9,6 +9,8 @@ import { Progress } from "./ui/progress";
 import { Checkbox } from "./ui/checkbox";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
+import flow from "../assets/formasPago/flow.png";
+import merPago from "../assets/formasPago/mp.png";
 
 function Hero({
 	formData,
@@ -51,7 +53,7 @@ function Hero({
 			},
 			{
 				title: "2. Tus datos",
-				description: "Completa la información de contacto y extras.",
+				description: "Completa la informaciÃ³n de contacto y extras.",
 			},
 			{
 				title: "3. Revisar y pagar",
@@ -103,14 +105,14 @@ function Hero({
 	const tieneCotizacionAutomatica = typeof cotizacion.precio === "number";
 	const requiereCotizacionManual =
 		formData.destino === "Otro" ||
-			(formData.destino && !tieneCotizacionAutomatica);
+		(formData.destino && !tieneCotizacionAutomatica);
 	const mostrarPrecio = tieneCotizacionAutomatica;
 
 	const promotionDetails = useMemo(() => {
 		if (!activePromotion) return null;
 		const parts = [];
 		if (activePromotion.aplicaPorDias && activePromotion.dias.length) {
-			parts.push(`Días: ${activePromotion.dias.join(", ")}`);
+			parts.push(`DÃ­as: ${activePromotion.dias.join(", ")}`);
 		}
 		if (
 			activePromotion.aplicaPorHorario &&
@@ -121,7 +123,7 @@ function Hero({
 				`Horario: ${activePromotion.horaInicio} - ${activePromotion.horaFin} hrs`
 			);
 		}
-		return parts.join(" · ");
+		return parts.join(" Â· ");
 	}, [activePromotion]);
 
 	useEffect(() => {
@@ -193,7 +195,7 @@ function Hero({
 				`${formData.fechaRegreso}T${formData.horaRegreso}`
 			);
 			if (Number.isNaN(regreso.getTime())) {
-				setStepError("La fecha de regreso no es válida.");
+				setStepError("La fecha de regreso no es vÃ¡lida.");
 				return;
 			}
 			if (regreso <= salida) {
@@ -216,27 +218,27 @@ function Hero({
 
 		if (!formData.email.trim()) {
 			setStepError(
-				"Necesitamos un correo electrónico para enviar la confirmación."
+				"Necesitamos un correo electrÃ³nico para enviar la confirmaciÃ³n."
 			);
 			return;
 		}
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) {
-			setStepError("El correo electrónico ingresado no es válido.");
+			setStepError("El correo electrÃ³nico ingresado no es vÃ¡lido.");
 			return;
 		}
 
 		if (!formData.telefono.trim()) {
-			setStepError("Indica un teléfono móvil de contacto.");
+			setStepError("Indica un telÃ©fono mÃ³vil de contacto.");
 			return;
 		}
 
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError(
-				"Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
+				"Por favor, introduce un nÃºmero de mÃ³vil chileno vÃ¡lido (ej: +56 9 1234 5678)."
 			);
-			setStepError("Revisa el número de teléfono antes de continuar.");
+			setStepError("Revisa el nÃºmero de telÃ©fono antes de continuar.");
 			return;
 		}
 
@@ -257,7 +259,7 @@ function Hero({
 			} else if (result.error === "server" && result.message) {
 				setStepError(`No pudimos enviar tu reserva: ${result.message}`);
 			} else if (result.error === "telefono") {
-				setStepError("Revisa el número de teléfono ingresado.");
+				setStepError("Revisa el nÃºmero de telÃ©fono ingresado.");
 			}
 			return;
 		}
@@ -308,16 +310,14 @@ function Hero({
 				gateway: "flow",
 				title: "Flow",
 				subtitle: "Webpay, tarjetas y transferencia",
-				image:
-					"https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Logo_Flow_Pago.png/320px-Logo_Flow_Pago.png",
+				image: flow,
 			},
 			{
 				id: "mercadopago",
 				gateway: "mercadopago",
 				title: "Mercado Pago",
 				subtitle: "Tarjetas y billetera Mercado Pago",
-				image:
-					"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Mercado_Pago_logo.svg/512px-Mercado_Pago_logo.svg.png",
+				image: merPago,
 			},
 		],
 		[]
@@ -380,15 +380,14 @@ function Hero({
 				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
 				style={{ backgroundImage: `url(${heroVan})` }}
 			></div>
-			<div className="relative container mx-auto px-4 text-center">
+			<div className="relative container mx-auto px-4 text-center pb-16 md:pb-24">
 				<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-					Traslados Privados Aeropuerto La Araucanía
+					Traslados Privados Aeropuerto La AraucanÃ­a
 					<br />
-					<span className="text-accent">Temuco, Pucón y Villarrica</span>
+					<span className="text-accent">Temuco, PucÃ³n y Villarrica</span>
 				</h2>
 				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Transportes Araucaria ofrece traslados privados puerta a puerta entre el Aeropuerto La Araucanía, Temuco, Pucón, Villarrica y hoteles de la región.
-					Reserva online en minutos tu transfer desde el Aeropuerto La Araucanía, confirma tu chofer y asegura el {baseDiscountPercentage}% de descuento web garantizado
+					Transportes Araucaria conecta el Aeropuerto La Araucanía con Temuco, Pucón, Villarrica y los principales hoteles de la región. Reserva en línea, confirma tu conductor y asegura el {baseDiscountPercentage}% de descuento web garantizado
 					{promoDiscountPercentage > 0
 						? ` + ${promoDiscountPercentage}% extra por promociones activas`
 						: ""}
@@ -402,7 +401,7 @@ function Hero({
 					<CardHeader className="space-y-3">
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle className="text-foreground text-2xl">
-								Reserva tu viaje en línea
+								Reserva tu viaje en lÃ­nea
 							</CardTitle>
 							<div className="flex items-center gap-2">
 								<Badge variant="secondary" className="text-sm">
@@ -586,7 +585,7 @@ function Hero({
 											htmlFor="ida-vuelta"
 											className="text-sm text-muted-foreground"
 										>
-											¿Deseas reservar también el regreso? Coordina ida y vuelta
+											Â¿Deseas reservar tambiÃ©n el regreso? Coordina ida y vuelta
 											en una sola solicitud.
 										</label>
 									</div>
@@ -624,18 +623,18 @@ function Hero({
 									</p>
 								</div>
 								<div className="text-center text-sm text-muted-foreground">
-									¿No encuentras tu destino?{" "}
+									Â¿No encuentras tu destino?{" "}
 									<a href="#contacto" className="text-primary hover:underline">
-										Contáctanos
+										ContÃ¡ctanos
 									</a>{" "}
-									para una cotización personalizada.
+									para una cotizaciÃ³n personalizada.
 								</div>
 								{mostrarPrecio ? (
 									<div className="rounded-xl border border-primary/20 bg-primary/10 p-6 text-foreground">
 										<div className="grid gap-4 md:grid-cols-2 md:items-center">
 											<div className="space-y-1">
 												<p className="text-sm uppercase tracking-wide text-muted-foreground">
-													Vehículo sugerido
+													VehÃ­culo sugerido
 												</p>
 												<p className="text-2xl font-semibold">
 													{cotizacion.vehiculo}
@@ -659,7 +658,7 @@ function Hero({
 													)}
 												</div>
 												<p className="text-xs text-muted-foreground uppercase tracking-wide">
-													Precio estándar
+													Precio estÃ¡ndar
 												</p>
 												<p className="text-xl font-semibold">
 													{formatCurrency(pricing.precioBase)}
@@ -694,12 +693,12 @@ function Hero({
 															({totalDiscountPercentage}% aplicado)
 														</span>
 													</p>
-																					{activePromotion && (
+													{activePromotion && (
 														<p className="text-xs font-semibold text-emerald-600">
 															Promo activa:{" "}
 															{activePromotion.descripcion ||
 																`Descuento ${activePromotion.descuentoPorcentaje}%`}
-															{promotionDetails ? ` · ${promotionDetails}` : ""}
+															{promotionDetails ? ` Â· ${promotionDetails}` : ""}
 														</p>
 													)}
 												</div>
@@ -710,10 +709,10 @@ function Hero({
 									<div className="rounded-xl border border-dashed border-primary/40 bg-white/40 p-6 text-primary">
 										<p className="font-semibold">
 											Calcularemos el valor exacto y te lo enviaremos junto con
-											la confirmación.
+											la confirmaciÃ³n.
 										</p>
 										<p className="text-sm text-primary/80">
-											Indícanos tu destino para sugerirte el vehículo más
+											IndÃ­canos tu destino para sugerirte el vehÃ­culo mÃ¡s
 											conveniente.
 										</p>
 									</div>
@@ -746,7 +745,7 @@ function Hero({
 											name="nombre"
 											value={formData.nombre}
 											onChange={handleInputChange}
-											placeholder="Ej: Juan Pérez"
+											placeholder="Ej: Juan PÃ©rez"
 										/>
 									</div>
 									<div className="space-y-2">
@@ -764,7 +763,7 @@ function Hero({
 
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 									<div className="space-y-2">
-										<Label htmlFor="telefono-hero">Teléfono móvil</Label>
+										<Label htmlFor="telefono-hero">TelÃ©fono mÃ³vil</Label>
 										<Input
 											id="telefono-hero"
 											name="telefono"
@@ -778,7 +777,7 @@ function Hero({
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="numeroVuelo-hero">
-											Número de vuelo (si aplica)
+											NÃºmero de vuelo (si aplica)
 										</Label>
 										<Input
 											id="numeroVuelo-hero"
@@ -792,7 +791,7 @@ function Hero({
 
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 									<div className="space-y-2">
-										<Label htmlFor="hotel-hero">Hotel o dirección final</Label>
+										<Label htmlFor="hotel-hero">Hotel o direcciÃ³n final</Label>
 										<Input
 											id="hotel-hero"
 											name="hotel"
@@ -803,7 +802,7 @@ function Hero({
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="sillaInfantil-hero">
-											¿Necesitas silla infantil?
+											Â¿Necesitas alzador infantil?
 										</Label>
 										<select
 											id="sillaInfantil-hero"
@@ -813,8 +812,8 @@ function Hero({
 											className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
 										>
 											<option value="no">No requiero</option>
-											<option value="1 silla">Sí, 1 silla</option>
-											<option value="2 sillas">Sí, 2 sillas</option>
+											<option value="1 silla">SÃ­, 1 alzador</option>
+											<option value="2 sillas">SÃ­, 2 alzadores</option>
 										</select>
 									</div>
 								</div>
@@ -828,14 +827,14 @@ function Hero({
 										name="equipajeEspecial"
 										value={formData.equipajeEspecial}
 										onChange={handleInputChange}
-										placeholder="Cuéntanos sobre equipaje voluminoso, mascotas u otros detalles relevantes."
+										placeholder="CuÃ©ntanos sobre equipaje voluminoso, mascotas u otros detalles relevantes."
 									/>
 								</div>
 
 								{mostrarPrecio && (
 									<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-foreground">
 										<h4 className="text-lg font-semibold mb-2">
-											Resumen económico
+											Resumen econÃ³mico
 										</h4>
 										<div className="grid gap-2 text-sm">
 											<div className="flex items-center justify-between">
@@ -877,7 +876,7 @@ function Hero({
 											</div>
 										</div>
 										<p className="mt-3 text-xs text-muted-foreground">
-											Podrás elegir entre abonar el 40% o pagar el total con
+											PodrÃ¡s elegir entre abonar el 40% o pagar el total con
 											descuento en el siguiente paso.
 										</p>
 									</div>
@@ -913,156 +912,359 @@ function Hero({
 						)}
 
 						{currentStep === 2 && (
-				<div className="space-y-6">
-					<div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-						<div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
-							<h4 className="text-lg font-semibold text-primary mb-3">
-								Confirma tu traslado
-							</h4>
-							<div className="grid gap-3 text-sm md:grid-cols-2">
-								<div>
-									<p className="text-muted-foreground">Origen</p>
-									<p className="font-medium text-foreground">{origenFinal}</p>
+							<div className="space-y-6">
+								<div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+									<div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+										<h4 className="text-lg font-semibold text-primary mb-3">
+											Confirma tu traslado
+										</h4>
+										<div className="grid gap-3 text-sm md:grid-cols-2">
+											<div>
+												<p className="text-muted-foreground">Origen</p>
+												<p className="font-medium text-foreground">
+													{origenFinal}
+												</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Destino</p>
+												<p className="font-medium text-foreground">
+													{destinoFinal}
+												</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Fecha</p>
+												<p className="font-medium text-foreground">
+													{fechaLegible}
+												</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Hora</p>
+												<p className="font-medium text-foreground">
+													{horaLegible}
+												</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">Pasajeros</p>
+												<p className="font-medium text-foreground">
+													{pasajerosLabel}
+												</p>
+											</div>
+											<div>
+												<p className="text-muted-foreground">
+													VehÃ­culo sugerido
+												</p>
+												<p className="font-medium text-foreground">
+													{vehiculoSugerido}
+												</p>
+											</div>
+										</div>
+										{formData.idaVuelta && (
+											<div className="mt-4 space-y-1 rounded-lg border border-primary/30 bg-primary/10 p-3">
+												<p className="text-sm font-semibold text-primary">
+													Regreso confirmado
+												</p>
+												<p className="text-sm text-muted-foreground">
+													{formData.fechaRegreso || "Por definir"} Â·{" "}
+													{formData.horaRegreso || "Por definir"} hrs
+												</p>
+											</div>
+										)}
+									</div>
+									{requiereCotizacionManual ? (
+										<div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
+											<h4 className="text-lg font-semibold text-primary mb-3">
+												CotizaciÃ³n personalizada necesaria
+											</h4>
+											<p className="text-sm text-muted-foreground leading-relaxed">
+												Este destino no estÃ¡ disponible para pago inmediato.
+												Completa el formulario de contacto para recibir una
+												tarifa en menos de 30 minutos.
+											</p>
+											<Button
+												asChild
+												className="mt-4 w-full sm:w-auto"
+												variant="secondary"
+											>
+												<a href="#contacto">Ir al formulario de contacto</a>
+											</Button>
+										</div>
+									) : (
+										<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-sm">
+											<h4 className="text-lg font-semibold mb-3">
+												Resumen de pago
+											</h4>
+											<div className="space-y-2">
+												<div className="flex items-center justify-between">
+													<span>Descuento base (10%)</span>
+													<span className="font-semibold">
+														-{formatCurrency(pricing.descuentoBase)}
+													</span>
+												</div>
+												{promoDiscountPercentage > 0 && (
+													<div className="flex items-center justify-between">
+														<span>
+															Promo adicional (+{promoDiscountPercentage}%)
+														</span>
+														<span className="font-semibold">
+															-{formatCurrency(pricing.descuentoPromocion)}
+														</span>
+													</div>
+												)}
+												<div className="flex items-center justify-between text-emerald-600">
+													<span>Ahorro total aplicado</span>
+													<span className="font-semibold">
+														-{formatCurrency(pricing.descuentoOnline)}
+														<span className="ml-1 text-xs text-emerald-400">
+															({totalDiscountPercentage}% total)
+														</span>
+													</span>
+												</div>
+												<div className="flex items-center justify-between">
+													<span>Precio con descuento</span>
+													<span className="font-semibold">
+														{formatCurrency(pricing.totalConDescuento)}
+													</span>
+												</div>
+												<div className="flex items-center justify-between">
+													<span>Abono sugerido (40%)</span>
+													<span className="font-semibold">
+														{formatCurrency(pricing.abono)}
+													</span>
+												</div>
+												<div className="flex items-center justify-between">
+													<span>Saldo al llegar</span>
+													<span className="font-semibold">
+														{formatCurrency(pricing.saldoPendiente)}
+													</span>
+												</div>
+											</div>
+											<p className="mt-3 text-xs text-muted-foreground">
+												Elige si deseas abonar ahora o pagar el total con
+												descuento.
+											</p>
+										</div>
+									)}
 								</div>
-								<div>
-									<p className="text-muted-foreground">Destino</p>
-									<p className="font-medium text-foreground">{destinoFinal}</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Fecha</p>
-									<p className="font-medium text-foreground">{fechaLegible}</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Hora</p>
-									<p className="font-medium text-foreground">{horaLegible}</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Pasajeros</p>
-									<p className="font-medium text-foreground">{pasajerosLabel}</p>
-								</div>
-								<div>
-									<p className="text-muted-foreground">Vehículo sugerido</p>
-									<p className="font-medium text-foreground">{vehiculoSugerido}</p>
-								</div>
-							</div>
-							{formData.idaVuelta && (
-								<div className="mt-4 space-y-1 rounded-lg border border-primary/30 bg-primary/10 p-3">
-									<p className="text-sm font-semibold text-primary">Regreso confirmado</p>
-									<p className="text-sm text-muted-foreground">{formData.fechaRegreso || "Por definir"} · {formData.horaRegreso || "Por definir"} hrs</p>
-								</div>
-							)}
-						</div>
-						{requiereCotizacionManual ? (
-							<div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
-								<h4 className="text-lg font-semibold text-primary mb-3">Cotización personalizada necesaria</h4>
-								<p className="text-sm text-muted-foreground leading-relaxed">Este destino no está disponible para pago inmediato. Completa el formulario de contacto para recibir una tarifa en menos de 30 minutos.</p>
-								<Button asChild className="mt-4 w-full sm:w-auto" variant="secondary"><a href="#contacto">Ir al formulario de contacto</a></Button>
-							</div>
-						) : (
-							<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-sm">
-								<h4 className="text-lg font-semibold mb-3">Resumen de pago</h4>
-								<div className="space-y-2">
-									<div className="flex items-center justify-between"><span>Descuento base (10%)</span><span className="font-semibold">-{formatCurrency(pricing.descuentoBase)}</span></div>
-									{promoDiscountPercentage > 0 && (<div className="flex items-center justify-between"><span>Promo adicional (+{promoDiscountPercentage}%)</span><span className="font-semibold">-{formatCurrency(pricing.descuentoPromocion)}</span></div>)}
-									<div className="flex items-center justify-between text-emerald-600"><span>Ahorro total aplicado</span><span className="font-semibold">-{formatCurrency(pricing.descuentoOnline)}<span className="ml-1 text-xs text-emerald-400">({totalDiscountPercentage}% total)</span></span></div>
-									<div className="flex items-center justify-between"><span>Precio con descuento</span><span className="font-semibold">{formatCurrency(pricing.totalConDescuento)}</span></div>
-									<div className="flex items-center justify-between"><span>Abono sugerido (40%)</span><span className="font-semibold">{formatCurrency(pricing.abono)}</span></div>
-									<div className="flex items-center justify-between"><span>Saldo al llegar</span><span className="font-semibold">{formatCurrency(pricing.saldoPendiente)}</span></div>
-								</div>
-								<p className="mt-3 text-xs text-muted-foreground">Elige si deseas abonar ahora o pagar el total con descuento.</p>
+
+								{!requiereCotizacionManual && (
+									<>
+										{activePromotion && (
+											<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
+												<p className="font-semibold">
+													Descuento especial{" "}
+													{activePromotion.descuentoPorcentaje}% Â·{" "}
+													{activePromotion.descripcion ||
+														`Tramo ${activePromotion.destino}`}
+												</p>
+												{promotionDetails && (
+													<p className="mt-1">{promotionDetails}</p>
+												)}
+											</div>
+										)}
+
+										<div className="space-y-4">
+											<p className="text-sm font-medium text-foreground">
+												Selecciona el monto a pagar
+											</p>
+											<div className="grid gap-4 md:grid-cols-2">
+												{chargeOptions.map((option) => {
+													const isSelected = selectedCharge === option.id;
+													const isDisabled = option.disabled;
+													return (
+														<button
+															key={option.id}
+															type="button"
+															onClick={() =>
+																!isDisabled && setSelectedCharge(option.id)
+															}
+															disabled={isDisabled}
+															className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
+																isSelected
+																	? "border-primary ring-2 ring-primary/40"
+																	: "border-slate-300 hover:border-primary/60"
+															} ${
+																isDisabled
+																	? "cursor-not-allowed opacity-60"
+																	: "cursor-pointer"
+															}`}
+														>
+															<div className="flex-1">
+																<p className="font-semibold text-slate-900">
+																	{option.title}
+																</p>
+																<p className="text-sm text-muted-foreground">
+																	{option.subtitle}
+																</p>
+																<p className="mt-2 text-sm font-semibold text-foreground">
+																	{formatCurrency(option.amount)}
+																</p>
+															</div>
+															{isSelected && (
+																<span className="text-xs font-semibold uppercase text-primary">
+																	Seleccionado
+																</span>
+															)}
+														</button>
+													);
+												})}
+											</div>
+										</div>
+
+										<div className="space-y-4">
+											<p className="text-sm font-medium text-foreground">
+												Selecciona tu medio de pago
+											</p>
+											<div className="grid gap-4 md:grid-cols-2">
+												{paymentMethods.map((method) => {
+													const isSelected = selectedMethod === method.id;
+													const methodLoading =
+														loadingGateway ===
+														`${method.gateway}-${selectedChargeData?.type}`;
+													return (
+														<button
+															key={method.id}
+															type="button"
+															onClick={() => setSelectedMethod(method.id)}
+															disabled={isAnotherGatewayLoading}
+															className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
+																isSelected
+																	? "border-primary ring-2 ring-primary/40"
+																	: "border-slate-300 hover:border-primary/60"
+															}`}
+														>
+															<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
+																<img
+																	src={method.image}
+																	alt={method.title}
+																	className="h-full w-full object-contain p-2"
+																	loading="lazy"
+																/>
+															</div>
+															<div className="flex-1">
+																<p className="font-semibold text-slate-900">
+																	{method.title}
+																</p>
+																<p className="text-sm text-muted-foreground">
+																	{method.subtitle}
+																</p>
+																{methodLoading && (
+																	<p className="mt-1 text-xs text-primary">
+																		Generando enlace...
+																	</p>
+																)}
+															</div>
+															{isSelected && !methodLoading && (
+																<span className="text-xs font-semibold uppercase text-primary">
+																	Seleccionado
+																</span>
+															)}
+														</button>
+													);
+												})}
+											</div>
+										</div>
+
+										<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
+											<p className="text-sm font-medium text-foreground">
+												Antes de continuar
+											</p>
+											<div className="flex items-start gap-3">
+												<Checkbox
+													id="check-viaje"
+													checked={reviewChecklist.viaje}
+													onCheckedChange={(value) =>
+														setReviewChecklist((prev) => ({
+															...prev,
+															viaje: Boolean(value),
+														}))
+													}
+												/>
+												<label
+													htmlFor="check-viaje"
+													className="text-sm leading-relaxed text-muted-foreground"
+												>
+													Confirmo que revisÃ© origen, destino, fecha y hora de
+													mi traslado.
+												</label>
+											</div>
+											<div className="flex items-start gap-3">
+												<Checkbox
+													id="check-contacto"
+													checked={reviewChecklist.contacto}
+													onCheckedChange={(value) =>
+														setReviewChecklist((prev) => ({
+															...prev,
+															contacto: Boolean(value),
+														}))
+													}
+												/>
+												<label
+													htmlFor="check-contacto"
+													className="text-sm leading-relaxed text-muted-foreground"
+												>
+													Acepto recibir la confirmaciÃ³n y enlace de pago por
+													email y WhatsApp.
+												</label>
+											</div>
+											{!canPay && (
+												<p className="text-xs text-muted-foreground">
+													Marca ambas casillas para habilitar las opciones de
+													pago.
+												</p>
+											)}
+										</div>
+
+										<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+											<div className="flex flex-wrap gap-3 w-full lg:w-auto">
+												<Button
+													type="button"
+													variant="outline"
+													className="w-full lg:w-auto"
+													onClick={handleStepBack}
+													disabled={isSubmitting || Boolean(loadingGateway)}
+												>
+													Editar informaciÃ³n
+												</Button>
+											</div>
+											<div className="w-full lg:w-auto">
+												<Button
+													type="button"
+													className="w-full bg-accent hover:bg-accent/90"
+													onClick={() => {
+														if (
+															selectedMethodData &&
+															selectedChargeData &&
+															!selectedCombinationLoading
+														) {
+															handlePayment(
+																selectedMethodData.gateway,
+																selectedChargeData.type
+															);
+														}
+													}}
+													disabled={
+														!canTriggerPayment || selectedCombinationLoading
+													}
+												>
+													{selectedCombinationLoading ? (
+														<>
+															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+															Procesando pago...
+														</>
+													) : selectedMethodData && selectedChargeData ? (
+														`Pagar ${formatCurrency(
+															selectedChargeData.amount
+														)} con ${selectedMethodData.title}`
+													) : (
+														"Selecciona un medio de pago"
+													)}
+												</Button>
+											</div>
+										</div>
+									</>
+								)}
 							</div>
 						)}
-					</div>
-
-					{!requiereCotizacionManual && (
-						<>
-							{activePromotion && (
-								<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
-									<p className="font-semibold">Descuento especial {activePromotion.descuentoPorcentaje}% · {activePromotion.descripcion || `Tramo ${activePromotion.destino}`}</p>
-									{promotionDetails && (<p className="mt-1">{promotionDetails}</p>)}
-								</div>
-							)}
-
-							<div className="space-y-4">
-								<p className="text-sm font-medium text-foreground">Selecciona el monto a pagar</p>
-								<div className="grid gap-4 md:grid-cols-2">
-									{chargeOptions.map((option) => {
-										const isSelected = selectedCharge === option.id;
-										const isDisabled = option.disabled;
-										return (
-											<button key={option.id} type="button" onClick={() => !isDisabled && setSelectedCharge(option.id)} disabled={isDisabled} className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-slate-300 hover:border-primary/60"} ${isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
-												<div className="flex-1">
-													<p className="font-semibold text-slate-900">{option.title}</p>
-													<p className="text-sm text-muted-foreground">{option.subtitle}</p>
-													<p className="mt-2 text-sm font-semibold text-foreground">{formatCurrency(option.amount)}</p>
-												</div>
-												{isSelected && (<span className="text-xs font-semibold uppercase text-primary">Seleccionado</span>)}
-											</button>
-										);
-									})}
-								</div>
-							</div>
-
-							<div className="space-y-4">
-								<p className="text-sm font-medium text-foreground">Selecciona tu medio de pago</p>
-								<div className="grid gap-4 md:grid-cols-2">
-									{paymentMethods.map((method) => {
-										const isSelected = selectedMethod === method.id;
-										const methodLoading = loadingGateway === `${method.gateway}-${selectedChargeData?.type}`;
-										return (
-											<button key={method.id} type="button" onClick={() => setSelectedMethod(method.id)} disabled={isAnotherGatewayLoading} className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-slate-300 hover:border-primary/60"}`}>
-												<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
-													<img src={method.image} alt={method.title} className="h-full w-full object-contain p-2" loading="lazy" />
-												</div>
-												<div className="flex-1">
-													<p className="font-semibold text-slate-900">{method.title}</p>
-													<p className="text-sm text-muted-foreground">{method.subtitle}</p>
-													{methodLoading && (<p className="mt-1 text-xs text-primary">Generando enlace...</p>)}
-												</div>
-												{isSelected && !methodLoading && (<span className="text-xs font-semibold uppercase text-primary">Seleccionado</span>)}
-											</button>
-										);
-									})}
-								</div>
-							</div>
-
-							<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
-								<p className="text-sm font-medium text-foreground">Antes de continuar</p>
-								<div className="flex items-start gap-3">
-									<Checkbox id="check-viaje" checked={reviewChecklist.viaje} onCheckedChange={(value) => setReviewChecklist((prev) => ({ ...prev, viaje: Boolean(value) }))} />
-									<label htmlFor="check-viaje" className="text-sm leading-relaxed text-muted-foreground">Confirmo que revisé origen, destino, fecha y hora de mi traslado.</label>
-								</div>
-								<div className="flex items-start gap-3">
-									<Checkbox id="check-contacto" checked={reviewChecklist.contacto} onCheckedChange={(value) => setReviewChecklist((prev) => ({ ...prev, contacto: Boolean(value) }))} />
-									<label htmlFor="check-contacto" className="text-sm leading-relaxed text-muted-foreground">Acepto recibir la confirmación y enlace de pago por email y WhatsApp.</label>
-								</div>
-								{!canPay && (<p className="text-xs text-muted-foreground">Marca ambas casillas para habilitar las opciones de pago.</p>)}
-							</div>
-
-							<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-								<div className="flex flex-wrap gap-3 w-full lg:w-auto">
-									<Button type="button" variant="outline" className="w-full lg:w-auto" onClick={handleStepBack} disabled={isSubmitting || Boolean(loadingGateway)}>Editar información</Button>
-								</div>
-								<div className="w-full lg:w-auto">
-									<Button type="button" className="w-full bg-accent hover:bg-accent/90" onClick={() => {
-										if (selectedMethodData && selectedChargeData && !selectedCombinationLoading) {
-											handlePayment(selectedMethodData.gateway, selectedChargeData.type);
-										}
-									}} disabled={!canTriggerPayment || selectedCombinationLoading}>
-										{selectedCombinationLoading ? (<>
-											<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />Procesando pago...
-										</>) : selectedMethodData && selectedChargeData ? (
-											`Pagar ${formatCurrency(selectedChargeData.amount)} con ${selectedMethodData.title}`
-										) : (
-											"Selecciona un medio de pago"
-										)}
-									</Button>
-								</div>
-							</div>
-						</>
-					)}
-				</div>
-			)}
 						{stepError && (
 							<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
 								{stepError}
@@ -1076,3 +1278,4 @@ function Hero({
 }
 
 export default Hero;
+
