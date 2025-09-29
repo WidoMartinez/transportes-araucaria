@@ -377,7 +377,7 @@ function Hero({
 		>
 			<div className="absolute inset-0 bg-black/30"></div>
 			<div
-				className="absolute inset-0 bg-cover bg-center bg-no-repeat border-4 border-white/20"
+				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
 				style={{ backgroundImage: `url(${heroVan})` }}
 			></div>
 			<div className="relative container mx-auto px-4 text-center pb-16 md:pb-24">
