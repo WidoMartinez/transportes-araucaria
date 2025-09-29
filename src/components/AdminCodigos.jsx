@@ -23,11 +23,14 @@ import {
 	Calendar,
 	Users,
 	Target,
+	RotateCcw,
+	LoaderCircle,
 } from "lucide-react";
 
 function AdminCodigos() {
 	const [codigos, setCodigos] = useState([]);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
 	const [showForm, setShowForm] = useState(false);
 	const [editingCodigo, setEditingCodigo] = useState(null);
 	const [formData, setFormData] = useState({
@@ -46,13 +49,29 @@ function AdminCodigos() {
 
 	// Cargar códigos desde la API
 	const fetchCodigos = async () => {
+		setLoading(true);
 		try {
 			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			console.log("🔍 Cargando códigos desde:", `${apiUrl}/api/codigos`);
+
 			const response = await fetch(`${apiUrl}/api/codigos`);
+			console.log(
+				"📡 Respuesta del servidor:",
+				response.status,
+				response.statusText
+			);
+
+			if (!response.ok) {
+				throw new Error(`Error ${response.status}: ${response.statusText}`);
+			}
+
 			const data = await response.json();
+			console.log("📥 Datos recibidos:", data);
 			setCodigos(data);
 		} catch (error) {
-			console.error("Error cargando códigos:", error);
+			console.error("❌ Error cargando códigos:", error);
+			setError(error.message);
+			setCodigos([]);
 		} finally {
 			setLoading(false);
 		}
@@ -80,9 +99,14 @@ function AdminCodigos() {
 			if (response.ok) {
 				await fetchCodigos();
 				resetForm();
+				setError(null); // Limpiar errores al guardar exitosamente
+			} else {
+				const errorData = await response.json();
+				throw new Error(errorData.error || `Error ${response.status}`);
 			}
 		} catch (error) {
 			console.error("Error guardando código:", error);
+			setError(error.message);
 		}
 	};
 
@@ -160,14 +184,46 @@ function AdminCodigos() {
 	return (
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
-				<h2 className="text-2xl font-bold">Gestión de Códigos de Descuento</h2>
-				<Button
-					onClick={() => setShowForm(true)}
-					className="bg-purple-600 hover:bg-purple-700"
-				>
-					<Plus className="w-4 h-4 mr-2" />
-					Nuevo Código
-				</Button>
+				<div>
+					<h2 className="text-2xl font-bold">
+						Gestión de Códigos de Descuento
+					</h2>
+					<div className="flex items-center gap-2 mt-1">
+						<div
+							className={`w-2 h-2 rounded-full ${
+								error ? "bg-red-500" : "bg-green-500"
+							}`}
+						></div>
+						<span className="text-sm text-gray-600">
+							{error ? "Error de conexión" : "Conectado"}
+						</span>
+						{loading && (
+							<span className="text-sm text-blue-600">Cargando...</span>
+						)}
+					</div>
+				</div>
+				<div className="flex gap-2">
+					<Button
+						onClick={fetchCodigos}
+						variant="outline"
+						disabled={loading}
+						className="flex items-center gap-2"
+					>
+						{loading ? (
+							<LoaderCircle className="w-4 h-4 animate-spin" />
+						) : (
+							<RotateCcw className="w-4 h-4" />
+						)}
+						Recargar
+					</Button>
+					<Button
+						onClick={() => setShowForm(true)}
+						className="bg-purple-600 hover:bg-purple-700"
+					>
+						<Plus className="w-4 h-4 mr-2" />
+						Nuevo Código
+					</Button>
+				</div>
 			</div>
 
 			{/* Formulario */}
@@ -347,8 +403,39 @@ function AdminCodigos() {
 				</Card>
 			)}
 
+			{/* Mensaje de error */}
+			{error && (
+				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
+					<div className="flex items-center gap-2">
+						<XCircle className="w-5 h-5 text-red-600" />
+						<div>
+							<p className="font-semibold text-red-800">
+								Error cargando códigos
+							</p>
+							<p className="text-sm text-red-600">{error}</p>
+							<Button
+								onClick={fetchCodigos}
+								variant="outline"
+								size="sm"
+								className="mt-2"
+							>
+								Reintentar
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{/* Lista de códigos */}
 			<div className="grid gap-4">
+				{codigos.length === 0 && !loading && !error && (
+					<div className="text-center py-8 text-gray-500">
+						<p className="text-lg">No hay códigos de descuento creados</p>
+						<p className="text-sm">
+							Haz clic en "Nuevo Código" para crear el primero
+						</p>
+					</div>
+				)}
 				{codigos.map((codigo) => (
 					<Card key={codigo.id}>
 						<CardContent className="p-4">

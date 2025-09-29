@@ -1217,6 +1217,40 @@ function Hero({
 															</span>
 														</div>
 													)}
+													{roundTripDiscountPercentage > 0 && (
+														<div className="flex items-center justify-between">
+															<span>
+																Ida y vuelta (+{roundTripDiscountPercentage}%)
+															</span>
+															<span className="font-semibold">
+																-{formatCurrency(pricing.descuentoRoundTrip)}
+															</span>
+														</div>
+													)}
+													{personalizedDiscountPercentage > 0 && (
+														<div className="flex items-center justify-between">
+															<span>
+																Descuentos especiales (+
+																{personalizedDiscountPercentage}%)
+															</span>
+															<span className="font-semibold">
+																-
+																{formatCurrency(
+																	pricing.descuentosPersonalizados
+																)}
+															</span>
+														</div>
+													)}
+													{codigoAplicado && (
+														<div className="flex items-center justify-between bg-purple-50 p-2 rounded-lg border border-purple-200">
+															<span className="text-purple-800 font-medium">
+																🎟️ Código {codigoAplicado.codigo}
+															</span>
+															<span className="font-semibold text-purple-900">
+																-{formatCurrency(pricing.descuentoCodigo || 0)}
+															</span>
+														</div>
+													)}
 													<div className="flex items-center justify-between text-slate-700">
 														<span>Ahorro total aplicado</span>
 														<span className="font-semibold">

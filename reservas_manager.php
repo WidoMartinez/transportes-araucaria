@@ -87,6 +87,44 @@ function crearBackup($archivo) {
 }
 
 /**
+ * Función para borrar reservas recientes
+ */
+function borrarReservasRecientes($archivo, $dias = 7) {
+    $reservas = leerReservas($archivo);
+    
+    if (empty($reservas)) {
+        return ['success' => true, 'message' => 'No hay reservas para borrar', 'eliminadas' => 0];
+    }
+    
+    // Crear backup antes de borrar
+    crearBackup($archivo);
+    
+    $fechaLimite = date('Y-m-d H:i:s', strtotime("-{$dias} days"));
+    $reservasOriginales = count($reservas);
+    
+    // Filtrar reservas que NO sean recientes (mantener las antiguas)
+    $reservasFiltradas = array_filter($reservas, function($reserva) use ($fechaLimite) {
+        return isset($reserva['timestamp']) && $reserva['timestamp'] < $fechaLimite;
+    });
+    
+    $eliminadas = $reservasOriginales - count($reservasFiltradas);
+    
+    // Guardar las reservas filtradas
+    $resultado = file_put_contents($archivo, json_encode(array_values($reservasFiltradas), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    
+    if ($resultado !== false) {
+        return [
+            'success' => true, 
+            'message' => "Se eliminaron {$eliminadas} reservas recientes (últimos {$dias} días)",
+            'eliminadas' => $eliminadas,
+            'restantes' => count($reservasFiltradas)
+        ];
+    } else {
+        return ['success' => false, 'message' => 'Error al guardar los cambios'];
+    }
+}
+
+/**
  * Función para generar archivo Excel
  */
 function generarExcel($reservas) {
@@ -231,6 +269,15 @@ if ($method === 'POST') {
         header('Cache-Control: max-age=0');
         
         echo $excel_content;
+        
+    } elseif ($action === 'delete_recent') {
+        // Borrar reservas recientes
+        $dias = $_GET['dias'] ?? 7;
+        $resultado = borrarReservasRecientes($reservasFile, $dias);
+        
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($resultado);
+        exit;
         
     } elseif ($action === 'list') {
         // Listar reservas (JSON)
@@ -434,6 +481,14 @@ function mostrarInterfazAdmin() {
             background: #218838;
         }
         
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
         .recent-reservas {
             background: white;
             padding: 30px;
@@ -545,8 +600,24 @@ function mostrarInterfazAdmin() {
             <div class="action-group">
                 <h3>Acciones Rápidas</h3>
                 <div class="form-row">
-                    <a href="?action=download" class="btn">Descargar Todas las Reservas</a>
+                    <a href="?action=download" class="btn">📥 Descargar Todas las Reservas</a>
                     <button class="btn" onclick="actualizarEstadisticas()">🔄 Actualizar Estadísticas</button>
+                </div>
+                <div class="form-row">
+                    <button class="btn btn-danger" onclick="borrarReservasRecientes()">🗑️ Borrar Reservas Recientes</button>
+                    <select id="diasBorrar" class="form-control" style="width: auto; display: inline-block;">
+                        <option value="1">Último día</option>
+                        <option value="3">Últimos 3 días</option>
+                        <option value="7" selected>Últimos 7 días</option>
+                        <option value="15">Últimos 15 días</option>
+                        <option value="30">Últimos 30 días</option>
+                    </select>
+                </div>
+                <div class="form-row" style="margin-top: 10px;">
+                    <small style="color: #666; font-style: italic;">
+                        ⚠️ Esta acción eliminará permanentemente las reservas seleccionadas. 
+                        Se creará un backup automático antes de proceder.
+                    </small>
                 </div>
             </div>
         </div>
@@ -649,6 +720,33 @@ function mostrarInterfazAdmin() {
         function actualizarEstadisticas() {
             cargarEstadisticas();
             cargarReservasRecientes();
+        }
+        
+        // Borrar reservas recientes
+        async function borrarReservasRecientes() {
+            const dias = document.getElementById('diasBorrar').value;
+            const confirmacion = confirm(`¿Estás seguro de borrar las reservas de los últimos ${dias} días?\n\nEsta acción creará un backup automático pero no se puede deshacer.`);
+            
+            if (!confirmacion) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`?action=delete_recent&dias=${dias}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ ${data.message}\n\nReservas eliminadas: ${data.eliminadas}\nReservas restantes: ${data.restantes}`);
+                    // Recargar las estadísticas y reservas
+                    cargarEstadisticas();
+                    cargarReservasRecientes();
+                } else {
+                    alert(`❌ Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error al borrar reservas:', error);
+                alert('❌ Error al conectar con el servidor');
+            }
         }
         
         // Cargar datos al inicio
