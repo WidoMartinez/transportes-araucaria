@@ -32,7 +32,6 @@ function Hero({
 	canPay,
 	handlePayment,
 	loadingGateway,
-	whatsappUrl,
 	setFormData,
 	onSubmitWizard,
 	validarTelefono,
@@ -101,6 +100,12 @@ function Hero({
 	const pasajerosLabel = `${formData.pasajeros || "1"} pasajero(s)`;
 	const vehiculoSugerido = cotizacion.vehiculo || "A confirmar";
 
+	const tieneCotizacionAutomatica = typeof cotizacion.precio === "number";
+	const requiereCotizacionManual =
+		formData.destino === "Otro" ||
+			(formData.destino && !tieneCotizacionAutomatica);
+	const mostrarPrecio = tieneCotizacionAutomatica;
+
 	const promotionDetails = useMemo(() => {
 		if (!activePromotion) return null;
 		const parts = [];
@@ -118,12 +123,6 @@ function Hero({
 		}
 		return parts.join(" · ");
 	}, [activePromotion]);
-
-	const handleOpenWhatsApp = () => {
-		if (typeof window !== "undefined") {
-			window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-		}
-	};
 
 	useEffect(() => {
 		if (showSummary) {
@@ -244,6 +243,11 @@ function Hero({
 		setPhoneError("");
 		setStepError("");
 
+		if (requiereCotizacionManual) {
+			setCurrentStep(2);
+			return;
+		}
+
 		const result = await onSubmitWizard();
 
 		if (!result.success) {
@@ -274,7 +278,6 @@ function Hero({
 		(roundTripDiscountRate || 0) * 100
 	);
 	const totalDiscountPercentage = Math.round(descuentoRate * 100);
-	const mostrarPrecio = Boolean(cotizacion.precio);
 
 	const chargeOptions = useMemo(
 		() => [
@@ -360,6 +363,7 @@ function Hero({
 		selectedChargeData &&
 			!selectedChargeData.disabled &&
 			selectedMethodData &&
+			!requiereCotizacionManual &&
 			canPay &&
 			!isSubmitting &&
 			!isAnotherGatewayLoading &&
@@ -378,14 +382,13 @@ function Hero({
 			></div>
 			<div className="relative container mx-auto px-4 text-center">
 				<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-					Tu Traslado Privado y Exclusivo
+					Traslados Privados Aeropuerto La Araucanía
 					<br />
-					<span className="text-accent">en un Auto Confortable</span>
+					<span className="text-accent">Temuco, Pucón y Villarrica</span>
 				</h2>
 				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Diseñamos una reserva guiada paso a paso para que confirmes y pagues
-					tu viaje de forma autónoma, asegurando el {baseDiscountPercentage}% de
-					descuento online garantizado
+					Transportes Araucaria ofrece traslados privados puerta a puerta entre el Aeropuerto La Araucanía, Temuco, Pucón, Villarrica y hoteles de la región.
+					Reserva online en minutos tu transfer desde el Aeropuerto La Araucanía, confirma tu chofer y asegura el {baseDiscountPercentage}% de descuento web garantizado
 					{promoDiscountPercentage > 0
 						? ` + ${promoDiscountPercentage}% extra por promociones activas`
 						: ""}
@@ -691,7 +694,7 @@ function Hero({
 															({totalDiscountPercentage}% aplicado)
 														</span>
 													</p>
-													{activePromotion && (
+																					{activePromotion && (
 														<p className="text-xs font-semibold text-emerald-600">
 															Promo activa:{" "}
 															{activePromotion.descripcion ||
@@ -910,343 +913,156 @@ function Hero({
 						)}
 
 						{currentStep === 2 && (
-							<div className="space-y-6">
-								<div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-									<div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
-										<h4 className="text-lg font-semibold text-primary mb-3">
-											Confirma tu traslado
-										</h4>
-										<div className="grid gap-3 text-sm md:grid-cols-2">
-											<div>
-												<p className="text-muted-foreground">Origen</p>
-												<p className="font-medium text-foreground">
-													{origenFinal}
-												</p>
-											</div>
-											<div>
-												<p className="text-muted-foreground">Destino</p>
-												<p className="font-medium text-foreground">
-													{destinoFinal}
-												</p>
-											</div>
-											<div>
-												<p className="text-muted-foreground">Fecha</p>
-												<p className="font-medium text-foreground">
-													{fechaLegible}
-												</p>
-											</div>
-											<div>
-												<p className="text-muted-foreground">Hora</p>
-												<p className="font-medium text-foreground">
-													{horaLegible}
-												</p>
-											</div>
-											<div>
-												<p className="text-muted-foreground">Pasajeros</p>
-												<p className="font-medium text-foreground">
-													{pasajerosLabel}
-												</p>
-											</div>
-											<div>
-												<p className="text-muted-foreground">
-													Vehículo sugerido
-												</p>
-												<p className="font-medium text-foreground">
-													{vehiculoSugerido}
-												</p>
-											</div>
-										</div>
-										{formData.idaVuelta && (
-											<div className="mt-4 space-y-1 rounded-lg border border-primary/30 bg-primary/10 p-3">
-												<p className="text-sm font-semibold text-primary">
-													Regreso confirmado
-												</p>
-												<p className="text-sm text-muted-foreground">
-													{formData.fechaRegreso || "Por definir"} ·{" "}
-													{formData.horaRegreso || "Por definir"} hrs
-												</p>
-											</div>
-										)}
-									</div>
-									<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-sm">
-										<h4 className="text-lg font-semibold mb-3">
-											Resumen de pago
-										</h4>
-										<div className="space-y-2">
-											<div className="flex items-center justify-between">
-												<span>Descuento base (10%)</span>
-												<span className="font-semibold">
-													-{formatCurrency(pricing.descuentoBase)}
-												</span>
-											</div>
-											{promoDiscountPercentage > 0 && (
-												<div className="flex items-center justify-between">
-													<span>
-														Promo adicional (+{promoDiscountPercentage}%)
-													</span>
-													<span className="font-semibold">
-														-{formatCurrency(pricing.descuentoPromocion)}
-													</span>
-												</div>
-											)}
-											<div className="flex items-center justify-between text-emerald-600">
-												<span>Ahorro total aplicado</span>
-												<span className="font-semibold">
-													-{formatCurrency(pricing.descuentoOnline)}
-													<span className="ml-1 text-xs text-emerald-400">
-														({totalDiscountPercentage}% total)
-													</span>
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span>Precio con descuento</span>
-												<span className="font-semibold">
-													{formatCurrency(pricing.totalConDescuento)}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span>Abono sugerido (40%)</span>
-												<span className="font-semibold">
-													{formatCurrency(pricing.abono)}
-												</span>
-											</div>
-											<div className="flex items-center justify-between">
-												<span>Saldo al llegar</span>
-												<span className="font-semibold">
-													{formatCurrency(pricing.saldoPendiente)}
-												</span>
-											</div>
-										</div>
-										<p className="mt-3 text-xs text-muted-foreground">
-											Elige si deseas abonar ahora o pagar el total con
-											descuento.
-										</p>
-									</div>
+				<div className="space-y-6">
+					<div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+						<div className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+							<h4 className="text-lg font-semibold text-primary mb-3">
+								Confirma tu traslado
+							</h4>
+							<div className="grid gap-3 text-sm md:grid-cols-2">
+								<div>
+									<p className="text-muted-foreground">Origen</p>
+									<p className="font-medium text-foreground">{origenFinal}</p>
 								</div>
-
-								{activePromotion && (
-									<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
-										<p className="font-semibold">
-											Descuento especial {activePromotion.descuentoPorcentaje}%
-											—{" "}
-											{activePromotion.descripcion ||
-												`Tramo ${activePromotion.destino}`}
-										</p>
-										{promotionDetails && (
-											<p className="mt-1">{promotionDetails}</p>
-										)}
-									</div>
-								)}
-
-								<div className="space-y-4">
-									<p className="text-sm font-medium text-foreground">
-										Selecciona el monto a pagar
-									</p>
-									<div className="grid gap-4 md:grid-cols-2">
-										{chargeOptions.map((option) => {
-											const isSelected = selectedCharge === option.id;
-											const isDisabled = option.disabled;
-											return (
-												<button
-													key={option.id}
-													type="button"
-													onClick={() =>
-														!isDisabled && setSelectedCharge(option.id)
-													}
-													disabled={isDisabled}
-													className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
-														isSelected
-															? "border-primary ring-2 ring-primary/40"
-															: "border-slate-300 hover:border-primary/60"
-													} ${
-														isDisabled
-															? "cursor-not-allowed opacity-60"
-															: "cursor-pointer"
-													}`}
-												>
-													<div className="flex-1">
-														<p className="font-semibold text-slate-900">
-															{option.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{option.subtitle}
-														</p>
-														<p className="mt-2 text-sm font-semibold text-foreground">
-															{formatCurrency(option.amount)}
-														</p>
-													</div>
-													{isSelected && (
-														<span className="text-xs font-semibold uppercase text-primary">
-															Seleccionado
-														</span>
-													)}
-												</button>
-											);
-										})}
-									</div>
+								<div>
+									<p className="text-muted-foreground">Destino</p>
+									<p className="font-medium text-foreground">{destinoFinal}</p>
 								</div>
-
-								<div className="space-y-4">
-									<p className="text-sm font-medium text-foreground">
-										Selecciona tu medio de pago
-									</p>
-									<div className="grid gap-4 md:grid-cols-2">
-										{paymentMethods.map((method) => {
-											const isSelected = selectedMethod === method.id;
-											const methodLoading =
-												loadingGateway ===
-												`${method.gateway}-${selectedChargeData?.type}`;
-											return (
-												<button
-													key={method.id}
-													type="button"
-													onClick={() => setSelectedMethod(method.id)}
-													disabled={isAnotherGatewayLoading}
-													className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
-														isSelected
-															? "border-primary ring-2 ring-primary/40"
-															: "border-slate-300 hover:border-primary/60"
-													}`}
-												>
-													<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
-														<img
-															src={method.image}
-															alt={method.title}
-															className="h-full w-full object-contain p-2"
-															loading="lazy"
-														/>
-													</div>
-													<div className="flex-1">
-														<p className="font-semibold text-slate-900">
-															{method.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{method.subtitle}
-														</p>
-														{methodLoading && (
-															<p className="mt-1 text-xs text-primary">
-																Generando enlace...
-															</p>
-														)}
-													</div>
-													{isSelected && !methodLoading && (
-														<span className="text-xs font-semibold uppercase text-primary">
-															Seleccionado
-														</span>
-													)}
-												</button>
-											);
-										})}
-									</div>
+								<div>
+									<p className="text-muted-foreground">Fecha</p>
+									<p className="font-medium text-foreground">{fechaLegible}</p>
 								</div>
-
-								<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
-									<p className="text-sm font-medium text-foreground">
-										Antes de continuar
-									</p>
-									<div className="flex items-start gap-3">
-										<Checkbox
-											id="check-viaje"
-											checked={reviewChecklist.viaje}
-											onCheckedChange={(value) =>
-												setReviewChecklist((prev) => ({
-													...prev,
-													viaje: Boolean(value),
-												}))
-											}
-										/>
-										<label
-											htmlFor="check-viaje"
-											className="text-sm leading-relaxed text-muted-foreground"
-										>
-											Confirmo que revisé origen, destino, fecha y hora de mi
-											traslado.
-										</label>
-									</div>
-									<div className="flex items-start gap-3">
-										<Checkbox
-											id="check-contacto"
-											checked={reviewChecklist.contacto}
-											onCheckedChange={(value) =>
-												setReviewChecklist((prev) => ({
-													...prev,
-													contacto: Boolean(value),
-												}))
-											}
-										/>
-										<label
-											htmlFor="check-contacto"
-											className="text-sm leading-relaxed text-muted-foreground"
-										>
-											Acepto recibir la confirmación y enlace de pago por email
-											y WhatsApp.
-										</label>
-									</div>
-									{!canPay && (
-										<p className="text-xs text-muted-foreground">
-											Marca ambas casillas para habilitar las opciones de pago.
-										</p>
-									)}
+								<div>
+									<p className="text-muted-foreground">Hora</p>
+									<p className="font-medium text-foreground">{horaLegible}</p>
 								</div>
-
-								<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-									<div className="flex flex-wrap gap-3 w-full lg:w-auto">
-										<Button
-											type="button"
-											variant="outline"
-											className="w-full lg:w-auto"
-											onClick={handleStepBack}
-											disabled={isSubmitting || Boolean(loadingGateway)}
-										>
-											Editar información
-										</Button>
-										<Button
-											type="button"
-											variant="secondary"
-											className="w-full lg:w-auto"
-											onClick={handleOpenWhatsApp}
-										>
-											Confirmar por WhatsApp
-										</Button>
-									</div>
-									<div className="w-full lg:w-auto">
-										<Button
-											type="button"
-											className="w-full bg-accent hover:bg-accent/90"
-											onClick={() => {
-												if (
-													selectedMethodData &&
-													selectedChargeData &&
-													!selectedCombinationLoading
-												) {
-													handlePayment(
-														selectedMethodData.gateway,
-														selectedChargeData.type
-													);
-												}
-											}}
-											disabled={
-												!canTriggerPayment || selectedCombinationLoading
-											}
-										>
-											{selectedCombinationLoading ? (
-												<>
-													<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-													Procesando pago...
-												</>
-											) : selectedMethodData && selectedChargeData ? (
-												`Pagar ${formatCurrency(
-													selectedChargeData.amount
-												)} con ${selectedMethodData.title}`
-											) : (
-												"Selecciona un medio de pago"
-											)}
-										</Button>
-									</div>
+								<div>
+									<p className="text-muted-foreground">Pasajeros</p>
+									<p className="font-medium text-foreground">{pasajerosLabel}</p>
+								</div>
+								<div>
+									<p className="text-muted-foreground">Vehículo sugerido</p>
+									<p className="font-medium text-foreground">{vehiculoSugerido}</p>
 								</div>
 							</div>
+							{formData.idaVuelta && (
+								<div className="mt-4 space-y-1 rounded-lg border border-primary/30 bg-primary/10 p-3">
+									<p className="text-sm font-semibold text-primary">Regreso confirmado</p>
+									<p className="text-sm text-muted-foreground">{formData.fechaRegreso || "Por definir"} · {formData.horaRegreso || "Por definir"} hrs</p>
+								</div>
+							)}
+						</div>
+						{requiereCotizacionManual ? (
+							<div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
+								<h4 className="text-lg font-semibold text-primary mb-3">Cotización personalizada necesaria</h4>
+								<p className="text-sm text-muted-foreground leading-relaxed">Este destino no está disponible para pago inmediato. Completa el formulario de contacto para recibir una tarifa en menos de 30 minutos.</p>
+								<Button asChild className="mt-4 w-full sm:w-auto" variant="secondary"><a href="#contacto">Ir al formulario de contacto</a></Button>
+							</div>
+						) : (
+							<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-sm">
+								<h4 className="text-lg font-semibold mb-3">Resumen de pago</h4>
+								<div className="space-y-2">
+									<div className="flex items-center justify-between"><span>Descuento base (10%)</span><span className="font-semibold">-{formatCurrency(pricing.descuentoBase)}</span></div>
+									{promoDiscountPercentage > 0 && (<div className="flex items-center justify-between"><span>Promo adicional (+{promoDiscountPercentage}%)</span><span className="font-semibold">-{formatCurrency(pricing.descuentoPromocion)}</span></div>)}
+									<div className="flex items-center justify-between text-emerald-600"><span>Ahorro total aplicado</span><span className="font-semibold">-{formatCurrency(pricing.descuentoOnline)}<span className="ml-1 text-xs text-emerald-400">({totalDiscountPercentage}% total)</span></span></div>
+									<div className="flex items-center justify-between"><span>Precio con descuento</span><span className="font-semibold">{formatCurrency(pricing.totalConDescuento)}</span></div>
+									<div className="flex items-center justify-between"><span>Abono sugerido (40%)</span><span className="font-semibold">{formatCurrency(pricing.abono)}</span></div>
+									<div className="flex items-center justify-between"><span>Saldo al llegar</span><span className="font-semibold">{formatCurrency(pricing.saldoPendiente)}</span></div>
+								</div>
+								<p className="mt-3 text-xs text-muted-foreground">Elige si deseas abonar ahora o pagar el total con descuento.</p>
+							</div>
 						)}
+					</div>
 
+					{!requiereCotizacionManual && (
+						<>
+							{activePromotion && (
+								<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
+									<p className="font-semibold">Descuento especial {activePromotion.descuentoPorcentaje}% · {activePromotion.descripcion || `Tramo ${activePromotion.destino}`}</p>
+									{promotionDetails && (<p className="mt-1">{promotionDetails}</p>)}
+								</div>
+							)}
+
+							<div className="space-y-4">
+								<p className="text-sm font-medium text-foreground">Selecciona el monto a pagar</p>
+								<div className="grid gap-4 md:grid-cols-2">
+									{chargeOptions.map((option) => {
+										const isSelected = selectedCharge === option.id;
+										const isDisabled = option.disabled;
+										return (
+											<button key={option.id} type="button" onClick={() => !isDisabled && setSelectedCharge(option.id)} disabled={isDisabled} className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-slate-300 hover:border-primary/60"} ${isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+												<div className="flex-1">
+													<p className="font-semibold text-slate-900">{option.title}</p>
+													<p className="text-sm text-muted-foreground">{option.subtitle}</p>
+													<p className="mt-2 text-sm font-semibold text-foreground">{formatCurrency(option.amount)}</p>
+												</div>
+												{isSelected && (<span className="text-xs font-semibold uppercase text-primary">Seleccionado</span>)}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+
+							<div className="space-y-4">
+								<p className="text-sm font-medium text-foreground">Selecciona tu medio de pago</p>
+								<div className="grid gap-4 md:grid-cols-2">
+									{paymentMethods.map((method) => {
+										const isSelected = selectedMethod === method.id;
+										const methodLoading = loadingGateway === `${method.gateway}-${selectedChargeData?.type}`;
+										return (
+											<button key={method.id} type="button" onClick={() => setSelectedMethod(method.id)} disabled={isAnotherGatewayLoading} className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${isSelected ? "border-primary ring-2 ring-primary/40" : "border-slate-300 hover:border-primary/60"}`}>
+												<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
+													<img src={method.image} alt={method.title} className="h-full w-full object-contain p-2" loading="lazy" />
+												</div>
+												<div className="flex-1">
+													<p className="font-semibold text-slate-900">{method.title}</p>
+													<p className="text-sm text-muted-foreground">{method.subtitle}</p>
+													{methodLoading && (<p className="mt-1 text-xs text-primary">Generando enlace...</p>)}
+												</div>
+												{isSelected && !methodLoading && (<span className="text-xs font-semibold uppercase text-primary">Seleccionado</span>)}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+
+							<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
+								<p className="text-sm font-medium text-foreground">Antes de continuar</p>
+								<div className="flex items-start gap-3">
+									<Checkbox id="check-viaje" checked={reviewChecklist.viaje} onCheckedChange={(value) => setReviewChecklist((prev) => ({ ...prev, viaje: Boolean(value) }))} />
+									<label htmlFor="check-viaje" className="text-sm leading-relaxed text-muted-foreground">Confirmo que revisé origen, destino, fecha y hora de mi traslado.</label>
+								</div>
+								<div className="flex items-start gap-3">
+									<Checkbox id="check-contacto" checked={reviewChecklist.contacto} onCheckedChange={(value) => setReviewChecklist((prev) => ({ ...prev, contacto: Boolean(value) }))} />
+									<label htmlFor="check-contacto" className="text-sm leading-relaxed text-muted-foreground">Acepto recibir la confirmación y enlace de pago por email y WhatsApp.</label>
+								</div>
+								{!canPay && (<p className="text-xs text-muted-foreground">Marca ambas casillas para habilitar las opciones de pago.</p>)}
+							</div>
+
+							<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+								<div className="flex flex-wrap gap-3 w-full lg:w-auto">
+									<Button type="button" variant="outline" className="w-full lg:w-auto" onClick={handleStepBack} disabled={isSubmitting || Boolean(loadingGateway)}>Editar información</Button>
+								</div>
+								<div className="w-full lg:w-auto">
+									<Button type="button" className="w-full bg-accent hover:bg-accent/90" onClick={() => {
+										if (selectedMethodData && selectedChargeData && !selectedCombinationLoading) {
+											handlePayment(selectedMethodData.gateway, selectedChargeData.type);
+										}
+									}} disabled={!canTriggerPayment || selectedCombinationLoading}>
+										{selectedCombinationLoading ? (<>
+											<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />Procesando pago...
+										</>) : selectedMethodData && selectedChargeData ? (
+											`Pagar ${formatCurrency(selectedChargeData.amount)} con ${selectedMethodData.title}`
+										) : (
+											"Selecciona un medio de pago"
+										)}
+									</Button>
+								</div>
+							</div>
+						</>
+					)}
+				</div>
+			)}
 						{stepError && (
 							<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
 								{stepError}

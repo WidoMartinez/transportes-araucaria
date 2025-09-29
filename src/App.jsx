@@ -298,7 +298,10 @@ function App() {
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
 			}
-			return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
+			return {
+				precio: precioFinal !== null ? Math.round(precioFinal) : null,
+				vehiculo: vehiculoAsignado,
+			};
 		},
 		[destinosData]
 	);
@@ -562,28 +565,6 @@ function App() {
 
 	const handleWizardSubmit = () => enviarReserva("Reserva Web Autogestionada");
 
-	const whatsappUrl = useMemo(() => {
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-		const viajeInfo = `${destinoFinal} el ${formData.fecha} a las ${formData.hora}`;
-		const regresoInfo = formData.idaVuelta
-			? ` Regreso el ${formData.fechaRegreso || "por definir"} a las ${
-					formData.horaRegreso || "por definir"
-			  }`
-			: "";
-		const extras = [];
-		if (formData.numeroVuelo) extras.push(`Vuelo: ${formData.numeroVuelo}`);
-		if (formData.hotel) extras.push(`Alojamiento: ${formData.hotel}`);
-		if (formData.equipajeEspecial)
-			extras.push(`Equipaje: ${formData.equipajeEspecial}`);
-		if (formData.sillaInfantil !== "no")
-			extras.push(`Silla infantil: ${formData.sillaInfantil}`);
-		const detalles = extras.length ? ` Detalles: ${extras.join(" | ")}.` : "";
-		const message = `Hola, acabo de reservar en el sitio web. Mi nombre es ${
-			formData.nombre || "Cliente"
-		} y quisiera confirmar mi traslado a ${viajeInfo}.${regresoInfo}${detalles}`;
-		return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
-	}, [formData]);
 
 	const minDateTime = useMemo(() => {
 		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
@@ -648,7 +629,6 @@ function App() {
 					canPay={canPay}
 					handlePayment={handlePayment}
 					loadingGateway={loadingGateway}
-					whatsappUrl={whatsappUrl}
 					onSubmitWizard={handleWizardSubmit}
 					validarTelefono={validarTelefono}
 					validarHorarioReserva={validarHorarioReserva}
