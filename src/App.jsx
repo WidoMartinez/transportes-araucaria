@@ -349,7 +349,23 @@ function App() {
 		const esViajeIda = aeropuertoEnDestino;
 		const esViajeVuelta = aeropuertoEnOrigen;
 
+		console.log("🔍 DEBUG FILTRO PROMOCIONES:", {
+			tramo,
+			isRoundTrip,
+			esViajeIda,
+			esViajeVuelta,
+			promotions: promotions.length,
+		});
+
 		return promotions.filter((promo) => {
+			console.log("🔍 Evaluando promoción:", {
+				promo: promo.nombre,
+				destino: promo.destino,
+				tramo,
+				coincide: promo.destino === tramo,
+				descuento: promo.descuentoPorcentaje,
+			});
+
 			if (!promo.destino || promo.destino !== tramo) return false;
 			if (promo.descuentoPorcentaje <= 0) return false;
 
@@ -357,8 +373,15 @@ function App() {
 			const tipoViaje = promo.aplicaTipoViaje;
 			if (tipoViaje) {
 				if (isRoundTrip) {
-					// Para viajes de ida y vuelta, debe estar habilitado "ambos"
-					if (!tipoViaje.ambos) return false;
+					// Para viajes de ida y vuelta, puede aplicar si:
+					// 1. Está habilitado "ambos" (aplica a ambos tramos)
+					// 2. Está habilitado "ida" y es viaje de ida (primer tramo)
+					// 3. Está habilitado "vuelta" y es viaje de vuelta (segundo tramo)
+					const aplicaAmbos = tipoViaje.ambos;
+					const aplicaIda = tipoViaje.ida && esViajeIda;
+					const aplicaVuelta = tipoViaje.vuelta && esViajeVuelta;
+
+					if (!aplicaAmbos && !aplicaIda && !aplicaVuelta) return false;
 				} else {
 					// Para viajes de una sola dirección
 					if (esViajeIda) {
@@ -412,6 +435,17 @@ function App() {
 	const promotionDiscountRate = activePromotion
 		? activePromotion.descuentoPorcentaje / 100
 		: 0;
+
+	// Debug específico para promociones
+	console.log("🎯 DEBUG PROMOCIONES:", {
+		applicablePromotions,
+		activePromotion,
+		promotionDiscountRate,
+		destinoSeleccionado: destinoSeleccionado?.nombre,
+		origen: formData.origen,
+		destino: formData.destino,
+		idaVuelta: formData.idaVuelta,
+	});
 	// Calcular descuentos dinámicos desde descuentosGlobales
 	const onlineDiscountRate =
 		descuentosGlobales?.descuentoOnline?.activo &&
@@ -630,10 +664,13 @@ function App() {
 			: descuentosPersonalizadosPorTramo;
 
 		// 2. PROMOCIONES POR TRAMO (se aplican según configuración específica)
-		// Estas se calculan según las promociones activas para el tramo específico
-		const descuentoPromocion = Math.round(
-			precioBase * (promotionDiscountRate || 0)
+		// Estas se calculan por tramo individual, no sobre el total
+		const descuentoPromocionPorTramo = Math.round(
+			precioIda * (promotionDiscountRate || 0)
 		);
+		const descuentoPromocion = formData.idaVuelta
+			? descuentoPromocionPorTramo * 2
+			: descuentoPromocionPorTramo;
 
 		// 3. DESCUENTO IDA Y VUELTA (solo cuando se selecciona ida y vuelta)
 		const descuentoRoundTrip = formData.idaVuelta
@@ -669,6 +706,7 @@ function App() {
 			personalizedDiscountRate,
 			descuentoOnlinePorTramo,
 			descuentoOnline,
+			descuentoPromocionPorTramo,
 			descuentoPromocion,
 			descuentoRoundTrip,
 			descuentosPersonalizados,
