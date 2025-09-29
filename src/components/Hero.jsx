@@ -7,11 +7,35 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Checkbox } from "./ui/checkbox";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "./ui/select";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
+
+// Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
+const generateTimeOptions = () => {
+	const options = [];
+	for (let hour = 6; hour <= 20; hour++) {
+		for (let minute = 0; minute < 60; minute += 15) {
+			const timeString = `${hour.toString().padStart(2, "0")}:${minute
+				.toString()
+				.padStart(2, "0")}`;
+			const displayTime = `${hour.toString().padStart(2, "0")}:${minute
+				.toString()
+				.padStart(2, "0")}`;
+			options.push({ value: timeString, label: displayTime });
+		}
+	}
+	return options;
+};
 
 function Hero({
 	formData,
@@ -54,6 +78,17 @@ function Hero({
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [discountUpdated, setDiscountUpdated] = useState(false);
+
+	// Generar opciones de tiempo
+	const timeOptions = useMemo(() => generateTimeOptions(), []);
+
+	// Función para manejar el cambio de hora
+	const handleTimeChange = (field, value) => {
+		setFormData((prev) => ({
+			...prev,
+			[field]: value,
+		}));
+	};
 
 	// Mostrar indicador cuando se actualizan los descuentos
 	useEffect(() => {
@@ -642,14 +677,26 @@ function Hero({
 											</div>
 											<div className="space-y-2">
 												<Label htmlFor="hora-hero">Hora</Label>
-												<Input
-													id="hora-hero"
-													type="time"
-													name="hora"
+												<Select
 													value={formData.hora}
-													onChange={handleInputChange}
-													required
-												/>
+													onValueChange={(value) =>
+														handleTimeChange("hora", value)
+													}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Selecciona la hora" />
+													</SelectTrigger>
+													<SelectContent>
+														{timeOptions.map((option) => (
+															<SelectItem
+																key={option.value}
+																value={option.value}
+															>
+																{option.label}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
 											<div className="space-y-2">
 												<Label htmlFor="pasajeros-hero">Pasajeros</Label>
@@ -719,14 +766,26 @@ function Hero({
 													</div>
 													<div className="space-y-2">
 														<Label htmlFor="hora-regreso">Hora regreso</Label>
-														<Input
-															id="hora-regreso"
-															type="time"
-															name="horaRegreso"
+														<Select
 															value={formData.horaRegreso}
-															onChange={handleInputChange}
-															required={formData.idaVuelta}
-														/>
+															onValueChange={(value) =>
+																handleTimeChange("horaRegreso", value)
+															}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="Selecciona la hora de regreso" />
+															</SelectTrigger>
+															<SelectContent>
+																{timeOptions.map((option) => (
+																	<SelectItem
+																		key={option.value}
+																		value={option.value}
+																	>
+																		{option.label}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
 													</div>
 												</div>
 											)}
