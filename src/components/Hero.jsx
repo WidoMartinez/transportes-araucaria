@@ -53,7 +53,7 @@ function Hero({
 			},
 			{
 				title: "2. Tus datos",
-				description: "Completa la informaciÃ³n de contacto y extras.",
+				description: "Completa la información de contacto y extras.",
 			},
 			{
 				title: "3. Revisar y pagar",
@@ -112,7 +112,7 @@ function Hero({
 		if (!activePromotion) return null;
 		const parts = [];
 		if (activePromotion.aplicaPorDias && activePromotion.dias.length) {
-			parts.push(`DÃ­as: ${activePromotion.dias.join(", ")}`);
+			parts.push(`Días: ${activePromotion.dias.join(", ")}`);
 		}
 		if (
 			activePromotion.aplicaPorHorario &&
@@ -123,7 +123,7 @@ function Hero({
 				`Horario: ${activePromotion.horaInicio} - ${activePromotion.horaFin} hrs`
 			);
 		}
-		return parts.join(" Â· ");
+		return parts.join(" · ");
 	}, [activePromotion]);
 
 	useEffect(() => {
@@ -195,7 +195,7 @@ function Hero({
 				`${formData.fechaRegreso}T${formData.horaRegreso}`
 			);
 			if (Number.isNaN(regreso.getTime())) {
-				setStepError("La fecha de regreso no es vÃ¡lida.");
+				setStepError("La fecha de regreso no es válida.");
 				return;
 			}
 			if (regreso <= salida) {
@@ -218,27 +218,27 @@ function Hero({
 
 		if (!formData.email.trim()) {
 			setStepError(
-				"Necesitamos un correo electrÃ³nico para enviar la confirmaciÃ³n."
+				"Necesitamos un correo electrónico para enviar la confirmación."
 			);
 			return;
 		}
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) {
-			setStepError("El correo electrÃ³nico ingresado no es vÃ¡lido.");
+			setStepError("El correo electrónico ingresado no es válido.");
 			return;
 		}
 
 		if (!formData.telefono.trim()) {
-			setStepError("Indica un telÃ©fono mÃ³vil de contacto.");
+			setStepError("Indica un teléfono móvil de contacto.");
 			return;
 		}
 
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError(
-				"Por favor, introduce un nÃºmero de mÃ³vil chileno vÃ¡lido (ej: +56 9 1234 5678)."
+				"Por favor, introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
 			);
-			setStepError("Revisa el nÃºmero de telÃ©fono antes de continuar.");
+			setStepError("Revisa el número de teléfono antes de continuar.");
 			return;
 		}
 
@@ -259,7 +259,7 @@ function Hero({
 			} else if (result.error === "server" && result.message) {
 				setStepError(`No pudimos enviar tu reserva: ${result.message}`);
 			} else if (result.error === "telefono") {
-				setStepError("Revisa el nÃºmero de telÃ©fono ingresado.");
+				setStepError("Revisa el número de teléfono ingresado.");
 			}
 			return;
 		}
@@ -377,17 +377,20 @@ function Hero({
 		>
 			<div className="absolute inset-0 bg-black/30"></div>
 			<div
-				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+				className="absolute inset-0 bg-cover bg-center bg-no-repeat border-4 border-white/20"
 				style={{ backgroundImage: `url(${heroVan})` }}
 			></div>
 			<div className="relative container mx-auto px-4 text-center pb-16 md:pb-24">
-				<h2 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in-down">
-					Traslados Privados Aeropuerto La AraucanÃ­a
+				<h2 className="text-5xl md:text-6xl font-bold mb-6 mt-8 animate-fade-in-down">
+					Traslados Privados Aeropuerto La Araucanía
 					<br />
-					<span className="text-accent">Temuco, PucÃ³n y Villarrica</span>
+					<span className="text-accent">Temuco, Pucón y Villarrica</span>
 				</h2>
 				<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto">
-					Transportes Araucaria conecta el Aeropuerto La Araucanía con Temuco, Pucón, Villarrica y los principales hoteles de la región. Reserva en línea, confirma tu conductor y asegura el {baseDiscountPercentage}% de descuento web garantizado
+					Transportes Araucaria conecta el Aeropuerto La Araucanía con Temuco,
+					Pucón, Villarrica y los principales hoteles de la región. Reserva en
+					línea, confirma tu conductor y asegura el {baseDiscountPercentage}% de
+					descuento web garantizado
 					{promoDiscountPercentage > 0
 						? ` + ${promoDiscountPercentage}% extra por promociones activas`
 						: ""}
@@ -401,7 +404,7 @@ function Hero({
 					<CardHeader className="space-y-3">
 						<div className="flex flex-wrap items-center justify-between gap-2">
 							<CardTitle className="text-foreground text-2xl">
-								Reserva tu viaje en lÃ­nea
+								Reserva tu viaje en línea
 							</CardTitle>
 							<div className="flex items-center gap-2">
 								<Badge variant="secondary" className="text-sm">
@@ -585,7 +588,7 @@ function Hero({
 											htmlFor="ida-vuelta"
 											className="text-sm text-muted-foreground"
 										>
-											Â¿Deseas reservar tambiÃ©n el regreso? Coordina ida y vuelta
+											¿Deseas reservar también el regreso? Coordina ida y vuelta
 											en una sola solicitud.
 										</label>
 									</div>
@@ -623,18 +626,18 @@ function Hero({
 									</p>
 								</div>
 								<div className="text-center text-sm text-muted-foreground">
-									Â¿No encuentras tu destino?{" "}
+									¿No encuentras tu destino?{" "}
 									<a href="#contacto" className="text-primary hover:underline">
-										ContÃ¡ctanos
+										Contáctanos
 									</a>{" "}
-									para una cotizaciÃ³n personalizada.
+									para una cotización personalizada.
 								</div>
 								{mostrarPrecio ? (
 									<div className="rounded-xl border border-primary/20 bg-primary/10 p-6 text-foreground">
 										<div className="grid gap-4 md:grid-cols-2 md:items-center">
 											<div className="space-y-1">
 												<p className="text-sm uppercase tracking-wide text-muted-foreground">
-													VehÃ­culo sugerido
+													Vehículo sugerido
 												</p>
 												<p className="text-2xl font-semibold">
 													{cotizacion.vehiculo}
@@ -658,7 +661,7 @@ function Hero({
 													)}
 												</div>
 												<p className="text-xs text-muted-foreground uppercase tracking-wide">
-													Precio estÃ¡ndar
+													Precio estándar
 												</p>
 												<p className="text-xl font-semibold">
 													{formatCurrency(pricing.precioBase)}
@@ -698,7 +701,9 @@ function Hero({
 															Promo activa:{" "}
 															{activePromotion.descripcion ||
 																`Descuento ${activePromotion.descuentoPorcentaje}%`}
-															{promotionDetails ? ` Â· ${promotionDetails}` : ""}
+															{promotionDetails
+																? ` Â· ${promotionDetails}`
+																: ""}
 														</p>
 													)}
 												</div>
@@ -709,10 +714,10 @@ function Hero({
 									<div className="rounded-xl border border-dashed border-primary/40 bg-white/40 p-6 text-primary">
 										<p className="font-semibold">
 											Calcularemos el valor exacto y te lo enviaremos junto con
-											la confirmaciÃ³n.
+											la confirmación.
 										</p>
 										<p className="text-sm text-primary/80">
-											IndÃ­canos tu destino para sugerirte el vehÃ­culo mÃ¡s
+											Indícanos tu destino para sugerirte el vehículo más
 											conveniente.
 										</p>
 									</div>
@@ -745,7 +750,7 @@ function Hero({
 											name="nombre"
 											value={formData.nombre}
 											onChange={handleInputChange}
-											placeholder="Ej: Juan PÃ©rez"
+											placeholder="Ej: Juan Pérez"
 										/>
 									</div>
 									<div className="space-y-2">
@@ -763,7 +768,7 @@ function Hero({
 
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 									<div className="space-y-2">
-										<Label htmlFor="telefono-hero">TelÃ©fono mÃ³vil</Label>
+										<Label htmlFor="telefono-hero">Teléfono móvil</Label>
 										<Input
 											id="telefono-hero"
 											name="telefono"
@@ -777,7 +782,7 @@ function Hero({
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="numeroVuelo-hero">
-											NÃºmero de vuelo (si aplica)
+											Número de vuelo (si aplica)
 										</Label>
 										<Input
 											id="numeroVuelo-hero"
@@ -791,7 +796,7 @@ function Hero({
 
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 									<div className="space-y-2">
-										<Label htmlFor="hotel-hero">Hotel o direcciÃ³n final</Label>
+										<Label htmlFor="hotel-hero">Hotel o dirección final</Label>
 										<Input
 											id="hotel-hero"
 											name="hotel"
@@ -802,7 +807,7 @@ function Hero({
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="sillaInfantil-hero">
-											Â¿Necesitas alzador infantil?
+											¿Necesitas alzador infantil?
 										</Label>
 										<select
 											id="sillaInfantil-hero"
@@ -812,8 +817,8 @@ function Hero({
 											className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
 										>
 											<option value="no">No requiero</option>
-											<option value="1 silla">SÃ­, 1 alzador</option>
-											<option value="2 sillas">SÃ­, 2 alzadores</option>
+											<option value="1 silla">Sí, 1 alzador</option>
+											<option value="2 sillas">Sí, 2 alzadores</option>
 										</select>
 									</div>
 								</div>
@@ -827,14 +832,14 @@ function Hero({
 										name="equipajeEspecial"
 										value={formData.equipajeEspecial}
 										onChange={handleInputChange}
-										placeholder="CuÃ©ntanos sobre equipaje voluminoso, mascotas u otros detalles relevantes."
+										placeholder="Cuéntanos sobre equipaje voluminoso, mascotas u otros detalles relevantes."
 									/>
 								</div>
 
 								{mostrarPrecio && (
 									<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-foreground">
 										<h4 className="text-lg font-semibold mb-2">
-											Resumen econÃ³mico
+											Resumen económico
 										</h4>
 										<div className="grid gap-2 text-sm">
 											<div className="flex items-center justify-between">
@@ -876,7 +881,7 @@ function Hero({
 											</div>
 										</div>
 										<p className="mt-3 text-xs text-muted-foreground">
-											PodrÃ¡s elegir entre abonar el 40% o pagar el total con
+											Podrás elegir entre abonar el 40% o pagar el total con
 											descuento en el siguiente paso.
 										</p>
 									</div>
@@ -951,7 +956,7 @@ function Hero({
 											</div>
 											<div>
 												<p className="text-muted-foreground">
-													VehÃ­culo sugerido
+													Vehículo sugerido
 												</p>
 												<p className="font-medium text-foreground">
 													{vehiculoSugerido}
@@ -973,10 +978,10 @@ function Hero({
 									{requiereCotizacionManual ? (
 										<div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
 											<h4 className="text-lg font-semibold text-primary mb-3">
-												CotizaciÃ³n personalizada necesaria
+												Cotización personalizada necesaria
 											</h4>
 											<p className="text-sm text-muted-foreground leading-relaxed">
-												Este destino no estÃ¡ disponible para pago inmediato.
+												Este destino no está disponible para pago inmediato.
 												Completa el formulario de contacto para recibir una
 												tarifa en menos de 30 minutos.
 											</p>
@@ -1052,7 +1057,7 @@ function Hero({
 											<div className="rounded-md border border-emerald-400/40 bg-emerald-50 p-4 text-sm text-emerald-700">
 												<p className="font-semibold">
 													Descuento especial{" "}
-													{activePromotion.descuentoPorcentaje}% Â·{" "}
+													{activePromotion.descuentoPorcentaje}% ·{" "}
 													{activePromotion.descripcion ||
 														`Tramo ${activePromotion.destino}`}
 												</p>
@@ -1183,7 +1188,7 @@ function Hero({
 													htmlFor="check-viaje"
 													className="text-sm leading-relaxed text-muted-foreground"
 												>
-													Confirmo que revisÃ© origen, destino, fecha y hora de
+													Confirmo que revisé origen, destino, fecha y hora de
 													mi traslado.
 												</label>
 											</div>
@@ -1202,7 +1207,7 @@ function Hero({
 													htmlFor="check-contacto"
 													className="text-sm leading-relaxed text-muted-foreground"
 												>
-													Acepto recibir la confirmaciÃ³n y enlace de pago por
+													Acepto recibir la confirmación y enlace de pago por
 													email y WhatsApp.
 												</label>
 											</div>
@@ -1223,7 +1228,7 @@ function Hero({
 													onClick={handleStepBack}
 													disabled={isSubmitting || Boolean(loadingGateway)}
 												>
-													Editar informaciÃ³n
+													Editar información
 												</Button>
 											</div>
 											<div className="w-full lg:w-auto">
@@ -1278,4 +1283,3 @@ function Hero({
 }
 
 export default Hero;
-
