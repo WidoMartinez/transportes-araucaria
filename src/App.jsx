@@ -98,7 +98,27 @@ const isTimeWithinRange = (time, start, end) => {
 
 const resolveIsAdminView = () => {
 	if (typeof window === "undefined") return false;
-	return window.location.pathname.toLowerCase().startsWith("/admin/precios");
+
+	// Verificar múltiples formas de acceso al admin
+	const url = new URL(window.location.href);
+	const params = url.searchParams;
+	const pathname = url.pathname.toLowerCase();
+	const hash = url.hash.toLowerCase();
+
+	return (
+		// Parámetro URL: ?admin=true
+		params.get("admin") === "true" ||
+		// Parámetro URL: ?panel=admin
+		params.get("panel") === "admin" ||
+		// Parámetro URL: ?view=admin
+		params.get("view") === "admin" ||
+		// Hash: #admin
+		hash === "#admin" ||
+		// Ruta: /admin/precios (original)
+		pathname.startsWith("/admin/precios") ||
+		// Ruta: /admin
+		pathname === "/admin"
+	);
 };
 
 function App() {
@@ -583,7 +603,8 @@ function App() {
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
-		const emailApiUrl = "https://www.transportesaraucaria.cl/enviar_correo.php";
+		const emailApiUrl =
+			"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 		try {
 			const response = await fetch(emailApiUrl, {
 				method: "POST",

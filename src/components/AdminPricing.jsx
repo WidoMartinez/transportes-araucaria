@@ -84,7 +84,17 @@ const normalizePromotions = (promociones = []) => {
 };
 
 function AdminPricing() {
-	const [pricing, setPricing] = useState({ destinos: [], dayPromotions: [] });
+	const [pricing, setPricing] = useState({ 
+		destinos: [], 
+		dayPromotions: [],
+		descuentosGlobales: {
+			descuentoBase: 0,
+			descuentoPromocion: 0,
+			descuentoRoundTrip: 10,
+			descuentoOnline: 5,
+			activo: true
+		}
+	});
 	const [newDestino, setNewDestino] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -109,6 +119,13 @@ function AdminPricing() {
 						? data.destinos
 						: destinosIniciales,
 				dayPromotions: normalizePromotions(data.dayPromotions),
+				descuentosGlobales: {
+					descuentoBase: data.descuentosGlobales?.descuentoBase || 0,
+					descuentoPromocion: data.descuentosGlobales?.descuentoPromocion || 0,
+					descuentoRoundTrip: data.descuentosGlobales?.descuentoRoundTrip || 10,
+					descuentoOnline: data.descuentosGlobales?.descuentoOnline || 5,
+					activo: data.descuentosGlobales?.activo !== undefined ? data.descuentosGlobales.activo : true
+				},
 				updatedAt: data.updatedAt || null,
 			});
 		} catch (fetchError) {
@@ -119,6 +136,13 @@ function AdminPricing() {
 			setPricing({
 				destinos: destinosIniciales,
 				dayPromotions: [],
+				descuentosGlobales: {
+					descuentoBase: 0,
+					descuentoPromocion: 0,
+					descuentoRoundTrip: 10,
+					descuentoOnline: 5,
+					activo: true
+				},
 				updatedAt: null,
 			});
 		} finally {
@@ -317,6 +341,27 @@ function AdminPricing() {
 		}));
 	};
 
+	// Funciones para manejar descuentos globales
+	const handleDescuentoGlobalChange = (field, value) => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				[field]: field === 'activo' ? value : Math.min(Math.max(Number(value) || 0, 0), 100)
+			}
+		}));
+	};
+
+	const toggleDescuentosGlobales = () => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				activo: !prev.descuentosGlobales.activo
+			}
+		}));
+	};
+
 	const handleAddNewDestino = () => {
 		if (newDestino.nombre.trim() === "") {
 			alert("El nombre del destino no puede estar vacío.");
@@ -404,6 +449,7 @@ function AdminPricing() {
 				body: JSON.stringify({
 					destinos: pricing.destinos,
 					dayPromotions: pricing.dayPromotions,
+					descuentosGlobales: pricing.descuentosGlobales,
 				}),
 			});
 
@@ -418,6 +464,13 @@ function AdminPricing() {
 			setPricing({
 				...savedData,
 				dayPromotions: normalizePromotions(savedData.dayPromotions),
+				descuentosGlobales: {
+					descuentoBase: savedData.descuentosGlobales?.descuentoBase || 0,
+					descuentoPromocion: savedData.descuentosGlobales?.descuentoPromocion || 0,
+					descuentoRoundTrip: savedData.descuentosGlobales?.descuentoRoundTrip || 10,
+					descuentoOnline: savedData.descuentosGlobales?.descuentoOnline || 5,
+					activo: savedData.descuentosGlobales?.activo !== undefined ? savedData.descuentosGlobales.activo : true
+				}
 			});
 			setSuccess("Configuración guardada correctamente.");
 		} catch (submitError) {
@@ -457,6 +510,112 @@ function AdminPricing() {
 				</header>
 
 				<form onSubmit={handleSubmit} className="space-y-10">
+					{/* Sección de Descuentos Globales */}
+					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
+						<div className="flex flex-wrap items-center justify-between gap-4">
+							<h2 className="text-xl font-semibold text-white">
+								Descuentos Globales
+							</h2>
+							<label className="inline-flex items-center">
+								<input
+									type="checkbox"
+									checked={pricing.descuentosGlobales?.activo || false}
+									onChange={toggleDescuentosGlobales}
+									className="rounded border-slate-600 bg-slate-700 text-green-500 focus:ring-green-500/60"
+								/>
+								<span className="ml-2 text-sm text-slate-300">
+									{pricing.descuentosGlobales?.activo ? 'Activos' : 'Desactivados'}
+								</span>
+							</label>
+						</div>
+
+						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+							<div>
+								<label className="block text-sm font-medium text-slate-300 mb-2">
+									Descuento Base (%)
+								</label>
+								<input
+									type="number"
+									min="0"
+									max="100"
+									step="0.1"
+									value={pricing.descuentosGlobales?.descuentoBase || 0}
+									onChange={(e) => handleDescuentoGlobalChange('descuentoBase', e.target.value)}
+									disabled={!pricing.descuentosGlobales?.activo}
+									className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+								/>
+								<p className="mt-1 text-xs text-slate-400">Descuento base general</p>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-slate-300 mb-2">
+									Descuento Promoción (%)
+								</label>
+								<input
+									type="number"
+									min="0"
+									max="100"
+									step="0.1"
+									value={pricing.descuentosGlobales?.descuentoPromocion || 0}
+									onChange={(e) => handleDescuentoGlobalChange('descuentoPromocion', e.target.value)}
+									disabled={!pricing.descuentosGlobales?.activo}
+									className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+								/>
+								<p className="mt-1 text-xs text-slate-400">Descuento por promociones especiales</p>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-slate-300 mb-2">
+									Descuento Ida y Vuelta (%)
+								</label>
+								<input
+									type="number"
+									min="0"
+									max="100"
+									step="0.1"
+									value={pricing.descuentosGlobales?.descuentoRoundTrip || 10}
+									onChange={(e) => handleDescuentoGlobalChange('descuentoRoundTrip', e.target.value)}
+									disabled={!pricing.descuentosGlobales?.activo}
+									className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+								/>
+								<p className="mt-1 text-xs text-slate-400">Descuento para viajes redondos</p>
+							</div>
+
+							<div>
+								<label className="block text-sm font-medium text-slate-300 mb-2">
+									Descuento Online (%)
+								</label>
+								<input
+									type="number"
+									min="0"
+									max="100"
+									step="0.1"
+									value={pricing.descuentosGlobales?.descuentoOnline || 5}
+									onChange={(e) => handleDescuentoGlobalChange('descuentoOnline', e.target.value)}
+									disabled={!pricing.descuentosGlobales?.activo}
+									className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+								/>
+								<p className="mt-1 text-xs text-slate-400">Descuento por reserva online</p>
+							</div>
+						</div>
+
+						<div className="bg-slate-800/50 rounded-lg p-4">
+							<h3 className="text-sm font-medium text-slate-300 mb-2">Vista Previa de Descuentos</h3>
+							<div className="text-xs text-slate-400">
+								<p>• Descuento Base: {pricing.descuentosGlobales?.descuentoBase || 0}%</p>
+								<p>• Descuento Promoción: {pricing.descuentosGlobales?.descuentoPromocion || 0}%</p>
+								<p>• Descuento Ida y Vuelta: {pricing.descuentosGlobales?.descuentoRoundTrip || 10}%</p>
+								<p>• Descuento Online: {pricing.descuentosGlobales?.descuentoOnline || 5}%</p>
+								<p className="mt-2 font-medium text-slate-200">
+									Estado: {pricing.descuentosGlobales?.activo ? 
+										<span className="text-green-400">✅ Activos</span> : 
+										<span className="text-red-400">❌ Desactivados</span>
+									}
+								</p>
+							</div>
+						</div>
+					</section>
+
 					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
 						<div className="flex flex-wrap items-center justify-between gap-4">
 							<h2 className="text-xl font-semibold text-white">

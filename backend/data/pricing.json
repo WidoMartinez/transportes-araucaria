@@ -53,25 +53,46 @@
           "porcentajeAdicional": 0.05
         }
       }
-    }
-  ],
-  "dayPromotions": [
+    },
     {
-      "id": "promo-vuelta-temuco",
-      "destino": "Temuco",
-      "descripcion": "Solo vuelta (aeropuerto → ciudad) - 4%",
-      "aplicaPorDias": false,
-      "dias": [],
-      "aplicaPorHorario": false,
-      "horaInicio": "",
-      "horaFin": "",
-      "descuentoPorcentaje": 4,
-      "aplicaTipoViaje": {
-        "ida": false,
-        "vuelta": false,
-        "ambos": true
-      }
+      "nombre": "Lican Ray",
+      "descripcion": "",
+      "tiempo": "",
+      "imagen": "URL_de_imagen_por_defecto.jpg",
+      "maxPasajeros": 4,
+      "minHorasAnticipacion": 5,
+      "precios": {
+        "auto": {
+          "base": 65000,
+          "porcentajeAdicional": 0.1
+        },
+        "van": {
+          "base": 0,
+          "porcentajeAdicional": 0.05
+        }
+      },
+      "id": "dest-1759158635460"
+    },
+    {
+      "nombre": "Coñaripe",
+      "descripcion": "",
+      "tiempo": "",
+      "imagen": "URL_de_imagen_por_defecto.jpg",
+      "maxPasajeros": 4,
+      "minHorasAnticipacion": 5,
+      "precios": {
+        "auto": {
+          "base": 70000,
+          "porcentajeAdicional": 0.1
+        },
+        "van": {
+          "base": 0,
+          "porcentajeAdicional": 0.05
+        }
+      },
+      "id": "dest-1759158648040"
     }
   ],
-  "updatedAt": "2025-09-29T02:16:26.076Z"
+  "dayPromotions": [],
+  "updatedAt": "2025-09-29T15:10:54.084Z"
 }
