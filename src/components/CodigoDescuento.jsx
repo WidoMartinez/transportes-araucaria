@@ -6,12 +6,10 @@ import { Badge } from "./ui/badge";
 
 function CodigoDescuento({
 	codigoAplicado,
-	onCodigoChange,
+	codigoError,
+	validandoCodigo,
 	onAplicarCodigo,
 	onRemoverCodigo,
-	isValidating,
-	error,
-	precioBase,
 }) {
 	const [codigoInput, setCodigoInput] = useState("");
 
@@ -36,14 +34,6 @@ function CodigoDescuento({
 		}).format(amount);
 	};
 
-	const calcularDescuento = (codigo) => {
-		if (codigo.tipo === "porcentaje") {
-			return Math.round(precioBase * (codigo.valor / 100));
-		} else {
-			return Math.min(codigo.valor, precioBase);
-		}
-	};
-
 	return (
 		<div className="space-y-3">
 			{/* Campo para ingresar código */}
@@ -54,14 +44,14 @@ function CodigoDescuento({
 						value={codigoInput}
 						onChange={(e) => setCodigoInput(e.target.value)}
 						className="flex-1"
-						disabled={isValidating}
+						disabled={validandoCodigo}
 					/>
 					<Button
 						type="submit"
-						disabled={!codigoInput.trim() || isValidating}
+						disabled={!codigoInput.trim() || validandoCodigo}
 						className="bg-purple-600 hover:bg-purple-700"
 					>
-						{isValidating ? (
+						{validandoCodigo ? (
 							<LoaderCircle className="w-4 h-4 animate-spin" />
 						) : (
 							"Aplicar"
@@ -83,10 +73,9 @@ function CodigoDescuento({
 								{codigoAplicado.descripcion}
 							</p>
 							<p className="text-sm text-green-600">
-								Descuento: {formatCurrency(calcularDescuento(codigoAplicado))}
-								{codigoAplicado.tipo === "porcentaje" && (
-									<span> ({codigoAplicado.valor}%)</span>
-								)}
+								{codigoAplicado.tipo === "porcentaje"
+									? `Descuento: ${codigoAplicado.valor}%`
+									: `Descuento: ${formatCurrency(codigoAplicado.valor)}`}
 							</p>
 						</div>
 					</div>
@@ -102,12 +91,12 @@ function CodigoDescuento({
 			)}
 
 			{/* Mostrar error */}
-			{error && (
+			{codigoError && (
 				<div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
 					<XCircle className="w-5 h-5 text-red-600" />
 					<div>
 						<p className="font-semibold text-red-800">Código inválido</p>
-						<p className="text-sm text-red-600">{error}</p>
+						<p className="text-sm text-red-600">{codigoError}</p>
 					</div>
 				</div>
 			)}

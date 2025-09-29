@@ -47,7 +47,8 @@ function AdminCodigos() {
 	// Cargar códigos desde la API
 	const fetchCodigos = async () => {
 		try {
-			const response = await fetch("/api/codigos");
+			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			const response = await fetch(`${apiUrl}/api/codigos`);
 			const data = await response.json();
 			setCodigos(data);
 		} catch (error) {
@@ -64,9 +65,10 @@ function AdminCodigos() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		try {
+			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
 			const url = editingCodigo
-				? `/api/codigos/${editingCodigo.id}`
-				: "/api/codigos";
+				? `${apiUrl}/api/codigos/${editingCodigo.id}`
+				: `${apiUrl}/api/codigos`;
 			const method = editingCodigo ? "PUT" : "POST";
 
 			const response = await fetch(url, {
@@ -105,7 +107,8 @@ function AdminCodigos() {
 	const handleDelete = async (id) => {
 		if (confirm("¿Estás seguro de eliminar este código?")) {
 			try {
-				await fetch(`/api/codigos/${id}`, { method: "DELETE" });
+				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+				await fetch(`${apiUrl}/api/codigos/${id}`, { method: "DELETE" });
 				await fetchCodigos();
 			} catch (error) {
 				console.error("Error eliminando código:", error);

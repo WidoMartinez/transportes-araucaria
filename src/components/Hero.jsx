@@ -11,6 +11,7 @@ import { CheckCircle2, LoaderCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
+import CodigoDescuento from "./CodigoDescuento";
 
 function Hero({
 	formData,
@@ -41,6 +42,11 @@ function Hero({
 	validarTelefono,
 	validarHorarioReserva,
 	showSummary,
+	codigoAplicado,
+	codigoError,
+	validandoCodigo,
+	onAplicarCodigo,
+	onRemoverCodigo,
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
@@ -1048,6 +1054,15 @@ function Hero({
 
 								{currentStep === 2 && (
 									<div className="max-h-[80vh] overflow-y-auto space-y-8 p-4 -m-4">
+										{/* Código de descuento */}
+										<CodigoDescuento
+											codigoAplicado={codigoAplicado}
+											codigoError={codigoError}
+											validandoCodigo={validandoCodigo}
+											onAplicarCodigo={onAplicarCodigo}
+											onRemoverCodigo={onRemoverCodigo}
+										/>
+
 										{/* Resumen del viaje */}
 										<div className="bg-white rounded-lg border border-gray-200 p-6">
 											<h4 className="text-xl font-semibold text-gray-900 mb-6 border-b pb-2">
