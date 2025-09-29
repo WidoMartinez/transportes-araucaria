@@ -45,6 +45,14 @@ function Hero({
 	const [selectedCharge, setSelectedCharge] = useState(null);
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
+	const [discountUpdated, setDiscountUpdated] = useState(false);
+
+	// Mostrar indicador cuando se actualizan los descuentos
+	useEffect(() => {
+		setDiscountUpdated(true);
+		const timer = setTimeout(() => setDiscountUpdated(false), 2000);
+		return () => clearTimeout(timer);
+	}, [baseDiscountRate, roundTripDiscountRate]);
 
 	const steps = useMemo(
 		() => [
@@ -723,8 +731,13 @@ function Hero({
 														<p className="text-xl font-semibold">
 															{formatCurrency(pricing.precioBase)}
 														</p>
-														<p className="text-xs text-muted-foreground uppercase tracking-wide">
+														<p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2">
 															Total con descuento
+															{discountUpdated && (
+																<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 animate-pulse">
+																	✅ Actualizado
+																</span>
+															)}
 														</p>
 														<p className="text-2xl font-bold text-accent">
 															{formatCurrency(pricing.totalConDescuento)}

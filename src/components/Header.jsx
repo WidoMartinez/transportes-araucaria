@@ -1,7 +1,7 @@
 /* global gtag */
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Phone, MessageCircle } from "lucide-react";
+import { Phone, MessageCircle, RotateCcw } from "lucide-react";
 import logo from "../assets/logo.png";
 
 // Función para encapsular el seguimiento de la conversión con el NUEVO ID
@@ -15,12 +15,42 @@ const trackWhatsAppClick = () => {
 };
 
 function Header() {
+	const [isUpdating, setIsUpdating] = useState(false);
+
+	const handleUpdatePricing = async () => {
+		setIsUpdating(true);
+		try {
+			if (window.recargarDatosPrecios) {
+				await window.recargarDatosPrecios();
+				console.log("✅ Precios actualizados manualmente");
+			} else {
+				window.location.reload();
+			}
+		} catch (error) {
+			console.error("Error al actualizar precios:", error);
+		} finally {
+			setTimeout(() => setIsUpdating(false), 1000);
+		}
+	};
+
 	return (
 		<header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
 			<div className="container mx-auto px-4">
 				<div className="flex justify-between items-center h-19">
-					<div>
+					<div className="flex items-center gap-4">
 						<img src={logo} alt="Transportes Araucaria Logo" className="h-28" />
+						{/* Botón de actualización - visible al hacer hover */}
+						<button
+							onClick={handleUpdatePricing}
+							disabled={isUpdating}
+							className="opacity-30 hover:opacity-100 transition-all duration-300 p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 hover:scale-110"
+							title="Actualizar precios y descuentos (Ctrl+Shift+U)"
+						>
+							<RotateCcw
+								size={16}
+								className={isUpdating ? "animate-spin" : ""}
+							/>
+						</button>
 					</div>
 					<nav className="hidden md:flex space-x-6">
 						<a

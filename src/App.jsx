@@ -34,7 +34,7 @@ import AdminPricing from "./components/AdminPricing";
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
 
-const DESCUENTO_ONLINE = 0.1;
+// Descuentos ahora se cargan dinámicamente desde descuentosGlobales
 const ROUND_TRIP_DISCOUNT = 0.05;
 
 const normalizePromotions = (promotions = []) => {
@@ -125,6 +125,11 @@ function App() {
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
+	const [descuentosGlobales, setDescuentosGlobales] = useState({
+		descuentoOnline: { valor: 5, activo: true },
+		descuentoRoundTrip: { valor: 10, activo: true },
+		descuentosPersonalizados: [],
+	});
 	const [loadingPrecios, setLoadingPrecios] = useState(true);
 
 	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
@@ -157,36 +162,144 @@ function App() {
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
+	// --- FUNCIÓN PARA RECARGAR DATOS ---
+	const recargarDatosPrecios = async () => {
+		console.log("🔄 INICIANDO recarga de datos de precios...");
+		try {
+			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			console.log("📡 Fetching desde:", `${apiUrl}/pricing`);
+			const response = await fetch(`${apiUrl}/pricing`);
+			if (!response.ok)
+				throw new Error("La respuesta de la red no fue exitosa.");
+
+			const data = await response.json();
+			console.log("📥 Datos recibidos:", data);
+
+			if (data.destinos && data.destinos.length > 0) {
+				setDestinosData(data.destinos);
+			} else {
+				setDestinosData(destinosBase);
+			}
+			setPromotions(normalizePromotions(data.dayPromotions));
+
+			// Cargar descuentos globales
+			console.log(
+				"🏷️ Procesando descuentos globales:",
+				data.descuentosGlobales
+			);
+			if (data.descuentosGlobales) {
+				const nuevosDescuentos = {
+					descuentoOnline: {
+						valor:
+							data.descuentosGlobales.descuentoOnline?.valor ||
+							data.descuentosGlobales.descuentoOnline ||
+							5,
+						activo:
+							data.descuentosGlobales.descuentoOnline?.activo !== undefined
+								? data.descuentosGlobales.descuentoOnline.activo
+								: true,
+					},
+					descuentoRoundTrip: {
+						valor:
+							data.descuentosGlobales.descuentoRoundTrip?.valor ||
+							data.descuentosGlobales.descuentoRoundTrip ||
+							10,
+						activo:
+							data.descuentosGlobales.descuentoRoundTrip?.activo !== undefined
+								? data.descuentosGlobales.descuentoRoundTrip.activo
+								: true,
+					},
+					descuentosPersonalizados:
+						data.descuentosGlobales.descuentosPersonalizados || [],
+				};
+				console.log("🔄 Actualizando descuentos globales a:", nuevosDescuentos);
+				setDescuentosGlobales(nuevosDescuentos);
+			}
+
+			console.log("✅ Datos de precios actualizados correctamente");
+			return true;
+		} catch (error) {
+			console.error("Error al recargar precios:", error);
+			return false;
+		}
+	};
+
 	// --- CARGA DE DATOS DINÁMICA ---
 	useEffect(() => {
 		const fetchPreciosDesdeAPI = async () => {
-			try {
-				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
-				const response = await fetch(`${apiUrl}/pricing`);
-				if (!response.ok)
-					throw new Error("La respuesta de la red no fue exitosa.");
-
-				const data = await response.json();
-
-				if (data.destinos && data.destinos.length > 0) {
-					setDestinosData(data.destinos);
-				} else {
-					setDestinosData(destinosBase);
-				}
-				setPromotions(normalizePromotions(data.dayPromotions));
-			} catch (error) {
-				console.error(
-					"Error al cargar precios desde la API, usando valores por defecto.",
-					error
-				);
+			setLoadingPrecios(true);
+			const success = await recargarDatosPrecios();
+			if (!success) {
 				setDestinosData(destinosBase);
 				setPromotions([]);
-			} finally {
-				setLoadingPrecios(false);
 			}
+			setLoadingPrecios(false);
 		};
 		fetchPreciosDesdeAPI();
 	}, []);
+
+	// --- EFECTO PARA ESCUCHAR CAMBIOS DE CONFIGURACIÓN ---
+	useEffect(() => {
+		const handleStorageChange = (e) => {
+			if (e.key === "pricing_updated") {
+				console.log(
+					"🔄 Detectado cambio en configuración de precios, recargando..."
+				);
+				recargarDatosPrecios();
+			}
+		};
+
+		window.addEventListener("storage", handleStorageChange);
+
+		// También escuchar eventos personalizados
+		const handlePricingUpdate = () => {
+			console.log("🔄 Recargando precios por evento personalizado...");
+			recargarDatosPrecios();
+		};
+
+		window.addEventListener("pricing_updated", handlePricingUpdate);
+
+		// Polling cada 30 segundos para verificar cambios (como respaldo)
+		const pollingInterval = setInterval(async () => {
+			const lastUpdate = localStorage.getItem("pricing_updated");
+			const lastCheck = localStorage.getItem("last_pricing_check") || "0";
+
+			if (lastUpdate && parseInt(lastUpdate) > parseInt(lastCheck)) {
+				console.log("🔄 Polling detectó cambios en precios, recargando...");
+				await recargarDatosPrecios();
+				localStorage.setItem("last_pricing_check", Date.now().toString());
+			}
+		}, 30000); // 30 segundos
+
+		return () => {
+			window.removeEventListener("storage", handleStorageChange);
+			window.removeEventListener("pricing_updated", handlePricingUpdate);
+			clearInterval(pollingInterval);
+		};
+	}, []);
+
+	// Hacer la función de recarga disponible globalmente para el panel admin
+	useEffect(() => {
+		window.recargarDatosPrecios = recargarDatosPrecios;
+
+		// Agregar atajo de teclado Ctrl+Shift+U para actualizar precios
+		const handleKeyDown = (e) => {
+			if (e.ctrlKey && e.shiftKey && e.key === "U") {
+				e.preventDefault();
+				console.log("🔄 Actualizando precios por atajo de teclado...");
+				recargarDatosPrecios();
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			delete window.recargarDatosPrecios;
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [recargarDatosPrecios]);
+
+	// Código duplicado removido - ya está en recargarDatosPrecios
 
 	// --- LÓGICA DE RUTAS Y PASAJEROS DINÁMICOS ---
 	const todosLosTramos = useMemo(
@@ -299,10 +412,45 @@ function App() {
 	const promotionDiscountRate = activePromotion
 		? activePromotion.descuentoPorcentaje / 100
 		: 0;
-	const roundTripDiscountRate = formData.idaVuelta ? ROUND_TRIP_DISCOUNT : 0;
+	// Calcular descuentos dinámicos desde descuentosGlobales
+	const onlineDiscountRate =
+		descuentosGlobales?.descuentoOnline?.activo &&
+		descuentosGlobales?.descuentoOnline?.valor
+			? descuentosGlobales.descuentoOnline.valor / 100
+			: 0;
+
+	// Debug: mostrar descuentos actuales cuando cambien
+	useEffect(() => {
+		console.log("💰 DESCUENTOS ACTUALES:", {
+			descuentosGlobales,
+			onlineDiscountRate,
+			roundTripDiscountRate:
+				formData.idaVuelta &&
+				descuentosGlobales?.descuentoRoundTrip?.activo &&
+				descuentosGlobales?.descuentoRoundTrip?.valor
+					? descuentosGlobales.descuentoRoundTrip.valor / 100
+					: 0,
+		});
+	}, [descuentosGlobales, formData.idaVuelta]);
+
+	const roundTripDiscountRate =
+		formData.idaVuelta &&
+		descuentosGlobales?.descuentoRoundTrip?.activo &&
+		descuentosGlobales?.descuentoRoundTrip?.valor
+			? descuentosGlobales.descuentoRoundTrip.valor / 100
+			: 0;
+
+	// Calcular descuentos personalizados activos
+	const personalizedDiscountRate =
+		descuentosGlobales?.descuentosPersonalizados
+			?.filter((desc) => desc.activo && desc.valor > 0)
+			.reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
 
 	const effectiveDiscountRate = Math.min(
-		DESCUENTO_ONLINE + promotionDiscountRate + roundTripDiscountRate,
+		onlineDiscountRate +
+			promotionDiscountRate +
+			roundTripDiscountRate +
+			personalizedDiscountRate,
 		0.75
 	);
 
@@ -465,15 +613,21 @@ function App() {
 	const pricing = useMemo(() => {
 		const precioIda = cotizacion.precio || 0;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
-		const descuentoBase = Math.round(precioBase * DESCUENTO_ONLINE);
+		const descuentoBase = Math.round(precioBase * onlineDiscountRate);
 		const descuentoPromocion = Math.round(
 			precioBase * (promotionDiscountRate || 0)
 		);
 		const descuentoRoundTrip = Math.round(
 			precioBase * (roundTripDiscountRate || 0)
 		);
+		const descuentosPersonalizados = Math.round(
+			precioBase * (personalizedDiscountRate || 0)
+		);
 		const descuentoOnline =
-			descuentoBase + descuentoPromocion + descuentoRoundTrip;
+			descuentoBase +
+			descuentoPromocion +
+			descuentoRoundTrip +
+			descuentosPersonalizados;
 		const totalConDescuento = Math.max(precioBase - descuentoOnline, 0);
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
@@ -482,6 +636,7 @@ function App() {
 			descuentoBase,
 			descuentoPromocion,
 			descuentoRoundTrip,
+			descuentosPersonalizados,
 			descuentoOnline,
 			totalConDescuento,
 			abono,
@@ -491,6 +646,8 @@ function App() {
 		cotizacion.precio,
 		promotionDiscountRate,
 		roundTripDiscountRate,
+		onlineDiscountRate,
+		personalizedDiscountRate,
 		formData.idaVuelta,
 	]);
 
@@ -594,6 +751,7 @@ function App() {
 			descuentoBase: pricing.descuentoBase,
 			descuentoPromocion: pricing.descuentoPromocion,
 			descuentoRoundTrip: pricing.descuentoRoundTrip,
+			descuentosPersonalizados: pricing.descuentosPersonalizados,
 			descuentoOnline,
 			totalConDescuento,
 			abonoSugerido: abono,
@@ -691,7 +849,7 @@ function App() {
 					cotizacion={cotizacion}
 					pricing={pricing}
 					descuentoRate={effectiveDiscountRate}
-					baseDiscountRate={DESCUENTO_ONLINE}
+					baseDiscountRate={onlineDiscountRate}
 					promotionDiscountRate={promotionDiscountRate}
 					roundTripDiscountRate={roundTripDiscountRate}
 					activePromotion={activePromotion}
