@@ -427,7 +427,10 @@ function Hero({
 							Reserva en línea, confirma tu conductor y asegura el{" "}
 							{baseDiscountPercentage}% de descuento web garantizado
 							{promoDiscountPercentage > 0
-								? ` + ${promoDiscountPercentage}% extra por promociones activas`
+								? ` + ${
+										activePromotion?.descripcion ||
+										`${promoDiscountPercentage}% extra por promociones activas`
+								  }`
 								: ""}
 							{roundTripDiscountPercentage > 0
 								? ` + ${roundTripDiscountPercentage}% adicional por reservar ida y vuelta`
@@ -469,7 +472,9 @@ function Hero({
 								solo disponible en nuestra web
 								{promoDiscountPercentage > 0 && (
 									<span className="block mt-2 text-accent font-bold">
-										+ {promoDiscountPercentage}% extra por promociones activas
+										+{" "}
+										{activePromotion?.descripcion ||
+											`${promoDiscountPercentage}% extra por promociones activas`}
 									</span>
 								)}
 								{roundTripDiscountPercentage > 0 && (
@@ -506,7 +511,8 @@ function Hero({
 												variant="default"
 												className="text-sm bg-emerald-500 text-slate-950"
 											>
-												Promo extra +{promoDiscountPercentage}%
+												{activePromotion?.descripcion ||
+													`Promo extra +${promoDiscountPercentage}%`}
 											</Badge>
 										)}
 										{roundTripDiscountPercentage > 0 && (
@@ -759,7 +765,8 @@ function Hero({
 																	className="mb-1 bg-emerald-500 text-slate-950"
 																	variant="default"
 																>
-																	Extra +{promoDiscountPercentage}%
+																	{activePromotion?.descripcion ||
+																		`Extra +${promoDiscountPercentage}%`}
 																</Badge>
 															)}
 														</div>
@@ -787,8 +794,9 @@ function Hero({
 															</p>
 															{promoDiscountPercentage > 0 && (
 																<p className="font-medium text-emerald-600">
-																	Promo adicional (+{promoDiscountPercentage}%):{" "}
-																	{formatCurrency(pricing.descuentoPromocion)}
+																	{activePromotion?.descripcion ||
+																		`Promo adicional (+${promoDiscountPercentage}%)`}
+																	: {formatCurrency(pricing.descuentoPromocion)}
 																</p>
 															)}
 															{roundTripDiscountPercentage > 0 && (
@@ -972,7 +980,8 @@ function Hero({
 													{promoDiscountPercentage > 0 && (
 														<div className="flex items-center justify-between">
 															<span>
-																Promo adicional (+{promoDiscountPercentage}%)
+																{activePromotion?.descripcion ||
+																	`Promo adicional (+${promoDiscountPercentage}%)`}
 															</span>
 															<span className="font-semibold">
 																{formatCurrency(pricing.descuentoPromocion)}
@@ -1157,7 +1166,8 @@ function Hero({
 													{promoDiscountPercentage > 0 && (
 														<div className="flex items-center justify-between">
 															<span>
-																Promo adicional (+{promoDiscountPercentage}%)
+																{activePromotion?.descripcion ||
+																	`Promo adicional (+${promoDiscountPercentage}%)`}
 															</span>
 															<span className="font-semibold">
 																-{formatCurrency(pricing.descuentoPromocion)}
