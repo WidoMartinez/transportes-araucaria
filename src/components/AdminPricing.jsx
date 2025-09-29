@@ -252,7 +252,7 @@ function AdminPricing() {
 				if (promo.id !== id) return promo;
 				const newValue = !promo.aplicaTipoViaje[tipoViaje];
 
-				// Lógica mutuamente excluyente
+				// Lógica inteligente para tipo de viaje
 				let newAplicaTipoViaje = { ...promo.aplicaTipoViaje };
 
 				if (tipoViaje === "ambos" && newValue) {
@@ -262,19 +262,44 @@ function AdminPricing() {
 						vuelta: false,
 						ambos: true,
 					};
+				} else if (tipoViaje === "ambos" && !newValue) {
+					// Si deselecciona "ambos", activa por defecto "ida"
+					newAplicaTipoViaje = {
+						ida: true,
+						vuelta: false,
+						ambos: false,
+					};
 				} else if (
 					(tipoViaje === "ida" || tipoViaje === "vuelta") &&
 					newValue
 				) {
-					// Si selecciona "ida" o "vuelta", desactiva "ambos"
+					// Si selecciona "ida" o "vuelta", desactiva "ambos" primero
 					newAplicaTipoViaje = {
 						...newAplicaTipoViaje,
 						[tipoViaje]: true,
 						ambos: false,
 					};
+
+					// Si ahora tiene tanto "ida" como "vuelta", convertir a "ambos"
+					if (newAplicaTipoViaje.ida && newAplicaTipoViaje.vuelta) {
+						newAplicaTipoViaje = {
+							ida: false,
+							vuelta: false,
+							ambos: true,
+						};
+					}
 				} else {
-					// Si desactiva cualquier opción
+					// Si desactiva "ida" o "vuelta"
 					newAplicaTipoViaje[tipoViaje] = newValue;
+
+					// Si no queda ninguna opción seleccionada, activar "ida" por defecto
+					if (
+						!newAplicaTipoViaje.ida &&
+						!newAplicaTipoViaje.vuelta &&
+						!newAplicaTipoViaje.ambos
+					) {
+						newAplicaTipoViaje.ida = true;
+					}
 				}
 
 				return {
@@ -899,8 +924,9 @@ function AdminPricing() {
 													Selecciona en qué tipo de viaje se aplicará este
 													descuento.
 													<br />
-													<strong>Nota:</strong> "Ida y vuelta" es excluyente
-													con "Solo ida" y "Solo vuelta".
+													<strong>Nota:</strong> Si seleccionas tanto "Solo ida"
+													como "Solo vuelta", se convertirá automáticamente en
+													"Ida y vuelta".
 												</p>
 											</div>
 										</div>
