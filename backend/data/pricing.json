@@ -1,72 +1,77 @@
 {
-  "destinos": [
-    {
-      "nombre": "Temuco",
-      "descripcion": "Centro comercial y administrativo de La Araucanía.",
-      "tiempo": "45 min",
-      "imagen": "/src/assets/temuco.jpg",
-      "maxPasajeros": 4,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 25000,
-          "porcentajeAdicional": 0.1
-        },
-        "van": {
-          "base": 45000,
-          "porcentajeAdicional": 0.1
-        }
-      }
-    },
-    {
-      "nombre": "Villarrica",
-      "descripcion": "Turismo y naturaleza junto al lago.",
-      "tiempo": "1h 15min",
-      "imagen": "/src/assets/villarrica.jpg",
-      "maxPasajeros": 7,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 55000,
-          "porcentajeAdicional": 0.05
-        },
-        "van": {
-          "base": 200000,
-          "porcentajeAdicional": 0.05
-        }
-      }
-    },
-    {
-      "nombre": "Pucón",
-      "descripcion": "Aventura, termas y volcán.",
-      "tiempo": "1h 30min",
-      "imagen": "/src/assets/pucon.jpg",
-      "maxPasajeros": 7,
-      "minHorasAnticipacion": 5,
-      "precios": {
-        "auto": {
-          "base": 60000,
-          "porcentajeAdicional": 0.05
-        },
-        "van": {
-          "base": 250000,
-          "porcentajeAdicional": 0.05
-        }
-      }
-    }
-  ],
-  "dayPromotions": [
-    {
-      "id": "promo-1759088776861-ng5y28",
-      "destino": "Temuco",
-      "descripcion": "finde",
-      "aplicaPorDias": false,
-      "dias": [],
-      "aplicaPorHorario": false,
-      "horaInicio": "",
-      "horaFin": "",
-      "descuentoPorcentaje": 3
-    }
-  ],
-  "updatedAt": "2025-09-28T20:19:55.660Z"
+	"destinos": [
+		{
+			"nombre": "Temuco",
+			"descripcion": "Centro comercial y administrativo de La Araucanía.",
+			"tiempo": "45 min",
+			"imagen": "/src/assets/temuco.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 25000,
+					"porcentajeAdicional": 0.1
+				},
+				"van": {
+					"base": 45000,
+					"porcentajeAdicional": 0.1
+				}
+			}
+		},
+		{
+			"nombre": "Villarrica",
+			"descripcion": "Turismo y naturaleza junto al lago.",
+			"tiempo": "1h 15min",
+			"imagen": "/src/assets/villarrica.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 55000,
+					"porcentajeAdicional": 0.05
+				},
+				"van": {
+					"base": 200000,
+					"porcentajeAdicional": 0.05
+				}
+			}
+		},
+		{
+			"nombre": "Pucón",
+			"descripcion": "Aventura, termas y volcán.",
+			"tiempo": "1h 30min",
+			"imagen": "/src/assets/pucon.jpg",
+			"maxPasajeros": 4,
+			"minHorasAnticipacion": 5,
+			"precios": {
+				"auto": {
+					"base": 60000,
+					"porcentajeAdicional": 0.05
+				},
+				"van": {
+					"base": 250000,
+					"porcentajeAdicional": 0.05
+				}
+			}
+		}
+	],
+	"dayPromotions": [
+		{
+			"id": "promo-vuelta-temuco",
+			"destino": "Temuco",
+			"descripcion": "Solo vuelta (aeropuerto → ciudad) - 4%",
+			"aplicaPorDias": false,
+			"dias": [],
+			"aplicaPorHorario": false,
+			"horaInicio": "",
+			"horaFin": "",
+			"descuentoPorcentaje": 4,
+			"aplicaTipoViaje": {
+				"ida": false,
+				"vuelta": true,
+				"ambos": false
+			}
+		}
+	],
+	"updatedAt": "2025-09-29T02:13:22.872Z"
 }

@@ -43,6 +43,11 @@ const nuevaPromocionTemplate = {
 	horaInicio: "",
 	horaFin: "",
 	descuentoPorcentaje: 0,
+	aplicaTipoViaje: {
+		ida: false,
+		vuelta: false,
+		ambos: true,
+	},
 };
 
 const normalizePromotions = (promociones = []) => {
@@ -60,6 +65,20 @@ const normalizePromotions = (promociones = []) => {
 			horaInicio: promo.horaInicio || "",
 			horaFin: promo.horaFin || "",
 			descripcion: promo.descripcion || "",
+			aplicaTipoViaje: {
+				ida:
+					promo.aplicaTipoViaje?.ida !== undefined
+						? Boolean(promo.aplicaTipoViaje.ida)
+						: false,
+				vuelta:
+					promo.aplicaTipoViaje?.vuelta !== undefined
+						? Boolean(promo.aplicaTipoViaje.vuelta)
+						: false,
+				ambos:
+					promo.aplicaTipoViaje?.ambos !== undefined
+						? Boolean(promo.aplicaTipoViaje.ambos)
+						: true,
+			},
 		};
 	});
 };
@@ -226,6 +245,46 @@ function AdminPricing() {
 		}));
 	};
 
+	const handleToggleTipoViaje = (id, tipoViaje) => {
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: prev.dayPromotions.map((promo) => {
+				if (promo.id !== id) return promo;
+				const newValue = !promo.aplicaTipoViaje[tipoViaje];
+
+				// Lógica mutuamente excluyente
+				let newAplicaTipoViaje = { ...promo.aplicaTipoViaje };
+
+				if (tipoViaje === "ambos" && newValue) {
+					// Si selecciona "ambos", desactiva "ida" y "vuelta"
+					newAplicaTipoViaje = {
+						ida: false,
+						vuelta: false,
+						ambos: true,
+					};
+				} else if (
+					(tipoViaje === "ida" || tipoViaje === "vuelta") &&
+					newValue
+				) {
+					// Si selecciona "ida" o "vuelta", desactiva "ambos"
+					newAplicaTipoViaje = {
+						...newAplicaTipoViaje,
+						[tipoViaje]: true,
+						ambos: false,
+					};
+				} else {
+					// Si desactiva cualquier opción
+					newAplicaTipoViaje[tipoViaje] = newValue;
+				}
+
+				return {
+					...promo,
+					aplicaTipoViaje: newAplicaTipoViaje,
+				};
+			}),
+		}));
+	};
+
 	const handleRemovePromotion = (id) => {
 		setPricing((prev) => ({
 			...prev,
@@ -285,7 +344,17 @@ function AdminPricing() {
 			if (promo.aplicaPorDias && promo.dias.length === 0) return true;
 			if (
 				promo.aplicaPorHorario &&
-				(!promo.horaInicio || !promo.horaFin || promo.horaInicio >= promo.horaFin)
+				(!promo.horaInicio ||
+					!promo.horaFin ||
+					promo.horaInicio >= promo.horaFin)
+			) {
+				return true;
+			}
+			// Validar que al menos una opción de tipo de viaje esté seleccionada
+			if (
+				!promo.aplicaTipoViaje.ida &&
+				!promo.aplicaTipoViaje.vuelta &&
+				!promo.aplicaTipoViaje.ambos
 			) {
 				return true;
 			}
@@ -414,8 +483,8 @@ function AdminPricing() {
 												}
 												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 											/>
-									</label>
-									<label className="text-sm text-slate-300">
+										</label>
+										<label className="text-sm text-slate-300">
 											Precio Base (Auto)
 											<input
 												type="number"
@@ -579,9 +648,9 @@ function AdminPricing() {
 									Descuentos Personalizados
 								</h2>
 								<p className="mt-1 text-xs text-slate-400 max-w-xl">
-									Configura promociones por tramo con restricciones por día u horario.
-									Estos porcentajes se aplican como descuento adicional al 10% base
-									del canal web.
+									Configura promociones por tramo con restricciones por día u
+									horario. Estos porcentajes se aplican como descuento adicional
+									al 10% base del canal web.
 								</p>
 							</div>
 							<button
@@ -603,7 +672,9 @@ function AdminPricing() {
 						{pricing.dayPromotions.length > 0 ? (
 							<div className="space-y-5">
 								{pricing.dayPromotions.map((promo) => {
-									const destinoOptions = pricing.destinos.map((dest) => dest.nombre);
+									const destinoOptions = pricing.destinos.map(
+										(dest) => dest.nombre
+									);
 									return (
 										<div
 											key={promo.id}
@@ -632,8 +703,8 @@ function AdminPricing() {
 															))}
 														</select>
 													</label>
-												<label className="text-sm text-slate-300">
-													% Descuento adicional
+													<label className="text-sm text-slate-300">
+														% Descuento adicional
 														<input
 															type="number"
 															min="0"
@@ -686,7 +757,7 @@ function AdminPricing() {
 																	promo.id,
 																	"aplicaPorDias"
 																)
-														}
+															}
 															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
 														/>
 														Aplicar solo en días específicos
@@ -699,14 +770,18 @@ function AdminPricing() {
 															<button
 																type="button"
 																key={day}
-																onClick={() => handleTogglePromotionDay(promo.id, day)}
+																onClick={() =>
+																	handleTogglePromotionDay(promo.id, day)
+																}
 																disabled={!promo.aplicaPorDias}
 																className={`rounded-full border px-3 py-1 text-xs transition ${
 																	isActive
 																		? "border-emerald-400 bg-emerald-500/20 text-emerald-100"
-																	: "border-slate-700 bg-slate-900 text-slate-300"
+																		: "border-slate-700 bg-slate-900 text-slate-300"
 																} ${
-																	promo.aplicaPorDias ? "hover:border-emerald-400 hover:bg-emerald-500/10" : "opacity-50"
+																	promo.aplicaPorDias
+																		? "hover:border-emerald-400 hover:bg-emerald-500/10"
+																		: "opacity-50"
 																}`}
 															>
 																{day}
@@ -773,6 +848,60 @@ function AdminPricing() {
 														/>
 													</label>
 												</div>
+											</div>
+
+											<div className="space-y-3">
+												<label className="text-sm font-medium text-slate-300">
+													Aplicar descuento en:
+												</label>
+												<div className="flex flex-wrap gap-3">
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaTipoViaje.ida}
+															onChange={() =>
+																handleToggleTipoViaje(promo.id, "ida")
+															}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														<span className="flex items-center gap-1">
+															🚗 Solo ida
+														</span>
+													</label>
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaTipoViaje.vuelta}
+															onChange={() =>
+																handleToggleTipoViaje(promo.id, "vuelta")
+															}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														<span className="flex items-center gap-1">
+															🔄 Solo vuelta
+														</span>
+													</label>
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaTipoViaje.ambos}
+															onChange={() =>
+																handleToggleTipoViaje(promo.id, "ambos")
+															}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														<span className="flex items-center gap-1">
+															🔄🚗 Ida y vuelta
+														</span>
+													</label>
+												</div>
+												<p className="text-xs text-slate-400">
+													Selecciona en qué tipo de viaje se aplicará este
+													descuento.
+													<br />
+													<strong>Nota:</strong> "Ida y vuelta" es excluyente
+													con "Solo ida" y "Solo vuelta".
+												</p>
 											</div>
 										</div>
 									);

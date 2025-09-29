@@ -49,6 +49,20 @@ const normalizePromotions = (promotions = []) => {
 		horaInicio: promo.horaInicio || "",
 		horaFin: promo.horaFin || "",
 		descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
+		aplicaTipoViaje: {
+			ida:
+				promo.aplicaTipoViaje?.ida !== undefined
+					? Boolean(promo.aplicaTipoViaje.ida)
+					: false,
+			vuelta:
+				promo.aplicaTipoViaje?.vuelta !== undefined
+					? Boolean(promo.aplicaTipoViaje.vuelta)
+					: false,
+			ambos:
+				promo.aplicaTipoViaje?.ambos !== undefined
+					? Boolean(promo.aplicaTipoViaje.ambos)
+					: true,
+		},
 	}));
 };
 
@@ -191,9 +205,39 @@ function App() {
 		if (!destinoSeleccionado) return [];
 		if (!promotions.length) return [];
 		const tramo = destinoSeleccionado.nombre;
+		const isRoundTrip = formData.idaVuelta;
+
+		// Determinar la dirección del viaje basado en dónde está el aeropuerto
+		const aeropuertoEnOrigen = formData.origen === "Aeropuerto La Araucanía";
+		const aeropuertoEnDestino = formData.destino === "Aeropuerto La Araucanía";
+
+		// Ida: de ciudad al aeropuerto (aeropuerto está en destino)
+		// Vuelta: del aeropuerto a ciudad (aeropuerto está en origen)
+		const esViajeIda = aeropuertoEnDestino;
+		const esViajeVuelta = aeropuertoEnOrigen;
+
 		return promotions.filter((promo) => {
 			if (!promo.destino || promo.destino !== tramo) return false;
 			if (promo.descuentoPorcentaje <= 0) return false;
+
+			// Filtro por tipo de viaje
+			const tipoViaje = promo.aplicaTipoViaje;
+			if (tipoViaje) {
+				if (isRoundTrip) {
+					// Para viajes de ida y vuelta, debe estar habilitado "ambos"
+					if (!tipoViaje.ambos) return false;
+				} else {
+					// Para viajes de una sola dirección
+					if (esViajeIda) {
+						// Viaje de ida (ciudad → aeropuerto): debe permitir "ida" o "ambos"
+						if (!tipoViaje.ida && !tipoViaje.ambos) return false;
+					} else if (esViajeVuelta) {
+						// Viaje de vuelta (aeropuerto → ciudad): debe permitir "vuelta" o "ambos"
+						if (!tipoViaje.vuelta && !tipoViaje.ambos) return false;
+					}
+				}
+			}
+
 			if (promo.aplicaPorDias) {
 				const tags = getDayTagsFromDate(formData.fecha);
 				if (!tags.length) return false;
@@ -211,7 +255,15 @@ function App() {
 			}
 			return true;
 		});
-	}, [promotions, destinoSeleccionado, formData.fecha, formData.hora]);
+	}, [
+		promotions,
+		destinoSeleccionado,
+		formData.fecha,
+		formData.hora,
+		formData.idaVuelta,
+		formData.origen,
+		formData.destino,
+	]);
 
 	const activePromotion = useMemo(() => {
 		if (!applicablePromotions.length) return null;
@@ -564,7 +616,6 @@ function App() {
 	};
 
 	const handleWizardSubmit = () => enviarReserva("Reserva Web Autogestionada");
-
 
 	const minDateTime = useMemo(() => {
 		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
