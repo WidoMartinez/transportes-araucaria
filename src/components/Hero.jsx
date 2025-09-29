@@ -788,26 +788,26 @@ function Hero({
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
 														<div className="space-y-1 text-sm">
-															<p className="font-medium text-emerald-500">
+															<p className="font-medium text-slate-600">
 																Descuento base ({baseDiscountPercentage}%):{" "}
 																{formatCurrency(pricing.descuentoBase)}
 															</p>
 															{promoDiscountPercentage > 0 && (
-																<p className="font-medium text-emerald-600">
+																<p className="font-medium text-slate-600">
 																	{activePromotion?.descripcion ||
 																		`Promo adicional (+${promoDiscountPercentage}%)`}
 																	: {formatCurrency(pricing.descuentoPromocion)}
 																</p>
 															)}
 															{roundTripDiscountPercentage > 0 && (
-																<p className="font-medium text-sky-500">
+																<p className="font-medium text-slate-600">
 																	Ida y vuelta (+{roundTripDiscountPercentage}
 																	%):{" "}
 																	{formatCurrency(pricing.descuentoRoundTrip)}
 																</p>
 															)}
 															{personalizedDiscountPercentage > 0 && (
-																<p className="font-medium text-purple-500">
+																<p className="font-medium text-slate-600">
 																	Descuentos especiales (+
 																	{personalizedDiscountPercentage}
 																	%):{" "}
@@ -816,15 +816,15 @@ function Hero({
 																	)}
 																</p>
 															)}
-															<p className="text-emerald-500 font-semibold">
+															<p className="text-slate-700 font-semibold">
 																Ahorro total:{" "}
 																{formatCurrency(pricing.descuentoOnline)}
-																<span className="ml-1 text-xs text-emerald-300">
+																<span className="ml-1 text-xs text-slate-500">
 																	({totalDiscountPercentage}% aplicado)
 																</span>
 															</p>
 															{activePromotion && (
-																<p className="text-xs font-semibold text-emerald-600">
+																<p className="text-xs font-semibold text-slate-600">
 																	Promo activa:{" "}
 																	{activePromotion.descripcion ||
 																		`Descuento ${activePromotion.descuentoPorcentaje}%`}
@@ -988,11 +988,11 @@ function Hero({
 															</span>
 														</div>
 													)}
-													<div className="flex items-center justify-between text-emerald-600">
+													<div className="flex items-center justify-between text-slate-700">
 														<span>Ahorro total aplicado</span>
 														<span className="font-semibold">
 															{formatCurrency(pricing.descuentoOnline)}
-															<span className="ml-1 text-xs text-emerald-400">
+															<span className="ml-1 text-xs text-slate-500">
 																({totalDiscountPercentage}% total)
 															</span>
 														</span>
@@ -1174,11 +1174,11 @@ function Hero({
 															</span>
 														</div>
 													)}
-													<div className="flex items-center justify-between text-emerald-600">
+													<div className="flex items-center justify-between text-slate-700">
 														<span>Ahorro total aplicado</span>
 														<span className="font-semibold">
 															-{formatCurrency(pricing.descuentoOnline)}
-															<span className="ml-1 text-xs text-emerald-400">
+															<span className="ml-1 text-xs text-slate-500">
 																({totalDiscountPercentage}% total)
 															</span>
 														</span>
