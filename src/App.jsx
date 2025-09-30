@@ -171,7 +171,7 @@ function App() {
 
 	// --- FUNCIÓN PARA RECARGAR DATOS ---
 	const recargarDatosPrecios = async () => {
-		console.log("🔄 INICIANDO recarga de datos de precios...");
+		console.log("🔄 INICIANDO recarga de datos de precios... v2.0");
 		try {
 			const apiUrl =
 				import.meta.env.VITE_API_URL ||
