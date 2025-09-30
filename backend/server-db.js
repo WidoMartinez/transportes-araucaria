@@ -225,7 +225,7 @@ app.get("/pricing", async (req, res) => {
 			destinos: responseData.destinos.length,
 			dayPromotions: responseData.dayPromotions.length,
 			descuentosGlobales: Object.keys(responseData.descuentosGlobales),
-			codigosDescuento: responseData.codigosDescuento.length
+			codigosDescuento: responseData.codigosDescuento.length,
 		});
 
 		res.json(responseData);
