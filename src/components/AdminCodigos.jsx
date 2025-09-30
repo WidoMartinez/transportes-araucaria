@@ -252,6 +252,53 @@ function AdminCodigos() {
 		}
 	};
 
+	const handleDeleteUserFromCodeDirect = async (codigoId, usuarioId) => {
+		const codigo = codigos.find((c) => c.id.toString() === codigoId);
+		if (!codigo) {
+			alert("No se encontró el código");
+			return;
+		}
+
+		if (
+			confirm(
+				`¿Estás seguro de eliminar al usuario "${usuarioId}" de la lista de usuarios que han usado el código "${codigo.codigo}"?`
+			)
+		) {
+			setDeletingUser(true);
+			try {
+				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+				const url = `${apiUrl}/api/codigos/${codigoId}/usuarios/${usuarioId}`;
+				console.log("Debug - Enviando petición directa a:", url);
+
+				const response = await fetch(url, {
+					method: "DELETE",
+				});
+
+				console.log(
+					"Debug - Respuesta del servidor:",
+					response.status,
+					response.statusText
+				);
+
+				if (response.ok) {
+					await fetchCodigos();
+					alert("Usuario eliminado exitosamente del código");
+				} else {
+					const errorData = await response.json();
+					console.error("Error del servidor:", errorData);
+					alert(
+						`Error: ${errorData.error || "No se pudo eliminar el usuario"}`
+					);
+				}
+			} catch (error) {
+				console.error("Error eliminando usuario:", error);
+				alert("Error al eliminar el usuario");
+			} finally {
+				setDeletingUser(false);
+			}
+		}
+	};
+
 	const resetForm = () => {
 		setFormData({
 			codigo: "",
@@ -680,12 +727,24 @@ function AdminCodigos() {
 													{codigo.usuariosQueUsaron
 														.slice(0, 5)
 														.map((usuario, index) => (
-															<span
+															<div
 																key={index}
-																className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+																className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
 															>
-																{usuario.substring(0, 8)}...
-															</span>
+																<span>{usuario.substring(0, 8)}...</span>
+																<button
+																	onClick={() =>
+																		handleDeleteUserFromCodeDirect(
+																			codigo.id,
+																			usuario
+																		)
+																	}
+																	className="text-red-600 hover:text-red-800 hover:bg-red-100 rounded p-0.5 transition-colors"
+																	title="Eliminar usuario"
+																>
+																	<Trash2 className="w-3 h-3" />
+																</button>
+															</div>
 														))}
 													{codigo.usuariosQueUsaron.length > 5 && (
 														<span className="text-xs text-blue-600">
