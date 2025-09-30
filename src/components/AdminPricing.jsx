@@ -612,12 +612,20 @@ function AdminPricing() {
 		setSuccess("");
 
 		try {
+			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => ({
+				...promo,
+				porcentaje:
+					typeof promo.descuentoPorcentaje === "number"
+						? promo.descuentoPorcentaje
+						: Number(promo.descuentoPorcentaje) || 0,
+			}));
+
 			const response = await fetch(`${API_BASE_URL}/pricing`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					destinos: pricing.destinos,
-					dayPromotions: pricing.dayPromotions,
+					dayPromotions: formattedDayPromotions,
 					descuentosGlobales: pricing.descuentosGlobales,
 				}),
 			});
@@ -629,43 +637,59 @@ function AdminPricing() {
 				);
 			}
 
-			const savedData = await response.json();
-			setPricing({
-				...savedData,
-				dayPromotions: normalizePromotions(savedData.dayPromotions),
-				descuentosGlobales: {
-					descuentoOnline: {
-						valor:
-							savedData.descuentosGlobales?.descuentoOnline?.valor ||
-							savedData.descuentosGlobales?.descuentoOnline ||
-							5,
-						activo:
-							savedData.descuentosGlobales?.descuentoOnline?.activo !==
-							undefined
-								? savedData.descuentosGlobales.descuentoOnline.activo
-								: true,
-						nombre: "Descuento por Reserva Online",
-					},
-					descuentoRoundTrip: {
-						valor:
-							savedData.descuentosGlobales?.descuentoRoundTrip?.valor ||
-							savedData.descuentosGlobales?.descuentoRoundTrip ||
-							10,
-						activo:
-							savedData.descuentosGlobales?.descuentoRoundTrip?.activo !==
-							undefined
-								? savedData.descuentosGlobales.descuentoRoundTrip.activo
-								: true,
-						nombre: "Descuento por Ida y Vuelta",
-					},
-					descuentosPersonalizados:
-						savedData.descuentosGlobales?.descuentosPersonalizados || [],
-				},
-			});
-			setSuccess(
-				"Configuración guardada correctamente. Los cambios se aplicarán en el sitio web."
-			);
+			let savedData = null;
+			try {
+				savedData = await response.json();
+			} catch (parseError) {
+				console.warn("No se pudo parsear la respuesta del servidor; se recargara la configuracion.", parseError);
+			}
 
+			const hasFullPayload =
+				savedData &&
+				Array.isArray(savedData.destinos) &&
+				Array.isArray(savedData.dayPromotions) &&
+				savedData.descuentosGlobales;
+
+			if (hasFullPayload) {
+				setPricing({
+					...savedData,
+					dayPromotions: normalizePromotions(savedData.dayPromotions),
+					descuentosGlobales: {
+						descuentoOnline: {
+							valor:
+								savedData.descuentosGlobales?.descuentoOnline?.valor ||
+								savedData.descuentosGlobales?.descuentoOnline ||
+								5,
+							activo:
+								savedData.descuentosGlobales?.descuentoOnline?.activo !==
+								undefined
+									? savedData.descuentosGlobales.descuentoOnline.activo
+									: true,
+							nombre: "Descuento por Reserva Online",
+						},
+						descuentoRoundTrip: {
+							valor:
+								savedData.descuentosGlobales?.descuentoRoundTrip?.valor ||
+								savedData.descuentosGlobales?.descuentoRoundTrip ||
+								10,
+							activo:
+								savedData.descuentosGlobales?.descuentoRoundTrip?.activo !==
+								undefined
+									? savedData.descuentosGlobales.descuentoRoundTrip.activo
+									: true,
+							nombre: "Descuento por Ida y Vuelta",
+						},
+						descuentosPersonalizados:
+							savedData.descuentosGlobales?.descuentosPersonalizados || [],
+					},
+				});
+			} else {
+				await fetchPricing();
+			}
+
+			setSuccess(
+				"Configuracion guardada correctamente. Los cambios se aplicaran en el sitio web."
+			);
 			// Notificar a la aplicación principal que los datos han cambiado
 			try {
 				// Método 1: localStorage event (funciona entre pestañas)
