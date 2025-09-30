@@ -213,13 +213,22 @@ app.get("/pricing", async (req, res) => {
 			minHorasAnticipacion: destino.minHorasAnticipacion || 5,
 		}));
 
-		res.json({
+		const responseData = {
 			destinos: destinosFormateados,
 			dayPromotions: dayPromotionsFormatted,
 			descuentosGlobales: descuentosFormatted,
 			codigosDescuento: codigosFormateados,
 			updatedAt: new Date().toISOString(),
+		};
+
+		console.log("🔍 Backend - Datos que se envían al frontend:", {
+			destinos: responseData.destinos.length,
+			dayPromotions: responseData.dayPromotions.length,
+			descuentosGlobales: Object.keys(responseData.descuentosGlobales),
+			codigosDescuento: responseData.codigosDescuento.length
 		});
+
+		res.json(responseData);
 	} catch (error) {
 		console.error("Error al obtener la configuración de precios:", error);
 		res.status(500).json({
