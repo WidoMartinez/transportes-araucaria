@@ -496,7 +496,9 @@ function App() {
 	]);
 
 	const activePromotion = useMemo(() => {
-		const promos = Array.isArray(applicablePromotions) ? applicablePromotions : [];
+		const promos = Array.isArray(applicablePromotions)
+			? applicablePromotions
+			: [];
 		if (promos.length === 0) return null;
 		return promos.reduce(
 			(best, promo) =>
