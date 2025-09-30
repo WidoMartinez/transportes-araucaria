@@ -119,6 +119,9 @@ app.put("/pricing", async (req, res) => {
 	}
 
 	try {
+		// Leer datos existentes para preservar codigosDescuento
+		const existingData = await readPricingData();
+
 		const dataToSave = {
 			destinos,
 			dayPromotions,
@@ -135,6 +138,9 @@ app.put("/pricing", async (req, res) => {
 				},
 				descuentosPersonalizados: [],
 			},
+			// Preservar codigosDescuento existentes
+			codigosDescuento: existingData.codigosDescuento || [],
+			updatedAt: new Date().toISOString(),
 		};
 		const savedData = await writePricingData(dataToSave);
 		res.json(savedData);
