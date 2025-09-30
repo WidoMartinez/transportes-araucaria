@@ -120,6 +120,11 @@ function AdminPricing() {
 			}
 			const data = await response.json();
 
+			console.log("🔍 Frontend - Datos recibidos del backend:", data);
+			console.log("🔍 Frontend - Destinos recibidos:", data.destinos);
+			console.log("🔍 Frontend - Cantidad de destinos:", data.destinos?.length);
+			console.log("🔍 Frontend - Destinos iniciales:", destinosIniciales);
+
 			setPricing({
 				destinos:
 					data.destinos && data.destinos.length > 0
@@ -153,6 +158,11 @@ function AdminPricing() {
 						data.descuentosGlobales?.descuentosPersonalizados || [],
 				},
 				updatedAt: data.updatedAt || null,
+			});
+
+			console.log("🔍 Frontend - Estado final de pricing:", {
+				destinos: data.destinos && data.destinos.length > 0 ? data.destinos : destinosIniciales,
+				dayPromotions: normalizePromotions(data.dayPromotions)
 			});
 		} catch (fetchError) {
 			console.error(fetchError);

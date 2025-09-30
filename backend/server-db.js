@@ -104,6 +104,9 @@ app.get("/pricing", async (req, res) => {
 			],
 		});
 
+		console.log("🔍 Backend - Destinos encontrados en BD:", destinos.length);
+		console.log("📊 Backend - Datos de destinos:", destinos);
+
 		const dayPromotions = await Promocion.findAll({
 			order: [["dia", "ASC"]],
 		});
