@@ -604,7 +604,7 @@ const startServer = async () => {
 
 	app.listen(PORT, () => {
 		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-		console.log(`📊 Base de datos MySQL conectada`);
+		console.log("📊 Base de datos MySQL conectada");
 	});
 };
 
