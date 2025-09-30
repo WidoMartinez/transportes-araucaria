@@ -268,6 +268,15 @@ app.put("/pricing", async (req, res) => {
 		console.log("🔍 Procesando dayPromotions:", dayPromotions);
 		console.log("🔍 Cantidad de promociones:", dayPromotions.length);
 
+		// Primero eliminar todas las promociones existentes
+		console.log("🗑️ Eliminando todas las promociones existentes...");
+		await Promocion.destroy({
+			where: {},
+			truncate: true // Elimina todos los registros
+		});
+		console.log("✅ Promociones existentes eliminadas");
+
+		// Luego crear las nuevas promociones
 		for (const promocion of dayPromotions) {
 			console.log("📝 Procesando promoción:", promocion);
 			// Si la promoción tiene múltiples días, crear una entrada por día
@@ -283,7 +292,7 @@ app.put("/pricing", async (req, res) => {
 					destino: promocion.destino,
 				});
 
-				await Promocion.upsert({
+				await Promocion.create({
 					nombre: promocion.nombre,
 					dia: dia,
 					tipo: "porcentaje", // Por defecto porcentaje
