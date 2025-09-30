@@ -109,11 +109,21 @@ app.get("/pricing", async (req, res) => {
 			order: [["fechaCreacion", "DESC"]],
 		});
 
+		// Asegurar que usuariosQueUsaron sea siempre un array
+		const codigosFormateados = codigosDescuento.map((codigo) => ({
+			...codigo.toJSON(),
+			usuariosQueUsaron: Array.isArray(codigo.usuariosQueUsaron)
+				? codigo.usuariosQueUsaron
+				: codigo.usuariosQueUsaron
+				? JSON.parse(codigo.usuariosQueUsaron)
+				: [],
+		}));
+
 		res.json({
 			destinos,
 			dayPromotions,
 			descuentosGlobales: descuentosFormatted,
-			codigosDescuento,
+			codigosDescuento: codigosFormateados,
 			updatedAt: new Date().toISOString(),
 		});
 	} catch (error) {
@@ -219,7 +229,18 @@ app.get("/api/codigos", async (req, res) => {
 		const codigos = await CodigoDescuento.findAll({
 			order: [["fechaCreacion", "DESC"]],
 		});
-		res.json(codigos);
+
+		// Asegurar que usuariosQueUsaron sea siempre un array
+		const codigosFormateados = codigos.map((codigo) => ({
+			...codigo.toJSON(),
+			usuariosQueUsaron: Array.isArray(codigo.usuariosQueUsaron)
+				? codigo.usuariosQueUsaron
+				: codigo.usuariosQueUsaron
+				? JSON.parse(codigo.usuariosQueUsaron)
+				: [],
+		}));
+
+		res.json(codigosFormateados);
 	} catch (error) {
 		console.error("Error obteniendo códigos:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
