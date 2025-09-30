@@ -104,15 +104,11 @@ app.get("/pricing", async (req, res) => {
 			],
 		});
 
-		console.log("🔍 Backend - Destinos encontrados en BD:", destinos.length);
-		console.log("📊 Backend - Datos de destinos:", destinos);
 
 		const dayPromotions = await Promocion.findAll({
 			order: [["dia", "ASC"]],
 		});
 
-		console.log("🔍 Promociones encontradas en BD:", dayPromotions.length);
-		console.log("📊 Datos de promociones:", dayPromotions);
 
 		// Transformar promociones al formato esperado por el frontend
 		const dayPromotionsFormatted = dayPromotions.map((promo) => ({
@@ -133,10 +129,6 @@ app.get("/pricing", async (req, res) => {
 			},
 		}));
 
-		console.log(
-			"🔄 Promociones formateadas para frontend:",
-			dayPromotionsFormatted
-		);
 
 		const descuentosGlobales = await DescuentoGlobal.findAll();
 
@@ -221,12 +213,6 @@ app.get("/pricing", async (req, res) => {
 			updatedAt: new Date().toISOString(),
 		};
 
-		console.log("🔍 Backend - Datos que se envían al frontend:", {
-			destinos: responseData.destinos.length,
-			dayPromotions: responseData.dayPromotions.length,
-			descuentosGlobales: Object.keys(responseData.descuentosGlobales),
-			codigosDescuento: responseData.codigosDescuento.length,
-		});
 
 		res.json(responseData);
 	} catch (error) {

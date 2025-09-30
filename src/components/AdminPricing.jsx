@@ -120,19 +120,6 @@ function AdminPricing() {
 			}
 			const data = await response.json();
 
-			console.log("🔍 Frontend - Datos recibidos del backend:", data);
-			console.log("🔍 Frontend - Destinos recibidos:", data.destinos);
-			console.log("🔍 Frontend - Cantidad de destinos:", data.destinos?.length);
-			console.log("🔍 Frontend - Destinos iniciales:", destinosIniciales);
-			console.log("🔍 Frontend - Condición data.destinos:", data.destinos);
-			console.log(
-				"🔍 Frontend - Condición data.destinos.length > 0:",
-				data.destinos?.length > 0
-			);
-			console.log(
-				"🔍 Frontend - Condición completa:",
-				data.destinos && data.destinos.length > 0
-			);
 
 			setPricing({
 				destinos:
@@ -169,23 +156,6 @@ function AdminPricing() {
 				updatedAt: data.updatedAt || null,
 			});
 
-			const destinosFinales =
-				data.destinos && data.destinos.length > 0
-					? data.destinos
-					: destinosIniciales;
-
-			console.log(
-				"🔍 Frontend - Destinos finales que se usarán:",
-				destinosFinales
-			);
-			console.log(
-				"🔍 Frontend - Cantidad de destinos finales:",
-				destinosFinales.length
-			);
-			console.log("🔍 Frontend - Estado final de pricing:", {
-				destinos: destinosFinales,
-				dayPromotions: normalizePromotions(data.dayPromotions),
-			});
 		} catch (fetchError) {
 			console.error(fetchError);
 			setError(
