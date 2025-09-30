@@ -612,13 +612,22 @@ function AdminPricing() {
 		setSuccess("");
 
 		try {
-			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => ({
-				...promo,
-				porcentaje:
-					typeof promo.descuentoPorcentaje === "number"
-						? promo.descuentoPorcentaje
-						: Number(promo.descuentoPorcentaje) || 0,
-			}));
+			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => {
+				const diasArray = Array.isArray(promo.dias)
+					? promo.dias.filter(Boolean)
+					: [];
+				const normalizedDias = diasArray.length > 0 ? diasArray : ["todos"];
+
+				return {
+					...promo,
+					dias: normalizedDias,
+					dia: promo.dia || normalizedDias[0],
+					porcentaje:
+						typeof promo.descuentoPorcentaje === "number"
+							? promo.descuentoPorcentaje
+							: Number(promo.descuentoPorcentaje) || 0,
+				};
+			});
 
 			const response = await fetch(`${API_BASE_URL}/pricing`, {
 				method: "PUT",
