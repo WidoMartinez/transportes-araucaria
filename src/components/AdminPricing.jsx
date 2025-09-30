@@ -578,6 +578,11 @@ function AdminPricing() {
 			"🔍 Frontend - Longitud:",
 			pricing.descuentosGlobales.descuentosPersonalizados?.length
 		);
+		
+		// Debug logs para dayPromotions
+		console.log("🔍 Frontend - dayPromotions antes de enviar:", pricing.dayPromotions);
+		console.log("🔍 Frontend - dayPromotions.length:", pricing.dayPromotions?.length);
+		console.log("🔍 Frontend - dayPromotions contenido:", pricing.dayPromotions);
 
 		setSaving(true);
 		setError("");
