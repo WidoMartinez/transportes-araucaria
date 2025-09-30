@@ -42,7 +42,7 @@ const initializeDatabase = async () => {
 		if (!connected) {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
-		await syncDatabase(false);
+		await syncDatabase(false); // false = no forzar recreación
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
