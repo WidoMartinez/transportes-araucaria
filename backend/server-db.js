@@ -108,6 +108,9 @@ app.get("/pricing", async (req, res) => {
 			order: [["dia", "ASC"]],
 		});
 
+		console.log("🔍 Promociones encontradas en BD:", dayPromotions.length);
+		console.log("📊 Datos de promociones:", dayPromotions);
+
 		// Transformar promociones al formato esperado por el frontend
 		const dayPromotionsFormatted = dayPromotions.map((promo) => ({
 			id: `promo-${promo.id}`,
@@ -126,6 +129,8 @@ app.get("/pricing", async (req, res) => {
 				ambos: true,
 			},
 		}));
+
+		console.log("🔄 Promociones formateadas para frontend:", dayPromotionsFormatted);
 
 		const descuentosGlobales = await DescuentoGlobal.findAll();
 
@@ -257,13 +262,24 @@ app.put("/pricing", async (req, res) => {
 		}
 
 		// Actualizar promociones
+		console.log("🔍 Procesando dayPromotions:", dayPromotions);
+		console.log("🔍 Cantidad de promociones:", dayPromotions.length);
+		
 		for (const promocion of dayPromotions) {
+			console.log("📝 Procesando promoción:", promocion);
 			// Si la promoción tiene múltiples días, crear una entrada por día
 			const dias = Array.isArray(promocion.dias)
 				? promocion.dias
 				: [promocion.dia];
 
 			for (const dia of dias) {
+				console.log("💾 Guardando promoción en BD:", {
+					nombre: promocion.nombre,
+					dia: dia,
+					valor: promocion.descuentoPorcentaje || 0,
+					destino: promocion.destino
+				});
+				
 				await Promocion.upsert({
 					nombre: promocion.nombre,
 					dia: dia,
@@ -274,6 +290,7 @@ app.put("/pricing", async (req, res) => {
 				});
 			}
 		}
+		console.log("✅ Promociones procesadas correctamente");
 
 		// Actualizar descuentos globales
 		if (descuentosGlobales) {
