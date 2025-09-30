@@ -224,7 +224,7 @@ function AdminPricing() {
 	};
 
 	const handleAddPromotion = () => {
-		if (pricing.destinos.length === 0) {
+		if (!pricing.destinos || pricing.destinos.length === 0) {
 			alert(
 				"Agrega al menos un destino antes de crear un descuento personalizado."
 			);
@@ -1108,7 +1108,7 @@ function AdminPricing() {
 								</div>
 							)}
 
-							{pricing.destinos.length > 0 ? (
+							{pricing.destinos && pricing.destinos.length > 0 ? (
 								pricing.destinos.map((destino) => {
 									const isVanDisabled = destino.maxPasajeros <= 4;
 									return (
@@ -1220,14 +1220,14 @@ function AdminPricing() {
 							<button
 								type="button"
 								onClick={handleAddPromotion}
-								disabled={pricing.destinos.length === 0}
+								disabled={!pricing.destinos || pricing.destinos.length === 0}
 								className="inline-flex items-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
 							>
 								Añadir Descuento
 							</button>
 						</div>
 
-						{pricing.destinos.length === 0 && (
+						{(!pricing.destinos || pricing.destinos.length === 0) && (
 							<p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
 								Primero crea un destino para asociar descuentos.
 							</p>
