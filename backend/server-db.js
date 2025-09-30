@@ -64,6 +64,25 @@ app.get("/pricing", async (req, res) => {
 			order: [["dia", "ASC"]],
 		});
 
+		// Transformar promociones al formato esperado por el frontend
+		const dayPromotionsFormatted = dayPromotions.map((promo) => ({
+			id: `promo-${promo.id}`,
+			nombre: promo.nombre,
+			destino: "", // Las promociones de la BD no tienen destino específico
+			descripcion: promo.descripcion || "",
+			dias: [promo.dia], // Convertir dia singular a array
+			aplicaPorDias: true, // Las promociones de BD se basan en días
+			aplicaPorHorario: false,
+			horaInicio: "",
+			horaFin: "",
+			descuentoPorcentaje: promo.tipo === "porcentaje" ? promo.valor : 0,
+			aplicaTipoViaje: {
+				ida: true,
+				vuelta: true,
+				ambos: true,
+			},
+		}));
+
 		const descuentosGlobales = await DescuentoGlobal.findAll();
 
 		// Convertir descuentos globales al formato esperado
@@ -141,7 +160,7 @@ app.get("/pricing", async (req, res) => {
 
 		res.json({
 			destinos: destinosFormateados,
-			dayPromotions,
+			dayPromotions: dayPromotionsFormatted,
 			descuentosGlobales: descuentosFormatted,
 			codigosDescuento: codigosFormateados,
 			updatedAt: new Date().toISOString(),
@@ -180,14 +199,19 @@ app.put("/pricing", async (req, res) => {
 
 		// Actualizar promociones
 		for (const promocion of dayPromotions) {
-			await Promocion.upsert({
-				nombre: promocion.nombre,
-				dia: promocion.dia,
-				tipo: promocion.tipo,
-				valor: promocion.valor,
-				activo: promocion.activo !== false,
-				descripcion: promocion.descripcion,
-			});
+			// Si la promoción tiene múltiples días, crear una entrada por día
+			const dias = Array.isArray(promocion.dias) ? promocion.dias : [promocion.dia];
+			
+			for (const dia of dias) {
+				await Promocion.upsert({
+					nombre: promocion.nombre,
+					dia: dia,
+					tipo: "porcentaje", // Por defecto porcentaje
+					valor: promocion.descuentoPorcentaje || 0,
+					activo: promocion.activo !== false,
+					descripcion: promocion.descripcion,
+				});
+			}
 		}
 
 		// Actualizar descuentos globales
