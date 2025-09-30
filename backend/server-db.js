@@ -220,9 +220,11 @@ app.put("/pricing", async (req, res) => {
 		for (const destino of destinos) {
 			// Transformar datos del frontend al formato de la base de datos
 			const precioIda = destino.precios?.auto?.base || destino.precioIda || 0;
-			const precioVuelta = destino.precios?.auto?.base || destino.precioVuelta || 0;
-			const precioIdaVuelta = destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
-			
+			const precioVuelta =
+				destino.precios?.auto?.base || destino.precioVuelta || 0;
+			const precioIdaVuelta =
+				destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
+
 			await Destino.upsert({
 				nombre: destino.nombre,
 				precioIda: precioIda,
