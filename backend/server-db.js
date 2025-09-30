@@ -284,22 +284,29 @@ app.put("/pricing", async (req, res) => {
 			}
 
 			// Actualizar descuentos personalizados
-			if (descuentosGlobales.descuentosPersonalizados) {
+			console.log("🔍 Descuentos personalizados recibidos:", descuentosGlobales.descuentosPersonalizados);
+			if (descuentosGlobales.descuentosPersonalizados && descuentosGlobales.descuentosPersonalizados.length > 0) {
+				console.log("🔄 Eliminando descuentos personalizados existentes...");
 				// Eliminar descuentos personalizados existentes
 				await DescuentoGlobal.destroy({
 					where: { tipo: "descuentoPersonalizado" },
 				});
 
+				console.log("🔄 Creando nuevos descuentos personalizados...");
 				// Crear nuevos descuentos personalizados
 				for (const descuento of descuentosGlobales.descuentosPersonalizados) {
+					console.log("📝 Creando descuento:", descuento);
 					await DescuentoGlobal.create({
 						tipo: "descuentoPersonalizado",
 						nombre: descuento.nombre,
 						valor: descuento.valor,
 						activo: descuento.activo,
-						descripcion: descuento.descripcion,
+						descripcion: descuento.descripcion || "",
 					});
 				}
+				console.log("✅ Descuentos personalizados creados");
+			} else {
+				console.log("⚠️ No hay descuentos personalizados para procesar");
 			}
 		}
 
