@@ -200,8 +200,10 @@ app.put("/pricing", async (req, res) => {
 		// Actualizar promociones
 		for (const promocion of dayPromotions) {
 			// Si la promoción tiene múltiples días, crear una entrada por día
-			const dias = Array.isArray(promocion.dias) ? promocion.dias : [promocion.dia];
-			
+			const dias = Array.isArray(promocion.dias)
+				? promocion.dias
+				: [promocion.dia];
+
 			for (const dia of dias) {
 				await Promocion.upsert({
 					nombre: promocion.nombre,
