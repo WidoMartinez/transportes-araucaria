@@ -246,10 +246,17 @@ function AdminPricing() {
 			id: generatePromotionId(),
 		};
 
-		setPricing((prev) => ({
-			...prev,
-			dayPromotions: [...prev.dayPromotions, nuevaPromocion],
-		}));
+		console.log("🔍 handleAddPromotion - dayPromotions antes:", prev.dayPromotions);
+		console.log("🔍 handleAddPromotion - nuevaPromocion:", nuevaPromocion);
+		
+		setPricing((prev) => {
+			const newDayPromotions = [...prev.dayPromotions, nuevaPromocion];
+			console.log("🔍 handleAddPromotion - dayPromotions después:", newDayPromotions);
+			return {
+				...prev,
+				dayPromotions: newDayPromotions,
+			};
+		});
 	};
 
 	const handlePromotionFieldChange = (id, field, value) => {
@@ -578,11 +585,21 @@ function AdminPricing() {
 			"🔍 Frontend - Longitud:",
 			pricing.descuentosGlobales.descuentosPersonalizados?.length
 		);
-		
+
 		// Debug logs para dayPromotions
-		console.log("🔍 Frontend - dayPromotions antes de enviar:", pricing.dayPromotions);
-		console.log("🔍 Frontend - dayPromotions.length:", pricing.dayPromotions?.length);
-		console.log("🔍 Frontend - dayPromotions contenido:", pricing.dayPromotions);
+		console.log(
+			"🔍 Frontend - dayPromotions antes de enviar:",
+			pricing.dayPromotions
+		);
+		console.log(
+			"🔍 Frontend - dayPromotions.length:",
+			pricing.dayPromotions?.length
+		);
+		console.log(
+			"🔍 Frontend - dayPromotions contenido:",
+			pricing.dayPromotions
+		);
+		console.log("🔍 Frontend - Estado completo de pricing:", pricing);
 
 		setSaving(true);
 		setError("");
