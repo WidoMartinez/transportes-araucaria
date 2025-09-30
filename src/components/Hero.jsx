@@ -206,6 +206,22 @@ function Hero({
 		setStepError("");
 	}, [currentStep]);
 
+	// Efecto para mantener el scroll en la parte superior del módulo cuando cambie el paso
+	useEffect(() => {
+		if (showBookingModule) {
+			// Pequeño delay para asegurar que el DOM se haya actualizado
+			setTimeout(() => {
+				const moduleElement = document.querySelector("[data-booking-module]");
+				if (moduleElement) {
+					moduleElement.scrollIntoView({
+						behavior: "smooth",
+						block: "start",
+					});
+				}
+			}, 100);
+		}
+	}, [currentStep, showBookingModule]);
+
 	const handleStepOneNext = () => {
 		if (!formData.origen.trim()) {
 			setStepError("Indica el origen de tu viaje.");
@@ -532,7 +548,10 @@ function Hero({
 							</p>
 						</div>
 
-						<Card className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left">
+						<Card
+							className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left"
+							data-booking-module
+						>
 							<CardHeader className="space-y-3">
 								<div className="flex flex-wrap items-center justify-between gap-2">
 									<Button

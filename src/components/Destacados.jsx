@@ -9,12 +9,16 @@ import {
 	CarouselNext,
 	CarouselPrevious,
 } from "@/components/ui/carousel"; // Importamos el carrusel
+import Autoplay from "embla-carousel-autoplay";
 
 // El componente recibe una lista de 'destinos' como propiedad
 function Destacados({ destinos }) {
 	if (!destinos || destinos.length === 0) {
 		return null; // No renderizar nada si no hay destinos destacados
 	}
+
+	// Configurar el plugin de autoplay
+	const autoplayPlugin = Autoplay({ delay: 5000, stopOnInteraction: false });
 
 	return (
 		<section id="destacados" className="py-20 bg-muted/40 overflow-hidden">
@@ -34,6 +38,7 @@ function Destacados({ destinos }) {
 						align: "start",
 						loop: true,
 					}}
+					plugins={[autoplayPlugin]}
 					className="w-full max-w-6xl mx-auto"
 				>
 					<CarouselContent>

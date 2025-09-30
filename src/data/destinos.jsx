@@ -5,6 +5,9 @@ import temucoImg from "../assets/temuco.jpg";
 import villarricaImg from "../assets/villarrica.jpg";
 import puconImg from "../assets/pucon.jpg";
 import corralcoImg from "../assets/corralco.jpg";
+import icalmaImg from "../assets/icalma.jpg";
+import lonquimayImg from "../assets/lonquimay.jpg";
+import conguillioImg from "../assets/conguilllio.jpg";
 
 /**
  * @typedef {object} PrecioVehiculo
@@ -80,5 +83,29 @@ export const destacadosData = [
 		descripcion:
 			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
 		imagen: corralcoImg,
+	},
+	{
+		nombre: "Icalma",
+		titulo: "Laguna Icalma",
+		subtitulo: "Naturaleza Glaciar y Cultura Pehuenche",
+		descripcion:
+			"Descubre la hermosa Laguna Icalma, un cuerpo de agua de origen glaciar rodeado de bosques nativos y montañas. Ideal para pesca, navegación, senderismo y conocer la rica cultura pehuenche de la zona.",
+		imagen: icalmaImg,
+	},
+	{
+		nombre: "Lonquimay",
+		titulo: "Volcán Lonquimay",
+		subtitulo: "Aventura y Naturaleza Pura",
+		descripcion:
+			"Descubre la majestuosidad del volcán Lonquimay y sus alrededores. Trekking, observación de flora y fauna, y paisajes volcánicos únicos te esperan en este destino de aventura.",
+		imagen: lonquimayImg,
+	},
+	{
+		nombre: "Conguillío",
+		titulo: "Parque Nacional Conguillío",
+		subtitulo: "La Araucanía en su Estado Puro",
+		descripcion:
+			"Explora uno de los parques nacionales más hermosos de Chile. Bosques de araucarias milenarias, lagos cristalinos y el volcán Llaima te ofrecen una experiencia natural incomparable.",
+		imagen: conguillioImg,
 	},
 ];
