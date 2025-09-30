@@ -416,22 +416,22 @@ function App() {
 		const esViajeIda = aeropuertoEnDestino;
 		const esViajeVuelta = aeropuertoEnOrigen;
 
-		console.log("🔍 DEBUG FILTRO PROMOCIONES:", {
-			tramo,
-			isRoundTrip,
-			esViajeIda,
-			esViajeVuelta,
-			promotions: promotions.length,
-		});
+		// console.log("🔍 DEBUG FILTRO PROMOCIONES:", {
+		// 	tramo,
+		// 	isRoundTrip,
+		// 	esViajeIda,
+		// 	esViajeVuelta,
+		// 	promotions: promotions.length,
+		// });
 
 		return promotions.filter((promo) => {
-			console.log("🔍 Evaluando promoción:", {
-				promo: promo.nombre,
-				destino: promo.destino,
-				tramo,
-				coincide: promo.destino === tramo,
-				descuento: promo.descuentoPorcentaje,
-			});
+			// console.log("🔍 Evaluando promoción:", {
+			// 	promo: promo.nombre,
+			// 	destino: promo.destino,
+			// 	tramo,
+			// 	coincide: promo.destino === tramo,
+			// 	descuento: promo.descuentoPorcentaje,
+			// });
 
 			if (!promo.destino || promo.destino !== tramo) return false;
 			if (promo.descuentoPorcentaje <= 0) return false;
@@ -503,16 +503,16 @@ function App() {
 		? activePromotion.descuentoPorcentaje / 100
 		: 0;
 
-	// Debug específico para promociones
-	console.log("🎯 DEBUG PROMOCIONES:", {
-		applicablePromotions,
-		activePromotion,
-		promotionDiscountRate,
-		destinoSeleccionado: destinoSeleccionado?.nombre,
-		origen: formData.origen,
-		destino: formData.destino,
-		idaVuelta: formData.idaVuelta,
-	});
+	// Debug específico para promociones (comentado para reducir ruido)
+	// console.log("🎯 DEBUG PROMOCIONES:", {
+	// 	applicablePromotions,
+	// 	activePromotion,
+	// 	promotionDiscountRate,
+	// 	destinoSeleccionado: destinoSeleccionado?.nombre,
+	// 	origen: formData.origen,
+	// 	destino: formData.destino,
+	// 	idaVuelta: formData.idaVuelta,
+	// });
 	// Calcular descuentos dinámicos desde descuentosGlobales
 	const onlineDiscountRate =
 		descuentosGlobales?.descuentoOnline?.activo &&
@@ -520,19 +520,19 @@ function App() {
 			? descuentosGlobales.descuentoOnline.valor / 100
 			: 0;
 
-	// Debug: mostrar descuentos actuales cuando cambien
-	useEffect(() => {
-		console.log("💰 DESCUENTOS ACTUALES:", {
-			descuentosGlobales,
-			onlineDiscountRate,
-			roundTripDiscountRate:
-				formData.idaVuelta &&
-				descuentosGlobales?.descuentoRoundTrip?.activo &&
-				descuentosGlobales?.descuentoRoundTrip?.valor
-					? descuentosGlobales.descuentoRoundTrip.valor / 100
-					: 0,
-		});
-	}, [descuentosGlobales, formData.idaVuelta]);
+	// Debug: mostrar descuentos actuales cuando cambien (comentado para reducir ruido)
+	// useEffect(() => {
+	// 	console.log("💰 DESCUENTOS ACTUALES:", {
+	// 		descuentosGlobales,
+	// 		onlineDiscountRate,
+	// 		roundTripDiscountRate:
+	// 			formData.idaVuelta &&
+	// 			descuentosGlobales?.descuentoRoundTrip?.activo &&
+	// 			descuentosGlobales?.descuentoRoundTrip?.valor
+	// 				? descuentosGlobales.descuentoRoundTrip.valor / 100
+	// 				: 0,
+	// 	});
+	// }, [descuentosGlobales, formData.idaVuelta]);
 
 	const roundTripDiscountRate =
 		formData.idaVuelta &&
@@ -752,13 +752,13 @@ function App() {
 			} else {
 				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
 			}
-			console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
-				codigoAplicado,
-				precioBase,
-				descuentoCodigo,
-				tipo: codigoAplicado.tipo,
-				valor: codigoAplicado.valor,
-			});
+			// console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
+			// 	codigoAplicado,
+			// 	precioBase,
+			// 	descuentoCodigo,
+			// 	tipo: codigoAplicado.tipo,
+			// 	valor: codigoAplicado.valor,
+			// });
 		}
 
 		// Calcular descuento total
@@ -780,41 +780,41 @@ function App() {
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
-		// Debug específico para verificar el total final
-		console.log("💰 TOTAL FINAL CALCULADO:", {
-			precioBase,
-			descuentoOnlineTotal,
-			totalConDescuento,
-			abono,
-			saldoPendiente,
-			descuentoCodigo,
-			codigoAplicado: codigoAplicado?.codigo,
-		});
+		// Debug específico para verificar el total final (comentado para reducir ruido)
+		// console.log("💰 TOTAL FINAL CALCULADO:", {
+		// 	precioBase,
+		// 	descuentoOnlineTotal,
+		// 	totalConDescuento,
+		// 	abono,
+		// 	saldoPendiente,
+		// 	descuentoCodigo,
+		// 	codigoAplicado: codigoAplicado?.codigo,
+		// });
 
-		// Debug: mostrar información de descuentos
-		console.log("💰 DEBUG PRICING CORREGIDO:", {
-			precioIda,
-			precioBase,
-			idaVuelta: formData.idaVuelta,
-			onlineDiscountRate,
-			promotionDiscountRate,
-			roundTripDiscountRate,
-			personalizedDiscountRate,
-			descuentoOnlinePorTramo,
-			descuentoOnline,
-			descuentoPromocionPorTramo,
-			descuentoPromocion,
-			descuentoRoundTrip,
-			descuentosPersonalizados,
-			descuentoCodigo,
-			descuentoTotalSinLimite,
-			descuentoMaximo,
-			descuentoOnlineTotal,
-			effectiveDiscountRate,
-			activePromotion,
-			applicablePromotions,
-			codigoAplicado,
-		});
+		// Debug: mostrar información de descuentos (comentado para reducir ruido)
+		// console.log("💰 DEBUG PRICING CORREGIDO:", {
+		// 	precioIda,
+		// 	precioBase,
+		// 	idaVuelta: formData.idaVuelta,
+		// 	onlineDiscountRate,
+		// 	promotionDiscountRate,
+		// 	roundTripDiscountRate,
+		// 	personalizedDiscountRate,
+		// 	descuentoOnlinePorTramo,
+		// 	descuentoOnline,
+		// 	descuentoPromocionPorTramo,
+		// 	descuentoPromocion,
+		// 	descuentoRoundTrip,
+		// 	descuentosPersonalizados,
+		// 	descuentoCodigo,
+		// 	descuentoTotalSinLimite,
+		// 	descuentoMaximo,
+		// 	descuentoOnlineTotal,
+		// 	effectiveDiscountRate,
+		// 	activePromotion,
+		// 	applicablePromotions,
+		// 	codigoAplicado,
+		// });
 
 		return {
 			precioBase,
@@ -948,17 +948,33 @@ function App() {
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
-		const emailApiUrl =
-			"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+		// Usar el servidor backend local en desarrollo, PHP en producción
+		const isDevelopment =
+			window.location.hostname === "localhost" ||
+			window.location.hostname === "127.0.0.1";
+		let emailApiUrl;
+		let headers = { "Content-Type": "application/json" };
+
+		if (isDevelopment) {
+			// En desarrollo, usar el servidor backend local
+			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			emailApiUrl = `${apiUrl}/enviar-reserva`;
+		} else {
+			// En producción, usar el PHP original
+			emailApiUrl =
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+			headers = { "Content-Type": "application/json" };
+		}
+
 		try {
 			const response = await fetch(emailApiUrl, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers,
 				body: JSON.stringify(dataToSend),
 			});
 			const result = await response.json();
 			if (!response.ok)
-				throw new Error(result.message || "Error en el servidor PHP.");
+				throw new Error(result.message || "Error en el servidor.");
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof gtag === "function") {

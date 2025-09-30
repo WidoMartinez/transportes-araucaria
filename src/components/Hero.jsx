@@ -336,21 +336,21 @@ function Hero({
 	);
 	const totalDiscountPercentage = Math.round(descuentoRate * 100);
 
-	// Debug: mostrar información de descuentos personalizados
-	useEffect(() => {
-		console.log("🔍 DEBUG DESCUENTOS PERSONALIZADOS:", {
-			personalizedDiscountRate,
-			personalizedDiscountPercentage,
-			descuentosPersonalizados,
-			pricingDescuentosPersonalizados: pricing?.descuentosPersonalizados,
-			descuentosPersonalizadosArray: descuentosPersonalizados,
-		});
-	}, [
-		personalizedDiscountRate,
-		personalizedDiscountPercentage,
-		descuentosPersonalizados,
-		pricing?.descuentosPersonalizados,
-	]);
+	// Debug: mostrar información de descuentos personalizados (comentado para reducir ruido)
+	// useEffect(() => {
+	// 	console.log("🔍 DEBUG DESCUENTOS PERSONALIZADOS:", {
+	// 		personalizedDiscountRate,
+	// 		personalizedDiscountPercentage,
+	// 		descuentosPersonalizados,
+	// 		pricingDescuentosPersonalizados: pricing?.descuentosPersonalizados,
+	// 		descuentosPersonalizadosArray: descuentosPersonalizados,
+	// 	});
+	// }, [
+	// 	personalizedDiscountRate,
+	// 	personalizedDiscountPercentage,
+	// 	descuentosPersonalizados,
+	// 	pricing?.descuentosPersonalizados,
+	// ]);
 
 	const chargeOptions = useMemo(
 		() => [

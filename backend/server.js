@@ -382,6 +382,39 @@ app.delete("/api/codigos/:codigoId/usuarios/:usuarioId", async (req, res) => {
 	}
 });
 
+// Endpoint para enviar reservas (reemplaza el PHP directo)
+app.post("/enviar-reserva", async (req, res) => {
+	try {
+		const dataToSend = req.body;
+
+		// Aquí puedes agregar lógica para procesar la reserva
+		// Por ahora solo devolvemos éxito
+		console.log("📧 Reserva recibida:", {
+			nombre: dataToSend.nombre,
+			email: dataToSend.email,
+			telefono: dataToSend.telefono,
+			origen: dataToSend.origen,
+			destino: dataToSend.destino,
+			fecha: dataToSend.fecha,
+			hora: dataToSend.hora,
+			pasajeros: dataToSend.pasajeros,
+			totalConDescuento: dataToSend.totalConDescuento,
+			source: dataToSend.source,
+		});
+
+		res.json({
+			success: true,
+			message: "Reserva enviada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error procesando reserva:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
 // --- ENDPOINT PARA CREAR PAGOS (sin cambios) ---
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description, email } = req.body;
