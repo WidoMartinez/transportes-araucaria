@@ -520,7 +520,11 @@ function AdminPricing() {
 		const promocionInvalida = pricing.dayPromotions.find((promo) => {
 			if (!promo.destino) return true;
 			if (promo.descuentoPorcentaje <= 0) return true;
-			if (promo.aplicaPorDias && (!Array.isArray(promo.dias) || promo.dias.length === 0)) return true;
+			if (
+				promo.aplicaPorDias &&
+				(!Array.isArray(promo.dias) || promo.dias.length === 0)
+			)
+				return true;
 			if (
 				promo.aplicaPorHorario &&
 				(!promo.horaInicio ||
