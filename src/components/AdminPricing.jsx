@@ -224,6 +224,10 @@ function AdminPricing() {
 	};
 
 	const handleAddPromotion = () => {
+		console.log("🔍 handleAddPromotion - pricing.destinos:", pricing.destinos);
+		console.log("🔍 handleAddPromotion - pricing.destinos.length:", pricing.destinos?.length);
+		console.log("🔍 handleAddPromotion - condición:", !pricing.destinos || pricing.destinos.length === 0);
+		
 		if (!pricing.destinos || pricing.destinos.length === 0) {
 			alert(
 				"Agrega al menos un destino antes de crear un descuento personalizado."
@@ -1254,6 +1258,12 @@ function AdminPricing() {
 								Primero crea un destino para asociar descuentos.
 							</p>
 						)}
+						
+						{/* Debug info */}
+						<div className="text-xs text-gray-400 mb-2">
+							Debug: Destinos disponibles: {pricing.destinos?.length || 0}
+							{pricing.destinos?.map(d => d.nombre).join(', ')}
+						</div>
 
 						{pricing.dayPromotions && pricing.dayPromotions.length > 0 ? (
 							<div className="space-y-5">
