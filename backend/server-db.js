@@ -218,13 +218,23 @@ app.put("/pricing", async (req, res) => {
 	try {
 		// Actualizar destinos
 		for (const destino of destinos) {
+			// Transformar datos del frontend al formato de la base de datos
+			const precioIda = destino.precios?.auto?.base || destino.precioIda || 0;
+			const precioVuelta = destino.precios?.auto?.base || destino.precioVuelta || 0;
+			const precioIdaVuelta = destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
+			
 			await Destino.upsert({
 				nombre: destino.nombre,
-				precioIda: destino.precioIda,
-				precioVuelta: destino.precioVuelta,
-				precioIdaVuelta: destino.precioIdaVuelta,
+				precioIda: precioIda,
+				precioVuelta: precioVuelta,
+				precioIdaVuelta: precioIdaVuelta,
 				activo: destino.activo !== false,
 				orden: destino.orden || 0,
+				descripcion: destino.descripcion || "",
+				tiempo: destino.tiempo || "45 min",
+				imagen: destino.imagen || "",
+				maxPasajeros: destino.maxPasajeros || 4,
+				minHorasAnticipacion: destino.minHorasAnticipacion || 5,
 			});
 		}
 
