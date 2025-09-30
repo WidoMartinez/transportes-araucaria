@@ -272,7 +272,7 @@ app.put("/pricing", async (req, res) => {
 		console.log("🗑️ Eliminando todas las promociones existentes...");
 		await Promocion.destroy({
 			where: {},
-			truncate: true // Elimina todos los registros
+			truncate: true, // Elimina todos los registros
 		});
 		console.log("✅ Promociones existentes eliminadas");
 
