@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { destinosBase as destinosIniciales } from "@/data/destinos";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL =
+	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
 
 const nuevoDestinoTemplate = {
 	nombre: "",

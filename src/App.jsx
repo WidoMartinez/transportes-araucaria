@@ -173,7 +173,9 @@ function App() {
 	const recargarDatosPrecios = async () => {
 		console.log("🔄 INICIANDO recarga de datos de precios...");
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			const apiUrl =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucaria.onrender.com";
 			console.log("📡 Fetching desde:", `${apiUrl}/pricing`);
 			const response = await fetch(`${apiUrl}/pricing`);
 			if (!response.ok)
@@ -255,7 +257,9 @@ function App() {
 		setCodigoError(null);
 
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+			const apiUrl =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucaria.onrender.com";
 			const usuarioId = generarUsuarioId();
 
 			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
@@ -948,23 +952,12 @@ function App() {
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
-		// Usar el servidor backend local en desarrollo, PHP en producción
-		const isDevelopment =
-			window.location.hostname === "localhost" ||
-			window.location.hostname === "127.0.0.1";
-		let emailApiUrl;
-		let headers = { "Content-Type": "application/json" };
-
-		if (isDevelopment) {
-			// En desarrollo, usar el servidor backend local
-			const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
-			emailApiUrl = `${apiUrl}/enviar-reserva`;
-		} else {
-			// En producción, usar el PHP original
-			emailApiUrl =
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-			headers = { "Content-Type": "application/json" };
-		}
+		// Usar el servidor backend de Render para todas las peticiones
+		const apiUrl =
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
+		const emailApiUrl = `${apiUrl}/enviar-reserva`;
+		const headers = { "Content-Type": "application/json" };
 
 		try {
 			const response = await fetch(emailApiUrl, {
@@ -987,7 +980,8 @@ function App() {
 			if (codigoAplicado) {
 				try {
 					const apiUrl =
-						import.meta.env.VITE_API_URL || "http://localhost:8080";
+						import.meta.env.VITE_API_URL ||
+						"https://transportes-araucaria.onrender.com";
 					const usuarioId = generarUsuarioId();
 
 					await fetch(`${apiUrl}/api/codigos/usar`, {
