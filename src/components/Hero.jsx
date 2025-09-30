@@ -163,8 +163,9 @@ function Hero({
 	const promotionDetails = useMemo(() => {
 		if (!activePromotion) return null;
 		const parts = [];
-		if (activePromotion.aplicaPorDias && activePromotion.dias.length) {
-			parts.push(`Días: ${activePromotion.dias.join(", ")}`);
+		const promoDays = Array.isArray(activePromotion.dias) ? activePromotion.dias : [];
+		if (activePromotion.aplicaPorDias && promoDays.length > 0) {
+			parts.push(`Días: ${promoDays.join(", ")}`);
 		}
 		if (
 			activePromotion.aplicaPorHorario &&

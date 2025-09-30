@@ -407,7 +407,8 @@ function App() {
 
 	const applicablePromotions = useMemo(() => {
 		if (!destinoSeleccionado) return [];
-		if (!promotions.length) return [];
+		const safePromotions = Array.isArray(promotions) ? promotions : [];
+		if (safePromotions.length === 0) return [];
 		const tramo = destinoSeleccionado.nombre;
 		const isRoundTrip = formData.idaVuelta;
 
@@ -425,10 +426,10 @@ function App() {
 		// 	isRoundTrip,
 		// 	esViajeIda,
 		// 	esViajeVuelta,
-		// 	promotions: promotions.length,
+		// 	promotions: safePromotions.length,
 		// });
 
-		return promotions.filter((promo) => {
+		return safePromotions.filter((promo) => {
 			// console.log("🔍 Evaluando promoción:", {
 			// 	promo: promo.nombre,
 			// 	destino: promo.destino,
@@ -468,7 +469,9 @@ function App() {
 			if (promo.aplicaPorDias) {
 				const tags = getDayTagsFromDate(formData.fecha);
 				if (!tags.length) return false;
-				const hasMatch = tags.some((tag) => promo.dias.includes(tag));
+				const diasPromo = Array.isArray(promo.dias) ? promo.dias : [];
+				if (diasPromo.length === 0) return false;
+				const hasMatch = tags.some((tag) => diasPromo.includes(tag));
 				if (!hasMatch) return false;
 			}
 			if (promo.aplicaPorHorario) {
@@ -493,8 +496,9 @@ function App() {
 	]);
 
 	const activePromotion = useMemo(() => {
-		if (!applicablePromotions.length) return null;
-		return applicablePromotions.reduce(
+		const promos = Array.isArray(applicablePromotions) ? applicablePromotions : [];
+		if (promos.length === 0) return null;
+		return promos.reduce(
 			(best, promo) =>
 				promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0)
 					? promo
