@@ -119,8 +119,28 @@ app.get("/pricing", async (req, res) => {
 				: [],
 		}));
 
+		// Transformar destinos al formato esperado por el frontend
+		const destinosFormateados = destinos.map((destino) => ({
+			...destino.toJSON(),
+			precios: {
+				auto: {
+					base: destino.precioIda,
+					porcentajeAdicional: 0.1,
+				},
+				van: {
+					base: destino.precioIda * 1.8, // Aproximación para van
+					porcentajeAdicional: 0.1,
+				},
+			},
+			descripcion: destino.descripcion || "",
+			tiempo: destino.tiempo || "45 min",
+			imagen: destino.imagen || "",
+			maxPasajeros: destino.maxPasajeros || 4,
+			minHorasAnticipacion: destino.minHorasAnticipacion || 5,
+		}));
+
 		res.json({
-			destinos,
+			destinos: destinosFormateados,
 			dayPromotions,
 			descuentosGlobales: descuentosFormatted,
 			codigosDescuento: codigosFormateados,

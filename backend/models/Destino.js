@@ -34,6 +34,26 @@ const Destino = sequelize.define(
 			type: DataTypes.INTEGER,
 			defaultValue: 0,
 		},
+		descripcion: {
+			type: DataTypes.TEXT,
+			allowNull: true,
+		},
+		tiempo: {
+			type: DataTypes.STRING,
+			allowNull: true,
+		},
+		imagen: {
+			type: DataTypes.STRING,
+			allowNull: true,
+		},
+		maxPasajeros: {
+			type: DataTypes.INTEGER,
+			defaultValue: 4,
+		},
+		minHorasAnticipacion: {
+			type: DataTypes.INTEGER,
+			defaultValue: 5,
+		},
 	},
 	{
 		tableName: "destinos",
