@@ -51,35 +51,58 @@ const nuevaPromocionTemplate = {
 	},
 };
 
+const parsePromotionMetadata = (promo) => {
+	if (!promo || typeof promo.descripcion !== "string") return null;
+	try {
+		const parsed = JSON.parse(promo.descripcion);
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+	} catch (error) {
+		return null;
+	}
+};
+
 const normalizePromotions = (promociones = []) => {
 	if (!Array.isArray(promociones)) return [];
 	return promociones.map((promo, index) => {
-		const id = promo.id || generatePromotionId() || `promo-${index}`;
+		const metadata = parsePromotionMetadata(promo);
+		const id = metadata?.sourceId || promo.id || generatePromotionId() || `promo-${index}`;
+		const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
+		const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
+		const dias = aplicaPorDias
+			? (diasMetadata.length > 0
+				? diasMetadata
+				: Array.isArray(promo.dias)
+				? promo.dias.filter(Boolean)
+				: metadata?.diaIndividual
+				? [metadata.diaIndividual]
+				: [])
+			: [];
+		const porcentaje = Number(
+			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
+		);
+		const aplicaTipoViajeMetadata = metadata?.aplicaTipoViaje || {};
+
 		return {
 			...nuevaPromocionTemplate,
 			...promo,
 			id,
-			dias: Array.isArray(promo.dias) ? promo.dias : [],
-			descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
-			aplicaPorDias: Boolean(promo.aplicaPorDias),
-			aplicaPorHorario: Boolean(promo.aplicaPorHorario),
-			horaInicio: promo.horaInicio || "",
-			horaFin: promo.horaFin || "",
-			descripcion: promo.descripcion || "",
+			destino: metadata?.destino ?? promo.destino ?? "",
+			descripcion: metadata?.descripcion ?? promo.descripcion ?? "",
+			aplicaPorDias,
+			dias,
+			aplicaPorHorario: metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
+			horaInicio: metadata?.horaInicio ?? promo.horaInicio ?? "",
+			horaFin: metadata?.horaFin ?? promo.horaFin ?? "",
+			descuentoPorcentaje: Number.isFinite(porcentaje) ? porcentaje : 0,
 			aplicaTipoViaje: {
 				ida:
-					promo.aplicaTipoViaje?.ida !== undefined
-						? Boolean(promo.aplicaTipoViaje.ida)
-						: false,
+					metadata?.aplicaTipoViaje?.ida ?? promo.aplicaTipoViaje?.ida ?? false,
 				vuelta:
-					promo.aplicaTipoViaje?.vuelta !== undefined
-						? Boolean(promo.aplicaTipoViaje.vuelta)
-						: false,
+					metadata?.aplicaTipoViaje?.vuelta ?? promo.aplicaTipoViaje?.vuelta ?? false,
 				ambos:
-					promo.aplicaTipoViaje?.ambos !== undefined
-						? Boolean(promo.aplicaTipoViaje.ambos)
-						: true,
+					metadata?.aplicaTipoViaje?.ambos ?? promo.aplicaTipoViaje?.ambos ?? true,
 			},
+			activo: metadata?.activo ?? promo.activo ?? true,
 		};
 	});
 };
@@ -613,19 +636,47 @@ function AdminPricing() {
 
 		try {
 			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => {
+				const aplicaPorDias = Boolean(promo.aplicaPorDias);
 				const diasArray = Array.isArray(promo.dias)
 					? promo.dias.filter(Boolean)
 					: [];
-				const normalizedDias = diasArray.length > 0 ? diasArray : ["todos"];
+				const normalizedDias = aplicaPorDias
+					? diasArray.length > 0
+						? diasArray
+						: ["lunes"]
+					: [];
+				const diaPersistencia = aplicaPorDias
+					? normalizedDias[0]
+					: promo.dia || diasArray[0] || "lunes";
+				const porcentaje =
+					typeof promo.descuentoPorcentaje === "number"
+						? promo.descuentoPorcentaje
+						: Number(promo.descuentoPorcentaje) || 0;
+				const metadata = {
+					sourceId: promo.id,
+					destino: promo.destino || "",
+					descripcion: promo.descripcion || "",
+					dias: aplicaPorDias ? normalizedDias : [],
+					aplicaPorDias,
+					aplicaPorHorario: Boolean(promo.aplicaPorHorario),
+					horaInicio: promo.horaInicio || "",
+					horaFin: promo.horaFin || "",
+					porcentaje,
+					aplicaTipoViaje: {
+						ida: Boolean(promo.aplicaTipoViaje?.ida),
+						vuelta: Boolean(promo.aplicaTipoViaje?.vuelta),
+						ambos: Boolean(promo.aplicaTipoViaje?.ambos),
+					},
+					activo: promo.activo !== false,
+					diaIndividual: diaPersistencia,
+				};
 
 				return {
 					...promo,
-					dias: normalizedDias,
-					dia: promo.dia || normalizedDias[0],
-					porcentaje:
-						typeof promo.descuentoPorcentaje === "number"
-							? promo.descuentoPorcentaje
-							: Number(promo.descuentoPorcentaje) || 0,
+					dias: aplicaPorDias ? normalizedDias : [],
+					dia: diaPersistencia,
+					porcentaje,
+					descripcion: JSON.stringify(metadata),
 				};
 			});
 

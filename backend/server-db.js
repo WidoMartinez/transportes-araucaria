@@ -33,6 +33,26 @@ const signParams = (params) => {
 
 const app = express();
 app.use(express.json());
+
+const generatePromotionId = () => `promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const parsePromotionMetadata = (record) => {
+	if (!record || typeof record.descripcion !== "string") {
+		return null;
+	}
+	try {
+		const parsed = JSON.parse(record.descripcion);
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+	} catch (error) {
+		return null;
+	}
+};
+
+const toNumber = (value, fallback = 0) => {
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 app.use(
 	cors({
 		origin: [
@@ -109,23 +129,36 @@ app.get("/pricing", async (req, res) => {
 		});
 
 		// Transformar promociones al formato esperado por el frontend
-		const dayPromotionsFormatted = dayPromotions.map((promo) => ({
-			id: `promo-${promo.id}`,
-			nombre: promo.nombre,
-			destino: "", // Las promociones de la BD no tienen destino específico
-			descripcion: promo.descripcion || "",
-			dias: [promo.dia], // Convertir dia singular a array
-			aplicaPorDias: true, // Las promociones de BD se basan en días
-			aplicaPorHorario: false,
-			horaInicio: "",
-			horaFin: "",
-			descuentoPorcentaje: promo.tipo === "porcentaje" ? promo.valor : 0,
-			aplicaTipoViaje: {
-				ida: true,
-				vuelta: true,
-				ambos: true,
-			},
-		}));
+		const dayPromotionsFormatted = dayPromotions.map((promo) => {
+			const metadata = parsePromotionMetadata(promo);
+			const baseId = metadata?.sourceId || `promo-${promo.id}`;
+			const porcentajeBase = metadata?.porcentaje;
+			const porcentaje = porcentajeBase !== undefined ? toNumber(porcentajeBase, 0) : promo.tipo === "porcentaje" ? toNumber(promo.valor, 0) : 0;
+			const aplicaPorDias = metadata?.aplicaPorDias !== undefined ? Boolean(metadata.aplicaPorDias) : true;
+			const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
+			const diasDesdePromo = Array.isArray(promo.dias) ? promo.dias.filter(Boolean) : [];
+			const defaultDay = metadata?.diaIndividual || promo.dia || diasDesdePromo[0] || diasMetadata[0] || "lunes";
+			const dias = aplicaPorDias ? (diasMetadata.length > 0 ? diasMetadata : diasDesdePromo.length > 0 ? diasDesdePromo : [defaultDay]) : [];
+			const tipoViaje = metadata?.aplicaTipoViaje || {};
+			return {
+				id: baseId,
+				nombre: metadata?.nombre || promo.nombre || "",
+				destino: metadata?.destino || "",
+				descripcion: metadata?.descripcion !== undefined ? metadata.descripcion : promo.descripcion || "",
+				dias,
+				aplicaPorDias,
+				aplicaPorHorario: metadata?.aplicaPorHorario !== undefined ? Boolean(metadata.aplicaPorHorario) : false,
+				horaInicio: metadata?.horaInicio || "",
+				horaFin: metadata?.horaFin || "",
+				descuentoPorcentaje: porcentaje,
+				aplicaTipoViaje: {
+					ida: tipoViaje.ida !== undefined ? Boolean(tipoViaje.ida) : true,
+					vuelta: tipoViaje.vuelta !== undefined ? Boolean(tipoViaje.vuelta) : true,
+					ambos: tipoViaje.ambos !== undefined ? Boolean(tipoViaje.ambos) : true,
+				},
+				activo: metadata?.activo !== undefined ? Boolean(metadata.activo) : promo.activo !== undefined ? Boolean(promo.activo) : true,
+			};
+		});
 
 		const descuentosGlobales = await DescuentoGlobal.findAll();
 
@@ -270,33 +303,61 @@ app.put("/pricing", async (req, res) => {
 		});
 		console.log("✅ Promociones existentes eliminadas");
 
-		// Luego crear las nuevas promociones
 		for (const promocion of dayPromotions) {
-			console.log("📝 Procesando promoción:", promocion);
-			// Si la promoción tiene múltiples días, crear una entrada por día
-			const dias = Array.isArray(promocion.dias)
-				? promocion.dias
-				: [promocion.dia];
+			console.log("Procesando promocion:", promocion);
+			const metadata = parsePromotionMetadata(promocion);
+			const porcentaje = toNumber(
+				metadata?.porcentaje ?? promocion.porcentaje ?? promocion.descuentoPorcentaje ?? promocion.valor ?? 0,
+				0
+			);
+			const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promocion.aplicaPorDias);
+			const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
+			const diasDesdePromo = Array.isArray(promocion.dias) ? promocion.dias.filter(Boolean) : [];
+			const diaBase = metadata?.diaIndividual || promocion.dia || diasDesdePromo[0] || diasMetadata[0] || "lunes";
+			const diasParaIterar = aplicaPorDias ? (diasMetadata.length > 0 ? diasMetadata : diasDesdePromo.length > 0 ? diasDesdePromo : [diaBase]) : [diaBase];
+			const destino = metadata?.destino || promocion.destino || "";
+			const nombre = metadata?.nombre || promocion.nombre || metadata?.descripcion || promocion.descripcion || "Promocion";
+			const descripcion = metadata?.descripcion || promocion.descripcion || "";
+			const aplicaPorHorario = metadata?.aplicaPorHorario ?? Boolean(promocion.aplicaPorHorario);
+			const horaInicio = metadata?.horaInicio ?? promocion.horaInicio ?? "";
+			const horaFin = metadata?.horaFin ?? promocion.horaFin ?? "";
+			const tipoViaje = metadata?.aplicaTipoViaje || promocion.aplicaTipoViaje || {};
+			const tipoViajeNormalizado = {
+				ida: Boolean(tipoViaje.ida),
+				vuelta: Boolean(tipoViaje.vuelta),
+				ambos: Boolean(tipoViaje.ambos),
+			};
+			const activo = metadata?.activo ?? promocion.activo ?? true;
+			const sourceId = metadata?.sourceId || promocion.id || generatePromotionId();
 
-			for (const dia of dias) {
-				console.log("💾 Guardando promoción en BD:", {
-					nombre: promocion.descripcion || "Promoción sin nombre",
-					dia: dia,
-					valor: promocion.porcentaje || 0,
-					destino: promocion.destino,
-				});
+			for (const dia of diasParaIterar) {
+				const payload = {
+					sourceId,
+					nombre,
+					destino,
+					descripcion,
+					dias: aplicaPorDias ? diasParaIterar : [],
+					aplicaPorDias,
+					aplicaPorHorario,
+					horaInicio,
+					horaFin,
+					porcentaje,
+					aplicaTipoViaje: tipoViajeNormalizado,
+					activo,
+					diaIndividual: dia,
+				};
 
 				await Promocion.create({
-					nombre: promocion.descripcion || "Promoción sin nombre",
-					dia: dia,
-					tipo: "porcentaje", // Por defecto porcentaje
-					valor: promocion.porcentaje || 0,
-					activo: promocion.activo !== false,
-					descripcion: promocion.descripcion,
+					nombre,
+					dia,
+					tipo: "porcentaje",
+					valor: porcentaje,
+					activo,
+					descripcion: JSON.stringify(payload),
 				});
 			}
 		}
-		console.log("✅ Promociones procesadas correctamente");
+		console.log("Promociones procesadas correctamente");
 
 		// Actualizar descuentos globales
 		if (descuentosGlobales) {
