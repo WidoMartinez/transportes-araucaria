@@ -246,12 +246,18 @@ function AdminPricing() {
 			id: generatePromotionId(),
 		};
 
-		console.log("🔍 handleAddPromotion - dayPromotions antes:", prev.dayPromotions);
 		console.log("🔍 handleAddPromotion - nuevaPromocion:", nuevaPromocion);
-		
+
 		setPricing((prev) => {
+			console.log(
+				"🔍 handleAddPromotion - dayPromotions antes:",
+				prev.dayPromotions
+			);
 			const newDayPromotions = [...prev.dayPromotions, nuevaPromocion];
-			console.log("🔍 handleAddPromotion - dayPromotions después:", newDayPromotions);
+			console.log(
+				"🔍 handleAddPromotion - dayPromotions después:",
+				newDayPromotions
+			);
 			return {
 				...prev,
 				dayPromotions: newDayPromotions,
