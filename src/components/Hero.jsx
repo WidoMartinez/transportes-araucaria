@@ -1093,7 +1093,7 @@ function Hero({
 													<div className="flex items-center justify-between text-slate-700">
 														<span>Ahorro total aplicado</span>
 														<span className="font-semibold">
-															{formatCurrency(pricing.descuentoOnline)}
+															-{formatCurrency(pricing.descuentoOnline)}
 															<span className="ml-1 text-xs text-slate-500">
 																({totalDiscountPercentage}% total)
 															</span>

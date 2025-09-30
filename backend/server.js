@@ -333,6 +333,55 @@ app.post("/api/codigos/usar", async (req, res) => {
 	}
 });
 
+// Endpoint para eliminar un usuario específico de un código
+app.delete("/api/codigos/:codigoId/usuarios/:usuarioId", async (req, res) => {
+	try {
+		const { codigoId, usuarioId } = req.params;
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+
+		const codigoIndex = codigos.findIndex((c) => c.id === codigoId);
+		if (codigoIndex === -1) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const codigo = codigos[codigoIndex];
+
+		// Verificar si el usuario existe en la lista
+		if (
+			!codigo.usuariosQueUsaron ||
+			!codigo.usuariosQueUsaron.includes(usuarioId)
+		) {
+			return res
+				.status(404)
+				.json({ error: "Usuario no encontrado en este código" });
+		}
+
+		// Eliminar el usuario de la lista
+		codigos[codigoIndex].usuariosQueUsaron = codigos[
+			codigoIndex
+		].usuariosQueUsaron.filter((uid) => uid !== usuarioId);
+
+		// Reducir el contador de usos
+		if (codigos[codigoIndex].usosActuales > 0) {
+			codigos[codigoIndex].usosActuales -= 1;
+		}
+
+		// Guardar los cambios
+		pricing.codigosDescuento = codigos;
+		await writePricingData(pricing);
+
+		res.json({
+			exito: true,
+			usosActuales: codigos[codigoIndex].usosActuales,
+			usuariosQueUsaron: codigos[codigoIndex].usuariosQueUsaron,
+		});
+	} catch (error) {
+		console.error("Error eliminando usuario del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // --- ENDPOINT PARA CREAR PAGOS (sin cambios) ---
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description, email } = req.body;

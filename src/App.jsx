@@ -752,6 +752,13 @@ function App() {
 			} else {
 				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
 			}
+			console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
+				codigoAplicado,
+				precioBase,
+				descuentoCodigo,
+				tipo: codigoAplicado.tipo,
+				valor: codigoAplicado.valor,
+			});
 		}
 
 		// Calcular descuento total
@@ -773,6 +780,17 @@ function App() {
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
+		// Debug específico para verificar el total final
+		console.log("💰 TOTAL FINAL CALCULADO:", {
+			precioBase,
+			descuentoOnlineTotal,
+			totalConDescuento,
+			abono,
+			saldoPendiente,
+			descuentoCodigo,
+			codigoAplicado: codigoAplicado?.codigo,
+		});
+
 		// Debug: mostrar información de descuentos
 		console.log("💰 DEBUG PRICING CORREGIDO:", {
 			precioIda,
@@ -788,12 +806,14 @@ function App() {
 			descuentoPromocion,
 			descuentoRoundTrip,
 			descuentosPersonalizados,
+			descuentoCodigo,
 			descuentoTotalSinLimite,
 			descuentoMaximo,
 			descuentoOnlineTotal,
 			effectiveDiscountRate,
 			activePromotion,
 			applicablePromotions,
+			codigoAplicado,
 		});
 
 		return {

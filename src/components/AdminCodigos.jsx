@@ -33,6 +33,11 @@ function AdminCodigos() {
 	const [error, setError] = useState(null);
 	const [showForm, setShowForm] = useState(false);
 	const [editingCodigo, setEditingCodigo] = useState(null);
+	const [deleteId, setDeleteId] = useState("");
+	const [deleting, setDeleting] = useState(false);
+	const [selectedCodigo, setSelectedCodigo] = useState("");
+	const [selectedUsuario, setSelectedUsuario] = useState("");
+	const [deletingUser, setDeletingUser] = useState(false);
 	const [formData, setFormData] = useState({
 		codigo: "",
 		descripcion: "",
@@ -136,6 +141,113 @@ function AdminCodigos() {
 				await fetchCodigos();
 			} catch (error) {
 				console.error("Error eliminando código:", error);
+			}
+		}
+	};
+
+	const handleDeleteById = async () => {
+		if (!deleteId.trim()) {
+			alert("Por favor, ingresa un ID válido");
+			return;
+		}
+
+		const codigo = codigos.find((c) => c.id.toString() === deleteId.trim());
+		if (!codigo) {
+			alert("No se encontró un código con ese ID");
+			return;
+		}
+
+		if (
+			confirm(
+				`¿Estás seguro de eliminar el código "${codigo.codigo}" (ID: ${deleteId})?`
+			)
+		) {
+			setDeleting(true);
+			try {
+				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+				const response = await fetch(`${apiUrl}/api/codigos/${deleteId}`, {
+					method: "DELETE",
+				});
+
+				if (response.ok) {
+					await fetchCodigos();
+					setDeleteId("");
+					alert("Código eliminado exitosamente");
+				} else {
+					const errorData = await response.json();
+					alert(`Error: ${errorData.error || "No se pudo eliminar el código"}`);
+				}
+			} catch (error) {
+				console.error("Error eliminando código:", error);
+				alert("Error al eliminar el código");
+			} finally {
+				setDeleting(false);
+			}
+		}
+	};
+
+	const handleDeleteUserFromCode = async () => {
+		if (!selectedCodigo || !selectedUsuario.trim()) {
+			alert("Por favor, selecciona un código y ingresa un ID de usuario");
+			return;
+		}
+
+		const codigo = codigos.find((c) => c.id.toString() === selectedCodigo);
+		if (!codigo) {
+			alert("No se encontró el código seleccionado");
+			return;
+		}
+
+		if (
+			!codigo.usuariosQueUsaron ||
+			!codigo.usuariosQueUsaron.includes(selectedUsuario.trim())
+		) {
+			console.log("Debug - Usuario no encontrado:", {
+				selectedUsuario: selectedUsuario.trim(),
+				usuariosQueUsaron: codigo.usuariosQueUsaron,
+				codigo: codigo.codigo,
+			});
+			alert("El usuario no ha usado este código");
+			return;
+		}
+
+		if (
+			confirm(
+				`¿Estás seguro de eliminar al usuario "${selectedUsuario}" de la lista de usuarios que han usado el código "${codigo.codigo}"?`
+			)
+		) {
+			setDeletingUser(true);
+			try {
+				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+				const url = `${apiUrl}/api/codigos/${selectedCodigo}/usuarios/${selectedUsuario}`;
+				console.log("Debug - Enviando petición a:", url);
+
+				const response = await fetch(url, {
+					method: "DELETE",
+				});
+
+				console.log(
+					"Debug - Respuesta del servidor:",
+					response.status,
+					response.statusText
+				);
+
+				if (response.ok) {
+					await fetchCodigos();
+					setSelectedUsuario("");
+					alert("Usuario eliminado exitosamente del código");
+				} else {
+					const errorData = await response.json();
+					console.error("Error del servidor:", errorData);
+					alert(
+						`Error: ${errorData.error || "No se pudo eliminar el usuario"}`
+					);
+				}
+			} catch (error) {
+				console.error("Error eliminando usuario:", error);
+				alert("Error al eliminar el usuario");
+			} finally {
+				setDeletingUser(false);
 			}
 		}
 	};
@@ -403,6 +515,85 @@ function AdminCodigos() {
 				</Card>
 			)}
 
+			{/* Sección para eliminar usuario de un código */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-red-600">
+						Eliminar Usuario de Código
+					</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="space-y-4">
+						<div>
+							<Label htmlFor="selectedCodigo">Seleccionar Código</Label>
+							<Select value={selectedCodigo} onValueChange={setSelectedCodigo}>
+								<SelectTrigger>
+									<SelectValue placeholder="Selecciona un código" />
+								</SelectTrigger>
+								<SelectContent>
+									{codigos
+										.filter(
+											(codigo) =>
+												codigo.usuariosQueUsaron &&
+												codigo.usuariosQueUsaron.length > 0
+										)
+										.map((codigo) => (
+											<SelectItem key={codigo.id} value={codigo.id.toString()}>
+												{codigo.codigo} ({codigo.usuariosQueUsaron.length}{" "}
+												usuarios)
+											</SelectItem>
+										))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						{selectedCodigo && (
+							<div>
+								<Label htmlFor="selectedUsuario">
+									ID del Usuario a Eliminar
+								</Label>
+								<Input
+									id="selectedUsuario"
+									value={selectedUsuario}
+									onChange={(e) => setSelectedUsuario(e.target.value)}
+									placeholder="Ingresa el ID del usuario"
+									className="mt-1"
+								/>
+								<p className="text-xs text-gray-500 mt-1">
+									Usuarios que han usado este código:{" "}
+									{codigos
+										.find((c) => c.id.toString() === selectedCodigo)
+										?.usuariosQueUsaron?.join(", ") || "Ninguno"}
+								</p>
+							</div>
+						)}
+
+						<div className="flex gap-2">
+							<Button
+								onClick={handleDeleteUserFromCode}
+								variant="destructive"
+								disabled={
+									deletingUser || !selectedCodigo || !selectedUsuario.trim()
+								}
+								className="flex items-center gap-2"
+							>
+								{deletingUser ? (
+									<LoaderCircle className="w-4 h-4 animate-spin" />
+								) : (
+									<Trash2 className="w-4 h-4" />
+								)}
+								{deletingUser ? "Eliminando..." : "Eliminar Usuario"}
+							</Button>
+						</div>
+
+						<p className="text-xs text-gray-500">
+							⚠️ Esta acción eliminará al usuario de la lista de usuarios que
+							han usado el código, pero no eliminará el código en sí.
+						</p>
+					</div>
+				</CardContent>
+			</Card>
+
 			{/* Mensaje de error */}
 			{error && (
 				<div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -444,6 +635,9 @@ function AdminCodigos() {
 									<div className="flex items-center gap-2 mb-2">
 										<h3 className="font-semibold">{codigo.codigo}</h3>
 										{getStatusBadge(codigo)}
+										<Badge variant="outline" className="text-xs">
+											ID: {codigo.id}
+										</Badge>
 									</div>
 									<p className="text-sm text-slate-600 mb-2">
 										{codigo.descripcion}
