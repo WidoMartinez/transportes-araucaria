@@ -551,6 +551,12 @@ function AdminPricing() {
 			return;
 		}
 
+		// Debug logs para descuentos personalizados
+		console.log("🔍 Frontend - Descuentos personalizados antes de enviar:", pricing.descuentosGlobales.descuentosPersonalizados);
+		console.log("🔍 Frontend - Tipo:", typeof pricing.descuentosGlobales.descuentosPersonalizados);
+		console.log("🔍 Frontend - Es array:", Array.isArray(pricing.descuentosGlobales.descuentosPersonalizados));
+		console.log("🔍 Frontend - Longitud:", pricing.descuentosGlobales.descuentosPersonalizados?.length);
+
 		setSaving(true);
 		setError("");
 		setSuccess("");
