@@ -161,8 +161,11 @@ function AdminPricing() {
 			});
 
 			console.log("🔍 Frontend - Estado final de pricing:", {
-				destinos: data.destinos && data.destinos.length > 0 ? data.destinos : destinosIniciales,
-				dayPromotions: normalizePromotions(data.dayPromotions)
+				destinos:
+					data.destinos && data.destinos.length > 0
+						? data.destinos
+						: destinosIniciales,
+				dayPromotions: normalizePromotions(data.dayPromotions),
 			});
 		} catch (fetchError) {
 			console.error(fetchError);
