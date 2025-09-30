@@ -464,9 +464,9 @@ function Hero({
 						</h1>
 						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
 							Transportes Araucaria conecta el Aeropuerto La Araucanía con
-							Temuco, Pucón, Villarrica y los principales hoteles de la región.
-							Reserva en línea, confirma tu conductor y asegura el{" "}
-							{baseDiscountPercentage}% de descuento web garantizado
+							Temuco, Pucón, Villarrica y los principales atractivos turísticos
+							de la región. Reserva en línea, confirma tu conductor y asegura
+							desde un {baseDiscountPercentage}% de descuento web garantizado
 							{promoDiscountPercentage > 0
 								? ` + ${
 										activePromotion?.descripcion ||
