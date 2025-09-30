@@ -284,8 +284,14 @@ app.put("/pricing", async (req, res) => {
 			}
 
 			// Actualizar descuentos personalizados
-			console.log("🔍 Descuentos personalizados recibidos:", descuentosGlobales.descuentosPersonalizados);
-			if (descuentosGlobales.descuentosPersonalizados && descuentosGlobales.descuentosPersonalizados.length > 0) {
+			console.log(
+				"🔍 Descuentos personalizados recibidos:",
+				descuentosGlobales.descuentosPersonalizados
+			);
+			if (
+				descuentosGlobales.descuentosPersonalizados &&
+				descuentosGlobales.descuentosPersonalizados.length > 0
+			) {
 				console.log("🔄 Eliminando descuentos personalizados existentes...");
 				// Eliminar descuentos personalizados existentes
 				await DescuentoGlobal.destroy({
