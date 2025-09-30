@@ -217,12 +217,12 @@ app.get("/pricing", async (req, res) => {
 	}
 });
 
-	// Endpoint PUT para actualizar precios
-	app.put("/pricing", async (req, res) => {
-		console.log("🔄 PUT /pricing recibido");
-		console.log("📥 Body recibido:", JSON.stringify(req.body, null, 2));
-		
-		const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
+// Endpoint PUT para actualizar precios
+app.put("/pricing", async (req, res) => {
+	console.log("🔄 PUT /pricing recibido");
+	console.log("📥 Body recibido:", JSON.stringify(req.body, null, 2));
+
+	const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
 
 	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
 		return res.status(400).json({
@@ -300,12 +300,27 @@ app.get("/pricing", async (req, res) => {
 			}
 
 			// Actualizar descuentos personalizados
-			console.log("🔍 Descuentos personalizados recibidos:", descuentosGlobales.descuentosPersonalizados);
-			console.log("🔍 Tipo de descuentos personalizados:", typeof descuentosGlobales.descuentosPersonalizados);
-			console.log("🔍 Es array:", Array.isArray(descuentosGlobales.descuentosPersonalizados));
-			console.log("🔍 Longitud:", descuentosGlobales.descuentosPersonalizados?.length);
-			
-			if (descuentosGlobales.descuentosPersonalizados && descuentosGlobales.descuentosPersonalizados.length > 0) {
+			console.log(
+				"🔍 Descuentos personalizados recibidos:",
+				descuentosGlobales.descuentosPersonalizados
+			);
+			console.log(
+				"🔍 Tipo de descuentos personalizados:",
+				typeof descuentosGlobales.descuentosPersonalizados
+			);
+			console.log(
+				"🔍 Es array:",
+				Array.isArray(descuentosGlobales.descuentosPersonalizados)
+			);
+			console.log(
+				"🔍 Longitud:",
+				descuentosGlobales.descuentosPersonalizados?.length
+			);
+
+			if (
+				descuentosGlobales.descuentosPersonalizados &&
+				descuentosGlobales.descuentosPersonalizados.length > 0
+			) {
 				console.log("🔄 Eliminando descuentos personalizados existentes...");
 				// Eliminar descuentos personalizados existentes
 				await DescuentoGlobal.destroy({
