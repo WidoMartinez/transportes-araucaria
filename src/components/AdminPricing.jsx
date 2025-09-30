@@ -120,7 +120,6 @@ function AdminPricing() {
 			}
 			const data = await response.json();
 
-
 			setPricing({
 				destinos:
 					data.destinos && data.destinos.length > 0
@@ -155,7 +154,6 @@ function AdminPricing() {
 				},
 				updatedAt: data.updatedAt || null,
 			});
-
 		} catch (fetchError) {
 			console.error(fetchError);
 			setError(

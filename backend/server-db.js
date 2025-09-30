@@ -104,11 +104,9 @@ app.get("/pricing", async (req, res) => {
 			],
 		});
 
-
 		const dayPromotions = await Promocion.findAll({
 			order: [["dia", "ASC"]],
 		});
-
 
 		// Transformar promociones al formato esperado por el frontend
 		const dayPromotionsFormatted = dayPromotions.map((promo) => ({
@@ -128,7 +126,6 @@ app.get("/pricing", async (req, res) => {
 				ambos: true,
 			},
 		}));
-
 
 		const descuentosGlobales = await DescuentoGlobal.findAll();
 
@@ -212,7 +209,6 @@ app.get("/pricing", async (req, res) => {
 			codigosDescuento: codigosFormateados,
 			updatedAt: new Date().toISOString(),
 		};
-
 
 		res.json(responseData);
 	} catch (error) {
