@@ -280,17 +280,17 @@ app.put("/pricing", async (req, res) => {
 
 			for (const dia of dias) {
 				console.log("💾 Guardando promoción en BD:", {
-					nombre: promocion.nombre,
+					nombre: promocion.descripcion || "Promoción sin nombre",
 					dia: dia,
-					valor: promocion.descuentoPorcentaje || 0,
+					valor: promocion.porcentaje || 0,
 					destino: promocion.destino,
 				});
 
 				await Promocion.create({
-					nombre: promocion.nombre,
+					nombre: promocion.descripcion || "Promoción sin nombre",
 					dia: dia,
 					tipo: "porcentaje", // Por defecto porcentaje
-					valor: promocion.descuentoPorcentaje || 0,
+					valor: promocion.porcentaje || 0,
 					activo: promocion.activo !== false,
 					descripcion: promocion.descripcion,
 				});
