@@ -520,7 +520,7 @@ function AdminPricing() {
 		const promocionInvalida = pricing.dayPromotions.find((promo) => {
 			if (!promo.destino) return true;
 			if (promo.descuentoPorcentaje <= 0) return true;
-			if (promo.aplicaPorDias && promo.dias.length === 0) return true;
+			if (promo.aplicaPorDias && (!Array.isArray(promo.dias) || promo.dias.length === 0)) return true;
 			if (
 				promo.aplicaPorHorario &&
 				(!promo.horaInicio ||
@@ -1233,7 +1233,7 @@ function AdminPricing() {
 							</p>
 						)}
 
-						{pricing.dayPromotions.length > 0 ? (
+						{pricing.dayPromotions && pricing.dayPromotions.length > 0 ? (
 							<div className="space-y-5">
 								{pricing.dayPromotions.map((promo) => {
 									const destinoOptions = pricing.destinos.map(
