@@ -709,13 +709,15 @@ app.post("/api/codigos/validar", async (req, res) => {
 		}
 
 		// Verificar si el usuario ya usó este código
-		if (usuarioId && codigoEncontrado.usuariosQueUsaron) {
-			const usuarioYaUso =
-				codigoEncontrado.usuariosQueUsaron.includes(usuarioId);
+		if (usuarioId) {
+			const usuariosQueUsaron = normalizeUsuariosQueUsaron(
+				codigoEncontrado.usuariosQueUsaron || []
+			);
+			const usuarioYaUso = usuariosQueUsaron.includes(usuarioId);
 			if (usuarioYaUso) {
 				return res.json({
 					valido: false,
-					error: "Ya has usado este código de descuento",
+					error: "Ya has usado este código de descuento anteriormente",
 				});
 			}
 		}
@@ -769,21 +771,26 @@ app.post("/api/codigos/usar", async (req, res) => {
 		}
 
 		// Verificar si el usuario ya usó este código
-		if (usuarioId && codigoEncontrado.usuariosQueUsaron) {
-			const usuarioYaUso =
-				codigoEncontrado.usuariosQueUsaron.includes(usuarioId);
+		if (usuarioId) {
+			const usuariosQueUsaron = normalizeUsuariosQueUsaron(
+				codigoEncontrado.usuariosQueUsaron || []
+			);
+			const usuarioYaUso = usuariosQueUsaron.includes(usuarioId);
 			if (usuarioYaUso) {
 				return res.json({
 					exito: false,
-					error: "Ya has usado este código de descuento",
+					error: "Ya has usado este código de descuento anteriormente",
 				});
 			}
 		}
 
-		// Actualizar usos
+		// Actualizar usos - asegurar que no se duplique el usuario
+		const usuariosActuales = normalizeUsuariosQueUsaron(
+			codigoEncontrado.usuariosQueUsaron || []
+		);
 		const nuevosUsuarios = usuarioId
-			? [...(codigoEncontrado.usuariosQueUsaron || []), usuarioId]
-			: codigoEncontrado.usuariosQueUsaron || [];
+			? [...usuariosActuales, usuarioId]
+			: usuariosActuales;
 
 		await CodigoDescuento.update(
 			{
