@@ -841,11 +841,16 @@ app.post("/api/flow-confirmation", (req, res) => {
 const PORT = process.env.PORT || 3001;
 
 const startServer = async () => {
-	await initializeDatabase();
+	try {
+		await initializeDatabase();
+		console.log("📊 Base de datos MySQL conectada");
+	} catch (error) {
+		console.error("⚠️ Advertencia: No se pudo conectar a la base de datos:", error.message);
+		console.log("🔄 Continuando sin base de datos - algunas funciones estarán limitadas");
+	}
 
 	app.listen(PORT, () => {
 		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-		console.log("📊 Base de datos MySQL conectada");
 	});
 };
 
