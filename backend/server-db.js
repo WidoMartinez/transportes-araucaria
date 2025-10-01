@@ -53,6 +53,51 @@ const toNumber = (value, fallback = 0) => {
 	return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const parseJsonArray = (raw) => {
+	if (!raw) return [];
+	let value = raw;
+	const seen = new Set();
+
+	while (typeof value === "string") {
+		const trimmed = value.trim();
+		if (trimmed.length === 0) {
+			return [];
+		}
+		if (seen.has(trimmed)) {
+			break;
+		}
+		seen.add(trimmed);
+		try {
+			value = JSON.parse(trimmed);
+		} catch (error) {
+			return [];
+		}
+	}
+
+	return Array.isArray(value) ? value : [];
+};
+
+const normalizeDestinosAplicables = (raw) => {
+	const parsed = parseJsonArray(raw);
+	return parsed
+		.map((item) => {
+			if (typeof item === "string") return item;
+			if (item && typeof item === "object") {
+				return item.value || item.nombre || item.label || "";
+			}
+			return "";
+		})
+		.filter(Boolean);
+};
+
+const normalizeUsuariosQueUsaron = (raw) => {
+	const parsed = parseJsonArray(raw);
+	return parsed
+		.map((item) => (typeof item === "string" ? item : ""))
+		.filter(Boolean);
+};
+
+
 app.use(
 	cors({
 		origin: [
@@ -206,14 +251,18 @@ app.get("/pricing", async (req, res) => {
 		});
 
 		// Asegurar que usuariosQueUsaron sea siempre un array
-		const codigosFormateados = codigosDescuento.map((codigo) => ({
-			...codigo.toJSON(),
-			usuariosQueUsaron: Array.isArray(codigo.usuariosQueUsaron)
-				? codigo.usuariosQueUsaron
-				: codigo.usuariosQueUsaron
-				? JSON.parse(codigo.usuariosQueUsaron)
-				: [],
-		}));
+		const codigosFormateados = codigosDescuento.map((codigo) => {
+			const codigoJson = codigo.toJSON();
+			return {
+				...codigoJson,
+				destinosAplicables: normalizeDestinosAplicables(
+					codigoJson.destinosAplicables ?? codigo.destinosAplicables
+				),
+				usuariosQueUsaron: normalizeUsuariosQueUsaron(
+					codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
+				),
+			};
+		});
 
 		// Transformar destinos al formato esperado por el frontend
 		const destinosFormateados = destinos.map((destino) => ({
@@ -446,14 +495,18 @@ app.get("/api/codigos", async (req, res) => {
 		});
 
 		// Asegurar que usuariosQueUsaron sea siempre un array
-		const codigosFormateados = codigos.map((codigo) => ({
-			...codigo.toJSON(),
-			usuariosQueUsaron: Array.isArray(codigo.usuariosQueUsaron)
-				? codigo.usuariosQueUsaron
-				: codigo.usuariosQueUsaron
-				? JSON.parse(codigo.usuariosQueUsaron)
-				: [],
-		}));
+		const codigosFormateados = codigos.map((codigo) => {
+			const codigoJson = codigo.toJSON();
+			return {
+				...codigoJson,
+				destinosAplicables: normalizeDestinosAplicables(
+					codigoJson.destinosAplicables ?? codigo.destinosAplicables
+				),
+				usuariosQueUsaron: normalizeUsuariosQueUsaron(
+					codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
+				),
+			};
+		});
 
 		res.json(codigosFormateados);
 	} catch (error) {
@@ -466,6 +519,7 @@ app.post("/api/codigos", async (req, res) => {
 	try {
 		const nuevoCodigo = {
 			...req.body,
+			destinosAplicables: normalizeDestinosAplicables(req.body.destinosAplicables),
 			id: req.body.codigo,
 			usosActuales: 0,
 			fechaCreacion: new Date().toISOString().split("T")[0],
@@ -483,7 +537,15 @@ app.post("/api/codigos", async (req, res) => {
 app.put("/api/codigos/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
-		const [updatedRows] = await CodigoDescuento.update(req.body, {
+		const payload = { ...req.body };
+
+		if (Object.prototype.hasOwnProperty.call(req.body, "destinosAplicables")) {
+			payload.destinosAplicables = normalizeDestinosAplicables(
+				req.body.destinosAplicables
+			);
+		}
+
+		const [updatedRows] = await CodigoDescuento.update(payload, {
 			where: { id },
 		});
 
@@ -553,10 +615,14 @@ app.post("/api/codigos/validar", async (req, res) => {
 			}
 		}
 
+		const destinosAplicables = normalizeDestinosAplicables(
+			codigoEncontrado.destinosAplicables
+		);
+
 		// Verificar destino aplicable
 		if (
-			codigoEncontrado.destinosAplicables.length > 0 &&
-			!codigoEncontrado.destinosAplicables.includes(destino)
+			destinosAplicables.length > 0 &&
+			!destinosAplicables.includes(destino)
 		) {
 			return res.json({
 				valido: false,
@@ -572,7 +638,13 @@ app.post("/api/codigos/validar", async (req, res) => {
 			});
 		}
 
-		res.json({ valido: true, codigo: codigoEncontrado });
+		const codigoPlano = codigoEncontrado.toJSON();
+		codigoPlano.destinosAplicables = destinosAplicables;
+		codigoPlano.usuariosQueUsaron = normalizeUsuariosQueUsaron(
+			codigoPlano.usuariosQueUsaron ?? codigoEncontrado.usuariosQueUsaron
+		);
+
+		res.json({ valido: true, codigo: codigoPlano });
 	} catch (error) {
 		console.error("Error validando código:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
@@ -636,6 +708,37 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 		const codigoEncontrado = await CodigoDescuento.findOne({
 			where: { codigo },
 		});
+
+// Endpoint para recibir reservas desde el formulario web
+app.post("/enviar-reserva", async (req, res) => {
+	try {
+		const datosReserva = req.body || {};
+
+		console.log("Reserva web recibida:", {
+			nombre: datosReserva.nombre,
+			email: datosReserva.email,
+			telefono: datosReserva.telefono,
+			origen: datosReserva.origen,
+			destino: datosReserva.destino,
+			fecha: datosReserva.fecha,
+			hora: datosReserva.hora,
+			pasajeros: datosReserva.pasajeros,
+			totalConDescuento: datosReserva.totalConDescuento,
+			source: datosReserva.source || "web",
+		});
+
+		return res.json({
+			success: true,
+			message: "Reserva recibida correctamente",
+		});
+	} catch (error) {
+		console.error("Error al procesar la reserva:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
 
 		if (!codigoEncontrado) {
 			return res.status(404).json({ error: "Código no encontrado" });
