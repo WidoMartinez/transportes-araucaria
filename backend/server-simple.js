@@ -49,13 +49,13 @@ app.get("/health", (req, res) => {
 
 // Endpoint raíz para verificar que el servidor está funcionando
 app.get("/", (req, res) => {
-	res.json({ 
-		status: "OK", 
+	res.json({
+		status: "OK",
 		message: "Servidor Transportes Araucaria funcionando correctamente",
 		endpoints: {
 			"POST /enviar-reserva": "Enviar reserva",
-			"GET /health": "Estado del servidor"
-		}
+			"GET /health": "Estado del servidor",
+		},
 	});
 });
 
