@@ -8,13 +8,29 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Checkbox } from "./ui/checkbox";
 import {
+        Dialog,
+        DialogContent,
+        DialogDescription,
+        DialogFooter,
+        DialogHeader,
+        DialogTitle,
+} from "./ui/dialog";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { CheckCircle2, LoaderCircle } from "lucide-react";
+import {
+        CheckCircle2,
+        Copy,
+        LoaderCircle,
+        Mail,
+        MessageCircle,
+        Save,
+        TrendingUp,
+} from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
@@ -79,6 +95,12 @@ function Hero({
         const [showBookingModule, setShowBookingModule] = useState(false);
         const [discountUpdated, setDiscountUpdated] = useState(false);
         const [ctaIsBouncing, setCtaIsBouncing] = useState(true);
+        const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+        const [quoteEmail, setQuoteEmail] = useState("");
+        const [quoteEmailError, setQuoteEmailError] = useState("");
+        const [quoteCopied, setQuoteCopied] = useState(false);
+        const [quoteSaved, setQuoteSaved] = useState(false);
+        const [quoteEmailSent, setQuoteEmailSent] = useState(false);
 
 	// Generar opciones de tiempo
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
@@ -104,6 +126,12 @@ function Hero({
                 const timeout = setTimeout(() => setCtaIsBouncing(false), 6000);
                 return () => clearTimeout(timeout);
         }, [ctaIsBouncing]);
+
+        useEffect(() => {
+                if (isSaveDialogOpen && !quoteEmail && formData.email) {
+                        setQuoteEmail(formData.email);
+                }
+        }, [formData.email, isSaveDialogOpen, quoteEmail]);
 
         const handleRevealBookingModule = () => {
                 setShowBookingModule(true);
@@ -218,9 +246,27 @@ function Hero({
 		formData.telefono,
 	]);
 
-	useEffect(() => {
-		setStepError("");
-	}, [currentStep]);
+        useEffect(() => {
+                setStepError("");
+        }, [currentStep]);
+
+        useEffect(() => {
+                if (!quoteCopied) return undefined;
+                const timeout = setTimeout(() => setQuoteCopied(false), 2500);
+                return () => clearTimeout(timeout);
+        }, [quoteCopied]);
+
+        useEffect(() => {
+                if (!quoteSaved) return undefined;
+                const timeout = setTimeout(() => setQuoteSaved(false), 2500);
+                return () => clearTimeout(timeout);
+        }, [quoteSaved]);
+
+        useEffect(() => {
+                if (!quoteEmailSent) return undefined;
+                const timeout = setTimeout(() => setQuoteEmailSent(false), 3000);
+                return () => clearTimeout(timeout);
+        }, [quoteEmailSent]);
 
 	// Efecto para mantener el scroll en la parte superior del módulo cuando cambie el paso
 	useEffect(() => {
@@ -352,21 +398,234 @@ function Hero({
 		setCurrentStep(2);
 	};
 
-	const handleStepBack = () => {
-		setCurrentStep((prev) => Math.max(prev - 1, 0));
-	};
+        const handleStepBack = () => {
+                setCurrentStep((prev) => Math.max(prev - 1, 0));
+        };
+
+        const handleOpenSaveDialog = () => {
+                setQuoteEmailError("");
+                setIsSaveDialogOpen(true);
+                if (!quoteEmail && formData.email) {
+                        setQuoteEmail(formData.email);
+                }
+        };
+
+        const handleCopyQuote = async () => {
+                try {
+                        if (navigator?.clipboard?.writeText) {
+                                await navigator.clipboard.writeText(quoteSummary);
+                        } else if (typeof document !== "undefined") {
+                                const tempTextArea = document.createElement("textarea");
+                                tempTextArea.value = quoteSummary;
+                                tempTextArea.setAttribute("readonly", "");
+                                tempTextArea.style.position = "absolute";
+                                tempTextArea.style.left = "-9999px";
+                                document.body.appendChild(tempTextArea);
+                                tempTextArea.select();
+                                document.execCommand("copy");
+                                document.body.removeChild(tempTextArea);
+                        }
+                        setQuoteCopied(true);
+                } catch (error) {
+                        console.error("No se pudo copiar la cotización:", error);
+                }
+        };
+
+        const handleSaveQuoteLocal = () => {
+                try {
+                        if (typeof window === "undefined") return;
+                        const payload = {
+                                summary: quoteSummary,
+                                savedAt: new Date().toISOString(),
+                                formData: {
+                                        origen: origenFinal,
+                                        destino: destinoFinal,
+                                        fecha: formData.fecha,
+                                        hora: formData.hora,
+                                        pasajeros: formData.pasajeros,
+                                        idaVuelta: formData.idaVuelta,
+                                        fechaRegreso: formData.fechaRegreso,
+                                        horaRegreso: formData.horaRegreso,
+                                },
+                                pricing: {
+                                        precioBase: pricing.precioBase,
+                                        totalConDescuento: pricing.totalConDescuento,
+                                        abono: pricing.abono,
+                                        saldoPendiente: pricing.saldoPendiente,
+                                },
+                        };
+                        window.localStorage.setItem(
+                                "transportes-araucaria-ultima-cotizacion",
+                                JSON.stringify(payload)
+                        );
+                        setQuoteSaved(true);
+                } catch (error) {
+                        console.error("No se pudo guardar la cotización localmente:", error);
+                }
+        };
+
+        const handleEmailQuote = () => {
+                if (typeof window === "undefined") return;
+                const trimmedEmail = quoteEmail.trim();
+                if (!trimmedEmail) {
+                        setQuoteEmailError("Ingresa un correo para enviarte la cotización.");
+                        return;
+                }
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(trimmedEmail)) {
+                        setQuoteEmailError("El correo ingresado no es válido.");
+                        return;
+                }
+
+                const subject = encodeURIComponent(
+                        "Tu cotización de traslado con Transportes Araucaria"
+                );
+                const baseUrl = window.location?.href || "https://www.transportesaraucaria.cl";
+                const body = encodeURIComponent(
+                        `${quoteSummary}\n\nCompleta tu reserva aquí: ${baseUrl}`
+                );
+
+                setQuoteEmailError("");
+                window.open(`mailto:${trimmedEmail}?subject=${subject}&body=${body}`);
+                setQuoteEmailSent(true);
+        };
+
+        const trackWhatsAppSupportClick = () => {
+                if (typeof window !== "undefined" && typeof window.gtag === "function") {
+                        window.gtag("event", "conversion", {
+                                send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
+                        });
+                        console.log("Conversión de clic en WhatsApp (Hero) enviada.");
+                }
+        };
 
 	const baseDiscountPercentage = Math.round((baseDiscountRate || 0) * 100);
 	const promoDiscountPercentage = Math.round(
 		(promotionDiscountRate || 0) * 100
 	);
-	const roundTripDiscountPercentage = Math.round(
-		(roundTripDiscountRate || 0) * 100
-	);
-	const personalizedDiscountPercentage = Math.round(
-		(personalizedDiscountRate || 0) * 100
-	);
-	const totalDiscountPercentage = Math.round(descuentoRate * 100);
+        const roundTripDiscountPercentage = Math.round(
+                (roundTripDiscountRate || 0) * 100
+        );
+        const personalizedDiscountPercentage = Math.round(
+                (personalizedDiscountRate || 0) * 100
+        );
+        const totalDiscountPercentage = Math.round(descuentoRate * 100);
+
+        const showDynamicPricingIndicator = useMemo(
+                () =>
+                        mostrarPrecio &&
+                        (promotionDiscountRate > 0 ||
+                                personalizedDiscountPercentage > 0 ||
+                                roundTripDiscountPercentage > 0 ||
+                                Boolean(activePromotion)),
+                [
+                        activePromotion,
+                        mostrarPrecio,
+                        personalizedDiscountPercentage,
+                        promotionDiscountRate,
+                        roundTripDiscountPercentage,
+                ]
+        );
+
+        const activePersonalizedDiscounts = useMemo(() => {
+                if (!Array.isArray(descuentosPersonalizados)) return [];
+                return descuentosPersonalizados
+                        .filter((discount) =>
+                                typeof discount === "object" ? discount?.activo !== false : Boolean(discount)
+                        )
+                        .map((discount) =>
+                                typeof discount === "object"
+                                        ? discount.nombre || discount.descripcion || discount.id
+                                        : String(discount)
+                        )
+                        .filter(Boolean);
+        }, [descuentosPersonalizados]);
+
+        const quoteSummary = useMemo(() => {
+                const details = [
+                        `Traslado: ${origenFinal} → ${destinoFinal}`,
+                        `Fecha: ${fechaLegible}`,
+                        `Hora: ${horaLegible}`,
+                        `Pasajeros: ${pasajerosLabel}`,
+                        `Vehículo sugerido: ${vehiculoSugerido}`,
+                ];
+
+                if (formData.idaVuelta) {
+                        details.push(
+                                `Regreso: ${formData.fechaRegreso || "Por definir"} · ${
+                                        formData.horaRegreso || "Por definir"
+                                } hrs`
+                        );
+                }
+
+                if (tieneCotizacionAutomatica) {
+                        details.push(
+                                `Tarifa estándar: ${formatCurrency(pricing.precioBase)}`,
+                                `Total con descuento: ${formatCurrency(pricing.totalConDescuento)}`,
+                                `Abono 40%: ${formatCurrency(pricing.abono)}`,
+                                `Saldo pendiente: ${formatCurrency(pricing.saldoPendiente)}`
+                        );
+                } else {
+                        details.push(
+                                "Cotización personalizada: Te contactaremos con el valor exacto."
+                        );
+                }
+
+                if (codigoAplicado?.codigo) {
+                        details.push(`Código aplicado: ${codigoAplicado.codigo}`);
+                }
+
+                if (activePromotion?.descripcion) {
+                        details.push(`Promoción activa: ${activePromotion.descripcion}`);
+                }
+
+                if (activePersonalizedDiscounts.length > 0) {
+                        details.push(
+                                `Descuentos especiales: ${activePersonalizedDiscounts.join(", ")}`
+                        );
+                }
+
+                return `${details.join("\n")}`;
+        }, [
+                activePersonalizedDiscounts,
+                activePromotion?.descripcion,
+                codigoAplicado?.codigo,
+                destinoFinal,
+                fechaLegible,
+                formData.fechaRegreso,
+                formData.horaRegreso,
+                formData.idaVuelta,
+                formatCurrency,
+                horaLegible,
+                origenFinal,
+                pasajerosLabel,
+                pricing.abono,
+                pricing.precioBase,
+                pricing.saldoPendiente,
+                pricing.totalConDescuento,
+                tieneCotizacionAutomatica,
+                vehiculoSugerido,
+        ]);
+
+        const stepFeedbackMessage = useMemo(() => {
+                if (!showBookingModule) return null;
+                if (currentStep === 0) return null;
+                if (currentStep === 1) {
+                        return "¡Primer paso listo! Tus datos de viaje quedaron registrados.";
+                }
+                if (currentStep === 2) {
+                        return requiereCotizacionManual
+                                ? "Estamos revisando tu solicitud para enviarte una cotización personalizada."
+                                : "¡Excelente! Revisa el resumen y elige tu forma de pago.";
+                }
+                return null;
+        }, [currentStep, requiereCotizacionManual, showBookingModule]);
+
+        const whatsappSupportLink = useMemo(() => {
+                const intro = "Hola, necesito ayuda con mi cotización de traslado.";
+                const message = `${intro}\n\n${quoteSummary}`;
+                return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
+        }, [quoteSummary]);
 
 	// Debug: mostrar información de descuentos personalizados (comentado para reducir ruido)
 	// useEffect(() => {
@@ -655,9 +914,17 @@ function Hero({
 											);
 										})}
 									</div>
-									<Progress value={progressValue} className="h-2" />
-								</div>
-							</CardHeader>
+                                                                        <Progress value={progressValue} className="h-2" />
+                                                                        {stepFeedbackMessage && (
+                                                                                <div className="mt-4 flex justify-center">
+                                                                                        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm animate-in fade-in-0 slide-in-from-top-2">
+                                                                                                <CheckCircle2 className="h-4 w-4" />
+                                                                                                <span>{stepFeedbackMessage}</span>
+                                                                                        </div>
+                                                                                </div>
+                                                                        )}
+                                                                </div>
+                                                        </CardHeader>
 							<CardContent className="space-y-8">
 								{currentStep === 0 && (
 									<div className="space-y-6">
@@ -875,12 +1142,18 @@ function Hero({
 														<p className="text-xs text-muted-foreground uppercase tracking-wide">
 															Precio estándar
 														</p>
-														<p className="text-xl font-semibold">
-															{formatCurrency(pricing.precioBase)}
-														</p>
-														<p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-															Total con descuento
-															{discountUpdated && (
+                                                                                                                <p className="text-xl font-semibold">
+                                                                                                                        {formatCurrency(pricing.precioBase)}
+                                                                                                                </p>
+                                                                                                                {showDynamicPricingIndicator && (
+                                                                                                                        <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-amber-100/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800 shadow-sm">
+                                                                                                                                <TrendingUp className="h-4 w-4" />
+                                                                                                                                Precios dinámicos
+                                                                                                                        </div>
+                                                                                                                )}
+                                                                                                                <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                                                                                                                        Total con descuento
+                                                                                                                        {discountUpdated && (
 																<span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 animate-pulse">
 																	✅ Actualizado
 																</span>
@@ -1243,10 +1516,10 @@ function Hero({
 												</div>
 											</div>
 
-											{formData.idaVuelta && (
-												<div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-													<div className="flex items-center gap-2 mb-2">
-														<svg
+                                                                                        {formData.idaVuelta && (
+                                                                                                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                                                                <svg
 															className="w-5 h-5 text-blue-600"
 															fill="none"
 															stroke="currentColor"
@@ -1263,16 +1536,43 @@ function Hero({
 															Regreso incluido
 														</p>
 													</div>
-													<p className="text-sm text-blue-700">
-														{formData.fechaRegreso || "Por definir"} ·{" "}
-														{formData.horaRegreso || "Por definir"} hrs
-													</p>
-												</div>
-											)}
-										</div>
-										{requiereCotizacionManual ? (
-											<div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
-												<h4 className="text-lg font-semibold text-primary mb-3">
+                                                                                                        <p className="text-sm text-blue-700">
+                                                                                                                {formData.fechaRegreso || "Por definir"} ·{" "}
+                                                                                                                {formData.horaRegreso || "Por definir"} hrs
+                                                                                                        </p>
+                                                                                                </div>
+                                                                                        )}
+
+                                                                                        <div className="mt-6 rounded-xl border border-primary/30 bg-white/80 p-4 shadow-sm">
+                                                                                                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                                                                        <div className="flex items-start gap-3">
+                                                                                                                <div className="rounded-full bg-primary/10 p-2 text-primary">
+                                                                                                                        <Save className="h-5 w-5" />
+                                                                                                                </div>
+                                                                                                                <div>
+                                                                                                                        <p className="text-sm font-semibold text-slate-900">
+                                                                                                                                Guarda o envía tu cotización
+                                                                                                                        </p>
+                                                                                                                        <p className="text-sm text-muted-foreground">
+                                                                                                                                Recíbela en tu correo o consérvala para comparar opciones más tarde.
+                                                                                                                        </p>
+                                                                                                                </div>
+                                                                                                        </div>
+                                                                                                        <Button
+                                                                                                                type="button"
+                                                                                                                variant="outline"
+                                                                                                                onClick={handleOpenSaveDialog}
+                                                                                                                className="self-start md:self-auto"
+                                                                                                        >
+                                                                                                                <Save className="mr-2 h-4 w-4" />
+                                                                                                                Guardar / Enviar
+                                                                                                        </Button>
+                                                                                                </div>
+                                                                                        </div>
+                                                                                </div>
+                                                                                {requiereCotizacionManual ? (
+                                                                                        <div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
+                                                                                                <h4 className="text-lg font-semibold text-primary mb-3">
 													Cotización personalizada necesaria
 												</h4>
 												<p className="text-sm text-muted-foreground leading-relaxed">
@@ -1610,9 +1910,112 @@ function Hero({
 						</Card>
 					</div>
 				)}
-			</div>
-		</section>
-	);
+                        </div>
+
+                        <Dialog
+                                open={isSaveDialogOpen}
+                                onOpenChange={(open) => {
+                                        setIsSaveDialogOpen(open);
+                                        if (!open) {
+                                                setQuoteEmailError("");
+                                                setQuoteEmailSent(false);
+                                                setQuoteCopied(false);
+                                                setQuoteSaved(false);
+                                        }
+                                }}
+                        >
+                                <DialogContent className="max-w-lg">
+                                        <DialogHeader>
+                                                <DialogTitle>Guarda o envía tu cotización</DialogTitle>
+                                                <DialogDescription>
+                                                        Revisa el resumen de tu traslado, guárdalo en este dispositivo o
+                                                        envíalo a tu correo para retomarlo más tarde.
+                                                </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                        <Label htmlFor="quote-summary" className="text-sm font-semibold text-foreground">
+                                                                Resumen del traslado
+                                                        </Label>
+                                                        <Textarea
+                                                                id="quote-summary"
+                                                                value={quoteSummary}
+                                                                readOnly
+                                                                className="min-h-[160px] resize-none bg-muted/40"
+                                                        />
+                                                        <div className="flex flex-wrap gap-3">
+                                                                <Button type="button" variant="outline" onClick={handleCopyQuote}>
+                                                                        <Copy className="mr-2 h-4 w-4" /> Copiar resumen
+                                                                </Button>
+                                                                <Button type="button" variant="outline" onClick={handleSaveQuoteLocal}>
+                                                                        <Save className="mr-2 h-4 w-4" /> Guardar en este dispositivo
+                                                                </Button>
+                                                        </div>
+                                                        {(quoteCopied || quoteSaved) && (
+                                                                <p className="flex items-center gap-2 text-sm text-emerald-600">
+                                                                        <CheckCircle2 className="h-4 w-4" />
+                                                                        {quoteCopied
+                                                                                ? "Resumen copiado al portapapeles."
+                                                                                : "Cotización guardada en este dispositivo."}
+                                                                </p>
+                                                        )}
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                        <Label htmlFor="quote-email" className="text-sm font-semibold text-foreground">
+                                                                Enviarla a tu correo
+                                                        </Label>
+                                                        <Input
+                                                                id="quote-email"
+                                                                type="email"
+                                                                placeholder="tucorreo@ejemplo.cl"
+                                                                value={quoteEmail}
+                                                                onChange={(event) => {
+                                                                        setQuoteEmail(event.target.value);
+                                                                        setQuoteEmailError("");
+                                                                }}
+                                                        />
+                                                        {quoteEmailError && (
+                                                                <p className="text-sm text-red-600">{quoteEmailError}</p>
+                                                        )}
+                                                        {quoteEmailSent && (
+                                                                <p className="flex items-center gap-2 text-sm text-emerald-600">
+                                                                        <CheckCircle2 className="h-4 w-4" /> Cotización preparada en tu correo.
+                                                                </p>
+                                                        )}
+                                                </div>
+                                        </div>
+                                        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                                                <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                                setIsSaveDialogOpen(false);
+                                                                setQuoteEmailError("");
+                                                        }}
+                                                >
+                                                        Cerrar
+                                                </Button>
+                                                <Button type="button" onClick={handleEmailQuote} className="bg-accent hover:bg-accent/90">
+                                                        <Mail className="mr-2 h-4 w-4" /> Enviar cotización
+                                                </Button>
+                                        </DialogFooter>
+                                </DialogContent>
+                        </Dialog>
+
+                        <a
+                                href={whatsappSupportLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={trackWhatsAppSupportClick}
+                                className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                                aria-label="Chatear por WhatsApp para resolver dudas"
+                        >
+                                <MessageCircle className="h-5 w-5" />
+                                Ayuda por WhatsApp
+                        </a>
+                </section>
+        );
 }
 
 export default Hero;
