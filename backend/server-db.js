@@ -165,400 +165,429 @@ const initializeDatabase = async () => {
 	}
 };
 
-
 // --- ENDPOINTS PARA CONFIGURACION DE PRECIOS ---
 const PRICING_CACHE_TTL_MS = Number(process.env.PRICING_CACHE_TTL_MS || 60000);
 let pricingCache = { payload: null, expiresAt: 0 };
 
 const setPricingCache = (payload) => {
-  pricingCache = {
-    payload,
-    expiresAt: Date.now() + PRICING_CACHE_TTL_MS,
-  };
+	pricingCache = {
+		payload,
+		expiresAt: Date.now() + PRICING_CACHE_TTL_MS,
+	};
 };
 
 const invalidatePricingCache = () => {
-  pricingCache = { payload: null, expiresAt: 0 };
+	pricingCache = { payload: null, expiresAt: 0 };
 };
 
 const buildPromotionKey = (sourceId, day) => `${sourceId}::${day}`;
 
 const extractPromotionKeyFromRecord = (promo) => {
-  const metadata = parsePromotionMetadata(promo);
-  const sourceId = metadata?.sourceId || promo.sourceId || `promo-${promo.id}`;
-  const dayTag =
-    metadata?.diaIndividual ||
-    (Array.isArray(metadata?.dias) && metadata.dias[0]) ||
-    promo.dia ||
-    (Array.isArray(promo.dias) && promo.dias[0]) ||
-    "lunes";
-  return buildPromotionKey(sourceId, dayTag);
+	const metadata = parsePromotionMetadata(promo);
+	const sourceId = metadata?.sourceId || promo.sourceId || `promo-${promo.id}`;
+	const dayTag =
+		metadata?.diaIndividual ||
+		(Array.isArray(metadata?.dias) && metadata.dias[0]) ||
+		promo.dia ||
+		(Array.isArray(promo.dias) && promo.dias[0]) ||
+		"lunes";
+	return buildPromotionKey(sourceId, dayTag);
 };
 
 const buildPromotionEntries = (promocion) => {
-  const metadata = parsePromotionMetadata(promocion);
-  const porcentaje = toNumber(
-    metadata?.porcentaje ??
-      promocion.porcentaje ??
-      promocion.descuentoPorcentaje ??
-      promocion.valor ??
-      0,
-    0
-  );
-  const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promocion.aplicaPorDias);
-  const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
-  const diasDesdePromo = Array.isArray(promocion.dias) ? promocion.dias.filter(Boolean) : [];
-  const diaBase =
-    metadata?.diaIndividual ||
-    promocion.dia ||
-    diasDesdePromo[0] ||
-    diasMetadata[0] ||
-    "lunes";
-  const diasParaIterar = aplicaPorDias
-    ? diasMetadata.length > 0
-      ? diasMetadata
-      : diasDesdePromo.length > 0
-      ? diasDesdePromo
-      : [diaBase]
-    : [diaBase];
-  const destino = metadata?.destino || promocion.destino || "";
-  const nombre =
-    metadata?.nombre ||
-    promocion.nombre ||
-    metadata?.descripcion ||
-    promocion.descripcion ||
-    "Promocion";
-  const descripcion = metadata?.descripcion || promocion.descripcion || "";
-  const aplicaPorHorario = metadata?.aplicaPorHorario ?? Boolean(promocion.aplicaPorHorario);
-  const horaInicio = metadata?.horaInicio ?? promocion.horaInicio ?? "";
-  const horaFin = metadata?.horaFin ?? promocion.horaFin ?? "";
-  const tipoViaje = metadata?.aplicaTipoViaje || promocion.aplicaTipoViaje || {};
-  const tipoViajeNormalizado = {
-    ida: Boolean(tipoViaje.ida),
-    vuelta: Boolean(tipoViaje.vuelta),
-    ambos: Boolean(tipoViaje.ambos),
-  };
-  const activo = metadata?.activo ?? promocion.activo ?? true;
-  const sourceId = metadata?.sourceId || promocion.id || generatePromotionId();
+	const metadata = parsePromotionMetadata(promocion);
+	const porcentaje = toNumber(
+		metadata?.porcentaje ??
+			promocion.porcentaje ??
+			promocion.descuentoPorcentaje ??
+			promocion.valor ??
+			0,
+		0
+	);
+	const aplicaPorDias =
+		metadata?.aplicaPorDias ?? Boolean(promocion.aplicaPorDias);
+	const diasMetadata = Array.isArray(metadata?.dias)
+		? metadata.dias.filter(Boolean)
+		: [];
+	const diasDesdePromo = Array.isArray(promocion.dias)
+		? promocion.dias.filter(Boolean)
+		: [];
+	const diaBase =
+		metadata?.diaIndividual ||
+		promocion.dia ||
+		diasDesdePromo[0] ||
+		diasMetadata[0] ||
+		"lunes";
+	const diasParaIterar = aplicaPorDias
+		? diasMetadata.length > 0
+			? diasMetadata
+			: diasDesdePromo.length > 0
+			? diasDesdePromo
+			: [diaBase]
+		: [diaBase];
+	const destino = metadata?.destino || promocion.destino || "";
+	const nombre =
+		metadata?.nombre ||
+		promocion.nombre ||
+		metadata?.descripcion ||
+		promocion.descripcion ||
+		"Promocion";
+	const descripcion = metadata?.descripcion || promocion.descripcion || "";
+	const aplicaPorHorario =
+		metadata?.aplicaPorHorario ?? Boolean(promocion.aplicaPorHorario);
+	const horaInicio = metadata?.horaInicio ?? promocion.horaInicio ?? "";
+	const horaFin = metadata?.horaFin ?? promocion.horaFin ?? "";
+	const tipoViaje =
+		metadata?.aplicaTipoViaje || promocion.aplicaTipoViaje || {};
+	const tipoViajeNormalizado = {
+		ida: Boolean(tipoViaje.ida),
+		vuelta: Boolean(tipoViaje.vuelta),
+		ambos: Boolean(tipoViaje.ambos),
+	};
+	const activo = metadata?.activo ?? promocion.activo ?? true;
+	const sourceId = metadata?.sourceId || promocion.id || generatePromotionId();
 
-  return diasParaIterar.map((dia) => {
-    const payload = {
-      sourceId,
-      nombre,
-      destino,
-      descripcion,
-      dias: aplicaPorDias ? diasParaIterar : [],
-      aplicaPorDias,
-      aplicaPorHorario,
-      horaInicio,
-      horaFin,
-      porcentaje,
-      aplicaTipoViaje: tipoViajeNormalizado,
-      activo,
-      diaIndividual: dia,
-    };
+	return diasParaIterar.map((dia) => {
+		const payload = {
+			sourceId,
+			nombre,
+			destino,
+			descripcion,
+			dias: aplicaPorDias ? diasParaIterar : [],
+			aplicaPorDias,
+			aplicaPorHorario,
+			horaInicio,
+			horaFin,
+			porcentaje,
+			aplicaTipoViaje: tipoViajeNormalizado,
+			activo,
+			diaIndividual: dia,
+		};
 
-    return {
-      key: buildPromotionKey(sourceId, dia),
-      record: {
-        nombre,
-        dia,
-        tipo: "porcentaje",
-        valor: porcentaje,
-        activo,
-        descripcion: JSON.stringify(payload),
-      },
-    };
-  });
+		return {
+			key: buildPromotionKey(sourceId, dia),
+			record: {
+				nombre,
+				dia,
+				tipo: "porcentaje",
+				valor: porcentaje,
+				activo,
+				descripcion: JSON.stringify(payload),
+			},
+		};
+	});
 };
 
 const buildPricingPayload = async () => {
-  const [destinos, dayPromotions, descuentosGlobales, codigosDescuento] = await Promise.all([
-    Destino.findAll({
-      order: [
-        ["orden", "ASC"],
-        ["nombre", "ASC"],
-      ],
-    }),
-    Promocion.findAll({
-      order: [["dia", "ASC"]],
-    }),
-    DescuentoGlobal.findAll(),
-    CodigoDescuento.findAll({
-      order: [["fechaCreacion", "DESC"]],
-    }),
-  ]);
+	const [destinos, dayPromotions, descuentosGlobales, codigosDescuento] =
+		await Promise.all([
+			Destino.findAll({
+				order: [
+					["orden", "ASC"],
+					["nombre", "ASC"],
+				],
+			}),
+			Promocion.findAll({
+				order: [["dia", "ASC"]],
+			}),
+			DescuentoGlobal.findAll(),
+			CodigoDescuento.findAll({
+				order: [["fechaCreacion", "DESC"]],
+			}),
+		]);
 
-  const dayPromotionsFormatted = dayPromotions.map((promo) => {
-    const metadata = parsePromotionMetadata(promo);
-    const baseId = metadata?.sourceId || `promo-${promo.id}`;
-    const porcentajeBase = metadata?.porcentaje;
-    const porcentaje =
-      porcentajeBase !== undefined
-        ? toNumber(porcentajeBase, 0)
-        : promo.tipo === "porcentaje"
-        ? toNumber(promo.valor, 0)
-        : 0;
-    const aplicaPorDias = metadata?.aplicaPorDias !== undefined ? Boolean(metadata.aplicaPorDias) : true;
-    const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
-    const diasDesdePromo = Array.isArray(promo.dias) ? promo.dias.filter(Boolean) : [];
-    const defaultDay =
-      metadata?.diaIndividual ||
-      promo.dia ||
-      diasDesdePromo[0] ||
-      diasMetadata[0] ||
-      "lunes";
-    const dias = aplicaPorDias
-      ? diasMetadata.length > 0
-        ? diasMetadata
-        : diasDesdePromo.length > 0
-        ? diasDesdePromo
-        : [defaultDay]
-      : [];
-    const tipoViaje = metadata?.aplicaTipoViaje || {};
-    return {
-      id: baseId,
-      nombre: metadata?.nombre || promo.nombre || "",
-      destino: metadata?.destino || "",
-      descripcion: metadata?.descripcion !== undefined ? metadata.descripcion : promo.descripcion || "",
-      dias,
-      aplicaPorDias,
-      aplicaPorHorario: metadata?.aplicaPorHorario !== undefined ? Boolean(metadata.aplicaPorHorario) : false,
-      horaInicio: metadata?.horaInicio || "",
-      horaFin: metadata?.horaFin || "",
-      descuentoPorcentaje: porcentaje,
-      aplicaTipoViaje: {
-        ida: tipoViaje.ida !== undefined ? Boolean(tipoViaje.ida) : true,
-        vuelta: tipoViaje.vuelta !== undefined ? Boolean(tipoViaje.vuelta) : true,
-        ambos: tipoViaje.ambos !== undefined ? Boolean(tipoViaje.ambos) : true,
-      },
-      activo:
-        metadata?.activo !== undefined
-          ? Boolean(metadata.activo)
-          : promo.activo !== undefined
-          ? Boolean(promo.activo)
-          : true,
-    };
-  });
+	const dayPromotionsFormatted = dayPromotions.map((promo) => {
+		const metadata = parsePromotionMetadata(promo);
+		const baseId = metadata?.sourceId || `promo-${promo.id}`;
+		const porcentajeBase = metadata?.porcentaje;
+		const porcentaje =
+			porcentajeBase !== undefined
+				? toNumber(porcentajeBase, 0)
+				: promo.tipo === "porcentaje"
+				? toNumber(promo.valor, 0)
+				: 0;
+		const aplicaPorDias =
+			metadata?.aplicaPorDias !== undefined
+				? Boolean(metadata.aplicaPorDias)
+				: true;
+		const diasMetadata = Array.isArray(metadata?.dias)
+			? metadata.dias.filter(Boolean)
+			: [];
+		const diasDesdePromo = Array.isArray(promo.dias)
+			? promo.dias.filter(Boolean)
+			: [];
+		const defaultDay =
+			metadata?.diaIndividual ||
+			promo.dia ||
+			diasDesdePromo[0] ||
+			diasMetadata[0] ||
+			"lunes";
+		const dias = aplicaPorDias
+			? diasMetadata.length > 0
+				? diasMetadata
+				: diasDesdePromo.length > 0
+				? diasDesdePromo
+				: [defaultDay]
+			: [];
+		const tipoViaje = metadata?.aplicaTipoViaje || {};
+		return {
+			id: baseId,
+			nombre: metadata?.nombre || promo.nombre || "",
+			destino: metadata?.destino || "",
+			descripcion:
+				metadata?.descripcion !== undefined
+					? metadata.descripcion
+					: promo.descripcion || "",
+			dias,
+			aplicaPorDias,
+			aplicaPorHorario:
+				metadata?.aplicaPorHorario !== undefined
+					? Boolean(metadata.aplicaPorHorario)
+					: false,
+			horaInicio: metadata?.horaInicio || "",
+			horaFin: metadata?.horaFin || "",
+			descuentoPorcentaje: porcentaje,
+			aplicaTipoViaje: {
+				ida: tipoViaje.ida !== undefined ? Boolean(tipoViaje.ida) : true,
+				vuelta:
+					tipoViaje.vuelta !== undefined ? Boolean(tipoViaje.vuelta) : true,
+				ambos: tipoViaje.ambos !== undefined ? Boolean(tipoViaje.ambos) : true,
+			},
+			activo:
+				metadata?.activo !== undefined
+					? Boolean(metadata.activo)
+					: promo.activo !== undefined
+					? Boolean(promo.activo)
+					: true,
+		};
+	});
 
-  const descuentosFormatted = {
-    descuentoOnline: {
-      valor: 5,
-      activo: true,
-      nombre: "Descuento por Reserva Online",
-    },
-    descuentoRoundTrip: {
-      valor: 10,
-      activo: true,
-      nombre: "Descuento por Ida y Vuelta",
-    },
-    descuentosPersonalizados: [],
-  };
+	const descuentosFormatted = {
+		descuentoOnline: {
+			valor: 5,
+			activo: true,
+			nombre: "Descuento por Reserva Online",
+		},
+		descuentoRoundTrip: {
+			valor: 10,
+			activo: true,
+			nombre: "Descuento por Ida y Vuelta",
+		},
+		descuentosPersonalizados: [],
+	};
 
-  descuentosGlobales.forEach((descuento) => {
-    if (descuento.tipo === "descuentoOnline") {
-      descuentosFormatted.descuentoOnline = {
-        valor: descuento.valor,
-        activo: descuento.activo,
-        nombre: descuento.nombre,
-      };
-    } else if (descuento.tipo === "descuentoRoundTrip") {
-      descuentosFormatted.descuentoRoundTrip = {
-        valor: descuento.valor,
-        activo: descuento.activo,
-        nombre: descuento.nombre,
-      };
-    } else if (descuento.tipo === "descuentoPersonalizado") {
-      descuentosFormatted.descuentosPersonalizados.push({
-        nombre: descuento.nombre,
-        valor: descuento.valor,
-        activo: descuento.activo,
-        descripcion: descuento.descripcion,
-      });
-    }
-  });
+	descuentosGlobales.forEach((descuento) => {
+		if (descuento.tipo === "descuentoOnline") {
+			descuentosFormatted.descuentoOnline = {
+				valor: descuento.valor,
+				activo: descuento.activo,
+				nombre: descuento.nombre,
+			};
+		} else if (descuento.tipo === "descuentoRoundTrip") {
+			descuentosFormatted.descuentoRoundTrip = {
+				valor: descuento.valor,
+				activo: descuento.activo,
+				nombre: descuento.nombre,
+			};
+		} else if (descuento.tipo === "descuentoPersonalizado") {
+			descuentosFormatted.descuentosPersonalizados.push({
+				nombre: descuento.nombre,
+				valor: descuento.valor,
+				activo: descuento.activo,
+				descripcion: descuento.descripcion,
+			});
+		}
+	});
 
-  const codigosFormateados = codigosDescuento.map((codigo) => {
-    const codigoJson = codigo.toJSON();
-    return {
-      ...codigoJson,
-      destinosAplicables: normalizeDestinosAplicables(
-        codigoJson.destinosAplicables ?? codigo.destinosAplicables
-      ),
-      usuariosQueUsaron: normalizeUsuariosQueUsaron(
-        codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
-      ),
-    };
-  });
+	const codigosFormateados = codigosDescuento.map((codigo) => {
+		const codigoJson = codigo.toJSON();
+		return {
+			...codigoJson,
+			destinosAplicables: normalizeDestinosAplicables(
+				codigoJson.destinosAplicables ?? codigo.destinosAplicables
+			),
+			usuariosQueUsaron: normalizeUsuariosQueUsaron(
+				codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
+			),
+		};
+	});
 
-  const destinosFormateados = destinos.map((destino) => ({
-    ...destino.toJSON(),
-    precios: {
-      auto: {
-        base: destino.precioIda,
-        porcentajeAdicional: 0.1,
-      },
-      van: {
-        base: destino.precioIda * 1.8,
-        porcentajeAdicional: 0.1,
-      },
-    },
-    descripcion: destino.descripcion || "",
-    tiempo: destino.tiempo || "45 min",
-    imagen: destino.imagen || "",
-    maxPasajeros: destino.maxPasajeros || 4,
-    minHorasAnticipacion: destino.minHorasAnticipacion || 5,
-  }));
+	const destinosFormateados = destinos.map((destino) => ({
+		...destino.toJSON(),
+		precios: {
+			auto: {
+				base: destino.precioIda,
+				porcentajeAdicional: 0.1,
+			},
+			van: {
+				base: destino.precioIda * 1.8,
+				porcentajeAdicional: 0.1,
+			},
+		},
+		descripcion: destino.descripcion || "",
+		tiempo: destino.tiempo || "45 min",
+		imagen: destino.imagen || "",
+		maxPasajeros: destino.maxPasajeros || 4,
+		minHorasAnticipacion: destino.minHorasAnticipacion || 5,
+	}));
 
-  return {
-    destinos: destinosFormateados,
-    dayPromotions: dayPromotionsFormatted,
-    descuentosGlobales: descuentosFormatted,
-    codigosDescuento: codigosFormateados,
-    updatedAt: new Date().toISOString(),
-  };
+	return {
+		destinos: destinosFormateados,
+		dayPromotions: dayPromotionsFormatted,
+		descuentosGlobales: descuentosFormatted,
+		codigosDescuento: codigosFormateados,
+		updatedAt: new Date().toISOString(),
+	};
 };
 
 app.get("/pricing", async (req, res) => {
-  try {
-    const now = Date.now();
-    if (pricingCache.payload && pricingCache.expiresAt > now) {
-      return res.json(pricingCache.payload);
-    }
+	try {
+		const now = Date.now();
+		if (pricingCache.payload && pricingCache.expiresAt > now) {
+			return res.json(pricingCache.payload);
+		}
 
-    const payload = await buildPricingPayload();
-    setPricingCache(payload);
-    res.json(payload);
-  } catch (error) {
-    console.error("Error al obtener la configuracion de precios:", error);
-    res.status(500).json({
-      message: "No se pudo obtener la configuracion de precios.",
-    });
-  }
+		const payload = await buildPricingPayload();
+		setPricingCache(payload);
+		res.json(payload);
+	} catch (error) {
+		console.error("Error al obtener la configuracion de precios:", error);
+		res.status(500).json({
+			message: "No se pudo obtener la configuracion de precios.",
+		});
+	}
 });
 
 app.put("/pricing", async (req, res) => {
-  console.log("PUT /pricing recibido");
-  console.log("Body recibido:", JSON.stringify(req.body, null, 2));
+	console.log("PUT /pricing recibido");
+	console.log("Body recibido:", JSON.stringify(req.body, null, 2));
 
-  const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
+	const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
 
-  if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
-    return res.status(400).json({
-      message:
-        "La estructura de datos enviada es incorrecta. Se esperaba un objeto con 'destinos' y 'dayPromotions'.",
-    });
-  }
+	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
+		return res.status(400).json({
+			message:
+				"La estructura de datos enviada es incorrecta. Se esperaba un objeto con 'destinos' y 'dayPromotions'.",
+		});
+	}
 
-  try {
-    invalidatePricingCache();
+	try {
+		invalidatePricingCache();
 
-    await Promise.all(
-      (destinos || []).map((destino) => {
-        const precioBase = destino.precios?.auto?.base || destino.precioIda || 0;
-        const precioVuelta = destino.precios?.auto?.base || destino.precioVuelta || 0;
-        const precioIdaVuelta = destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
+		await Promise.all(
+			(destinos || []).map((destino) => {
+				const precioBase =
+					destino.precios?.auto?.base || destino.precioIda || 0;
+				const precioVuelta =
+					destino.precios?.auto?.base || destino.precioVuelta || 0;
+				const precioIdaVuelta =
+					destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
 
-        return Destino.upsert({
-          nombre: destino.nombre,
-          precioIda: precioBase,
-          precioVuelta,
-          precioIdaVuelta,
-          activo: destino.activo !== false,
-          orden: destino.orden || 0,
-          descripcion: destino.descripcion || "",
-          tiempo: destino.tiempo || "45 min",
-          imagen: destino.imagen || "",
-          maxPasajeros: destino.maxPasajeros || 4,
-          minHorasAnticipacion: destino.minHorasAnticipacion || 5,
-        });
-      })
-    );
+				return Destino.upsert({
+					nombre: destino.nombre,
+					precioIda: precioBase,
+					precioVuelta,
+					precioIdaVuelta,
+					activo: destino.activo !== false,
+					orden: destino.orden || 0,
+					descripcion: destino.descripcion || "",
+					tiempo: destino.tiempo || "45 min",
+					imagen: destino.imagen || "",
+					maxPasajeros: destino.maxPasajeros || 4,
+					minHorasAnticipacion: destino.minHorasAnticipacion || 5,
+				});
+			})
+		);
 
-    const existingPromotions = await Promocion.findAll();
-    const existingPromotionMap = new Map(
-      existingPromotions.map((promo) => [extractPromotionKeyFromRecord(promo), promo])
-    );
-    const seenPromotionKeys = new Set();
+		const existingPromotions = await Promocion.findAll();
+		const existingPromotionMap = new Map(
+			existingPromotions.map((promo) => [
+				extractPromotionKeyFromRecord(promo),
+				promo,
+			])
+		);
+		const seenPromotionKeys = new Set();
 
-    for (const promocion of dayPromotions) {
-      for (const entry of buildPromotionEntries(promocion)) {
-        seenPromotionKeys.add(entry.key);
-        const existing = existingPromotionMap.get(entry.key);
-        if (existing) {
-          await existing.update(entry.record);
-        } else {
-          await Promocion.create(entry.record);
-        }
-      }
-    }
+		for (const promocion of dayPromotions) {
+			for (const entry of buildPromotionEntries(promocion)) {
+				seenPromotionKeys.add(entry.key);
+				const existing = existingPromotionMap.get(entry.key);
+				if (existing) {
+					await existing.update(entry.record);
+				} else {
+					await Promocion.create(entry.record);
+				}
+			}
+		}
 
-    const idsToDelete = [];
-    for (const [key, promo] of existingPromotionMap.entries()) {
-      if (!seenPromotionKeys.has(key)) {
-        idsToDelete.push(promo.id);
-      }
-    }
+		const idsToDelete = [];
+		for (const [key, promo] of existingPromotionMap.entries()) {
+			if (!seenPromotionKeys.has(key)) {
+				idsToDelete.push(promo.id);
+			}
+		}
 
-    if (idsToDelete.length > 0) {
-      await Promocion.destroy({ where: { id: idsToDelete } });
-    }
+		if (idsToDelete.length > 0) {
+			await Promocion.destroy({ where: { id: idsToDelete } });
+		}
 
-    if (descuentosGlobales) {
-      const globalUpdates = [];
+		if (descuentosGlobales) {
+			const globalUpdates = [];
 
-      if (descuentosGlobales.descuentoOnline) {
-        globalUpdates.push(
-          DescuentoGlobal.upsert({
-            tipo: "descuentoOnline",
-            nombre: descuentosGlobales.descuentoOnline.nombre,
-            valor: descuentosGlobales.descuentoOnline.valor,
-            activo: descuentosGlobales.descuentoOnline.activo,
-            descripcion: "Descuento por reserva online",
-          })
-        );
-      }
+			if (descuentosGlobales.descuentoOnline) {
+				globalUpdates.push(
+					DescuentoGlobal.upsert({
+						tipo: "descuentoOnline",
+						nombre: descuentosGlobales.descuentoOnline.nombre,
+						valor: descuentosGlobales.descuentoOnline.valor,
+						activo: descuentosGlobales.descuentoOnline.activo,
+						descripcion: "Descuento por reserva online",
+					})
+				);
+			}
 
-      if (descuentosGlobales.descuentoRoundTrip) {
-        globalUpdates.push(
-          DescuentoGlobal.upsert({
-            tipo: "descuentoRoundTrip",
-            nombre: descuentosGlobales.descuentoRoundTrip.nombre,
-            valor: descuentosGlobales.descuentoRoundTrip.valor,
-            activo: descuentosGlobales.descuentoRoundTrip.activo,
-            descripcion: "Descuento por ida y vuelta",
-          })
-        );
-      }
+			if (descuentosGlobales.descuentoRoundTrip) {
+				globalUpdates.push(
+					DescuentoGlobal.upsert({
+						tipo: "descuentoRoundTrip",
+						nombre: descuentosGlobales.descuentoRoundTrip.nombre,
+						valor: descuentosGlobales.descuentoRoundTrip.valor,
+						activo: descuentosGlobales.descuentoRoundTrip.activo,
+						descripcion: "Descuento por ida y vuelta",
+					})
+				);
+			}
 
-      await Promise.all(globalUpdates);
+			await Promise.all(globalUpdates);
 
-      if (Array.isArray(descuentosGlobales.descuentosPersonalizados)) {
-        await DescuentoGlobal.destroy({ where: { tipo: "descuentoPersonalizado" } });
+			if (Array.isArray(descuentosGlobales.descuentosPersonalizados)) {
+				await DescuentoGlobal.destroy({
+					where: { tipo: "descuentoPersonalizado" },
+				});
 
-        if (descuentosGlobales.descuentosPersonalizados.length > 0) {
-          await DescuentoGlobal.bulkCreate(
-            descuentosGlobales.descuentosPersonalizados.map((descuento) => ({
-              tipo: "descuentoPersonalizado",
-              nombre: descuento.nombre,
-              valor: descuento.valor,
-              activo: descuento.activo,
-              descripcion: descuento.descripcion || "",
-            }))
-          );
-        }
-      }
-    }
+				if (descuentosGlobales.descuentosPersonalizados.length > 0) {
+					await DescuentoGlobal.bulkCreate(
+						descuentosGlobales.descuentosPersonalizados.map((descuento) => ({
+							tipo: "descuentoPersonalizado",
+							nombre: descuento.nombre,
+							valor: descuento.valor,
+							activo: descuento.activo,
+							descripcion: descuento.descripcion || "",
+						}))
+					);
+				}
+			}
+		}
 
-    const payload = await buildPricingPayload();
-    setPricingCache(payload);
-    res.json(payload);
-  } catch (error) {
-    console.error("Error al guardar la configuracion de precios:", error);
-    res.status(500).json({
-      message: "No se pudo guardar la configuracion de precios.",
-    });
-  }
+		const payload = await buildPricingPayload();
+		setPricingCache(payload);
+		res.json(payload);
+	} catch (error) {
+		console.error("Error al guardar la configuracion de precios:", error);
+		res.status(500).json({
+			message: "No se pudo guardar la configuracion de precios.",
+		});
+	}
 });
 
 // --- ENDPOINTS PARA CODIGOS DE DESCUENTO ---
@@ -817,31 +846,31 @@ app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 
-				console.log("Reserva web recibida:", {
-					nombre: datosReserva.nombre,
-					email: datosReserva.email,
-					telefono: datosReserva.telefono,
-					origen: datosReserva.origen,
-					destino: datosReserva.destino,
-					fecha: datosReserva.fecha,
-					hora: datosReserva.hora,
-					pasajeros: datosReserva.pasajeros,
-					totalConDescuento: datosReserva.totalConDescuento,
-					source: datosReserva.source || "web",
-				});
-
-				return res.json({
-					success: true,
-					message: "Reserva recibida correctamente",
-				});
-			} catch (error) {
-				console.error("Error al procesar la reserva:", error);
-				return res.status(500).json({
-					success: false,
-					message: "Error interno del servidor",
-				});
-			}
+		console.log("Reserva web recibida:", {
+			nombre: datosReserva.nombre,
+			email: datosReserva.email,
+			telefono: datosReserva.telefono,
+			origen: datosReserva.origen,
+			destino: datosReserva.destino,
+			fecha: datosReserva.fecha,
+			hora: datosReserva.hora,
+			pasajeros: datosReserva.pasajeros,
+			totalConDescuento: datosReserva.totalConDescuento,
+			source: datosReserva.source || "web",
 		});
+
+		return res.json({
+			success: true,
+			message: "Reserva recibida correctamente",
+		});
+	} catch (error) {
+		console.error("Error al procesar la reserva:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
 
 // Endpoint para generar pagos desde el frontend
 app.post("/create-payment", async (req, res) => {
@@ -849,12 +878,15 @@ app.post("/create-payment", async (req, res) => {
 
 	if (!gateway || !amount || !description || !email) {
 		return res.status(400).json({
-			message: "Faltan parametros requeridos: gateway, amount, description, email.",
+			message:
+				"Faltan parametros requeridos: gateway, amount, description, email.",
 		});
 	}
 
-	const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
-	const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
+	const frontendBase =
+		process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+	const backendBase =
+		process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 
 	if (gateway === "mercadopago") {
 		const preferenceData = {
@@ -881,8 +913,10 @@ app.post("/create-payment", async (req, res) => {
 			const result = await preference.create({ body: preferenceData });
 			return res.json({ url: result.init_point });
 		} catch (error) {
-			console.error("Error al crear preferencia de Mercado Pago:",
-				error.response ? error.response.data : error.message);
+			console.error(
+				"Error al crear preferencia de Mercado Pago:",
+				error.response ? error.response.data : error.message
+			);
 			return res.status(500).json({
 				message: "Error al generar el pago con Mercado Pago.",
 			});
@@ -908,9 +942,9 @@ app.post("/create-payment", async (req, res) => {
 				`${flowApiUrl}/payment/create`,
 				new URLSearchParams(params).toString(),
 				{
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
 				}
 			);
 			const payment = response.data;
@@ -920,8 +954,10 @@ app.post("/create-payment", async (req, res) => {
 			const redirectUrl = `${payment.url}?token=${payment.token}`;
 			return res.json({ url: redirectUrl });
 		} catch (error) {
-			console.error("Error al crear el pago con Flow:",
-				error.response ? error.response.data : error.message);
+			console.error(
+				"Error al crear el pago con Flow:",
+				error.response ? error.response.data : error.message
+			);
 			return res.status(500).json({
 				message: "Error al generar el pago con Flow.",
 			});
@@ -1001,33 +1037,32 @@ app.post("/api/flow-confirmation", (req, res) => {
 	res.status(200).send("OK");
 });
 
-
 // --- UTILIDADES DE KEEP ALIVE ---
 const scheduleKeepAlive = () => {
-  const targetBase =
-    process.env.RENDER_KEEP_ALIVE_URL ||
-    process.env.KEEP_ALIVE_URL ||
-    "";
+	const targetBase =
+		process.env.RENDER_KEEP_ALIVE_URL || process.env.KEEP_ALIVE_URL || "";
 
-  if (!targetBase) {
-    return;
-  }
+	if (!targetBase) {
+		return;
+	}
 
-  const normalized = targetBase.endsWith("/health")
-    ? targetBase
-    : `${targetBase.replace(/\/$/, "")}/health`;
-  const interval = Number(process.env.RENDER_KEEP_ALIVE_INTERVAL_MS || 300000);
-  console.log(`Activando keep-alive cada ${interval / 1000}s hacia ${normalized}`);
+	const normalized = targetBase.endsWith("/health")
+		? targetBase
+		: `${targetBase.replace(/\/$/, "")}/health`;
+	const interval = Number(process.env.RENDER_KEEP_ALIVE_INTERVAL_MS || 300000);
+	console.log(
+		`Activando keep-alive cada ${interval / 1000}s hacia ${normalized}`
+	);
 
-  const timer = setInterval(() => {
-    axios.get(normalized).catch((error) => {
-      console.warn("Keep-alive fallido:", error.message);
-    });
-  }, interval);
+	const timer = setInterval(() => {
+		axios.get(normalized).catch((error) => {
+			console.warn("Keep-alive fallido:", error.message);
+		});
+	}, interval);
 
-  if (typeof timer.unref === "function") {
-    timer.unref();
-  }
+	if (typeof timer.unref === "function") {
+		timer.unref();
+	}
 };
 
 // --- INICIALIZAR SERVIDOR ---
