@@ -162,7 +162,7 @@ function App() {
 	const [codigoAplicado, setCodigoAplicado] = useState(null);
 	const [codigoError, setCodigoError] = useState(null);
 	const [validandoCodigo, setValidandoCodigo] = useState(false);
-	const [loadingPrecios, setLoadingPrecios] = useState(true);
+	const [loadingPrecios, setLoadingPrecios] = useState(false);
 
 	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
 	const [formData, setFormData] = useState({
@@ -195,7 +195,7 @@ function App() {
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
 	// --- FUNCIÓN PARA RECARGAR DATOS ---
-	const recargarDatosPrecios = async () => {
+	const recargarDatosPrecios = useCallback(async () => {
 		console.log("🔄 INICIANDO recarga de datos de precios... v2.0");
 		try {
 			const apiUrl =
@@ -256,7 +256,7 @@ function App() {
 			console.error("Error al recargar precios:", error);
 			return false;
 		}
-	};
+	}, []);
 
 	// Funciones para manejar códigos de descuento
 	// Generar ID único del usuario basado en datos del navegador
@@ -322,17 +322,38 @@ function App() {
 
 	// --- CARGA DE DATOS DINÁMICA ---
 	useEffect(() => {
+		if (typeof window === "undefined") return;
+
+		let isMounted = true;
+
 		const fetchPreciosDesdeAPI = async () => {
+			if (!isMounted) return;
 			setLoadingPrecios(true);
 			const success = await recargarDatosPrecios();
+			if (!isMounted) return;
 			if (!success) {
 				setDestinosData(destinosBase);
 				setPromotions([]);
 			}
 			setLoadingPrecios(false);
 		};
-		fetchPreciosDesdeAPI();
-	}, []);
+
+		const iniciarCarga = () => {
+			window.removeEventListener("load", iniciarCarga);
+			fetchPreciosDesdeAPI();
+		};
+
+		if (document.readyState === "complete") {
+			iniciarCarga();
+		} else {
+			window.addEventListener("load", iniciarCarga);
+		}
+
+		return () => {
+			isMounted = false;
+			window.removeEventListener("load", iniciarCarga);
+		};
+	}, [recargarDatosPrecios]);
 
 	// --- EFECTO PARA ESCUCHAR CAMBIOS DE CONFIGURACIÓN ---
 	useEffect(() => {
