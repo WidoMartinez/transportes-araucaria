@@ -710,8 +710,10 @@ function AdminPricing() {
 				Array.isArray(savedData.dayPromotions) &&
 				savedData.descuentosGlobales;
 
+			let broadcastPayload = null;
+
 			if (hasFullPayload) {
-				setPricing({
+				const normalizedPayload = {
 					...savedData,
 					dayPromotions: normalizePromotions(savedData.dayPromotions),
 					descuentosGlobales: {
@@ -721,11 +723,10 @@ function AdminPricing() {
 								savedData.descuentosGlobales?.descuentoOnline ||
 								5,
 							activo:
-								savedData.descuentosGlobales?.descuentoOnline?.activo !==
-								undefined
+								savedData.descuentosGlobales?.descuentoOnline?.activo !== undefined
 									? savedData.descuentosGlobales.descuentoOnline.activo
 									: true,
-							nombre: "Descuento por Reserva Online",
+								nombre: "Descuento por Reserva Online",
 						},
 						descuentoRoundTrip: {
 							valor:
@@ -733,16 +734,19 @@ function AdminPricing() {
 								savedData.descuentosGlobales?.descuentoRoundTrip ||
 								10,
 							activo:
-								savedData.descuentosGlobales?.descuentoRoundTrip?.activo !==
-								undefined
+								savedData.descuentosGlobales?.descuentoRoundTrip?.activo !== undefined
 									? savedData.descuentosGlobales.descuentoRoundTrip.activo
 									: true,
-							nombre: "Descuento por Ida y Vuelta",
+								nombre: "Descuento por Ida y Vuelta",
 						},
 						descuentosPersonalizados:
 							savedData.descuentosGlobales?.descuentosPersonalizados || [],
 					},
-				});
+					updatedAt: savedData.updatedAt || new Date().toISOString(),
+				};
+
+				setPricing(normalizedPayload);
+				broadcastPayload = normalizedPayload;
 			} else {
 				await fetchPricing();
 			}
@@ -750,37 +754,65 @@ function AdminPricing() {
 			setSuccess(
 				"Configuracion guardada correctamente. Los cambios se aplicaran en el sitio web."
 			);
-			// Notificar a la aplicación principal que los datos han cambiado
+			// Notificar a la aplicacion principal que los datos han cambiado
 			try {
-				// Método 1: localStorage event (funciona entre pestañas)
 				localStorage.setItem("pricing_updated", Date.now().toString());
+				if (broadcastPayload) {
+					try {
+						localStorage.setItem("pricing_updated_payload", JSON.stringify(broadcastPayload));
+					} catch (storageError) {
+						console.warn("No se pudo persistir payload de precios en localStorage:", storageError);
+					}
+				} else {
+					localStorage.removeItem("pricing_updated_payload");
+				}
 
-				// Método 2: Evento personalizado (funciona en la misma ventana)
 				if (typeof window !== "undefined") {
-					window.dispatchEvent(new CustomEvent("pricing_updated"));
+					window.dispatchEvent(
+						new CustomEvent("pricing_updated", {
+							detail: broadcastPayload || null,
+						})
+					);
 				}
 
-				// Método 3: Recargar directamente si hay función global
 				if (typeof window !== "undefined" && window.recargarDatosPrecios) {
-					window.recargarDatosPrecios();
+					const resultadoRecarga = window.recargarDatosPrecios(
+						broadcastPayload ? { payload: broadcastPayload } : undefined
+					);
+					if (resultadoRecarga && typeof resultadoRecarga.catch == "function") {
+						resultadoRecarga.catch((error) => {
+							console.error("Error aplicando payload desde panel admin:", error);
+						});
+					}
 				}
 
-				// Método 4: Recargar página principal si está abierta en otra pestaña
 				if (
 					typeof window !== "undefined" &&
 					window.opener &&
 					window.opener.recargarDatosPrecios
 				) {
-					window.opener.recargarDatosPrecios();
+					try {
+						const resultadoOpener = window.opener.recargarDatosPrecios(
+							broadcastPayload ? { payload: broadcastPayload } : undefined
+						);
+						if (resultadoOpener && typeof resultadoOpener.catch == "function") {
+							resultadoOpener.catch((error) => {
+								console.error("Error aplicando payload en ventana principal:", error);
+							});
+						}
+					} catch (callError) {
+						console.error("Error notificando a la ventana principal:", callError);
+					}
 				}
 
-				console.log("✅ Notificaciones de actualización enviadas");
+				console.log("Notificaciones de actualizacion enviadas");
 			} catch (e) {
 				console.log(
-					"⚠️ No se pudieron enviar todas las notificaciones:",
+					"No se pudieron enviar todas las notificaciones:",
 					e.message
 				);
 			}
+
 		} catch (submitError) {
 			console.error(submitError);
 			setError(
