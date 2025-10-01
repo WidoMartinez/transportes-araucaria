@@ -709,6 +709,34 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 			where: { codigo },
 		});
 
+
+		if (!codigoEncontrado) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const usuariosActualizados = (
+			codigoEncontrado.usuariosQueUsaron || []
+		).filter((id) => id !== usuarioId);
+
+		await CodigoDescuento.update(
+			{
+				usuariosQueUsaron: usuariosActualizados,
+			},
+			{
+				where: { codigo },
+			}
+		);
+
+		res.json({
+			exito: true,
+			usuariosQueUsaron: usuariosActualizados,
+		});
+	} catch (error) {
+		console.error("Error eliminando usuario del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Endpoint para recibir reservas desde el formulario web
 app.post("/enviar-reserva", async (req, res) => {
 	try {
@@ -737,33 +765,6 @@ app.post("/enviar-reserva", async (req, res) => {
 			success: false,
 			message: "Error interno del servidor",
 		});
-	}
-});
-
-		if (!codigoEncontrado) {
-			return res.status(404).json({ error: "Código no encontrado" });
-		}
-
-		const usuariosActualizados = (
-			codigoEncontrado.usuariosQueUsaron || []
-		).filter((id) => id !== usuarioId);
-
-		await CodigoDescuento.update(
-			{
-				usuariosQueUsaron: usuariosActualizados,
-			},
-			{
-				where: { codigo },
-			}
-		);
-
-		res.json({
-			exito: true,
-			usuariosQueUsaron: usuariosActualizados,
-		});
-	} catch (error) {
-		console.error("Error eliminando usuario del código:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
 
