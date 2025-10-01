@@ -2,10 +2,10 @@
 	"name": "transporte-araucaria-server",
 	"version": "1.0.0",
 	"description": "Servidor para manejar pagos para el sitio de Transportes Araucaria.",
-	"main": "server.js",
+	"main": "server-db.js",
 	"type": "module",
 	"scripts": {
-		"start": "node server.js",
+		"start": "node server-db.js",
 		"start:db": "node server-db.js",
 		"migrate": "node migrate.js",
 		"test:db": "node test-db.js",
