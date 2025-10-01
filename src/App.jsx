@@ -43,7 +43,9 @@ const parsePromotionMetadata = (promo) => {
 	if (!promo || typeof promo.descripcion !== "string") return null;
 	try {
 		const parsed = JSON.parse(promo.descripcion);
-		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+			? parsed
+			: null;
 	} catch (error) {
 		return null;
 	}
@@ -54,16 +56,19 @@ const normalizePromotions = (promotions = []) => {
 	return promotions.filter(Boolean).map((promo, index) => {
 		const metadata = parsePromotionMetadata(promo);
 		const id = metadata?.sourceId || promo.id || `promo-${index}`;
-		const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
-		const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
+		const diasMetadata = Array.isArray(metadata?.dias)
+			? metadata.dias.filter(Boolean)
+			: [];
+		const aplicaPorDias =
+			metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
 		const dias = aplicaPorDias
-			? (diasMetadata.length > 0
+			? diasMetadata.length > 0
 				? diasMetadata
 				: Array.isArray(promo.dias)
 				? promo.dias.filter(Boolean)
 				: metadata?.diaIndividual
 				? [metadata.diaIndividual]
-				: [])
+				: []
 			: [];
 		const porcentaje = Number(
 			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
@@ -76,20 +81,25 @@ const normalizePromotions = (promotions = []) => {
 			descripcion: metadata?.descripcion ?? promo.descripcion ?? "",
 			aplicaPorDias,
 			dias,
-			aplicaPorHorario: metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
+			aplicaPorHorario:
+				metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
 			horaInicio: metadata?.horaInicio ?? promo.horaInicio ?? "",
 			horaFin: metadata?.horaFin ?? promo.horaFin ?? "",
 			descuentoPorcentaje: Number.isFinite(porcentaje) ? porcentaje : 0,
 			aplicaTipoViaje: {
-			ida:
-				metadata?.aplicaTipoViaje?.ida ?? promo.aplicaTipoViaje?.ida ?? false,
-			vuelta:
-				metadata?.aplicaTipoViaje?.vuelta ?? promo.aplicaTipoViaje?.vuelta ?? false,
-			ambos:
-				metadata?.aplicaTipoViaje?.ambos ?? promo.aplicaTipoViaje?.ambos ?? true,
-		},
+				ida:
+					metadata?.aplicaTipoViaje?.ida ?? promo.aplicaTipoViaje?.ida ?? false,
+				vuelta:
+					metadata?.aplicaTipoViaje?.vuelta ??
+					promo.aplicaTipoViaje?.vuelta ??
+					false,
+				ambos:
+					metadata?.aplicaTipoViaje?.ambos ??
+					promo.aplicaTipoViaje?.ambos ??
+					true,
+			},
 			activo: metadata?.activo ?? promo.activo ?? true,
-	};
+		};
 	});
 };
 
@@ -195,66 +205,63 @@ function App() {
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
 	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
-	const applyPricingPayload = useCallback(
-		(data, { signal } = {}) => {
-			if (!data || signal?.aborted) {
-				return false;
-			}
+	const applyPricingPayload = useCallback((data, { signal } = {}) => {
+		if (!data || signal?.aborted) {
+			return false;
+		}
 
-			const destinosNormalizados =
-				Array.isArray(data.destinos) && data.destinos.length > 0
-					? data.destinos
-					: destinosBase;
+		const destinosNormalizados =
+			Array.isArray(data.destinos) && data.destinos.length > 0
+				? data.destinos
+				: destinosBase;
 
-			if (signal?.aborted) {
-				return false;
-			}
-			setDestinosData(destinosNormalizados);
+		if (signal?.aborted) {
+			return false;
+		}
+		setDestinosData(destinosNormalizados);
 
-			if (signal?.aborted) {
-				return false;
-			}
-			setPromotions(normalizePromotions(data.dayPromotions));
+		if (signal?.aborted) {
+			return false;
+		}
+		setPromotions(normalizePromotions(data.dayPromotions));
 
+		if (signal?.aborted) {
+			return true;
+		}
+
+		if (data.descuentosGlobales) {
+			const nuevosDescuentos = {
+				descuentoOnline: {
+					valor:
+						data.descuentosGlobales.descuentoOnline?.valor ??
+						data.descuentosGlobales.descuentoOnline ??
+						5,
+					activo:
+						data.descuentosGlobales.descuentoOnline?.activo !== undefined
+							? data.descuentosGlobales.descuentoOnline.activo
+							: true,
+				},
+				descuentoRoundTrip: {
+					valor:
+						data.descuentosGlobales.descuentoRoundTrip?.valor ??
+						data.descuentosGlobales.descuentoRoundTrip ??
+						10,
+					activo:
+						data.descuentosGlobales.descuentoRoundTrip?.activo !== undefined
+							? data.descuentosGlobales.descuentoRoundTrip.activo
+							: true,
+				},
+				descuentosPersonalizados:
+					data.descuentosGlobales.descuentosPersonalizados || [],
+			};
 			if (signal?.aborted) {
 				return true;
 			}
+			setDescuentosGlobales(nuevosDescuentos);
+		}
 
-			if (data.descuentosGlobales) {
-				const nuevosDescuentos = {
-					descuentoOnline: {
-						valor:
-							data.descuentosGlobales.descuentoOnline?.valor ??
-							data.descuentosGlobales.descuentoOnline ??
-							5,
-						activo:
-							data.descuentosGlobales.descuentoOnline?.activo !== undefined
-								? data.descuentosGlobales.descuentoOnline.activo
-								: true,
-					},
-					descuentoRoundTrip: {
-						valor:
-							data.descuentosGlobales.descuentoRoundTrip?.valor ??
-							data.descuentosGlobales.descuentoRoundTrip ??
-							10,
-						activo:
-							data.descuentosGlobales.descuentoRoundTrip?.activo !== undefined
-								? data.descuentosGlobales.descuentoRoundTrip.activo
-								: true,
-					},
-					descuentosPersonalizados:
-						data.descuentosGlobales.descuentosPersonalizados || [],
-				};
-				if (signal?.aborted) {
-					return true;
-				}
-				setDescuentosGlobales(nuevosDescuentos);
-			}
-
-			return true;
-		},
-		[]
-	);
+		return true;
+	}, []);
 
 	// --- FUNCION PARA RECARGAR DATOS ---
 	const recargarDatosPrecios = useCallback(
@@ -288,7 +295,9 @@ function App() {
 				const applied = applyPricingPayload(data, { signal });
 
 				if (!applied && !payload) {
-					console.warn("?? No se pudieron aplicar los datos de precios recibidos");
+					console.warn(
+						"?? No se pudieron aplicar los datos de precios recibidos"
+					);
 				}
 				return applied;
 			} catch (error) {
@@ -375,7 +384,9 @@ function App() {
 		const cargarPrecios = async () => {
 			setLoadingPrecios(true);
 			try {
-				const success = await recargarDatosPrecios({ signal: controller.signal });
+				const success = await recargarDatosPrecios({
+					signal: controller.signal,
+				});
 				if (!success && isActive && !controller.signal.aborted) {
 					setDestinosData(destinosBase);
 					setPromotions([]);
@@ -411,20 +422,31 @@ function App() {
 					const payload = JSON.parse(e.newValue);
 					recargarDatosPrecios({ payload }).catch((error) => {
 						if (error?.name !== "AbortError") {
-							console.error("Error aplicando payload de precios desde storage:", error);
+							console.error(
+								"Error aplicando payload de precios desde storage:",
+								error
+							);
 						}
 					});
 					return;
 				} catch (parseError) {
-					console.warn("No se pudo parsear payload de precios desde storage:", parseError);
+					console.warn(
+						"No se pudo parsear payload de precios desde storage:",
+						parseError
+					);
 				}
 			}
 
 			if (e.key === "pricing_updated") {
-				console.log("?? Detectado cambio en configuracion de precios, recargando...");
+				console.log(
+					"?? Detectado cambio en configuracion de precios, recargando..."
+				);
 				recargarDatosPrecios().catch((error) => {
 					if (error?.name !== "AbortError") {
-						console.error("Error recargando precios tras cambio en storage:", error);
+						console.error(
+							"Error recargando precios tras cambio en storage:",
+							error
+						);
 					}
 				});
 			}
@@ -439,7 +461,10 @@ function App() {
 			if (payload) {
 				recargarDatosPrecios({ payload }).catch((error) => {
 					if (error?.name !== "AbortError") {
-						console.error("Error aplicando payload de precios desde evento:", error);
+						console.error(
+							"Error aplicando payload de precios desde evento:",
+							error
+						);
 					}
 				});
 				return;
@@ -1081,6 +1106,29 @@ function App() {
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
+
+		// Enviar notificación por correo usando el archivo PHP de Hostinger
+		try {
+			const emailResponse = await fetch(
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(dataToSend),
+				}
+			);
+
+			if (emailResponse.ok) {
+				const emailResult = await emailResponse.json();
+				console.log("✅ Correo enviado exitosamente:", emailResult);
+			} else {
+				console.warn("⚠️ Error al enviar correo:", await emailResponse.text());
+			}
+		} catch (emailError) {
+			console.error("❌ Error al enviar notificación por correo:", emailError);
+			// No interrumpimos el flujo si falla el correo
+		}
+
 		// Usar el servidor backend de Render para todas las peticiones
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
