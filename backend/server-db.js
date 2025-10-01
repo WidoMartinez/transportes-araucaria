@@ -768,6 +768,94 @@ app.post("/enviar-reserva", async (req, res) => {
 	}
 });
 
+// Endpoint para generar pagos desde el frontend
+app.post("/create-payment", async (req, res) => {
+	const { gateway, amount, description, email } = req.body || {};
+
+	if (!gateway || !amount || !description || !email) {
+		return res.status(400).json({
+			message: "Faltan parametros requeridos: gateway, amount, description, email.",
+		});
+	}
+
+	const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+	const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
+
+	if (gateway === "mercadopago") {
+		const preferenceData = {
+			items: [
+				{
+					title: description,
+					unit_price: Number(amount),
+					quantity: 1,
+				},
+			],
+			back_urls: {
+				success: `${frontendBase}/pago-exitoso`,
+				failure: `${frontendBase}/pago-fallido`,
+				pending: `${frontendBase}/pago-pendiente`,
+			},
+			auto_return: "approved",
+			payer: {
+				email,
+			},
+		};
+
+		try {
+			const preference = new Preference(client);
+			const result = await preference.create({ body: preferenceData });
+			return res.json({ url: result.init_point });
+		} catch (error) {
+			console.error("Error al crear preferencia de Mercado Pago:",
+				error.response ? error.response.data : error.message);
+			return res.status(500).json({
+				message: "Error al generar el pago con Mercado Pago.",
+			});
+		}
+	}
+
+	if (gateway === "flow") {
+		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+		const params = {
+			apiKey: process.env.FLOW_API_KEY,
+			commerceOrder: `ORDEN-${Date.now()}`,
+			subject: description,
+			currency: "CLP",
+			amount: Number(amount),
+			email: email,
+			urlConfirmation: `${backendBase}/api/flow-confirmation`,
+			urlReturn: `${frontendBase}/flow-return`,
+		};
+		params.s = signParams(params);
+
+		try {
+			const response = await axios.post(
+				`${flowApiUrl}/payment/create`,
+				new URLSearchParams(params).toString(),
+				{
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				}
+			);
+			const payment = response.data;
+			if (!payment.url || !payment.token) {
+				throw new Error("Respuesta invalida desde Flow");
+			}
+			const redirectUrl = `${payment.url}?token=${payment.token}`;
+			return res.json({ url: redirectUrl });
+		} catch (error) {
+			console.error("Error al crear el pago con Flow:",
+				error.response ? error.response.data : error.message);
+			return res.status(500).json({
+				message: "Error al generar el pago con Flow.",
+			});
+		}
+	}
+
+	return res.status(400).json({ message: "Pasarela de pago no valida." });
+});
+
 // --- ENDPOINTS DE PAGO (mantener los existentes) ---
 app.post("/api/create-preference", async (req, res) => {
 	try {
