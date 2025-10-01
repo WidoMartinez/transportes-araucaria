@@ -74,10 +74,11 @@ function Hero({
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
-	const [selectedCharge, setSelectedCharge] = useState(null);
-	const [selectedMethod, setSelectedMethod] = useState(null);
-	const [showBookingModule, setShowBookingModule] = useState(false);
-	const [discountUpdated, setDiscountUpdated] = useState(false);
+        const [selectedCharge, setSelectedCharge] = useState(null);
+        const [selectedMethod, setSelectedMethod] = useState(null);
+        const [showBookingModule, setShowBookingModule] = useState(false);
+        const [discountUpdated, setDiscountUpdated] = useState(false);
+        const [ctaIsBouncing, setCtaIsBouncing] = useState(true);
 
 	// Generar opciones de tiempo
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
@@ -90,12 +91,24 @@ function Hero({
 		}));
 	};
 
-	// Mostrar indicador cuando se actualizan los descuentos
-	useEffect(() => {
-		setDiscountUpdated(true);
-		const timer = setTimeout(() => setDiscountUpdated(false), 2000);
-		return () => clearTimeout(timer);
-	}, [baseDiscountRate, roundTripDiscountRate]);
+        // Mostrar indicador cuando se actualizan los descuentos
+        useEffect(() => {
+                setDiscountUpdated(true);
+                const timer = setTimeout(() => setDiscountUpdated(false), 2000);
+                return () => clearTimeout(timer);
+        }, [baseDiscountRate, roundTripDiscountRate]);
+
+        // Limitar la animación del botón principal para evitar distracciones
+        useEffect(() => {
+                if (!ctaIsBouncing) return undefined;
+                const timeout = setTimeout(() => setCtaIsBouncing(false), 6000);
+                return () => clearTimeout(timeout);
+        }, [ctaIsBouncing]);
+
+        const handleRevealBookingModule = () => {
+                setShowBookingModule(true);
+                setCtaIsBouncing(false);
+        };
 
 	const steps = useMemo(
 		() => [
@@ -505,12 +518,14 @@ function Hero({
 
 				{!showBookingModule && (
 					<div className="flex flex-col items-center justify-center space-y-6">
-						<Button
-							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-white px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
-						>
-							🚐 Reservar mi traslado
-						</Button>
+                                                <Button
+                                                        onClick={handleRevealBookingModule}
+                                                        className={`bg-white text-primary px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/70 focus-visible:ring-offset-0 hover:bg-primary hover:text-white ${
+                                                                ctaIsBouncing ? "animate-bounce" : ""
+                                                        }`}
+                                                >
+                                                        🚐 Cotizar y Reservar
+                                                </Button>
 						<p className="text-lg text-white/95 drop-shadow-md font-medium">
 							Proceso rápido y seguro • Sin costos ocultos
 						</p>
