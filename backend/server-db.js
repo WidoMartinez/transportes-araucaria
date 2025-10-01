@@ -8,10 +8,13 @@ import { MercadoPagoConfig, Preference } from "mercadopago";
 import axios from "axios";
 import crypto from "crypto";
 import { testConnection, syncDatabase } from "./config/database.js";
+import { Op } from "sequelize";
+import sequelize from "./config/database.js";
 import CodigoDescuento from "./models/CodigoDescuento.js";
 import Destino from "./models/Destino.js";
 import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
+import Reserva from "./models/Reserva.js";
 
 dotenv.config();
 
@@ -866,9 +869,47 @@ app.post("/enviar-reserva", async (req, res) => {
 			source: datosReserva.source || "web",
 		});
 
+		// Guardar reserva en la base de datos
+		const reservaGuardada = await Reserva.create({
+			nombre: datosReserva.nombre || "No especificado",
+			email: datosReserva.email || "",
+			telefono: datosReserva.telefono || "",
+			origen: datosReserva.origen || "",
+			destino: datosReserva.destino || "",
+			fecha: datosReserva.fecha || new Date(),
+			hora: datosReserva.hora || "00:00:00",
+			pasajeros: parseInt(datosReserva.pasajeros) || 1,
+			precio: parseFloat(datosReserva.precio) || 0,
+			vehiculo: datosReserva.vehiculo || "",
+			numeroVuelo: datosReserva.numeroVuelo || "",
+			hotel: datosReserva.hotel || "",
+			equipajeEspecial: datosReserva.equipajeEspecial || "",
+			sillaInfantil: datosReserva.sillaInfantil === "si" || false,
+			idaVuelta: Boolean(datosReserva.idaVuelta),
+			fechaRegreso: datosReserva.fechaRegreso || null,
+			horaRegreso: datosReserva.horaRegreso || null,
+			abonoSugerido: parseFloat(datosReserva.abonoSugerido) || 0,
+			saldoPendiente: parseFloat(datosReserva.saldoPendiente) || 0,
+			descuentoBase: parseFloat(datosReserva.descuentoBase) || 0,
+			descuentoPromocion: parseFloat(datosReserva.descuentoPromocion) || 0,
+			descuentoRoundTrip: parseFloat(datosReserva.descuentoRoundTrip) || 0,
+			descuentoOnline: parseFloat(datosReserva.descuentoOnline) || 0,
+			totalConDescuento: parseFloat(datosReserva.totalConDescuento) || 0,
+			mensaje: datosReserva.mensaje || "",
+			source: datosReserva.source || "web",
+			estado: "pendiente",
+			ipAddress: req.ip || req.connection.remoteAddress || "",
+			userAgent: req.get("User-Agent") || "",
+			codigoDescuento: datosReserva.codigoDescuento || "",
+			estadoPago: "pendiente",
+		});
+
+		console.log("✅ Reserva guardada en base de datos con ID:", reservaGuardada.id);
+
 		return res.json({
 			success: true,
-			message: "Reserva recibida correctamente",
+			message: "Reserva recibida y guardada correctamente",
+			reservaId: reservaGuardada.id,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva:", error);
@@ -876,6 +917,147 @@ app.post("/enviar-reserva", async (req, res) => {
 			success: false,
 			message: "Error interno del servidor",
 		});
+	}
+});
+
+// --- ENDPOINTS PARA GESTIONAR RESERVAS ---
+
+// Obtener todas las reservas
+app.get("/api/reservas", async (req, res) => {
+	try {
+		const { page = 1, limit = 20, estado, fecha_desde, fecha_hasta } = req.query;
+		const offset = (page - 1) * limit;
+
+		const whereClause = {};
+		if (estado) whereClause.estado = estado;
+		if (fecha_desde || fecha_hasta) {
+			whereClause.fecha = {};
+			if (fecha_desde) whereClause.fecha[Op.gte] = fecha_desde;
+			if (fecha_hasta) whereClause.fecha[Op.lte] = fecha_hasta;
+		}
+
+		const { count, rows: reservas } = await Reserva.findAndCountAll({
+			where: whereClause,
+			order: [["created_at", "DESC"]],
+			limit: parseInt(limit),
+			offset: parseInt(offset),
+		});
+
+		res.json({
+			reservas,
+			pagination: {
+				total: count,
+				page: parseInt(page),
+				limit: parseInt(limit),
+				totalPages: Math.ceil(count / limit),
+			},
+		});
+	} catch (error) {
+		console.error("Error obteniendo reservas:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener una reserva específica
+app.get("/api/reservas/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const reserva = await Reserva.findByPk(id);
+
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		res.json(reserva);
+	} catch (error) {
+		console.error("Error obteniendo reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar estado de una reserva
+app.put("/api/reservas/:id/estado", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { estado, observaciones } = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await reserva.update({
+			estado,
+			observaciones: observaciones || reserva.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Estado de reserva actualizado",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error actualizando estado de reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar estado de pago de una reserva
+app.put("/api/reservas/:id/pago", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { estadoPago, metodoPago, referenciaPago } = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await reserva.update({
+			estadoPago,
+			metodoPago: metodoPago || reserva.metodoPago,
+			referenciaPago: referenciaPago || reserva.referenciaPago,
+		});
+
+		res.json({
+			success: true,
+			message: "Estado de pago actualizado",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error actualizando estado de pago:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener estadísticas de reservas
+app.get("/api/reservas/estadisticas", async (req, res) => {
+	try {
+		const totalReservas = await Reserva.count();
+		const reservasPendientes = await Reserva.count({ where: { estado: "pendiente" } });
+		const reservasConfirmadas = await Reserva.count({ where: { estado: "confirmada" } });
+		const reservasPagadas = await Reserva.count({ where: { estadoPago: "pagado" } });
+
+		// Ingresos totales
+		const ingresosResult = await Reserva.findOne({
+			attributes: [
+				[sequelize.fn("SUM", sequelize.col("totalConDescuento")), "totalIngresos"],
+			],
+			where: { estadoPago: "pagado" },
+		});
+
+		const totalIngresos = parseFloat(ingresosResult?.dataValues?.totalIngresos || 0);
+
+		res.json({
+			totalReservas,
+			reservasPendientes,
+			reservasConfirmadas,
+			reservasPagadas,
+			totalIngresos,
+		});
+	} catch (error) {
+		console.error("Error obteniendo estadísticas:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
 
