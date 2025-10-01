@@ -47,6 +47,18 @@ app.get("/health", (req, res) => {
 	res.json({ status: "OK", message: "Servidor funcionando correctamente" });
 });
 
+// Endpoint raíz para verificar que el servidor está funcionando
+app.get("/", (req, res) => {
+	res.json({ 
+		status: "OK", 
+		message: "Servidor Transportes Araucaria funcionando correctamente",
+		endpoints: {
+			"POST /enviar-reserva": "Enviar reserva",
+			"GET /health": "Estado del servidor"
+		}
+	});
+});
+
 // --- INICIALIZAR SERVIDOR ---
 const PORT = process.env.PORT || 3001;
 
