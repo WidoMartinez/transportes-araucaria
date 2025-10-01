@@ -123,7 +123,12 @@ const Reserva = sequelize.define(
 			defaultValue: "web",
 		},
 		estado: {
-			type: DataTypes.ENUM("pendiente", "confirmada", "cancelada", "completada"),
+			type: DataTypes.ENUM(
+				"pendiente",
+				"confirmada",
+				"cancelada",
+				"completada"
+			),
 			defaultValue: "pendiente",
 		},
 		ipAddress: {

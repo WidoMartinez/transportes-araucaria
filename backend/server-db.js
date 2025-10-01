@@ -904,7 +904,10 @@ app.post("/enviar-reserva", async (req, res) => {
 			estadoPago: "pendiente",
 		});
 
-		console.log("✅ Reserva guardada en base de datos con ID:", reservaGuardada.id);
+		console.log(
+			"✅ Reserva guardada en base de datos con ID:",
+			reservaGuardada.id
+		);
 
 		return res.json({
 			success: true,
@@ -925,7 +928,13 @@ app.post("/enviar-reserva", async (req, res) => {
 // Obtener todas las reservas
 app.get("/api/reservas", async (req, res) => {
 	try {
-		const { page = 1, limit = 20, estado, fecha_desde, fecha_hasta } = req.query;
+		const {
+			page = 1,
+			limit = 20,
+			estado,
+			fecha_desde,
+			fecha_hasta,
+		} = req.query;
 		const offset = (page - 1) * limit;
 
 		const whereClause = {};
@@ -1034,19 +1043,30 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 app.get("/api/reservas/estadisticas", async (req, res) => {
 	try {
 		const totalReservas = await Reserva.count();
-		const reservasPendientes = await Reserva.count({ where: { estado: "pendiente" } });
-		const reservasConfirmadas = await Reserva.count({ where: { estado: "confirmada" } });
-		const reservasPagadas = await Reserva.count({ where: { estadoPago: "pagado" } });
+		const reservasPendientes = await Reserva.count({
+			where: { estado: "pendiente" },
+		});
+		const reservasConfirmadas = await Reserva.count({
+			where: { estado: "confirmada" },
+		});
+		const reservasPagadas = await Reserva.count({
+			where: { estadoPago: "pagado" },
+		});
 
 		// Ingresos totales
 		const ingresosResult = await Reserva.findOne({
 			attributes: [
-				[sequelize.fn("SUM", sequelize.col("totalConDescuento")), "totalIngresos"],
+				[
+					sequelize.fn("SUM", sequelize.col("totalConDescuento")),
+					"totalIngresos",
+				],
 			],
 			where: { estadoPago: "pagado" },
 		});
 
-		const totalIngresos = parseFloat(ingresosResult?.dataValues?.totalIngresos || 0);
+		const totalIngresos = parseFloat(
+			ingresosResult?.dataValues?.totalIngresos || 0
+		);
 
 		res.json({
 			totalReservas,
