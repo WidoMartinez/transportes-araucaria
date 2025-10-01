@@ -426,174 +426,6 @@ app.get("/pricing", async (req, res) => {
       return res.json(pricingCache.payload);
     }
 
-<<<<<<< HEAD
-		const dayPromotions = await Promocion.findAll({
-			order: [["dia", "ASC"]],
-		});
-
-		// Transformar promociones al formato esperado por el frontend
-		const dayPromotionsFormatted = dayPromotions.map((promo) => {
-			const metadata = parsePromotionMetadata(promo);
-			const baseId = metadata?.sourceId || `promo-${promo.id}`;
-			const porcentajeBase = metadata?.porcentaje;
-			const porcentaje =
-				porcentajeBase !== undefined
-					? toNumber(porcentajeBase, 0)
-					: promo.tipo === "porcentaje"
-					? toNumber(promo.valor, 0)
-					: 0;
-			const aplicaPorDias =
-				metadata?.aplicaPorDias !== undefined
-					? Boolean(metadata.aplicaPorDias)
-					: true;
-			const diasMetadata = Array.isArray(metadata?.dias)
-				? metadata.dias.filter(Boolean)
-				: [];
-			const diasDesdePromo = Array.isArray(promo.dias)
-				? promo.dias.filter(Boolean)
-				: [];
-			const defaultDay =
-				metadata?.diaIndividual ||
-				promo.dia ||
-				diasDesdePromo[0] ||
-				diasMetadata[0] ||
-				"lunes";
-			const dias = aplicaPorDias
-				? diasMetadata.length > 0
-					? diasMetadata
-					: diasDesdePromo.length > 0
-					? diasDesdePromo
-					: [defaultDay]
-				: [];
-			const tipoViaje = metadata?.aplicaTipoViaje || {};
-			return {
-				id: baseId,
-				nombre: metadata?.nombre || promo.nombre || "",
-				destino: metadata?.destino || "",
-				descripcion:
-					metadata?.descripcion !== undefined
-						? metadata.descripcion
-						: promo.descripcion || "",
-				dias,
-				aplicaPorDias,
-				aplicaPorHorario:
-					metadata?.aplicaPorHorario !== undefined
-						? Boolean(metadata.aplicaPorHorario)
-						: false,
-				horaInicio: metadata?.horaInicio || "",
-				horaFin: metadata?.horaFin || "",
-				descuentoPorcentaje: porcentaje,
-				aplicaTipoViaje: {
-					ida: tipoViaje.ida !== undefined ? Boolean(tipoViaje.ida) : true,
-					vuelta:
-						tipoViaje.vuelta !== undefined ? Boolean(tipoViaje.vuelta) : true,
-					ambos:
-						tipoViaje.ambos !== undefined ? Boolean(tipoViaje.ambos) : true,
-				},
-				activo:
-					metadata?.activo !== undefined
-						? Boolean(metadata.activo)
-						: promo.activo !== undefined
-						? Boolean(promo.activo)
-						: true,
-			};
-		});
-
-		const descuentosGlobales = await DescuentoGlobal.findAll();
-
-		// Convertir descuentos globales al formato esperado
-		const descuentosFormatted = {
-			descuentoOnline: {
-				valor: 5,
-				activo: true,
-				nombre: "Descuento por Reserva Online",
-			},
-			descuentoRoundTrip: {
-				valor: 10,
-				activo: true,
-				nombre: "Descuento por Ida y Vuelta",
-			},
-			descuentosPersonalizados: [],
-		};
-
-		// Mapear descuentos desde la base de datos
-		descuentosGlobales.forEach((descuento) => {
-			if (descuento.tipo === "descuentoOnline") {
-				descuentosFormatted.descuentoOnline = {
-					valor: descuento.valor,
-					activo: descuento.activo,
-					nombre: descuento.nombre,
-				};
-			} else if (descuento.tipo === "descuentoRoundTrip") {
-				descuentosFormatted.descuentoRoundTrip = {
-					valor: descuento.valor,
-					activo: descuento.activo,
-					nombre: descuento.nombre,
-				};
-			} else if (descuento.tipo === "descuentoPersonalizado") {
-				descuentosFormatted.descuentosPersonalizados.push({
-					nombre: descuento.nombre,
-					valor: descuento.valor,
-					activo: descuento.activo,
-					descripcion: descuento.descripcion,
-				});
-			}
-		});
-
-		const codigosDescuento = await CodigoDescuento.findAll({
-			order: [["fechaCreacion", "DESC"]],
-		});
-
-		// Asegurar que usuariosQueUsaron sea siempre un array
-		const codigosFormateados = codigosDescuento.map((codigo) => {
-			const codigoJson = codigo.toJSON();
-			return {
-				...codigoJson,
-				destinosAplicables: normalizeDestinosAplicables(
-					codigoJson.destinosAplicables ?? codigo.destinosAplicables
-				),
-				usuariosQueUsaron: normalizeUsuariosQueUsaron(
-					codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
-				),
-			};
-		});
-
-		// Transformar destinos al formato esperado por el frontend
-		const destinosFormateados = destinos.map((destino) => ({
-			...destino.toJSON(),
-			precios: {
-				auto: {
-					base: destino.precioIda,
-					porcentajeAdicional: 0.1,
-				},
-				van: {
-					base: destino.precioIda * 1.8, // Aproximación para van
-					porcentajeAdicional: 0.1,
-				},
-			},
-			descripcion: destino.descripcion || "",
-			tiempo: destino.tiempo || "45 min",
-			imagen: destino.imagen || "",
-			maxPasajeros: destino.maxPasajeros || 4,
-			minHorasAnticipacion: destino.minHorasAnticipacion || 5,
-		}));
-
-		const responseData = {
-			destinos: destinosFormateados,
-			dayPromotions: dayPromotionsFormatted,
-			descuentosGlobales: descuentosFormatted,
-			codigosDescuento: codigosFormateados,
-			updatedAt: new Date().toISOString(),
-		};
-
-		res.json(responseData);
-	} catch (error) {
-		console.error("Error al obtener la configuración de precios:", error);
-		res.status(500).json({
-			message: "No se pudo obtener la configuración de precios.",
-		});
-	}
-=======
     const payload = await buildPricingPayload();
     setPricingCache(payload);
     res.json(payload);
@@ -603,7 +435,6 @@ app.get("/pricing", async (req, res) => {
       message: "No se pudo obtener la configuracion de precios.",
     });
   }
->>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 });
 
 app.put("/pricing", async (req, res) => {
@@ -650,62 +481,6 @@ app.put("/pricing", async (req, res) => {
     );
     const seenPromotionKeys = new Set();
 
-<<<<<<< HEAD
-		for (const promocion of dayPromotions) {
-			console.log("Procesando promocion:", promocion);
-			const metadata = parsePromotionMetadata(promocion);
-			const porcentaje = toNumber(
-				metadata?.porcentaje ??
-					promocion.porcentaje ??
-					promocion.descuentoPorcentaje ??
-					promocion.valor ??
-					0,
-				0
-			);
-			const aplicaPorDias =
-				metadata?.aplicaPorDias ?? Boolean(promocion.aplicaPorDias);
-			const diasMetadata = Array.isArray(metadata?.dias)
-				? metadata.dias.filter(Boolean)
-				: [];
-			const diasDesdePromo = Array.isArray(promocion.dias)
-				? promocion.dias.filter(Boolean)
-				: [];
-			const diaBase =
-				metadata?.diaIndividual ||
-				promocion.dia ||
-				diasDesdePromo[0] ||
-				diasMetadata[0] ||
-				"lunes";
-			const diasParaIterar = aplicaPorDias
-				? diasMetadata.length > 0
-					? diasMetadata
-					: diasDesdePromo.length > 0
-					? diasDesdePromo
-					: [diaBase]
-				: [diaBase];
-			const destino = metadata?.destino || promocion.destino || "";
-			const nombre =
-				metadata?.nombre ||
-				promocion.nombre ||
-				metadata?.descripcion ||
-				promocion.descripcion ||
-				"Promocion";
-			const descripcion = metadata?.descripcion || promocion.descripcion || "";
-			const aplicaPorHorario =
-				metadata?.aplicaPorHorario ?? Boolean(promocion.aplicaPorHorario);
-			const horaInicio = metadata?.horaInicio ?? promocion.horaInicio ?? "";
-			const horaFin = metadata?.horaFin ?? promocion.horaFin ?? "";
-			const tipoViaje =
-				metadata?.aplicaTipoViaje || promocion.aplicaTipoViaje || {};
-			const tipoViajeNormalizado = {
-				ida: Boolean(tipoViaje.ida),
-				vuelta: Boolean(tipoViaje.vuelta),
-				ambos: Boolean(tipoViaje.ambos),
-			};
-			const activo = metadata?.activo ?? promocion.activo ?? true;
-			const sourceId =
-				metadata?.sourceId || promocion.id || generatePromotionId();
-=======
     for (const promocion of dayPromotions) {
       for (const entry of buildPromotionEntries(promocion)) {
         seenPromotionKeys.add(entry.key);
@@ -717,7 +492,6 @@ app.put("/pricing", async (req, res) => {
         }
       }
     }
->>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 
     const idsToDelete = [];
     for (const [key, promo] of existingPromotionMap.entries()) {
@@ -1011,13 +785,6 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 			where: { codigo },
 		});
 
-<<<<<<< HEAD
-		// Endpoint para recibir reservas desde el formulario web
-		app.post("/enviar-reserva", async (req, res) => {
-			try {
-				const datosReserva = req.body || {};
-=======
-
 		if (!codigoEncontrado) {
 			return res.status(404).json({ error: "Código no encontrado" });
 		}
@@ -1049,7 +816,6 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
->>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 
 				console.log("Reserva web recibida:", {
 					nombre: datosReserva.nombre,
@@ -1268,7 +1034,6 @@ const scheduleKeepAlive = () => {
 const PORT = process.env.PORT || 3001;
 
 const startServer = async () => {
-<<<<<<< HEAD
 	try {
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
@@ -1284,15 +1049,7 @@ const startServer = async () => {
 
 	app.listen(PORT, () => {
 		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-=======
-
-	await initializeDatabase();
-
-	app.listen(PORT, () => {
-		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-		console.log("📊 Base de datos MySQL conectada");
 		scheduleKeepAlive();
->>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 	});
 };
 
