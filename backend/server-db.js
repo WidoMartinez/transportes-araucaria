@@ -34,6 +34,10 @@ const signParams = (params) => {
 const app = express();
 app.use(express.json());
 
+app.get("/health", (req, res) => {
+	res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -161,16 +165,268 @@ const initializeDatabase = async () => {
 	}
 };
 
-// --- ENDPOINTS PARA CONFIGURACIÓN DE PRECIOS ---
-app.get("/pricing", async (req, res) => {
-	try {
-		const destinos = await Destino.findAll({
-			order: [
-				["orden", "ASC"],
-				["nombre", "ASC"],
-			],
-		});
 
+// --- ENDPOINTS PARA CONFIGURACION DE PRECIOS ---
+const PRICING_CACHE_TTL_MS = Number(process.env.PRICING_CACHE_TTL_MS || 60000);
+let pricingCache = { payload: null, expiresAt: 0 };
+
+const setPricingCache = (payload) => {
+  pricingCache = {
+    payload,
+    expiresAt: Date.now() + PRICING_CACHE_TTL_MS,
+  };
+};
+
+const invalidatePricingCache = () => {
+  pricingCache = { payload: null, expiresAt: 0 };
+};
+
+const buildPromotionKey = (sourceId, day) => `${sourceId}::${day}`;
+
+const extractPromotionKeyFromRecord = (promo) => {
+  const metadata = parsePromotionMetadata(promo);
+  const sourceId = metadata?.sourceId || promo.sourceId || `promo-${promo.id}`;
+  const dayTag =
+    metadata?.diaIndividual ||
+    (Array.isArray(metadata?.dias) && metadata.dias[0]) ||
+    promo.dia ||
+    (Array.isArray(promo.dias) && promo.dias[0]) ||
+    "lunes";
+  return buildPromotionKey(sourceId, dayTag);
+};
+
+const buildPromotionEntries = (promocion) => {
+  const metadata = parsePromotionMetadata(promocion);
+  const porcentaje = toNumber(
+    metadata?.porcentaje ??
+      promocion.porcentaje ??
+      promocion.descuentoPorcentaje ??
+      promocion.valor ??
+      0,
+    0
+  );
+  const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promocion.aplicaPorDias);
+  const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
+  const diasDesdePromo = Array.isArray(promocion.dias) ? promocion.dias.filter(Boolean) : [];
+  const diaBase =
+    metadata?.diaIndividual ||
+    promocion.dia ||
+    diasDesdePromo[0] ||
+    diasMetadata[0] ||
+    "lunes";
+  const diasParaIterar = aplicaPorDias
+    ? diasMetadata.length > 0
+      ? diasMetadata
+      : diasDesdePromo.length > 0
+      ? diasDesdePromo
+      : [diaBase]
+    : [diaBase];
+  const destino = metadata?.destino || promocion.destino || "";
+  const nombre =
+    metadata?.nombre ||
+    promocion.nombre ||
+    metadata?.descripcion ||
+    promocion.descripcion ||
+    "Promocion";
+  const descripcion = metadata?.descripcion || promocion.descripcion || "";
+  const aplicaPorHorario = metadata?.aplicaPorHorario ?? Boolean(promocion.aplicaPorHorario);
+  const horaInicio = metadata?.horaInicio ?? promocion.horaInicio ?? "";
+  const horaFin = metadata?.horaFin ?? promocion.horaFin ?? "";
+  const tipoViaje = metadata?.aplicaTipoViaje || promocion.aplicaTipoViaje || {};
+  const tipoViajeNormalizado = {
+    ida: Boolean(tipoViaje.ida),
+    vuelta: Boolean(tipoViaje.vuelta),
+    ambos: Boolean(tipoViaje.ambos),
+  };
+  const activo = metadata?.activo ?? promocion.activo ?? true;
+  const sourceId = metadata?.sourceId || promocion.id || generatePromotionId();
+
+  return diasParaIterar.map((dia) => {
+    const payload = {
+      sourceId,
+      nombre,
+      destino,
+      descripcion,
+      dias: aplicaPorDias ? diasParaIterar : [],
+      aplicaPorDias,
+      aplicaPorHorario,
+      horaInicio,
+      horaFin,
+      porcentaje,
+      aplicaTipoViaje: tipoViajeNormalizado,
+      activo,
+      diaIndividual: dia,
+    };
+
+    return {
+      key: buildPromotionKey(sourceId, dia),
+      record: {
+        nombre,
+        dia,
+        tipo: "porcentaje",
+        valor: porcentaje,
+        activo,
+        descripcion: JSON.stringify(payload),
+      },
+    };
+  });
+};
+
+const buildPricingPayload = async () => {
+  const [destinos, dayPromotions, descuentosGlobales, codigosDescuento] = await Promise.all([
+    Destino.findAll({
+      order: [
+        ["orden", "ASC"],
+        ["nombre", "ASC"],
+      ],
+    }),
+    Promocion.findAll({
+      order: [["dia", "ASC"]],
+    }),
+    DescuentoGlobal.findAll(),
+    CodigoDescuento.findAll({
+      order: [["fechaCreacion", "DESC"]],
+    }),
+  ]);
+
+  const dayPromotionsFormatted = dayPromotions.map((promo) => {
+    const metadata = parsePromotionMetadata(promo);
+    const baseId = metadata?.sourceId || `promo-${promo.id}`;
+    const porcentajeBase = metadata?.porcentaje;
+    const porcentaje =
+      porcentajeBase !== undefined
+        ? toNumber(porcentajeBase, 0)
+        : promo.tipo === "porcentaje"
+        ? toNumber(promo.valor, 0)
+        : 0;
+    const aplicaPorDias = metadata?.aplicaPorDias !== undefined ? Boolean(metadata.aplicaPorDias) : true;
+    const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
+    const diasDesdePromo = Array.isArray(promo.dias) ? promo.dias.filter(Boolean) : [];
+    const defaultDay =
+      metadata?.diaIndividual ||
+      promo.dia ||
+      diasDesdePromo[0] ||
+      diasMetadata[0] ||
+      "lunes";
+    const dias = aplicaPorDias
+      ? diasMetadata.length > 0
+        ? diasMetadata
+        : diasDesdePromo.length > 0
+        ? diasDesdePromo
+        : [defaultDay]
+      : [];
+    const tipoViaje = metadata?.aplicaTipoViaje || {};
+    return {
+      id: baseId,
+      nombre: metadata?.nombre || promo.nombre || "",
+      destino: metadata?.destino || "",
+      descripcion: metadata?.descripcion !== undefined ? metadata.descripcion : promo.descripcion || "",
+      dias,
+      aplicaPorDias,
+      aplicaPorHorario: metadata?.aplicaPorHorario !== undefined ? Boolean(metadata.aplicaPorHorario) : false,
+      horaInicio: metadata?.horaInicio || "",
+      horaFin: metadata?.horaFin || "",
+      descuentoPorcentaje: porcentaje,
+      aplicaTipoViaje: {
+        ida: tipoViaje.ida !== undefined ? Boolean(tipoViaje.ida) : true,
+        vuelta: tipoViaje.vuelta !== undefined ? Boolean(tipoViaje.vuelta) : true,
+        ambos: tipoViaje.ambos !== undefined ? Boolean(tipoViaje.ambos) : true,
+      },
+      activo:
+        metadata?.activo !== undefined
+          ? Boolean(metadata.activo)
+          : promo.activo !== undefined
+          ? Boolean(promo.activo)
+          : true,
+    };
+  });
+
+  const descuentosFormatted = {
+    descuentoOnline: {
+      valor: 5,
+      activo: true,
+      nombre: "Descuento por Reserva Online",
+    },
+    descuentoRoundTrip: {
+      valor: 10,
+      activo: true,
+      nombre: "Descuento por Ida y Vuelta",
+    },
+    descuentosPersonalizados: [],
+  };
+
+  descuentosGlobales.forEach((descuento) => {
+    if (descuento.tipo === "descuentoOnline") {
+      descuentosFormatted.descuentoOnline = {
+        valor: descuento.valor,
+        activo: descuento.activo,
+        nombre: descuento.nombre,
+      };
+    } else if (descuento.tipo === "descuentoRoundTrip") {
+      descuentosFormatted.descuentoRoundTrip = {
+        valor: descuento.valor,
+        activo: descuento.activo,
+        nombre: descuento.nombre,
+      };
+    } else if (descuento.tipo === "descuentoPersonalizado") {
+      descuentosFormatted.descuentosPersonalizados.push({
+        nombre: descuento.nombre,
+        valor: descuento.valor,
+        activo: descuento.activo,
+        descripcion: descuento.descripcion,
+      });
+    }
+  });
+
+  const codigosFormateados = codigosDescuento.map((codigo) => {
+    const codigoJson = codigo.toJSON();
+    return {
+      ...codigoJson,
+      destinosAplicables: normalizeDestinosAplicables(
+        codigoJson.destinosAplicables ?? codigo.destinosAplicables
+      ),
+      usuariosQueUsaron: normalizeUsuariosQueUsaron(
+        codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
+      ),
+    };
+  });
+
+  const destinosFormateados = destinos.map((destino) => ({
+    ...destino.toJSON(),
+    precios: {
+      auto: {
+        base: destino.precioIda,
+        porcentajeAdicional: 0.1,
+      },
+      van: {
+        base: destino.precioIda * 1.8,
+        porcentajeAdicional: 0.1,
+      },
+    },
+    descripcion: destino.descripcion || "",
+    tiempo: destino.tiempo || "45 min",
+    imagen: destino.imagen || "",
+    maxPasajeros: destino.maxPasajeros || 4,
+    minHorasAnticipacion: destino.minHorasAnticipacion || 5,
+  }));
+
+  return {
+    destinos: destinosFormateados,
+    dayPromotions: dayPromotionsFormatted,
+    descuentosGlobales: descuentosFormatted,
+    codigosDescuento: codigosFormateados,
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+app.get("/pricing", async (req, res) => {
+  try {
+    const now = Date.now();
+    if (pricingCache.payload && pricingCache.expiresAt > now) {
+      return res.json(pricingCache.payload);
+    }
+
+<<<<<<< HEAD
 		const dayPromotions = await Promocion.findAll({
 			order: [["dia", "ASC"]],
 		});
@@ -337,59 +593,64 @@ app.get("/pricing", async (req, res) => {
 			message: "No se pudo obtener la configuración de precios.",
 		});
 	}
+=======
+    const payload = await buildPricingPayload();
+    setPricingCache(payload);
+    res.json(payload);
+  } catch (error) {
+    console.error("Error al obtener la configuracion de precios:", error);
+    res.status(500).json({
+      message: "No se pudo obtener la configuracion de precios.",
+    });
+  }
+>>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 });
 
-// Endpoint PUT para actualizar precios
 app.put("/pricing", async (req, res) => {
-	console.log("🔄 PUT /pricing recibido");
-	console.log("📥 Body recibido:", JSON.stringify(req.body, null, 2));
+  console.log("PUT /pricing recibido");
+  console.log("Body recibido:", JSON.stringify(req.body, null, 2));
 
-	const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
+  const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
 
-	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
-		return res.status(400).json({
-			message:
-				"La estructura de datos enviada es incorrecta. Se esperaba un objeto con 'destinos' y 'dayPromotions'.",
-		});
-	}
+  if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
+    return res.status(400).json({
+      message:
+        "La estructura de datos enviada es incorrecta. Se esperaba un objeto con 'destinos' y 'dayPromotions'.",
+    });
+  }
 
-	try {
-		// Actualizar destinos
-		for (const destino of destinos) {
-			// Transformar datos del frontend al formato de la base de datos
-			const precioIda = destino.precios?.auto?.base || destino.precioIda || 0;
-			const precioVuelta =
-				destino.precios?.auto?.base || destino.precioVuelta || 0;
-			const precioIdaVuelta =
-				destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
+  try {
+    invalidatePricingCache();
 
-			await Destino.upsert({
-				nombre: destino.nombre,
-				precioIda: precioIda,
-				precioVuelta: precioVuelta,
-				precioIdaVuelta: precioIdaVuelta,
-				activo: destino.activo !== false,
-				orden: destino.orden || 0,
-				descripcion: destino.descripcion || "",
-				tiempo: destino.tiempo || "45 min",
-				imagen: destino.imagen || "",
-				maxPasajeros: destino.maxPasajeros || 4,
-				minHorasAnticipacion: destino.minHorasAnticipacion || 5,
-			});
-		}
+    await Promise.all(
+      (destinos || []).map((destino) => {
+        const precioBase = destino.precios?.auto?.base || destino.precioIda || 0;
+        const precioVuelta = destino.precios?.auto?.base || destino.precioVuelta || 0;
+        const precioIdaVuelta = destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
 
-		// Actualizar promociones
-		console.log("🔍 Procesando dayPromotions:", dayPromotions);
-		console.log("🔍 Cantidad de promociones:", dayPromotions.length);
+        return Destino.upsert({
+          nombre: destino.nombre,
+          precioIda: precioBase,
+          precioVuelta,
+          precioIdaVuelta,
+          activo: destino.activo !== false,
+          orden: destino.orden || 0,
+          descripcion: destino.descripcion || "",
+          tiempo: destino.tiempo || "45 min",
+          imagen: destino.imagen || "",
+          maxPasajeros: destino.maxPasajeros || 4,
+          minHorasAnticipacion: destino.minHorasAnticipacion || 5,
+        });
+      })
+    );
 
-		// Primero eliminar todas las promociones existentes
-		console.log("🗑️ Eliminando todas las promociones existentes...");
-		await Promocion.destroy({
-			where: {},
-			truncate: true, // Elimina todos los registros
-		});
-		console.log("✅ Promociones existentes eliminadas");
+    const existingPromotions = await Promocion.findAll();
+    const existingPromotionMap = new Map(
+      existingPromotions.map((promo) => [extractPromotionKeyFromRecord(promo), promo])
+    );
+    const seenPromotionKeys = new Set();
 
+<<<<<<< HEAD
 		for (const promocion of dayPromotions) {
 			console.log("Procesando promocion:", promocion);
 			const metadata = parsePromotionMetadata(promocion);
@@ -444,116 +705,89 @@ app.put("/pricing", async (req, res) => {
 			const activo = metadata?.activo ?? promocion.activo ?? true;
 			const sourceId =
 				metadata?.sourceId || promocion.id || generatePromotionId();
+=======
+    for (const promocion of dayPromotions) {
+      for (const entry of buildPromotionEntries(promocion)) {
+        seenPromotionKeys.add(entry.key);
+        const existing = existingPromotionMap.get(entry.key);
+        if (existing) {
+          await existing.update(entry.record);
+        } else {
+          await Promocion.create(entry.record);
+        }
+      }
+    }
+>>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 
-			for (const dia of diasParaIterar) {
-				const payload = {
-					sourceId,
-					nombre,
-					destino,
-					descripcion,
-					dias: aplicaPorDias ? diasParaIterar : [],
-					aplicaPorDias,
-					aplicaPorHorario,
-					horaInicio,
-					horaFin,
-					porcentaje,
-					aplicaTipoViaje: tipoViajeNormalizado,
-					activo,
-					diaIndividual: dia,
-				};
+    const idsToDelete = [];
+    for (const [key, promo] of existingPromotionMap.entries()) {
+      if (!seenPromotionKeys.has(key)) {
+        idsToDelete.push(promo.id);
+      }
+    }
 
-				await Promocion.create({
-					nombre,
-					dia,
-					tipo: "porcentaje",
-					valor: porcentaje,
-					activo,
-					descripcion: JSON.stringify(payload),
-				});
-			}
-		}
-		console.log("Promociones procesadas correctamente");
+    if (idsToDelete.length > 0) {
+      await Promocion.destroy({ where: { id: idsToDelete } });
+    }
 
-		// Actualizar descuentos globales
-		if (descuentosGlobales) {
-			// Actualizar descuento online
-			if (descuentosGlobales.descuentoOnline) {
-				await DescuentoGlobal.upsert({
-					tipo: "descuentoOnline",
-					nombre: descuentosGlobales.descuentoOnline.nombre,
-					valor: descuentosGlobales.descuentoOnline.valor,
-					activo: descuentosGlobales.descuentoOnline.activo,
-					descripcion: "Descuento por reserva online",
-				});
-			}
+    if (descuentosGlobales) {
+      const globalUpdates = [];
 
-			// Actualizar descuento round trip
-			if (descuentosGlobales.descuentoRoundTrip) {
-				await DescuentoGlobal.upsert({
-					tipo: "descuentoRoundTrip",
-					nombre: descuentosGlobales.descuentoRoundTrip.nombre,
-					valor: descuentosGlobales.descuentoRoundTrip.valor,
-					activo: descuentosGlobales.descuentoRoundTrip.activo,
-					descripcion: "Descuento por ida y vuelta",
-				});
-			}
+      if (descuentosGlobales.descuentoOnline) {
+        globalUpdates.push(
+          DescuentoGlobal.upsert({
+            tipo: "descuentoOnline",
+            nombre: descuentosGlobales.descuentoOnline.nombre,
+            valor: descuentosGlobales.descuentoOnline.valor,
+            activo: descuentosGlobales.descuentoOnline.activo,
+            descripcion: "Descuento por reserva online",
+          })
+        );
+      }
 
-			// Actualizar descuentos personalizados
-			console.log(
-				"🔍 Descuentos personalizados recibidos:",
-				descuentosGlobales.descuentosPersonalizados
-			);
-			console.log(
-				"🔍 Tipo de descuentos personalizados:",
-				typeof descuentosGlobales.descuentosPersonalizados
-			);
-			console.log(
-				"🔍 Es array:",
-				Array.isArray(descuentosGlobales.descuentosPersonalizados)
-			);
-			console.log(
-				"🔍 Longitud:",
-				descuentosGlobales.descuentosPersonalizados?.length
-			);
+      if (descuentosGlobales.descuentoRoundTrip) {
+        globalUpdates.push(
+          DescuentoGlobal.upsert({
+            tipo: "descuentoRoundTrip",
+            nombre: descuentosGlobales.descuentoRoundTrip.nombre,
+            valor: descuentosGlobales.descuentoRoundTrip.valor,
+            activo: descuentosGlobales.descuentoRoundTrip.activo,
+            descripcion: "Descuento por ida y vuelta",
+          })
+        );
+      }
 
-			if (
-				descuentosGlobales.descuentosPersonalizados &&
-				descuentosGlobales.descuentosPersonalizados.length > 0
-			) {
-				console.log("🔄 Eliminando descuentos personalizados existentes...");
-				// Eliminar descuentos personalizados existentes
-				await DescuentoGlobal.destroy({
-					where: { tipo: "descuentoPersonalizado" },
-				});
+      await Promise.all(globalUpdates);
 
-				console.log("🔄 Creando nuevos descuentos personalizados...");
-				// Crear nuevos descuentos personalizados
-				for (const descuento of descuentosGlobales.descuentosPersonalizados) {
-					console.log("📝 Creando descuento:", descuento);
-					await DescuentoGlobal.create({
-						tipo: "descuentoPersonalizado",
-						nombre: descuento.nombre,
-						valor: descuento.valor,
-						activo: descuento.activo,
-						descripcion: descuento.descripcion || "",
-					});
-				}
-				console.log("✅ Descuentos personalizados creados");
-			} else {
-				console.log("⚠️ No hay descuentos personalizados para procesar");
-			}
-		}
+      if (Array.isArray(descuentosGlobales.descuentosPersonalizados)) {
+        await DescuentoGlobal.destroy({ where: { tipo: "descuentoPersonalizado" } });
 
-		res.json({ message: "Configuración actualizada correctamente" });
-	} catch (error) {
-		console.error("Error al guardar la configuración de precios:", error);
-		res.status(500).json({
-			message: "No se pudo guardar la configuración de precios.",
-		});
-	}
+        if (descuentosGlobales.descuentosPersonalizados.length > 0) {
+          await DescuentoGlobal.bulkCreate(
+            descuentosGlobales.descuentosPersonalizados.map((descuento) => ({
+              tipo: "descuentoPersonalizado",
+              nombre: descuento.nombre,
+              valor: descuento.valor,
+              activo: descuento.activo,
+              descripcion: descuento.descripcion || "",
+            }))
+          );
+        }
+      }
+    }
+
+    const payload = await buildPricingPayload();
+    setPricingCache(payload);
+    res.json(payload);
+  } catch (error) {
+    console.error("Error al guardar la configuracion de precios:", error);
+    res.status(500).json({
+      message: "No se pudo guardar la configuracion de precios.",
+    });
+  }
 });
 
-// --- ENDPOINTS PARA CÓDIGOS DE DESCUENTO ---
+// --- ENDPOINTS PARA CODIGOS DE DESCUENTO ---
 app.get("/api/codigos", async (req, res) => {
 	try {
 		const codigos = await CodigoDescuento.findAll({
@@ -777,10 +1011,45 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 			where: { codigo },
 		});
 
+<<<<<<< HEAD
 		// Endpoint para recibir reservas desde el formulario web
 		app.post("/enviar-reserva", async (req, res) => {
 			try {
 				const datosReserva = req.body || {};
+=======
+
+		if (!codigoEncontrado) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const usuariosActualizados = (
+			codigoEncontrado.usuariosQueUsaron || []
+		).filter((id) => id !== usuarioId);
+
+		await CodigoDescuento.update(
+			{
+				usuariosQueUsaron: usuariosActualizados,
+			},
+			{
+				where: { codigo },
+			}
+		);
+
+		res.json({
+			exito: true,
+			usuariosQueUsaron: usuariosActualizados,
+		});
+	} catch (error) {
+		console.error("Error eliminando usuario del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para recibir reservas desde el formulario web
+app.post("/enviar-reserva", async (req, res) => {
+	try {
+		const datosReserva = req.body || {};
+>>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 
 				console.log("Reserva web recibida:", {
 					nombre: datosReserva.nombre,
@@ -808,31 +1077,92 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 			}
 		});
 
-		if (!codigoEncontrado) {
-			return res.status(404).json({ error: "Código no encontrado" });
-		}
+// Endpoint para generar pagos desde el frontend
+app.post("/create-payment", async (req, res) => {
+	const { gateway, amount, description, email } = req.body || {};
 
-		const usuariosActualizados = (
-			codigoEncontrado.usuariosQueUsaron || []
-		).filter((id) => id !== usuarioId);
-
-		await CodigoDescuento.update(
-			{
-				usuariosQueUsaron: usuariosActualizados,
-			},
-			{
-				where: { codigo },
-			}
-		);
-
-		res.json({
-			exito: true,
-			usuariosQueUsaron: usuariosActualizados,
+	if (!gateway || !amount || !description || !email) {
+		return res.status(400).json({
+			message: "Faltan parametros requeridos: gateway, amount, description, email.",
 		});
-	} catch (error) {
-		console.error("Error eliminando usuario del código:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
 	}
+
+	const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+	const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
+
+	if (gateway === "mercadopago") {
+		const preferenceData = {
+			items: [
+				{
+					title: description,
+					unit_price: Number(amount),
+					quantity: 1,
+				},
+			],
+			back_urls: {
+				success: `${frontendBase}/pago-exitoso`,
+				failure: `${frontendBase}/pago-fallido`,
+				pending: `${frontendBase}/pago-pendiente`,
+			},
+			auto_return: "approved",
+			payer: {
+				email,
+			},
+		};
+
+		try {
+			const preference = new Preference(client);
+			const result = await preference.create({ body: preferenceData });
+			return res.json({ url: result.init_point });
+		} catch (error) {
+			console.error("Error al crear preferencia de Mercado Pago:",
+				error.response ? error.response.data : error.message);
+			return res.status(500).json({
+				message: "Error al generar el pago con Mercado Pago.",
+			});
+		}
+	}
+
+	if (gateway === "flow") {
+		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+		const params = {
+			apiKey: process.env.FLOW_API_KEY,
+			commerceOrder: `ORDEN-${Date.now()}`,
+			subject: description,
+			currency: "CLP",
+			amount: Number(amount),
+			email: email,
+			urlConfirmation: `${backendBase}/api/flow-confirmation`,
+			urlReturn: `${frontendBase}/flow-return`,
+		};
+		params.s = signParams(params);
+
+		try {
+			const response = await axios.post(
+				`${flowApiUrl}/payment/create`,
+				new URLSearchParams(params).toString(),
+				{
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+				}
+			);
+			const payment = response.data;
+			if (!payment.url || !payment.token) {
+				throw new Error("Respuesta invalida desde Flow");
+			}
+			const redirectUrl = `${payment.url}?token=${payment.token}`;
+			return res.json({ url: redirectUrl });
+		} catch (error) {
+			console.error("Error al crear el pago con Flow:",
+				error.response ? error.response.data : error.message);
+			return res.status(500).json({
+				message: "Error al generar el pago con Flow.",
+			});
+		}
+	}
+
+	return res.status(400).json({ message: "Pasarela de pago no valida." });
 });
 
 // --- ENDPOINTS DE PAGO (mantener los existentes) ---
@@ -905,10 +1235,40 @@ app.post("/api/flow-confirmation", (req, res) => {
 	res.status(200).send("OK");
 });
 
+
+// --- UTILIDADES DE KEEP ALIVE ---
+const scheduleKeepAlive = () => {
+  const targetBase =
+    process.env.RENDER_KEEP_ALIVE_URL ||
+    process.env.KEEP_ALIVE_URL ||
+    "";
+
+  if (!targetBase) {
+    return;
+  }
+
+  const normalized = targetBase.endsWith("/health")
+    ? targetBase
+    : `${targetBase.replace(/\/$/, "")}/health`;
+  const interval = Number(process.env.RENDER_KEEP_ALIVE_INTERVAL_MS || 300000);
+  console.log(`Activando keep-alive cada ${interval / 1000}s hacia ${normalized}`);
+
+  const timer = setInterval(() => {
+    axios.get(normalized).catch((error) => {
+      console.warn("Keep-alive fallido:", error.message);
+    });
+  }, interval);
+
+  if (typeof timer.unref === "function") {
+    timer.unref();
+  }
+};
+
 // --- INICIALIZAR SERVIDOR ---
 const PORT = process.env.PORT || 3001;
 
 const startServer = async () => {
+<<<<<<< HEAD
 	try {
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
@@ -924,6 +1284,15 @@ const startServer = async () => {
 
 	app.listen(PORT, () => {
 		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+=======
+
+	await initializeDatabase();
+
+	app.listen(PORT, () => {
+		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
+		console.log("📊 Base de datos MySQL conectada");
+		scheduleKeepAlive();
+>>>>>>> cursor/fix-non-functional-payment-buttons-8e5f
 	});
 };
 
