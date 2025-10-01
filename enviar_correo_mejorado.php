@@ -92,7 +92,12 @@ if (!$data) {
 
 // Extrae y sanitiza los datos
 $nombre = htmlspecialchars($data['nombre'] ?? 'No especificado');
-$email = filter_var($data['email'] ?? '', FILTER_SANITIZE_EMAIL);
+$emailInput = trim($data['email'] ?? '');
+$email = filter_var($emailInput, FILTER_VALIDATE_EMAIL) ?: '';
+$emailDisplay = htmlspecialchars($email ?: $emailInput ?: 'No especificado', ENT_QUOTES, 'UTF-8');
+$emailHref = $email ?: '#';
+$hasValidCustomerEmail = $email !== '';
+
 $telefono = htmlspecialchars($data['telefono'] ?? 'No especificado');
 $source = htmlspecialchars($data['source'] ?? 'Sitio Web');
 $mensaje = htmlspecialchars($data['mensaje'] ?? '');
@@ -197,7 +202,7 @@ $emailHtml .= "
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
                 <tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Nombre:</td><td style='padding: 8px;'>{$nombre}</td></tr>
                 <tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Teléfono:</td><td style='padding: 8px;'><a href='tel:{$telefono}'>{$telefono}</a></td></tr>
-                <tr><td style='padding: 8px; font-weight: bold;'>Email:</td><td style='padding: 8px;'><a href='mailto:{$email}'>{$email}</a></td></tr>
+                <tr><td style='padding: 8px; font-weight: bold;'>Email:</td><td style='padding: 8px;'><a href='mailto:{$emailHref}'>{$emailDisplay}</a></td></tr>
             </table>";
 
 // Agregar detalles adicionales si existen
@@ -260,6 +265,9 @@ $emailHtml .= "
 
 $mail = new PHPMailer(true);
 
+$adminEmailEnviado = false;
+$confirmacionEnviada = false;
+
 try {
     // Configuración del servidor
     $mail->isSMTP();
@@ -274,7 +282,9 @@ try {
     // Destinatarios
     $mail->setFrom($emailUser, 'Notificación Sitio Web');
     $mail->addAddress($emailTo);
-    $mail->addReplyTo($email, $nombre);
+    if ($hasValidCustomerEmail) {
+        $mail->addReplyTo($email, $nombre);
+    }
 
     // Contenido
     $mail->isHTML(true);
@@ -282,12 +292,16 @@ try {
     $mail->Body    = $emailHtml;
 
     $mail->send();
-    
+    $adminEmailEnviado = true;
+    // Confirmación al cliente deshabilitada: solo se notifica al administrador.
+
     // Respuesta exitosa
     echo json_encode([
         'message' => 'Mensaje enviado exitosamente.',
         'reserva_guardada' => $reservaGuardada,
-        'id_reserva' => $reservaCompleta['id'] ?? null
+        'id_reserva' => $reservaCompleta['id'] ?? null,
+        'correo_enviado' => $adminEmailEnviado,
+        'confirmacion_enviada' => $confirmacionEnviada
     ]);
     
 } catch (Exception $e) {
@@ -295,7 +309,9 @@ try {
     echo json_encode([
         'message' => "Error al enviar el correo: {$mail->ErrorInfo}",
         'reserva_guardada' => $reservaGuardada,
-        'id_reserva' => $reservaCompleta['id'] ?? null
+        'id_reserva' => $reservaCompleta['id'] ?? null,
+        'correo_enviado' => $adminEmailEnviado,
+        'confirmacion_enviada' => $confirmacionEnviada
     ]);
 }
 ?>
