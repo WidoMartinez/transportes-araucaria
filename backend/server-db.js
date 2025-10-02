@@ -1065,16 +1065,16 @@ app.get("/api/sync-all", async (req, res) => {
 		// Sincronizar tablas una por una para evitar conflictos
 		console.log("Sincronizando tabla codigos_descuento...");
 		await CodigoDescuento.sync({ force: false, alter: true });
-		
+
 		console.log("Sincronizando tabla reservas...");
 		await Reserva.sync({ force: false, alter: true });
-		
+
 		console.log("Sincronizando tabla destinos...");
 		await Destino.sync({ force: false, alter: true });
-		
+
 		console.log("Sincronizando tabla promociones...");
 		await Promocion.sync({ force: false, alter: true });
-		
+
 		console.log("Sincronizando tabla descuentos_globales...");
 		await DescuentoGlobal.sync({ force: false, alter: true });
 
