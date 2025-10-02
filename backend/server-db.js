@@ -1047,6 +1047,45 @@ app.get("/api/test-tables", async (req, res) => {
 	}
 });
 
+// Endpoint para forzar la sincronización de todas las tablas
+app.get("/api/sync-all", async (req, res) => {
+	try {
+		// Verificar conexión primero
+		await sequelize.authenticate();
+
+		// Importar todos los modelos
+		const CodigoDescuento = (await import("./models/CodigoDescuento.js")).default;
+		const Reserva = (await import("./models/Reserva.js")).default;
+		const Destino = (await import("./models/Destino.js")).default;
+		const Promocion = (await import("./models/Promocion.js")).default;
+		const DescuentoGlobal = (await import("./models/DescuentoGlobal.js")).default;
+
+		// Forzar sincronización de todas las tablas
+		await sequelize.sync({ force: false, alter: true });
+
+		// Verificar estructura de las tablas principales
+		const [codigosResults] = await sequelize.query("DESCRIBE codigos_descuento");
+		const [reservasResults] = await sequelize.query("DESCRIBE reservas");
+
+		res.json({
+			status: "ok",
+			message: "Todas las tablas sincronizadas correctamente",
+			tables: {
+				codigos_descuento: codigosResults.map(row => row.Field),
+				reservas: reservasResults.map(row => row.Field)
+			},
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error("Error sincronizando tablas:", error);
+		res.status(500).json({
+			error: "Error sincronizando tablas",
+			details: error.message,
+			timestamp: new Date().toISOString(),
+		});
+	}
+});
+
 // Endpoint para forzar la sincronización de la tabla
 app.get("/api/codigos/sync", async (req, res) => {
 	try {
