@@ -1052,25 +1052,25 @@ app.get("/api/codigos/test", async (req, res) => {
 	try {
 		// Verificar conexión primero
 		await sequelize.authenticate();
-		
+
 		// Intentar sincronizar la tabla si no existe
 		await sequelize.sync({ force: false });
-		
+
 		// Contar códigos (esto debería funcionar si la tabla existe)
 		const totalCodigos = await CodigoDescuento.count();
-		
+
 		res.json({
 			status: "ok",
 			totalCodigos,
 			message: "Modelo CodigoDescuento funcionando correctamente",
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {
 		console.error("Error probando modelo CodigoDescuento:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			error: "Error probando modelo",
 			details: error.message,
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
 		});
 	}
 });
