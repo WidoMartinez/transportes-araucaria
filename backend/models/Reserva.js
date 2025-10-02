@@ -174,9 +174,6 @@ const Reserva = sequelize.define(
 				fields: ["estado"],
 			},
 			{
-				fields: ["estadoPago"],
-			},
-			{
 				fields: ["created_at"],
 			},
 		],
