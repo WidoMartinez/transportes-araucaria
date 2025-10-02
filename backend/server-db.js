@@ -1126,9 +1126,9 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		try {
 			// Verificar si las columnas existen
 			const [results] = await sequelize.query("DESCRIBE codigos_descuento");
-			const columns = results.map(row => row.Field);
-			const hasUsosActuales = columns.includes('usosActuales');
-			const hasLimiteUsos = columns.includes('limiteUsos');
+			const columns = results.map((row) => row.Field);
+			const hasUsosActuales = columns.includes("usosActuales");
+			const hasLimiteUsos = columns.includes("limiteUsos");
 
 			if (hasUsosActuales && hasLimiteUsos) {
 				codigosAgotados = await CodigoDescuento.count({
@@ -1156,7 +1156,10 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 				totalUsos = await CodigoDescuento.sum("usosActuales");
 			}
 		} catch (columnError) {
-			console.warn("Columnas de uso no disponibles, usando valores por defecto:", columnError.message);
+			console.warn(
+				"Columnas de uso no disponibles, usando valores por defecto:",
+				columnError.message
+			);
 		}
 
 		res.json({
