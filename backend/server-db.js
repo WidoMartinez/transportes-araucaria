@@ -1058,7 +1058,7 @@ app.get("/api/codigos/sync", async (req, res) => {
 
 		// Verificar que las columnas existen
 		const [results] = await sequelize.query("DESCRIBE codigos_descuento");
-		const columns = results.map(row => row.Field);
+		const columns = results.map((row) => row.Field);
 
 		res.json({
 			status: "ok",
@@ -1110,33 +1110,54 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		// Verificar conexión primero
 		await sequelize.authenticate();
 
+		// Intentar sincronizar la tabla para asegurar que tiene todas las columnas
+		await sequelize.sync({ force: false, alter: true });
+
 		const totalCodigos = await CodigoDescuento.count();
 		const codigosActivos = await CodigoDescuento.count({
 			where: { activo: true },
 		});
-		const codigosAgotados = await CodigoDescuento.count({
-			where: {
-				activo: true,
-				[Op.and]: [
-					sequelize.where(
-						sequelize.col("usosActuales"),
-						Op.gte,
-						sequelize.col("limiteUsos")
-					),
-				],
-			},
-		});
 
-		// Códigos más usados
-		const codigosMasUsados = await CodigoDescuento.findAll({
-			where: { activo: true },
-			order: [["usosActuales", "DESC"]],
-			limit: 5,
-			attributes: ["codigo", "descripcion", "usosActuales", "limiteUsos"],
-		});
+		// Verificar si las columnas necesarias existen antes de usarlas
+		let codigosAgotados = 0;
+		let codigosMasUsados = [];
+		let totalUsos = 0;
 
-		// Total de usos en el sistema
-		const totalUsos = await CodigoDescuento.sum("usosActuales");
+		try {
+			// Verificar si las columnas existen
+			const [results] = await sequelize.query("DESCRIBE codigos_descuento");
+			const columns = results.map(row => row.Field);
+			const hasUsosActuales = columns.includes('usosActuales');
+			const hasLimiteUsos = columns.includes('limiteUsos');
+
+			if (hasUsosActuales && hasLimiteUsos) {
+				codigosAgotados = await CodigoDescuento.count({
+					where: {
+						activo: true,
+						[Op.and]: [
+							sequelize.where(
+								sequelize.col("usosActuales"),
+								Op.gte,
+								sequelize.col("limiteUsos")
+							),
+						],
+					},
+				});
+
+				// Códigos más usados
+				codigosMasUsados = await CodigoDescuento.findAll({
+					where: { activo: true },
+					order: [["usosActuales", "DESC"]],
+					limit: 5,
+					attributes: ["codigo", "descripcion", "usosActuales", "limiteUsos"],
+				});
+
+				// Total de usos en el sistema
+				totalUsos = await CodigoDescuento.sum("usosActuales");
+			}
+		} catch (columnError) {
+			console.warn("Columnas de uso no disponibles, usando valores por defecto:", columnError.message);
+		}
 
 		res.json({
 			totalCodigos,
