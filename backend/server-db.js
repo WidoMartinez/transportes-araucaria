@@ -992,17 +992,17 @@ app.post("/api/codigos/:id/reset", async (req, res) => {
 app.get("/api/test-db", async (req, res) => {
 	try {
 		await sequelize.authenticate();
-		res.json({ 
-			status: "ok", 
+		res.json({
+			status: "ok",
 			message: "Conexión a la base de datos exitosa",
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {
 		console.error("Error de conexión a la base de datos:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			error: "Error de conexión a la base de datos",
 			details: error.message,
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
 		});
 	}
 });
@@ -1011,34 +1011,64 @@ app.get("/api/test-db", async (req, res) => {
 app.get("/api/test-tables", async (req, res) => {
 	try {
 		await sequelize.authenticate();
-		
+
 		// Verificar si la tabla codigos_descuento existe
-		const [results] = await sequelize.query("SHOW TABLES LIKE 'codigos_descuento'");
+		const [results] = await sequelize.query(
+			"SHOW TABLES LIKE 'codigos_descuento'"
+		);
 		const tableExists = results.length > 0;
-		
+
 		// Si la tabla no existe, intentar crearla
 		if (!tableExists) {
 			console.log("Tabla codigos_descuento no existe, sincronizando...");
 			await sequelize.sync({ force: false });
 		}
-		
+
 		// Contar registros en la tabla
 		let codigosCount = 0;
 		if (tableExists) {
 			codigosCount = await CodigoDescuento.count();
 		}
-		
-		res.json({ 
-			status: "ok", 
+
+		res.json({
+			status: "ok",
 			message: "Verificación de tablas completada",
 			tableExists,
 			codigosCount,
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {
 		console.error("Error verificando tablas:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			error: "Error verificando tablas",
+			details: error.message,
+			timestamp: new Date().toISOString(),
+		});
+	}
+});
+
+// Endpoint simple para probar el modelo CodigoDescuento
+app.get("/api/codigos/test", async (req, res) => {
+	try {
+		// Verificar conexión primero
+		await sequelize.authenticate();
+		
+		// Intentar sincronizar la tabla si no existe
+		await sequelize.sync({ force: false });
+		
+		// Contar códigos (esto debería funcionar si la tabla existe)
+		const totalCodigos = await CodigoDescuento.count();
+		
+		res.json({
+			status: "ok",
+			totalCodigos,
+			message: "Modelo CodigoDescuento funcionando correctamente",
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		console.error("Error probando modelo CodigoDescuento:", error);
+		res.status(500).json({ 
+			error: "Error probando modelo",
 			details: error.message,
 			timestamp: new Date().toISOString()
 		});
@@ -1050,10 +1080,10 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 	try {
 		// Verificar conexión primero
 		await sequelize.authenticate();
-		
+
 		const totalCodigos = await CodigoDescuento.count();
 		const codigosActivos = await CodigoDescuento.count({
-			where: { activo: true }
+			where: { activo: true },
 		});
 		const codigosAgotados = await CodigoDescuento.count({
 			where: {
@@ -1088,10 +1118,10 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error obteniendo estadísticas:", error);
-		res.status(500).json({ 
+		res.status(500).json({
 			error: "Error interno del servidor",
 			details: error.message,
-			timestamp: new Date().toISOString()
+			timestamp: new Date().toISOString(),
 		});
 	}
 });
