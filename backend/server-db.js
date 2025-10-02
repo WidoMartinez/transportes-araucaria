@@ -1047,6 +1047,35 @@ app.get("/api/test-tables", async (req, res) => {
 	}
 });
 
+// Endpoint para forzar la sincronización de la tabla
+app.get("/api/codigos/sync", async (req, res) => {
+	try {
+		// Verificar conexión primero
+		await sequelize.authenticate();
+
+		// Forzar sincronización para actualizar la estructura de la tabla
+		await sequelize.sync({ force: false, alter: true });
+
+		// Verificar que las columnas existen
+		const [results] = await sequelize.query("DESCRIBE codigos_descuento");
+		const columns = results.map(row => row.Field);
+
+		res.json({
+			status: "ok",
+			message: "Tabla sincronizada correctamente",
+			columns,
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error("Error sincronizando tabla:", error);
+		res.status(500).json({
+			error: "Error sincronizando tabla",
+			details: error.message,
+			timestamp: new Date().toISOString(),
+		});
+	}
+});
+
 // Endpoint simple para probar el modelo CodigoDescuento
 app.get("/api/codigos/test", async (req, res) => {
 	try {
