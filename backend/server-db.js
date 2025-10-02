@@ -1007,6 +1007,44 @@ app.get("/api/test-db", async (req, res) => {
 	}
 });
 
+// Endpoint para verificar tablas existentes
+app.get("/api/test-tables", async (req, res) => {
+	try {
+		await sequelize.authenticate();
+		
+		// Verificar si la tabla codigos_descuento existe
+		const [results] = await sequelize.query("SHOW TABLES LIKE 'codigos_descuento'");
+		const tableExists = results.length > 0;
+		
+		// Si la tabla no existe, intentar crearla
+		if (!tableExists) {
+			console.log("Tabla codigos_descuento no existe, sincronizando...");
+			await sequelize.sync({ force: false });
+		}
+		
+		// Contar registros en la tabla
+		let codigosCount = 0;
+		if (tableExists) {
+			codigosCount = await CodigoDescuento.count();
+		}
+		
+		res.json({ 
+			status: "ok", 
+			message: "Verificación de tablas completada",
+			tableExists,
+			codigosCount,
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		console.error("Error verificando tablas:", error);
+		res.status(500).json({ 
+			error: "Error verificando tablas",
+			details: error.message,
+			timestamp: new Date().toISOString()
+		});
+	}
+});
+
 // Endpoint para obtener estadísticas de códigos
 app.get("/api/codigos/estadisticas", async (req, res) => {
 	try {
