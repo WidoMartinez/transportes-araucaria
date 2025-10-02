@@ -31,6 +31,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminPricing from "./components/AdminPricing";
 import AdminCodigos from "./components/AdminCodigos";
+import AdminCodigosMejorado from "./components/AdminCodigosMejorado";
 import CodigoDescuento from "./components/CodigoDescuento";
 
 // --- Datos Iniciales y Lógica ---
@@ -1213,12 +1214,16 @@ function App() {
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
 	if (isAdminView) {
-		// Verificar si es panel de códigos
+		// Verificar qué panel mostrar
 		const urlParams = new URLSearchParams(window.location.search);
 		const panel = urlParams.get("panel");
 
 		if (panel === "codigos") {
 			return <AdminCodigos />;
+		}
+
+		if (panel === "codigos-mejorado") {
+			return <AdminCodigosMejorado />;
 		}
 
 		return <AdminPricing />;
