@@ -988,12 +988,34 @@ app.post("/api/codigos/:id/reset", async (req, res) => {
 	}
 });
 
+// Endpoint para probar la conexión a la base de datos
+app.get("/api/test-db", async (req, res) => {
+	try {
+		await sequelize.authenticate();
+		res.json({ 
+			status: "ok", 
+			message: "Conexión a la base de datos exitosa",
+			timestamp: new Date().toISOString()
+		});
+	} catch (error) {
+		console.error("Error de conexión a la base de datos:", error);
+		res.status(500).json({ 
+			error: "Error de conexión a la base de datos",
+			details: error.message,
+			timestamp: new Date().toISOString()
+		});
+	}
+});
+
 // Endpoint para obtener estadísticas de códigos
 app.get("/api/codigos/estadisticas", async (req, res) => {
 	try {
+		// Verificar conexión primero
+		await sequelize.authenticate();
+		
 		const totalCodigos = await CodigoDescuento.count();
 		const codigosActivos = await CodigoDescuento.count({
-			where: { activo: true },
+			where: { activo: true }
 		});
 		const codigosAgotados = await CodigoDescuento.count({
 			where: {
@@ -1028,7 +1050,11 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error obteniendo estadísticas:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
+		res.status(500).json({ 
+			error: "Error interno del servidor",
+			details: error.message,
+			timestamp: new Date().toISOString()
+		});
 	}
 });
 
