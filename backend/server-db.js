@@ -691,11 +691,15 @@ app.delete("/api/codigos/:id", async (req, res) => {
 app.post("/api/codigos/validar", async (req, res) => {
 	try {
 		const { codigo, destino, monto, email, telefono } = req.body;
-		
+
 		// Crear identificador único del usuario basado en email + teléfono
-		const usuarioId = email && telefono ? 
-			crypto.createHash('sha256').update(`${email}-${telefono}`).digest('hex') : 
-			null;
+		const usuarioId =
+			email && telefono
+				? crypto
+						.createHash("sha256")
+						.update(`${email}-${telefono}`)
+						.digest("hex")
+				: null;
 
 		const codigoEncontrado = await CodigoDescuento.findOne({
 			where: { codigo, activo: true },
@@ -771,11 +775,15 @@ app.post("/api/codigos/validar", async (req, res) => {
 app.post("/api/codigos/usar", async (req, res) => {
 	try {
 		const { codigo, email, telefono } = req.body;
-		
+
 		// Crear identificador único del usuario basado en email + teléfono
-		const usuarioId = email && telefono ? 
-			crypto.createHash('sha256').update(`${email}-${telefono}`).digest('hex') : 
-			null;
+		const usuarioId =
+			email && telefono
+				? crypto
+						.createHash("sha256")
+						.update(`${email}-${telefono}`)
+						.digest("hex")
+				: null;
 
 		const codigoEncontrado = await CodigoDescuento.findOne({
 			where: { codigo },
@@ -885,30 +893,37 @@ app.get("/api/codigos/:id/usuarios", async (req, res) => {
 				codigoDescuento: codigo.codigo,
 			},
 			attributes: [
-				'id', 'nombre', 'email', 'telefono', 'created_at', 
-				'totalConDescuento', 'estado', 'estadoPago'
+				"id",
+				"nombre",
+				"email",
+				"telefono",
+				"created_at",
+				"totalConDescuento",
+				"estado",
+				"estadoPago",
 			],
-			order: [['created_at', 'DESC']]
+			order: [["created_at", "DESC"]],
 		});
 
 		// Combinar datos de usuarios con reservas
-		const usuariosConDetalles = usuariosQueUsaron.map(usuarioId => {
-			const reserva = reservas.find(r => {
-				const hashUsuario = crypto.createHash('sha256')
+		const usuariosConDetalles = usuariosQueUsaron.map((usuarioId) => {
+			const reserva = reservas.find((r) => {
+				const hashUsuario = crypto
+					.createHash("sha256")
 					.update(`${r.email}-${r.telefono}`)
-					.digest('hex');
+					.digest("hex");
 				return hashUsuario === usuarioId;
 			});
 
 			return {
 				usuarioId,
-				nombre: reserva?.nombre || 'Usuario no encontrado',
-				email: reserva?.email || 'Email no disponible',
-				telefono: reserva?.telefono || 'Teléfono no disponible',
+				nombre: reserva?.nombre || "Usuario no encontrado",
+				email: reserva?.email || "Email no disponible",
+				telefono: reserva?.telefono || "Teléfono no disponible",
 				fechaUso: reserva?.created_at || null,
 				monto: reserva?.totalConDescuento || 0,
-				estado: reserva?.estado || 'No disponible',
-				estadoPago: reserva?.estadoPago || 'No disponible'
+				estado: reserva?.estado || "No disponible",
+				estadoPago: reserva?.estadoPago || "No disponible",
 			};
 		});
 
@@ -919,10 +934,10 @@ app.get("/api/codigos/:id/usuarios", async (req, res) => {
 				descripcion: codigo.descripcion,
 				usosActuales: codigo.usosActuales,
 				limiteUsos: codigo.limiteUsos,
-				activo: codigo.activo
+				activo: codigo.activo,
 			},
 			usuarios: usuariosConDetalles,
-			totalUsuarios: usuariosConDetalles.length
+			totalUsuarios: usuariosConDetalles.length,
 		});
 	} catch (error) {
 		console.error("Error obteniendo usuarios del código:", error);
@@ -937,8 +952,8 @@ app.post("/api/codigos/:id/reset", async (req, res) => {
 		const { confirmar } = req.body;
 
 		if (!confirmar) {
-			return res.status(400).json({ 
-				error: "Debe confirmar la acción de reset" 
+			return res.status(400).json({
+				error: "Debe confirmar la acción de reset",
 			});
 		}
 
@@ -950,10 +965,10 @@ app.post("/api/codigos/:id/reset", async (req, res) => {
 		await CodigoDescuento.update(
 			{
 				usosActuales: 0,
-				usuariosQueUsaron: []
+				usuariosQueUsaron: [],
 			},
 			{
-				where: { id }
+				where: { id },
 			}
 		);
 
@@ -964,8 +979,8 @@ app.post("/api/codigos/:id/reset", async (req, res) => {
 				id: codigo.id,
 				codigo: codigo.codigo,
 				usosActuales: 0,
-				usuariosQueUsaron: []
-			}
+				usuariosQueUsaron: [],
+			},
 		});
 	} catch (error) {
 		console.error("Error reseteando código:", error);
@@ -978,34 +993,38 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 	try {
 		const totalCodigos = await CodigoDescuento.count();
 		const codigosActivos = await CodigoDescuento.count({
-			where: { activo: true }
+			where: { activo: true },
 		});
 		const codigosAgotados = await CodigoDescuento.count({
 			where: {
 				activo: true,
 				[Op.and]: [
-					sequelize.where(sequelize.col('usosActuales'), Op.gte, sequelize.col('limiteUsos'))
-				]
-			}
+					sequelize.where(
+						sequelize.col("usosActuales"),
+						Op.gte,
+						sequelize.col("limiteUsos")
+					),
+				],
+			},
 		});
 
 		// Códigos más usados
 		const codigosMasUsados = await CodigoDescuento.findAll({
 			where: { activo: true },
-			order: [['usosActuales', 'DESC']],
+			order: [["usosActuales", "DESC"]],
 			limit: 5,
-			attributes: ['codigo', 'descripcion', 'usosActuales', 'limiteUsos']
+			attributes: ["codigo", "descripcion", "usosActuales", "limiteUsos"],
 		});
 
 		// Total de usos en el sistema
-		const totalUsos = await CodigoDescuento.sum('usosActuales');
+		const totalUsos = await CodigoDescuento.sum("usosActuales");
 
 		res.json({
 			totalCodigos,
 			codigosActivos,
 			codigosAgotados,
 			codigosMasUsados,
-			totalUsos
+			totalUsos,
 		});
 	} catch (error) {
 		console.error("Error obteniendo estadísticas:", error);
@@ -1016,15 +1035,15 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 // Endpoint para buscar códigos con filtros avanzados
 app.get("/api/codigos/buscar", async (req, res) => {
 	try {
-		const { 
-			activo, 
-			agotado, 
-			vencido, 
-			buscar, 
-			ordenar = 'fechaCreacion',
-			direccion = 'DESC',
+		const {
+			activo,
+			agotado,
+			vencido,
+			buscar,
+			ordenar = "fechaCreacion",
+			direccion = "DESC",
 			limite = 20,
-			pagina = 1
+			pagina = 1,
 		} = req.query;
 
 		const offset = (pagina - 1) * limite;
@@ -1032,25 +1051,29 @@ app.get("/api/codigos/buscar", async (req, res) => {
 
 		// Filtros
 		if (activo !== undefined) {
-			whereClause.activo = activo === 'true';
+			whereClause.activo = activo === "true";
 		}
 
-		if (agotado === 'true') {
+		if (agotado === "true") {
 			whereClause[Op.and] = [
-				sequelize.where(sequelize.col('usosActuales'), Op.gte, sequelize.col('limiteUsos'))
+				sequelize.where(
+					sequelize.col("usosActuales"),
+					Op.gte,
+					sequelize.col("limiteUsos")
+				),
 			];
 		}
 
-		if (vencido === 'true') {
+		if (vencido === "true") {
 			whereClause.fechaVencimiento = {
-				[Op.lt]: new Date()
+				[Op.lt]: new Date(),
 			};
 		}
 
 		if (buscar) {
 			whereClause[Op.or] = [
 				{ codigo: { [Op.like]: `%${buscar}%` } },
-				{ descripcion: { [Op.like]: `%${buscar}%` } }
+				{ descripcion: { [Op.like]: `%${buscar}%` } },
 			];
 		}
 
@@ -1058,7 +1081,7 @@ app.get("/api/codigos/buscar", async (req, res) => {
 			where: whereClause,
 			order: [[ordenar, direccion]],
 			limit: parseInt(limite),
-			offset: parseInt(offset)
+			offset: parseInt(offset),
 		});
 
 		res.json({
@@ -1067,8 +1090,8 @@ app.get("/api/codigos/buscar", async (req, res) => {
 				total: count,
 				pagina: parseInt(pagina),
 				limite: parseInt(limite),
-				totalPaginas: Math.ceil(count / limite)
-			}
+				totalPaginas: Math.ceil(count / limite),
+			},
 		});
 	} catch (error) {
 		console.error("Error buscando códigos:", error);
@@ -1079,28 +1102,28 @@ app.get("/api/codigos/buscar", async (req, res) => {
 // Endpoint para obtener historial de usos de códigos
 app.get("/api/codigos/historial", async (req, res) => {
 	try {
-		const { 
-			codigo, 
-			fechaDesde, 
-			fechaHasta, 
+		const {
+			codigo,
+			fechaDesde,
+			fechaHasta,
 			estado,
-			ordenar = 'created_at',
-			direccion = 'DESC'
+			ordenar = "created_at",
+			direccion = "DESC",
 		} = req.query;
 
 		const whereClause = {};
-		
+
 		// Filtros
 		if (codigo) {
 			whereClause.codigoDescuento = { [Op.like]: `%${codigo}%` };
 		}
-		
+
 		if (fechaDesde || fechaHasta) {
 			whereClause.created_at = {};
 			if (fechaDesde) whereClause.created_at[Op.gte] = fechaDesde;
 			if (fechaHasta) whereClause.created_at[Op.lte] = fechaHasta;
 		}
-		
+
 		if (estado) {
 			whereClause.estado = estado;
 		}
@@ -1109,17 +1132,24 @@ app.get("/api/codigos/historial", async (req, res) => {
 		const reservas = await Reserva.findAll({
 			where: {
 				...whereClause,
-				codigoDescuento: { [Op.ne]: null, [Op.ne]: '' }
+				codigoDescuento: { [Op.ne]: null, [Op.ne]: "" },
 			},
 			attributes: [
-				'id', 'nombre', 'email', 'telefono', 'created_at',
-				'totalConDescuento', 'estado', 'estadoPago', 'codigoDescuento'
+				"id",
+				"nombre",
+				"email",
+				"telefono",
+				"created_at",
+				"totalConDescuento",
+				"estado",
+				"estadoPago",
+				"codigoDescuento",
 			],
-			order: [[ordenar, direccion]]
+			order: [[ordenar, direccion]],
 		});
 
 		// Formatear datos para el historial
-		const historial = reservas.map(reserva => ({
+		const historial = reservas.map((reserva) => ({
 			codigo: reserva.codigoDescuento,
 			nombre: reserva.nombre,
 			email: reserva.email,
@@ -1127,31 +1157,34 @@ app.get("/api/codigos/historial", async (req, res) => {
 			fechaUso: reserva.created_at,
 			monto: reserva.totalConDescuento,
 			estado: reserva.estado,
-			estadoPago: reserva.estadoPago
+			estadoPago: reserva.estadoPago,
 		}));
 
 		// Estadísticas
 		const totalUsos = historial.length;
-		const usuariosUnicos = new Set(historial.map(h => `${h.email}-${h.telefono}`)).size;
-		const totalDescuentos = historial.reduce((sum, h) => sum + (h.monto || 0), 0);
-		
+		const usuariosUnicos = new Set(
+			historial.map((h) => `${h.email}-${h.telefono}`)
+		).size;
+		const totalDescuentos = historial.reduce(
+			(sum, h) => sum + (h.monto || 0),
+			0
+		);
+
 		// Usos de hoy
 		const hoy = new Date();
 		hoy.setHours(0, 0, 0, 0);
-		const usosHoy = historial.filter(h => 
-			new Date(h.fechaUso) >= hoy
-		).length;
+		const usosHoy = historial.filter((h) => new Date(h.fechaUso) >= hoy).length;
 
 		const estadisticas = {
 			totalUsos,
 			usuariosUnicos,
 			totalDescuentos,
-			usosHoy
+			usosHoy,
 		};
 
 		res.json({
 			historial,
-			estadisticas
+			estadisticas,
 		});
 	} catch (error) {
 		console.error("Error obteniendo historial:", error);
