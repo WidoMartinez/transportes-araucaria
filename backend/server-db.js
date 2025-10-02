@@ -690,7 +690,13 @@ app.delete("/api/codigos/:id", async (req, res) => {
 // Endpoint para validar código de descuento
 app.post("/api/codigos/validar", async (req, res) => {
 	try {
-		const { codigo, destino, monto, usuarioId } = req.body;
+		const { codigo, destino, monto, email, telefono } = req.body;
+		
+		// Crear identificador único del usuario basado en email + teléfono
+		const usuarioId = email && telefono ? 
+			crypto.createHash('sha256').update(`${email}-${telefono}`).digest('hex') : 
+			null;
+
 		const codigoEncontrado = await CodigoDescuento.findOne({
 			where: { codigo, activo: true },
 		});
@@ -764,7 +770,13 @@ app.post("/api/codigos/validar", async (req, res) => {
 // Endpoint para registrar el uso de un código por un usuario
 app.post("/api/codigos/usar", async (req, res) => {
 	try {
-		const { codigo, usuarioId } = req.body;
+		const { codigo, email, telefono } = req.body;
+		
+		// Crear identificador único del usuario basado en email + teléfono
+		const usuarioId = email && telefono ? 
+			crypto.createHash('sha256').update(`${email}-${telefono}`).digest('hex') : 
+			null;
+
 		const codigoEncontrado = await CodigoDescuento.findOne({
 			where: { codigo },
 		});
@@ -847,6 +859,302 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error eliminando usuario del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS MEJORADOS PARA PANEL DE ADMINISTRACIÓN ---
+
+// Endpoint para obtener usuarios de un código específico con detalles
+app.get("/api/codigos/:id/usuarios", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const codigo = await CodigoDescuento.findByPk(id);
+
+		if (!codigo) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const usuariosQueUsaron = normalizeUsuariosQueUsaron(
+			codigo.usuariosQueUsaron || []
+		);
+
+		// Obtener detalles de las reservas de estos usuarios
+		const reservas = await Reserva.findAll({
+			where: {
+				codigoDescuento: codigo.codigo,
+			},
+			attributes: [
+				'id', 'nombre', 'email', 'telefono', 'created_at', 
+				'totalConDescuento', 'estado', 'estadoPago'
+			],
+			order: [['created_at', 'DESC']]
+		});
+
+		// Combinar datos de usuarios con reservas
+		const usuariosConDetalles = usuariosQueUsaron.map(usuarioId => {
+			const reserva = reservas.find(r => {
+				const hashUsuario = crypto.createHash('sha256')
+					.update(`${r.email}-${r.telefono}`)
+					.digest('hex');
+				return hashUsuario === usuarioId;
+			});
+
+			return {
+				usuarioId,
+				nombre: reserva?.nombre || 'Usuario no encontrado',
+				email: reserva?.email || 'Email no disponible',
+				telefono: reserva?.telefono || 'Teléfono no disponible',
+				fechaUso: reserva?.created_at || null,
+				monto: reserva?.totalConDescuento || 0,
+				estado: reserva?.estado || 'No disponible',
+				estadoPago: reserva?.estadoPago || 'No disponible'
+			};
+		});
+
+		res.json({
+			codigo: {
+				id: codigo.id,
+				codigo: codigo.codigo,
+				descripcion: codigo.descripcion,
+				usosActuales: codigo.usosActuales,
+				limiteUsos: codigo.limiteUsos,
+				activo: codigo.activo
+			},
+			usuarios: usuariosConDetalles,
+			totalUsuarios: usuariosConDetalles.length
+		});
+	} catch (error) {
+		console.error("Error obteniendo usuarios del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para resetear un código (eliminar todos los usuarios y resetear contador)
+app.post("/api/codigos/:id/reset", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { confirmar } = req.body;
+
+		if (!confirmar) {
+			return res.status(400).json({ 
+				error: "Debe confirmar la acción de reset" 
+			});
+		}
+
+		const codigo = await CodigoDescuento.findByPk(id);
+		if (!codigo) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		await CodigoDescuento.update(
+			{
+				usosActuales: 0,
+				usuariosQueUsaron: []
+			},
+			{
+				where: { id }
+			}
+		);
+
+		res.json({
+			exito: true,
+			message: "Código reseteado exitosamente",
+			codigo: {
+				id: codigo.id,
+				codigo: codigo.codigo,
+				usosActuales: 0,
+				usuariosQueUsaron: []
+			}
+		});
+	} catch (error) {
+		console.error("Error reseteando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para obtener estadísticas de códigos
+app.get("/api/codigos/estadisticas", async (req, res) => {
+	try {
+		const totalCodigos = await CodigoDescuento.count();
+		const codigosActivos = await CodigoDescuento.count({
+			where: { activo: true }
+		});
+		const codigosAgotados = await CodigoDescuento.count({
+			where: {
+				activo: true,
+				[Op.and]: [
+					sequelize.where(sequelize.col('usosActuales'), Op.gte, sequelize.col('limiteUsos'))
+				]
+			}
+		});
+
+		// Códigos más usados
+		const codigosMasUsados = await CodigoDescuento.findAll({
+			where: { activo: true },
+			order: [['usosActuales', 'DESC']],
+			limit: 5,
+			attributes: ['codigo', 'descripcion', 'usosActuales', 'limiteUsos']
+		});
+
+		// Total de usos en el sistema
+		const totalUsos = await CodigoDescuento.sum('usosActuales');
+
+		res.json({
+			totalCodigos,
+			codigosActivos,
+			codigosAgotados,
+			codigosMasUsados,
+			totalUsos
+		});
+	} catch (error) {
+		console.error("Error obteniendo estadísticas:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para buscar códigos con filtros avanzados
+app.get("/api/codigos/buscar", async (req, res) => {
+	try {
+		const { 
+			activo, 
+			agotado, 
+			vencido, 
+			buscar, 
+			ordenar = 'fechaCreacion',
+			direccion = 'DESC',
+			limite = 20,
+			pagina = 1
+		} = req.query;
+
+		const offset = (pagina - 1) * limite;
+		const whereClause = {};
+
+		// Filtros
+		if (activo !== undefined) {
+			whereClause.activo = activo === 'true';
+		}
+
+		if (agotado === 'true') {
+			whereClause[Op.and] = [
+				sequelize.where(sequelize.col('usosActuales'), Op.gte, sequelize.col('limiteUsos'))
+			];
+		}
+
+		if (vencido === 'true') {
+			whereClause.fechaVencimiento = {
+				[Op.lt]: new Date()
+			};
+		}
+
+		if (buscar) {
+			whereClause[Op.or] = [
+				{ codigo: { [Op.like]: `%${buscar}%` } },
+				{ descripcion: { [Op.like]: `%${buscar}%` } }
+			];
+		}
+
+		const { count, rows: codigos } = await CodigoDescuento.findAndCountAll({
+			where: whereClause,
+			order: [[ordenar, direccion]],
+			limit: parseInt(limite),
+			offset: parseInt(offset)
+		});
+
+		res.json({
+			codigos,
+			paginacion: {
+				total: count,
+				pagina: parseInt(pagina),
+				limite: parseInt(limite),
+				totalPaginas: Math.ceil(count / limite)
+			}
+		});
+	} catch (error) {
+		console.error("Error buscando códigos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para obtener historial de usos de códigos
+app.get("/api/codigos/historial", async (req, res) => {
+	try {
+		const { 
+			codigo, 
+			fechaDesde, 
+			fechaHasta, 
+			estado,
+			ordenar = 'created_at',
+			direccion = 'DESC'
+		} = req.query;
+
+		const whereClause = {};
+		
+		// Filtros
+		if (codigo) {
+			whereClause.codigoDescuento = { [Op.like]: `%${codigo}%` };
+		}
+		
+		if (fechaDesde || fechaHasta) {
+			whereClause.created_at = {};
+			if (fechaDesde) whereClause.created_at[Op.gte] = fechaDesde;
+			if (fechaHasta) whereClause.created_at[Op.lte] = fechaHasta;
+		}
+		
+		if (estado) {
+			whereClause.estado = estado;
+		}
+
+		// Obtener reservas con códigos de descuento
+		const reservas = await Reserva.findAll({
+			where: {
+				...whereClause,
+				codigoDescuento: { [Op.ne]: null, [Op.ne]: '' }
+			},
+			attributes: [
+				'id', 'nombre', 'email', 'telefono', 'created_at',
+				'totalConDescuento', 'estado', 'estadoPago', 'codigoDescuento'
+			],
+			order: [[ordenar, direccion]]
+		});
+
+		// Formatear datos para el historial
+		const historial = reservas.map(reserva => ({
+			codigo: reserva.codigoDescuento,
+			nombre: reserva.nombre,
+			email: reserva.email,
+			telefono: reserva.telefono,
+			fechaUso: reserva.created_at,
+			monto: reserva.totalConDescuento,
+			estado: reserva.estado,
+			estadoPago: reserva.estadoPago
+		}));
+
+		// Estadísticas
+		const totalUsos = historial.length;
+		const usuariosUnicos = new Set(historial.map(h => `${h.email}-${h.telefono}`)).size;
+		const totalDescuentos = historial.reduce((sum, h) => sum + (h.monto || 0), 0);
+		
+		// Usos de hoy
+		const hoy = new Date();
+		hoy.setHours(0, 0, 0, 0);
+		const usosHoy = historial.filter(h => 
+			new Date(h.fechaUso) >= hoy
+		).length;
+
+		const estadisticas = {
+			totalUsos,
+			usuariosUnicos,
+			totalDescuentos,
+			usosHoy
+		};
+
+		res.json({
+			historial,
+			estadisticas
+		});
+	} catch (error) {
+		console.error("Error obteniendo historial:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
