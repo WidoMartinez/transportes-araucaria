@@ -61,9 +61,9 @@ export default function AdminCodigosMejorado() {
 
 	// Filtros y búsqueda
 	const [filtros, setFiltros] = useState({
-		activo: "",
-		agotado: "",
-		vencido: "",
+		activo: "todos",
+		agotado: "todos",
+		vencido: "todos",
 		buscar: "",
 		ordenar: "fechaCreacion",
 		direccion: "DESC",
@@ -191,9 +191,9 @@ export default function AdminCodigosMejorado() {
 	// Limpiar filtros
 	const limpiarFiltros = () => {
 		setFiltros({
-			activo: "",
-			agotado: "",
-			vencido: "",
+			activo: "todos",
+			agotado: "todos",
+			vencido: "todos",
 			buscar: "",
 			ordenar: "fechaCreacion",
 			direccion: "DESC",
@@ -345,7 +345,7 @@ export default function AdminCodigosMejorado() {
 									<SelectValue placeholder="Todos" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">Todos</SelectItem>
+									<SelectItem value="todos">Todos</SelectItem>
 									<SelectItem value="true">Activos</SelectItem>
 									<SelectItem value="false">Inactivos</SelectItem>
 								</SelectContent>
@@ -364,7 +364,7 @@ export default function AdminCodigosMejorado() {
 									<SelectValue placeholder="Todos" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">Todos</SelectItem>
+									<SelectItem value="todos">Todos</SelectItem>
 									<SelectItem value="true">Solo Agotados</SelectItem>
 									<SelectItem value="false">No Agotados</SelectItem>
 								</SelectContent>
@@ -383,7 +383,7 @@ export default function AdminCodigosMejorado() {
 									<SelectValue placeholder="Todos" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">Todos</SelectItem>
+									<SelectItem value="todos">Todos</SelectItem>
 									<SelectItem value="true">Solo Vencidos</SelectItem>
 									<SelectItem value="false">No Vencidos</SelectItem>
 								</SelectContent>
