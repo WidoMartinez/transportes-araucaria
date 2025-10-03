@@ -27,6 +27,7 @@ import Destacados from "./components/Destacados";
 import PorQueElegirnos from "./components/PorQueElegirnos";
 import Testimonios from "./components/Testimonios";
 import Contacto from "./components/Contacto";
+import FletesLanding from "./components/FletesLanding";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminPricing from "./components/AdminPricing";
@@ -159,7 +160,14 @@ const resolveIsAdminView = () => {
 	);
 };
 
+const resolveIsFreightView = () => {
+	if (typeof window === "undefined") return false;
+	const pathname = window.location.pathname.toLowerCase();
+	return pathname === "/fletes" || pathname.startsWith("/fletes/");
+};
+
 function App() {
+	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
@@ -787,7 +795,10 @@ function App() {
 	);
 
 	useEffect(() => {
-		const handleLocationChange = () => setIsAdminView(resolveIsAdminView());
+		const handleLocationChange = () => {
+			setIsAdminView(resolveIsAdminView());
+			setIsFreightView(resolveIsFreightView());
+		};
 		window.addEventListener("popstate", handleLocationChange);
 		return () => window.removeEventListener("popstate", handleLocationChange);
 	}, []);
@@ -1212,6 +1223,10 @@ function App() {
 	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
 	const destinoFinal =
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
+
+	if (isFreightView) {
+		return <FletesLanding />;
+	}
 
 	if (isAdminView) {
 		// Verificar qué panel mostrar
