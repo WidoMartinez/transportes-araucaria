@@ -41,6 +41,19 @@ const PRICING_FILE_PATH = path.join(DATA_DIR, "pricing.json");
 const defaultPricing = {
 	destinos: [], // Nueva estructura para almacenar las tarifas por destino
 	dayPromotions: [],
+	descuentosGlobales: {
+		descuentoOnline: {
+			valor: 5,
+			activo: true,
+			nombre: "Descuento por Reserva Online",
+		},
+		descuentoRoundTrip: {
+			valor: 10,
+			activo: true,
+			nombre: "Descuento por Ida y Vuelta",
+		},
+		descuentosPersonalizados: [],
+	},
 	updatedAt: new Date().toISOString(),
 };
 
@@ -95,7 +108,7 @@ app.get("/pricing", async (req, res) => {
 
 // Endpoint PUT actualizado para manejar la nueva estructura de datos
 app.put("/pricing", async (req, res) => {
-	const { destinos, dayPromotions } = req.body || {};
+	const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
 
 	// Validación robusta para la nueva estructura
 	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
@@ -106,12 +119,304 @@ app.put("/pricing", async (req, res) => {
 	}
 
 	try {
-		const savedData = await writePricingData({ destinos, dayPromotions });
+		// Leer datos existentes para preservar codigosDescuento
+		const existingData = await readPricingData();
+
+		const dataToSave = {
+			destinos,
+			dayPromotions,
+			descuentosGlobales: descuentosGlobales || {
+				descuentoOnline: {
+					valor: 5,
+					activo: true,
+					nombre: "Descuento por Reserva Online",
+				},
+				descuentoRoundTrip: {
+					valor: 10,
+					activo: true,
+					nombre: "Descuento por Ida y Vuelta",
+				},
+				descuentosPersonalizados: [],
+			},
+			// Preservar codigosDescuento existentes
+			codigosDescuento: existingData.codigosDescuento || [],
+			updatedAt: new Date().toISOString(),
+		};
+		const savedData = await writePricingData(dataToSave);
 		res.json(savedData);
 	} catch (error) {
 		console.error("Error al guardar la configuración de precios:", error);
 		res.status(500).json({
 			message: "No se pudo guardar la configuración de precios.",
+		});
+	}
+});
+
+// --- ENDPOINTS PARA CÓDIGOS DE DESCUENTO ---
+app.get("/api/codigos", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+		res.json(codigos);
+	} catch (error) {
+		console.error("Error leyendo códigos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+app.post("/api/codigos", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		const nuevoCodigo = {
+			...req.body,
+			id: req.body.codigo,
+			usosActuales: 0,
+			fechaCreacion: new Date().toISOString().split("T")[0],
+			creadoPor: "admin",
+		};
+
+		if (!pricing.codigosDescuento) {
+			pricing.codigosDescuento = [];
+		}
+
+		pricing.codigosDescuento.push(nuevoCodigo);
+		await writePricingData(pricing);
+
+		res.json(nuevoCodigo);
+	} catch (error) {
+		console.error("Error creando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+app.put("/api/codigos/:id", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		const codigoIndex = pricing.codigosDescuento.findIndex(
+			(c) => c.id === req.params.id
+		);
+
+		if (codigoIndex === -1) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		pricing.codigosDescuento[codigoIndex] = {
+			...pricing.codigosDescuento[codigoIndex],
+			...req.body,
+			id: req.params.id,
+		};
+
+		await writePricingData(pricing);
+		res.json(pricing.codigosDescuento[codigoIndex]);
+	} catch (error) {
+		console.error("Error actualizando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+app.delete("/api/codigos/:id", async (req, res) => {
+	try {
+		const pricing = await readPricingData();
+		pricing.codigosDescuento = pricing.codigosDescuento.filter(
+			(c) => c.id !== req.params.id
+		);
+
+		await writePricingData(pricing);
+		res.json({ success: true });
+	} catch (error) {
+		console.error("Error eliminando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para validar código de descuento
+app.post("/api/codigos/validar", async (req, res) => {
+	try {
+		const { codigo, destino, monto, usuarioId } = req.body;
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+
+		const codigoEncontrado = codigos.find(
+			(c) => c.codigo === codigo && c.activo && c.usosActuales < c.limiteUsos
+		);
+
+		if (!codigoEncontrado) {
+			return res.json({ valido: false, error: "Código no válido o agotado" });
+		}
+
+		// Verificar fecha de vencimiento
+		const ahora = new Date();
+		const vencimiento = new Date(codigoEncontrado.fechaVencimiento);
+		if (vencimiento < ahora) {
+			return res.json({ valido: false, error: "Código vencido" });
+		}
+
+		// Verificar si el usuario ya usó este código
+		if (usuarioId && codigoEncontrado.usuariosQueUsaron) {
+			const usuarioYaUso =
+				codigoEncontrado.usuariosQueUsaron.includes(usuarioId);
+			if (usuarioYaUso) {
+				return res.json({
+					valido: false,
+					error: "Ya has usado este código de descuento",
+				});
+			}
+		}
+
+		// Verificar destino aplicable
+		if (
+			codigoEncontrado.destinosAplicables.length > 0 &&
+			!codigoEncontrado.destinosAplicables.includes(destino)
+		) {
+			return res.json({
+				valido: false,
+				error: "Código no aplicable para este destino",
+			});
+		}
+
+		// Verificar monto mínimo
+		if (monto < codigoEncontrado.montoMinimo) {
+			return res.json({
+				valido: false,
+				error: `Monto mínimo requerido: $${codigoEncontrado.montoMinimo.toLocaleString()}`,
+			});
+		}
+
+		res.json({ valido: true, codigo: codigoEncontrado });
+	} catch (error) {
+		console.error("Error validando código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para registrar el uso de un código por un usuario
+app.post("/api/codigos/usar", async (req, res) => {
+	try {
+		const { codigo, usuarioId } = req.body;
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+
+		const codigoIndex = codigos.findIndex((c) => c.codigo === codigo);
+		if (codigoIndex === -1) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const codigoEncontrado = codigos[codigoIndex];
+
+		// Verificar si el usuario ya usó este código
+		if (usuarioId && codigoEncontrado.usuariosQueUsaron) {
+			const usuarioYaUso =
+				codigoEncontrado.usuariosQueUsaron.includes(usuarioId);
+			if (usuarioYaUso) {
+				return res.json({
+					exito: false,
+					error: "Ya has usado este código de descuento",
+				});
+			}
+		}
+
+		// Registrar el uso
+		codigos[codigoIndex].usosActuales += 1;
+		if (usuarioId) {
+			if (!codigos[codigoIndex].usuariosQueUsaron) {
+				codigos[codigoIndex].usuariosQueUsaron = [];
+			}
+			codigos[codigoIndex].usuariosQueUsaron.push(usuarioId);
+		}
+
+		// Guardar los cambios
+		pricing.codigosDescuento = codigos;
+		await writePricingData(pricing);
+
+		res.json({
+			exito: true,
+			usosActuales: codigos[codigoIndex].usosActuales,
+			usuariosQueUsaron: codigos[codigoIndex].usuariosQueUsaron,
+		});
+	} catch (error) {
+		console.error("Error registrando uso del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para eliminar un usuario específico de un código
+app.delete("/api/codigos/:codigoId/usuarios/:usuarioId", async (req, res) => {
+	try {
+		const { codigoId, usuarioId } = req.params;
+		const pricing = await readPricingData();
+		const codigos = pricing.codigosDescuento || [];
+
+		const codigoIndex = codigos.findIndex((c) => c.id === codigoId);
+		if (codigoIndex === -1) {
+			return res.status(404).json({ error: "Código no encontrado" });
+		}
+
+		const codigo = codigos[codigoIndex];
+
+		// Verificar si el usuario existe en la lista
+		if (
+			!codigo.usuariosQueUsaron ||
+			!codigo.usuariosQueUsaron.includes(usuarioId)
+		) {
+			return res
+				.status(404)
+				.json({ error: "Usuario no encontrado en este código" });
+		}
+
+		// Eliminar el usuario de la lista
+		codigos[codigoIndex].usuariosQueUsaron = codigos[
+			codigoIndex
+		].usuariosQueUsaron.filter((uid) => uid !== usuarioId);
+
+		// Reducir el contador de usos
+		if (codigos[codigoIndex].usosActuales > 0) {
+			codigos[codigoIndex].usosActuales -= 1;
+		}
+
+		// Guardar los cambios
+		pricing.codigosDescuento = codigos;
+		await writePricingData(pricing);
+
+		res.json({
+			exito: true,
+			usosActuales: codigos[codigoIndex].usosActuales,
+			usuariosQueUsaron: codigos[codigoIndex].usuariosQueUsaron,
+		});
+	} catch (error) {
+		console.error("Error eliminando usuario del código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para enviar reservas (reemplaza el PHP directo)
+app.post("/enviar-reserva", async (req, res) => {
+	try {
+		const dataToSend = req.body;
+
+		// Aquí puedes agregar lógica para procesar la reserva
+		// Por ahora solo devolvemos éxito
+		console.log("📧 Reserva recibida:", {
+			nombre: dataToSend.nombre,
+			email: dataToSend.email,
+			telefono: dataToSend.telefono,
+			origen: dataToSend.origen,
+			destino: dataToSend.destino,
+			fecha: dataToSend.fecha,
+			hora: dataToSend.hora,
+			pasajeros: dataToSend.pasajeros,
+			totalConDescuento: dataToSend.totalConDescuento,
+			source: dataToSend.source,
+		});
+
+		res.json({
+			success: true,
+			message: "Reserva enviada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error procesando reserva:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
 		});
 	}
 });

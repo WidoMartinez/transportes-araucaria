@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
 	Card,
 	CardContent,
@@ -10,8 +10,32 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "./ui/select";
 import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
+
+// Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
+const generateTimeOptions = () => {
+	const options = [];
+	for (let hour = 6; hour <= 20; hour++) {
+		for (let minute = 0; minute < 60; minute += 15) {
+			const timeString = `${hour.toString().padStart(2, "0")}:${minute
+				.toString()
+				.padStart(2, "0")}`;
+			const displayTime = `${hour.toString().padStart(2, "0")}:${minute
+				.toString()
+				.padStart(2, "0")}`;
+			options.push({ value: timeString, label: displayTime });
+		}
+	}
+	return options;
+};
 
 // Componente interno para reutilizar la lógica de mostrar información de contacto
 const InfoItem = ({ icon: Icon, title, children }) => (
@@ -37,6 +61,16 @@ function Contacto({
 	isSubmitting,
 	setFormData,
 }) {
+	// Generar opciones de tiempo
+	const timeOptions = useMemo(() => generateTimeOptions(), []);
+
+	// Función para manejar el cambio de hora
+	const handleTimeChange = (field, value) => {
+		setFormData((prev) => ({
+			...prev,
+			[field]: value,
+		}));
+	};
 	return (
 		<section id="contacto" className="py-24 bg-gray-50/50">
 			<div className="container mx-auto px-4">
@@ -205,14 +239,23 @@ function Contacto({
 										</div>
 										<div className="space-y-2">
 											<Label htmlFor="hora-form">Hora</Label>
-											<Input
-												type="time"
-												id="hora-form"
-												name="hora"
+											<Select
 												value={formData.hora}
-												onChange={handleInputChange}
-												required
-											/>
+												onValueChange={(value) =>
+													handleTimeChange("hora", value)
+												}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="Selecciona la hora" />
+												</SelectTrigger>
+												<SelectContent>
+													{timeOptions.map((option) => (
+														<SelectItem key={option.value} value={option.value}>
+															{option.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
 										</div>
 									</div>
 									<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
@@ -238,16 +281,21 @@ function Contacto({
 															horaRegreso: "",
 														};
 													});
-											}}
+												}}
 											/>
-											<label htmlFor="ida-vuelta-form" className="text-sm text-muted-foreground">
+											<label
+												htmlFor="ida-vuelta-form"
+												className="text-sm text-muted-foreground"
+											>
 												¿También necesitas coordinar el regreso?
 											</label>
 										</div>
 										{formData.idaVuelta && (
 											<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 												<div className="space-y-2">
-													<Label htmlFor="fecha-regreso-form">Fecha regreso</Label>
+													<Label htmlFor="fecha-regreso-form">
+														Fecha regreso
+													</Label>
 													<Input
 														id="fecha-regreso-form"
 														type="date"
@@ -259,20 +307,35 @@ function Contacto({
 													/>
 												</div>
 												<div className="space-y-2">
-													<Label htmlFor="hora-regreso-form">Hora regreso</Label>
-													<Input
-														id="hora-regreso-form"
-														type="time"
-														name="horaRegreso"
+													<Label htmlFor="hora-regreso-form">
+														Hora regreso
+													</Label>
+													<Select
 														value={formData.horaRegreso}
-														onChange={handleInputChange}
-														required={formData.idaVuelta}
-													/>
+														onValueChange={(value) =>
+															handleTimeChange("horaRegreso", value)
+														}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Selecciona la hora de regreso" />
+														</SelectTrigger>
+														<SelectContent>
+															{timeOptions.map((option) => (
+																<SelectItem
+																	key={option.value}
+																	value={option.value}
+																>
+																	{option.label}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
 												</div>
 											</div>
 										)}
 										<p className="text-xs text-muted-foreground">
-											Coordinaremos ambos trayectos, te confirmaremos horarios y obtendrás un 5% adicional por reservar ida y vuelta.
+											Coordinaremos ambos trayectos, te confirmaremos horarios y
+											obtendrás un 5% adicional por reservar ida y vuelta.
 										</p>
 									</div>
 									<div className="space-y-2">

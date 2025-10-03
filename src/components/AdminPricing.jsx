@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { destinosBase as destinosIniciales } from "@/data/destinos";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL =
+	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
 
 const nuevoDestinoTemplate = {
 	nombre: "",
@@ -43,29 +44,87 @@ const nuevaPromocionTemplate = {
 	horaInicio: "",
 	horaFin: "",
 	descuentoPorcentaje: 0,
+	aplicaTipoViaje: {
+		ida: false,
+		vuelta: false,
+		ambos: true,
+	},
+};
+
+const parsePromotionMetadata = (promo) => {
+	if (!promo || typeof promo.descripcion !== "string") return null;
+	try {
+		const parsed = JSON.parse(promo.descripcion);
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+	} catch (error) {
+		return null;
+	}
 };
 
 const normalizePromotions = (promociones = []) => {
 	if (!Array.isArray(promociones)) return [];
 	return promociones.map((promo, index) => {
-		const id = promo.id || generatePromotionId() || `promo-${index}`;
+		const metadata = parsePromotionMetadata(promo);
+		const id = metadata?.sourceId || promo.id || generatePromotionId() || `promo-${index}`;
+		const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
+		const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
+		const dias = aplicaPorDias
+			? (diasMetadata.length > 0
+				? diasMetadata
+				: Array.isArray(promo.dias)
+				? promo.dias.filter(Boolean)
+				: metadata?.diaIndividual
+				? [metadata.diaIndividual]
+				: [])
+			: [];
+		const porcentaje = Number(
+			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
+		);
+		const aplicaTipoViajeMetadata = metadata?.aplicaTipoViaje || {};
+
 		return {
 			...nuevaPromocionTemplate,
 			...promo,
 			id,
-			dias: Array.isArray(promo.dias) ? promo.dias : [],
-			descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
-			aplicaPorDias: Boolean(promo.aplicaPorDias),
-			aplicaPorHorario: Boolean(promo.aplicaPorHorario),
-			horaInicio: promo.horaInicio || "",
-			horaFin: promo.horaFin || "",
-			descripcion: promo.descripcion || "",
+			destino: metadata?.destino ?? promo.destino ?? "",
+			descripcion: metadata?.descripcion ?? promo.descripcion ?? "",
+			aplicaPorDias,
+			dias,
+			aplicaPorHorario: metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
+			horaInicio: metadata?.horaInicio ?? promo.horaInicio ?? "",
+			horaFin: metadata?.horaFin ?? promo.horaFin ?? "",
+			descuentoPorcentaje: Number.isFinite(porcentaje) ? porcentaje : 0,
+			aplicaTipoViaje: {
+				ida:
+					metadata?.aplicaTipoViaje?.ida ?? promo.aplicaTipoViaje?.ida ?? false,
+				vuelta:
+					metadata?.aplicaTipoViaje?.vuelta ?? promo.aplicaTipoViaje?.vuelta ?? false,
+				ambos:
+					metadata?.aplicaTipoViaje?.ambos ?? promo.aplicaTipoViaje?.ambos ?? true,
+			},
+			activo: metadata?.activo ?? promo.activo ?? true,
 		};
 	});
 };
 
 function AdminPricing() {
-	const [pricing, setPricing] = useState({ destinos: [], dayPromotions: [] });
+	const [pricing, setPricing] = useState({
+		destinos: [],
+		dayPromotions: [],
+		descuentosGlobales: {
+			descuentoOnline: {
+				valor: 5,
+				activo: true,
+				nombre: "Descuento por Reserva Online",
+			},
+			descuentoRoundTrip: {
+				valor: 10,
+				activo: true,
+				nombre: "Descuento por Ida y Vuelta",
+			},
+			descuentosPersonalizados: [],
+		},
+	});
 	const [newDestino, setNewDestino] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -90,6 +149,32 @@ function AdminPricing() {
 						? data.destinos
 						: destinosIniciales,
 				dayPromotions: normalizePromotions(data.dayPromotions),
+				descuentosGlobales: {
+					descuentoOnline: {
+						valor:
+							data.descuentosGlobales?.descuentoOnline?.valor ||
+							data.descuentosGlobales?.descuentoOnline ||
+							5,
+						activo:
+							data.descuentosGlobales?.descuentoOnline?.activo !== undefined
+								? data.descuentosGlobales.descuentoOnline.activo
+								: true,
+						nombre: "Descuento por Reserva Online",
+					},
+					descuentoRoundTrip: {
+						valor:
+							data.descuentosGlobales?.descuentoRoundTrip?.valor ||
+							data.descuentosGlobales?.descuentoRoundTrip ||
+							10,
+						activo:
+							data.descuentosGlobales?.descuentoRoundTrip?.activo !== undefined
+								? data.descuentosGlobales.descuentoRoundTrip.activo
+								: true,
+						nombre: "Descuento por Ida y Vuelta",
+					},
+					descuentosPersonalizados:
+						data.descuentosGlobales?.descuentosPersonalizados || [],
+				},
 				updatedAt: data.updatedAt || null,
 			});
 		} catch (fetchError) {
@@ -100,6 +185,19 @@ function AdminPricing() {
 			setPricing({
 				destinos: destinosIniciales,
 				dayPromotions: [],
+				descuentosGlobales: {
+					descuentoOnline: {
+						valor: 5,
+						activo: true,
+						nombre: "Descuento por Reserva Online",
+					},
+					descuentoRoundTrip: {
+						valor: 10,
+						activo: true,
+						nombre: "Descuento por Ida y Vuelta",
+					},
+					descuentosPersonalizados: [],
+				},
 				updatedAt: null,
 			});
 		} finally {
@@ -149,7 +247,17 @@ function AdminPricing() {
 	};
 
 	const handleAddPromotion = () => {
-		if (pricing.destinos.length === 0) {
+		console.log("🔍 handleAddPromotion - pricing.destinos:", pricing.destinos);
+		console.log(
+			"🔍 handleAddPromotion - pricing.destinos.length:",
+			pricing.destinos?.length
+		);
+		console.log(
+			"🔍 handleAddPromotion - condición:",
+			!pricing.destinos || pricing.destinos.length === 0
+		);
+
+		if (!pricing.destinos || pricing.destinos.length === 0) {
 			alert(
 				"Agrega al menos un destino antes de crear un descuento personalizado."
 			);
@@ -161,10 +269,23 @@ function AdminPricing() {
 			id: generatePromotionId(),
 		};
 
-		setPricing((prev) => ({
-			...prev,
-			dayPromotions: [...prev.dayPromotions, nuevaPromocion],
-		}));
+		console.log("🔍 handleAddPromotion - nuevaPromocion:", nuevaPromocion);
+
+		setPricing((prev) => {
+			console.log(
+				"🔍 handleAddPromotion - dayPromotions antes:",
+				prev.dayPromotions
+			);
+			const newDayPromotions = [...prev.dayPromotions, nuevaPromocion];
+			console.log(
+				"🔍 handleAddPromotion - dayPromotions después:",
+				newDayPromotions
+			);
+			return {
+				...prev,
+				dayPromotions: newDayPromotions,
+			};
+		});
 	};
 
 	const handlePromotionFieldChange = (id, field, value) => {
@@ -226,10 +347,173 @@ function AdminPricing() {
 		}));
 	};
 
+	const handleToggleTipoViaje = (id, tipoViaje) => {
+		setPricing((prev) => ({
+			...prev,
+			dayPromotions: prev.dayPromotions.map((promo) => {
+				if (promo.id !== id) return promo;
+				const newValue = !promo.aplicaTipoViaje[tipoViaje];
+
+				// Lógica inteligente para tipo de viaje
+				let newAplicaTipoViaje = { ...promo.aplicaTipoViaje };
+
+				if (tipoViaje === "ambos" && newValue) {
+					// Si selecciona "ambos", desactiva "ida" y "vuelta"
+					newAplicaTipoViaje = {
+						ida: false,
+						vuelta: false,
+						ambos: true,
+					};
+				} else if (tipoViaje === "ambos" && !newValue) {
+					// Si deselecciona "ambos", activa por defecto "ida"
+					newAplicaTipoViaje = {
+						ida: true,
+						vuelta: false,
+						ambos: false,
+					};
+				} else if (
+					(tipoViaje === "ida" || tipoViaje === "vuelta") &&
+					newValue
+				) {
+					// Si selecciona "ida" o "vuelta", desactiva "ambos" primero
+					newAplicaTipoViaje = {
+						...newAplicaTipoViaje,
+						[tipoViaje]: true,
+						ambos: false,
+					};
+
+					// Si ahora tiene tanto "ida" como "vuelta", convertir a "ambos"
+					if (newAplicaTipoViaje.ida && newAplicaTipoViaje.vuelta) {
+						newAplicaTipoViaje = {
+							ida: false,
+							vuelta: false,
+							ambos: true,
+						};
+					}
+				} else {
+					// Si desactiva "ida" o "vuelta"
+					newAplicaTipoViaje[tipoViaje] = newValue;
+
+					// Si no queda ninguna opción seleccionada, activar "ida" por defecto
+					if (
+						!newAplicaTipoViaje.ida &&
+						!newAplicaTipoViaje.vuelta &&
+						!newAplicaTipoViaje.ambos
+					) {
+						newAplicaTipoViaje.ida = true;
+					}
+				}
+
+				return {
+					...promo,
+					aplicaTipoViaje: newAplicaTipoViaje,
+				};
+			}),
+		}));
+	};
+
 	const handleRemovePromotion = (id) => {
 		setPricing((prev) => ({
 			...prev,
 			dayPromotions: prev.dayPromotions.filter((promo) => promo.id !== id),
+		}));
+	};
+
+	// Funciones para manejar descuentos globales
+	const handleDescuentoFijoChange = (tipo, field, value) => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				[tipo]: {
+					...prev.descuentosGlobales[tipo],
+					[field]:
+						field === "valor"
+							? Math.min(Math.max(Number(value) || 0, 0), 100)
+							: value,
+				},
+			},
+		}));
+	};
+
+	const toggleDescuentoFijo = (tipo) => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				[tipo]: {
+					...prev.descuentosGlobales[tipo],
+					activo: !prev.descuentosGlobales[tipo].activo,
+				},
+			},
+		}));
+	};
+
+	// Funciones para descuentos personalizados
+	const addDescuentoPersonalizado = () => {
+		const nuevoDescuento = {
+			id: `desc_${Date.now()}`,
+			nombre: "",
+			valor: 0,
+			activo: true,
+		};
+
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				descuentosPersonalizados: [
+					...prev.descuentosGlobales.descuentosPersonalizados,
+					nuevoDescuento,
+				],
+			},
+		}));
+	};
+
+	const handleDescuentoPersonalizadoChange = (id, field, value) => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				descuentosPersonalizados:
+					prev.descuentosGlobales.descuentosPersonalizados.map((desc) =>
+						desc.id === id
+							? {
+									...desc,
+									[field]:
+										field === "valor"
+											? Math.min(Math.max(Number(value) || 0, 0), 100)
+											: value,
+							  }
+							: desc
+					),
+			},
+		}));
+	};
+
+	const removeDescuentoPersonalizado = (id) => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				descuentosPersonalizados:
+					prev.descuentosGlobales.descuentosPersonalizados.filter(
+						(desc) => desc.id !== id
+					),
+			},
+		}));
+	};
+
+	const toggleDescuentoPersonalizado = (id) => {
+		setPricing((prev) => ({
+			...prev,
+			descuentosGlobales: {
+				...prev.descuentosGlobales,
+				descuentosPersonalizados:
+					prev.descuentosGlobales.descuentosPersonalizados.map((desc) =>
+						desc.id === id ? { ...desc, activo: !desc.activo } : desc
+					),
+			},
 		}));
 	};
 
@@ -282,10 +566,24 @@ function AdminPricing() {
 		const promocionInvalida = pricing.dayPromotions.find((promo) => {
 			if (!promo.destino) return true;
 			if (promo.descuentoPorcentaje <= 0) return true;
-			if (promo.aplicaPorDias && promo.dias.length === 0) return true;
+			if (
+				promo.aplicaPorDias &&
+				(!Array.isArray(promo.dias) || promo.dias.length === 0)
+			)
+				return true;
 			if (
 				promo.aplicaPorHorario &&
-				(!promo.horaInicio || !promo.horaFin || promo.horaInicio >= promo.horaFin)
+				(!promo.horaInicio ||
+					!promo.horaFin ||
+					promo.horaInicio >= promo.horaFin)
+			) {
+				return true;
+			}
+			// Validar que al menos una opción de tipo de viaje esté seleccionada
+			if (
+				!promo.aplicaTipoViaje.ida &&
+				!promo.aplicaTipoViaje.vuelta &&
+				!promo.aplicaTipoViaje.ambos
 			) {
 				return true;
 			}
@@ -299,17 +597,96 @@ function AdminPricing() {
 			return;
 		}
 
+		// Debug logs para descuentos personalizados
+		console.log(
+			"🔍 Frontend - Descuentos personalizados antes de enviar:",
+			pricing.descuentosGlobales.descuentosPersonalizados
+		);
+		console.log(
+			"🔍 Frontend - Tipo:",
+			typeof pricing.descuentosGlobales.descuentosPersonalizados
+		);
+		console.log(
+			"🔍 Frontend - Es array:",
+			Array.isArray(pricing.descuentosGlobales.descuentosPersonalizados)
+		);
+		console.log(
+			"🔍 Frontend - Longitud:",
+			pricing.descuentosGlobales.descuentosPersonalizados?.length
+		);
+
+		// Debug logs para dayPromotions
+		console.log(
+			"🔍 Frontend - dayPromotions antes de enviar:",
+			pricing.dayPromotions
+		);
+		console.log(
+			"🔍 Frontend - dayPromotions.length:",
+			pricing.dayPromotions?.length
+		);
+		console.log(
+			"🔍 Frontend - dayPromotions contenido:",
+			pricing.dayPromotions
+		);
+		console.log("🔍 Frontend - Estado completo de pricing:", pricing);
+
 		setSaving(true);
 		setError("");
 		setSuccess("");
 
 		try {
+			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => {
+				const aplicaPorDias = Boolean(promo.aplicaPorDias);
+				const diasArray = Array.isArray(promo.dias)
+					? promo.dias.filter(Boolean)
+					: [];
+				const normalizedDias = aplicaPorDias
+					? diasArray.length > 0
+						? diasArray
+						: ["lunes"]
+					: [];
+				const diaPersistencia = aplicaPorDias
+					? normalizedDias[0]
+					: promo.dia || diasArray[0] || "lunes";
+				const porcentaje =
+					typeof promo.descuentoPorcentaje === "number"
+						? promo.descuentoPorcentaje
+						: Number(promo.descuentoPorcentaje) || 0;
+				const metadata = {
+					sourceId: promo.id,
+					destino: promo.destino || "",
+					descripcion: promo.descripcion || "",
+					dias: aplicaPorDias ? normalizedDias : [],
+					aplicaPorDias,
+					aplicaPorHorario: Boolean(promo.aplicaPorHorario),
+					horaInicio: promo.horaInicio || "",
+					horaFin: promo.horaFin || "",
+					porcentaje,
+					aplicaTipoViaje: {
+						ida: Boolean(promo.aplicaTipoViaje?.ida),
+						vuelta: Boolean(promo.aplicaTipoViaje?.vuelta),
+						ambos: Boolean(promo.aplicaTipoViaje?.ambos),
+					},
+					activo: promo.activo !== false,
+					diaIndividual: diaPersistencia,
+				};
+
+				return {
+					...promo,
+					dias: aplicaPorDias ? normalizedDias : [],
+					dia: diaPersistencia,
+					porcentaje,
+					descripcion: JSON.stringify(metadata),
+				};
+			});
+
 			const response = await fetch(`${API_BASE_URL}/pricing`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					destinos: pricing.destinos,
-					dayPromotions: pricing.dayPromotions,
+					dayPromotions: formattedDayPromotions,
+					descuentosGlobales: pricing.descuentosGlobales,
 				}),
 			});
 
@@ -320,12 +697,122 @@ function AdminPricing() {
 				);
 			}
 
-			const savedData = await response.json();
-			setPricing({
-				...savedData,
-				dayPromotions: normalizePromotions(savedData.dayPromotions),
-			});
-			setSuccess("Configuración guardada correctamente.");
+			let savedData = null;
+			try {
+				savedData = await response.json();
+			} catch (parseError) {
+				console.warn("No se pudo parsear la respuesta del servidor; se recargara la configuracion.", parseError);
+			}
+
+			const hasFullPayload =
+				savedData &&
+				Array.isArray(savedData.destinos) &&
+				Array.isArray(savedData.dayPromotions) &&
+				savedData.descuentosGlobales;
+
+			let broadcastPayload = null;
+
+			if (hasFullPayload) {
+				const normalizedPayload = {
+					...savedData,
+					dayPromotions: normalizePromotions(savedData.dayPromotions),
+					descuentosGlobales: {
+						descuentoOnline: {
+							valor:
+								savedData.descuentosGlobales?.descuentoOnline?.valor ||
+								savedData.descuentosGlobales?.descuentoOnline ||
+								5,
+							activo:
+								savedData.descuentosGlobales?.descuentoOnline?.activo !== undefined
+									? savedData.descuentosGlobales.descuentoOnline.activo
+									: true,
+								nombre: "Descuento por Reserva Online",
+						},
+						descuentoRoundTrip: {
+							valor:
+								savedData.descuentosGlobales?.descuentoRoundTrip?.valor ||
+								savedData.descuentosGlobales?.descuentoRoundTrip ||
+								10,
+							activo:
+								savedData.descuentosGlobales?.descuentoRoundTrip?.activo !== undefined
+									? savedData.descuentosGlobales.descuentoRoundTrip.activo
+									: true,
+								nombre: "Descuento por Ida y Vuelta",
+						},
+						descuentosPersonalizados:
+							savedData.descuentosGlobales?.descuentosPersonalizados || [],
+					},
+					updatedAt: savedData.updatedAt || new Date().toISOString(),
+				};
+
+				setPricing(normalizedPayload);
+				broadcastPayload = normalizedPayload;
+			} else {
+				await fetchPricing();
+			}
+
+			setSuccess(
+				"Configuracion guardada correctamente. Los cambios se aplicaran en el sitio web."
+			);
+			// Notificar a la aplicacion principal que los datos han cambiado
+			try {
+				localStorage.setItem("pricing_updated", Date.now().toString());
+				if (broadcastPayload) {
+					try {
+						localStorage.setItem("pricing_updated_payload", JSON.stringify(broadcastPayload));
+					} catch (storageError) {
+						console.warn("No se pudo persistir payload de precios en localStorage:", storageError);
+					}
+				} else {
+					localStorage.removeItem("pricing_updated_payload");
+				}
+
+				if (typeof window !== "undefined") {
+					window.dispatchEvent(
+						new CustomEvent("pricing_updated", {
+							detail: broadcastPayload || null,
+						})
+					);
+				}
+
+				if (typeof window !== "undefined" && window.recargarDatosPrecios) {
+					const resultadoRecarga = window.recargarDatosPrecios(
+						broadcastPayload ? { payload: broadcastPayload } : undefined
+					);
+					if (resultadoRecarga && typeof resultadoRecarga.catch == "function") {
+						resultadoRecarga.catch((error) => {
+							console.error("Error aplicando payload desde panel admin:", error);
+						});
+					}
+				}
+
+				if (
+					typeof window !== "undefined" &&
+					window.opener &&
+					window.opener.recargarDatosPrecios
+				) {
+					try {
+						const resultadoOpener = window.opener.recargarDatosPrecios(
+							broadcastPayload ? { payload: broadcastPayload } : undefined
+						);
+						if (resultadoOpener && typeof resultadoOpener.catch == "function") {
+							resultadoOpener.catch((error) => {
+								console.error("Error aplicando payload en ventana principal:", error);
+							});
+						}
+					} catch (callError) {
+						console.error("Error notificando a la ventana principal:", callError);
+					}
+				}
+
+				console.log("Notificaciones de actualizacion enviadas");
+			} catch (e) {
+				console.log(
+					"No se pudieron enviar todas las notificaciones:",
+					e.message
+				);
+			}
+
 		} catch (submitError) {
 			console.error(submitError);
 			setError(
@@ -363,6 +850,328 @@ function AdminPricing() {
 				</header>
 
 				<form onSubmit={handleSubmit} className="space-y-10">
+					{/* Sección de Descuentos Globales */}
+					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
+						<div className="flex flex-wrap items-center justify-between gap-4">
+							<h2 className="text-xl font-semibold text-white">
+								🏷️ Descuentos Globales
+							</h2>
+						</div>
+
+						{/* Descuentos Fijos */}
+						<div className="space-y-4">
+							<h3 className="text-lg font-medium text-slate-200 border-b border-slate-700 pb-2">
+								Descuentos Fijos
+							</h3>
+
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								{/* Descuento Online */}
+								<div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+									<div className="flex items-center justify-between mb-3">
+										<h4 className="font-medium text-slate-200">
+											🌐 Descuento Online
+										</h4>
+										<label className="inline-flex items-center">
+											<input
+												type="checkbox"
+												checked={
+													pricing.descuentosGlobales?.descuentoOnline?.activo ||
+													false
+												}
+												onChange={() => toggleDescuentoFijo("descuentoOnline")}
+												className="rounded border-slate-600 bg-slate-700 text-green-500 focus:ring-green-500/60"
+											/>
+											<span className="ml-2 text-sm text-slate-300">
+												{pricing.descuentosGlobales?.descuentoOnline?.activo
+													? "Activo"
+													: "Inactivo"}
+											</span>
+										</label>
+									</div>
+									<div className="flex items-center gap-3">
+										<input
+											type="number"
+											min="0"
+											max="100"
+											step="0.1"
+											value={
+												pricing.descuentosGlobales?.descuentoOnline?.valor || 5
+											}
+											onChange={(e) =>
+												handleDescuentoFijoChange(
+													"descuentoOnline",
+													"valor",
+													e.target.value
+												)
+											}
+											disabled={
+												!pricing.descuentosGlobales?.descuentoOnline?.activo
+											}
+											className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+										/>
+										<span className="text-slate-300">%</span>
+									</div>
+									<p className="mt-2 text-xs text-slate-400">
+										Descuento por reservar online
+									</p>
+								</div>
+
+								{/* Descuento Ida y Vuelta */}
+								<div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+									<div className="flex items-center justify-between mb-3">
+										<h4 className="font-medium text-slate-200">
+											🔄 Descuento Ida y Vuelta
+										</h4>
+										<label className="inline-flex items-center">
+											<input
+												type="checkbox"
+												checked={
+													pricing.descuentosGlobales?.descuentoRoundTrip
+														?.activo || false
+												}
+												onChange={() =>
+													toggleDescuentoFijo("descuentoRoundTrip")
+												}
+												className="rounded border-slate-600 bg-slate-700 text-green-500 focus:ring-green-500/60"
+											/>
+											<span className="ml-2 text-sm text-slate-300">
+												{pricing.descuentosGlobales?.descuentoRoundTrip?.activo
+													? "Activo"
+													: "Inactivo"}
+											</span>
+										</label>
+									</div>
+									<div className="flex items-center gap-3">
+										<input
+											type="number"
+											min="0"
+											max="100"
+											step="0.1"
+											value={
+												pricing.descuentosGlobales?.descuentoRoundTrip?.valor ||
+												10
+											}
+											onChange={(e) =>
+												handleDescuentoFijoChange(
+													"descuentoRoundTrip",
+													"valor",
+													e.target.value
+												)
+											}
+											disabled={
+												!pricing.descuentosGlobales?.descuentoRoundTrip?.activo
+											}
+											className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+										/>
+										<span className="text-slate-300">%</span>
+									</div>
+									<p className="mt-2 text-xs text-slate-400">
+										Descuento para viajes redondos
+									</p>
+								</div>
+							</div>
+						</div>
+
+						{/* Descuentos Personalizados */}
+						<div className="space-y-4">
+							<div className="flex items-center justify-between">
+								<h3 className="text-lg font-medium text-slate-200 border-b border-slate-700 pb-2">
+									Descuentos Personalizados
+								</h3>
+								<button
+									type="button"
+									onClick={addDescuentoPersonalizado}
+									className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow transition hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/60"
+								>
+									+ Agregar Descuento
+								</button>
+							</div>
+
+							{pricing.descuentosGlobales?.descuentosPersonalizados?.length ===
+							0 ? (
+								<div className="text-center py-8 text-slate-400">
+									<p>No hay descuentos personalizados.</p>
+									<p className="text-sm">
+										Haz clic en "Agregar Descuento" para crear uno.
+									</p>
+								</div>
+							) : (
+								<div className="space-y-3">
+									{pricing.descuentosGlobales?.descuentosPersonalizados?.map(
+										(descuento) => (
+											<div
+												key={descuento.id}
+												className="bg-slate-800/50 rounded-lg p-4 border border-slate-700"
+											>
+												<div className="flex items-start gap-4">
+													<div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
+														<div>
+															<label className="block text-sm font-medium text-slate-300 mb-1">
+																Nombre del Descuento
+															</label>
+															<input
+																type="text"
+																value={descuento.nombre}
+																onChange={(e) =>
+																	handleDescuentoPersonalizadoChange(
+																		descuento.id,
+																		"nombre",
+																		e.target.value
+																	)
+																}
+																placeholder="Ej: Descuento Estudiantes"
+																className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+															/>
+														</div>
+														<div>
+															<label className="block text-sm font-medium text-slate-300 mb-1">
+																Porcentaje (%)
+															</label>
+															<input
+																type="number"
+																min="0"
+																max="100"
+																step="0.1"
+																value={descuento.valor}
+																onChange={(e) =>
+																	handleDescuentoPersonalizadoChange(
+																		descuento.id,
+																		"valor",
+																		e.target.value
+																	)
+																}
+																disabled={!descuento.activo}
+																className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+															/>
+														</div>
+														<div className="flex items-end gap-2">
+															<label className="inline-flex items-center">
+																<input
+																	type="checkbox"
+																	checked={descuento.activo}
+																	onChange={() =>
+																		toggleDescuentoPersonalizado(descuento.id)
+																	}
+																	className="rounded border-slate-600 bg-slate-700 text-green-500 focus:ring-green-500/60"
+																/>
+																<span className="ml-2 text-sm text-slate-300">
+																	{descuento.activo ? "Activo" : "Inactivo"}
+																</span>
+															</label>
+															<button
+																type="button"
+																onClick={() =>
+																	removeDescuentoPersonalizado(descuento.id)
+																}
+																className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/60"
+															>
+																🗑️
+															</button>
+														</div>
+													</div>
+												</div>
+											</div>
+										)
+									)}
+								</div>
+							)}
+						</div>
+
+						{/* Vista Previa */}
+						<div className="bg-slate-800/50 rounded-lg p-4">
+							<h3 className="text-sm font-medium text-slate-300 mb-3">
+								📊 Resumen de Descuentos
+							</h3>
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+								<div>
+									<h4 className="font-medium text-slate-200 mb-2">
+										Descuentos Fijos:
+									</h4>
+									<p className="text-slate-400">
+										• Online:{" "}
+										{pricing.descuentosGlobales?.descuentoOnline?.valor || 5}%
+										<span
+											className={
+												pricing.descuentosGlobales?.descuentoOnline?.activo
+													? "text-green-400 ml-1"
+													: "text-red-400 ml-1"
+											}
+										>
+											{pricing.descuentosGlobales?.descuentoOnline?.activo
+												? "✅"
+												: "❌"}
+										</span>
+									</p>
+									<p className="text-slate-400">
+										• Ida y Vuelta:{" "}
+										{pricing.descuentosGlobales?.descuentoRoundTrip?.valor ||
+											10}
+										%
+										<span
+											className={
+												pricing.descuentosGlobales?.descuentoRoundTrip?.activo
+													? "text-green-400 ml-1"
+													: "text-red-400 ml-1"
+											}
+										>
+											{pricing.descuentosGlobales?.descuentoRoundTrip?.activo
+												? "✅"
+												: "❌"}
+										</span>
+									</p>
+								</div>
+								<div>
+									<h4 className="font-medium text-slate-200 mb-2">
+										Descuentos Personalizados:
+									</h4>
+									{pricing.descuentosGlobales?.descuentosPersonalizados
+										?.length === 0 ? (
+										<p className="text-slate-400">Ninguno configurado</p>
+									) : (
+										pricing.descuentosGlobales.descuentosPersonalizados.map(
+											(desc) => (
+												<p key={desc.id} className="text-slate-400">
+													• {desc.nombre || "Sin nombre"}: {desc.valor}%
+													<span
+														className={
+															desc.activo
+																? "text-green-400 ml-1"
+																: "text-red-400 ml-1"
+														}
+													>
+														{desc.activo ? "✅" : "❌"}
+													</span>
+												</p>
+											)
+										)
+									)}
+								</div>
+								<div>
+									<h4 className="font-medium text-slate-200 mb-2">
+										Estado General:
+									</h4>
+									<p className="text-slate-400">
+										Total Descuentos:{" "}
+										{(pricing.descuentosGlobales?.descuentosPersonalizados
+											?.length || 0) + 2}
+									</p>
+									<p className="text-slate-400">
+										Activos:{" "}
+										{
+											[
+												pricing.descuentosGlobales?.descuentoOnline?.activo,
+												pricing.descuentosGlobales?.descuentoRoundTrip?.activo,
+												...(pricing.descuentosGlobales?.descuentosPersonalizados?.map(
+													(d) => d.activo
+												) || []),
+											].filter(Boolean).length
+										}
+									</p>
+								</div>
+							</div>
+						</div>
+					</section>
+
 					<section className="space-y-6 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
 						<div className="flex flex-wrap items-center justify-between gap-4">
 							<h2 className="text-xl font-semibold text-white">
@@ -414,8 +1223,8 @@ function AdminPricing() {
 												}
 												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 											/>
-									</label>
-									<label className="text-sm text-slate-300">
+										</label>
+										<label className="text-sm text-slate-300">
 											Precio Base (Auto)
 											<input
 												type="number"
@@ -475,7 +1284,7 @@ function AdminPricing() {
 								</div>
 							)}
 
-							{pricing.destinos.length > 0 ? (
+							{pricing.destinos && pricing.destinos.length > 0 ? (
 								pricing.destinos.map((destino) => {
 									const isVanDisabled = destino.maxPasajeros <= 4;
 									return (
@@ -579,31 +1388,39 @@ function AdminPricing() {
 									Descuentos Personalizados
 								</h2>
 								<p className="mt-1 text-xs text-slate-400 max-w-xl">
-									Configura promociones por tramo con restricciones por día u horario.
-									Estos porcentajes se aplican como descuento adicional al 10% base
-									del canal web.
+									Configura promociones por tramo con restricciones por día u
+									horario. Estos porcentajes se aplican como descuento adicional
+									al descuento base configurado en "Descuentos Globales".
 								</p>
 							</div>
 							<button
 								type="button"
 								onClick={handleAddPromotion}
-								disabled={pricing.destinos.length === 0}
+								disabled={!pricing.destinos || pricing.destinos.length === 0}
 								className="inline-flex items-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
 							>
 								Añadir Descuento
 							</button>
 						</div>
 
-						{pricing.destinos.length === 0 && (
+						{(!pricing.destinos || pricing.destinos.length === 0) && (
 							<p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
 								Primero crea un destino para asociar descuentos.
 							</p>
 						)}
 
-						{pricing.dayPromotions.length > 0 ? (
+						{/* Debug info */}
+						<div className="text-xs text-gray-400 mb-2">
+							Debug: Destinos disponibles: {pricing.destinos?.length || 0}
+							{pricing.destinos?.map((d) => d.nombre).join(", ")}
+						</div>
+
+						{pricing.dayPromotions && pricing.dayPromotions.length > 0 ? (
 							<div className="space-y-5">
 								{pricing.dayPromotions.map((promo) => {
-									const destinoOptions = pricing.destinos.map((dest) => dest.nombre);
+									const destinoOptions = pricing.destinos.map(
+										(dest) => dest.nombre
+									);
 									return (
 										<div
 											key={promo.id}
@@ -632,8 +1449,8 @@ function AdminPricing() {
 															))}
 														</select>
 													</label>
-												<label className="text-sm text-slate-300">
-													% Descuento adicional
+													<label className="text-sm text-slate-300">
+														% Descuento adicional
 														<input
 															type="number"
 															min="0"
@@ -686,7 +1503,7 @@ function AdminPricing() {
 																	promo.id,
 																	"aplicaPorDias"
 																)
-														}
+															}
 															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
 														/>
 														Aplicar solo en días específicos
@@ -699,14 +1516,18 @@ function AdminPricing() {
 															<button
 																type="button"
 																key={day}
-																onClick={() => handleTogglePromotionDay(promo.id, day)}
+																onClick={() =>
+																	handleTogglePromotionDay(promo.id, day)
+																}
 																disabled={!promo.aplicaPorDias}
 																className={`rounded-full border px-3 py-1 text-xs transition ${
 																	isActive
 																		? "border-emerald-400 bg-emerald-500/20 text-emerald-100"
-																	: "border-slate-700 bg-slate-900 text-slate-300"
+																		: "border-slate-700 bg-slate-900 text-slate-300"
 																} ${
-																	promo.aplicaPorDias ? "hover:border-emerald-400 hover:bg-emerald-500/10" : "opacity-50"
+																	promo.aplicaPorDias
+																		? "hover:border-emerald-400 hover:bg-emerald-500/10"
+																		: "opacity-50"
 																}`}
 															>
 																{day}
@@ -773,6 +1594,61 @@ function AdminPricing() {
 														/>
 													</label>
 												</div>
+											</div>
+
+											<div className="space-y-3">
+												<label className="text-sm font-medium text-slate-300">
+													Aplicar descuento en:
+												</label>
+												<div className="flex flex-wrap gap-3">
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaTipoViaje.ida}
+															onChange={() =>
+																handleToggleTipoViaje(promo.id, "ida")
+															}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														<span className="flex items-center gap-1">
+															🚗 Solo ida
+														</span>
+													</label>
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaTipoViaje.vuelta}
+															onChange={() =>
+																handleToggleTipoViaje(promo.id, "vuelta")
+															}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														<span className="flex items-center gap-1">
+															🔄 Solo vuelta
+														</span>
+													</label>
+													<label className="inline-flex items-center gap-2 text-sm text-slate-300">
+														<input
+															type="checkbox"
+															checked={promo.aplicaTipoViaje.ambos}
+															onChange={() =>
+																handleToggleTipoViaje(promo.id, "ambos")
+															}
+															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
+														/>
+														<span className="flex items-center gap-1">
+															🔄🚗 Ida y vuelta
+														</span>
+													</label>
+												</div>
+												<p className="text-xs text-slate-400">
+													Selecciona en qué tipo de viaje se aplicará este
+													descuento.
+													<br />
+													<strong>Nota:</strong> Si seleccionas tanto "Solo ida"
+													como "Solo vuelta", se convertirá automáticamente en
+													"Ida y vuelta".
+												</p>
 											</div>
 										</div>
 									);

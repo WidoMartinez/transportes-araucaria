@@ -30,28 +30,77 @@ import Contacto from "./components/Contacto";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminPricing from "./components/AdminPricing";
+import AdminCodigos from "./components/AdminCodigos";
+import CodigoDescuento from "./components/CodigoDescuento";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
 
-const DESCUENTO_ONLINE = 0.1;
+// Descuentos ahora se cargan dinámicamente desde descuentosGlobales
 const ROUND_TRIP_DISCOUNT = 0.05;
+
+const parsePromotionMetadata = (promo) => {
+	if (!promo || typeof promo.descripcion !== "string") return null;
+	try {
+		const parsed = JSON.parse(promo.descripcion);
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+			? parsed
+			: null;
+	} catch (error) {
+		return null;
+	}
+};
 
 const normalizePromotions = (promotions = []) => {
 	if (!Array.isArray(promotions)) return [];
-	return promotions
-		.filter(Boolean)
-		.map((promo, index) => ({
-			id: promo.id || `promo-${index}`,
-			destino: promo.destino || "",
-			descripcion: promo.descripcion || "",
-			dias: Array.isArray(promo.dias) ? promo.dias : [],
-			aplicaPorDias: Boolean(promo.aplicaPorDias),
-			aplicaPorHorario: Boolean(promo.aplicaPorHorario),
-			horaInicio: promo.horaInicio || "",
-			horaFin: promo.horaFin || "",
-			descuentoPorcentaje: Number(promo.descuentoPorcentaje) || 0,
-		}));
+	return promotions.filter(Boolean).map((promo, index) => {
+		const metadata = parsePromotionMetadata(promo);
+		const id = metadata?.sourceId || promo.id || `promo-${index}`;
+		const diasMetadata = Array.isArray(metadata?.dias)
+			? metadata.dias.filter(Boolean)
+			: [];
+		const aplicaPorDias =
+			metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
+		const dias = aplicaPorDias
+			? diasMetadata.length > 0
+				? diasMetadata
+				: Array.isArray(promo.dias)
+				? promo.dias.filter(Boolean)
+				: metadata?.diaIndividual
+				? [metadata.diaIndividual]
+				: []
+			: [];
+		const porcentaje = Number(
+			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
+		);
+		const aplicaTipoViajeMetadata = metadata?.aplicaTipoViaje || {};
+
+		return {
+			id,
+			destino: metadata?.destino ?? promo.destino ?? "",
+			descripcion: metadata?.descripcion ?? promo.descripcion ?? "",
+			aplicaPorDias,
+			dias,
+			aplicaPorHorario:
+				metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
+			horaInicio: metadata?.horaInicio ?? promo.horaInicio ?? "",
+			horaFin: metadata?.horaFin ?? promo.horaFin ?? "",
+			descuentoPorcentaje: Number.isFinite(porcentaje) ? porcentaje : 0,
+			aplicaTipoViaje: {
+				ida:
+					metadata?.aplicaTipoViaje?.ida ?? promo.aplicaTipoViaje?.ida ?? false,
+				vuelta:
+					metadata?.aplicaTipoViaje?.vuelta ??
+					promo.aplicaTipoViaje?.vuelta ??
+					false,
+				ambos:
+					metadata?.aplicaTipoViaje?.ambos ??
+					promo.aplicaTipoViaje?.ambos ??
+					true,
+			},
+			activo: metadata?.activo ?? promo.activo ?? true,
+		};
+	});
 };
 
 const getDayTagsFromDate = (dateString) => {
@@ -86,14 +135,44 @@ const isTimeWithinRange = (time, start, end) => {
 
 const resolveIsAdminView = () => {
 	if (typeof window === "undefined") return false;
-	return window.location.pathname.toLowerCase().startsWith("/admin/precios");
+
+	// Verificar múltiples formas de acceso al admin
+	const url = new URL(window.location.href);
+	const params = url.searchParams;
+	const pathname = url.pathname.toLowerCase();
+	const hash = url.hash.toLowerCase();
+
+	return (
+		// Parámetro URL: ?admin=true
+		params.get("admin") === "true" ||
+		// Parámetro URL: ?panel=admin
+		params.get("panel") === "admin" ||
+		// Parámetro URL: ?view=admin
+		params.get("view") === "admin" ||
+		// Hash: #admin
+		hash === "#admin" ||
+		// Ruta: /admin/precios (original)
+		pathname.startsWith("/admin/precios") ||
+		// Ruta: /admin
+		pathname === "/admin"
+	);
 };
 
 function App() {
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
-	const [loadingPrecios, setLoadingPrecios] = useState(true);
+	const [descuentosGlobales, setDescuentosGlobales] = useState({
+		descuentoOnline: { valor: 5, activo: true },
+		descuentoRoundTrip: { valor: 10, activo: true },
+		descuentosPersonalizados: [],
+	});
+
+	// Estados para códigos de descuento
+	const [codigoAplicado, setCodigoAplicado] = useState(null);
+	const [codigoError, setCodigoError] = useState(null);
+	const [validandoCodigo, setValidandoCodigo] = useState(false);
+	const [loadingPrecios, setLoadingPrecios] = useState(false);
 
 	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
 	const [formData, setFormData] = useState({
@@ -125,36 +204,321 @@ function App() {
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
-	// --- CARGA DE DATOS DINÁMICA ---
-	useEffect(() => {
-		const fetchPreciosDesdeAPI = async () => {
+	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
+	const applyPricingPayload = useCallback((data, { signal } = {}) => {
+		if (!data || signal?.aborted) {
+			return false;
+		}
+
+		const destinosNormalizados =
+			Array.isArray(data.destinos) && data.destinos.length > 0
+				? data.destinos
+				: destinosBase;
+
+		if (signal?.aborted) {
+			return false;
+		}
+		setDestinosData(destinosNormalizados);
+
+		if (signal?.aborted) {
+			return false;
+		}
+		setPromotions(normalizePromotions(data.dayPromotions));
+
+		if (signal?.aborted) {
+			return true;
+		}
+
+		if (data.descuentosGlobales) {
+			const nuevosDescuentos = {
+				descuentoOnline: {
+					valor:
+						data.descuentosGlobales.descuentoOnline?.valor ??
+						data.descuentosGlobales.descuentoOnline ??
+						5,
+					activo:
+						data.descuentosGlobales.descuentoOnline?.activo !== undefined
+							? data.descuentosGlobales.descuentoOnline.activo
+							: true,
+				},
+				descuentoRoundTrip: {
+					valor:
+						data.descuentosGlobales.descuentoRoundTrip?.valor ??
+						data.descuentosGlobales.descuentoRoundTrip ??
+						10,
+					activo:
+						data.descuentosGlobales.descuentoRoundTrip?.activo !== undefined
+							? data.descuentosGlobales.descuentoRoundTrip.activo
+							: true,
+				},
+				descuentosPersonalizados:
+					data.descuentosGlobales.descuentosPersonalizados || [],
+			};
+			if (signal?.aborted) {
+				return true;
+			}
+			setDescuentosGlobales(nuevosDescuentos);
+		}
+
+		return true;
+	}, []);
+
+	// --- FUNCION PARA RECARGAR DATOS ---
+	const recargarDatosPrecios = useCallback(
+		async ({ signal, payload } = {}) => {
+			console.log("?? INICIANDO recarga de datos de precios... v2.1");
 			try {
-				const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
-				const response = await fetch(`${apiUrl}/pricing`);
-				if (!response.ok)
-					throw new Error("La respuesta de la red no fue exitosa.");
+				let data = payload;
 
-				const data = await response.json();
+				if (!data) {
+					const apiUrl =
+						import.meta.env.VITE_API_URL ||
+						"https://transportes-araucaria.onrender.com";
+					console.log("?? Fetching desde:", `${apiUrl}/pricing`);
 
-				if (data.destinos && data.destinos.length > 0) {
-					setDestinosData(data.destinos);
+					const response = await fetch(`${apiUrl}/pricing`, {
+						signal,
+					});
+					if (!response.ok) {
+						throw new Error("La respuesta de la red no fue exitosa.");
+					}
+					data = await response.json();
 				} else {
-					setDestinosData(destinosBase);
+					console.log("?? Aplicando payload de precios ya disponible");
 				}
-				setPromotions(normalizePromotions(data.dayPromotions));
+
+				if (signal?.aborted) {
+					console.warn("?? Recarga abortada antes de aplicar los datos");
+					return false;
+				}
+
+				const applied = applyPricingPayload(data, { signal });
+
+				if (!applied && !payload) {
+					console.warn(
+						"?? No se pudieron aplicar los datos de precios recibidos"
+					);
+				}
+				return applied;
 			} catch (error) {
-				console.error(
-					"Error al cargar precios desde la API, usando valores por defecto.",
-					error
-				);
-				setDestinosData(destinosBase);
-				setPromotions([]);
+				if (error.name == "AbortError") {
+					console.warn("Recarga de precios cancelada por cambio de vista");
+					throw error;
+				}
+				console.error("Error al recargar precios:", error);
+				return false;
+			}
+		},
+		[applyPricingPayload]
+	);
+
+	// Funciones para manejar códigos de descuento
+	// Generar ID único del usuario basado en datos del navegador
+	const generarUsuarioId = () => {
+		// Intentar obtener un ID persistente del localStorage
+		let usuarioId = localStorage.getItem("usuarioId");
+		if (!usuarioId) {
+			// Generar un ID único basado en características del navegador
+			const timestamp = Date.now();
+			const random = Math.random().toString(36).substring(2);
+			const userAgent = navigator.userAgent.substring(0, 20);
+			usuarioId = `user_${timestamp}_${random}_${btoa(userAgent).substring(
+				0,
+				8
+			)}`;
+			localStorage.setItem("usuarioId", usuarioId);
+		}
+		return usuarioId;
+	};
+
+	const validarCodigo = async (codigo) => {
+		setValidandoCodigo(true);
+		setCodigoError(null);
+
+		try {
+			const apiUrl =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucaria.onrender.com";
+			const usuarioId = generarUsuarioId();
+
+			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					codigo,
+					destino: formData.destino,
+					monto: cotizacion.precio || 0,
+					usuarioId,
+				}),
+			});
+
+			const result = await response.json();
+
+			if (result.valido) {
+				setCodigoAplicado(result.codigo);
+				setCodigoError(null);
+			} else {
+				setCodigoError(result.error);
+				setCodigoAplicado(null);
+			}
+		} catch (error) {
+			setCodigoError("Error validando código");
+			setCodigoAplicado(null);
+		} finally {
+			setValidandoCodigo(false);
+		}
+	};
+
+	const removerCodigo = () => {
+		setCodigoAplicado(null);
+		setCodigoError(null);
+	};
+
+	// --- CARGA DE DATOS DINAMICA ---
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+
+		const controller = new AbortController();
+		let isActive = true;
+
+		const cargarPrecios = async () => {
+			setLoadingPrecios(true);
+			try {
+				const success = await recargarDatosPrecios({
+					signal: controller.signal,
+				});
+				if (!success && isActive && !controller.signal.aborted) {
+					setDestinosData(destinosBase);
+					setPromotions([]);
+				}
+			} catch (error) {
+				if (error.name == "AbortError") {
+					return;
+				}
+				if (isActive) {
+					setDestinosData(destinosBase);
+					setPromotions([]);
+				}
 			} finally {
-				setLoadingPrecios(false);
+				if (isActive) {
+					setLoadingPrecios(false);
+				}
 			}
 		};
-		fetchPreciosDesdeAPI();
+
+		cargarPrecios();
+
+		return () => {
+			isActive = false;
+			controller.abort();
+		};
+	}, [recargarDatosPrecios]);
+
+	// --- EFECTO PARA ESCUCHAR CAMBIOS DE CONFIGURACIÓN ---
+	useEffect(() => {
+		const handleStorageChange = (e) => {
+			if (e.key === "pricing_updated_payload" && e.newValue) {
+				try {
+					const payload = JSON.parse(e.newValue);
+					recargarDatosPrecios({ payload }).catch((error) => {
+						if (error?.name !== "AbortError") {
+							console.error(
+								"Error aplicando payload de precios desde storage:",
+								error
+							);
+						}
+					});
+					return;
+				} catch (parseError) {
+					console.warn(
+						"No se pudo parsear payload de precios desde storage:",
+						parseError
+					);
+				}
+			}
+
+			if (e.key === "pricing_updated") {
+				console.log(
+					"?? Detectado cambio en configuracion de precios, recargando..."
+				);
+				recargarDatosPrecios().catch((error) => {
+					if (error?.name !== "AbortError") {
+						console.error(
+							"Error recargando precios tras cambio en storage:",
+							error
+						);
+					}
+				});
+			}
+		};
+
+		window.addEventListener("storage", handleStorageChange);
+
+		// Tambien escuchar eventos personalizados
+		const handlePricingUpdate = (event) => {
+			console.log("?? Recargando precios por evento personalizado...");
+			const payload = event?.detail;
+			if (payload) {
+				recargarDatosPrecios({ payload }).catch((error) => {
+					if (error?.name !== "AbortError") {
+						console.error(
+							"Error aplicando payload de precios desde evento:",
+							error
+						);
+					}
+				});
+				return;
+			}
+			recargarDatosPrecios().catch((error) => {
+				if (error?.name !== "AbortError") {
+					console.error("Error recargando precios desde evento:", error);
+				}
+			});
+		};
+
+		window.addEventListener("pricing_updated", handlePricingUpdate);
+
+		// Polling cada 30 segundos para verificar cambios (como respaldo)
+		const pollingInterval = setInterval(async () => {
+			const lastUpdate = localStorage.getItem("pricing_updated");
+			const lastCheck = localStorage.getItem("last_pricing_check") || "0";
+
+			if (lastUpdate && parseInt(lastUpdate) > parseInt(lastCheck)) {
+				console.log("🔄 Polling detectó cambios en precios, recargando...");
+				await recargarDatosPrecios();
+				localStorage.setItem("last_pricing_check", Date.now().toString());
+			}
+		}, 30000); // 30 segundos
+
+		return () => {
+			window.removeEventListener("storage", handleStorageChange);
+			window.removeEventListener("pricing_updated", handlePricingUpdate);
+			clearInterval(pollingInterval);
+		};
 	}, []);
+
+	// Hacer la función de recarga disponible globalmente para el panel admin
+	useEffect(() => {
+		window.recargarDatosPrecios = recargarDatosPrecios;
+
+		// Agregar atajo de teclado Ctrl+Shift+U para actualizar precios
+		const handleKeyDown = (e) => {
+			if (e.ctrlKey && e.shiftKey && e.key === "U") {
+				e.preventDefault();
+				console.log("🔄 Actualizando precios por atajo de teclado...");
+				recargarDatosPrecios();
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			delete window.recargarDatosPrecios;
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [recargarDatosPrecios]);
+
+	// Código duplicado removido - ya está en recargarDatosPrecios
 
 	// --- LÓGICA DE RUTAS Y PASAJEROS DINÁMICOS ---
 	const todosLosTramos = useMemo(
@@ -181,9 +545,7 @@ function App() {
 	const destinoSeleccionado = useMemo(() => {
 		const tramo = [formData.origen, formData.destino].find(
 			(lugar) =>
-				lugar &&
-				lugar !== "Aeropuerto La Araucanía" &&
-				lugar !== "Otro"
+				lugar && lugar !== "Aeropuerto La Araucanía" && lugar !== "Otro"
 		);
 		if (!tramo) return null;
 		return destinosData.find((d) => d.nombre === tramo) || null;
@@ -193,31 +555,104 @@ function App() {
 
 	const applicablePromotions = useMemo(() => {
 		if (!destinoSeleccionado) return [];
-		if (!promotions.length) return [];
+		const safePromotions = Array.isArray(promotions) ? promotions : [];
+		if (safePromotions.length === 0) return [];
 		const tramo = destinoSeleccionado.nombre;
-		return promotions.filter((promo) => {
+		const isRoundTrip = formData.idaVuelta;
+
+		// Determinar la dirección del viaje basado en dónde está el aeropuerto
+		const aeropuertoEnOrigen = formData.origen === "Aeropuerto La Araucanía";
+		const aeropuertoEnDestino = formData.destino === "Aeropuerto La Araucanía";
+
+		// Ida: de ciudad al aeropuerto (aeropuerto está en destino)
+		// Vuelta: del aeropuerto a ciudad (aeropuerto está en origen)
+		const esViajeIda = aeropuertoEnDestino;
+		const esViajeVuelta = aeropuertoEnOrigen;
+
+		// console.log("🔍 DEBUG FILTRO PROMOCIONES:", {
+		// 	tramo,
+		// 	isRoundTrip,
+		// 	esViajeIda,
+		// 	esViajeVuelta,
+		// 	promotions: safePromotions.length,
+		// });
+
+		return safePromotions.filter((promo) => {
+			// console.log("🔍 Evaluando promoción:", {
+			// 	promo: promo.nombre,
+			// 	destino: promo.destino,
+			// 	tramo,
+			// 	coincide: promo.destino === tramo,
+			// 	descuento: promo.descuentoPorcentaje,
+			// });
+
 			if (!promo.destino || promo.destino !== tramo) return false;
 			if (promo.descuentoPorcentaje <= 0) return false;
+
+			// Filtro por tipo de viaje
+			const tipoViaje = promo.aplicaTipoViaje;
+			if (tipoViaje) {
+				if (isRoundTrip) {
+					// Para viajes de ida y vuelta, puede aplicar si:
+					// 1. Está habilitado "ambos" (aplica a ambos tramos)
+					// 2. Está habilitado "ida" y es viaje de ida (primer tramo)
+					// 3. Está habilitado "vuelta" y es viaje de vuelta (segundo tramo)
+					const aplicaAmbos = tipoViaje.ambos;
+					const aplicaIda = tipoViaje.ida && esViajeIda;
+					const aplicaVuelta = tipoViaje.vuelta && esViajeVuelta;
+
+					if (!aplicaAmbos && !aplicaIda && !aplicaVuelta) return false;
+				} else {
+					// Para viajes de una sola dirección
+					if (esViajeIda) {
+						// Viaje de ida (ciudad → aeropuerto): debe permitir "ida" o "ambos"
+						if (!tipoViaje.ida && !tipoViaje.ambos) return false;
+					} else if (esViajeVuelta) {
+						// Viaje de vuelta (aeropuerto → ciudad): debe permitir "vuelta" o "ambos"
+						if (!tipoViaje.vuelta && !tipoViaje.ambos) return false;
+					}
+				}
+			}
+
 			if (promo.aplicaPorDias) {
 				const tags = getDayTagsFromDate(formData.fecha);
 				if (!tags.length) return false;
-				const hasMatch = tags.some((tag) => promo.dias.includes(tag));
+				const diasPromo = Array.isArray(promo.dias) ? promo.dias : [];
+				if (diasPromo.length === 0) return false;
+				const hasMatch = tags.some((tag) => diasPromo.includes(tag));
 				if (!hasMatch) return false;
 			}
 			if (promo.aplicaPorHorario) {
 				const horaSeleccionada = formData.hora;
 				if (!horaSeleccionada) return false;
 				if (!promo.horaInicio || !promo.horaFin) return false;
-				if (!isTimeWithinRange(horaSeleccionada, promo.horaInicio, promo.horaFin)) return false;
+				if (
+					!isTimeWithinRange(horaSeleccionada, promo.horaInicio, promo.horaFin)
+				)
+					return false;
 			}
 			return true;
 		});
-	}, [promotions, destinoSeleccionado, formData.fecha, formData.hora]);
+	}, [
+		promotions,
+		destinoSeleccionado,
+		formData.fecha,
+		formData.hora,
+		formData.idaVuelta,
+		formData.origen,
+		formData.destino,
+	]);
 
 	const activePromotion = useMemo(() => {
-		if (!applicablePromotions.length) return null;
-		return applicablePromotions.reduce((best, promo) =>
-			promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0) ? promo : best,
+		const promos = Array.isArray(applicablePromotions)
+			? applicablePromotions
+			: [];
+		if (promos.length === 0) return null;
+		return promos.reduce(
+			(best, promo) =>
+				promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0)
+					? promo
+					: best,
 			null
 		);
 	}, [applicablePromotions]);
@@ -225,10 +660,56 @@ function App() {
 	const promotionDiscountRate = activePromotion
 		? activePromotion.descuentoPorcentaje / 100
 		: 0;
-	const roundTripDiscountRate = formData.idaVuelta ? ROUND_TRIP_DISCOUNT : 0;
+
+	// Debug específico para promociones (comentado para reducir ruido)
+	// console.log("🎯 DEBUG PROMOCIONES:", {
+	// 	applicablePromotions,
+	// 	activePromotion,
+	// 	promotionDiscountRate,
+	// 	destinoSeleccionado: destinoSeleccionado?.nombre,
+	// 	origen: formData.origen,
+	// 	destino: formData.destino,
+	// 	idaVuelta: formData.idaVuelta,
+	// });
+	// Calcular descuentos dinámicos desde descuentosGlobales
+	const onlineDiscountRate =
+		descuentosGlobales?.descuentoOnline?.activo &&
+		descuentosGlobales?.descuentoOnline?.valor
+			? descuentosGlobales.descuentoOnline.valor / 100
+			: 0;
+
+	// Debug: mostrar descuentos actuales cuando cambien (comentado para reducir ruido)
+	// useEffect(() => {
+	// 	console.log("💰 DESCUENTOS ACTUALES:", {
+	// 		descuentosGlobales,
+	// 		onlineDiscountRate,
+	// 		roundTripDiscountRate:
+	// 			formData.idaVuelta &&
+	// 			descuentosGlobales?.descuentoRoundTrip?.activo &&
+	// 			descuentosGlobales?.descuentoRoundTrip?.valor
+	// 				? descuentosGlobales.descuentoRoundTrip.valor / 100
+	// 				: 0,
+	// 	});
+	// }, [descuentosGlobales, formData.idaVuelta]);
+
+	const roundTripDiscountRate =
+		formData.idaVuelta &&
+		descuentosGlobales?.descuentoRoundTrip?.activo &&
+		descuentosGlobales?.descuentoRoundTrip?.valor
+			? descuentosGlobales.descuentoRoundTrip.valor / 100
+			: 0;
+
+	// Calcular descuentos personalizados activos
+	const personalizedDiscountRate =
+		descuentosGlobales?.descuentosPersonalizados
+			?.filter((desc) => desc.activo && desc.valor > 0)
+			.reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
 
 	const effectiveDiscountRate = Math.min(
-		DESCUENTO_ONLINE + promotionDiscountRate + roundTripDiscountRate,
+		onlineDiscountRate +
+			promotionDiscountRate +
+			roundTripDiscountRate +
+			personalizedDiscountRate,
 		0.75
 	);
 
@@ -236,7 +717,10 @@ function App() {
 		if (!destinoSeleccionado) return;
 		const limite = destinoSeleccionado.maxPasajeros;
 		const pasajerosSeleccionados = parseInt(formData.pasajeros, 10);
-		if (Number.isFinite(pasajerosSeleccionados) && pasajerosSeleccionados > limite) {
+		if (
+			Number.isFinite(pasajerosSeleccionados) &&
+			pasajerosSeleccionados > limite
+		) {
 			setFormData((prev) => ({
 				...prev,
 				pasajeros: limite.toString(),
@@ -293,7 +777,10 @@ function App() {
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
 			}
-			return { precio: Math.round(precioFinal), vehiculo: vehiculoAsignado };
+			return {
+				precio: precioFinal !== null ? Math.round(precioFinal) : null,
+				vehiculo: vehiculoAsignado,
+			};
 		},
 		[destinosData]
 	);
@@ -385,29 +872,129 @@ function App() {
 	const pricing = useMemo(() => {
 		const precioIda = cotizacion.precio || 0;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
-		const descuentoBase = Math.round(precioBase * DESCUENTO_ONLINE);
-		const descuentoPromocion = Math.round(
-			precioBase * (promotionDiscountRate || 0)
+
+		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
+		// Descuento online por reservar (se aplica a cada tramo)
+		const descuentoOnlinePorTramo = Math.round(precioIda * onlineDiscountRate);
+		const descuentoOnline = formData.idaVuelta
+			? descuentoOnlinePorTramo * 2
+			: descuentoOnlinePorTramo;
+
+		// Descuentos personalizados (se aplican a cada tramo)
+		const descuentosPersonalizadosPorTramo = Math.round(
+			precioIda * personalizedDiscountRate
 		);
-		const descuentoRoundTrip = Math.round(
-			precioBase * (roundTripDiscountRate || 0)
+		const descuentosPersonalizados = formData.idaVuelta
+			? descuentosPersonalizadosPorTramo * 2
+			: descuentosPersonalizadosPorTramo;
+
+		// 2. PROMOCIONES POR TRAMO (se aplican según configuración específica)
+		// Estas se calculan por tramo individual, no sobre el total
+		const descuentoPromocionPorTramo = Math.round(
+			precioIda * (promotionDiscountRate || 0)
 		);
-		const descuentoOnline =
-			descuentoBase + descuentoPromocion + descuentoRoundTrip;
-		const totalConDescuento = Math.max(precioBase - descuentoOnline, 0);
+		const descuentoPromocion = formData.idaVuelta
+			? descuentoPromocionPorTramo * 2
+			: descuentoPromocionPorTramo;
+
+		// 3. DESCUENTO IDA Y VUELTA (solo cuando se selecciona ida y vuelta)
+		const descuentoRoundTrip = formData.idaVuelta
+			? Math.round(precioBase * (roundTripDiscountRate || 0))
+			: 0;
+
+		// 4. DESCUENTO POR CÓDIGO
+		let descuentoCodigo = 0;
+		if (codigoAplicado) {
+			if (codigoAplicado.tipo === "porcentaje") {
+				descuentoCodigo = Math.round(precioBase * (codigoAplicado.valor / 100));
+			} else {
+				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
+			}
+			// console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
+			// 	codigoAplicado,
+			// 	precioBase,
+			// 	descuentoCodigo,
+			// 	tipo: codigoAplicado.tipo,
+			// 	valor: codigoAplicado.valor,
+			// });
+		}
+
+		// Calcular descuento total
+		const descuentoTotalSinLimite =
+			descuentoOnline +
+			descuentoPromocion +
+			descuentoRoundTrip +
+			descuentosPersonalizados +
+			descuentoCodigo;
+
+		// Aplicar límite del 75% al precio base
+		const descuentoMaximo = Math.round(precioBase * 0.75);
+		const descuentoOnlineTotal = Math.min(
+			descuentoTotalSinLimite,
+			descuentoMaximo
+		);
+
+		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0);
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
+
+		// Debug específico para verificar el total final (comentado para reducir ruido)
+		// console.log("💰 TOTAL FINAL CALCULADO:", {
+		// 	precioBase,
+		// 	descuentoOnlineTotal,
+		// 	totalConDescuento,
+		// 	abono,
+		// 	saldoPendiente,
+		// 	descuentoCodigo,
+		// 	codigoAplicado: codigoAplicado?.codigo,
+		// });
+
+		// Debug: mostrar información de descuentos (comentado para reducir ruido)
+		// console.log("💰 DEBUG PRICING CORREGIDO:", {
+		// 	precioIda,
+		// 	precioBase,
+		// 	idaVuelta: formData.idaVuelta,
+		// 	onlineDiscountRate,
+		// 	promotionDiscountRate,
+		// 	roundTripDiscountRate,
+		// 	personalizedDiscountRate,
+		// 	descuentoOnlinePorTramo,
+		// 	descuentoOnline,
+		// 	descuentoPromocionPorTramo,
+		// 	descuentoPromocion,
+		// 	descuentoRoundTrip,
+		// 	descuentosPersonalizados,
+		// 	descuentoCodigo,
+		// 	descuentoTotalSinLimite,
+		// 	descuentoMaximo,
+		// 	descuentoOnlineTotal,
+		// 	effectiveDiscountRate,
+		// 	activePromotion,
+		// 	applicablePromotions,
+		// 	codigoAplicado,
+		// });
+
 		return {
 			precioBase,
-			descuentoBase,
+			descuentoBase: descuentoOnline, // Para mantener compatibilidad
 			descuentoPromocion,
 			descuentoRoundTrip,
-			descuentoOnline,
+			descuentosPersonalizados,
+			descuentoCodigo,
+			descuentoOnline: descuentoOnlineTotal,
 			totalConDescuento,
 			abono,
 			saldoPendiente,
 		};
-	}, [cotizacion.precio, promotionDiscountRate, roundTripDiscountRate, formData.idaVuelta]);
+	}, [
+		cotizacion.precio,
+		promotionDiscountRate,
+		roundTripDiscountRate,
+		onlineDiscountRate,
+		personalizedDiscountRate,
+		formData.idaVuelta,
+		codigoAplicado,
+	]);
 
 	const {
 		precioBase,
@@ -418,16 +1005,24 @@ function App() {
 	} = pricing;
 
 	const handlePayment = async (gateway, type = "abono") => {
+		// Prevenir múltiples peticiones
+		if (loadingGateway) {
+			console.log("Ya hay una petición de pago en proceso");
+			return;
+		}
+
 		setLoadingGateway(`${gateway}-${type}`);
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
 		const amount = type === "total" ? totalConDescuento : abono;
+
 		if (!amount) {
 			alert("Aún no tenemos un valor para generar el enlace de pago.");
 			setLoadingGateway(null);
 			return;
 		}
+
 		const description =
 			type === "total"
 				? `Pago total con descuento para ${destinoFinal} (${
@@ -436,7 +1031,11 @@ function App() {
 				: `Abono reserva (40%) para ${destinoFinal} (${
 						vehiculo || "A confirmar"
 				  })`;
-		const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+		const apiUrl =
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
+
 		try {
 			const response = await fetch(`${apiUrl}/create-payment`, {
 				method: "POST",
@@ -448,6 +1047,11 @@ function App() {
 					email: formData.email,
 				}),
 			});
+
+			if (!response.ok) {
+				throw new Error(`Error del servidor: ${response.status}`);
+			}
+
 			const data = await response.json();
 			if (data.url) {
 				window.open(data.url, "_blank");
@@ -460,6 +1064,7 @@ function App() {
 			console.error("Error al crear el pago:", error);
 			alert(`Hubo un problema: ${error.message}`);
 		} finally {
+			// Asegurar que siempre se resetee el estado de carga
 			setLoadingGateway(null);
 		}
 	};
@@ -482,34 +1087,64 @@ function App() {
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const origenFinal =
 			formData.origen === "Otro" ? formData.otroOrigen : formData.origen;
-			const dataToSend = {
-				...formData,
-				origen: origenFinal,
-				destino: destinoFinal,
-				precio: cotizacion.precio,
-				vehiculo: cotizacion.vehiculo,
-				descuentoBase: pricing.descuentoBase,
-				descuentoPromocion: pricing.descuentoPromocion,
-				descuentoRoundTrip: pricing.descuentoRoundTrip,
-				descuentoOnline,
-				totalConDescuento,
-				abonoSugerido: abono,
-				saldoPendiente,
-				source,
-			};
+		const dataToSend = {
+			...formData,
+			origen: origenFinal,
+			destino: destinoFinal,
+			precio: cotizacion.precio,
+			vehiculo: cotizacion.vehiculo,
+			descuentoBase: pricing.descuentoBase,
+			descuentoPromocion: pricing.descuentoPromocion,
+			descuentoRoundTrip: pricing.descuentoRoundTrip,
+			descuentosPersonalizados: pricing.descuentosPersonalizados,
+			descuentoOnline,
+			totalConDescuento,
+			abonoSugerido: abono,
+			saldoPendiente,
+			source,
+		};
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
 		}
-		const emailApiUrl = "https://www.transportesaraucaria.cl/enviar_correo.php";
+
+		// Enviar notificación por correo usando el archivo PHP de Hostinger
+		try {
+			const emailResponse = await fetch(
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(dataToSend),
+				}
+			);
+
+			if (emailResponse.ok) {
+				const emailResult = await emailResponse.json();
+				console.log("✅ Correo enviado exitosamente:", emailResult);
+			} else {
+				console.warn("⚠️ Error al enviar correo:", await emailResponse.text());
+			}
+		} catch (emailError) {
+			console.error("❌ Error al enviar notificación por correo:", emailError);
+			// No interrumpimos el flujo si falla el correo
+		}
+
+		// Usar el servidor backend de Render para todas las peticiones
+		const apiUrl =
+			import.meta.env.VITE_API_URL ||
+			"https://transportes-araucaria.onrender.com";
+		const emailApiUrl = `${apiUrl}/enviar-reserva`;
+		const headers = { "Content-Type": "application/json" };
+
 		try {
 			const response = await fetch(emailApiUrl, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers,
 				body: JSON.stringify(dataToSend),
 			});
 			const result = await response.json();
 			if (!response.ok)
-				throw new Error(result.message || "Error en el servidor PHP.");
+				throw new Error(result.message || "Error en el servidor.");
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof gtag === "function") {
@@ -517,6 +1152,31 @@ function App() {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
 				});
 			}
+
+			// Registrar el uso del código si hay uno aplicado
+			if (codigoAplicado) {
+				try {
+					const apiUrl =
+						import.meta.env.VITE_API_URL ||
+						"https://transportes-araucaria.onrender.com";
+					const usuarioId = generarUsuarioId();
+
+					await fetch(`${apiUrl}/api/codigos/usar`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							codigo: codigoAplicado.codigo,
+							usuarioId,
+						}),
+					});
+
+					console.log("✅ Uso del código registrado exitosamente");
+				} catch (error) {
+					console.error("Error registrando uso del código:", error);
+					// No mostramos error al usuario ya que la reserva ya se procesó
+				}
+			}
+
 			return { success: true };
 		} catch (error) {
 			console.error("Error al enviar el formulario a PHP:", error);
@@ -533,29 +1193,6 @@ function App() {
 	};
 
 	const handleWizardSubmit = () => enviarReserva("Reserva Web Autogestionada");
-
-	const whatsappUrl = useMemo(() => {
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-		const viajeInfo = `${destinoFinal} el ${formData.fecha} a las ${formData.hora}`;
-		const regresoInfo = formData.idaVuelta
-			? ` Regreso el ${formData.fechaRegreso || "por definir"} a las ${
-					formData.horaRegreso || "por definir"
-				}`
-			: "";
-		const extras = [];
-		if (formData.numeroVuelo) extras.push(`Vuelo: ${formData.numeroVuelo}`);
-		if (formData.hotel) extras.push(`Alojamiento: ${formData.hotel}`);
-		if (formData.equipajeEspecial)
-			extras.push(`Equipaje: ${formData.equipajeEspecial}`);
-		if (formData.sillaInfantil !== "no")
-			extras.push(`Silla infantil: ${formData.sillaInfantil}`);
-		const detalles = extras.length ? ` Detalles: ${extras.join(" | ")}.` : "";
-		const message = `Hola, acabo de reservar en el sitio web. Mi nombre es ${
-			formData.nombre || "Cliente"
-		} y quisiera confirmar mi traslado a ${viajeInfo}.${regresoInfo}${detalles}`;
-		return `https://wa.me/56936643540?text=${encodeURIComponent(message)}`;
-	}, [formData]);
 
 	const minDateTime = useMemo(() => {
 		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
@@ -576,6 +1213,14 @@ function App() {
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
 	if (isAdminView) {
+		// Verificar si es panel de códigos
+		const urlParams = new URLSearchParams(window.location.search);
+		const panel = urlParams.get("panel");
+
+		if (panel === "codigos") {
+			return <AdminCodigos />;
+		}
+
 		return <AdminPricing />;
 	}
 
@@ -610,9 +1255,13 @@ function App() {
 					cotizacion={cotizacion}
 					pricing={pricing}
 					descuentoRate={effectiveDiscountRate}
-					baseDiscountRate={DESCUENTO_ONLINE}
+					baseDiscountRate={onlineDiscountRate}
 					promotionDiscountRate={promotionDiscountRate}
 					roundTripDiscountRate={roundTripDiscountRate}
+					personalizedDiscountRate={personalizedDiscountRate}
+					descuentosPersonalizados={
+						descuentosGlobales?.descuentosPersonalizados || []
+					}
 					activePromotion={activePromotion}
 					reviewChecklist={reviewChecklist}
 					setReviewChecklist={setReviewChecklist}
@@ -620,11 +1269,15 @@ function App() {
 					canPay={canPay}
 					handlePayment={handlePayment}
 					loadingGateway={loadingGateway}
-					whatsappUrl={whatsappUrl}
 					onSubmitWizard={handleWizardSubmit}
 					validarTelefono={validarTelefono}
 					validarHorarioReserva={validarHorarioReserva}
 					showSummary={showConfirmationAlert}
+					codigoAplicado={codigoAplicado}
+					codigoError={codigoError}
+					validandoCodigo={validandoCodigo}
+					onAplicarCodigo={validarCodigo}
+					onRemoverCodigo={removerCodigo}
 				/>
 				<Servicios />
 				<Destinos />
