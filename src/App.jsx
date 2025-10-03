@@ -1,6 +1,3 @@
-// src/App.jsx
-
-/* global gtag */
 import "./App.css";
 import { useState, useEffect, useMemo, useCallback } from "react";
 
@@ -29,10 +26,14 @@ import Testimonios from "./components/Testimonios";
 import Contacto from "./components/Contacto";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
-import AdminPricing from "./components/AdminPricing";
-import AdminCodigos from "./components/AdminCodigos";
+// import AdminPricing from "./components/AdminPricing"; // Eliminado
+// import AdminCodigos from "./components/AdminCodigos"; // Eliminado
+// import CodigoDescuento from "./components/CodigoDescuento"; // Eliminado
+
+// Nuevos componentes del dashboard
+import DashboardReservas from "./components/DashboardReservas";
 import AdminCodigosMejorado from "./components/AdminCodigosMejorado";
-import CodigoDescuento from "./components/CodigoDescuento";
+import HistorialCodigos from "./components/HistorialCodigos";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -155,7 +156,9 @@ const resolveIsAdminView = () => {
 		// Ruta: /admin/precios (original)
 		pathname.startsWith("/admin/precios") ||
 		// Ruta: /admin
-		pathname === "/admin"
+		pathname === "/admin" ||
+		// Ruta: /dashboard
+		pathname === "/dashboard"
 	);
 };
 
@@ -498,814 +501,260 @@ function App() {
 		};
 	}, []);
 
-	// Hacer la función de recarga disponible globalmente para el panel admin
-	useEffect(() => {
-		window.recargarDatosPrecios = recargarDatosPrecios;
-
-		// Agregar atajo de teclado Ctrl+Shift+U para actualizar precios
-		const handleKeyDown = (e) => {
-			if (e.ctrlKey && e.shiftKey && e.key === "U") {
-				e.preventDefault();
-				console.log("🔄 Actualizando precios por atajo de teclado...");
-				recargarDatosPrecios();
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-
-		return () => {
-			delete window.recargarDatosPrecios;
-			document.removeEventListener("keydown", handleKeyDown);
-		};
-	}, [recargarDatosPrecios]);
-
-	// Código duplicado removido - ya está en recargarDatosPrecios
-
-	// --- LÓGICA DE RUTAS Y PASAJEROS DINÁMICOS ---
-	const todosLosTramos = useMemo(
-		() => ["Aeropuerto La Araucanía", ...destinosData.map((d) => d.nombre)],
-		[destinosData]
-	);
-
-	const destinosDisponibles = useMemo(() => {
-		return todosLosTramos.filter((d) => d !== formData.origen);
-	}, [formData.origen, todosLosTramos]);
-
-	const origenesContacto = useMemo(
-		() => [
-			"Aeropuerto La Araucanía",
-			...destinosData.map((d) => d.nombre),
-			"Otro",
-		],
-		[destinosData]
-	);
-
-	// ==================================================================
-	// LÓGICA CORREGIDA PARA ACTUALIZACIÓN DINÁMICA DE PASAJEROS
-	// ==================================================================
-	const destinoSeleccionado = useMemo(() => {
-		const tramo = [formData.origen, formData.destino].find(
-			(lugar) =>
-				lugar && lugar !== "Aeropuerto La Araucanía" && lugar !== "Otro"
+	// --- LÓGICA DE CÁLCULO DE PRECIOS ---
+	const cotizacion = useMemo(() => {
+		const selectedDestino = destinosData.find(
+			(d) => d.nombre === formData.destino
 		);
-		if (!tramo) return null;
-		return destinosData.find((d) => d.nombre === tramo) || null;
-	}, [formData.origen, formData.destino, destinosData]);
+		const precioBase = selectedDestino ? selectedDestino.precio : 0;
+		const numPasajeros = parseInt(formData.pasajeros);
+		const precioPorPasajero = selectedDestino
+			? selectedDestino.precioPorPasajero
+			: 0;
 
-	const maxPasajeros = destinoSeleccionado?.maxPasajeros ?? 7;
+		let subtotal = precioBase + (numPasajeros - 1) * precioPorPasajero;
 
-	const applicablePromotions = useMemo(() => {
-		if (!destinoSeleccionado) return [];
-		const safePromotions = Array.isArray(promotions) ? promotions : [];
-		if (safePromotions.length === 0) return [];
-		const tramo = destinoSeleccionado.nombre;
-		const isRoundTrip = formData.idaVuelta;
+		// Aplicar descuentos globales
+		if (descuentosGlobales.descuentoOnline.activo) {
+			subtotal *= 1 - descuentosGlobales.descuentoOnline.valor / 100;
+		}
+		if (formData.idaVuelta && descuentosGlobales.descuentoRoundTrip.activo) {
+			subtotal *= 1 - descuentosGlobales.descuentoRoundTrip.valor / 100;
+		}
 
-		// Determinar la dirección del viaje basado en dónde está el aeropuerto
-		const aeropuertoEnOrigen = formData.origen === "Aeropuerto La Araucanía";
-		const aeropuertoEnDestino = formData.destino === "Aeropuerto La Araucanía";
+		// Aplicar promociones por día/horario
+		const currentDayTags = getDayTagsFromDate(formData.fecha);
+		const currentTime = formData.hora;
 
-		// Ida: de ciudad al aeropuerto (aeropuerto está en destino)
-		// Vuelta: del aeropuerto a ciudad (aeropuerto está en origen)
-		const esViajeIda = aeropuertoEnDestino;
-		const esViajeVuelta = aeropuertoEnOrigen;
-
-		// console.log("🔍 DEBUG FILTRO PROMOCIONES:", {
-		// 	tramo,
-		// 	isRoundTrip,
-		// 	esViajeIda,
-		// 	esViajeVuelta,
-		// 	promotions: safePromotions.length,
-		// });
-
-		return safePromotions.filter((promo) => {
-			// console.log("🔍 Evaluando promoción:", {
-			// 	promo: promo.nombre,
-			// 	destino: promo.destino,
-			// 	tramo,
-			// 	coincide: promo.destino === tramo,
-			// 	descuento: promo.descuentoPorcentaje,
-			// });
-
-			if (!promo.destino || promo.destino !== tramo) return false;
-			if (promo.descuentoPorcentaje <= 0) return false;
-
-			// Filtro por tipo de viaje
-			const tipoViaje = promo.aplicaTipoViaje;
-			if (tipoViaje) {
-				if (isRoundTrip) {
-					// Para viajes de ida y vuelta, puede aplicar si:
-					// 1. Está habilitado "ambos" (aplica a ambos tramos)
-					// 2. Está habilitado "ida" y es viaje de ida (primer tramo)
-					// 3. Está habilitado "vuelta" y es viaje de vuelta (segundo tramo)
-					const aplicaAmbos = tipoViaje.ambos;
-					const aplicaIda = tipoViaje.ida && esViajeIda;
-					const aplicaVuelta = tipoViaje.vuelta && esViajeVuelta;
-
-					if (!aplicaAmbos && !aplicaIda && !aplicaVuelta) return false;
-				} else {
-					// Para viajes de una sola dirección
-					if (esViajeIda) {
-						// Viaje de ida (ciudad → aeropuerto): debe permitir "ida" o "ambos"
-						if (!tipoViaje.ida && !tipoViaje.ambos) return false;
-					} else if (esViajeVuelta) {
-						// Viaje de vuelta (aeropuerto → ciudad): debe permitir "vuelta" o "ambos"
-						if (!tipoViaje.vuelta && !tipoViaje.ambos) return false;
-					}
+		let promocionAplicada = null;
+		promotions.forEach((promo) => {
+			if (
+				promo.activo &&
+				(promo.destino === "" ||
+					promo.destino.toLowerCase() === formData.destino.toLowerCase() ||
+					promo.destino.toLowerCase() === "todos") &&
+				(promo.aplicaTipoViaje.ambos ||
+					(promo.aplicaTipoViaje.ida && !formData.idaVuelta) ||
+					(promo.aplicaTipoViaje.vuelta && formData.idaVuelta)) &&
+				(promo.aplicaPorDias === false ||
+					promo.dias.some((day) => currentDayTags.includes(day))) &&
+				(promo.aplicaPorHorario === false ||
+					isTimeWithinRange(currentTime, promo.horaInicio, promo.horaFin))
+			) {
+				if (promo.descuentoPorcentaje > (promocionAplicada?.descuentoPorcentaje || 0)) {
+					promocionAplicada = promo;
 				}
 			}
-
-			if (promo.aplicaPorDias) {
-				const tags = getDayTagsFromDate(formData.fecha);
-				if (!tags.length) return false;
-				const diasPromo = Array.isArray(promo.dias) ? promo.dias : [];
-				if (diasPromo.length === 0) return false;
-				const hasMatch = tags.some((tag) => diasPromo.includes(tag));
-				if (!hasMatch) return false;
-			}
-			if (promo.aplicaPorHorario) {
-				const horaSeleccionada = formData.hora;
-				if (!horaSeleccionada) return false;
-				if (!promo.horaInicio || !promo.horaFin) return false;
-				if (
-					!isTimeWithinRange(horaSeleccionada, promo.horaInicio, promo.horaFin)
-				)
-					return false;
-			}
-			return true;
 		});
-	}, [
-		promotions,
-		destinoSeleccionado,
-		formData.fecha,
-		formData.hora,
-		formData.idaVuelta,
-		formData.origen,
-		formData.destino,
-	]);
 
-	const activePromotion = useMemo(() => {
-		const promos = Array.isArray(applicablePromotions)
-			? applicablePromotions
-			: [];
-		if (promos.length === 0) return null;
-		return promos.reduce(
-			(best, promo) =>
-				promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0)
-					? promo
-					: best,
-			null
-		);
-	}, [applicablePromotions]);
-
-	const promotionDiscountRate = activePromotion
-		? activePromotion.descuentoPorcentaje / 100
-		: 0;
-
-	// Debug específico para promociones (comentado para reducir ruido)
-	// console.log("🎯 DEBUG PROMOCIONES:", {
-	// 	applicablePromotions,
-	// 	activePromotion,
-	// 	promotionDiscountRate,
-	// 	destinoSeleccionado: destinoSeleccionado?.nombre,
-	// 	origen: formData.origen,
-	// 	destino: formData.destino,
-	// 	idaVuelta: formData.idaVuelta,
-	// });
-	// Calcular descuentos dinámicos desde descuentosGlobales
-	const onlineDiscountRate =
-		descuentosGlobales?.descuentoOnline?.activo &&
-		descuentosGlobales?.descuentoOnline?.valor
-			? descuentosGlobales.descuentoOnline.valor / 100
-			: 0;
-
-	// Debug: mostrar descuentos actuales cuando cambien (comentado para reducir ruido)
-	// useEffect(() => {
-	// 	console.log("💰 DESCUENTOS ACTUALES:", {
-	// 		descuentosGlobales,
-	// 		onlineDiscountRate,
-	// 		roundTripDiscountRate:
-	// 			formData.idaVuelta &&
-	// 			descuentosGlobales?.descuentoRoundTrip?.activo &&
-	// 			descuentosGlobales?.descuentoRoundTrip?.valor
-	// 				? descuentosGlobales.descuentoRoundTrip.valor / 100
-	// 				: 0,
-	// 	});
-	// }, [descuentosGlobales, formData.idaVuelta]);
-
-	const roundTripDiscountRate =
-		formData.idaVuelta &&
-		descuentosGlobales?.descuentoRoundTrip?.activo &&
-		descuentosGlobales?.descuentoRoundTrip?.valor
-			? descuentosGlobales.descuentoRoundTrip.valor / 100
-			: 0;
-
-	// Calcular descuentos personalizados activos
-	const personalizedDiscountRate =
-		descuentosGlobales?.descuentosPersonalizados
-			?.filter((desc) => desc.activo && desc.valor > 0)
-			.reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
-
-	const effectiveDiscountRate = Math.min(
-		onlineDiscountRate +
-			promotionDiscountRate +
-			roundTripDiscountRate +
-			personalizedDiscountRate,
-		0.75
-	);
-
-	useEffect(() => {
-		if (!destinoSeleccionado) return;
-		const limite = destinoSeleccionado.maxPasajeros;
-		const pasajerosSeleccionados = parseInt(formData.pasajeros, 10);
-		if (
-			Number.isFinite(pasajerosSeleccionados) &&
-			pasajerosSeleccionados > limite
-		) {
-			setFormData((prev) => ({
-				...prev,
-				pasajeros: limite.toString(),
-			}));
+		if (promocionAplicada) {
+			subtotal *= 1 - promocionAplicada.descuentoPorcentaje / 100;
 		}
-	}, [destinoSeleccionado, formData.pasajeros]);
 
-	useEffect(() => {
-		setFormData((prev) => {
-			if (!prev.idaVuelta) return prev;
-			if (!prev.fecha || !prev.fechaRegreso) return prev;
-			if (prev.fechaRegreso < prev.fecha) {
-				return { ...prev, fechaRegreso: prev.fecha };
-			}
-			return prev;
-		});
-	}, [formData.fecha, formData.fechaRegreso, formData.idaVuelta]);
-
-	const calcularCotizacion = useCallback(
-		(origen, destino, pasajeros) => {
-			const tramo = [origen, destino].find(
-				(lugar) => lugar !== "Aeropuerto La Araucanía"
-			);
-			const destinoInfo = destinosData.find((d) => d.nombre === tramo);
-
-			if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
-				return { precio: null, vehiculo: null };
-			}
-
-			const numPasajeros = parseInt(pasajeros);
-			let vehiculoAsignado;
-			let precioFinal;
-
-			if (numPasajeros > 0 && numPasajeros <= 4) {
-				vehiculoAsignado = "Auto Privado";
-				const precios = destinoInfo.precios.auto;
-				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
-
-				const pasajerosAdicionales = numPasajeros - 1;
-				const costoAdicional = precios.base * precios.porcentajeAdicional;
-				precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-			} else if (
-				numPasajeros >= 5 &&
-				numPasajeros <= destinoInfo.maxPasajeros
-			) {
-				vehiculoAsignado = "Van de Pasajeros";
-				const precios = destinoInfo.precios.van;
-				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
-
-				const pasajerosAdicionales = numPasajeros - 5;
-				const costoAdicional = precios.base * precios.porcentajeAdicional;
-				precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
-			} else {
-				vehiculoAsignado = "Consultar disponibilidad";
-				precioFinal = null;
-			}
-			return {
-				precio: precioFinal !== null ? Math.round(precioFinal) : null,
-				vehiculo: vehiculoAsignado,
-			};
-		},
-		[destinosData]
-	);
-
-	useEffect(() => {
-		const handleLocationChange = () => setIsAdminView(resolveIsAdminView());
-		window.addEventListener("popstate", handleLocationChange);
-		return () => window.removeEventListener("popstate", handleLocationChange);
-	}, []);
-
-	const cotizacion = useMemo(() => {
-		return calcularCotizacion(
-			formData.origen,
-			formData.destino,
-			formData.pasajeros
-		);
-	}, [
-		formData.origen,
-		formData.destino,
-		formData.pasajeros,
-		calcularCotizacion,
-	]);
-
-	const validarTelefono = (telefono) =>
-		/^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/.test(telefono);
-
-	const validarHorarioReserva = () => {
-		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
-			return {
-				esValido: false,
-				mensaje: "Por favor, completa la fecha y hora.",
-			};
-		}
-		const ahora = new Date();
-		const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
-		const horasDeDiferencia = (fechaReserva - ahora) / 3600000;
-		const { minHorasAnticipacion } = destinoSeleccionado;
-		if (horasDeDiferencia < minHorasAnticipacion) {
-			return {
-				esValido: false,
-				mensaje: `Para ${destinoSeleccionado.nombre}, reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
-			};
-		}
-		return { esValido: true, mensaje: "" };
-	};
-
-	const handleInputChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => {
-			const newFormData = { ...prev, [name]: value };
-			if (name === "origen" && value !== "Aeropuerto La Araucanía")
-				newFormData.destino = "Aeropuerto La Araucanía";
-			else if (name === "destino" && value !== "Aeropuerto La Araucanía")
-				newFormData.origen = "Aeropuerto La Araucanía";
-			return newFormData;
-		});
-		if (name === "telefono") setPhoneError("");
-	};
-
-	const resetForm = () => {
-		setFormData({
-			nombre: "",
-			telefono: "",
-			email: "",
-			origen: "Aeropuerto La Araucanía",
-			otroOrigen: "",
-			destino: "",
-			otroDestino: "",
-			fecha: "",
-			hora: "",
-			pasajeros: "1",
-			numeroVuelo: "",
-			hotel: "",
-			equipajeEspecial: "",
-			sillaInfantil: "no",
-			mensaje: "",
-			idaVuelta: false,
-			fechaRegreso: "",
-			horaRegreso: "",
-		});
-	};
-
-	const handleCloseAlert = () => {
-		setShowConfirmationAlert(false);
-		setReviewChecklist({ viaje: false, contacto: false });
-		resetForm();
-	};
-
-	const pricing = useMemo(() => {
-		const precioIda = cotizacion.precio || 0;
-		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
-
-		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
-		// Descuento online por reservar (se aplica a cada tramo)
-		const descuentoOnlinePorTramo = Math.round(precioIda * onlineDiscountRate);
-		const descuentoOnline = formData.idaVuelta
-			? descuentoOnlinePorTramo * 2
-			: descuentoOnlinePorTramo;
-
-		// Descuentos personalizados (se aplican a cada tramo)
-		const descuentosPersonalizadosPorTramo = Math.round(
-			precioIda * personalizedDiscountRate
-		);
-		const descuentosPersonalizados = formData.idaVuelta
-			? descuentosPersonalizadosPorTramo * 2
-			: descuentosPersonalizadosPorTramo;
-
-		// 2. PROMOCIONES POR TRAMO (se aplican según configuración específica)
-		// Estas se calculan por tramo individual, no sobre el total
-		const descuentoPromocionPorTramo = Math.round(
-			precioIda * (promotionDiscountRate || 0)
-		);
-		const descuentoPromocion = formData.idaVuelta
-			? descuentoPromocionPorTramo * 2
-			: descuentoPromocionPorTramo;
-
-		// 3. DESCUENTO IDA Y VUELTA (solo cuando se selecciona ida y vuelta)
-		const descuentoRoundTrip = formData.idaVuelta
-			? Math.round(precioBase * (roundTripDiscountRate || 0))
-			: 0;
-
-		// 4. DESCUENTO POR CÓDIGO
+		// Aplicar código de descuento (si existe y es válido)
 		let descuentoCodigo = 0;
 		if (codigoAplicado) {
 			if (codigoAplicado.tipo === "porcentaje") {
-				descuentoCodigo = Math.round(precioBase * (codigoAplicado.valor / 100));
-			} else {
-				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
+				descuentoCodigo = subtotal * (codigoAplicado.valor / 100);
+			} else if (codigoAplicado.tipo === "monto") {
+				descuentoCodigo = codigoAplicado.valor;
 			}
-			// console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
-			// 	codigoAplicado,
-			// 	precioBase,
-			// 	descuentoCodigo,
-			// 	tipo: codigoAplicado.tipo,
-			// 	valor: codigoAplicado.valor,
-			// });
+			subtotal -= descuentoCodigo;
 		}
 
-		// Calcular descuento total
-		const descuentoTotalSinLimite =
-			descuentoOnline +
-			descuentoPromocion +
-			descuentoRoundTrip +
-			descuentosPersonalizados +
-			descuentoCodigo;
-
-		// Aplicar límite del 75% al precio base
-		const descuentoMaximo = Math.round(precioBase * 0.75);
-		const descuentoOnlineTotal = Math.min(
-			descuentoTotalSinLimite,
-			descuentoMaximo
-		);
-
-		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0);
-		const abono = Math.round(totalConDescuento * 0.4);
-		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
-
-		// Debug específico para verificar el total final (comentado para reducir ruido)
-		// console.log("💰 TOTAL FINAL CALCULADO:", {
-		// 	precioBase,
-		// 	descuentoOnlineTotal,
-		// 	totalConDescuento,
-		// 	abono,
-		// 	saldoPendiente,
-		// 	descuentoCodigo,
-		// 	codigoAplicado: codigoAplicado?.codigo,
-		// });
-
-		// Debug: mostrar información de descuentos (comentado para reducir ruido)
-		// console.log("💰 DEBUG PRICING CORREGIDO:", {
-		// 	precioIda,
-		// 	precioBase,
-		// 	idaVuelta: formData.idaVuelta,
-		// 	onlineDiscountRate,
-		// 	promotionDiscountRate,
-		// 	roundTripDiscountRate,
-		// 	personalizedDiscountRate,
-		// 	descuentoOnlinePorTramo,
-		// 	descuentoOnline,
-		// 	descuentoPromocionPorTramo,
-		// 	descuentoPromocion,
-		// 	descuentoRoundTrip,
-		// 	descuentosPersonalizados,
-		// 	descuentoCodigo,
-		// 	descuentoTotalSinLimite,
-		// 	descuentoMaximo,
-		// 	descuentoOnlineTotal,
-		// 	effectiveDiscountRate,
-		// 	activePromotion,
-		// 	applicablePromotions,
-		// 	codigoAplicado,
-		// });
+		const precioFinal = Math.max(0, subtotal);
 
 		return {
+			precio: precioFinal,
 			precioBase,
-			descuentoBase: descuentoOnline, // Para mantener compatibilidad
-			descuentoPromocion,
-			descuentoRoundTrip,
-			descuentosPersonalizados,
+			numPasajeros,
+			promocionAplicada,
+			codigoAplicado,
 			descuentoCodigo,
-			descuentoOnline: descuentoOnlineTotal,
-			totalConDescuento,
-			abono,
-			saldoPendiente,
 		};
-	}, [
-		cotizacion.precio,
-		promotionDiscountRate,
-		roundTripDiscountRate,
-		onlineDiscountRate,
-		personalizedDiscountRate,
-		formData.idaVuelta,
-		codigoAplicado,
-	]);
+	}, [formData, destinosData, promotions, descuentosGlobales, codigoAplicado]);
 
-	const {
-		precioBase,
-		descuentoOnline,
-		totalConDescuento,
-		abono,
-		saldoPendiente,
-	} = pricing;
-
-	const handlePayment = async (gateway, type = "abono") => {
-		// Prevenir múltiples peticiones
-		if (loadingGateway) {
-			console.log("Ya hay una petición de pago en proceso");
-			return;
-		}
-
-		setLoadingGateway(`${gateway}-${type}`);
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-		const { vehiculo } = cotizacion;
-		const amount = type === "total" ? totalConDescuento : abono;
-
-		if (!amount) {
-			alert("Aún no tenemos un valor para generar el enlace de pago.");
-			setLoadingGateway(null);
-			return;
-		}
-
-		const description =
-			type === "total"
-				? `Pago total con descuento para ${destinoFinal} (${
-						vehiculo || "A confirmar"
-				  })`
-				: `Abono reserva (40%) para ${destinoFinal} (${
-						vehiculo || "A confirmar"
-				  })`;
-
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
-
-		try {
-			const response = await fetch(`${apiUrl}/create-payment`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					gateway,
-					amount,
-					description,
-					email: formData.email,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Error del servidor: ${response.status}`);
-			}
-
-			const data = await response.json();
-			if (data.url) {
-				window.open(data.url, "_blank");
-			} else {
-				throw new Error(
-					data.message || "No se pudo generar el enlace de pago."
-				);
-			}
-		} catch (error) {
-			console.error("Error al crear el pago:", error);
-			alert(`Hubo un problema: ${error.message}`);
-		} finally {
-			// Asegurar que siempre se resetee el estado de carga
-			setLoadingGateway(null);
-		}
-	};
-
-	const enviarReserva = async (source) => {
-		if (!validarTelefono(formData.telefono)) {
-			setPhoneError(
-				"Introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
-			);
-			return { success: false, error: "telefono" };
-		}
-		setPhoneError("");
-		const validacion = validarHorarioReserva();
-		if (!validacion.esValido && formData.destino !== "Otro") {
-			return { success: false, error: "horario", message: validacion.mensaje };
-		}
-		if (isSubmitting) return { success: false, error: "procesando" };
-		setIsSubmitting(true);
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-		const origenFinal =
-			formData.origen === "Otro" ? formData.otroOrigen : formData.origen;
-		const dataToSend = {
-			...formData,
-			origen: origenFinal,
-			destino: destinoFinal,
-			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
-			descuentoBase: pricing.descuentoBase,
-			descuentoPromocion: pricing.descuentoPromocion,
-			descuentoRoundTrip: pricing.descuentoRoundTrip,
-			descuentosPersonalizados: pricing.descuentosPersonalizados,
-			descuentoOnline,
-			totalConDescuento,
-			abonoSugerido: abono,
-			saldoPendiente,
-			source,
-		};
-		if (!dataToSend.nombre?.trim()) {
-			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
-		}
-
-		// Enviar notificación por correo usando el archivo PHP de Hostinger
-		try {
-			const emailResponse = await fetch(
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(dataToSend),
-				}
-			);
-
-			if (emailResponse.ok) {
-				const emailResult = await emailResponse.json();
-				console.log("✅ Correo enviado exitosamente:", emailResult);
-			} else {
-				console.warn("⚠️ Error al enviar correo:", await emailResponse.text());
-			}
-		} catch (emailError) {
-			console.error("❌ Error al enviar notificación por correo:", emailError);
-			// No interrumpimos el flujo si falla el correo
-		}
-
-		// Usar el servidor backend de Render para todas las peticiones
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
-		const emailApiUrl = `${apiUrl}/enviar-reserva`;
-		const headers = { "Content-Type": "application/json" };
-
-		try {
-			const response = await fetch(emailApiUrl, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(dataToSend),
-			});
-			const result = await response.json();
-			if (!response.ok)
-				throw new Error(result.message || "Error en el servidor.");
-			setReviewChecklist({ viaje: false, contacto: false });
-			setShowConfirmationAlert(true);
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-				});
-			}
-
-			// Registrar el uso del código si hay uno aplicado
-			if (codigoAplicado) {
-				try {
-					const apiUrl =
-						import.meta.env.VITE_API_URL ||
-						"https://transportes-araucaria.onrender.com";
-					const usuarioId = generarUsuarioId();
-
-					await fetch(`${apiUrl}/api/codigos/usar`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							codigo: codigoAplicado.codigo,
-							usuarioId,
-						}),
-					});
-
-					console.log("✅ Uso del código registrado exitosamente");
-				} catch (error) {
-					console.error("Error registrando uso del código:", error);
-					// No mostramos error al usuario ya que la reserva ya se procesó
-				}
-			}
-
-			return { success: true };
-		} catch (error) {
-			console.error("Error al enviar el formulario a PHP:", error);
-			return { success: false, error: "server", message: error.message };
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
+	// --- MANEJO DE ENVÍO DE FORMULARIO ---
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		const result = await enviarReserva("Formulario de Contacto");
-		if (!result.success && result.message) alert(result.message);
+		setIsSubmitting(true);
+		setPhoneError("");
+
+		// Validar número de teléfono
+		const phoneRegex = /^\+569\d{8}$/;
+		if (!phoneRegex.test(formData.telefono)) {
+			setPhoneError("Formato de teléfono inválido. Debe ser +569XXXXXXXX.");
+			setIsSubmitting(false);
+			return;
+		}
+
+		// Validar checkboxes de revisión
+		if (!reviewChecklist.viaje || !reviewChecklist.contacto) {
+			alert("Por favor, confirma los detalles del viaje y contacto.");
+			setIsSubmitting(false);
+			return;
+		}
+
+		const dataToSend = {
+			...formData,
+			precioFinal: cotizacion.precio,
+			promocionAplicada: cotizacion.promocionAplicada?.id || null,
+			codigoDescuentoAplicado: cotizacion.codigoAplicado?.codigo || null,
+		};
+
+		console.log("Datos a enviar:", dataToSend);
+
+		try {
+			setLoadingGateway("Enviando solicitud...");
+			const apiUrl =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucaria.onrender.com";
+			const response = await fetch(`${apiUrl}/submit-form`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(dataToSend),
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				console.log("Formulario enviado con éxito:", result);
+				setShowConfirmationAlert(true);
+				// Limpiar formulario o redirigir
+				setFormData({
+					nombre: "",
+					telefono: "",
+					email: "",
+					origen: "Aeropuerto La Araucanía",
+					otroOrigen: "",
+					destino: "",
+					otroDestino: "",
+					fecha: "",
+					hora: "",
+					pasajeros: "1",
+					numeroVuelo: "",
+					hotel: "",
+					equipajeEspecial: "",
+					sillaInfantil: "no",
+					mensaje: "",
+					idaVuelta: false,
+					fechaRegreso: "",
+					horaRegreso: "",
+				});
+				setCodigoAplicado(null);
+				setReviewChecklist({ viaje: false, contacto: false });
+			} else {
+				console.error("Error al enviar formulario:", result.message);
+				alert("Error al enviar el formulario: " + result.message);
+			}
+		} catch (error) {
+			console.error("Error de red o del servidor:", error);
+			alert("Ocurrió un error al conectar con el servidor.");
+		} finally {
+			setIsSubmitting(false);
+			setLoadingGateway(null);
+		}
 	};
 
-	const handleWizardSubmit = () => enviarReserva("Reserva Web Autogestionada");
+	// Determinar la vista actual (admin o cliente)
+	const currentPath = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "/";
 
-	const minDateTime = useMemo(() => {
-		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
-		const fechaMinima = new Date();
-		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
-		return fechaMinima.toISOString().split("T")[0];
-	}, [destinoSeleccionado]);
-
-	const currencyFormatter = useMemo(
-		() =>
-			new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }),
-		[]
-	);
-	const formatCurrency = (value) => currencyFormatter.format(value || 0);
-
-	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
-	const destinoFinal =
-		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-
-	if (isAdminView) {
-		// Verificar qué panel mostrar
-		const urlParams = new URLSearchParams(window.location.search);
-		const panel = urlParams.get("panel");
-
-		if (panel === "codigos") {
-			return <AdminCodigos />;
-		}
-
-		if (panel === "codigos-mejorado") {
+	const renderContent = () => {
+		if (currentPath === "/dashboard") {
+			return <DashboardReservas />;
+		} else if (currentPath === "/admin/codigos") {
 			return <AdminCodigosMejorado />;
-		}
-
-		return <AdminPricing />;
-	}
-
-	return (
-		<div className="min-h-screen bg-background text-foreground">
-			{loadingPrecios && (
-				<div className="fixed top-0 left-0 w-full h-full bg-black/50 z-[100] flex items-center justify-center text-white">
-					<LoaderCircle className="animate-spin mr-2" />
-					Cargando tarifas actualizadas...
+		} else if (currentPath === "/admin/historial") {
+			return <HistorialCodigos />;
+		} else if (isAdminView) {
+			return (
+				<div className="min-h-screen bg-gray-100 p-8">
+					<h1 className="text-4xl font-bold text-center mb-8">Panel de Administración</h1>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+						<div className="bg-white p-6 rounded-lg shadow-md">
+							<h2 className="text-2xl font-semibold mb-4">Administrar Precios</h2>
+							<p className="text-gray-600 mb-4">Gestiona los precios de los destinos y las promociones.</p>
+							<Button onClick={() => window.location.href = "/admin/precios"}>Ir a Precios</Button>
+						</div>
+						<div className="bg-white p-6 rounded-lg shadow-md">
+							<h2 className="text-2xl font-semibold mb-4">Administrar Códigos</h2>
+							<p className="text-gray-600 mb-4">Crea, edita y elimina códigos de descuento.</p>
+							<Button onClick={() => window.location.href = "/admin/codigos"}>Ir a Códigos</Button>
+						</div>
+						<div className="bg-white p-6 rounded-lg shadow-md">
+							<h2 className="text-2xl font-semibold mb-4">Historial de Códigos</h2>
+							<p className="text-gray-600 mb-4">Visualiza el historial de uso de los códigos.</p>
+							<Button onClick={() => window.location.href = "/admin/historial"}>Ver Historial</Button>
+						</div>
+						<div className="bg-white p-6 rounded-lg shadow-md">
+							<h2 className="text-2xl font-semibold mb-4">Dashboard de Reservas</h2>
+							<p className="text-gray-600 mb-4">Accede al nuevo dashboard de gestión de reservas.</p>
+							<Button onClick={() => window.location.href = "/dashboard"}>Ver Dashboard</Button>
+						</div>
+					</div>
 				</div>
-			)}
-			<Dialog
-				open={showConfirmationAlert}
-				onOpenChange={setShowConfirmationAlert}
-			>
-				{/* El contenido del Dialog no requiere cambios */}
-			</Dialog>
+			);
+		} else {
+			return (
+				<>
+					<Header />
+					<Hero
+						formData={formData}
+						setFormData={setFormData}
+						destinosData={destinosData}
+						cotizacion={cotizacion}
+						promotions={promotions}
+						codigoAplicado={codigoAplicado}
+						codigoError={codigoError}
+						validandoCodigo={validandoCodigo}
+						validarCodigo={validarCodigo}
+						removerCodigo={removerCodigo}
+						loadingPrecios={loadingPrecios}
+						isSubmitting={isSubmitting}
+						phoneError={phoneError}
+						reviewChecklist={reviewChecklist}
+						setReviewChecklist={setReviewChecklist}
+						handleSubmit={handleSubmit}
+						loadingGateway={loadingGateway}
+					/>
+					<Servicios />
+					<Destinos destinosData={destinosData} />
+					<Destacados destacadosData={destacadosData} />
+					<PorQueElegirnos />
+					<Testimonios />
+					<Contacto />
+					<Fidelizacion />
+					<Footer />
+					{showConfirmationAlert && (
+						<Dialog
+							open={showConfirmationAlert}
+							onOpenChange={setShowConfirmationAlert}
+						>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>¡Reserva Enviada!</DialogTitle>
+									<DialogDescription>
+										Tu solicitud de reserva ha sido recibida. Te
+										contactaremos pronto.
+									</DialogDescription>
+								</DialogHeader>
+								<DialogFooter>
+									<DialogClose asChild>
+										<Button type="button">Cerrar</Button>
+									</DialogClose>
+								</DialogFooter>
+							</DialogContent>
+						</Dialog>
+					)}
+				</>
+			);
+		}
+	};
 
-			<Header />
-
-			<main>
-				<Hero
-					formData={formData}
-					handleInputChange={handleInputChange}
-					origenes={todosLosTramos}
-					destinos={destinosDisponibles}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					setPhoneError={setPhoneError}
-					isSubmitting={isSubmitting}
-					cotizacion={cotizacion}
-					pricing={pricing}
-					descuentoRate={effectiveDiscountRate}
-					baseDiscountRate={onlineDiscountRate}
-					promotionDiscountRate={promotionDiscountRate}
-					roundTripDiscountRate={roundTripDiscountRate}
-					personalizedDiscountRate={personalizedDiscountRate}
-					descuentosPersonalizados={
-						descuentosGlobales?.descuentosPersonalizados || []
-					}
-					activePromotion={activePromotion}
-					reviewChecklist={reviewChecklist}
-					setReviewChecklist={setReviewChecklist}
-					setFormData={setFormData}
-					canPay={canPay}
-					handlePayment={handlePayment}
-					loadingGateway={loadingGateway}
-					onSubmitWizard={handleWizardSubmit}
-					validarTelefono={validarTelefono}
-					validarHorarioReserva={validarHorarioReserva}
-					showSummary={showConfirmationAlert}
-					codigoAplicado={codigoAplicado}
-					codigoError={codigoError}
-					validandoCodigo={validandoCodigo}
-					onAplicarCodigo={validarCodigo}
-					onRemoverCodigo={removerCodigo}
-				/>
-				<Servicios />
-				<Destinos />
-				<Destacados destinos={destacadosData} />
-				<Fidelizacion />
-				<PorQueElegirnos />
-				<Testimonios />
-				<Contacto
-					formData={formData}
-					handleInputChange={handleInputChange}
-					handleSubmit={handleSubmit}
-					origenes={origenesContacto}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					isSubmitting={isSubmitting}
-					setFormData={setFormData}
-				/>
-			</main>
-
-			<Footer />
-		</div>
-	);
+	return <div className="App">{renderContent()}</div>;
 }
 
 export default App;
+
