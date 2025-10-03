@@ -478,14 +478,16 @@ function Hero({
 							Traslados Privados Aeropuerto La Araucanía
 							<br />
 							<span className="text-accent drop-shadow-lg">
-								Temuco, Pucón y Villarrica
+								Corralco, Pucón, Melipeuco y los principales destinos de La
+								Araucanía
 							</span>
 						</h1>
 						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
 							Transportes Araucaria conecta el Aeropuerto La Araucanía con
-							Temuco, Pucón, Villarrica y los principales atractivos turísticos
-							de la región. Reserva en línea, confirma tu conductor y asegura
-							desde un {baseDiscountPercentage}% de descuento web garantizado
+							Malalcahuello, Pucón, Villarrica, Lican Ray, Conguillío, Huilo
+							Huilo y otros centros turísticos imperdibles de la región. Reserva
+							en línea, confirma tu conductor y asegura desde un{" "}
+							{baseDiscountPercentage}% de descuento web garantizado
 							{promoDiscountPercentage > 0
 								? ` + ${
 										activePromotion?.descripcion ||
