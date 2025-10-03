@@ -1,653 +1,648 @@
-﻿/* global gtag */
-import { useMemo, useState } from "react";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+﻿import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	CheckCircle,
-	Clock,
-	Globe2,
-	MessageCircle,
-	Phone,
-	ShieldCheck,
-	Truck,
-} from "lucide-react";
-import logo from '../assets/logo.png';
-import camionford from '../assets/camionford.png';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Truck, MapPin, Clock, Shield, CheckCircle, Phone, Mail } from "lucide-react";
 
-const initialFormState = {
-	nombre: "",
-	empresa: "",
-	email: "",
-	telefono: "",
-	origen: "Temuco",
-	destino: "",
-	fecha: "",
-	tipoCarga: "",
-	volumen: "",
-	mensaje: "",
-};
-
-const REQUIRED_FIELDS = ["nombre", "telefono", "email", "origen", "destino"];
-
-const trackWhatsAppClick = (context) => {
+// Función para tracking de conversión de WhatsApp
+const trackWhatsAppClick = () => {
 	if (typeof gtag === "function") {
 		gtag("event", "conversion", {
 			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-			value: context?.value || 1,
-			currency: "CLP",
 		});
+		console.log("Conversión de clic en WhatsApp (Fletes) enviada.");
 	}
 };
 
 function FletesLanding() {
-	const [formData, setFormData] = useState(initialFormState);
-	const [feedback, setFeedback] = useState(null);
+	const [formData, setFormData] = useState({
+		nombre: "",
+		telefono: "",
+		email: "",
+		origen: "",
+		destino: "",
+		tipoCarga: "",
+		peso: "",
+		dimensiones: "",
+		fechaRecogida: "",
+		observaciones: "",
+	});
+
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showSuccess, setShowSuccess] = useState(false);
 
-	const whatsappMessage = useMemo(() => {
-		const baseMessage = `Hola Transportes Araucaria, necesito coordinar un flete nacional desde ${
-			formData.origen || "La AraucanÃ­a"
-		} hacia ${formData.destino || "[destino]"}.`;
-		const details = [];
-		if (formData.tipoCarga)
-			details.push(`Tipo de carga: ${formData.tipoCarga}`);
-		if (formData.volumen)
-			details.push(`Volumen/Peso aprox.: ${formData.volumen}`);
-		if (formData.fecha) details.push(`Fecha estimada: ${formData.fecha}`);
-		if (formData.nombre) details.push(`Contacto: ${formData.nombre}`);
-		if (formData.telefono) details.push(`TelÃ©fono: ${formData.telefono}`);
-		if (formData.empresa) details.push(`Empresa: ${formData.empresa}`);
-		if (formData.mensaje) details.push(`Notas: ${formData.mensaje}`);
-		return `https://wa.me/56936643540?text=${encodeURIComponent(
-			[baseMessage, ...details].join("\n")
-		)}`;
-	}, [formData]);
-
-	const handleChange = (event) => {
-		const { name, value } = event.target;
-		setFormData((prev) => ({ ...prev, [name]: value }));
-	};
-
-	const handleSubmit = async (event) => {
-		event.preventDefault();
-		setFeedback(null);
-
-		const missingField = REQUIRED_FIELDS.find(
-			(field) => !formData[field]?.trim()
-		);
-		if (missingField) {
-			setFeedback({
-				type: "error",
-				message: "Por favor completa los campos obligatorios marcados con *.",
-			});
-			return;
+	// Optimización SEO y Google Ads
+	useEffect(() => {
+		// Actualizar meta tags para SEO
+		document.title = "Fletes desde La Araucanía - Transporte de Carga a Todo Chile | Transportes Araucaria";
+		
+		// Meta description optimizada para Google Ads
+		const metaDescription = document.querySelector('meta[name="description"]');
+		if (metaDescription) {
+			metaDescription.setAttribute('content', 'Servicio de fletes desde La Araucanía a todo Chile. Transporte seguro de carga, envíos nacionales, cotización inmediata. ¡Contáctanos por WhatsApp!');
+		} else {
+			const meta = document.createElement('meta');
+			meta.name = 'description';
+			meta.content = 'Servicio de fletes desde La Araucanía a todo Chile. Transporte seguro de carga, envíos nacionales, cotización inmediata. ¡Contáctanos por WhatsApp!';
+			document.head.appendChild(meta);
 		}
 
-		setIsSubmitting(true);
-
-		const payload = {
-			canal: "landing-fletes",
-			tipoSolicitud: "FLETE_NACIONAL",
-			fechaSolicitud: new Date().toISOString(),
-			contacto: {
-				nombre: formData.nombre,
-				empresa: formData.empresa,
-				email: formData.email,
-				telefono: formData.telefono,
+		// Structured Data para Google
+		const structuredData = {
+			"@context": "https://schema.org",
+			"@type": "LocalBusiness",
+			"name": "Transportes Araucaria - Servicios de Fletes",
+			"description": "Servicio de fletes y transporte de carga desde La Araucanía a todo Chile",
+			"url": "https://www.transportesaraucaria.cl/fletes",
+			"telephone": "+56936643540",
+			"address": {
+				"@type": "PostalAddress",
+				"addressLocality": "Temuco",
+				"addressRegion": "La Araucanía",
+				"addressCountry": "Chile"
 			},
-			detalleServicio: {
-				origen: formData.origen,
-				destino: formData.destino,
-				fechaCarga: formData.fecha,
-				tipoCarga: formData.tipoCarga,
-				volumenEstimado: formData.volumen,
-				notas: formData.mensaje,
+			"serviceArea": {
+				"@type": "Country",
+				"name": "Chile"
 			},
+			"hasOfferCatalog": {
+				"@type": "OfferCatalog",
+				"name": "Servicios de Fletes",
+				"itemListElement": [
+					{
+						"@type": "Offer",
+						"itemOffered": {
+							"@type": "Service",
+							"name": "Fletes Nacionales",
+							"description": "Transporte de carga desde La Araucanía a todo Chile"
+						}
+					}
+				]
+			}
 		};
 
+		// Agregar structured data al DOM
+		const script = document.createElement('script');
+		script.type = 'application/ld+json';
+		script.textContent = JSON.stringify(structuredData);
+		document.head.appendChild(script);
+
+		// Tracking de página vista para Google Ads
+		if (typeof gtag === "function") {
+			gtag('config', 'GA_MEASUREMENT_ID', {
+				page_title: 'Fletes desde La Araucanía',
+				page_location: window.location.href
+			});
+		}
+
+		return () => {
+			// Cleanup
+			const existingScript = document.querySelector('script[type="application/ld+json"]');
+			if (existingScript) {
+				document.head.removeChild(existingScript);
+			}
+		};
+	}, []);
+
+	const handleInputChange = (e) => {
+		const { name, value } = e.target;
+		setFormData(prev => ({
+			...prev,
+			[name]: value
+		}));
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setIsSubmitting(true);
+
 		try {
-			const response = await fetch(
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(payload),
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error(
-					`No se pudo registrar la solicitud (${response.status}).`
-				);
-			}
-
-			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
-				await fetch(`${apiUrl}/enviar-reserva`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						...payload,
-						origen: payload.detalleServicio.origen,
-						destino: payload.detalleServicio.destino,
-						servicio: "Flete Nacional",
-						source: "landing-fletes",
-					}),
-				});
-			} catch (apiError) {
-				console.warn(
-					"Aviso: error al registrar el lead en la API principal",
-					apiError
-				);
-			}
-
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-					value: 1,
-					currency: "CLP",
-				});
-			}
-
-			setFeedback({
-				type: "success",
-				message:
-					"Recibimos tu solicitud de flete. Te contactaremos en minutos.",
+			// Enviar datos al backend
+			const response = await fetch("https://www.transportesaraucaria.cl/enviar_correo_mejorado.php", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					...formData,
+					tipo: "fletes",
+					source: "formulario-fletes"
+				}),
 			});
-			setFormData(initialFormState);
+
+			if (response.ok) {
+				setShowSuccess(true);
+				setFormData({
+					nombre: "",
+					telefono: "",
+					email: "",
+					origen: "",
+					destino: "",
+					tipoCarga: "",
+					peso: "",
+					dimensiones: "",
+					fechaRecogida: "",
+					observaciones: "",
+				});
+			}
 		} catch (error) {
-			console.error("Error al enviar la solicitud de flete", error);
-			setFeedback({
-				type: "error",
-				message:
-					"OcurriÃ³ un problema al enviar tu solicitud. EscrÃ­benos por WhatsApp para ayudarte de inmediato.",
-			});
+			console.error("Error al enviar formulario:", error);
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
-	const sellingPoints = [
+	const serviciosFletes = [
 		{
-			icon: Truck,
-			title: "Cobertura nacional puerta a puerta",
-			description:
-				"Coordinamos retiros en La AraucanÃ­a y entregas en todo Chile con conductores certificados.",
+			icon: <Truck className="h-8 w-8 text-blue-600" />,
+			title: "Fletes Nacionales",
+			description: "Transporte de carga desde La Araucanía a todo Chile",
+			features: ["Cobertura nacional", "Seguimiento en tiempo real", "Seguro incluido"]
 		},
 		{
-			icon: ShieldCheck,
-			title: "Carga segura y asegurada",
-			description:
-				"Protocolos de trazabilidad, seguimiento en vivo y pÃ³lizas acordes al tipo de mercaderÃ­a.",
+			icon: <Shield className="h-8 w-8 text-green-600" />,
+			title: "Carga Segura",
+			description: "Manejo especializado de mercancías delicadas",
+			features: ["Embalaje profesional", "Manejo cuidadoso", "Documentación completa"]
 		},
 		{
-			icon: Clock,
-			title: "Respuesta en menos de 15 minutos",
-			description:
-				"Equipo especializado en fletes urgentes, programados y contratos recurrentes para empresas.",
-		},
+			icon: <Clock className="h-8 w-8 text-orange-600" />,
+			title: "Entrega Rápida",
+			description: "Servicios express y programados",
+			features: ["Entrega en 24-48h", "Programación flexible", "Confirmación previa"]
+		}
 	];
 
-	const trustSignals = [
-		"IntegraciÃ³n con Google Ads y Analytics",
-		"AtenciÃ³n 24/7 desde La AraucanÃ­a",
-		"Conductores con licencia profesional",
-		"Servicio corporativo y pymes",
+	const destinosPrincipales = [
+		"Santiago", "Valparaíso", "Concepción", "Antofagasta", 
+		"Temuco", "Valdivia", "Puerto Montt", "Iquique"
 	];
-
-	const workflow = [
-		{
-			title: "DiagnÃ³stico express",
-			description:
-				"Te contactamos en minutos para definir requisitos, tipo de carga y plazos de entrega.",
-		},
-		{
-			title: "Plan logÃ­stico personalizado",
-			description:
-				"Coordinamos vehÃ­culos, permisos y aseguramos la documentaciÃ³n segÃºn normativa vigente.",
-		},
-		{
-			title: "Seguimiento y confirmaciÃ³n",
-			description:
-				"Te mantenemos informado en cada hito y confirmamos la entrega con pruebas de recepciÃ³n.",
-		},
-	];
-
-	const feedbackClassName =
-		feedback?.type === "success"
-			? "rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-			: "rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700";
 
 	return (
-		<div className="min-h-screen bg-background text-foreground">
-			<header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-border">
-				<div className="container mx-auto flex items-center justify-between px-4 py-4">
-					<a href="/" className="flex items-center gap-3">
-						<img src={logo} alt="Transportes Araucaria" className="h-16" />
-						<div className="text-left">
-							<p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-								Unidad de Fletes
-							</p>
-							<p className="text-lg font-semibold">Transportes Araucaria</p>
+		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+			{/* Hero Section - Optimizado para Google Ads */}
+			<section className="relative py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+				<div className="container mx-auto px-4">
+					<div className="max-w-4xl mx-auto text-center">
+						<h1 className="text-4xl md:text-6xl font-bold mb-6">
+							Fletes desde La Araucanía a Todo Chile
+						</h1>
+						<p className="text-xl md:text-2xl mb-8 text-blue-100">
+							🚛 Transporte de carga seguro y confiable. Envíos nacionales desde Temuco, Villarrica, Pucón y toda La Araucanía
+						</p>
+						<div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 mb-8">
+							<p className="text-lg font-semibold mb-2">✅ Servicios Disponibles:</p>
+							<div className="flex flex-wrap justify-center gap-4 text-sm">
+								<span className="bg-white/20 px-3 py-1 rounded-full">Fletes Santiago</span>
+								<span className="bg-white/20 px-3 py-1 rounded-full">Fletes Valparaíso</span>
+								<span className="bg-white/20 px-3 py-1 rounded-full">Fletes Concepción</span>
+								<span className="bg-white/20 px-3 py-1 rounded-full">Fletes Antofagasta</span>
+								<span className="bg-white/20 px-3 py-1 rounded-full">Fletes Puerto Montt</span>
+							</div>
 						</div>
-					</a>
-					<div className="hidden md:flex items-center gap-3">
-						<a
-							href={whatsappMessage}
-							onClick={() => trackWhatsAppClick({ value: 1 })}
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							<Button className="bg-accent hover:bg-accent/90">
-								<MessageCircle className="h-4 w-4 mr-2" />
-								Cotizar por WhatsApp
+						<div className="flex flex-col sm:flex-row gap-4 justify-center">
+							<Button 
+								size="lg" 
+								className="bg-white text-blue-600 hover:bg-blue-50 text-lg font-semibold px-8 py-4 border-2 border-white"
+								onClick={() => document.getElementById('formulario-fletes').scrollIntoView({ behavior: 'smooth' })}
+							>
+								📋 Cotizar Flete Gratis
 							</Button>
-						</a>
-						<a href="#cotizar">
-							<Button variant="outline">Formulario Express</Button>
-						</a>
+							<Button 
+								size="lg" 
+								variant="outline" 
+								className="border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg font-semibold px-8 py-4 bg-transparent"
+								onClick={trackWhatsAppClick}
+							>
+								<MessageCircle className="h-5 w-5 mr-2" />
+								WhatsApp +56 9 3664 3540
+							</Button>
+						</div>
+						<p className="text-sm mt-4 text-blue-200">
+							💬 Respuesta en menos de 2 horas | 🚚 Seguimiento en tiempo real | 🛡️ Seguro incluido
+						</p>
 					</div>
 				</div>
-			</header>
+			</section>
 
-			<main>
-				<section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-white to-accent/10">
-					<div className="container mx-auto px-4 py-24 lg:py-32 grid gap-12 lg:grid-cols-2 items-center">
-						<div>
-							<div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-sm font-medium text-primary">
-								<CheckCircle className="h-4 w-4" />
-								Fletes desde La AraucanÃ­a a todo Chile
-							</div>
-							<h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight">
-								LogÃ­stica nacional con base en La AraucanÃ­a para empresas que
-								necesitan velocidad y control.
-							</h1>
-							<p className="mt-6 text-lg text-muted-foreground max-w-xl">
-								Administramos fletes dedicados desde Temuco, Padre Las Casas y
-								gran La AraucanÃ­a hacia cualquier regiÃ³n del paÃ­s. Coordinamos
-								desde cargas paletizadas hasta insumos industriales, con
-								seguimiento en tiempo real y soporte 24/7.
-							</p>
-							<div className="mt-8 flex flex-col sm:flex-row gap-4">
-								<a
-									href={whatsappMessage}
-									target="_blank"
-									rel="noopener noreferrer"
-									onClick={() => trackWhatsAppClick({ value: 1 })}
-								>
-									<Button size="lg" className="bg-accent hover:bg-accent/90">
-										<MessageCircle className="h-5 w-5 mr-2" />
-										Habla con logÃ­stica ahora
-									</Button>
-								</a>
-								<a href="#cotizar">
-									<Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10">
-										Solicitar propuesta en 15 minutos
-									</Button>
-								</a>
-							</div>
-							<div className="mt-10 grid grid-cols-2 gap-6">
-								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm">
-									<p className="text-3xl font-bold text-primary">98%</p>
-									<p className="text-sm text-muted-foreground">
-										Entregas a tiempo reportadas por clientes corporativos 2023.
-									</p>
-								</div>
-								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm">
-									<p className="text-3xl font-bold text-primary">+1.200</p>
-									<p className="text-sm text-muted-foreground">
-										Viajes y fletes coordinados en los Ãºltimos 18 meses para
-										pymes y grandes cuentas.
-									</p>
-								</div>
-							</div>
-						</div>
-						<div className="relative">
-							<div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent rounded-3xl blur-3xl opacity-40" />
-							<img src={camionford} alt="Camión de referencia para fletes" className="relative w-full rounded-3xl shadow-2xl border border-transparent" />
-						</div>
-					</div>
-				</section>
-
-				<section className="py-20">
-					<div className="container mx-auto px-4">
-						<h2 className="text-3xl font-semibold text-center">
-							Por quÃ© las empresas eligen nuestro servicio de fletes
+			{/* Servicios */}
+			<section className="py-16 bg-white">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-12">
+						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+							Nuestros Servicios de Fletes
 						</h2>
-						<p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto">
-							Solucionamos la logÃ­stica para industrias, comercios y proveedores
-							que necesitan transportar carga con trazabilidad y soporte humano
-							en cada tramo.
+						<p className="text-xl text-gray-600">
+							Soluciones de transporte adaptadas a tus necesidades
 						</p>
-						<div className="mt-12 grid gap-8 md:grid-cols-3">
-							{sellingPoints.map(({ icon: Icon, title, description }) => (
-								<Card key={title} className="border-border/60">
-									<CardHeader>
-										<div className="flex items-center gap-3">
-											<span className="rounded-full bg-primary/10 p-3 text-primary">
-												<Icon className="h-6 w-6" />
-											</span>
-											<CardTitle className="text-xl">{title}</CardTitle>
-										</div>
-									</CardHeader>
-									<CardContent>
-										<p className="text-muted-foreground">{description}</p>
-									</CardContent>
-								</Card>
-							))}
-						</div>
-						<div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-							{trustSignals.map((item) => (
-								<div key={item} className="flex items-center gap-2">
-									<CheckCircle className="h-4 w-4 text-primary" />
-									<span>{item}</span>
-								</div>
-							))}
-						</div>
 					</div>
-				</section>
-
-				<section className="bg-gray-50 py-20">
-					<div className="container mx-auto px-4">
-						<div className="grid gap-10 lg:grid-cols-2">
-							<div>
-								<h2 className="text-3xl font-semibold">
-									Desde la AraucanÃ­a al resto del paÃ­s, con inteligencia
-									logÃ­stica
-								</h2>
-								<p className="mt-4 text-muted-foreground">
-									Somos la unidad especializada de Transportes Araucaria para
-									fletes nacionales. Administramos rutas recurrentes hacia
-									Santiago, BiobÃ­o, Los Lagos, TarapacÃ¡ y mÃ¡s, con tarifas
-									eficientes y coordinaciÃ³n directa con tus centros de
-									distribuciÃ³n.
-								</p>
-								<ul className="mt-6 space-y-4">
-									<li className="flex items-start gap-3">
-										<Phone className="h-5 w-5 text-primary mt-1" />
-										<span>
-											Equipo comercial dedicado y lÃ­nea directa para
-											contingencias 24/7.
-										</span>
-									</li>
-									<li className="flex items-start gap-3">
-										<Truck className="h-5 w-5 text-primary mt-1" />
-										<span>
-											Camiones, camionetas cerradas y vehÃ­culos refrigerados
-											segÃºn necesidad.
-										</span>
-									</li>
-									<li className="flex items-start gap-3">
-										<ShieldCheck className="h-5 w-5 text-primary mt-1" />
-										<span>
-											Protocolos de seguridad, cobertura de seguro y checklists
-											digitales en cada carga.
-										</span>
-									</li>
-								</ul>
-							</div>
-							<div className="rounded-3xl border border-dashed border-primary/40 bg-white p-8 shadow-sm">
-								<h3 className="text-2xl font-semibold">
-									CÃ³mo trabajamos tu solicitud
-								</h3>
-								<div className="mt-8 space-y-6">
-									{workflow.map(({ title, description }, index) => (
-										<div key={title} className="flex gap-4">
-											<div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
-												{index + 1}
-											</div>
-											<div>
-												<p className="font-semibold">{title}</p>
-												<p className="text-sm text-muted-foreground">
-													{description}
-												</p>
-											</div>
-										</div>
-									))}
-								</div>
-								<div className="mt-8 rounded-2xl border border-accent/40 bg-accent/10 px-6 py-4 text-sm text-accent-foreground">
-									<span className="font-semibold">
-										Ã‚Â¿Necesitas disponibilidad hoy mismo?
-									</span>{" "}
-									EscrÃ­benos por WhatsApp para activar el plan de contingencia y
-									salida inmediata.
-								</div>
-							</div>
-						</div>
+					
+					<div className="grid md:grid-cols-3 gap-8">
+						{serviciosFletes.map((servicio, index) => (
+							<Card key={index} className="text-center hover:shadow-lg transition-shadow">
+								<CardHeader>
+									<div className="flex justify-center mb-4">
+										{servicio.icon}
+									</div>
+									<CardTitle className="text-xl">{servicio.title}</CardTitle>
+									<CardDescription className="text-base">
+										{servicio.description}
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<ul className="space-y-2">
+										{servicio.features.map((feature, idx) => (
+											<li key={idx} className="flex items-center text-sm text-gray-600">
+												<CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+												{feature}
+											</li>
+										))}
+									</ul>
+								</CardContent>
+							</Card>
+						))}
 					</div>
-				</section>
+				</div>
+			</section>
 
-				<section id="cotizar" className="py-20">
-					<div className="container mx-auto px-4">
-						<div className="grid gap-10 lg:grid-cols-5">
-							<div className="lg:col-span-2">
-								<h2 className="text-3xl font-semibold">
-									ObtÃ©n una cotizaciÃ³n rÃ¡pida
-								</h2>
-								<p className="mt-4 text-muted-foreground">
-									Completa el formulario y uno de nuestros ejecutivos de
-									logÃ­stica te contactarÃ¡ en menos de 15 minutos para coordinar
-									el retiro.
-								</p>
-								<div className="mt-6 space-y-4 text-sm text-muted-foreground">
-									<p className="flex items-center gap-3">
-										<Phone className="h-4 w-4 text-primary" />
-										<span>+56 9 3664 3540 logÃ­stica 24/7</span>
+			{/* Destinos */}
+			<section className="py-16 bg-gray-50">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-12">
+						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+							Destinos Principales
+						</h2>
+						<p className="text-xl text-gray-600">
+							Llevamos tu carga a las principales ciudades de Chile
+						</p>
+					</div>
+					
+					<div className="flex flex-wrap justify-center gap-3">
+						{destinosPrincipales.map((destino, index) => (
+							<Badge key={index} variant="secondary" className="px-4 py-2 text-base bg-blue-100 text-blue-800 border border-blue-200">
+								<MapPin className="h-4 w-4 mr-2" />
+								{destino}
+							</Badge>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* Formulario de Contacto */}
+			<section id="formulario-fletes" className="py-16 bg-white">
+				<div className="container mx-auto px-4">
+					<div className="max-w-2xl mx-auto">
+						<div className="text-center mb-8">
+							<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+								Solicita tu Cotización
+							</h2>
+							<p className="text-xl text-gray-600">
+								Completa el formulario y te contactaremos en menos de 2 horas
+							</p>
+						</div>
+
+						{showSuccess ? (
+							<Card className="text-center py-8">
+								<CardContent>
+									<CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+									<h3 className="text-2xl font-bold text-gray-900 mb-2">
+										¡Solicitud Enviada!
+									</h3>
+									<p className="text-gray-600 mb-4">
+										Hemos recibido tu solicitud. Te contactaremos pronto.
 									</p>
-									<a
-										href={whatsappMessage}
-										target="_blank"
-										rel="noopener noreferrer"
-										onClick={() => trackWhatsAppClick({ value: 1 })}
-										className="flex items-center gap-3 text-primary hover:underline"
+									<Button 
+										onClick={() => setShowSuccess(false)}
+										className="bg-blue-600 hover:bg-blue-700 text-white"
 									>
-										<MessageCircle className="h-4 w-4" />
-										<span>Chat inmediato por WhatsApp</span>
-									</a>
-								</div>
-							</div>
-							<div className="lg:col-span-3">
-								<Card className="shadow-xl border-border/60">
-									<CardHeader>
-										<CardTitle>Formulario de fletes</CardTitle>
-										<CardDescription>
-											InformaciÃ³n clave para generar una propuesta a medida.
-										</CardDescription>
-									</CardHeader>
-									<CardContent>
-										<form onSubmit={handleSubmit} className="grid gap-4">
-											<div className="grid gap-4 md:grid-cols-2">
-												<div>
-													<label className="text-sm font-medium">
-														Nombre y apellido *
-													</label>
-													<Input
-														required
-														name="nombre"
-														value={formData.nombre}
-														onChange={handleChange}
-														placeholder="Ej. Carolina Mella"
-													/>
-												</div>
-												<div>
-													<label className="text-sm font-medium">
-														Empresa (opcional)
-													</label>
-													<Input
-														name="empresa"
-														value={formData.empresa}
-														onChange={handleChange}
-														placeholder="Nombre de la empresa"
-													/>
-												</div>
-											</div>
-											<div className="grid gap-4 md:grid-cols-2">
-												<div>
-													<label className="text-sm font-medium">
-														Correo electrÃ³nico *
-													</label>
-													<Input
-														type="email"
-														name="email"
-														required
-														value={formData.email}
-														onChange={handleChange}
-														placeholder="correo@empresa.cl"
-													/>
-												</div>
-												<div>
-													<label className="text-sm font-medium">
-														TelÃ©fono de contacto *
-													</label>
-													<Input
-														type="tel"
-														name="telefono"
-														required
-														value={formData.telefono}
-														onChange={handleChange}
-														placeholder="Ej. +56 9 1234 5678"
-													/>
-												</div>
-											</div>
-											<div className="grid gap-4 md:grid-cols-2">
-												<div>
-													<label className="text-sm font-medium">
-														Origen en La AraucanÃ­a *
-													</label>
-													<Input
-														name="origen"
-														required
-														value={formData.origen}
-														onChange={handleChange}
-														placeholder="Ciudad o punto de retiro"
-													/>
-												</div>
-												<div>
-													<label className="text-sm font-medium">
-														Destino en Chile *
-													</label>
-													<Input
-														name="destino"
-														required
-														value={formData.destino}
-														onChange={handleChange}
-														placeholder="Ciudad o direcciÃ³n de entrega"
-													/>
-												</div>
-											</div>
-											<div className="grid gap-4 md:grid-cols-2">
-												<div>
-													<label className="text-sm font-medium">
-														Fecha estimada
-													</label>
-													<Input
-														type="date"
-														name="fecha"
-														value={formData.fecha}
-														onChange={handleChange}
-													/>
-												</div>
-												<div>
-													<label className="text-sm font-medium">
-														Tipo de carga
-													</label>
-													<Input
-														name="tipoCarga"
-														value={formData.tipoCarga}
-														onChange={handleChange}
-														placeholder="Ej. pallets, maquinaria, refrigerados"
-													/>
-												</div>
-											</div>
+										Enviar Otra Solicitud
+									</Button>
+								</CardContent>
+							</Card>
+						) : (
+							<Card>
+								<CardHeader>
+									<CardTitle>Información del Flete</CardTitle>
+									<CardDescription>
+										Proporciona los detalles de tu carga para una cotización precisa
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<form onSubmit={handleSubmit} className="space-y-6">
+										<div className="grid md:grid-cols-2 gap-4">
 											<div>
-												<label className="text-sm font-medium">
-													Volumen o peso estimado
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													Nombre Completo *
 												</label>
 												<Input
-													name="volumen"
-													value={formData.volumen}
-													onChange={handleChange}
-													placeholder="Ej. 12 pallets, 4 toneladas"
+													name="nombre"
+													value={formData.nombre}
+													onChange={handleInputChange}
+													required
+													placeholder="Tu nombre completo"
+													className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
 												/>
 											</div>
 											<div>
-												<label className="text-sm font-medium">
-													Notas adicionales
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													Teléfono *
 												</label>
-												<Textarea
-													name="mensaje"
-													rows={4}
-													value={formData.mensaje}
-													onChange={handleChange}
-													placeholder="Restricciones de horario, documentos, referencias, etc."
+												<Input
+													name="telefono"
+													value={formData.telefono}
+													onChange={handleInputChange}
+													required
+													placeholder="+56 9 1234 5678"
+													type="tel"
+													className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
 												/>
 											</div>
-											{feedback && (
-												<div className={feedbackClassName}>
-													{feedback.message}
-												</div>
-											)}
-											<Button
-												type="submit"
-												className="mt-2"
-												size="lg"
+										</div>
+
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-2">
+												Email
+											</label>
+											<Input
+												name="email"
+												value={formData.email}
+												onChange={handleInputChange}
+												type="email"
+												placeholder="tu@email.com"
+												className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+											/>
+										</div>
+
+										<div className="grid md:grid-cols-2 gap-4">
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													Origen *
+												</label>
+												<Input
+													name="origen"
+													value={formData.origen}
+													onChange={handleInputChange}
+													required
+													placeholder="Ciudad de origen"
+													className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+												/>
+											</div>
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													Destino *
+												</label>
+												<Input
+													name="destino"
+													value={formData.destino}
+													onChange={handleInputChange}
+													required
+													placeholder="Ciudad de destino"
+													className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+												/>
+											</div>
+										</div>
+
+										<div className="grid md:grid-cols-2 gap-4">
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													Tipo de Carga *
+												</label>
+												<Input
+													name="tipoCarga"
+													value={formData.tipoCarga}
+													onChange={handleInputChange}
+													required
+													placeholder="Ej: Muebles, equipos, documentos"
+													className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+												/>
+											</div>
+											<div>
+												<label className="block text-sm font-medium text-gray-700 mb-2">
+													Peso Aproximado
+												</label>
+												<Input
+													name="peso"
+													value={formData.peso}
+													onChange={handleInputChange}
+													placeholder="Ej: 50 kg, 200 kg"
+													className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+												/>
+											</div>
+										</div>
+
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-2">
+												Dimensiones
+											</label>
+											<Input
+												name="dimensiones"
+												value={formData.dimensiones}
+												onChange={handleInputChange}
+												placeholder="Ej: 100x50x30 cm"
+												className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+											/>
+										</div>
+
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-2">
+												Fecha de Recogida Deseada
+											</label>
+											<Input
+												name="fechaRecogida"
+												value={formData.fechaRecogida}
+												onChange={handleInputChange}
+												type="date"
+												className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+											/>
+										</div>
+
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-2">
+												Observaciones Adicionales
+											</label>
+											<Textarea
+												name="observaciones"
+												value={formData.observaciones}
+												onChange={handleInputChange}
+												placeholder="Información adicional sobre la carga, requisitos especiales, etc."
+												rows={4}
+												className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+											/>
+										</div>
+
+										<div className="flex flex-col sm:flex-row gap-4">
+											<Button 
+												type="submit" 
+												className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
 												disabled={isSubmitting}
 											>
-												{isSubmitting
-													? "Enviando solicitud..."
-													: "Solicitar cotizaciÃ³n"}
+												{isSubmitting ? "Enviando..." : "Solicitar Cotización"}
 											</Button>
-										</form>
-									</CardContent>
-								</Card>
+											<Button 
+												type="button" 
+												variant="outline" 
+												className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white font-semibold py-3"
+												onClick={trackWhatsAppClick}
+											>
+												<MessageCircle className="h-4 w-4 mr-2" />
+												WhatsApp
+											</Button>
+										</div>
+									</form>
+								</CardContent>
+							</Card>
+						)}
+					</div>
+				</div>
+			</section>
+
+			{/* Beneficios y Garantías */}
+			<section className="py-16 bg-gray-50">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-12">
+						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+							¿Por Qué Elegirnos para tus Fletes?
+						</h2>
+						<p className="text-xl text-gray-600">
+							Más de 5 años transportando carga desde La Araucanía
+						</p>
+					</div>
+					
+					<div className="grid md:grid-cols-3 gap-8">
+						<Card className="text-center">
+							<CardContent className="pt-6">
+								<Shield className="h-12 w-12 text-green-600 mx-auto mb-4" />
+								<h3 className="text-xl font-bold mb-2">Seguro Total</h3>
+								<p className="text-gray-600">Cobertura completa para tu carga. Tranquilidad garantizada.</p>
+							</CardContent>
+						</Card>
+						
+						<Card className="text-center">
+							<CardContent className="pt-6">
+								<Clock className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+								<h3 className="text-xl font-bold mb-2">Entrega Puntual</h3>
+								<p className="text-gray-600">Cumplimos con los tiempos acordados. Confiabilidad al 100%.</p>
+							</CardContent>
+						</Card>
+						
+						<Card className="text-center">
+							<CardContent className="pt-6">
+								<MapPin className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+								<h3 className="text-xl font-bold mb-2">Cobertura Nacional</h3>
+								<p className="text-gray-600">Llevamos tu carga a cualquier ciudad de Chile.</p>
+							</CardContent>
+						</Card>
+					</div>
+				</div>
+			</section>
+
+			{/* Testimonios */}
+			<section className="py-16 bg-white">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-12">
+						<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+							Lo Que Dicen Nuestros Clientes
+						</h2>
+						<p className="text-xl text-gray-600">
+							Clientes satisfechos con nuestros servicios de fletes
+						</p>
+					</div>
+					
+					<div className="grid md:grid-cols-3 gap-8">
+						<Card>
+							<CardContent className="pt-6">
+								<div className="flex items-center mb-4">
+									<div className="flex text-yellow-400">
+										{"★".repeat(5)}
+									</div>
+								</div>
+								<p className="text-gray-600 mb-4">
+									"Excelente servicio. Envié muebles desde Temuco a Santiago y llegaron perfectos. Muy recomendable."
+								</p>
+								<div className="font-semibold">María González</div>
+								<div className="text-sm text-gray-500">Temuco</div>
+							</CardContent>
+						</Card>
+						
+						<Card>
+							<CardContent className="pt-6">
+								<div className="flex items-center mb-4">
+									<div className="flex text-yellow-400">
+										{"★".repeat(5)}
+									</div>
+								</div>
+								<p className="text-gray-600 mb-4">
+									"Rápido, seguro y económico. La mejor opción para fletes desde La Araucanía."
+								</p>
+								<div className="font-semibold">Carlos Rodríguez</div>
+								<div className="text-sm text-gray-500">Villarrica</div>
+							</CardContent>
+						</Card>
+						
+						<Card>
+							<CardContent className="pt-6">
+								<div className="flex items-center mb-4">
+									<div className="flex text-yellow-400">
+										{"★".repeat(5)}
+									</div>
+								</div>
+								<p className="text-gray-600 mb-4">
+									"Profesionales y confiables. Siempre uso sus servicios para mis envíos de negocio."
+								</p>
+								<div className="font-semibold">Ana Martínez</div>
+								<div className="text-sm text-gray-500">Pucón</div>
+							</CardContent>
+						</Card>
+					</div>
+				</div>
+			</section>
+
+			{/* Contacto Directo - Optimizado para Conversión */}
+			<section className="py-16 bg-blue-600 text-white">
+				<div className="container mx-auto px-4 text-center">
+					<h2 className="text-3xl md:text-4xl font-bold mb-6">
+						🚛 ¿Necesitas una Cotización Inmediata?
+					</h2>
+					<p className="text-xl mb-8 text-blue-100">
+						Contáctanos ahora y obtén tu cotización en menos de 2 horas
+					</p>
+					<div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 mb-8">
+						<div className="grid md:grid-cols-2 gap-6 text-left">
+							<div>
+								<h3 className="text-lg font-semibold mb-3">📞 Contacto Directo</h3>
+								<p className="mb-2">WhatsApp: +56 9 3664 3540</p>
+								<p className="mb-2">Teléfono: +56 9 3664 3540</p>
+								<p className="text-sm text-blue-200">Disponible de Lunes a Viernes 8:00 - 18:00</p>
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold mb-3">⚡ Respuesta Rápida</h3>
+								<p className="mb-2">✅ Cotización en 2 horas</p>
+								<p className="mb-2">✅ Seguimiento en tiempo real</p>
+								<p className="mb-2">✅ Seguro incluido</p>
 							</div>
 						</div>
 					</div>
-				</section>
-			</main>
-
-			<section className="bg-primary text-primary-foreground py-16 text-center">
-				<div className="container mx-auto px-4 max-w-3xl">
-					<h2 className="text-3xl font-semibold">
-						Listos para movilizar tu carga desde la AraucanÃ­a
-					</h2>
-					<p className="mt-4 text-primary-foreground/90">
-						Optimiza tus campaÃ±as de Google Ads dirigiendo a tus prospectos a
-						esta landing especializada y convierte visitas en clientes
-						fidelizados.
-					</p>
-					<div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-						<a
-							href={whatsappMessage}
-							target="_blank"
-							rel="noopener noreferrer"
-							onClick={() => trackWhatsAppClick({ value: 1 })}
+					<div className="flex flex-col sm:flex-row gap-4 justify-center">
+						<Button 
+							size="lg" 
+							className="bg-white text-blue-600 hover:bg-blue-50 text-lg font-semibold px-8 py-4 border-2 border-white"
+							onClick={trackWhatsAppClick}
 						>
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90">
-								<MessageCircle className="h-5 w-5 mr-2" />
-								Conversar por WhatsApp
-							</Button>
-						</a>
-						<a href="#cotizar">
-							<Button
-								size="lg"
-								variant="outline"
-								className="border-2 border-white text-white"
-							>
-								Completar formulario
-							</Button>
-						</a>
+							<MessageCircle className="h-5 w-5 mr-2" />
+							WhatsApp: +56 9 3664 3540
+						</Button>
+						<Button 
+							size="lg" 
+							variant="outline" 
+							className="border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg font-semibold px-8 py-4 bg-transparent"
+						>
+							<Phone className="h-5 w-5 mr-2" />
+							Llamar Ahora
+						</Button>
 					</div>
+					<p className="text-sm mt-4 text-blue-200">
+						💬 También puedes usar el formulario de arriba para una cotización detallada
+					</p>
 				</div>
 			</section>
 		</div>
@@ -655,6 +650,3 @@ function FletesLanding() {
 }
 
 export default FletesLanding;
-
-
-

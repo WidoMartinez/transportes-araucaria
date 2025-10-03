@@ -85,7 +85,7 @@ function Header() {
 						</a>
 						<a
 							href="/fletes"
-							className="text-foreground hover:text-primary transition-colors"
+							className="text-foreground hover:text-primary transition-colors font-semibold"
 						>
 							Fletes
 						</a>
