@@ -423,7 +423,7 @@ app.post("/enviar-reserva", async (req, res) => {
 
 // --- ENDPOINT PARA CREAR PAGOS (sin cambios) ---
 app.post("/create-payment", async (req, res) => {
-	const { gateway, amount, description, email } = req.body;
+    const { gateway, amount, description, email, reservationId } = req.body;
 
 	if (!gateway || !amount || !description || !email) {
 		return res.status(400).json({
@@ -433,24 +433,27 @@ app.post("/create-payment", async (req, res) => {
 	}
 
 	if (gateway === "mercadopago") {
-		const preferenceData = {
-			items: [
-				{
-					title: description,
-					unit_price: Number(amount),
-					quantity: 1,
-				},
-			],
-			back_urls: {
-				success: "https://www.transportesaraucaria.cl/pago-exitoso",
-				failure: "https://www.transportesaraucaria.cl/pago-fallido",
-				pending: "https://www.transportesaraucaria.cl/pago-pendiente",
-			},
-			auto_return: "approved",
-			payer: {
-				email: email,
-			},
-		};
+        const preferenceData = {
+            items: [
+                {
+                    title: description,
+                    unit_price: Number(amount),
+                    quantity: 1,
+                },
+            ],
+            back_urls: {
+                success: "https://www.transportesaraucaria.cl/pago-exitoso",
+                failure: "https://www.transportesaraucaria.cl/pago-fallido",
+                pending: "https://www.transportesaraucaria.cl/pago-pendiente",
+            },
+            auto_return: "approved",
+            payer: {
+                email: email,
+            },
+            metadata: reservationId ? { reservationId } : undefined,
+            // Agregar webhook para confirmar pagos
+            notification_url: `${process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com"}/api/webhook-mercadopago`,
+        };
 
 		try {
 			const preference = new Preference(client);
@@ -507,6 +510,68 @@ app.post("/create-payment", async (req, res) => {
 	} else {
 		res.status(400).json({ message: "Pasarela de pago no válida." });
 	}
+});
+
+// Webhook Mercado Pago: recibe notificaciones de eventos de pago
+app.post("/api/webhook-mercadopago", async (req, res) => {
+    try {
+        const body = req.body || {};
+        const query = req.query || {};
+
+        // Mercado Pago puede enviar en query params o body
+        const topic = query.topic || body.type || body.topic || "";
+        const paymentId = (body && body.data && body.data.id) || query.id || body.id;
+
+        console.log("📩 Webhook MP recibido:", { topic, paymentId, body });
+
+        if ((topic === "payment" || topic === "merchant_order") && paymentId) {
+            // Consultar detalle del pago para obtener estado
+            try {
+                const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+                if (token) {
+                    const { data } = await axios.get(
+                        `https://api.mercadopago.com/v1/payments/${paymentId}`,
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    console.log("✅ Detalle de pago:", {
+                        id: data.id,
+                        status: data.status,
+                        status_detail: data.status_detail,
+                        email: data.payer && data.payer.email,
+                        transaction_amount: data.transaction_amount,
+                    });
+
+                    // Intentar actualizar registro en PHP si se configuró la URL
+                    const phpUrlBase = process.env.RESERVAS_PHP_URL || process.env.YOUR_FRONTEND_URL || "";
+                    if (phpUrlBase) {
+                        const target = `${phpUrlBase.replace(/\/$/, "")}/actualizar_reserva_pago.php`;
+                        try {
+                            await axios.post(target, {
+                                id_reserva: (data.metadata && data.metadata.reservationId) ? data.metadata.reservationId : null,
+                                email: data.payer && data.payer.email,
+                                gateway: "mercadopago",
+                                payment_id: data.id,
+                                status: data.status,
+                                status_detail: data.status_detail,
+                                amount: data.transaction_amount,
+                                description: (data.description || "").toString(),
+                            }, { headers: { 'Content-Type': 'application/json' } });
+                            console.log('📝 Reserva actualizada en PHP');
+                        } catch (postErr) {
+                            console.error('No se pudo actualizar reserva en PHP:', postErr.response ? postErr.response.data : postErr.message);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error consultando pago MP:", err.response ? err.response.data : err.message);
+            }
+        }
+
+        res.status(200).json({ received: true });
+    } catch (error) {
+        console.error("Webhook MP error:", error);
+        res.status(200).json({ received: true });
+    }
 });
 
 const PORT = process.env.PORT || 8080;

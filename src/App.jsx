@@ -212,6 +212,8 @@ function App() {
 		contacto: false,
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
+	// ID de la reserva para asociar pagos (webhook)
+	const [reservationId, setReservationId] = useState(null);
 
 	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
 	const applyPricingPayload = useCallback((data, { signal } = {}) => {
@@ -1057,6 +1059,7 @@ function App() {
 					amount,
 					description,
 					email: formData.email,
+					reservationId: reservationId || null,
 				}),
 			});
 
@@ -1131,6 +1134,10 @@ function App() {
 			if (emailResponse.ok) {
 				const emailResult = await emailResponse.json();
 				console.log("✅ Correo enviado exitosamente:", emailResult);
+				// Guardar el ID de la reserva para asociar pagos posteriores
+				if (emailResult && emailResult.id_reserva) {
+					setReservationId(emailResult.id_reserva);
+				}
 			} else {
 				console.warn("⚠️ Error al enviar correo:", await emailResponse.text());
 			}

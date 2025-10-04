@@ -43,6 +43,33 @@ $emailUser = getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl';
 $emailPass = getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.';
 $emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
 
+// Configuración adicional
+$sendCustomerConfirmation = true; // Enviar correo de confirmación al cliente si tiene email válido
+$brandName = 'Transportes Araucaria';
+
+// Utilidad: actualizar flags de correo en la reserva guardada
+function actualizarFlagsCorreoReserva($archivo, $reservaId, $flags) {
+    if (!$reservaId || !file_exists($archivo)) return false;
+    $contenido = file_get_contents($archivo);
+    $reservas = json_decode($contenido, true);
+    if (!is_array($reservas)) return false;
+
+    $actualizado = false;
+    foreach ($reservas as &$r) {
+        if (isset($r['id']) && $r['id'] === $reservaId) {
+            foreach ($flags as $k => $v) {
+                $r[$k] = $v;
+            }
+            $actualizado = true;
+            break;
+        }
+    }
+    if ($actualizado) {
+        return file_put_contents($archivo, json_encode($reservas, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) !== false;
+    }
+    return false;
+}
+
 // Configuración del archivo de reservas
 $reservasFile = 'reservas_data.json';
 
@@ -62,7 +89,9 @@ function guardarReservaEnArchivo($archivo, $reserva)
     }
 
     // Agregar metadatos a la reserva
-    $reserva['id'] = uniqid('RES_', true);
+    if (empty($reserva['id'])) {
+        $reserva['id'] = uniqid('RES_', true);
+    }
     $reserva['timestamp'] = date('Y-m-d H:i:s');
     $reserva['fecha_registro'] = date('Y-m-d H:i:s');
     $reserva['ip_address'] = $_SERVER['REMOTE_ADDR'] ?? 'Desconocida';
@@ -127,6 +156,14 @@ $descuentoRoundTrip = $data['descuentoRoundTrip'] ?? 0;
 $descuentoOnline = $data['descuentoOnline'] ?? 0;
 $totalConDescuento = $data['totalConDescuento'] ?? $precio;
 
+// Datos adicionales opcionales del formulario
+$descuentosPersonalizados = $data['descuentosPersonalizados'] ?? [];
+if (!is_array($descuentosPersonalizados)) {
+    $descuentosPersonalizados = [$descuentosPersonalizados];
+}
+$otroOrigen = htmlspecialchars($data['otroOrigen'] ?? '');
+$otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
+
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 
 // Preparar datos completos para guardar
@@ -156,12 +193,23 @@ $reservaCompleta = [
     'descuentoPromocion' => $descuentoPromocion,
     'descuentoRoundTrip' => $descuentoRoundTrip,
     'descuentoOnline' => $descuentoOnline,
-    'totalConDescuento' => $totalConDescuento
+    'totalConDescuento' => $totalConDescuento,
+    'descuentosPersonalizados' => $descuentosPersonalizados,
+    'otroOrigen' => $otroOrigen,
+    'otroDestino' => $otroDestino,
+    // Flags iniciales de correo/pago
+    'correo_admin_enviado' => false,
+    'correo_cliente_enviado' => false,
+    'estado_pago' => 'sin_pago'
 ];
 
 // Intentar guardar la reserva ANTES de enviar el correo
 $reservaGuardada = false;
 try {
+    // Generar ID para poder referenciar luego
+    if (empty($reservaCompleta['id'])) {
+        $reservaCompleta['id'] = uniqid('RES_', true);
+    }
     $reservaGuardada = guardarReservaEnArchivo($reservasFile, $reservaCompleta);
 } catch (Exception $e) {
     error_log("Error al guardar reserva: " . $e->getMessage());
@@ -295,15 +343,81 @@ try {
 
     $mail->send();
     $adminEmailEnviado = true;
-    // Confirmación al cliente deshabilitada: solo se notifica al administrador.
+
+    // Intentar actualizar flags en la reserva
+    if (!empty($reservaCompleta['id'])) {
+        @actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
+            'correo_admin_enviado' => true,
+            'correo_cliente_enviado' => false
+        ]);
+    }
+
+    // Enviar confirmación al cliente (si procede)
+    if ($sendCustomerConfirmation && $hasValidCustomerEmail) {
+        try {
+            $mail->clearAllRecipients();
+            $mail->clearReplyTos();
+
+            $mail->setFrom($emailUser, $brandName);
+            $mail->addAddress($email, $nombre ?: 'Cliente');
+            // Copia al admin para respaldo de confirmaciones
+            $mail->addBcc($emailTo);
+            $mail->addReplyTo($emailUser, $brandName);
+
+            $mail->isHTML(true);
+            $mail->Subject = "Confirmación de solicitud recibida - {$brandName}";
+
+            $precioHtml = $precio ? ('$' . number_format($precio, 0, ',', '.') . ' CLP') : 'A consultar';
+            $totalHtml = $totalConDescuento ? ('$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP') : $precioHtml;
+            $abonoHtml = $abonoSugerido ? ('$' . number_format($abonoSugerido, 0, ',', '.') . ' CLP') : null;
+
+            $clienteHtml = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
+                <div style='background:#0f172a; color:#fff; padding:18px 22px;'>
+                    <h2 style='margin:0; font-size:18px;'>{$brandName}</h2>
+                    <p style='margin:4px 0 0; font-size:13px;'>Hemos recibido tu solicitud de traslado</p>
+                </div>
+                <div style='padding:20px;'>
+                    <p>Hola <strong>" . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                    <p>Gracias por contactarnos. Hemos recibido tu solicitud y te confirmaremos la disponibilidad a la brevedad. Aquí tienes el resumen:</p>
+
+                    <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin:12px 0;'>
+                        <p style='margin:6px 0'><strong>Origen:</strong> {$origen}</p>
+                        <p style='margin:6px 0'><strong>Destino:</strong> {$destino}</p>
+                        <p style='margin:6px 0'><strong>Fecha y hora:</strong> {$fecha} {$hora}</p>
+                        <p style='margin:6px 0'><strong>Pasajeros:</strong> {$pasajeros}</p>
+                        <p style='margin:6px 0'><strong>Vehículo:</strong> {$vehiculo}</p>
+                        <p style='margin:6px 0'><strong>Valor estimado:</strong> {$totalHtml}</p>
+                        " . ($abonoHtml ? "<p style='margin:6px 0'><strong>Abono sugerido:</strong> {$abonoHtml}</p>" : "") . "
+                    </div>
+
+                    <p style='font-size:13px; color:#334155;'>Si necesitas ajustar algún dato, responde a este correo para ayudarte.</p>
+                    <p style='margin-top:16px;'>Saludos,<br><strong>{$brandName}</strong></p>
+                </div>
+            </div>";
+
+            $mail->Body = $clienteHtml;
+            $mail->send();
+            $confirmacionEnviada = true;
+
+            // Actualizar flags en la reserva
+            if (!empty($reservaCompleta['id'])) {
+                @actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
+                    'correo_cliente_enviado' => true
+                ]);
+            }
+        } catch (Exception $e2) {
+            // No interrumpir la respuesta por fallo en confirmación al cliente
+            error_log('Error enviando confirmación al cliente: ' . $mail->ErrorInfo);
+        }
+    }
 
     // Respuesta exitosa
     echo json_encode([
         'message' => 'Mensaje enviado exitosamente.',
         'reserva_guardada' => $reservaGuardada,
         'id_reserva' => $reservaCompleta['id'] ?? null,
-        'correo_enviado' => $adminEmailEnviado,
-        'confirmacion_enviada' => $confirmacionEnviada
+        'correo_admin_enviado' => $adminEmailEnviado,
+        'correo_cliente_enviado' => $confirmacionEnviada
     ]);
 } catch (Exception $e) {
     http_response_code(500);
@@ -311,7 +425,7 @@ try {
         'message' => "Error al enviar el correo: {$mail->ErrorInfo}",
         'reserva_guardada' => $reservaGuardada,
         'id_reserva' => $reservaCompleta['id'] ?? null,
-        'correo_enviado' => $adminEmailEnviado,
-        'confirmacion_enviada' => $confirmacionEnviada
+        'correo_admin_enviado' => $adminEmailEnviado,
+        'correo_cliente_enviado' => $confirmacionEnviada
     ]);
 }
