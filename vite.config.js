@@ -28,11 +28,11 @@ export default defineConfig({
 		rollupOptions: {
 			output: {
 				manualChunks: {
-					vendor: ['react', 'react-dom'],
-					ui: ['lucide-react', '@radix-ui/react-slot'],
-					utils: ['class-variance-authority']
-				}
-			}
-		}
-	}
+					vendor: ["react", "react-dom"],
+					ui: ["lucide-react", "@radix-ui/react-slot"],
+					utils: ["class-variance-authority"],
+				},
+			},
+		},
+	},
 });
