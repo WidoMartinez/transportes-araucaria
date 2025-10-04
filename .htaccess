@@ -1,6 +1,9 @@
 RewriteEngine On
 Options -MultiViews
 
+# Force SPA routing for /fletes route even if a physical folder exists
+RewriteRule ^fletes/?$ /index.html [L]
+
 # Serve existing files and directories as-is
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
