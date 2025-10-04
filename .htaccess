@@ -1,9 +1,19 @@
 RewriteEngine On
 
-# Handle Angular and React Router
+# Handle React Router - Multiple approaches for Hostinger
+# Method 1: Standard SPA routing
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
+RewriteRule ^(.*)$ /index.html [L,QSA]
+
+# Method 2: Specific route handling for /fletes
+RewriteRule ^fletes/?$ /index.html [L,QSA]
+
+# Method 3: Fallback for any route not found
+RewriteCond %{REQUEST_URI} !^/index\.html$
+RewriteCond %{REQUEST_URI} !^/assets/
+RewriteCond %{REQUEST_URI} !^/favicon\.ico$
+RewriteRule ^(.*)$ /index.html [L,QSA]
 
 # Security headers
 Header always set X-Frame-Options DENY

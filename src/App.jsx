@@ -163,7 +163,8 @@ const resolveIsAdminView = () => {
 const resolveIsFreightView = () => {
 	if (typeof window === "undefined") return false;
 	const pathname = window.location.pathname.toLowerCase();
-	return pathname === "/fletes" || pathname.startsWith("/fletes/");
+	const hash = window.location.hash.toLowerCase();
+	return pathname === "/fletes" || pathname.startsWith("/fletes/") || hash === "#fletes";
 };
 
 function App() {
