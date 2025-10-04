@@ -1121,14 +1121,12 @@ function App() {
 
 		// Enviar notificación por correo usando el archivo PHP de Hostinger
 		try {
-			const emailResponse = await fetch(
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(dataToSend),
-				}
-			);
+			// Usar misma origen para evitar CORS entre www y raíz
+			const emailResponse = await fetch("/enviar_correo_mejorado.php", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(dataToSend),
+			});
 
 			if (emailResponse.ok) {
 				const emailResult = await emailResponse.json();

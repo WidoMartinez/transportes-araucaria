@@ -18,6 +18,7 @@ require 'PHPMailer/src/SMTP.php';
 // --- Configuración de CORS ---
 $allowed_origins = [
     'https://www.transportesaraucaria.cl',
+    'https://transportesaraucaria.cl',
     'http://localhost:5173'
 ];
 

@@ -127,14 +127,12 @@ Tipo: Flete Nacional`,
 		};
 
 		try {
-			const response = await fetch(
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(payload),
-				}
-			);
+			// Usar misma origen para evitar CORS entre www y raíz
+			const response = await fetch("/enviar_correo_mejorado.php", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
 
 			if (!response.ok) {
 				throw new Error(
@@ -151,8 +149,8 @@ Tipo: Flete Nacional`,
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						...payload,
-						origen: payload.detalleServicio.origen,
-						destino: payload.detalleServicio.destino,
+						origen: payload.origen,
+						destino: payload.destino,
 						servicio: "Flete Nacional",
 						source: "landing-fletes",
 					}),
@@ -490,7 +488,7 @@ Tipo: Flete Nacional`,
 									<CardHeader>
 										<CardTitle>Formulario de fletes</CardTitle>
 										<CardDescription>
-											InformaciÃ³n clave para generar una propuesta a medida.
+											Información clave para generar una propuesta a medida.
 										</CardDescription>
 									</CardHeader>
 									<CardContent>
