@@ -30,9 +30,7 @@ import Contacto from "./components/Contacto";
 import FletesLanding from "./components/FletesLanding";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
-import AdminPricing from "./components/AdminPricing";
-import AdminCodigos from "./components/AdminCodigos";
-import AdminCodigosMejorado from "./components/AdminCodigosMejorado";
+import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 
 // --- Datos Iniciales y Lógica ---
@@ -1250,19 +1248,7 @@ function App() {
 	}
 
 	if (isAdminView) {
-		// Verificar qué panel mostrar
-		const urlParams = new URLSearchParams(window.location.search);
-		const panel = urlParams.get("panel");
-
-		if (panel === "codigos") {
-			return <AdminCodigos />;
-		}
-
-		if (panel === "codigos-mejorado") {
-			return <AdminCodigosMejorado />;
-		}
-
-		return <AdminPricing />;
+    return <AdminDashboard />;
 	}
 
 	return (
