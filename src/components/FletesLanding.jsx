@@ -19,8 +19,8 @@ import {
 	ShieldCheck,
 	Truck,
 } from "lucide-react";
-import logo from '../assets/logo.png';
-import camionford from '../assets/camionford.png';
+import logo from "../assets/logo.png";
+import camionford from "../assets/camionford.png";
 
 const initialFormState = {
 	nombre: "",
@@ -54,7 +54,7 @@ function FletesLanding() {
 
 	const whatsappMessage = useMemo(() => {
 		const baseMessage = `Hola Transportes Araucaria, necesito coordinar un flete nacional desde ${
-			formData.origen || "La AraucanÃ­a"
+			formData.origen || "La Araucanía"
 		} hacia ${formData.destino || "[destino]"}.`;
 		const details = [];
 		if (formData.tipoCarga)
@@ -63,7 +63,7 @@ function FletesLanding() {
 			details.push(`Volumen/Peso aprox.: ${formData.volumen}`);
 		if (formData.fecha) details.push(`Fecha estimada: ${formData.fecha}`);
 		if (formData.nombre) details.push(`Contacto: ${formData.nombre}`);
-		if (formData.telefono) details.push(`TelÃ©fono: ${formData.telefono}`);
+		if (formData.telefono) details.push(`Teléfono: ${formData.telefono}`);
 		if (formData.empresa) details.push(`Empresa: ${formData.empresa}`);
 		if (formData.mensaje) details.push(`Notas: ${formData.mensaje}`);
 		return `https://wa.me/56936643540?text=${encodeURIComponent(
@@ -94,23 +94,36 @@ function FletesLanding() {
 		setIsSubmitting(true);
 
 		const payload = {
+			// Datos principales que espera el PHP
+			nombre: formData.nombre,
+			email: formData.email,
+			telefono: formData.telefono,
+			origen: formData.origen,
+			destino: formData.destino,
+			fecha: formData.fecha,
+			mensaje: `SOLICITUD DE FLETE NACIONAL
+
+Datos de contacto:
+- Nombre: ${formData.nombre}
+- Empresa: ${formData.empresa || "No especificada"}
+- Email: ${formData.email}
+- Teléfono: ${formData.telefono}
+
+Detalles del servicio:
+- Origen: ${formData.origen}
+- Destino: ${formData.destino}
+- Fecha de carga: ${formData.fecha || "No especificada"}
+- Tipo de carga: ${formData.tipoCarga || "No especificado"}
+- Volumen/Peso: ${formData.volumen || "No especificado"}
+- Notas adicionales: ${formData.mensaje || "Ninguna"}
+
+Canal: Landing de Fletes
+Tipo: Flete Nacional`,
+			source: "landing-fletes",
+			// Datos adicionales para tracking
 			canal: "landing-fletes",
 			tipoSolicitud: "FLETE_NACIONAL",
 			fechaSolicitud: new Date().toISOString(),
-			contacto: {
-				nombre: formData.nombre,
-				empresa: formData.empresa,
-				email: formData.email,
-				telefono: formData.telefono,
-			},
-			detalleServicio: {
-				origen: formData.origen,
-				destino: formData.destino,
-				fechaCarga: formData.fecha,
-				tipoCarga: formData.tipoCarga,
-				volumenEstimado: formData.volumen,
-				notas: formData.mensaje,
-			},
 		};
 
 		try {
@@ -170,7 +183,7 @@ function FletesLanding() {
 			setFeedback({
 				type: "error",
 				message:
-					"OcurriÃ³ un problema al enviar tu solicitud. EscrÃ­benos por WhatsApp para ayudarte de inmediato.",
+					"Ocurrió un problema al enviar tu solicitud. Escríbenos por WhatsApp para ayudarte de inmediato.",
 			});
 		} finally {
 			setIsSubmitting(false);
@@ -182,13 +195,13 @@ function FletesLanding() {
 			icon: Truck,
 			title: "Cobertura nacional puerta a puerta",
 			description:
-				"Coordinamos retiros en La AraucanÃ­a y entregas en todo Chile con conductores certificados.",
+				"Coordinamos retiros en La Araucanía y entregas en todo Chile con conductores certificados.",
 		},
 		{
 			icon: ShieldCheck,
 			title: "Carga segura y asegurada",
 			description:
-				"Protocolos de trazabilidad, seguimiento en vivo y pÃ³lizas acordes al tipo de mercaderÃ­a.",
+				"Protocolos de trazabilidad, seguimiento en vivo y pólizas acordes al tipo de mercadería.",
 		},
 		{
 			icon: Clock,
@@ -199,27 +212,27 @@ function FletesLanding() {
 	];
 
 	const trustSignals = [
-		"IntegraciÃ³n con Google Ads y Analytics",
-		"AtenciÃ³n 24/7 desde La AraucanÃ­a",
+		"Integración con Google Ads y Analytics",
+		"Atención 24/7 desde La Araucanía",
 		"Conductores con licencia profesional",
 		"Servicio corporativo y pymes",
 	];
 
 	const workflow = [
 		{
-			title: "DiagnÃ³stico express",
+			title: "Diagnóstico express",
 			description:
 				"Te contactamos en minutos para definir requisitos, tipo de carga y plazos de entrega.",
 		},
 		{
-			title: "Plan logÃ­stico personalizado",
+			title: "Plan logístico personalizado",
 			description:
-				"Coordinamos vehÃ­culos, permisos y aseguramos la documentaciÃ³n segÃºn normativa vigente.",
+				"Coordinamos vehículos, permisos y aseguramos la documentación según normativa vigente.",
 		},
 		{
-			title: "Seguimiento y confirmaciÃ³n",
+			title: "Seguimiento y confirmación",
 			description:
-				"Te mantenemos informado en cada hito y confirmamos la entrega con pruebas de recepciÃ³n.",
+				"Te mantenemos informado en cada hito y confirmamos la entrega con pruebas de recepción.",
 		},
 	];
 
@@ -233,13 +246,11 @@ function FletesLanding() {
 			<header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-border">
 				<div className="container mx-auto flex items-center justify-between px-4 py-4">
 					<a href="/" className="flex items-center gap-3">
-						<img src={logo} alt="Transportes Araucaria" className="h-16" />
-						<div className="text-left">
-							<p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-								Unidad de Fletes
-							</p>
-							<p className="text-lg font-semibold">Transportes Araucaria</p>
-						</div>
+						<img
+							src={logo}
+							alt="Transportes Araucaria"
+							className="h-20 md:h-24"
+						/>
 					</a>
 					<div className="hidden md:flex items-center gap-3">
 						<a
@@ -248,13 +259,18 @@ function FletesLanding() {
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<Button className="bg-accent hover:bg-accent/90">
+							<Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg focus-visible:ring-accent/30">
 								<MessageCircle className="h-4 w-4 mr-2" />
 								Cotizar por WhatsApp
 							</Button>
 						</a>
 						<a href="#cotizar">
-							<Button variant="outline">Formulario Express</Button>
+							<Button
+								variant="outline"
+								className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30"
+							>
+								Formulario Express
+							</Button>
 						</a>
 					</div>
 				</div>
@@ -266,15 +282,15 @@ function FletesLanding() {
 						<div>
 							<div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-sm font-medium text-primary">
 								<CheckCircle className="h-4 w-4" />
-								Fletes desde La AraucanÃ­a a todo Chile
+								Fletes desde La Araucanía a todo Chile
 							</div>
 							<h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight">
-								LogÃ­stica nacional con base en La AraucanÃ­a para empresas que
+								Logística nacional con base en La Araucanía para empresas que
 								necesitan velocidad y control.
 							</h1>
 							<p className="mt-6 text-lg text-muted-foreground max-w-xl">
 								Administramos fletes dedicados desde Temuco, Padre Las Casas y
-								gran La AraucanÃ­a hacia cualquier regiÃ³n del paÃ­s. Coordinamos
+								gran La Araucanía hacia cualquier región del país. Coordinamos
 								desde cargas paletizadas hasta insumos industriales, con
 								seguimiento en tiempo real y soporte 24/7.
 							</p>
@@ -285,13 +301,20 @@ function FletesLanding() {
 									rel="noopener noreferrer"
 									onClick={() => trackWhatsAppClick({ value: 1 })}
 								>
-									<Button size="lg" className="bg-accent hover:bg-accent/90">
+									<Button
+										size="lg"
+										className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg focus-visible:ring-accent/30"
+									>
 										<MessageCircle className="h-5 w-5 mr-2" />
-										Habla con logÃ­stica ahora
+										Habla con logística ahora
 									</Button>
 								</a>
 								<a href="#cotizar">
-									<Button size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10">
+									<Button
+										size="lg"
+										variant="outline"
+										className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30 shadow-lg"
+									>
 										Solicitar propuesta en 15 minutos
 									</Button>
 								</a>
@@ -314,7 +337,11 @@ function FletesLanding() {
 						</div>
 						<div className="relative">
 							<div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent rounded-3xl blur-3xl opacity-40" />
-							<img src={camionford} alt="Camión de referencia para fletes" className="relative w-full rounded-3xl shadow-2xl border border-transparent" />
+							<img
+								src={camionford}
+								alt="Camión de referencia para fletes"
+								className="relative w-full rounded-3xl shadow-2xl border border-transparent"
+							/>
 						</div>
 					</div>
 				</section>
@@ -322,10 +349,10 @@ function FletesLanding() {
 				<section className="py-20">
 					<div className="container mx-auto px-4">
 						<h2 className="text-3xl font-semibold text-center">
-							Por quÃ© las empresas eligen nuestro servicio de fletes
+							Por qué las empresas eligen nuestro servicio de fletes
 						</h2>
 						<p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto">
-							Solucionamos la logÃ­stica para industrias, comercios y proveedores
+							Solucionamos la logística para industrias, comercios y proveedores
 							que necesitan transportar carga con trazabilidad y soporte humano
 							en cada tramo.
 						</p>
@@ -362,29 +389,29 @@ function FletesLanding() {
 						<div className="grid gap-10 lg:grid-cols-2">
 							<div>
 								<h2 className="text-3xl font-semibold">
-									Desde la AraucanÃ­a al resto del paÃ­s, con inteligencia
-									logÃ­stica
+									Desde la Araucanía al resto del país, con inteligencia
+									logística
 								</h2>
 								<p className="mt-4 text-muted-foreground">
 									Somos la unidad especializada de Transportes Araucaria para
 									fletes nacionales. Administramos rutas recurrentes hacia
-									Santiago, BiobÃ­o, Los Lagos, TarapacÃ¡ y mÃ¡s, con tarifas
-									eficientes y coordinaciÃ³n directa con tus centros de
-									distribuciÃ³n.
+									Santiago, Biobío, Los Lagos, Tarapacá y más, con tarifas
+									eficientes y coordinación directa con tus centros de
+									distribución.
 								</p>
 								<ul className="mt-6 space-y-4">
 									<li className="flex items-start gap-3">
 										<Phone className="h-5 w-5 text-primary mt-1" />
 										<span>
-											Equipo comercial dedicado y lÃ­nea directa para
+											Equipo comercial dedicado y línea directa para
 											contingencias 24/7.
 										</span>
 									</li>
 									<li className="flex items-start gap-3">
 										<Truck className="h-5 w-5 text-primary mt-1" />
 										<span>
-											Camiones, camionetas cerradas y vehÃ­culos refrigerados
-											segÃºn necesidad.
+											Camiones, camionetas cerradas y vehículos refrigerados
+											según necesidad.
 										</span>
 									</li>
 									<li className="flex items-start gap-3">
@@ -398,7 +425,7 @@ function FletesLanding() {
 							</div>
 							<div className="rounded-3xl border border-dashed border-primary/40 bg-white p-8 shadow-sm">
 								<h3 className="text-2xl font-semibold">
-									CÃ³mo trabajamos tu solicitud
+									Cómo trabajamos tu solicitud
 								</h3>
 								<div className="mt-8 space-y-6">
 									{workflow.map(({ title, description }, index) => (
@@ -415,12 +442,14 @@ function FletesLanding() {
 										</div>
 									))}
 								</div>
-								<div className="mt-8 rounded-2xl border border-accent/40 bg-accent/10 px-6 py-4 text-sm text-accent-foreground">
-									<span className="font-semibold">
-										Ã‚Â¿Necesitas disponibilidad hoy mismo?
+								<div className="mt-8 rounded-2xl border-2 border-primary/60 bg-primary/10 px-6 py-4 text-sm text-primary shadow-lg">
+									<span className="font-bold text-primary">
+										¿Necesitas disponibilidad hoy mismo?
 									</span>{" "}
-									EscrÃ­benos por WhatsApp para activar el plan de contingencia y
-									salida inmediata.
+									<span className="text-primary/80">
+										Escríbenos por WhatsApp para activar el plan de contingencia
+										y salida inmediata.
+									</span>
 								</div>
 							</div>
 						</div>
@@ -432,17 +461,17 @@ function FletesLanding() {
 						<div className="grid gap-10 lg:grid-cols-5">
 							<div className="lg:col-span-2">
 								<h2 className="text-3xl font-semibold">
-									ObtÃ©n una cotizaciÃ³n rÃ¡pida
+									Obtén una cotización rápida
 								</h2>
 								<p className="mt-4 text-muted-foreground">
 									Completa el formulario y uno de nuestros ejecutivos de
-									logÃ­stica te contactarÃ¡ en menos de 15 minutos para coordinar
+									logística te contactará en menos de 15 minutos para coordinar
 									el retiro.
 								</p>
 								<div className="mt-6 space-y-4 text-sm text-muted-foreground">
 									<p className="flex items-center gap-3">
 										<Phone className="h-4 w-4 text-primary" />
-										<span>+56 9 3664 3540 logÃ­stica 24/7</span>
+										<span>+56 9 3664 3540 logística 24/7</span>
 									</p>
 									<a
 										href={whatsappMessage}
@@ -494,7 +523,7 @@ function FletesLanding() {
 											<div className="grid gap-4 md:grid-cols-2">
 												<div>
 													<label className="text-sm font-medium">
-														Correo electrÃ³nico *
+														Correo electrónico *
 													</label>
 													<Input
 														type="email"
@@ -507,7 +536,7 @@ function FletesLanding() {
 												</div>
 												<div>
 													<label className="text-sm font-medium">
-														TelÃ©fono de contacto *
+														Teléfono de contacto *
 													</label>
 													<Input
 														type="tel"
@@ -522,7 +551,7 @@ function FletesLanding() {
 											<div className="grid gap-4 md:grid-cols-2">
 												<div>
 													<label className="text-sm font-medium">
-														Origen en La AraucanÃ­a *
+														Origen en La Araucanía *
 													</label>
 													<Input
 														name="origen"
@@ -541,7 +570,7 @@ function FletesLanding() {
 														required
 														value={formData.destino}
 														onChange={handleChange}
-														placeholder="Ciudad o direcciÃ³n de entrega"
+														placeholder="Ciudad o dirección de entrega"
 													/>
 												</div>
 											</div>
@@ -599,13 +628,13 @@ function FletesLanding() {
 											)}
 											<Button
 												type="submit"
-												className="mt-2"
+												className="mt-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg focus-visible:ring-primary/30"
 												size="lg"
 												disabled={isSubmitting}
 											>
 												{isSubmitting
 													? "Enviando solicitud..."
-													: "Solicitar cotizaciÃ³n"}
+													: "Solicitar cotización"}
 											</Button>
 										</form>
 									</CardContent>
@@ -619,10 +648,10 @@ function FletesLanding() {
 			<section className="bg-primary text-primary-foreground py-16 text-center">
 				<div className="container mx-auto px-4 max-w-3xl">
 					<h2 className="text-3xl font-semibold">
-						Listos para movilizar tu carga desde la AraucanÃ­a
+						Listos para movilizar tu carga desde la Araucanía
 					</h2>
 					<p className="mt-4 text-primary-foreground/90">
-						Optimiza tus campaÃ±as de Google Ads dirigiendo a tus prospectos a
+						Optimiza tus campañas de Google Ads dirigiendo a tus prospectos a
 						esta landing especializada y convierte visitas en clientes
 						fidelizados.
 					</p>
@@ -633,7 +662,10 @@ function FletesLanding() {
 							rel="noopener noreferrer"
 							onClick={() => trackWhatsAppClick({ value: 1 })}
 						>
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90">
+							<Button
+								size="lg"
+								className="bg-white text-primary hover:bg-primary/10 shadow-lg border-2 border-primary/20 focus-visible:ring-primary/30"
+							>
 								<MessageCircle className="h-5 w-5 mr-2" />
 								Conversar por WhatsApp
 							</Button>
@@ -642,7 +674,7 @@ function FletesLanding() {
 							<Button
 								size="lg"
 								variant="outline"
-								className="border-2 border-white text-white"
+								className="border-2 border-white text-primary hover:bg-white/10 focus-visible:ring-white/30 shadow-lg bg-white"
 							>
 								Completar formulario
 							</Button>
@@ -655,6 +687,3 @@ function FletesLanding() {
 }
 
 export default FletesLanding;
-
-
-

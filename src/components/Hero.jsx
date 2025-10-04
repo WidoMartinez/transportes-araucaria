@@ -509,7 +509,7 @@ function Hero({
 					<div className="flex flex-col items-center justify-center space-y-6">
 						<Button
 							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-white px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
+							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none focus-visible:ring-accent/30"
 						>
 							🚐 Reservar mi traslado
 						</Button>
@@ -946,7 +946,7 @@ function Hero({
 											</p>
 											<Button
 												type="button"
-												className="w-full sm:w-auto bg-accent hover:bg-accent/90"
+												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
 												onClick={handleStepOneNext}
 												disabled={isSubmitting}
 											>
@@ -1155,7 +1155,7 @@ function Hero({
 											</Button>
 											<Button
 												type="button"
-												className="w-full sm:w-auto bg-accent hover:bg-accent/90"
+												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
 												onClick={handleStepTwoNext}
 												disabled={isSubmitting}
 											>
@@ -1552,7 +1552,7 @@ function Hero({
 													<div className="w-full lg:w-auto">
 														<Button
 															type="button"
-															className="w-full bg-accent hover:bg-accent/90"
+															className="w-full bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
 															onClick={() => {
 																if (
 																	selectedMethodData &&
