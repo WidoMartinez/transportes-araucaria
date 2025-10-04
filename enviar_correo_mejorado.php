@@ -37,10 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 header('Content-Type: application/json');
 
 // --- Carga las variables de entorno o defínelas aquí ---
-$emailHost = getenv('EMAIL_HOST') ?: 'smtp.titan.email';
+$emailHost = getenv('EMAIL_HOST') ?: 'smtp.hostinger.com';
 $emailPort = getenv('EMAIL_PORT') ?: 465;
-$emailUser = getenv('EMAIL_USER') ?: 'contacto@anunciads.cl';
-$emailPass = getenv('EMAIL_PASS') ?: 'TeamoGadiel7.';
+$emailUser = getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl';
+$emailPass = getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.';
 $emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
 
 // Configuración del archivo de reservas
@@ -49,7 +49,8 @@ $reservasFile = 'reservas_data.json';
 /**
  * Función para guardar reserva en archivo JSON
  */
-function guardarReservaEnArchivo($archivo, $reserva) {
+function guardarReservaEnArchivo($archivo, $reserva)
+{
     // Leer reservas existentes
     $reservas = [];
     if (file_exists($archivo)) {
@@ -59,25 +60,25 @@ function guardarReservaEnArchivo($archivo, $reserva) {
             $reservas = $reservasExistentes;
         }
     }
-    
+
     // Agregar metadatos a la reserva
     $reserva['id'] = uniqid('RES_', true);
     $reserva['timestamp'] = date('Y-m-d H:i:s');
     $reserva['fecha_registro'] = date('Y-m-d H:i:s');
     $reserva['ip_address'] = $_SERVER['REMOTE_ADDR'] ?? 'Desconocida';
     $reserva['user_agent'] = $_SERVER['HTTP_USER_AGENT'] ?? 'Desconocido';
-    
+
     // Agregar la nueva reserva al inicio del array
     array_unshift($reservas, $reserva);
-    
+
     // Mantener solo las últimas 1000 reservas para evitar archivos muy grandes
     if (count($reservas) > 1000) {
         $reservas = array_slice($reservas, 0, 1000);
     }
-    
+
     // Guardar en archivo
     $resultado = file_put_contents($archivo, json_encode($reservas, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    
+
     return $resultado !== false;
 }
 
@@ -211,7 +212,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
     $emailHtml .= "
             <h2>Detalles Adicionales</h2>
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>";
-    
+
     if ($numeroVuelo) {
         $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Número de Vuelo:</td><td style='padding: 8px;'>{$numeroVuelo}</td></tr>";
     }
@@ -224,7 +225,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
     if ($sillaInfantil === 'si') {
         $emailHtml .= "<tr><td style='padding: 8px; font-weight: bold;'>Silla Infantil:</td><td style='padding: 8px;'>✅ Requerida</td></tr>";
     }
-    
+
     $emailHtml .= "</table>";
 }
 
@@ -233,17 +234,17 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
     $emailHtml .= "
             <h2>Información Financiera</h2>
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>";
-    
+
     if ($totalConDescuento != $precio) {
         $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Precio Original:</td><td style='padding: 8px;'>$" . number_format($precio, 0, ',', '.') . " CLP</td></tr>";
         $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Precio con Descuentos:</td><td style='padding: 8px;'>$" . number_format($totalConDescuento, 0, ',', '.') . " CLP</td></tr>";
     }
-    
+
     if ($abonoSugerido > 0) {
         $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Abono Sugerido:</td><td style='padding: 8px;'>$" . number_format($abonoSugerido, 0, ',', '.') . " CLP</td></tr>";
         $emailHtml .= "<tr><td style='padding: 8px; font-weight: bold;'>Saldo Pendiente:</td><td style='padding: 8px;'>$" . number_format($saldoPendiente, 0, ',', '.') . " CLP</td></tr>";
     }
-    
+
     $emailHtml .= "</table>";
 }
 
@@ -304,7 +305,6 @@ try {
         'correo_enviado' => $adminEmailEnviado,
         'confirmacion_enviada' => $confirmacionEnviada
     ]);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -315,4 +315,3 @@ try {
         'confirmacion_enviada' => $confirmacionEnviada
     ]);
 }
-?>
