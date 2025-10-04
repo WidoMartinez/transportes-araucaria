@@ -1,0 +1,29 @@
+# Hostinger-specific .htaccess configuration
+RewriteEngine On
+
+# Enable mod_rewrite
+Options +FollowSymLinks
+
+# Handle React Router - Simple approach for Hostinger
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.html [L]
+
+# Specific handling for /fletes route
+RewriteRule ^fletes$ index.html [L]
+RewriteRule ^fletes/$ index.html [L]
+
+# Handle static assets
+RewriteCond %{REQUEST_URI} \.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ [NC]
+RewriteRule ^(.*)$ - [L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options DENY
+    Header always set X-Content-Type-Options nosniff
+</IfModule>
+
+# Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript
+</IfModule>
