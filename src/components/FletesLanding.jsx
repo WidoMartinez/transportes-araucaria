@@ -242,32 +242,32 @@ Tipo: Flete Nacional`,
 			: "rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700";
 
 	return (
-		<div className="min-h-screen bg-background text-foreground">
+		<div className="min-h-screen bg-background text-foreground animate-fade-in">
 			<header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-border">
 				<div className="container mx-auto flex items-center justify-between px-4 py-4">
-					<a href="/" className="flex items-center gap-3">
+					<a href="/" className="flex items-center gap-3 animate-slide-in-left">
 						<img
 							src={logo}
 							alt="Transportes Araucaria"
-							className="h-20 md:h-24"
+							className="h-20 md:h-24 transition-transform duration-300 hover:scale-105"
 						/>
 					</a>
-					<div className="hidden md:flex items-center gap-3">
+					<div className="hidden md:flex items-center gap-3 animate-slide-in-right">
 						<a
 							href={whatsappMessage}
 							onClick={() => trackWhatsAppClick({ value: 1 })}
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg focus-visible:ring-accent/30">
-								<MessageCircle className="h-4 w-4 mr-2" />
+							<Button className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg focus-visible:ring-accent/30 transition-all duration-300 hover:scale-105 hover:shadow-xl">
+								<MessageCircle className="h-4 w-4 mr-2 animate-pulse" />
 								Cotizar por WhatsApp
 							</Button>
 						</a>
 						<a href="#cotizar">
 							<Button
 								variant="outline"
-								className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30"
+								className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-lg"
 							>
 								Formulario Express
 							</Button>
@@ -279,22 +279,22 @@ Tipo: Flete Nacional`,
 			<main>
 				<section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-white to-accent/10">
 					<div className="container mx-auto px-4 py-24 lg:py-32 grid gap-12 lg:grid-cols-2 items-center">
-						<div>
-							<div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-sm font-medium text-primary">
-								<CheckCircle className="h-4 w-4" />
+						<div className="animate-slide-in-left">
+							<div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-sm font-medium text-primary animate-bounce-in">
+								<CheckCircle className="h-4 w-4 animate-pulse" />
 								Fletes desde La Araucanía a todo Chile
 							</div>
-							<h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight">
+							<h1 className="mt-6 text-4xl sm:text-5xl font-bold leading-tight animate-fade-in-up">
 								Logística nacional con base en La Araucanía para empresas que
 								necesitan velocidad y control.
 							</h1>
-							<p className="mt-6 text-lg text-muted-foreground max-w-xl">
+							<p className="mt-6 text-lg text-muted-foreground max-w-xl animate-fade-in-up animation-delay-200">
 								Administramos fletes dedicados desde Temuco, Padre Las Casas y
 								gran La Araucanía hacia cualquier región del país. Coordinamos
 								desde cargas paletizadas hasta insumos industriales, con
 								seguimiento en tiempo real y soporte 24/7.
 							</p>
-							<div className="mt-8 flex flex-col sm:flex-row gap-4">
+							<div className="mt-8 flex flex-col sm:flex-row gap-4 animate-fade-in-up animation-delay-400">
 								<a
 									href={whatsappMessage}
 									target="_blank"
@@ -303,9 +303,9 @@ Tipo: Flete Nacional`,
 								>
 									<Button
 										size="lg"
-										className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg focus-visible:ring-accent/30"
+										className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg focus-visible:ring-accent/30 transition-all duration-300 hover:scale-105 hover:shadow-xl"
 									>
-										<MessageCircle className="h-5 w-5 mr-2" />
+										<MessageCircle className="h-5 w-5 mr-2 animate-pulse" />
 										Habla con logística ahora
 									</Button>
 								</a>
@@ -313,34 +313,38 @@ Tipo: Flete Nacional`,
 									<Button
 										size="lg"
 										variant="outline"
-										className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30 shadow-lg"
+										className="border-primary text-primary hover:bg-primary/10 focus-visible:ring-primary/30 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 									>
 										Solicitar propuesta en 15 minutos
 									</Button>
 								</a>
 							</div>
 							<div className="mt-10 grid grid-cols-2 gap-6">
-								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm">
-									<p className="text-3xl font-bold text-primary">98%</p>
+								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm animate-fade-in-up animation-delay-600 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+									<p className="text-3xl font-bold text-primary animate-count-up">
+										98%
+									</p>
 									<p className="text-sm text-muted-foreground">
 										Entregas a tiempo reportadas por clientes corporativos 2023.
 									</p>
 								</div>
-								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm">
-									<p className="text-3xl font-bold text-primary">+1.200</p>
+								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm animate-fade-in-up animation-delay-800 transition-all duration-300 hover:scale-105 hover:shadow-lg">
+									<p className="text-3xl font-bold text-primary animate-count-up">
+										+1.200
+									</p>
 									<p className="text-sm text-muted-foreground">
-										Viajes y fletes coordinados en los Ãºltimos 18 meses para
+										Viajes y fletes coordinados en los últimos 18 meses para
 										pymes y grandes cuentas.
 									</p>
 								</div>
 							</div>
 						</div>
-						<div className="relative">
-							<div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent rounded-3xl blur-3xl opacity-40" />
+						<div className="relative animate-slide-in-right">
+							<div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-transparent rounded-3xl blur-3xl opacity-40 animate-pulse" />
 							<img
 								src={camionford}
 								alt="Camión de referencia para fletes"
-								className="relative w-full rounded-3xl shadow-2xl border border-transparent"
+								className="relative w-full rounded-3xl shadow-2xl border border-transparent transition-transform duration-500 hover:scale-105"
 							/>
 						</div>
 					</div>
@@ -357,21 +361,27 @@ Tipo: Flete Nacional`,
 							en cada tramo.
 						</p>
 						<div className="mt-12 grid gap-8 md:grid-cols-3">
-							{sellingPoints.map(({ icon: Icon, title, description }) => (
-								<Card key={title} className="border-border/60">
-									<CardHeader>
-										<div className="flex items-center gap-3">
-											<span className="rounded-full bg-primary/10 p-3 text-primary">
-												<Icon className="h-6 w-6" />
-											</span>
-											<CardTitle className="text-xl">{title}</CardTitle>
-										</div>
-									</CardHeader>
-									<CardContent>
-										<p className="text-muted-foreground">{description}</p>
-									</CardContent>
-								</Card>
-							))}
+							{sellingPoints.map(
+								({ icon: Icon, title, description }, index) => (
+									<Card
+										key={title}
+										className={`border-border/60 animate-fade-in-up transition-all duration-300 hover:scale-105 hover:shadow-lg`}
+										style={{ animationDelay: `${index * 0.2}s` }}
+									>
+										<CardHeader>
+											<div className="flex items-center gap-3">
+												<span className="rounded-full bg-primary/10 p-3 text-primary">
+													<Icon className="h-6 w-6" />
+												</span>
+												<CardTitle className="text-xl">{title}</CardTitle>
+											</div>
+										</CardHeader>
+										<CardContent>
+											<p className="text-muted-foreground">{description}</p>
+										</CardContent>
+									</Card>
+								)
+							)}
 						</div>
 						<div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
 							{trustSignals.map((item) => (
@@ -485,8 +495,8 @@ Tipo: Flete Nacional`,
 									</a>
 								</div>
 							</div>
-							<div className="lg:col-span-3">
-								<Card className="shadow-xl border-border/60">
+							<div className="lg:col-span-3 animate-fade-in-up animation-delay-400">
+								<Card className="shadow-xl border-border/60 transition-all duration-300 hover:shadow-2xl">
 									<CardHeader>
 										<CardTitle>Formulario de fletes</CardTitle>
 										<CardDescription>
@@ -664,7 +674,7 @@ Tipo: Flete Nacional`,
 						>
 							<Button
 								size="lg"
-								className="bg-white text-primary hover:bg-primary/10 shadow-lg border-2 border-primary/20 focus-visible:ring-primary/30"
+								className="bg-white text-primary hover:bg-primary/10 shadow-lg border-2 border-primary/20 focus-visible:ring-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-xl"
 							>
 								<MessageCircle className="h-5 w-5 mr-2" />
 								Conversar por WhatsApp
@@ -674,7 +684,7 @@ Tipo: Flete Nacional`,
 							<Button
 								size="lg"
 								variant="outline"
-								className="border-2 border-white text-primary hover:bg-white/10 focus-visible:ring-white/30 shadow-lg bg-white"
+								className="border-2 border-white text-primary hover:bg-white/10 focus-visible:ring-white/30 shadow-lg bg-white transition-all duration-300 hover:scale-105 hover:shadow-xl"
 							>
 								Completar formulario
 							</Button>
