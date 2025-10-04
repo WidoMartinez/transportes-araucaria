@@ -84,7 +84,7 @@ function Header() {
 							Temporada
 						</a>
 						<a
-							href="/fletes"
+							href={import.meta.env.DEV ? "/#fletes" : "/fletes"}
 							className="text-foreground hover:text-primary transition-colors"
 						>
 							Fletes

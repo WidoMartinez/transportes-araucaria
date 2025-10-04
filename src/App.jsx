@@ -163,7 +163,12 @@ const resolveIsAdminView = () => {
 const resolveIsFreightView = () => {
 	if (typeof window === "undefined") return false;
 	const pathname = window.location.pathname.toLowerCase();
-	return pathname === "/fletes" || pathname.startsWith("/fletes/");
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/fletes" ||
+		pathname.startsWith("/fletes/") ||
+		hash === "#fletes"
+	);
 };
 
 function App() {
@@ -212,6 +217,17 @@ function App() {
 		contacto: false,
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
+
+	// Sincronizar vista de Fletes cuando cambia el hash o el historial
+	useEffect(() => {
+		const syncFreight = () => setIsFreightView(resolveIsFreightView());
+		window.addEventListener("hashchange", syncFreight);
+		window.addEventListener("popstate", syncFreight);
+		return () => {
+			window.removeEventListener("hashchange", syncFreight);
+			window.removeEventListener("popstate", syncFreight);
+		};
+	}, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
