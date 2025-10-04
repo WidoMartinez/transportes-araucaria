@@ -1,0 +1,15 @@
+RewriteEngine On
+Options -MultiViews
+
+# Serve existing files and directories as-is
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Allow PHP endpoints to run normally
+RewriteCond %{REQUEST_URI} \.php$ [NC]
+RewriteRule ^ - [L]
+
+# SPA fallback: route everything else to index.html
+RewriteRule . /index.html [L]
+

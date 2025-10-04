@@ -84,6 +84,12 @@ function Header() {
 							Temporada
 						</a>
 						<a
+							href="/fletes"
+							className="text-foreground hover:text-primary transition-colors"
+						>
+							Fletes
+						</a>
+						<a
 							href="#contacto"
 							className="text-foreground hover:text-primary transition-colors"
 						>
@@ -118,3 +124,4 @@ function Header() {
 }
 
 export default Header;
+

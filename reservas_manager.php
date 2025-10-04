@@ -143,10 +143,13 @@ function generarExcel($reservas) {
         'Teléfono',
         'Origen',
         'Destino',
+        'Otro Origen',
+        'Otro Destino',
         'Fecha Viaje',
         'Hora',
         'Pasajeros',
         'Precio (CLP)',
+        'Total con Descuento (CLP)',
         'Vehículo',
         'Número Vuelo',
         'Hotel',
@@ -158,7 +161,20 @@ function generarExcel($reservas) {
         'Mensaje',
         'Fuente',
         'Abono Sugerido',
-        'Saldo Pendiente'
+        'Saldo Pendiente',
+        'Descuento Base',
+        'Descuento Promoción',
+        'Descuento RoundTrip',
+        'Descuento Online',
+        'Descuentos Personalizados',
+        'IP Address',
+        'User Agent',
+        'Estado Pago',
+        'Pago Monto',
+        'Pago ID',
+        'Pago Gateway',
+        'Correo Admin Enviado',
+        'Correo Cliente Enviado'
     ];
     
     fputcsv($output, $headers, ';');
@@ -173,10 +189,13 @@ function generarExcel($reservas) {
             $reserva['telefono'] ?? '',
             $reserva['origen'] ?? '',
             $reserva['destino'] ?? '',
+            $reserva['otroOrigen'] ?? '',
+            $reserva['otroDestino'] ?? '',
             $reserva['fecha'] ?? '',
             $reserva['hora'] ?? '',
             $reserva['pasajeros'] ?? '',
             number_format($reserva['precio'] ?? 0, 0, ',', '.'),
+            number_format($reserva['totalConDescuento'] ?? 0, 0, ',', '.'),
             $reserva['vehiculo'] ?? '',
             $reserva['numeroVuelo'] ?? '',
             $reserva['hotel'] ?? '',
@@ -188,7 +207,23 @@ function generarExcel($reservas) {
             $reserva['mensaje'] ?? '',
             $reserva['source'] ?? '',
             number_format($reserva['abonoSugerido'] ?? 0, 0, ',', '.'),
-            number_format($reserva['saldoPendiente'] ?? 0, 0, ',', '.')
+            number_format($reserva['saldoPendiente'] ?? 0, 0, ',', '.'),
+            $reserva['descuentoBase'] ?? 0,
+            $reserva['descuentoPromocion'] ?? 0,
+            $reserva['descuentoRoundTrip'] ?? 0,
+            $reserva['descuentoOnline'] ?? 0,
+            (is_array($reserva['descuentosPersonalizados'] ?? null) ? implode('|', array_map(function($d){
+                if (is_array($d)) { return ($d['id'] ?? '').':'.($d['valor'] ?? ''); }
+                return (string)$d;
+            }, $reserva['descuentosPersonalizados'])) : ''),
+            $reserva['ip_address'] ?? '',
+            $reserva['user_agent'] ?? '',
+            $reserva['estado_pago'] ?? '',
+            number_format($reserva['pago_monto'] ?? 0, 0, ',', '.'),
+            $reserva['pago_id'] ?? '',
+            $reserva['pago_gateway'] ?? '',
+            ($reserva['correo_admin_enviado'] ?? false) ? 'Sí' : 'No',
+            ($reserva['correo_cliente_enviado'] ?? false) ? 'Sí' : 'No'
         ];
         
         fputcsv($output, $fila, ';');

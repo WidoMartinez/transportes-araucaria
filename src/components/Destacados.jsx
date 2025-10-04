@@ -69,7 +69,7 @@ function Destacados({ destinos }) {
 												<a href="#contacto">
 													<Button
 														size="lg"
-														className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3 px-6"
+														className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3 px-6 focus-visible:ring-accent/30 shadow-lg"
 													>
 														Cotizar Viaje a {destino.nombre}
 														<ArrowRight className="ml-2 h-5 w-5" />
