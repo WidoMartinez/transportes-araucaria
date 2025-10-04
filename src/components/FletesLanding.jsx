@@ -345,6 +345,8 @@ Tipo: Flete Nacional`,
 								src={camionford}
 								alt="Camión de referencia para fletes"
 								className="relative w-full rounded-3xl shadow-2xl border border-transparent transition-transform duration-500 hover:scale-105"
+								loading="lazy"
+								decoding="async"
 							/>
 						</div>
 					</div>
