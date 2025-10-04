@@ -242,7 +242,10 @@ Tipo: Flete Nacional`,
 			: "rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700";
 
 	return (
-		<div id="fletes" className="min-h-screen bg-background text-foreground animate-fade-in">
+		<div
+			id="fletes"
+			className="min-h-screen bg-background text-foreground animate-fade-in"
+		>
 			<header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-border">
 				<div className="container mx-auto flex items-center justify-between px-4 py-4">
 					<a href="/" className="flex items-center gap-3 animate-slide-in-left">
