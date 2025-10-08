@@ -101,15 +101,15 @@ function Hero({
 		() => [
 			{
 				title: "1. Tu viaje",
-				description: "Selecciona origen, destino, fecha y pasajeros.",
+				description: "Selecciona origen, destino y pasajeros.",
 			},
 			{
 				title: "2. Tus datos",
-				description: "Completa la información de contacto y extras.",
+				description: "Completa tu información de contacto.",
 			},
 			{
 				title: "3. Revisar y pagar",
-				description: "Confirma el resumen y paga online con descuento.",
+				description: "Confirma el precio y paga online con descuento.",
 			},
 		],
 		[]
@@ -236,45 +236,9 @@ function Hero({
 			return;
 		}
 
-		if (!formData.fecha) {
-			setStepError("Selecciona la fecha de tu traslado.");
+		if (!formData.pasajeros || formData.pasajeros < 1) {
+			setStepError("Indica el número de pasajeros.");
 			return;
-		}
-
-		if (!formData.hora) {
-			setStepError("Selecciona la hora de recogida.");
-			return;
-		}
-
-		const validacion = validarHorarioReserva();
-		if (!validacion.esValido) {
-			setStepError(validacion.mensaje);
-			return;
-		}
-
-		if (formData.idaVuelta) {
-			if (!formData.fechaRegreso) {
-				setStepError("Selecciona la fecha de regreso.");
-				return;
-			}
-			if (!formData.horaRegreso) {
-				setStepError("Selecciona la hora del regreso.");
-				return;
-			}
-			const salida = new Date(`${formData.fecha}T${formData.hora}`);
-			const regreso = new Date(
-				`${formData.fechaRegreso}T${formData.horaRegreso}`
-			);
-			if (Number.isNaN(regreso.getTime())) {
-				setStepError("La fecha de regreso no es válida.");
-				return;
-			}
-			if (regreso <= salida) {
-				setStepError(
-					"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora seleccionadas."
-				);
-				return;
-			}
 		}
 
 		setStepError("");
@@ -316,26 +280,7 @@ function Hero({
 		setPhoneError("");
 		setStepError("");
 
-		if (requiereCotizacionManual) {
-			setCurrentStep(2);
-			return;
-		}
-
-		const result = await onSubmitWizard();
-
-		if (!result.success) {
-			if (result.error === "horario" && result.message) {
-				setStepError(result.message);
-				setCurrentStep(0);
-			} else if (result.error === "server" && result.message) {
-				setStepError(`No pudimos enviar tu reserva: ${result.message}`);
-			} else if (result.error === "telefono") {
-				setStepError("Revisa el número de teléfono ingresado.");
-			}
-			return;
-		}
-
-		setStepError("");
+		// Move directly to payment step
 		setCurrentStep(2);
 	};
 
@@ -686,138 +631,44 @@ function Hero({
 											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-											<div className="space-y-2">
-												<Label htmlFor="fecha-hero">Fecha</Label>
-												<Input
-													id="fecha-hero"
-													type="date"
-													name="fecha"
-													value={formData.fecha}
-													onChange={handleInputChange}
-													min={minDateTime}
-													required
-												/>
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="hora-hero">Hora</Label>
-												<Select
-													value={formData.hora}
-													onValueChange={(value) =>
-														handleTimeChange("hora", value)
-													}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Selecciona la hora" />
-													</SelectTrigger>
-													<SelectContent>
-														{timeOptions.map((option) => (
-															<SelectItem
-																key={option.value}
-																value={option.value}
-															>
-																{option.label}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="pasajeros-hero">Pasajeros</Label>
-												<select
-													id="pasajeros-hero"
-													name="pasajeros"
-													value={formData.pasajeros}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
-												>
-													{[...Array(maxPasajeros)].map((_, i) => (
-														<option key={i + 1} value={i + 1}>
-															{i + 1} pasajero(s)
-														</option>
-													))}
-												</select>
-											</div>
+										<div className="space-y-2">
+											<Label htmlFor="pasajeros-hero">Número de Pasajeros</Label>
+											<select
+												id="pasajeros-hero"
+												name="pasajeros"
+												value={formData.pasajeros}
+												onChange={handleInputChange}
+												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+												required
+											>
+												{[...Array(maxPasajeros)].map((_, i) => (
+													<option key={i + 1} value={i + 1}>
+														{i + 1} pasajero(s)
+													</option>
+												))}
+											</select>
 										</div>
 
-										<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
+										<div className="rounded-lg border border-muted/40 bg-muted/10 p-4">
 											<div className="flex items-start gap-3">
 												<Checkbox
 													id="ida-vuelta"
 													checked={formData.idaVuelta}
 													onCheckedChange={(value) => {
 														const isRoundTrip = Boolean(value);
-														setFormData((prev) => {
-															if (isRoundTrip) {
-																return {
-																	...prev,
-																	idaVuelta: true,
-																	fechaRegreso: prev.fechaRegreso || prev.fecha,
-																	horaRegreso: prev.horaRegreso,
-																};
-															}
-															return {
-																...prev,
-																idaVuelta: false,
-																fechaRegreso: "",
-																horaRegreso: "",
-															};
-														});
+														setFormData((prev) => ({
+															...prev,
+															idaVuelta: isRoundTrip,
+														}));
 													}}
 												/>
 												<label
 													htmlFor="ida-vuelta"
 													className="text-sm text-muted-foreground"
 												>
-													¿Deseas reservar también el regreso? Coordina ida y
-													vuelta en una sola solicitud.
+													¿Necesitas también el regreso? Obtén un 5% adicional de descuento reservando ida y vuelta.
 												</label>
 											</div>
-											{formData.idaVuelta && (
-												<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-													<div className="space-y-2">
-														<Label htmlFor="fecha-regreso">Fecha regreso</Label>
-														<Input
-															id="fecha-regreso"
-															type="date"
-															name="fechaRegreso"
-															min={formData.fecha || minDateTime}
-															value={formData.fechaRegreso}
-															onChange={handleInputChange}
-															required={formData.idaVuelta}
-														/>
-													</div>
-													<div className="space-y-2">
-														<Label htmlFor="hora-regreso">Hora regreso</Label>
-														<Select
-															value={formData.horaRegreso}
-															onValueChange={(value) =>
-																handleTimeChange("horaRegreso", value)
-															}
-														>
-															<SelectTrigger>
-																<SelectValue placeholder="Selecciona la hora de regreso" />
-															</SelectTrigger>
-															<SelectContent>
-																{timeOptions.map((option) => (
-																	<SelectItem
-																		key={option.value}
-																		value={option.value}
-																	>
-																		{option.label}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-													</div>
-												</div>
-											)}
-											<p className="text-xs text-muted-foreground">
-												Validaremos la disponibilidad del retorno junto con tu
-												reserva inicial. Al reservar ida y vuelta obtienes un 5%
-												adicional de descuento.
-											</p>
 										</div>
 										<div className="text-center text-sm text-muted-foreground">
 											¿No encuentras tu destino?{" "}
@@ -958,19 +809,20 @@ function Hero({
 
 								{currentStep === 1 && (
 									<div className="space-y-6">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+										<div className="grid grid-cols-1 gap-6">
 											<div className="space-y-2">
-												<Label htmlFor="nombre-hero">Nombre completo</Label>
+												<Label htmlFor="nombre-hero">Nombre completo *</Label>
 												<Input
 													id="nombre-hero"
 													name="nombre"
 													value={formData.nombre}
 													onChange={handleInputChange}
 													placeholder="Ej: Juan Pérez"
+													required
 												/>
 											</div>
 											<div className="space-y-2">
-												<Label htmlFor="email-hero">Email</Label>
+												<Label htmlFor="email-hero">Email *</Label>
 												<Input
 													id="email-hero"
 													type="email"
@@ -978,170 +830,30 @@ function Hero({
 													value={formData.email}
 													onChange={handleInputChange}
 													placeholder="tu@email.cl"
+													required
 												/>
 											</div>
-										</div>
-
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
-												<Label htmlFor="telefono-hero">Teléfono móvil</Label>
+												<Label htmlFor="telefono-hero">Teléfono móvil *</Label>
 												<Input
 													id="telefono-hero"
 													name="telefono"
 													value={formData.telefono}
 													onChange={handleInputChange}
 													placeholder="+56 9 1234 5678"
+													required
 												/>
 												{phoneError && (
 													<p className="text-sm text-red-500">{phoneError}</p>
 												)}
 											</div>
-											<div className="space-y-2">
-												<Label htmlFor="numeroVuelo-hero">
-													Número de vuelo (si aplica)
-												</Label>
-												<Input
-													id="numeroVuelo-hero"
-													name="numeroVuelo"
-													value={formData.numeroVuelo}
-													onChange={handleInputChange}
-													placeholder="Ej: LA123"
-												/>
-											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-2">
-												<Label htmlFor="hotel-hero">
-													Hotel o dirección final
-												</Label>
-												<Input
-													id="hotel-hero"
-													name="hotel"
-													value={formData.hotel}
-													onChange={handleInputChange}
-													placeholder="Ej: Hotel Antumalal"
-												/>
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="sillaInfantil-hero">
-													¿Necesitas alzador infantil?
-												</Label>
-												<select
-													id="sillaInfantil-hero"
-													name="sillaInfantil"
-													value={formData.sillaInfantil}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-												>
-													<option value="no">No requiero</option>
-													<option value="1 silla">Sí, 1 alzador</option>
-													<option value="2 sillas">Sí, 2 alzadores</option>
-												</select>
-											</div>
+										<div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+											<p className="text-sm text-blue-900">
+												<strong>📌 Nota:</strong> Después del pago te pediremos la fecha, hora y otros detalles de tu viaje.
+											</p>
 										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor="equipajeEspecial-hero">
-												Equipaje extra o comentarios para el conductor
-											</Label>
-											<Textarea
-												id="equipajeEspecial-hero"
-												name="equipajeEspecial"
-												value={formData.equipajeEspecial}
-												onChange={handleInputChange}
-												placeholder="Cuéntanos sobre equipaje voluminoso, mascotas u otros detalles relevantes."
-											/>
-										</div>
-
-										{/* Código de descuento - Más visible y cerca del resumen */}
-										<div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 shadow-lg">
-											<div className="flex items-center gap-3 mb-4">
-												<div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-													<span className="text-white font-bold text-sm">
-														🎟️
-													</span>
-												</div>
-												<div>
-													<h3 className="text-lg font-bold text-purple-900">
-														¿Tienes un código de descuento?
-													</h3>
-													<p className="text-sm text-purple-700">
-														Ingresa tu código para obtener descuentos
-														adicionales
-													</p>
-												</div>
-											</div>
-											<CodigoDescuento
-												codigoAplicado={codigoAplicado}
-												codigoError={codigoError}
-												validandoCodigo={validandoCodigo}
-												onAplicarCodigo={onAplicarCodigo}
-												onRemoverCodigo={onRemoverCodigo}
-											/>
-										</div>
-
-										{mostrarPrecio && (
-											<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-foreground">
-												<h4 className="text-lg font-semibold mb-2">
-													Resumen económico
-												</h4>
-												<div className="grid gap-2 text-sm">
-													<div className="flex items-center justify-between">
-														<span>Ahorro base ({baseDiscountPercentage}%)</span>
-														<span className="font-semibold">
-															{formatCurrency(pricing.descuentoBase)}
-														</span>
-													</div>
-													{promoDiscountPercentage > 0 && (
-														<div className="flex items-center justify-between">
-															<span>
-																{activePromotion?.descripcion ||
-																	`Promo adicional (+${promoDiscountPercentage}%)`}
-															</span>
-															<span className="font-semibold">
-																{formatCurrency(pricing.descuentoPromocion)}
-															</span>
-														</div>
-													)}
-													{codigoAplicado && (
-														<div className="flex items-center justify-between bg-purple-50 p-2 rounded-lg border border-purple-200">
-															<span className="text-purple-800 font-medium">
-																🎟️ Código {codigoAplicado.codigo}
-															</span>
-															<span className="font-semibold text-purple-900">
-																-{formatCurrency(pricing.descuentoCodigo || 0)}
-															</span>
-														</div>
-													)}
-													<div className="flex items-center justify-between text-slate-700">
-														<span>Ahorro total aplicado</span>
-														<span className="font-semibold">
-															-{formatCurrency(pricing.descuentoOnline)}
-															<span className="ml-1 text-xs text-slate-500">
-																({totalDiscountPercentage}% total)
-															</span>
-														</span>
-													</div>
-													<div className="flex items-center justify-between">
-														<span>Abono online (40%)</span>
-														<span className="font-semibold">
-															{formatCurrency(pricing.abono)}
-														</span>
-													</div>
-													<div className="flex items-center justify-between">
-														<span>Saldo con descuento</span>
-														<span className="font-semibold">
-															{formatCurrency(pricing.saldoPendiente)}
-														</span>
-													</div>
-												</div>
-												<p className="mt-3 text-xs text-muted-foreground">
-													Podrás elegir entre abonar el 40% o pagar el total con
-													descuento en el siguiente paso.
-												</p>
-											</div>
-										)}
 
 										<div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
 											<Button
@@ -1198,22 +910,6 @@ function Hero({
 												</div>
 												<div className="space-y-2">
 													<p className="text-sm font-medium text-gray-500">
-														Fecha
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{fechaLegible}
-													</p>
-												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Hora
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{horaLegible}
-													</p>
-												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
 														Pasajeros
 													</p>
 													<p className="text-lg font-semibold text-gray-900">
@@ -1247,15 +943,20 @@ function Hero({
 															/>
 														</svg>
 														<p className="font-semibold text-blue-900">
-															Regreso incluido
+															Regreso incluido (+5% descuento)
 														</p>
 													</div>
 													<p className="text-sm text-blue-700">
-														{formData.fechaRegreso || "Por definir"} ·{" "}
-														{formData.horaRegreso || "Por definir"} hrs
+														Las fechas y horarios se coordinarán después del pago.
 													</p>
 												</div>
 											)}
+
+											<div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+												<p className="text-sm text-amber-900">
+													<strong>📅 Importante:</strong> Después de confirmar el pago, te enviaremos un enlace para que ingreses la fecha, hora y otros detalles de tu viaje.
+												</p>
+											</div>
 										</div>
 										{requiereCotizacionManual ? (
 											<div className="rounded-xl border border-dashed border-primary/40 bg-white/90 p-6 text-sm text-foreground">
@@ -1384,6 +1085,32 @@ function Hero({
 														)}
 													</div>
 												)}
+
+												{/* Código de descuento */}
+												<div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 shadow-lg">
+													<div className="flex items-center gap-3 mb-4">
+														<div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+															<span className="text-white font-bold text-sm">
+																🎟️
+															</span>
+														</div>
+														<div>
+															<h3 className="text-lg font-bold text-purple-900">
+																¿Tienes un código de descuento?
+															</h3>
+															<p className="text-sm text-purple-700">
+																Ingresa tu código para obtener descuentos adicionales
+															</p>
+														</div>
+													</div>
+													<CodigoDescuento
+														codigoAplicado={codigoAplicado}
+														codigoError={codigoError}
+														validandoCodigo={validandoCodigo}
+														onAplicarCodigo={onAplicarCodigo}
+														onRemoverCodigo={onRemoverCodigo}
+													/>
+												</div>
 
 												<div className="space-y-4">
 													<p className="text-sm font-medium text-foreground">
