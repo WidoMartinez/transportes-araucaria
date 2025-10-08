@@ -31,11 +31,11 @@ const Reserva = sequelize.define(
 		},
 		fecha: {
 			type: DataTypes.DATEONLY,
-			allowNull: false,
+			allowNull: true,
 		},
 		hora: {
 			type: DataTypes.TIME,
-			allowNull: false,
+			allowNull: true,
 		},
 		pasajeros: {
 			type: DataTypes.INTEGER,

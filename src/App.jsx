@@ -1106,9 +1106,12 @@ function App() {
 			return { success: false, error: "telefono" };
 		}
 		setPhoneError("");
-		const validacion = validarHorarioReserva();
-		if (!validacion.esValido && formData.destino !== "Otro") {
-			return { success: false, error: "horario", message: validacion.mensaje };
+		// Only validate schedule if fecha and hora are provided
+		if (formData.fecha && formData.hora && formData.destino !== "Otro") {
+			const validacion = validarHorarioReserva();
+			if (!validacion.esValido) {
+				return { success: false, error: "horario", message: validacion.mensaje };
+			}
 		}
 		if (isSubmitting) return { success: false, error: "procesando" };
 		setIsSubmitting(true);
@@ -1120,6 +1123,9 @@ function App() {
 			...formData,
 			origen: origenFinal,
 			destino: destinoFinal,
+			// Use placeholder values if not provided yet
+			fecha: formData.fecha || "Por confirmar",
+			hora: formData.hora || "Por confirmar",
 			precio: cotizacion.precio,
 			vehiculo: cotizacion.vehiculo,
 			descuentoBase: pricing.descuentoBase,
