@@ -474,47 +474,29 @@ function Hero({
 			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
 				{!showBookingModule && (
 					<>
-						<h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
-							Traslados Privados Aeropuerto La Araucanía
-							<br />
-							<span className="text-accent drop-shadow-lg">
-								Corralco, Pucón, Melipeuco y los principales destinos de La
-								Araucanía
-							</span>
+						<h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+							Traslados Privados desde Aeropuerto La Araucanía
 						</h1>
-						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
-							Transportes Araucaria conecta el Aeropuerto La Araucanía con
-							Malalcahuello, Pucón, Villarrica, Lican Ray, Conguillío, Huilo
-							Huilo y otros centros turísticos imperdibles de la región. Reserva
-							en línea, confirma tu conductor y asegura desde un{" "}
-							{baseDiscountPercentage}% de descuento web garantizado
-							{promoDiscountPercentage > 0
-								? ` + ${
-										activePromotion?.descripcion ||
-										`${promoDiscountPercentage}% extra por promociones activas`
-								  }`
-								: ""}
-							{roundTripDiscountPercentage > 0
-								? ` + ${roundTripDiscountPercentage}% adicional por reservar ida y vuelta`
-								: ""}
-							{personalizedDiscountPercentage > 0
-								? ` + ${personalizedDiscountPercentage}% por descuentos especiales`
-								: ""}
-							.
+						<p className="text-lg md:text-xl mb-6 max-w-2xl mx-auto drop-shadow-md text-white/95">
+							Conectamos con Corralco, Pucón, Villarrica, Conguillío y más destinos de La Araucanía
 						</p>
+						<div className="inline-flex items-center gap-2 bg-accent/90 text-accent-foreground px-4 py-2 rounded-full mb-6 shadow-lg">
+							<span className="text-2xl font-bold">{baseDiscountPercentage}%</span>
+							<span className="text-sm">Descuento web</span>
+						</div>
 					</>
 				)}
 
 				{!showBookingModule && (
-					<div className="flex flex-col items-center justify-center space-y-6">
+					<div className="flex flex-col items-center justify-center space-y-4">
 						<Button
 							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none focus-visible:ring-accent/30"
+							className="bg-accent hover:bg-accent/90 text-accent-foreground px-10 py-5 text-xl font-semibold rounded-lg shadow-xl transition-all duration-200 hover:scale-105 focus-visible:ring-accent/30"
 						>
-							🚐 Reservar mi traslado
+							Reservar ahora
 						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso rápido y seguro • Sin costos ocultos
+						<p className="text-sm text-white/90 drop-shadow-md">
+							Rápido y seguro • Sin costos ocultos
 						</p>
 					</div>
 				)}
@@ -522,84 +504,37 @@ function Hero({
 				{showBookingModule && (
 					<div className="w-full">
 						{/* Texto motivacional cuando se abre el módulo */}
-						<div className="text-center mb-6">
-							<h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-2xl mb-3">
-								¡Reserva ahora y ahorra!
+						<div className="text-center mb-4">
+							<h3 className="text-xl md:text-2xl font-semibold text-white drop-shadow-lg mb-2">
+								Completa tu reserva
 							</h3>
-							<p className="text-lg md:text-xl text-white/95 drop-shadow-lg font-medium">
-								Descuento exclusivo del{" "}
-								<span className="text-accent font-bold text-2xl">
-									{baseDiscountPercentage}%
-								</span>{" "}
-								solo disponible en nuestra web
-								{promoDiscountPercentage > 0 && (
-									<span className="block mt-2 text-accent font-bold">
-										+{" "}
-										{activePromotion?.descripcion ||
-											`${promoDiscountPercentage}% extra por promociones activas`}
-									</span>
-								)}
-								{roundTripDiscountPercentage > 0 && (
-									<span className="block text-accent font-bold">
-										+ {roundTripDiscountPercentage}% adicional por ida y vuelta
-									</span>
-								)}
-								{personalizedDiscountPercentage > 0 && (
-									<span className="block text-accent font-bold">
-										+ {personalizedDiscountPercentage}% por descuentos
-										especiales
-									</span>
-								)}
+							<p className="text-sm md:text-base text-white/90 drop-shadow-md">
+								{totalDiscountPercentage}% de descuento aplicado automáticamente
 							</p>
 						</div>
 
 						<Card
-							className="max-w-5xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left"
+							className="max-w-4xl mx-auto bg-white/98 backdrop-blur-sm shadow-lg border border-gray-200 text-left"
 							data-booking-module
 						>
-							<CardHeader className="space-y-3">
-								<div className="flex flex-wrap items-center justify-between gap-2">
+							<CardHeader className="space-y-2 pb-4">
+								<div className="flex items-center justify-between">
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => setShowBookingModule(false)}
-										className="text-gray-500 hover:text-gray-700"
+										className="text-gray-400 hover:text-gray-600 -ml-2"
 									>
-										✕
+										✕ Cerrar
 									</Button>
-									<div className="flex items-center gap-2">
-										<Badge variant="secondary" className="text-sm">
-											Descuento en linea {baseDiscountPercentage}%
+									{totalDiscountPercentage > 0 && (
+										<Badge variant="secondary" className="text-xs font-medium">
+											{totalDiscountPercentage}% descuento
 										</Badge>
-										{promoDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-emerald-500 text-slate-950"
-											>
-												{activePromotion?.descripcion ||
-													`Promo extra +${promoDiscountPercentage}%`}
-											</Badge>
-										)}
-										{roundTripDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-sky-500 text-slate-950"
-											>
-												Ida & vuelta +{roundTripDiscountPercentage}%
-											</Badge>
-										)}
-										{personalizedDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-purple-500 text-slate-950"
-											>
-												Especial +{personalizedDiscountPercentage}%
-											</Badge>
-										)}
-									</div>
+									)}
 								</div>
-								<div className="space-y-4">
-									<div className="grid gap-4 md:grid-cols-3">
+								<div className="space-y-3">
+									<div className="flex items-center justify-between text-sm">
 										{steps.map((step, index) => {
 											const isCompleted = index < currentStep;
 											const isActive = index === currentStep;
@@ -607,42 +542,31 @@ function Hero({
 											return (
 												<div
 													key={step.title}
-													className={`flex items-start gap-3 rounded-lg border p-3 transition ${
-														isActive
-															? "border-primary bg-primary/10"
-															: isCompleted
-															? "border-green-500/50 bg-green-500/10"
-															: "border-muted bg-muted/40"
-													}`}
+													className="flex items-center gap-2"
 												>
 													<div
-														className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${
+														className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium ${
 															isCompleted
-																? "border-green-500 bg-green-500/20 text-green-600"
+																? "bg-green-500 text-white"
 																: isActive
-																? "border-primary bg-primary/20 text-primary"
-																: "border-muted-foreground/40 text-muted-foreground"
+																? "bg-primary text-white"
+																: "bg-gray-200 text-gray-500"
 														}`}
 													>
 														{isCompleted ? (
-															<CheckCircle2 className="h-6 w-6" />
+															<CheckCircle2 className="h-4 w-4" />
 														) : (
 															index + 1
 														)}
 													</div>
-													<div>
-														<p className="font-semibold text-foreground">
-															{step.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{step.description}
-														</p>
-													</div>
+													<span className={`hidden md:inline ${isActive ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+														{step.title.replace(/^\d+\.\s*/, "")}
+													</span>
 												</div>
 											);
 										})}
 									</div>
-									<Progress value={progressValue} className="h-2" />
+									<Progress value={progressValue} className="h-1.5" />
 								</div>
 							</CardHeader>
 							<CardContent className="space-y-8">
@@ -830,7 +754,7 @@ function Hero({
 											para una cotización personalizada.
 										</div>
 										{mostrarPrecio ? (
-											<div className="rounded-xl border border-primary/20 bg-primary/10 p-6 text-foreground">
+											<div className="rounded-lg border border-gray-200 bg-gray-50 p-5 text-foreground">
 												<div className="grid gap-4 md:grid-cols-2 md:items-center">
 													<div className="space-y-1">
 														<p className="text-sm uppercase tracking-wide text-muted-foreground">
