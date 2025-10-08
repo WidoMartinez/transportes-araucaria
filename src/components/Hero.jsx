@@ -665,8 +665,8 @@ function Hero({
 											</div>
 										</div>
 
-										<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
-											<div className="flex items-start gap-3">
+										<div className="border border-gray-200 bg-gray-50 rounded-lg p-4 space-y-3">
+											<div className="flex items-center gap-2">
 												<Checkbox
 													id="ida-vuelta"
 													checked={formData.idaVuelta}
@@ -692,16 +692,15 @@ function Hero({
 												/>
 												<label
 													htmlFor="ida-vuelta"
-													className="text-sm text-muted-foreground"
+													className="text-sm text-foreground cursor-pointer"
 												>
-													¿Deseas reservar también el regreso? Coordina ida y
-													vuelta en una sola solicitud.
+													Agregar viaje de regreso (+5% descuento)
 												</label>
 											</div>
 											{formData.idaVuelta && (
-												<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-													<div className="space-y-2">
-														<Label htmlFor="fecha-regreso">Fecha regreso</Label>
+												<div className="grid grid-cols-1 gap-3 md:grid-cols-2 pt-2">
+													<div className="space-y-1.5">
+														<Label htmlFor="fecha-regreso" className="text-xs">Fecha regreso</Label>
 														<Input
 															id="fecha-regreso"
 															type="date"
@@ -712,8 +711,8 @@ function Hero({
 															required={formData.idaVuelta}
 														/>
 													</div>
-													<div className="space-y-2">
-														<Label htmlFor="hora-regreso">Hora regreso</Label>
+													<div className="space-y-1.5">
+														<Label htmlFor="hora-regreso" className="text-xs">Hora regreso</Label>
 														<Select
 															value={formData.horaRegreso}
 															onValueChange={(value) =>
@@ -721,7 +720,7 @@ function Hero({
 															}
 														>
 															<SelectTrigger>
-																<SelectValue placeholder="Selecciona la hora de regreso" />
+																<SelectValue placeholder="Selecciona hora" />
 															</SelectTrigger>
 															<SelectContent>
 																{timeOptions.map((option) => (
@@ -737,22 +736,8 @@ function Hero({
 													</div>
 												</div>
 											)}
-											<p className="text-xs text-muted-foreground">
-												Validaremos la disponibilidad del retorno junto con tu
-												reserva inicial. Al reservar ida y vuelta obtienes un 5%
-												adicional de descuento.
-											</p>
 										</div>
-										<div className="text-center text-sm text-muted-foreground">
-											¿No encuentras tu destino?{" "}
-											<a
-												href="#contacto"
-												className="text-primary hover:underline"
-											>
-												Contáctanos
-											</a>{" "}
-											para una cotización personalizada.
-										</div>
+
 										{mostrarPrecio ? (
 											<div className="rounded-lg border border-gray-200 bg-gray-50 p-5 text-foreground">
 												<div className="grid gap-4 md:grid-cols-2 md:items-center">
@@ -863,18 +848,14 @@ function Hero({
 											</div>
 										)}
 
-										<div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-											<p className="text-sm text-muted-foreground">
-												Revisaremos disponibilidad en tiempo real antes de pasar
-												al pago.
-											</p>
+										<div className="flex justify-end">
 											<Button
 												type="button"
-												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
+												className="bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
 												onClick={handleStepOneNext}
 												disabled={isSubmitting}
 											>
-												Continuar con mis datos
+												Continuar
 											</Button>
 										</div>
 									</div>
@@ -978,24 +959,11 @@ function Hero({
 											/>
 										</div>
 
-										{/* Código de descuento - Más visible y cerca del resumen */}
-										<div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 shadow-lg">
-											<div className="flex items-center gap-3 mb-4">
-												<div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-													<span className="text-white font-bold text-sm">
-														🎟️
-													</span>
-												</div>
-												<div>
-													<h3 className="text-lg font-bold text-purple-900">
-														¿Tienes un código de descuento?
-													</h3>
-													<p className="text-sm text-purple-700">
-														Ingresa tu código para obtener descuentos
-														adicionales
-													</p>
-												</div>
-											</div>
+										{/* Código de descuento */}
+										<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+											<h3 className="text-sm font-medium text-foreground mb-3">
+												¿Tienes un código de descuento?
+											</h3>
 											<CodigoDescuento
 												codigoAplicado={codigoAplicado}
 												codigoError={codigoError}
@@ -1006,90 +974,42 @@ function Hero({
 										</div>
 
 										{mostrarPrecio && (
-											<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-foreground">
-												<h4 className="text-lg font-semibold mb-2">
-													Resumen económico
-												</h4>
-												<div className="grid gap-2 text-sm">
-													<div className="flex items-center justify-between">
-														<span>Ahorro base ({baseDiscountPercentage}%)</span>
-														<span className="font-semibold">
-															{formatCurrency(pricing.descuentoBase)}
-														</span>
-													</div>
-													{promoDiscountPercentage > 0 && (
-														<div className="flex items-center justify-between">
-															<span>
-																{activePromotion?.descripcion ||
-																	`Promo adicional (+${promoDiscountPercentage}%)`}
-															</span>
-															<span className="font-semibold">
-																{formatCurrency(pricing.descuentoPromocion)}
-															</span>
-														</div>
-													)}
-													{codigoAplicado && (
-														<div className="flex items-center justify-between bg-purple-50 p-2 rounded-lg border border-purple-200">
-															<span className="text-purple-800 font-medium">
-																🎟️ Código {codigoAplicado.codigo}
-															</span>
-															<span className="font-semibold text-purple-900">
-																-{formatCurrency(pricing.descuentoCodigo || 0)}
-															</span>
-														</div>
-													)}
-													<div className="flex items-center justify-between text-slate-700">
-														<span>Ahorro total aplicado</span>
-														<span className="font-semibold">
-															-{formatCurrency(pricing.descuentoOnline)}
-															<span className="ml-1 text-xs text-slate-500">
-																({totalDiscountPercentage}% total)
-															</span>
-														</span>
-													</div>
-													<div className="flex items-center justify-between">
-														<span>Abono online (40%)</span>
-														<span className="font-semibold">
-															{formatCurrency(pricing.abono)}
-														</span>
-													</div>
-													<div className="flex items-center justify-between">
-														<span>Saldo con descuento</span>
-														<span className="font-semibold">
-															{formatCurrency(pricing.saldoPendiente)}
-														</span>
-													</div>
+											<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-foreground">
+												<div className="flex items-center justify-between mb-2">
+													<span className="text-sm text-muted-foreground">Total con descuento</span>
+													<span className="text-xl font-bold text-accent">
+														{formatCurrency(pricing.totalConDescuento)}
+													</span>
 												</div>
-												<p className="mt-3 text-xs text-muted-foreground">
-													Podrás elegir entre abonar el 40% o pagar el total con
-													descuento en el siguiente paso.
-												</p>
+												<div className="text-xs text-muted-foreground">
+													Ahorro: {formatCurrency(pricing.descuentoOnline)} ({totalDiscountPercentage}% descuento)
+													{codigoAplicado && <span className="ml-2">• Código aplicado</span>}
+												</div>
 											</div>
 										)}
 
-										<div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+										<div className="flex gap-3 justify-between">
 											<Button
 												type="button"
 												variant="outline"
-												className="w-full sm:w-auto"
 												onClick={handleStepBack}
 												disabled={isSubmitting}
 											>
-												Volver al paso anterior
+												Atrás
 											</Button>
 											<Button
 												type="button"
-												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
+												className="bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
 												onClick={handleStepTwoNext}
 												disabled={isSubmitting}
 											>
 												{isSubmitting ? (
 													<>
 														<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-														Generando resumen...
+														Enviando...
 													</>
 												) : (
-													"Revisar resumen y pagar"
+													"Revisar y confirmar"
 												)}
 											</Button>
 										</div>
