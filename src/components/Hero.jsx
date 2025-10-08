@@ -1017,86 +1017,44 @@ function Hero({
 								)}
 
 								{currentStep === 2 && (
-									<div className="max-h-[80vh] overflow-y-auto space-y-8 p-4 -m-4">
+									<div className="space-y-6">
 										{/* Resumen del viaje */}
-										<div className="bg-white rounded-lg border border-gray-200 p-6">
-											<h4 className="text-xl font-semibold text-gray-900 mb-6 border-b pb-2">
+										<div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+											<h4 className="text-base font-semibold text-foreground mb-4">
 												Resumen de tu traslado
 											</h4>
-											<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Origen
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{origenFinal}
-													</p>
+											<div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+												<div>
+													<p className="text-xs text-muted-foreground">Origen</p>
+													<p className="font-medium">{origenFinal}</p>
 												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Destino
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{destinoFinal}
-													</p>
+												<div>
+													<p className="text-xs text-muted-foreground">Destino</p>
+													<p className="font-medium">{destinoFinal}</p>
 												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Fecha
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{fechaLegible}
-													</p>
+												<div>
+													<p className="text-xs text-muted-foreground">Fecha</p>
+													<p className="font-medium">{fechaLegible}</p>
 												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Hora
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{horaLegible}
-													</p>
+												<div>
+													<p className="text-xs text-muted-foreground">Hora</p>
+													<p className="font-medium">{horaLegible}</p>
 												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Pasajeros
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{pasajerosLabel}
-													</p>
+												<div>
+													<p className="text-xs text-muted-foreground">Pasajeros</p>
+													<p className="font-medium">{pasajerosLabel}</p>
 												</div>
-												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
-														Vehículo
-													</p>
-													<p className="text-lg font-semibold text-gray-900">
-														{vehiculoSugerido}
-													</p>
+												<div>
+													<p className="text-xs text-muted-foreground">Vehículo</p>
+													<p className="font-medium">{vehiculoSugerido}</p>
 												</div>
 											</div>
 
 											{formData.idaVuelta && (
-												<div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-													<div className="flex items-center gap-2 mb-2">
-														<svg
-															className="w-5 h-5 text-blue-600"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																strokeLinecap="round"
-																strokeLinejoin="round"
-																strokeWidth={2}
-																d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-															/>
-														</svg>
-														<p className="font-semibold text-blue-900">
-															Regreso incluido
-														</p>
-													</div>
-													<p className="text-sm text-blue-700">
-														{formData.fechaRegreso || "Por definir"} ·{" "}
-														{formData.horaRegreso || "Por definir"} hrs
+												<div className="mt-4 pt-4 border-t border-gray-200">
+													<p className="text-xs text-muted-foreground mb-1">Regreso</p>
+													<p className="text-sm font-medium">
+														{formData.fechaRegreso || "Por definir"} • {formData.horaRegreso || "Por definir"}
 													</p>
 												</div>
 											)}
@@ -1120,82 +1078,32 @@ function Hero({
 												</Button>
 											</div>
 										) : (
-											<div className="rounded-xl border border-secondary/30 bg-secondary/10 p-6 text-sm">
-												<h4 className="text-lg font-semibold mb-3">
-													Resumen de pago
-												</h4>
+											<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm">
 												<div className="space-y-2">
-													<div className="flex items-center justify-between">
-														<span>
-															Descuento base ({baseDiscountPercentage}%)
-														</span>
-														<span className="font-semibold">
-															-{formatCurrency(pricing.descuentoBase)}
+													<div className="flex items-center justify-between text-xs">
+														<span className="text-muted-foreground">Precio base</span>
+														<span className="line-through text-muted-foreground">
+															{formatCurrency(pricing.precioBase)}
 														</span>
 													</div>
-													{promoDiscountPercentage > 0 && (
-														<div className="flex items-center justify-between">
-															<span>
-																{activePromotion?.descripcion ||
-																	`Promo adicional (+${promoDiscountPercentage}%)`}
-															</span>
-															<span className="font-semibold">
-																-{formatCurrency(pricing.descuentoPromocion)}
-															</span>
-														</div>
-													)}
-													{roundTripDiscountPercentage > 0 && (
-														<div className="flex items-center justify-between">
-															<span>
-																Ida y vuelta (+{roundTripDiscountPercentage}%)
-															</span>
-															<span className="font-semibold">
-																-{formatCurrency(pricing.descuentoRoundTrip)}
-															</span>
-														</div>
-													)}
-													{personalizedDiscountPercentage > 0 && (
-														<div className="flex items-center justify-between">
-															<span>
-																Descuentos especiales (+
-																{personalizedDiscountPercentage}%)
-															</span>
-															<span className="font-semibold">
-																-
-																{formatCurrency(
-																	pricing.descuentosPersonalizados
-																)}
-															</span>
-														</div>
-													)}
-													{codigoAplicado && (
-														<div className="flex items-center justify-between bg-purple-50 p-2 rounded-lg border border-purple-200">
-															<span className="text-purple-800 font-medium">
-																🎟️ Código {codigoAplicado.codigo}
-															</span>
-															<span className="font-semibold text-purple-900">
-																-{formatCurrency(pricing.descuentoCodigo || 0)}
-															</span>
-														</div>
-													)}
-													<div className="flex items-center justify-between text-slate-700">
-														<span>Ahorro total aplicado</span>
-														<span className="font-semibold">
+													<div className="flex items-center justify-between text-xs">
+														<span className="text-muted-foreground">
+															Descuento ({totalDiscountPercentage}%)
+															{codigoAplicado && " • Código aplicado"}
+														</span>
+														<span className="text-green-600 font-medium">
 															-{formatCurrency(pricing.descuentoOnline)}
-															<span className="ml-1 text-xs text-slate-500">
-																({totalDiscountPercentage}% total)
-															</span>
 														</span>
 													</div>
-													<div className="flex items-center justify-between">
-														<span>Precio con descuento</span>
-														<span className="font-semibold">
+													<div className="pt-2 border-t border-gray-200 flex items-center justify-between">
+														<span className="font-medium">Total con descuento</span>
+														<span className="text-xl font-bold text-accent">
 															{formatCurrency(pricing.totalConDescuento)}
 														</span>
 													</div>
-													<div className="flex items-center justify-between">
-														<span>Abono sugerido (40%)</span>
-														<span className="font-semibold">
+													<div className="flex items-center justify-between text-xs">
+														<span className="text-muted-foreground">Abono 40%</span>
+														<span className="font-medium">
 															{formatCurrency(pricing.abono)}
 														</span>
 													</div>
@@ -1229,11 +1137,11 @@ function Hero({
 													</div>
 												)}
 
-												<div className="space-y-4">
+												<div className="space-y-3">
 													<p className="text-sm font-medium text-foreground">
-														Selecciona el monto a pagar
+														Monto a pagar
 													</p>
-													<div className="grid gap-4 md:grid-cols-2">
+													<div className="grid gap-3 md:grid-cols-2">
 														{chargeOptions.map((option) => {
 															const isSelected = selectedCharge === option.id;
 															const isDisabled = option.disabled;
@@ -1245,31 +1153,28 @@ function Hero({
 																		!isDisabled && setSelectedCharge(option.id)
 																	}
 																	disabled={isDisabled}
-																	className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
+																	className={`flex w-full items-center justify-between rounded-lg border p-3 text-left transition ${
 																		isSelected
-																			? "border-primary ring-2 ring-primary/40"
-																			: "border-slate-300 hover:border-primary/60"
+																			? "border-primary bg-primary/5"
+																			: "border-gray-300 hover:border-primary/50"
 																	} ${
 																		isDisabled
-																			? "cursor-not-allowed opacity-60"
+																			? "cursor-not-allowed opacity-50"
 																			: "cursor-pointer"
 																	}`}
 																>
-																	<div className="flex-1">
-																		<p className="font-semibold text-slate-900">
-																			{option.title}
+																	<div>
+																		<p className="text-sm font-medium">
+																			{option.title.replace("Pagar ", "")}
 																		</p>
-																		<p className="text-sm text-muted-foreground">
-																			{option.subtitle}
-																		</p>
-																		<p className="mt-2 text-sm font-semibold text-foreground">
+																		<p className="text-lg font-bold text-accent">
 																			{formatCurrency(option.amount)}
 																		</p>
 																	</div>
 																	{isSelected && (
-																		<span className="text-xs font-semibold uppercase text-primary">
-																			Seleccionado
-																		</span>
+																		<div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+																			<CheckCircle2 className="h-4 w-4 text-white" />
+																		</div>
 																	)}
 																</button>
 															);
@@ -1277,11 +1182,11 @@ function Hero({
 													</div>
 												</div>
 
-												<div className="space-y-4">
+												<div className="space-y-3">
 													<p className="text-sm font-medium text-foreground">
-														Selecciona tu medio de pago
+														Medio de pago
 													</p>
-													<div className="grid gap-4 md:grid-cols-2">
+													<div className="grid gap-3 md:grid-cols-2">
 														{paymentMethods.map((method) => {
 															const isSelected = selectedMethod === method.id;
 															const methodLoading =
@@ -1293,37 +1198,34 @@ function Hero({
 																	type="button"
 																	onClick={() => setSelectedMethod(method.id)}
 																	disabled={isAnotherGatewayLoading}
-																	className={`flex w-full items-center gap-4 rounded-lg border bg-white/90 p-4 text-left transition focus:outline-none ${
+																	className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition ${
 																		isSelected
-																			? "border-primary ring-2 ring-primary/40"
-																			: "border-slate-300 hover:border-primary/60"
+																			? "border-primary bg-primary/5"
+																			: "border-gray-300 hover:border-primary/50"
 																	}`}
 																>
-																	<div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-white shadow">
+																	<div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-white">
 																		<img
 																			src={method.image}
 																			alt={method.title}
-																			className="h-full w-full object-contain p-2"
+																			className="h-full w-full object-contain p-1"
 																			loading="lazy"
 																		/>
 																	</div>
 																	<div className="flex-1">
-																		<p className="font-semibold text-slate-900">
+																		<p className="text-sm font-medium">
 																			{method.title}
 																		</p>
-																		<p className="text-sm text-muted-foreground">
-																			{method.subtitle}
-																		</p>
 																		{methodLoading && (
-																			<p className="mt-1 text-xs text-primary">
-																				Generando enlace...
+																			<p className="text-xs text-primary">
+																				Generando...
 																			</p>
 																		)}
 																	</div>
 																	{isSelected && !methodLoading && (
-																		<span className="text-xs font-semibold uppercase text-primary">
-																			Seleccionado
-																		</span>
+																		<div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+																			<CheckCircle2 className="h-4 w-4 text-white" />
+																		</div>
 																	)}
 																</button>
 															);
@@ -1331,11 +1233,8 @@ function Hero({
 													</div>
 												</div>
 
-												<div className="rounded-xl border border-muted/60 bg-muted/20 p-4 space-y-3">
-													<p className="text-sm font-medium text-foreground">
-														Antes de continuar
-													</p>
-													<div className="flex items-start gap-3">
+												<div className="border border-gray-200 bg-gray-50 rounded-lg p-3 space-y-2">
+													<div className="flex items-center gap-2">
 														<Checkbox
 															id="check-viaje"
 															checked={reviewChecklist.viaje}
@@ -1348,13 +1247,12 @@ function Hero({
 														/>
 														<label
 															htmlFor="check-viaje"
-															className="text-sm leading-relaxed text-muted-foreground"
+															className="text-xs text-foreground cursor-pointer"
 														>
-															Confirmo que revisé origen, destino, fecha y hora
-															de mi traslado.
+															Confirmo los datos del viaje
 														</label>
 													</div>
-													<div className="flex items-start gap-3">
+													<div className="flex items-center gap-2">
 														<Checkbox
 															id="check-contacto"
 															checked={reviewChecklist.contacto}
@@ -1367,32 +1265,22 @@ function Hero({
 														/>
 														<label
 															htmlFor="check-contacto"
-															className="text-sm leading-relaxed text-muted-foreground"
+															className="text-xs text-foreground cursor-pointer"
 														>
-															Acepto recibir la confirmación y enlace de pago
-															por email y WhatsApp.
+															Acepto recibir la confirmación por email/WhatsApp
 														</label>
 													</div>
-													{!canPay && (
-														<p className="text-xs text-muted-foreground">
-															Marca ambas casillas para habilitar las opciones
-															de pago.
-														</p>
-													)}
 												</div>
 
-												<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-													<div className="flex flex-wrap gap-3 w-full lg:w-auto">
-														<Button
-															type="button"
-															variant="outline"
-															className="w-full lg:w-auto"
-															onClick={handleStepBack}
-															disabled={isSubmitting || Boolean(loadingGateway)}
-														>
-															Editar información
-														</Button>
-													</div>
+												<div className="flex gap-3 justify-between">
+													<Button
+														type="button"
+														variant="outline"
+														onClick={handleStepBack}
+														disabled={isSubmitting || Boolean(loadingGateway)}
+													>
+														Atrás
+													</Button>
 													<div className="w-full lg:w-auto">
 														<Button
 															type="button"
