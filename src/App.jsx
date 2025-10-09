@@ -21,6 +21,7 @@ import { LoaderCircle } from "lucide-react";
 // --- Componentes de Sección ---
 import Header from "./components/Header";
 import Hero from "./components/Hero";
+import ReservaMinimalista from "./components/ReservaMinimalista";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
 import Destacados from "./components/Destacados";
@@ -133,6 +134,12 @@ const isTimeWithinRange = (time, start, end) => {
 	return time >= start || time <= end;
 };
 
+const resolveUseMinimalist = () => {
+	if (typeof window === "undefined") return false;
+	const url = new URL(window.location.href);
+	return url.searchParams.get("minimal") === "true";
+};
+
 const resolveIsAdminView = () => {
 	if (typeof window === "undefined") return false;
 
@@ -172,6 +179,7 @@ const resolveIsFreightView = () => {
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [useMinimalist, setUseMinimalist] = useState(resolveUseMinimalist);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -1269,43 +1277,77 @@ function App() {
 			<Header />
 
 			<main>
-				<Hero
-					formData={formData}
-					handleInputChange={handleInputChange}
-					origenes={todosLosTramos}
-					destinos={destinosDisponibles}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					setPhoneError={setPhoneError}
-					isSubmitting={isSubmitting}
-					cotizacion={cotizacion}
-					pricing={pricing}
-					descuentoRate={effectiveDiscountRate}
-					baseDiscountRate={onlineDiscountRate}
-					promotionDiscountRate={promotionDiscountRate}
-					roundTripDiscountRate={roundTripDiscountRate}
-					personalizedDiscountRate={personalizedDiscountRate}
-					descuentosPersonalizados={
-						descuentosGlobales?.descuentosPersonalizados || []
-					}
-					activePromotion={activePromotion}
-					reviewChecklist={reviewChecklist}
-					setReviewChecklist={setReviewChecklist}
-					setFormData={setFormData}
-					canPay={canPay}
-					handlePayment={handlePayment}
-					loadingGateway={loadingGateway}
-					onSubmitWizard={handleWizardSubmit}
-					validarTelefono={validarTelefono}
-					validarHorarioReserva={validarHorarioReserva}
-					showSummary={showConfirmationAlert}
-					codigoAplicado={codigoAplicado}
-					codigoError={codigoError}
-					validandoCodigo={validandoCodigo}
-					onAplicarCodigo={validarCodigo}
-					onRemoverCodigo={removerCodigo}
-				/>
+				{useMinimalist ? (
+					<ReservaMinimalista
+						formData={formData}
+						handleInputChange={handleInputChange}
+						origenes={todosLosTramos}
+						destinos={destinosDisponibles}
+						maxPasajeros={maxPasajeros}
+						minDateTime={minDateTime}
+						phoneError={phoneError}
+						setPhoneError={setPhoneError}
+						isSubmitting={isSubmitting}
+						cotizacion={cotizacion}
+						pricing={pricing}
+						descuentoRate={effectiveDiscountRate}
+						baseDiscountRate={onlineDiscountRate}
+						promotionDiscountRate={promotionDiscountRate}
+						roundTripDiscountRate={roundTripDiscountRate}
+						personalizedDiscountRate={personalizedDiscountRate}
+						activePromotion={activePromotion}
+						canPay={canPay}
+						handlePayment={handlePayment}
+						loadingGateway={loadingGateway}
+						setFormData={setFormData}
+						onSubmitWizard={handleWizardSubmit}
+						validarTelefono={validarTelefono}
+						validarHorarioReserva={validarHorarioReserva}
+						codigoAplicado={codigoAplicado}
+						codigoError={codigoError}
+						validandoCodigo={validandoCodigo}
+						onAplicarCodigo={validarCodigo}
+						onRemoverCodigo={removerCodigo}
+					/>
+				) : (
+					<Hero
+						formData={formData}
+						handleInputChange={handleInputChange}
+						origenes={todosLosTramos}
+						destinos={destinosDisponibles}
+						maxPasajeros={maxPasajeros}
+						minDateTime={minDateTime}
+						phoneError={phoneError}
+						setPhoneError={setPhoneError}
+						isSubmitting={isSubmitting}
+						cotizacion={cotizacion}
+						pricing={pricing}
+						descuentoRate={effectiveDiscountRate}
+						baseDiscountRate={onlineDiscountRate}
+						promotionDiscountRate={promotionDiscountRate}
+						roundTripDiscountRate={roundTripDiscountRate}
+						personalizedDiscountRate={personalizedDiscountRate}
+						descuentosPersonalizados={
+							descuentosGlobales?.descuentosPersonalizados || []
+						}
+						activePromotion={activePromotion}
+						reviewChecklist={reviewChecklist}
+						setReviewChecklist={setReviewChecklist}
+						setFormData={setFormData}
+						canPay={canPay}
+						handlePayment={handlePayment}
+						loadingGateway={loadingGateway}
+						onSubmitWizard={handleWizardSubmit}
+						validarTelefono={validarTelefono}
+						validarHorarioReserva={validarHorarioReserva}
+						showSummary={showConfirmationAlert}
+						codigoAplicado={codigoAplicado}
+						codigoError={codigoError}
+						validandoCodigo={validandoCodigo}
+						onAplicarCodigo={validarCodigo}
+						onRemoverCodigo={removerCodigo}
+					/>
+				)}
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />
