@@ -1467,6 +1467,154 @@ app.post("/enviar-reserva", async (req, res) => {
 	}
 });
 
+// Endpoint para recibir reservas express (flujo simplificado)
+app.post("/enviar-reserva-express", async (req, res) => {
+	try {
+		const datosReserva = req.body || {};
+
+		console.log("Reserva express recibida:", {
+			nombre: datosReserva.nombre,
+			email: datosReserva.email,
+			telefono: datosReserva.telefono,
+			origen: datosReserva.origen,
+			destino: datosReserva.destino,
+			fecha: datosReserva.fecha,
+			pasajeros: datosReserva.pasajeros,
+			totalConDescuento: datosReserva.totalConDescuento,
+			source: datosReserva.source || "express_web",
+		});
+
+		// Validar campos mínimos requeridos
+		const camposRequeridos = [
+			"nombre",
+			"email",
+			"telefono",
+			"origen",
+			"destino",
+			"fecha",
+		];
+		const camposFaltantes = camposRequeridos.filter(
+			(campo) => !datosReserva[campo]
+		);
+
+		if (camposFaltantes.length > 0) {
+			return res.status(400).json({
+				success: false,
+				message: `Faltan campos requeridos: ${camposFaltantes.join(", ")}`,
+			});
+		}
+
+		// Crear reserva express con campos mínimos
+		const reservaExpress = await Reserva.create({
+			nombre: datosReserva.nombre,
+			email: datosReserva.email,
+			telefono: datosReserva.telefono,
+			origen: datosReserva.origen,
+			destino: datosReserva.destino,
+			fecha: datosReserva.fecha,
+			hora: "08:00:00", // Hora por defecto - se actualiza después
+			pasajeros: parseInt(datosReserva.pasajeros) || 1,
+			precio: parseFloat(datosReserva.precio) || 0,
+			vehiculo: datosReserva.vehiculo || "",
+
+			// Campos que se completarán después del pago (opcionales por ahora)
+			numeroVuelo: "",
+			hotel: "",
+			equipajeEspecial: "",
+			sillaInfantil: false,
+			idaVuelta: Boolean(datosReserva.idaVuelta),
+			fechaRegreso: datosReserva.fechaRegreso || null,
+			horaRegreso: null,
+
+			// Campos financieros
+			abonoSugerido: parseFloat(datosReserva.abonoSugerido) || 0,
+			saldoPendiente: parseFloat(datosReserva.saldoPendiente) || 0,
+			descuentoBase: parseFloat(datosReserva.descuentoBase) || 0,
+			descuentoPromocion: parseFloat(datosReserva.descuentoPromocion) || 0,
+			descuentoRoundTrip: parseFloat(datosReserva.descuentoRoundTrip) || 0,
+			descuentoOnline: parseFloat(datosReserva.descuentoOnline) || 0,
+			totalConDescuento: parseFloat(datosReserva.totalConDescuento) || 0,
+			mensaje: datosReserva.mensaje || "",
+
+			// Metadata del sistema
+			source: datosReserva.source || "express_web",
+			estado: "pendiente_detalles", // Estado específico para reservas express
+			detallesCompletos: false, // Se marcará como true después del pago
+			ipAddress: req.ip || req.connection.remoteAddress || "",
+			userAgent: req.get("User-Agent") || "",
+			codigoDescuento: datosReserva.codigoDescuento || "",
+			estadoPago: "pendiente",
+		});
+
+		console.log(
+			"✅ Reserva express guardada en base de datos con ID:",
+			reservaExpress.id
+		);
+
+		return res.json({
+			success: true,
+			message: "Reserva express creada correctamente",
+			reservaId: reservaExpress.id,
+			tipo: "express",
+		});
+	} catch (error) {
+		console.error("Error al procesar la reserva express:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// Endpoint para completar detalles después del pago
+app.put("/completar-reserva-detalles/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const detalles = req.body;
+
+		console.log(`Completando detalles para reserva ${id}:`, detalles);
+
+		// Buscar la reserva
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				message: "Reserva no encontrada",
+			});
+		}
+
+		// Actualizar con los detalles proporcionados
+		const datosActualizados = {
+			hora: detalles.hora || reserva.hora,
+			numeroVuelo: detalles.numeroVuelo || "",
+			hotel: detalles.hotel || "",
+			equipajeEspecial: detalles.equipajeEspecial || "",
+			sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
+			idaVuelta: Boolean(detalles.idaVuelta),
+			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
+			horaRegreso: detalles.horaRegreso || reserva.horaRegreso,
+			detallesCompletos: true,
+			estado: "confirmada", // Cambiar estado a confirmada
+		};
+
+		await reserva.update(datosActualizados);
+
+		console.log(`✅ Detalles completados para reserva ${id}`);
+
+		return res.json({
+			success: true,
+			message: "Detalles actualizados correctamente",
+			reserva: await Reserva.findByPk(id), // Devolver reserva actualizada
+		});
+	} catch (error) {
+		console.error("Error actualizando detalles de reserva:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
 // --- ENDPOINTS PARA GESTIONAR RESERVAS ---
 
 // Obtener todas las reservas

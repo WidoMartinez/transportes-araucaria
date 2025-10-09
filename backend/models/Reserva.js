@@ -35,7 +35,8 @@ const Reserva = sequelize.define(
 		},
 		hora: {
 			type: DataTypes.TIME,
-			allowNull: false,
+			allowNull: true, // Cambiado a opcional para flujo express
+			defaultValue: "08:00", // Hora por defecto
 		},
 		pasajeros: {
 			type: DataTypes.INTEGER,
@@ -125,11 +126,16 @@ const Reserva = sequelize.define(
 		estado: {
 			type: DataTypes.ENUM(
 				"pendiente",
+				"pendiente_detalles", // Nuevo estado para reservas express
 				"confirmada",
 				"cancelada",
 				"completada"
 			),
 			defaultValue: "pendiente",
+		},
+		detallesCompletos: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false, // Para trackear si se completaron los detalles post-pago
 		},
 		ipAddress: {
 			type: DataTypes.STRING(45),
