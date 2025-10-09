@@ -35,10 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 header('Content-Type: application/json');
 
 // --- Carga las variables de entorno o defínelas aquí ---
-$emailHost = getenv('EMAIL_HOST') ?: 'smtp.titan.email';
+$emailHost = getenv('EMAIL_HOST') ?: 'smtp.hostinger.com';
 $emailPort = getenv('EMAIL_PORT') ?: 465;
-$emailUser = getenv('EMAIL_USER') ?: 'contacto@anunciads.cl';
-$emailPass = getenv('EMAIL_PASS') ?: 'TeamoGadiel7.';
+$emailUser = getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl';
+$emailPass = getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.';
 $emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
 
 // Configuración del archivo de reservas

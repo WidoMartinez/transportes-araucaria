@@ -23,10 +23,10 @@ $ALLOWED_ORIGINS = [
 
 // === CONFIGURACIÓN DE EMAIL ===
 $EMAIL_CONFIG = [
-    'host' => getenv('EMAIL_HOST') ?: 'smtp.titan.email',
+    'host' => getenv('EMAIL_HOST') ?: 'smtp.hostinger.com',
     'port' => getenv('EMAIL_PORT') ?: 465,
-    'username' => getenv('EMAIL_USER') ?: 'contacto@anunciads.cl',
-    'password' => getenv('EMAIL_PASS') ?: 'TeamoGadiel7.',
+    'username' => getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl',
+    'password' => getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.',
     'to' => getenv('EMAIL_TO') ?: 'widomartinez@gmail.com',
     'from_name' => 'Sistema de Reservas - Transportes Araucania'
 ];
