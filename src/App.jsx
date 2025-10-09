@@ -32,6 +32,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
+import CompletarDetalles from "./components/CompletarDetalles";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -169,9 +170,31 @@ const resolveIsFreightView = () => {
 	);
 };
 
+const resolveIsCompletarDetallesView = () => {
+	if (typeof window === "undefined") return false;
+	const url = new URL(window.location.href);
+	const params = url.searchParams;
+	const pathname = url.pathname.toLowerCase();
+	const hash = url.hash.toLowerCase();
+	
+	return (
+		// Ruta: /completar-detalles
+		pathname === "/completar-detalles" ||
+		pathname.startsWith("/completar-detalles/") ||
+		// Hash: #completar-detalles
+		hash === "#completar-detalles" ||
+		hash.startsWith("#completar-detalles") ||
+		// Parámetro URL: ?completar=true
+		params.get("completar") === "true" ||
+		// Parámetro URL con reservaId
+		(params.has("reservaId") && params.get("view") === "completar")
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [isCompletarDetallesView, setIsCompletarDetallesView] = useState(resolveIsCompletarDetallesView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -1249,6 +1272,10 @@ function App() {
 
 	if (isAdminView) {
     return <AdminDashboard />;
+	}
+
+	if (isCompletarDetallesView) {
+		return <CompletarDetalles />;
 	}
 
 	return (
