@@ -31,7 +31,6 @@ import FletesLanding from "./components/FletesLanding";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
-import CodigoDescuento from "./components/CodigoDescuento";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -1239,9 +1238,51 @@ function App() {
 	);
 	const formatCurrency = (value) => currencyFormatter.format(value || 0);
 
-	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
-	const destinoFinal =
-		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
+        const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
+        const destinoFinal =
+                formData.destino === "Otro" ? formData.otroDestino : formData.destino;
+
+        const bookingProps = {
+                formData,
+                origenes: todosLosTramos,
+                destinos: destinosDisponibles,
+                maxPasajeros,
+                minDateTime,
+                phoneError,
+                setPhoneError,
+                isSubmitting,
+                cotizacion,
+                pricing,
+                discountInfo: {
+                        base: onlineDiscountRate,
+                        promotion: promotionDiscountRate,
+                        roundTrip: roundTripDiscountRate,
+                        personalized: personalizedDiscountRate,
+                        total: effectiveDiscountRate,
+                        activePromotion,
+                },
+                reviewChecklist,
+                setReviewChecklist,
+                canPay,
+                handlers: {
+                        onInputChange: handleInputChange,
+                        onSubmit: handleWizardSubmit,
+                        validarTelefono,
+                        validarHorarioReserva,
+                },
+                payments: {
+                        handlePayment,
+                        loadingGateway,
+                },
+                setFormData,
+                codigo: {
+                        aplicado: codigoAplicado,
+                        error: codigoError,
+                        validando: validandoCodigo,
+                        onAplicar: validarCodigo,
+                        onRemover: removerCodigo,
+                },
+        };
 
 	if (isFreightView) {
 		return <FletesLanding />;
@@ -1269,43 +1310,7 @@ function App() {
 			<Header />
 
 			<main>
-				<Hero
-					formData={formData}
-					handleInputChange={handleInputChange}
-					origenes={todosLosTramos}
-					destinos={destinosDisponibles}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					setPhoneError={setPhoneError}
-					isSubmitting={isSubmitting}
-					cotizacion={cotizacion}
-					pricing={pricing}
-					descuentoRate={effectiveDiscountRate}
-					baseDiscountRate={onlineDiscountRate}
-					promotionDiscountRate={promotionDiscountRate}
-					roundTripDiscountRate={roundTripDiscountRate}
-					personalizedDiscountRate={personalizedDiscountRate}
-					descuentosPersonalizados={
-						descuentosGlobales?.descuentosPersonalizados || []
-					}
-					activePromotion={activePromotion}
-					reviewChecklist={reviewChecklist}
-					setReviewChecklist={setReviewChecklist}
-					setFormData={setFormData}
-					canPay={canPay}
-					handlePayment={handlePayment}
-					loadingGateway={loadingGateway}
-					onSubmitWizard={handleWizardSubmit}
-					validarTelefono={validarTelefono}
-					validarHorarioReserva={validarHorarioReserva}
-					showSummary={showConfirmationAlert}
-					codigoAplicado={codigoAplicado}
-					codigoError={codigoError}
-					validandoCodigo={validandoCodigo}
-					onAplicarCodigo={validarCodigo}
-					onRemoverCodigo={removerCodigo}
-				/>
+                                <Hero booking={bookingProps} />
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />
