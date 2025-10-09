@@ -58,6 +58,8 @@ export default function AdminCodigosMejorado() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(null);
+	const [mostrarFiltros, setMostrarFiltros] = useState(false);
+	const [mostrarEstadisticas, setMostrarEstadisticas] = useState(false);
 
 	// Filtros y búsqueda
 	const [filtros, setFiltros] = useState({
@@ -225,19 +227,37 @@ export default function AdminCodigosMejorado() {
 	};
 
 	return (
-		<div className="space-y-6">
-			{/* Header */}
+		<div className="space-y-4">
+			{/* Header Simplificado */}
 			<div className="flex justify-between items-center">
-				<h1 className="text-3xl font-bold">Panel de Códigos Mejorado</h1>
-				<Button
-					onClick={() => {
-						cargarCodigos();
-						cargarEstadisticas();
-					}}
-				>
-					<RotateCcw className="w-4 h-4 mr-2" />
-					Actualizar
-				</Button>
+				<div className="flex items-center gap-3">
+					<h2 className="text-xl font-semibold">Gestión de Códigos</h2>
+					{estadisticas && (
+						<Badge variant="outline" className="text-sm">
+							{estadisticas.codigosActivos} activos
+						</Badge>
+					)}
+				</div>
+				<div className="flex gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setMostrarEstadisticas(!mostrarEstadisticas)}
+					>
+						<BarChart3 className="w-4 h-4 mr-2" />
+						{mostrarEstadisticas ? "Ocultar" : "Ver"} Stats
+					</Button>
+					<Button
+						size="sm"
+						onClick={() => {
+							cargarCodigos();
+							cargarEstadisticas();
+						}}
+					>
+						<RotateCcw className="w-4 h-4 mr-2" />
+						Actualizar
+					</Button>
+				</div>
 			</div>
 
 			{/* Alertas */}
@@ -253,16 +273,16 @@ export default function AdminCodigosMejorado() {
 				</Alert>
 			)}
 
-			{/* Estadísticas */}
-			{estadisticas && (
-				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+			{/* Estadísticas Colapsables */}
+			{mostrarEstadisticas && estadisticas && (
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 					<Card>
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center space-x-2">
-								<BarChart3 className="w-5 h-5 text-blue-500" />
+								<BarChart3 className="w-4 h-4 text-blue-500" />
 								<div>
-									<p className="text-sm font-medium">Total Códigos</p>
-									<p className="text-2xl font-bold">
+									<p className="text-xs font-medium text-gray-600">Total</p>
+									<p className="text-xl font-bold">
 										{estadisticas.totalCodigos}
 									</p>
 								</div>
@@ -271,12 +291,12 @@ export default function AdminCodigosMejorado() {
 					</Card>
 
 					<Card>
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center space-x-2">
-								<Users className="w-5 h-5 text-green-500" />
+								<Users className="w-4 h-4 text-green-500" />
 								<div>
-									<p className="text-sm font-medium">Activos</p>
-									<p className="text-2xl font-bold">
+									<p className="text-xs font-medium text-gray-600">Activos</p>
+									<p className="text-xl font-bold">
 										{estadisticas.codigosActivos}
 									</p>
 								</div>
@@ -285,12 +305,12 @@ export default function AdminCodigosMejorado() {
 					</Card>
 
 					<Card>
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center space-x-2">
-								<RotateCcw className="w-5 h-5 text-red-500" />
+								<Trash className="w-4 h-4 text-red-500" />
 								<div>
-									<p className="text-sm font-medium">Agotados</p>
-									<p className="text-2xl font-bold">
+									<p className="text-xs font-medium text-gray-600">Agotados</p>
+									<p className="text-xl font-bold">
 										{estadisticas.codigosAgotados}
 									</p>
 								</div>
@@ -299,12 +319,12 @@ export default function AdminCodigosMejorado() {
 					</Card>
 
 					<Card>
-						<CardContent className="p-4">
+						<CardContent className="p-3">
 							<div className="flex items-center space-x-2">
-								<BarChart3 className="w-5 h-5 text-purple-500" />
+								<BarChart3 className="w-4 h-4 text-purple-500" />
 								<div>
-									<p className="text-sm font-medium">Total Usos</p>
-									<p className="text-2xl font-bold">{estadisticas.totalUsos}</p>
+									<p className="text-xs font-medium text-gray-600">Usos</p>
+									<p className="text-xl font-bold">{estadisticas.totalUsos}</p>
 								</div>
 							</div>
 						</CardContent>
@@ -312,133 +332,128 @@ export default function AdminCodigosMejorado() {
 				</div>
 			)}
 
-			{/* Filtros */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center space-x-2">
-						<Filter className="w-5 h-5" />
-						<span>Filtros y Búsqueda</span>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-						<div>
-							<label className="text-sm font-medium">Buscar</label>
-							<Input
-								placeholder="Código o descripción..."
-								value={filtros.buscar}
-								onChange={(e) =>
-									setFiltros((prev) => ({ ...prev, buscar: e.target.value }))
-								}
-							/>
+			{/* Búsqueda Rápida Siempre Visible */}
+			<div className="flex gap-2">
+				<div className="flex-1">
+					<Input
+						placeholder="Buscar código o descripción..."
+						value={filtros.buscar}
+						onChange={(e) =>
+							setFiltros((prev) => ({ ...prev, buscar: e.target.value }))
+						}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter') {
+								aplicarFiltros();
+							}
+						}}
+					/>
+				</div>
+				<Button onClick={aplicarFiltros}>
+					<Search className="w-4 h-4 mr-2" />
+					Buscar
+				</Button>
+				<Button 
+					variant="outline"
+					onClick={() => setMostrarFiltros(!mostrarFiltros)}
+				>
+					<Filter className="w-4 h-4 mr-2" />
+					{mostrarFiltros ? "Menos" : "Más"} Filtros
+				</Button>
+			</div>
+
+			{/* Filtros Avanzados Colapsables */}
+			{mostrarFiltros && (
+				<Card>
+					<CardContent className="pt-4">
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+							<div>
+								<label className="text-xs font-medium text-gray-600">Estado</label>
+								<Select
+									value={filtros.activo}
+									onValueChange={(value) =>
+										setFiltros((prev) => ({ ...prev, activo: value }))
+									}
+								>
+									<SelectTrigger className="h-9">
+										<SelectValue placeholder="Todos" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos</SelectItem>
+										<SelectItem value="true">Activos</SelectItem>
+										<SelectItem value="false">Inactivos</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div>
+								<label className="text-xs font-medium text-gray-600">Agotados</label>
+								<Select
+									value={filtros.agotado}
+									onValueChange={(value) =>
+										setFiltros((prev) => ({ ...prev, agotado: value }))
+									}
+								>
+									<SelectTrigger className="h-9">
+										<SelectValue placeholder="Todos" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos</SelectItem>
+										<SelectItem value="true">Solo Agotados</SelectItem>
+										<SelectItem value="false">No Agotados</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div>
+								<label className="text-xs font-medium text-gray-600">Vencidos</label>
+								<Select
+									value={filtros.vencido}
+									onValueChange={(value) =>
+										setFiltros((prev) => ({ ...prev, vencido: value }))
+									}
+								>
+									<SelectTrigger className="h-9">
+										<SelectValue placeholder="Todos" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos</SelectItem>
+										<SelectItem value="true">Solo Vencidos</SelectItem>
+										<SelectItem value="false">No Vencidos</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div>
+								<label className="text-xs font-medium text-gray-600">Ordenar por</label>
+								<Select
+									value={filtros.ordenar}
+									onValueChange={(value) =>
+										setFiltros((prev) => ({ ...prev, ordenar: value }))
+									}
+								>
+									<SelectTrigger className="h-9">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="fechaCreacion">Fecha</SelectItem>
+										<SelectItem value="usosActuales">Usos</SelectItem>
+										<SelectItem value="codigo">Código</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
 
-						<div>
-							<label className="text-sm font-medium">Estado</label>
-							<Select
-								value={filtros.activo}
-								onValueChange={(value) =>
-									setFiltros((prev) => ({ ...prev, activo: value }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Todos" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="true">Activos</SelectItem>
-									<SelectItem value="false">Inactivos</SelectItem>
-								</SelectContent>
-							</Select>
+						<div className="flex gap-2 mt-3">
+							<Button size="sm" onClick={aplicarFiltros}>
+								Aplicar
+							</Button>
+							<Button size="sm" variant="outline" onClick={limpiarFiltros}>
+								Limpiar
+							</Button>
 						</div>
-
-						<div>
-							<label className="text-sm font-medium">Agotados</label>
-							<Select
-								value={filtros.agotado}
-								onValueChange={(value) =>
-									setFiltros((prev) => ({ ...prev, agotado: value }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Todos" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="true">Solo Agotados</SelectItem>
-									<SelectItem value="false">No Agotados</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div>
-							<label className="text-sm font-medium">Vencidos</label>
-							<Select
-								value={filtros.vencido}
-								onValueChange={(value) =>
-									setFiltros((prev) => ({ ...prev, vencido: value }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Todos" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="true">Solo Vencidos</SelectItem>
-									<SelectItem value="false">No Vencidos</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div>
-							<label className="text-sm font-medium">Ordenar</label>
-							<Select
-								value={filtros.ordenar}
-								onValueChange={(value) =>
-									setFiltros((prev) => ({ ...prev, ordenar: value }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="fechaCreacion">Fecha Creación</SelectItem>
-									<SelectItem value="usosActuales">Usos</SelectItem>
-									<SelectItem value="codigo">Código</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div>
-							<label className="text-sm font-medium">Dirección</label>
-							<Select
-								value={filtros.direccion}
-								onValueChange={(value) =>
-									setFiltros((prev) => ({ ...prev, direccion: value }))
-								}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="DESC">Descendente</SelectItem>
-									<SelectItem value="ASC">Ascendente</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-
-					<div className="flex space-x-2 mt-4">
-						<Button onClick={aplicarFiltros}>
-							<Search className="w-4 h-4 mr-2" />
-							Aplicar Filtros
-						</Button>
-						<Button variant="outline" onClick={limpiarFiltros}>
-							Limpiar
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Tabla de Códigos */}
 			<Card>
