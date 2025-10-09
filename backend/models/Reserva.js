@@ -35,7 +35,8 @@ const Reserva = sequelize.define(
 		},
 		hora: {
 			type: DataTypes.TIME,
-			allowNull: false,
+			allowNull: true,
+			defaultValue: "08:00:00",
 		},
 		pasajeros: {
 			type: DataTypes.INTEGER,
@@ -125,6 +126,7 @@ const Reserva = sequelize.define(
 		estado: {
 			type: DataTypes.ENUM(
 				"pendiente",
+				"pendiente_detalles",
 				"confirmada",
 				"cancelada",
 				"completada"
@@ -158,6 +160,11 @@ const Reserva = sequelize.define(
 		observaciones: {
 			type: DataTypes.TEXT,
 			allowNull: true,
+		},
+		detallesCompletos: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false,
 		},
 	},
 	{

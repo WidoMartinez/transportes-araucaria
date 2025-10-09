@@ -1583,6 +1583,112 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 	}
 });
 
+// --- ENDPOINTS PARA FLUJO EXPRESS (RESERVA RÁPIDA) ---
+
+// Crear reserva express con campos mínimos requeridos
+app.post("/enviar-reserva-express", async (req, res) => {
+	try {
+		const { nombre, email, telefono, origen, destino, fecha, pasajeros } = req.body;
+
+		// Validar solo campos mínimos
+		if (!nombre || !email || !telefono || !origen || !destino || !fecha) {
+			return res.status(400).json({
+				success: false,
+				message: "Faltan datos mínimos para la reserva express",
+			});
+		}
+
+		// Crear reserva con campos opcionales por defecto
+		const reservaExpress = await Reserva.create({
+			nombre,
+			email,
+			telefono,
+			origen,
+			destino,
+			fecha,
+			pasajeros: parseInt(pasajeros) || 1,
+			hora: req.body.hora || "08:00:00", // Hora por defecto
+			precio: parseFloat(req.body.precio) || 0,
+			vehiculo: req.body.vehiculo || "",
+			totalConDescuento: parseFloat(req.body.totalConDescuento) || 0,
+			estado: "pendiente_detalles",
+			detallesCompletos: false,
+			source: req.body.source || "express_web",
+			ipAddress: req.ip || req.connection.remoteAddress || "",
+			userAgent: req.get("User-Agent") || "",
+			estadoPago: "pendiente",
+			// Campos opcionales que se completarán después
+			numeroVuelo: req.body.numeroVuelo || "",
+			hotel: req.body.hotel || "",
+			equipajeEspecial: req.body.equipajeEspecial || "",
+			sillaInfantil: req.body.sillaInfantil === "si" || false,
+			idaVuelta: Boolean(req.body.idaVuelta),
+			fechaRegreso: req.body.fechaRegreso || null,
+			horaRegreso: req.body.horaRegreso || null,
+			codigoDescuento: req.body.codigoDescuento || "",
+		});
+
+		console.log("✅ Reserva express creada con ID:", reservaExpress.id);
+
+		return res.json({
+			success: true,
+			reservaId: reservaExpress.id,
+			message: "Reserva express creada correctamente",
+		});
+	} catch (error) {
+		console.error("Error en reserva express:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// Completar detalles de reserva post-pago
+app.put("/completar-reserva-detalles/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const detalles = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				message: "Reserva no encontrada",
+			});
+		}
+
+		// Actualizar con los detalles adicionales
+		await reserva.update({
+			hora: detalles.hora || reserva.hora,
+			numeroVuelo: detalles.numeroVuelo || reserva.numeroVuelo,
+			hotel: detalles.hotel || reserva.hotel,
+			equipajeEspecial: detalles.equipajeEspecial || reserva.equipajeEspecial,
+			sillaInfantil: detalles.sillaInfantil === "si" || reserva.sillaInfantil,
+			idaVuelta: detalles.idaVuelta !== undefined ? Boolean(detalles.idaVuelta) : reserva.idaVuelta,
+			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
+			horaRegreso: detalles.horaRegreso || reserva.horaRegreso,
+			mensaje: detalles.mensaje || reserva.mensaje,
+			detallesCompletos: true,
+			estado: "confirmada",
+		});
+
+		console.log("✅ Detalles completados para reserva ID:", id);
+
+		res.json({
+			success: true,
+			message: "Detalles actualizados correctamente",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error actualizando detalles:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
 // Obtener estadísticas de reservas
 app.get("/api/reservas/estadisticas", async (req, res) => {
 	try {

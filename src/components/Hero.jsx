@@ -101,15 +101,15 @@ function Hero({
 		() => [
 			{
 				title: "1. Tu viaje",
-				description: "Selecciona origen, destino, fecha y pasajeros.",
+				description: "Origen, destino y fecha de tu traslado.",
 			},
 			{
 				title: "2. Tus datos",
-				description: "Completa la información de contacto y extras.",
+				description: "Información de contacto para confirmar.",
 			},
 			{
 				title: "3. Revisar y pagar",
-				description: "Confirma el resumen y paga online con descuento.",
+				description: "Confirma y paga online con descuento.",
 			},
 		],
 		[]
@@ -241,15 +241,14 @@ function Hero({
 			return;
 		}
 
-		if (!formData.hora) {
-			setStepError("Selecciona la hora de recogida.");
-			return;
-		}
-
-		const validacion = validarHorarioReserva();
-		if (!validacion.esValido) {
-			setStepError(validacion.mensaje);
-			return;
+		// Hora es ahora opcional - se puede especificar después del pago
+		// Solo validar horario si se proporcionó la hora
+		if (formData.hora) {
+			const validacion = validarHorarioReserva();
+			if (!validacion.esValido) {
+				setStepError(validacion.mensaje);
+				return;
+			}
 		}
 
 		if (formData.idaVuelta) {
@@ -257,23 +256,22 @@ function Hero({
 				setStepError("Selecciona la fecha de regreso.");
 				return;
 			}
-			if (!formData.horaRegreso) {
-				setStepError("Selecciona la hora del regreso.");
-				return;
-			}
-			const salida = new Date(`${formData.fecha}T${formData.hora}`);
-			const regreso = new Date(
-				`${formData.fechaRegreso}T${formData.horaRegreso}`
-			);
-			if (Number.isNaN(regreso.getTime())) {
-				setStepError("La fecha de regreso no es válida.");
-				return;
-			}
-			if (regreso <= salida) {
-				setStepError(
-					"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora seleccionadas."
+			// Hora de regreso también es opcional
+			if (formData.hora && formData.horaRegreso) {
+				const salida = new Date(`${formData.fecha}T${formData.hora}`);
+				const regreso = new Date(
+					`${formData.fechaRegreso}T${formData.horaRegreso}`
 				);
-				return;
+				if (Number.isNaN(regreso.getTime())) {
+					setStepError("La fecha de regreso no es válida.");
+					return;
+				}
+				if (regreso <= salida) {
+					setStepError(
+						"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora seleccionadas."
+					);
+					return;
+				}
 			}
 		}
 
@@ -700,7 +698,9 @@ function Hero({
 												/>
 											</div>
 											<div className="space-y-2">
-												<Label htmlFor="hora-hero">Hora</Label>
+												<Label htmlFor="hora-hero">
+													Hora <span className="text-xs text-muted-foreground">(opcional)</span>
+												</Label>
 												<Select
 													value={formData.hora}
 													onValueChange={(value) =>
@@ -708,7 +708,7 @@ function Hero({
 													}
 												>
 													<SelectTrigger>
-														<SelectValue placeholder="Selecciona la hora" />
+														<SelectValue placeholder="Especifica después (recomendado 08:00)" />
 													</SelectTrigger>
 													<SelectContent>
 														{timeOptions.map((option) => (
@@ -1010,48 +1010,57 @@ function Hero({
 											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+										{/* Detalles Opcionales - Pueden completarse después */}
+										<div className="border border-dashed border-muted-foreground/30 rounded-lg p-4 space-y-4">
+											<div className="flex items-center gap-2 text-sm text-muted-foreground">
+												<span className="font-medium">💡 Opcional:</span>
+												<span>Puedes completar estos detalles después del pago si prefieres</span>
+											</div>
+											
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+												<div className="space-y-2">
+													<Label htmlFor="hotel-hero">
+														Hotel o dirección final
+													</Label>
+													<Input
+														id="hotel-hero"
+														name="hotel"
+														value={formData.hotel}
+														onChange={handleInputChange}
+														placeholder="Ej: Hotel Antumalal"
+													/>
+												</div>
+												<div className="space-y-2">
+													<Label htmlFor="sillaInfantil-hero">
+														¿Necesitas alzador infantil?
+													</Label>
+													<select
+														id="sillaInfantil-hero"
+														name="sillaInfantil"
+														value={formData.sillaInfantil}
+														onChange={handleInputChange}
+														className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+													>
+														<option value="no">No requiero</option>
+														<option value="1 silla">Sí, 1 alzador</option>
+														<option value="2 sillas">Sí, 2 alzadores</option>
+													</select>
+												</div>
+											</div>
+
 											<div className="space-y-2">
-												<Label htmlFor="hotel-hero">
-													Hotel o dirección final
+												<Label htmlFor="equipajeEspecial-hero">
+													Equipaje extra o comentarios
 												</Label>
-												<Input
-													id="hotel-hero"
-													name="hotel"
-													value={formData.hotel}
+												<Textarea
+													id="equipajeEspecial-hero"
+													name="equipajeEspecial"
+													value={formData.equipajeEspecial}
 													onChange={handleInputChange}
-													placeholder="Ej: Hotel Antumalal"
+													placeholder="Opcional: equipaje voluminoso, mascotas u otros detalles..."
+													rows={3}
 												/>
 											</div>
-											<div className="space-y-2">
-												<Label htmlFor="sillaInfantil-hero">
-													¿Necesitas alzador infantil?
-												</Label>
-												<select
-													id="sillaInfantil-hero"
-													name="sillaInfantil"
-													value={formData.sillaInfantil}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-												>
-													<option value="no">No requiero</option>
-													<option value="1 silla">Sí, 1 alzador</option>
-													<option value="2 sillas">Sí, 2 alzadores</option>
-												</select>
-											</div>
-										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor="equipajeEspecial-hero">
-												Equipaje extra o comentarios para el conductor
-											</Label>
-											<Textarea
-												id="equipajeEspecial-hero"
-												name="equipajeEspecial"
-												value={formData.equipajeEspecial}
-												onChange={handleInputChange}
-												placeholder="Cuéntanos sobre equipaje voluminoso, mascotas u otros detalles relevantes."
-											/>
 										</div>
 
 										{/* Código de descuento - Más visible y cerca del resumen */}
