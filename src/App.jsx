@@ -21,6 +21,7 @@ import { LoaderCircle } from "lucide-react";
 // --- Componentes de Sección ---
 import Header from "./components/Header";
 import Hero from "./components/Hero";
+import HeroDashboard from "./components/HeroDashboard";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
 import Destacados from "./components/Destacados";
@@ -1269,7 +1270,7 @@ function App() {
 			<Header />
 
 			<main>
-				<Hero
+				<HeroDashboard
 					formData={formData}
 					handleInputChange={handleInputChange}
 					origenes={todosLosTramos}
@@ -1281,25 +1282,17 @@ function App() {
 					isSubmitting={isSubmitting}
 					cotizacion={cotizacion}
 					pricing={pricing}
-					descuentoRate={effectiveDiscountRate}
 					baseDiscountRate={onlineDiscountRate}
 					promotionDiscountRate={promotionDiscountRate}
 					roundTripDiscountRate={roundTripDiscountRate}
 					personalizedDiscountRate={personalizedDiscountRate}
-					descuentosPersonalizados={
-						descuentosGlobales?.descuentosPersonalizados || []
-					}
 					activePromotion={activePromotion}
-					reviewChecklist={reviewChecklist}
-					setReviewChecklist={setReviewChecklist}
 					setFormData={setFormData}
 					canPay={canPay}
 					handlePayment={handlePayment}
 					loadingGateway={loadingGateway}
 					onSubmitWizard={handleWizardSubmit}
 					validarTelefono={validarTelefono}
-					validarHorarioReserva={validarHorarioReserva}
-					showSummary={showConfirmationAlert}
 					codigoAplicado={codigoAplicado}
 					codigoError={codigoError}
 					validandoCodigo={validandoCodigo}
