@@ -168,6 +168,46 @@ Reemplazar archivos en `src/assets/`:
 - Tasa de rebote
 - Origen del tráfico
 
+## 🎨 Mejoras del Formulario de Reservas
+
+### 📚 Documentación de Mejoras Identificadas
+
+Se ha realizado un análisis exhaustivo del formulario de reservas con mejoras priorizadas para optimizar UX/UI y conversión:
+
+#### Documentos Principales
+1. **[📊 Índice General](./INDICE_MEJORAS_FORMULARIO.md)** - Navegación de toda la documentación
+2. **[💼 Resumen Ejecutivo](./RESUMEN_EJECUTIVO_MEJORAS.md)** - Para stakeholders y management (15 min)
+3. **[🔍 Análisis Detallado](./ANALISIS_MEJORAS_FORMULARIO_RESERVAS.md)** - Para developers y designers (40 min)
+4. **[📋 Tareas de Implementación](./TAREAS_IMPLEMENTACION.md)** - Plan de ejecución con 16 tareas (documento de referencia)
+
+#### Resumen Rápido
+- ✅ **10 problemas** identificados y clasificados por severidad
+- ✅ **10 mejoras** propuestas organizadas en 4 fases
+- ✅ **16 tareas** específicas con estimaciones y código de ejemplo
+- ✅ **4 fases** de implementación (6 semanas, ~36.5 horas)
+- ✅ **ROI proyectado**: +15% conversión, -30% errores, payback 4-7 meses
+
+#### Quick Start
+```bash
+# Ver índice completo
+cat INDICE_MEJORAS_FORMULARIO.md
+
+# Para stakeholders
+cat RESUMEN_EJECUTIVO_MEJORAS.md
+
+# Para developers
+cat ANALISIS_MEJORAS_FORMULARIO_RESERVAS.md
+cat TAREAS_IMPLEMENTACION.md
+```
+
+#### Fases de Implementación
+1. **Fase 1 - Fundamentos** (2 sem): Validación visual y campos obligatorios
+2. **Fase 2 - Mejoras UX** (2 sem): Unificación de componentes y sticky summary
+3. **Fase 3 - Conversión** (1 sem): Códigos descuento y tooltips
+4. **Fase 4 - Polish** (1 sem): Animaciones y testing completo
+
+---
+
 ## Licencia
 Este proyecto es una plantilla personalizada para Transportes Araucaria.
 
