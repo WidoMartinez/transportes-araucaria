@@ -50,6 +50,18 @@ try {
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
     $mail->Port       = $emailPort;
     $mail->CharSet    = 'UTF-8';
+    
+    // Opciones SSL para mejor compatibilidad
+    $mail->SMTPOptions = array(
+        'ssl' => array(
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        )
+    );
+    
+    // Timeout aumentado
+    $mail->Timeout = 30;
 
     // Destinatarios
     $mail->setFrom($emailUser, 'Test Transportes Araucaria');

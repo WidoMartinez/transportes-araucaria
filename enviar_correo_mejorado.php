@@ -334,6 +334,18 @@ try {
     $mail->Port       = $emailPort;
     $mail->CharSet    = 'UTF-8';
     
+    // Opciones adicionales para mejorar la conexión
+    $mail->SMTPOptions = array(
+        'ssl' => array(
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        )
+    );
+    
+    // Timeout aumentado para conexiones lentas
+    $mail->Timeout = 30; // segundos
+    
     // Log de configuración para diagnóstico
     error_log("Intentando enviar correo con Host: {$emailHost}, Port: {$emailPort}, User: {$emailUser}");
 
