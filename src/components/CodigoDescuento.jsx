@@ -1,8 +1,13 @@
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { CheckCircle2, XCircle, LoaderCircle, Gift } from "lucide-react";
+import { CheckCircle2, XCircle, LoaderCircle, Tag, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "./ui/badge";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "./ui/collapsible";
 
 function CodigoDescuento({
 	codigoAplicado,
@@ -12,6 +17,7 @@ function CodigoDescuento({
 	onRemoverCodigo,
 }) {
 	const [codigoInput, setCodigoInput] = useState("");
+	const [isOpen, setIsOpen] = useState(false);
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
@@ -36,33 +42,56 @@ function CodigoDescuento({
 
 	return (
 		<div className="space-y-4">
-			{/* Campo para ingresar código */}
+			{/* Campo para ingresar código - Colapsable */}
 			{!codigoAplicado && (
-				<form onSubmit={handleSubmit} className="space-y-3">
-					<div className="flex gap-3">
-						<Input
-							placeholder="Ej: VERANO2024, ESTUDIANTE10K, PRIMERAVEZ"
-							value={codigoInput}
-							onChange={(e) => setCodigoInput(e.target.value)}
-							className="flex-1 text-lg font-medium border-2 border-purple-300 focus:border-purple-500 focus:ring-purple-500"
-							disabled={validandoCodigo}
-						/>
+				<Collapsible open={isOpen} onOpenChange={setIsOpen}>
+					<CollapsibleTrigger asChild>
 						<Button
-							type="submit"
-							disabled={!codigoInput.trim() || validandoCodigo}
-							className="bg-purple-600 hover:bg-purple-700 px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+							variant="ghost"
+							className="w-full flex items-center justify-between p-0 hover:bg-transparent"
+							type="button"
 						>
-							{validandoCodigo ? (
-								<LoaderCircle className="w-5 h-5 animate-spin" />
+							<div className="flex items-center gap-2">
+								<Tag className="h-5 w-5 text-purple-600" />
+								<span className="text-base font-semibold text-purple-900">
+									{isOpen ? "Ocultar campo" : "Ingresa tu código aquí"}
+								</span>
+							</div>
+							{isOpen ? (
+								<ChevronUp className="h-5 w-5 text-purple-600" />
 							) : (
-								"🎯 Aplicar"
+								<ChevronDown className="h-5 w-5 text-purple-600 animate-bounce" />
 							)}
 						</Button>
-					</div>
-					<p className="text-xs text-purple-600 font-medium">
-						💡 Los códigos se aplican automáticamente al resumen de precios
-					</p>
-				</form>
+					</CollapsibleTrigger>
+					<CollapsibleContent className="mt-4">
+						<form onSubmit={handleSubmit} className="space-y-3">
+							<div className="flex gap-3">
+								<Input
+									placeholder="Ej: VERANO2024, ESTUDIANTE10K, PRIMERAVEZ"
+									value={codigoInput}
+									onChange={(e) => setCodigoInput(e.target.value)}
+									className="flex-1 text-lg font-medium border-2 border-purple-300 focus:border-purple-500 focus:ring-purple-500"
+									disabled={validandoCodigo}
+								/>
+								<Button
+									type="submit"
+									disabled={!codigoInput.trim() || validandoCodigo}
+									className="bg-purple-600 hover:bg-purple-700 px-6 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+								>
+									{validandoCodigo ? (
+										<LoaderCircle className="w-5 h-5 animate-spin" />
+									) : (
+										"🎯 Aplicar"
+									)}
+								</Button>
+							</div>
+							<p className="text-xs text-purple-600 font-medium">
+								💡 Los códigos se aplican automáticamente al resumen de precios
+							</p>
+						</form>
+					</CollapsibleContent>
+				</Collapsible>
 			)}
 
 			{/* Mostrar código aplicado */}

@@ -136,6 +136,22 @@
 	animation: fade-in-down 0.8s ease-out forwards;
 }
 
+/* Animación suave de pulso para badge de descuento */
+@keyframes gentle-pulse {
+	0%, 100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.85;
+		transform: scale(1.05);
+	}
+}
+
+.animate-gentle-pulse {
+	animation: gentle-pulse 2s ease-in-out infinite;
+}
+
 /* Mejoras de contraste para botones */
 .btn-accent {
 	background-color: var(--accent);

@@ -1184,22 +1184,27 @@ function Hero({
 										</div>
 
 										{/* Código de descuento - Más visible y cerca del resumen */}
-										<div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6 shadow-lg">
-											<div className="flex items-center gap-3 mb-4">
-												<div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-													<span className="text-white font-bold text-sm">
-														🎟️
-													</span>
+										<div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-dashed border-purple-300 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300">
+											<div className="flex items-center justify-between mb-4">
+												<div className="flex items-center gap-3">
+													<div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center animate-pulse">
+														<span className="text-white font-bold text-lg">
+															🎟️
+														</span>
+													</div>
+													<div>
+														<h3 className="text-lg font-bold text-purple-900">
+															¿Tienes un código de descuento?
+														</h3>
+														<p className="text-sm text-purple-700">
+															Ingresa tu código para obtener descuentos
+															adicionales
+														</p>
+													</div>
 												</div>
-												<div>
-													<h3 className="text-lg font-bold text-purple-900">
-														¿Tienes un código de descuento?
-													</h3>
-													<p className="text-sm text-purple-700">
-														Ingresa tu código para obtener descuentos
-														adicionales
-													</p>
-												</div>
+												<Badge className="animate-pulse bg-green-500 text-white hover:bg-green-600 shadow-md">
+													¡Ahorra más!
+												</Badge>
 											</div>
 											<CodigoDescuento
 												codigoAplicado={codigoAplicado}
