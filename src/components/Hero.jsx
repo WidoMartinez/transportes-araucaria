@@ -19,6 +19,7 @@ import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
+import { InfoTooltip } from "./ui/tooltip-wrapper";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -890,8 +891,9 @@ function Hero({
 											<div className="rounded-xl border border-primary/20 bg-primary/10 p-6 text-foreground">
 												<div className="grid gap-4 md:grid-cols-2 md:items-center">
 													<div className="space-y-1">
-														<p className="text-sm uppercase tracking-wide text-muted-foreground">
+														<p className="text-sm uppercase tracking-wide text-muted-foreground flex items-center">
 															Vehículo sugerido
+															<InfoTooltip content="Seleccionado automáticamente según la cantidad de pasajeros y distancia del viaje" />
 														</p>
 														<p className="text-2xl font-semibold">
 															{cotizacion.vehiculo}
@@ -934,9 +936,10 @@ function Hero({
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
 														<div className="space-y-1 text-sm">
-															<p className="font-medium text-slate-600">
+															<p className="font-medium text-slate-600 flex items-center">
 																Descuento base ({baseDiscountPercentage}%):{" "}
 																{formatCurrency(pricing.descuentoBase)}
+																<InfoTooltip content="Descuento exclusivo por reservar online" side="right" />
 															</p>
 															{promoDiscountPercentage > 0 && (
 																<p className="font-medium text-slate-600">
@@ -1217,7 +1220,10 @@ function Hero({
 												</h4>
 												<div className="grid gap-2 text-sm">
 													<div className="flex items-center justify-between">
-														<span>Ahorro base ({baseDiscountPercentage}%)</span>
+														<span className="flex items-center">
+															Ahorro base ({baseDiscountPercentage}%)
+															<InfoTooltip content="Descuento exclusivo por reservar online" side="right" />
+														</span>
 														<span className="font-semibold">
 															{formatCurrency(pricing.descuentoBase)}
 														</span>
@@ -1350,8 +1356,9 @@ function Hero({
 													</p>
 												</div>
 												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
+													<p className="text-sm font-medium text-gray-500 flex items-center">
 														Vehículo
+														<InfoTooltip content="Seleccionado automáticamente según la cantidad de pasajeros y distancia del viaje" />
 													</p>
 													<p className="text-lg font-semibold text-gray-900">
 														{vehiculoSugerido}
@@ -1411,8 +1418,9 @@ function Hero({
 												</h4>
 												<div className="space-y-2">
 													<div className="flex items-center justify-between">
-														<span>
+														<span className="flex items-center">
 															Descuento base ({baseDiscountPercentage}%)
+															<InfoTooltip content="Descuento exclusivo por reservar online" side="right" />
 														</span>
 														<span className="font-semibold">
 															-{formatCurrency(pricing.descuentoBase)}
