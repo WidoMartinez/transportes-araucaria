@@ -6,107 +6,89 @@ import { Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
 const FooterLink = ({ href, children }) => (
 	<a
 		href={href}
-		className="text-muted-foreground hover:text-white transition-colors duration-300"
+		className="text-muted-foreground hover:text-white transition-colors"
 	>
 		{children}
 	</a>
 );
 
 // Componente interno para los iconos de redes sociales
+// eslint-disable-next-line no-unused-vars
 const SocialIcon = ({ href, icon: Icon }) => (
 	<a
 		href={href}
 		target="_blank"
 		rel="noopener noreferrer"
-		className="text-muted-foreground hover:text-white transition-colors duration-300"
+		className="text-muted-foreground hover:text-white transition-colors"
 	>
-		<Icon className="h-6 w-6" />
+		<Icon className="h-5 w-5" />
 	</a>
 );
 
 function Footer() {
 	return (
 		<footer className="bg-gray-900 text-white">
-			<div className="container mx-auto px-4 py-16">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-					{/* Columna 1: Logo y Descripción */}
-					<div className="space-y-4">
+			<div className="container mx-auto px-4 py-12">
+				<div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8 md:gap-12">
+					{/* Logo y descripción breve */}
+					<div className="flex flex-col items-center md:items-start max-w-xs">
 						<img
 							src={logoBlanco}
-							alt="Transportes Araucanía Logo"
-							className="h-20"
+							alt="Transportes Araucanía"
+							className="h-16 mb-3"
 						/>
-						<p className="text-muted-foreground">
-							Ofrecemos servicios de transporte privado de pasajeros con la más
-							alta calidad, seguridad y puntualidad en la Región de La
-							Araucanía.
+						<p className="text-muted-foreground text-sm text-center md:text-left">
+							Transporte privado de pasajeros en La Araucanía
 						</p>
 					</div>
 
-					{/* Columna 2: Navegación */}
-					<div className="space-y-4">
-						<h3 className="font-semibold text-lg tracking-wider uppercase">
-							Navegación
-						</h3>
-						<nav className="flex flex-col space-y-2">
-							<FooterLink href="#servicios">Servicios</FooterLink>
-							<FooterLink href="#destinos">Destinos</FooterLink>
-							<FooterLink href="#contacto">Contacto</FooterLink>
-							<FooterLink href="#">Términos y Condiciones</FooterLink>
-						</nav>
+					{/* Enlaces rápidos */}
+					<nav className="flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2 text-sm">
+						<FooterLink href="#servicios">Servicios</FooterLink>
+						<FooterLink href="#destinos">Destinos</FooterLink>
+						<FooterLink href="#contacto">Contacto</FooterLink>
+						<FooterLink href="#">Términos</FooterLink>
+					</nav>
+
+					{/* Contacto */}
+					<div className="flex flex-col items-center md:items-start gap-2 text-sm text-muted-foreground">
+						<a
+							href="tel:+56936643540"
+							className="hover:text-white transition-colors"
+						>
+							+56 9 3664 3540
+						</a>
+						<a
+							href="mailto:contacto@transportesaraucaria.cl"
+							className="hover:text-white transition-colors"
+						>
+							contacto@transportesaraucaria.cl
+						</a>
 					</div>
 
-					{/* Columna 3: Contacto */}
-					<div className="space-y-4">
-						<h3 className="font-semibold text-lg tracking-wider uppercase">
-							Contacto
-						</h3>
-						<div className="flex flex-col space-y-2 text-muted-foreground">
-							<p>Temuco, Chile</p>
-							<a
-								href="tel:+56936643540"
-								className="hover:text-white transition-colors duration-300"
-							>
-								+56 9 3664 3540
-							</a>
-							<a
-								href="mailto:contacto@transportesaraucaria.cl"
-								className="hover:text-white transition-colors duration-300"
-							>
-								contacto@transportesaraucaria.cl
-							</a>
-						</div>
-					</div>
-
-					{/* Columna 4: Redes Sociales */}
-					<div className="space-y-4">
-						<h3 className="font-semibold text-lg tracking-wider uppercase">
-							Síguenos
-						</h3>
-						<div className="flex space-x-4">
-							<SocialIcon href="#" icon={Facebook} />
-							<SocialIcon href="#" icon={Instagram} />
-							<SocialIcon href="#" icon={Twitter} />
-							<SocialIcon href="#" icon={Linkedin} />
-						</div>
+					{/* Redes sociales */}
+					<div className="flex gap-4">
+						<SocialIcon href="#" icon={Facebook} />
+						<SocialIcon href="#" icon={Instagram} />
+						<SocialIcon href="#" icon={Twitter} />
+						<SocialIcon href="#" icon={Linkedin} />
 					</div>
 				</div>
 			</div>
 
-			{/* Barra inferior del Footer */}
-			<div className="border-t border-gray-800">
-				<div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
+			{/* Barra inferior minimalista */}
+			<div className="border-t border-gray-800/50">
+				<div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-muted-foreground">
 					<p>
-						&copy; {new Date().getFullYear()} Transportes Araucanía. Todos los
-						derechos reservados.
+						&copy; {new Date().getFullYear()} Transportes Araucanía
 					</p>
-					<p className="mt-4 md:mt-0">
-						Diseñado y desarrollado por{" "}
+					<p>
+						Desarrollado por{" "}
 						<a
 							href="https://anunciads.cl"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="hover:text-white font-semibold transition-colors duration-300"
+							className="hover:text-white transition-colors"
 						>
 							anunciAds
 						</a>
