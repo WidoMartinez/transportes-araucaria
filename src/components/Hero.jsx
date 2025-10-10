@@ -19,6 +19,7 @@ import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
+import StickyPriceSummary from "./StickyPriceSummary";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -78,6 +79,7 @@ function Hero({
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [discountUpdated, setDiscountUpdated] = useState(false);
+	const [showPriceSummary, setShowPriceSummary] = useState(true);
 	
 	// Estados para validación visual en tiempo real
 	const [emailValidation, setEmailValidation] = useState({
@@ -1725,6 +1727,19 @@ function Hero({
 							</CardContent>
 						</Card>
 					</div>
+				)}
+
+				{showBookingModule && currentStep > 0 && (
+					<StickyPriceSummary
+						origen={origenFinal}
+						destino={destinoFinal}
+						fecha={fechaLegible}
+						pasajeros={formData.pasajeros}
+						pricing={pricing}
+						descuentoRate={descuentoRate}
+						visible={showPriceSummary}
+						onToggle={() => setShowPriceSummary(!showPriceSummary)}
+					/>
 				)}
 			</div>
 		</section>
