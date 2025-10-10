@@ -1,0 +1,66 @@
+/* Animaciones de micro-interacciones para el formulario de reservas */
+
+/* Transición suave entre pasos (fade in + slide desde la derecha) */
+@keyframes slideIn {
+from {
+opacity: 0;
+transform: translateX(20px);
+}
+to {
+opacity: 1;
+transform: translateX(0);
+}
+}
+
+/* Efecto bounce sutil para botones al hacer hover */
+@keyframes bounce-subtle {
+0%, 100% {
+transform: translateY(0);
+}
+50% {
+transform: translateY(-5px);
+}
+}
+
+/* Efecto shimmer para componentes en estado de carga */
+@keyframes shimmer {
+0% {
+opacity: 0.6;
+}
+50% {
+opacity: 1;
+}
+100% {
+opacity: 0.6;
+}
+}
+
+/* Animación shake para mensajes de error */
+@keyframes shake {
+0%, 100% {
+transform: translateX(0);
+}
+25% {
+transform: translateX(-10px);
+}
+75% {
+transform: translateX(10px);
+}
+}
+
+/* Clases de utilidad para aplicar las animaciones */
+.animate-slideIn {
+animation: slideIn 0.3s ease-out;
+}
+
+.animate-bounce-subtle {
+animation: bounce-subtle 0.5s ease-in-out;
+}
+
+.animate-shimmer {
+animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.animate-shake {
+animation: shake 0.4s ease-in-out;
+}

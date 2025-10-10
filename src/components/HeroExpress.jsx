@@ -372,7 +372,7 @@ function HeroExpress({
 							<CardContent className="space-y-6">
 								{/* PASO 1: Información básica del viaje */}
 								{currentStep === 0 && (
-									<div className="space-y-6">
+									<div className="space-y-6 animate-slideIn">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
 												<Label
@@ -525,7 +525,7 @@ function HeroExpress({
 											<Button
 												type="button"
 												onClick={handleStepOneNext}
-												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-semibold"
+												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-semibold hover:animate-bounce-subtle"
 												disabled={isSubmitting}
 											>
 												Continuar al pago →
@@ -536,7 +536,7 @@ function HeroExpress({
 
 								{/* PASO 2: Datos personales y pago */}
 								{currentStep === 1 && (
-									<div className="space-y-6">
+									<div className="space-y-6 animate-slideIn">
 										{/* Resumen del viaje */}
 										<div className="bg-gray-50 rounded-lg p-4 space-y-2">
 											<h4 className="font-semibold text-lg mb-3">
@@ -705,7 +705,7 @@ function HeroExpress({
 																	>
 																		{loadingGateway ===
 																		`${method.gateway}-${option.type}` ? (
-																			<LoaderCircle className="h-4 w-4 animate-spin" />
+																			<LoaderCircle className="h-4 w-4 animate-spin animate-shimmer" />
 																		) : (
 																			<img
 																				src={method.image}
@@ -778,7 +778,7 @@ function HeroExpress({
 												>
 													{isSubmitting ? (
 														<>
-															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+															<LoaderCircle className="mr-2 h-4 w-4 animate-spin animate-shimmer" />
 															Procesando reserva...
 														</>
 													) : (
@@ -791,7 +791,7 @@ function HeroExpress({
 								)}
 
 								{stepError && (
-									<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+									<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive animate-shake">
 										⚠️ {stepError}
 									</div>
 								)}

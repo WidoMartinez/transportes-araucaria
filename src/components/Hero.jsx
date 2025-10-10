@@ -690,7 +690,7 @@ function Hero({
 							</CardHeader>
 							<CardContent className="space-y-8">
 								{currentStep === 0 && (
-									<div className="space-y-6">
+									<div className="space-y-6 animate-slideIn">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
 												<Label htmlFor="origen-hero">
@@ -1003,7 +1003,7 @@ function Hero({
 											</p>
 											<Button
 												type="button"
-												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
+												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30 hover:animate-bounce-subtle"
 												onClick={handleStepOneNext}
 												disabled={isSubmitting}
 											>
@@ -1014,7 +1014,7 @@ function Hero({
 								)}
 
 								{currentStep === 1 && (
-									<div className="space-y-6">
+									<div className="space-y-6 animate-slideIn">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
 												<Label htmlFor="nombre-hero">
@@ -1284,13 +1284,13 @@ function Hero({
 											</Button>
 											<Button
 												type="button"
-												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
+												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30 hover:animate-bounce-subtle"
 												onClick={handleStepTwoNext}
 												disabled={isSubmitting}
 											>
 												{isSubmitting ? (
 													<>
-														<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+														<LoaderCircle className="mr-2 h-4 w-4 animate-spin animate-shimmer" />
 														Generando resumen...
 													</>
 												) : (
@@ -1302,7 +1302,7 @@ function Hero({
 								)}
 
 								{currentStep === 2 && (
-									<div className="max-h-[80vh] overflow-y-auto space-y-8 p-4 -m-4">
+									<div className="max-h-[80vh] overflow-y-auto space-y-8 p-4 -m-4 animate-slideIn">
 										{/* Resumen del viaje */}
 										<div className="bg-white rounded-lg border border-gray-200 p-6">
 											<h4 className="text-xl font-semibold text-gray-900 mb-6 border-b pb-2">
@@ -1700,7 +1700,7 @@ function Hero({
 														>
 															{selectedCombinationLoading ? (
 																<>
-																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin animate-shimmer" />
 																	Procesando pago...
 																</>
 															) : selectedMethodData && selectedChargeData ? (
@@ -1718,7 +1718,7 @@ function Hero({
 									</div>
 								)}
 								{stepError && (
-									<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+									<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive animate-shake">
 										{stepError}
 									</div>
 								)}
