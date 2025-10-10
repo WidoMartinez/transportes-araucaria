@@ -821,10 +821,15 @@ function Hero({
 												/>
 												<label
 													htmlFor="ida-vuelta"
-													className="text-sm text-muted-foreground"
+													className="text-sm font-medium cursor-pointer flex-1"
 												>
-													¿Deseas reservar también el regreso? Coordina ida y
-													vuelta en una sola solicitud.
+													¿Deseas reservar también el regreso?{" "}
+													<span className="inline-flex items-center gap-1">
+														Coordina ida y vuelta
+														<Badge variant="secondary" className="ml-1 bg-green-100 text-green-700 hover:bg-green-100">
+															+5% descuento
+														</Badge>
+													</span>
 												</label>
 											</div>
 											{formData.idaVuelta && (
@@ -867,9 +872,8 @@ function Hero({
 												</div>
 											)}
 											<p className="text-xs text-muted-foreground">
-												Validaremos la disponibilidad del retorno junto con tu
-												reserva inicial. Al reservar ida y vuelta obtienes un 5%
-												adicional de descuento.
+												💡 Validaremos la disponibilidad del retorno junto con tu
+												reserva inicial para garantizar tu traslado completo.
 											</p>
 										</div>
 										<div className="text-center text-sm text-muted-foreground">
