@@ -1138,6 +1138,7 @@ function App() {
 
 		// Enviar notificación por correo usando el archivo PHP de Hostinger
 		try {
+			console.log("📧 Intentando enviar notificación por correo...");
 			// Usar misma origen para evitar CORS entre www y raíz
 			const emailResponse = await fetch("/enviar_correo_mejorado.php", {
 				method: "POST",
@@ -1148,15 +1149,42 @@ function App() {
 			if (emailResponse.ok) {
 				const emailResult = await emailResponse.json();
 				console.log("✅ Correo enviado exitosamente:", emailResult);
+				
+				// Verificar si realmente se enviaron los correos
+				if (emailResult.correo_admin_enviado) {
+					console.log("✅ Correo administrativo confirmado");
+				} else {
+					console.warn("⚠️ El correo administrativo NO fue enviado");
+				}
+				
+				if (emailResult.correo_cliente_enviado) {
+					console.log("✅ Correo de confirmación al cliente enviado");
+				}
+				
 				// Guardar el ID de la reserva para asociar pagos posteriores
 				if (emailResult && emailResult.id_reserva) {
 					setReservationId(emailResult.id_reserva);
 				}
 			} else {
-				console.warn("⚠️ Error al enviar correo:", await emailResponse.text());
+				const errorText = await emailResponse.text();
+				console.error("❌ Error HTTP al enviar correo:", {
+					status: emailResponse.status,
+					statusText: emailResponse.statusText,
+					response: errorText
+				});
+				// Intentar parsear como JSON para obtener más detalles
+				try {
+					const errorJson = JSON.parse(errorText);
+					console.error("Detalles del error:", errorJson);
+				} catch (e) {
+					console.error("Respuesta de error (texto plano):", errorText);
+				}
 			}
 		} catch (emailError) {
-			console.error("❌ Error al enviar notificación por correo:", emailError);
+			console.error("❌ Excepción al enviar notificación por correo:", {
+				error: emailError.message,
+				stack: emailError.stack
+			});
 			// No interrumpimos el flujo si falla el correo
 		}
 

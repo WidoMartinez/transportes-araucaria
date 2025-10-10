@@ -317,8 +317,13 @@ $mail = new PHPMailer(true);
 
 $adminEmailEnviado = false;
 $confirmacionEnviada = false;
+$errorDetails = [];
 
 try {
+    // Habilitar depuración de SMTP para diagnóstico
+    // $mail->SMTPDebug = 2; // Descomentar para ver mensajes SMTP detallados
+    // $mail->Debugoutput = function($str, $level) { error_log("SMTP Debug level $level: $str"); };
+    
     // Configuración del servidor
     $mail->isSMTP();
     $mail->Host       = $emailHost;
@@ -328,6 +333,9 @@ try {
     $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
     $mail->Port       = $emailPort;
     $mail->CharSet    = 'UTF-8';
+    
+    // Log de configuración para diagnóstico
+    error_log("Intentando enviar correo con Host: {$emailHost}, Port: {$emailPort}, User: {$emailUser}");
 
     // Destinatarios
     $mail->setFrom($emailUser, 'Notificación Sitio Web');
@@ -343,13 +351,17 @@ try {
 
     $mail->send();
     $adminEmailEnviado = true;
+    error_log("✅ Correo administrativo enviado exitosamente a: {$emailTo}");
 
     // Intentar actualizar flags en la reserva
     if (!empty($reservaCompleta['id'])) {
-        @actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
+        $flagsActualizados = actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
             'correo_admin_enviado' => true,
             'correo_cliente_enviado' => false
         ]);
+        if ($flagsActualizados) {
+            error_log("Flags de correo actualizados para reserva: {$reservaCompleta['id']}");
+        }
     }
 
     // Enviar confirmación al cliente (si procede)
@@ -398,34 +410,51 @@ try {
             $mail->Body = $clienteHtml;
             $mail->send();
             $confirmacionEnviada = true;
+            error_log("✅ Correo de confirmación enviado exitosamente al cliente: {$email}");
 
             // Actualizar flags en la reserva
             if (!empty($reservaCompleta['id'])) {
-                @actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
+                actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
                     'correo_cliente_enviado' => true
                 ]);
             }
         } catch (Exception $e2) {
             // No interrumpir la respuesta por fallo en confirmación al cliente
-            error_log('Error enviando confirmación al cliente: ' . $mail->ErrorInfo);
+            $errorDetails['cliente'] = $mail->ErrorInfo;
+            error_log('❌ Error enviando confirmación al cliente: ' . $mail->ErrorInfo);
         }
     }
 
     // Respuesta exitosa
-    echo json_encode([
+    $response = [
+        'success' => true,
         'message' => 'Mensaje enviado exitosamente.',
         'reserva_guardada' => $reservaGuardada,
         'id_reserva' => $reservaCompleta['id'] ?? null,
         'correo_admin_enviado' => $adminEmailEnviado,
         'correo_cliente_enviado' => $confirmacionEnviada
-    ]);
+    ];
+    if (!empty($errorDetails)) {
+        $response['error_details'] = $errorDetails;
+    }
+    error_log("✅ Respuesta exitosa: " . json_encode($response));
+    echo json_encode($response);
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode([
-        'message' => "Error al enviar el correo: {$mail->ErrorInfo}",
+    $errorMsg = $mail->ErrorInfo ?: $e->getMessage();
+    $response = [
+        'success' => false,
+        'message' => "Error al enviar el correo: {$errorMsg}",
         'reserva_guardada' => $reservaGuardada,
         'id_reserva' => $reservaCompleta['id'] ?? null,
         'correo_admin_enviado' => $adminEmailEnviado,
-        'correo_cliente_enviado' => $confirmacionEnviada
-    ]);
+        'correo_cliente_enviado' => $confirmacionEnviada,
+        'error_details' => [
+            'exception' => $e->getMessage(),
+            'mail_error' => $mail->ErrorInfo,
+            'trace' => $e->getTraceAsString()
+        ]
+    ];
+    error_log("❌ Error al enviar correo: " . json_encode($response));
+    echo json_encode($response);
 }
