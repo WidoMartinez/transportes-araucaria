@@ -14,7 +14,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { CheckCircle2, LoaderCircle, AlertCircle } from "lucide-react";
+import { CheckCircle2, LoaderCircle, AlertCircle, MapPin, Users } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
@@ -696,40 +696,51 @@ function Hero({
 												<Label htmlFor="origen-hero">
 													Origen <span className="text-red-500">*</span>
 												</Label>
-												<select
-													id="origen-hero"
-													name="origen"
+												<Select
 													value={formData.origen}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
+													onValueChange={(value) => {
+														handleInputChange({ target: { name: 'origen', value } });
+													}}
 												>
-													{origenes.map((origen) => (
-														<option key={origen} value={origen}>
-															{origen}
-														</option>
-													))}
-												</select>
+													<SelectTrigger>
+														<SelectValue placeholder="Selecciona tu origen" />
+													</SelectTrigger>
+													<SelectContent>
+														{origenes.map((origen) => (
+															<SelectItem key={origen} value={origen}>
+																<div className="flex items-center gap-2">
+																	<MapPin className="h-4 w-4 text-muted-foreground" />
+																	{origen}
+																</div>
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
 											<div className="space-y-2">
 												<Label htmlFor="destino-hero">
 													Destino <span className="text-red-500">*</span>
 												</Label>
-												<select
-													id="destino-hero"
-													name="destino"
+												<Select
 													value={formData.destino}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
+													onValueChange={(value) => {
+														handleInputChange({ target: { name: 'destino', value } });
+													}}
 												>
-													<option value="">Seleccionar destino</option>
-													{destinos.map((d) => (
-														<option key={d} value={d}>
-															{d}
-														</option>
-													))}
-												</select>
+													<SelectTrigger>
+														<SelectValue placeholder="Selecciona tu destino" />
+													</SelectTrigger>
+													<SelectContent>
+														{destinos.map((destino) => (
+															<SelectItem key={destino} value={destino}>
+																<div className="flex items-center gap-2">
+																	<MapPin className="h-4 w-4 text-muted-foreground" />
+																	{destino}
+																</div>
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
 										</div>
 
@@ -777,20 +788,26 @@ function Hero({
 												<Label htmlFor="pasajeros-hero">
 													Pasajeros <span className="text-red-500">*</span>
 												</Label>
-												<select
-													id="pasajeros-hero"
-													name="pasajeros"
-													value={formData.pasajeros}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
+												<Select
+													value={formData.pasajeros.toString()}
+													onValueChange={(value) => {
+														handleInputChange({ target: { name: 'pasajeros', value } });
+													}}
 												>
-													{[...Array(maxPasajeros)].map((_, i) => (
-														<option key={i + 1} value={i + 1}>
-															{i + 1} pasajero(s)
-														</option>
-													))}
-												</select>
+													<SelectTrigger>
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														{[...Array(maxPasajeros)].map((_, i) => (
+															<SelectItem key={i + 1} value={(i + 1).toString()}>
+																<div className="flex items-center gap-2">
+																	<Users className="h-4 w-4 text-muted-foreground" />
+																	{i + 1} pasajero{i > 0 ? 's' : ''}
+																</div>
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
 										</div>
 
