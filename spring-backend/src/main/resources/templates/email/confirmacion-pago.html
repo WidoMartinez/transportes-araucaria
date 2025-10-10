@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Pago - Transportes Araucaria</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .pago-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #4caf50;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .monto {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4caf50;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✅ Pago Confirmado</h1>
+        <h2>Transportes Araucaria</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hola <strong th:text="${reserva.nombre}">Nombre</strong>,</p>
+        
+        <p>¡Excelente! Tu pago ha sido procesado exitosamente.</p>
+        
+        <div class="pago-info">
+            <h3>💳 Detalles del Pago</h3>
+            
+            <div class="info-row">
+                <span class="info-label">Número de Reserva:</span>
+                <span class="info-value" th:text="'#' + ${reserva.id}">#12345</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Tipo de Pago:</span>
+                <span class="info-value" th:text="${tipoPago}">Abono (40%)</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Monto Pagado:</span>
+                <span class="info-value monto" th:text="${#numbers.formatCurrency(monto, 'CLP')}">$16.400</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Fecha de Pago:</span>
+                <span class="info-value" th:text="${#temporals.format(#temporals.createNow(), 'dd/MM/yyyy HH:mm')}">15/01/2024 14:30</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Estado:</span>
+                <span class="info-value" style="color: #4caf50; font-weight: bold;">✅ APROBADO</span>
+            </div>
+        </div>
+        
+        <div th:if="${tipoPago == 'ABONO'}">
+            <p><strong>Importante:</strong> Has realizado el pago del abono (40%). El saldo pendiente deberá ser cancelado al momento del servicio.</p>
+            
+            <div class="pago-info">
+                <h3>💰 Saldo Pendiente</h3>
+                <div class="monto" th:text="${#numbers.formatCurrency(reserva.saldoPendiente, 'CLP')}">$24.600</div>
+                <p style="text-align: center; color: #666;">
+                    Este monto se cobrará al conductor al momento del servicio
+                </p>
+            </div>
+        </div>
+        
+        <div th:if="${tipoPago == 'TOTAL'}">
+            <p><strong>¡Perfecto!</strong> Has pagado el total de tu reserva. No tienes saldo pendiente.</p>
+        </div>
+        
+        <p><strong>Próximos pasos:</strong></p>
+        <ul>
+            <li>Tu reserva está completamente confirmada</li>
+            <li>Te contactaremos 24 horas antes de tu viaje</li>
+            <li>Guarda este comprobante para tus registros</li>
+        </ul>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${frontendUrl}/mis-reservas" style="display: inline-block; background: #4caf50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">Ver Mis Reservas</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><strong>Transportes Araucaria</strong></p>
+        <p>📧 info@transportesaraucaria.cl | 📱 +56 9 1234 5678</p>
+        <p>🌐 <a th:href="${frontendUrl}" th:text="${frontendUrl}">www.transportesaraucaria.cl</a></p>
+        <p style="font-size: 12px; color: #666;">
+            Este es un email automático, por favor no responder a este mensaje.
+        </p>
+    </div>
+</body>
+</html>

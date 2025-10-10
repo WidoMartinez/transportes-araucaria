@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de Reserva - Transportes Araucaria</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+        }
+        .reserva-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .precio-info {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #4caf50;
+        }
+        .precio-total {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+            text-align: center;
+            margin: 15px 0;
+        }
+        .descuento {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .btn {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚐 Transportes Araucaria</h1>
+        <h2>Confirmación de Reserva</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hola <strong th:text="${reserva.nombre}">Nombre</strong>,</p>
+        
+        <p>¡Gracias por elegir Transportes Araucaria! Tu reserva ha sido confirmada exitosamente.</p>
+        
+        <div class="reserva-info">
+            <h3>📋 Detalles de tu Reserva</h3>
+            
+            <div class="info-row">
+                <span class="info-label">Número de Reserva:</span>
+                <span class="info-value" th:text="'#' + ${reserva.id}">#12345</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Origen:</span>
+                <span class="info-value" th:text="${reserva.origen}">Aeropuerto La Araucanía</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Destino:</span>
+                <span class="info-value" th:text="${reserva.destino.nombre}">Pucón</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Fecha:</span>
+                <span class="info-value" th:text="${#temporals.format(reserva.fecha, formatoFecha)}">15 de enero de 2024</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Hora:</span>
+                <span class="info-value" th:text="${#temporals.format(reserva.hora, formatoHora)} + ' hrs'">10:30 hrs</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Pasajeros:</span>
+                <span class="info-value" th:text="${reserva.pasajeros} + ' pasajero(s)'">2 pasajero(s)</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.idaVuelta}">
+                <span class="info-label">Regreso:</span>
+                <span class="info-value" th:text="${#temporals.format(reserva.fechaRegreso, formatoFecha)} + ' a las ' + ${#temporals.format(reserva.horaRegreso, formatoHora)} + ' hrs'">20 de enero de 2024 a las 15:00 hrs</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.numeroVuelo}">
+                <span class="info-label">Número de Vuelo:</span>
+                <span class="info-value" th:text="${reserva.numeroVuelo}">LA123</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.hotel}">
+                <span class="info-label">Hotel:</span>
+                <span class="info-value" th:text="${reserva.hotel}">Hotel Antumalal</span>
+            </div>
+        </div>
+        
+        <div class="precio-info">
+            <h3>💰 Resumen de Precios</h3>
+            
+            <div class="info-row">
+                <span class="info-label">Precio Base:</span>
+                <span class="info-value" th:text="${#numbers.formatCurrency(reserva.precioBase, 'CLP')}">$50.000</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.descuentoOnline}">
+                <span class="info-label">Descuento Online (5%):</span>
+                <span class="info-value descuento" th:text="'-' + ${#numbers.formatCurrency(reserva.descuentoOnline, 'CLP')}">-$2.500</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.descuentoRoundTrip}">
+                <span class="info-label">Descuento Ida y Vuelta (10%):</span>
+                <span class="info-value descuento" th:text="'-' + ${#numbers.formatCurrency(reserva.descuentoRoundTrip, 'CLP')}">-$5.000</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.descuentoPromocion}">
+                <span class="info-label">Descuento Promoción:</span>
+                <span class="info-value descuento" th:text="'-' + ${#numbers.formatCurrency(reserva.descuentoPromocion, 'CLP')}">-$1.000</span>
+            </div>
+            
+            <div class="info-row" th:if="${reserva.descuentoCodigo}">
+                <span class="info-label">Descuento Código:</span>
+                <span class="info-value descuento" th:text="'-' + ${#numbers.formatCurrency(reserva.descuentoCodigo, 'CLP')}">-$500</span>
+            </div>
+            
+            <div class="precio-total" th:text="${#numbers.formatCurrency(reserva.totalConDescuento, 'CLP')}">$41.000</div>
+            
+            <div class="info-row">
+                <span class="info-label">Abono (40%):</span>
+                <span class="info-value" th:text="${#numbers.formatCurrency(reserva.abono, 'CLP')}">$16.400</span>
+            </div>
+            
+            <div class="info-row">
+                <span class="info-label">Saldo Pendiente:</span>
+                <span class="info-value" th:text="${#numbers.formatCurrency(reserva.saldoPendiente, 'CLP')}">$24.600</span>
+            </div>
+        </div>
+        
+        <p><strong>Próximos pasos:</strong></p>
+        <ul>
+            <li>Te contactaremos 24 horas antes de tu viaje para confirmar los detalles</li>
+            <li>Puedes realizar el pago del abono o del total a través de los enlaces que te enviaremos</li>
+            <li>Si tienes alguna pregunta, no dudes en contactarnos</li>
+        </ul>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="${frontendUrl}/mis-reservas" class="btn">Ver Mis Reservas</a>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p><strong>Transportes Araucaria</strong></p>
+        <p>📧 info@transportesaraucaria.cl | 📱 +56 9 1234 5678</p>
+        <p>🌐 <a th:href="${frontendUrl}" th:text="${frontendUrl}">www.transportesaraucaria.cl</a></p>
+        <p style="font-size: 12px; color: #666;">
+            Este es un email automático, por favor no responder a este mensaje.
+        </p>
+    </div>
+</body>
+</html>

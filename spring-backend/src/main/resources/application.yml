@@ -1,0 +1,83 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: transportes-araucaria-reservas
+  
+  datasource:
+    url: jdbc:mysql://localhost:3306/transportes_araucaria?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            
+  cache:
+    type: simple
+    cache-names:
+      - pricing
+      - destinations
+      - promotions
+
+# MercadoPago Configuration
+mercadopago:
+  access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
+  public-key: ${MERCADOPAGO_PUBLIC_KEY:}
+  webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
+
+# Flow Configuration
+flow:
+  api-key: ${FLOW_API_KEY:}
+  secret-key: ${FLOW_SECRET_KEY:}
+  api-url: ${FLOW_API_URL:https://www.flow.cl/api}
+
+# Application Configuration
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  backend-url: ${BACKEND_URL:http://localhost:8080}
+  pricing:
+    default-online-discount: 5
+    default-round-trip-discount: 10
+  email:
+    from: ${EMAIL_FROM:noreply@transportesaraucaria.cl}
+    admin: ${EMAIL_ADMIN:admin@transportesaraucaria.cl}
+
+# Logging
+logging:
+  level:
+    cl.transportesaraucaria: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
