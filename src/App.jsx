@@ -16,7 +16,7 @@ import {
 } from "./components/ui/dialog";
 import { Button } from "./components/ui/button";
 import { Checkbox } from "./components/ui/checkbox";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, CheckCircle2 } from "lucide-react";
 
 // --- Componentes de Sección ---
 import Header from "./components/Header";
@@ -32,6 +32,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
+import ReservasModerno from "./components/ReservasModerno";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -169,9 +170,32 @@ const resolveIsFreightView = () => {
 	);
 };
 
+const resolveIsModernReservationView = () => {
+	if (typeof window === "undefined") return false;
+	const url = new URL(window.location.href);
+	const params = url.searchParams;
+	const pathname = url.pathname.toLowerCase();
+	const hash = url.hash.toLowerCase();
+
+	return (
+		// Parámetro URL: ?reservas=moderno
+		params.get("reservas") === "moderno" ||
+		// Parámetro URL: ?view=moderno
+		params.get("view") === "moderno" ||
+		// Hash: #reservas-moderno
+		hash === "#reservas-moderno" ||
+		// Ruta: /reservas-moderno
+		pathname === "/reservas-moderno" ||
+		pathname.startsWith("/reservas-moderno/")
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [isModernReservationView, setIsModernReservationView] = useState(
+		resolveIsModernReservationView
+	);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -1237,18 +1261,105 @@ function App() {
 			new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }),
 		[]
 	);
-	const formatCurrency = (value) => currencyFormatter.format(value || 0);
-
 	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
-	const destinoFinal =
-		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
 	if (isFreightView) {
 		return <FletesLanding />;
 	}
 
 	if (isAdminView) {
-    return <AdminDashboard />;
+		return <AdminDashboard />;
+	}
+
+	if (isModernReservationView) {
+		return (
+			<div className="min-h-screen bg-background text-foreground">
+				{loadingPrecios && (
+					<div className="fixed top-0 left-0 w-full h-full bg-black/50 z-[100] flex items-center justify-center text-white">
+						<LoaderCircle className="animate-spin mr-2" />
+						Cargando tarifas actualizadas...
+					</div>
+				)}
+				<Dialog
+					open={showConfirmationAlert}
+					onOpenChange={setShowConfirmationAlert}
+				>
+					<DialogContent className="sm:max-w-md">
+						<DialogHeader>
+							<DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
+								<CheckCircle2 className="h-8 w-8 text-emerald-500" />
+								¡Reserva Confirmada!
+							</DialogTitle>
+							<DialogDescription className="text-center text-base space-y-2 pt-4">
+								<p className="text-gray-700">
+									Tu solicitud de reserva ha sido enviada exitosamente.
+								</p>
+								<p className="text-gray-600">
+									Te contactaremos pronto vía WhatsApp al número{" "}
+									<span className="font-semibold text-emerald-600">
+										{formData.telefono}
+									</span>{" "}
+									para confirmar los detalles.
+								</p>
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter className="sm:justify-center">
+							<DialogClose asChild>
+								<Button
+									onClick={() => {
+										setShowConfirmationAlert(false);
+										window.location.href = "/";
+									}}
+									className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600"
+								>
+									Entendido
+								</Button>
+							</DialogClose>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+
+				<Header />
+				<ReservasModerno
+					formData={formData}
+					handleInputChange={handleInputChange}
+					origenes={todosLosTramos}
+					destinos={destinosDisponibles}
+					maxPasajeros={maxPasajeros}
+					minDateTime={minDateTime}
+					phoneError={phoneError}
+					setPhoneError={setPhoneError}
+					isSubmitting={isSubmitting}
+					cotizacion={cotizacion}
+					pricing={pricing}
+					descuentoRate={effectiveDiscountRate}
+					baseDiscountRate={onlineDiscountRate}
+					promotionDiscountRate={promotionDiscountRate}
+					roundTripDiscountRate={roundTripDiscountRate}
+					personalizedDiscountRate={personalizedDiscountRate}
+					descuentosPersonalizados={
+						descuentosGlobales?.descuentosPersonalizados || []
+					}
+					activePromotion={activePromotion}
+					reviewChecklist={reviewChecklist}
+					setReviewChecklist={setReviewChecklist}
+					setFormData={setFormData}
+					canPay={canPay}
+					handlePayment={handlePayment}
+					loadingGateway={loadingGateway}
+					onSubmitWizard={handleWizardSubmit}
+					validarTelefono={validarTelefono}
+					validarHorarioReserva={validarHorarioReserva}
+					showSummary={showConfirmationAlert}
+					codigoAplicado={codigoAplicado}
+					codigoError={codigoError}
+					validandoCodigo={validandoCodigo}
+					onAplicarCodigo={validarCodigo}
+					onRemoverCodigo={removerCodigo}
+				/>
+				<Footer />
+			</div>
+		);
 	}
 
 	return (
