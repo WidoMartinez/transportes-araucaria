@@ -48,6 +48,7 @@ import {
 	XCircle,
 	AlertCircle,
 	RefreshCw,
+	Plus,
 } from "lucide-react";
 
 function AdminReservas() {
@@ -57,6 +58,7 @@ function AdminReservas() {
 	const [selectedReserva, setSelectedReserva] = useState(null);
 	const [showEditDialog, setShowEditDialog] = useState(false);
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
+	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [saving, setSaving] = useState(false);
 
 	// Filtros y búsqueda
@@ -93,6 +95,35 @@ function AdminReservas() {
 		equipajeEspecial: "",
 		sillaInfantil: false,
 		horaRegreso: "",
+	});
+
+	// Formulario de nueva reserva
+	const [newReservaForm, setNewReservaForm] = useState({
+		nombre: "",
+		email: "",
+		telefono: "",
+		origen: "",
+		destino: "",
+		fecha: "",
+		hora: "08:00",
+		pasajeros: 1,
+		precio: 0,
+		vehiculo: "sedan",
+		numeroVuelo: "",
+		hotel: "",
+		equipajeEspecial: "",
+		sillaInfantil: false,
+		idaVuelta: false,
+		fechaRegreso: "",
+		horaRegreso: "",
+		abonoSugerido: 0,
+		saldoPendiente: 0,
+		totalConDescuento: 0,
+		mensaje: "",
+		estado: "confirmada",
+		estadoPago: "pendiente",
+		metodoPago: "",
+		observaciones: "",
 	});
 
 	const apiUrl =
@@ -313,6 +344,91 @@ function AdminReservas() {
 		return new Date(date).toLocaleDateString("es-CL");
 	};
 
+	// Abrir modal de nueva reserva
+	const handleNewReserva = () => {
+		setNewReservaForm({
+			nombre: "",
+			email: "",
+			telefono: "",
+			origen: "",
+			destino: "",
+			fecha: "",
+			hora: "08:00",
+			pasajeros: 1,
+			precio: 0,
+			vehiculo: "sedan",
+			numeroVuelo: "",
+			hotel: "",
+			equipajeEspecial: "",
+			sillaInfantil: false,
+			idaVuelta: false,
+			fechaRegreso: "",
+			horaRegreso: "",
+			abonoSugerido: 0,
+			saldoPendiente: 0,
+			totalConDescuento: 0,
+			mensaje: "",
+			estado: "confirmada",
+			estadoPago: "pendiente",
+			metodoPago: "",
+			observaciones: "",
+		});
+		setShowNewDialog(true);
+	};
+
+	// Guardar nueva reserva
+	const handleSaveNewReserva = async () => {
+		// Validaciones básicas
+		if (!newReservaForm.nombre || !newReservaForm.email || !newReservaForm.telefono) {
+			alert("Por favor completa los campos obligatorios: Nombre, Email y Teléfono");
+			return;
+		}
+		if (!newReservaForm.origen || !newReservaForm.destino) {
+			alert("Por favor completa los campos obligatorios: Origen y Destino");
+			return;
+		}
+		if (!newReservaForm.fecha) {
+			alert("Por favor selecciona una fecha");
+			return;
+		}
+
+		setSaving(true);
+		try {
+			// Calcular saldo pendiente si no está establecido
+			const total = parseFloat(newReservaForm.totalConDescuento) || parseFloat(newReservaForm.precio) || 0;
+			const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
+			const saldo = total - abono;
+
+			const reservaData = {
+				...newReservaForm,
+				totalConDescuento: total,
+				saldoPendiente: saldo,
+				source: "manual",
+			};
+
+			const response = await fetch(`${apiUrl}/enviar-reserva`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(reservaData),
+			});
+
+			if (!response.ok) {
+				throw new Error("Error al crear la reserva");
+			}
+
+			// Recargar datos
+			await fetchReservas();
+			await fetchEstadisticas();
+			setShowNewDialog(false);
+			alert("Reserva creada exitosamente");
+		} catch (error) {
+			console.error("Error creando reserva:", error);
+			alert("Error al crear la reserva: " + error.message);
+		} finally {
+			setSaving(false);
+		}
+	};
+
 	if (loading && reservas.length === 0) {
 		return (
 			<div className="flex items-center justify-center h-64">
@@ -328,7 +444,13 @@ function AdminReservas() {
 		<div className="space-y-6">
 			{/* Encabezado y Estadísticas */}
 			<div>
-				<h2 className="text-3xl font-bold mb-4">Gestión de Reservas</h2>
+				<div className="flex justify-between items-center mb-4">
+					<h2 className="text-3xl font-bold">Gestión de Reservas</h2>
+					<Button onClick={handleNewReserva} className="gap-2">
+						<Plus className="w-4 h-4" />
+						Nueva Reserva
+					</Button>
+				</div>
 				<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
 					<Card>
 						<CardHeader className="pb-2">
@@ -1172,6 +1294,429 @@ function AdminReservas() {
 							</div>
 						</div>
 					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* Modal de Nueva Reserva */}
+			<Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
+				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle>Nueva Reserva Manual</DialogTitle>
+						<DialogDescription>
+							Crea una nueva reserva ingresando manualmente los datos del cliente y del viaje
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-6">
+						{/* Información del Cliente */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Información del Cliente
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="new-nombre">
+										Nombre Completo <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-nombre"
+										placeholder="Juan Pérez"
+										value={newReservaForm.nombre}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, nombre: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-email">
+										Email <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-email"
+										type="email"
+										placeholder="juan@example.com"
+										value={newReservaForm.email}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, email: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-telefono">
+										Teléfono <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-telefono"
+										placeholder="+56912345678"
+										value={newReservaForm.telefono}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, telefono: e.target.value })
+										}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Detalles del Viaje */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Detalles del Viaje
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="new-origen">
+										Origen <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-origen"
+										placeholder="Aeropuerto Temuco"
+										value={newReservaForm.origen}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, origen: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-destino">
+										Destino <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-destino"
+										placeholder="Pucón"
+										value={newReservaForm.destino}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, destino: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-fecha">
+										Fecha <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-fecha"
+										type="date"
+										value={newReservaForm.fecha}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, fecha: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-hora">Hora</Label>
+									<Input
+										id="new-hora"
+										type="time"
+										value={newReservaForm.hora}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, hora: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-pasajeros">Pasajeros</Label>
+									<Input
+										id="new-pasajeros"
+										type="number"
+										min="1"
+										value={newReservaForm.pasajeros}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												pasajeros: parseInt(e.target.value) || 1,
+											})
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-vehiculo">Vehículo</Label>
+									<Select
+										value={newReservaForm.vehiculo}
+										onValueChange={(value) =>
+											setNewReservaForm({ ...newReservaForm, vehiculo: value })
+										}
+									>
+										<SelectTrigger id="new-vehiculo">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="sedan">Sedan</SelectItem>
+											<SelectItem value="van">Van</SelectItem>
+											<SelectItem value="minibus">Minibus</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+
+							{/* Ida y Vuelta */}
+							<div className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="new-idavuelta"
+									checked={newReservaForm.idaVuelta}
+									onChange={(e) =>
+										setNewReservaForm({ ...newReservaForm, idaVuelta: e.target.checked })
+									}
+									className="w-4 h-4"
+								/>
+								<Label htmlFor="new-idavuelta">Incluir viaje de regreso</Label>
+							</div>
+
+							{newReservaForm.idaVuelta && (
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+									<div className="space-y-2">
+										<Label htmlFor="new-fecharegreso">Fecha Regreso</Label>
+										<Input
+											id="new-fecharegreso"
+											type="date"
+											value={newReservaForm.fechaRegreso}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													fechaRegreso: e.target.value,
+												})
+											}
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="new-horaregreso">Hora Regreso</Label>
+										<Input
+											id="new-horaregreso"
+											type="time"
+											value={newReservaForm.horaRegreso}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													horaRegreso: e.target.value,
+												})
+											}
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+
+						{/* Información Adicional */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Información Adicional (Opcional)
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="new-vuelo">Número de Vuelo</Label>
+									<Input
+										id="new-vuelo"
+										placeholder="LA123"
+										value={newReservaForm.numeroVuelo}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												numeroVuelo: e.target.value,
+											})
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-hotel">Hotel</Label>
+									<Input
+										id="new-hotel"
+										placeholder="Hotel Gran Pucón"
+										value={newReservaForm.hotel}
+										onChange={(e) =>
+											setNewReservaForm({ ...newReservaForm, hotel: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-2 md:col-span-2">
+									<Label htmlFor="new-equipaje">Equipaje Especial</Label>
+									<Input
+										id="new-equipaje"
+										placeholder="Esquíes, bicicletas, etc."
+										value={newReservaForm.equipajeEspecial}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												equipajeEspecial: e.target.value,
+											})
+										}
+									/>
+								</div>
+								<div className="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										id="new-silla"
+										checked={newReservaForm.sillaInfantil}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												sillaInfantil: e.target.checked,
+											})
+										}
+										className="w-4 h-4"
+									/>
+									<Label htmlFor="new-silla">Requiere silla infantil</Label>
+								</div>
+							</div>
+						</div>
+
+						{/* Información Financiera */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Información Financiera
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="new-precio">Precio Total (CLP)</Label>
+									<Input
+										id="new-precio"
+										type="number"
+										min="0"
+										placeholder="50000"
+										value={newReservaForm.precio}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												precio: parseFloat(e.target.value) || 0,
+												totalConDescuento: parseFloat(e.target.value) || 0,
+											})
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-abono">Abono Sugerido (CLP)</Label>
+									<Input
+										id="new-abono"
+										type="number"
+										min="0"
+										placeholder="25000"
+										value={newReservaForm.abonoSugerido}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												abonoSugerido: parseFloat(e.target.value) || 0,
+											})
+										}
+									/>
+								</div>
+							</div>
+							<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+								<p className="text-sm">
+									<strong>Saldo Pendiente:</strong>{" "}
+									{formatCurrency(
+										(parseFloat(newReservaForm.precio) || 0) -
+											(parseFloat(newReservaForm.abonoSugerido) || 0)
+									)}
+								</p>
+							</div>
+						</div>
+
+						{/* Estado y Pago */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Estado y Pago
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="new-estado">Estado de la Reserva</Label>
+									<Select
+										value={newReservaForm.estado}
+										onValueChange={(value) =>
+											setNewReservaForm({ ...newReservaForm, estado: value })
+										}
+									>
+										<SelectTrigger id="new-estado">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="pendiente">Pendiente</SelectItem>
+											<SelectItem value="confirmada">Confirmada</SelectItem>
+											<SelectItem value="completada">Completada</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-estadopago">Estado de Pago</Label>
+									<Select
+										value={newReservaForm.estadoPago}
+										onValueChange={(value) =>
+											setNewReservaForm({ ...newReservaForm, estadoPago: value })
+										}
+									>
+										<SelectTrigger id="new-estadopago">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="pendiente">Pendiente</SelectItem>
+											<SelectItem value="pagado">Pagado</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								{newReservaForm.estadoPago === "pagado" && (
+									<div className="space-y-2">
+										<Label htmlFor="new-metodopago">Método de Pago</Label>
+										<Select
+											value={newReservaForm.metodoPago}
+											onValueChange={(value) =>
+												setNewReservaForm({ ...newReservaForm, metodoPago: value })
+											}
+										>
+											<SelectTrigger id="new-metodopago">
+												<SelectValue placeholder="Seleccionar método" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="efectivo">Efectivo</SelectItem>
+												<SelectItem value="transferencia">Transferencia</SelectItem>
+												<SelectItem value="mercadopago">MercadoPago</SelectItem>
+												<SelectItem value="flow">Flow</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+								)}
+							</div>
+						</div>
+
+						{/* Observaciones */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Observaciones Internas
+							</h3>
+							<Textarea
+								placeholder="Notas adicionales sobre esta reserva..."
+								value={newReservaForm.observaciones}
+								onChange={(e) =>
+									setNewReservaForm({
+										...newReservaForm,
+										observaciones: e.target.value,
+									})
+								}
+								rows={3}
+							/>
+						</div>
+
+						{/* Botones */}
+						<div className="flex justify-end gap-2 pt-4 border-t">
+							<Button
+								variant="outline"
+								onClick={() => setShowNewDialog(false)}
+								disabled={saving}
+							>
+								Cancelar
+							</Button>
+							<Button onClick={handleSaveNewReserva} disabled={saving}>
+								{saving ? (
+									<>
+										<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+										Guardando...
+									</>
+								) : (
+									<>
+										<Plus className="w-4 h-4 mr-2" />
+										Crear Reserva
+									</>
+								)}
+							</Button>
+						</div>
+					</div>
 				</DialogContent>
 			</Dialog>
 		</div>
