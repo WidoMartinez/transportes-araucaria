@@ -145,27 +145,27 @@ function HeroExpress({
 		setCurrentStep(1);
 	};
 
-	// Validaciones del segundo paso (mínimas para pago)
-	const handleStepTwoNext = async () => {
+	// Validaciones del segundo paso (solo valida, no crea reserva)
+	const validateStepTwo = () => {
 		if (!formData.nombre?.trim()) {
 			setStepError("Ingresa tu nombre completo.");
-			return;
+			return false;
 		}
 
 		if (!formData.email?.trim()) {
 			setStepError("Ingresa tu correo electrónico.");
-			return;
+			return false;
 		}
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) {
 			setStepError("El correo electrónico no es válido.");
-			return;
+			return false;
 		}
 
 		if (!formData.telefono?.trim()) {
 			setStepError("Ingresa tu teléfono móvil.");
-			return;
+			return false;
 		}
 
 		// Validación suave del teléfono (no bloquea el proceso)
@@ -177,25 +177,34 @@ function HeroExpress({
 
 		if (!paymentConsent) {
 			setStepError("Debes aceptar los términos para continuar con el pago.");
-			return;
+			return false;
 		}
 
 		setStepError("");
+		return true;
+	};
 
-		// Procesar la reserva express (sin hora específica)
+	// Nueva función para procesar pago después de validar
+	const handlePaymentWithReservation = async (gateway, type) => {
+		// Primero validar los datos
+		if (!validateStepTwo()) {
+			return;
+		}
+
+		// Crear la reserva ANTES de redirigir al pago
 		const result = await onSubmitWizard();
 
 		if (!result.success) {
 			if (result.message) {
 				setStepError(`Error: ${result.message}`);
 			} else {
-				setStepError("Ocurrió un error. Por favor, inténtalo de nuevo.");
+				setStepError("Ocurrió un error al crear la reserva. Inténtalo de nuevo.");
 			}
 			return;
 		}
 
-		// Si llegamos aquí, la reserva se creó exitosamente
-		// El pago se maneja directamente desde aquí
+		// Si la reserva se creó exitosamente, proceder con el pago
+		await handlePayment(gateway, type);
 	};
 
 	const handleStepBack = () => {
@@ -823,7 +832,7 @@ function HeroExpress({
 																		type="button"
 																		variant="outline"
 																		onClick={() =>
-																			handlePayment(method.gateway, option.type)
+																			handlePaymentWithReservation(method.gateway, option.type)
 																		}
 																		disabled={
 																			isSubmitting ||
@@ -888,7 +897,7 @@ function HeroExpress({
 												← Volver
 											</Button>
 
-											{requiereCotizacionManual ? (
+											{requiereCotizacionManual && (
 												<Button
 													asChild
 													className="w-full sm:w-auto"
@@ -898,24 +907,21 @@ function HeroExpress({
 														Solicitar cotización personalizada
 													</a>
 												</Button>
-											) : (
-												<Button
-													type="button"
-													onClick={handleStepTwoNext}
-													disabled={isSubmitting || !paymentConsent}
-													className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
-												>
-													{isSubmitting ? (
-														<>
-															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-															Procesando reserva...
-														</>
-													) : (
-														"Confirmar reserva →"
-													)}
-												</Button>
 											)}
 										</div>
+
+										{/* Instrucciones de pago */}
+										{!requiereCotizacionManual && (
+											<div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+												<p className="text-sm text-blue-800">
+													💳 <strong>Para confirmar tu reserva, selecciona un método de pago arriba</strong>
+													<br />
+													<span className="text-xs">
+														La reserva se creará automáticamente al procesar el pago
+													</span>
+												</p>
+											</div>
+										)}
 									</div>
 								)}
 
