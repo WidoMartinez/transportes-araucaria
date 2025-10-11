@@ -22,7 +22,7 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="w-full px-4 py-6">
         <h1 className="text-2xl font-semibold mb-4">Panel Administrativo</h1>
         <div className="flex gap-2 mb-6">
           <button
