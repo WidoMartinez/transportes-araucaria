@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
+import AdminReservas from "./AdminReservas";
 
 function AdminDashboard() {
   const url = new URL(window.location.href);
@@ -29,6 +30,10 @@ function AdminDashboard() {
             onClick={() => setPanel("pricing")}
           >Precios</button>
           <button
+            className={`px-3 py-2 rounded border ${active === "reservas" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("reservas")}
+          >Reservas</button>
+          <button
             className={`px-3 py-2 rounded border ${active === "codigos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("codigos")}
           >Códigos</button>
@@ -44,7 +49,9 @@ function AdminDashboard() {
           >Reservas (PHP)</a>
         </div>
 
-        {active === "codigos" ? (
+        {active === "reservas" ? (
+          <AdminReservas />
+        ) : active === "codigos" ? (
           <AdminCodigos />
         ) : active === "codigos-mejorado" ? (
           <AdminCodigosMejorado />

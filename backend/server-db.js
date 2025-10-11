@@ -1701,6 +1701,63 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 	}
 });
 
+// Crear nueva reserva (para admin)
+app.post("/api/reservas", async (req, res) => {
+	try {
+		const datosReserva = req.body;
+
+		// Validar campos requeridos
+		const camposRequeridos = [
+			"nombre",
+			"email",
+			"telefono",
+			"origen",
+			"destino",
+			"fecha",
+			"precio",
+			"totalConDescuento",
+		];
+		const camposFaltantes = camposRequeridos.filter(
+			(campo) => !datosReserva[campo]
+		);
+
+		if (camposFaltantes.length > 0) {
+			return res.status(400).json({
+				error: "Faltan campos requeridos",
+				camposFaltantes,
+			});
+		}
+
+		// Crear la reserva
+		const reserva = await Reserva.create({
+			nombre: datosReserva.nombre,
+			email: datosReserva.email,
+			telefono: datosReserva.telefono,
+			origen: datosReserva.origen,
+			destino: datosReserva.destino,
+			fecha: datosReserva.fecha,
+			hora: datosReserva.hora || "08:00",
+			pasajeros: datosReserva.pasajeros || 1,
+			precio: datosReserva.precio,
+			totalConDescuento: datosReserva.totalConDescuento,
+			vehiculo: datosReserva.vehiculo || null,
+			estado: datosReserva.estado || "pendiente",
+			estadoPago: datosReserva.estadoPago || "pendiente",
+			observaciones: datosReserva.observaciones || null,
+			source: "admin_manual",
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Reserva creada exitosamente",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error creando reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Obtener estadísticas de reservas
 app.get("/api/reservas/estadisticas", async (req, res) => {
 	try {
@@ -1735,7 +1792,7 @@ app.get("/api/reservas/estadisticas", async (req, res) => {
 			reservasPendientes,
 			reservasConfirmadas,
 			reservasPagadas,
-			totalIngresos,
+			ingresosTotales: totalIngresos,
 		});
 	} catch (error) {
 		console.error("Error obteniendo estadísticas:", error);
