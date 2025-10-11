@@ -1629,6 +1629,48 @@ app.get("/api/reservas", async (req, res) => {
 	}
 });
 
+// Obtener estadísticas de reservas
+app.get("/api/reservas/estadisticas", async (req, res) => {
+	try {
+		const totalReservas = await Reserva.count();
+		const reservasPendientes = await Reserva.count({
+			where: { estado: "pendiente" },
+		});
+		const reservasConfirmadas = await Reserva.count({
+			where: { estado: "confirmada" },
+		});
+		const reservasPagadas = await Reserva.count({
+			where: { estadoPago: "pagado" },
+		});
+
+		// Ingresos totales
+		const ingresosResult = await Reserva.findOne({
+			attributes: [
+				[
+					sequelize.fn("SUM", sequelize.col("totalConDescuento")),
+					"totalIngresos",
+				],
+			],
+			where: { estadoPago: "pagado" },
+		});
+
+		const totalIngresos = parseFloat(
+			ingresosResult?.dataValues?.totalIngresos || 0
+		);
+
+		res.json({
+			totalReservas,
+			reservasPendientes,
+			reservasConfirmadas,
+			reservasPagadas,
+			totalIngresos,
+		});
+	} catch (error) {
+		console.error("Error obteniendo estadísticas:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Obtener una reserva específica
 app.get("/api/reservas/:id", async (req, res) => {
 	try {
@@ -1697,48 +1739,6 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando estado de pago:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
-// Obtener estadísticas de reservas
-app.get("/api/reservas/estadisticas", async (req, res) => {
-	try {
-		const totalReservas = await Reserva.count();
-		const reservasPendientes = await Reserva.count({
-			where: { estado: "pendiente" },
-		});
-		const reservasConfirmadas = await Reserva.count({
-			where: { estado: "confirmada" },
-		});
-		const reservasPagadas = await Reserva.count({
-			where: { estadoPago: "pagado" },
-		});
-
-		// Ingresos totales
-		const ingresosResult = await Reserva.findOne({
-			attributes: [
-				[
-					sequelize.fn("SUM", sequelize.col("totalConDescuento")),
-					"totalIngresos",
-				],
-			],
-			where: { estadoPago: "pagado" },
-		});
-
-		const totalIngresos = parseFloat(
-			ingresosResult?.dataValues?.totalIngresos || 0
-		);
-
-		res.json({
-			totalReservas,
-			reservasPendientes,
-			reservasConfirmadas,
-			reservasPagadas,
-			totalIngresos,
-		});
-	} catch (error) {
-		console.error("Error obteniendo estadísticas:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });

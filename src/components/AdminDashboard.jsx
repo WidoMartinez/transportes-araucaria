@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
+import AdminReservas from "./AdminReservas";
 
 function AdminDashboard() {
   const url = new URL(window.location.href);
@@ -25,6 +26,10 @@ function AdminDashboard() {
         <h1 className="text-2xl font-semibold mb-4">Panel Administrativo</h1>
         <div className="flex gap-2 mb-6">
           <button
+            className={`px-3 py-2 rounded border ${active === "reservas" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("reservas")}
+          >Reservas</button>
+          <button
             className={`px-3 py-2 rounded border ${active === "pricing" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("pricing")}
           >Precios</button>
@@ -36,15 +41,11 @@ function AdminDashboard() {
             className={`px-3 py-2 rounded border ${active === "codigos-mejorado" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("codigos-mejorado")}
           >Códigos (Mejorado)</button>
-          <a
-            className="px-3 py-2 rounded border bg-white"
-            href="/reservas_manager.php"
-            target="_blank"
-            rel="noreferrer noopener"
-          >Reservas (PHP)</a>
         </div>
 
-        {active === "codigos" ? (
+        {active === "reservas" ? (
+          <AdminReservas />
+        ) : active === "codigos" ? (
           <AdminCodigos />
         ) : active === "codigos-mejorado" ? (
           <AdminCodigosMejorado />
