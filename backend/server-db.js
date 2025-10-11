@@ -15,6 +15,7 @@ import Destino from "./models/Destino.js";
 import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
+import Lead from "./models/Lead.js";
 
 dotenv.config();
 
@@ -1551,6 +1552,33 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			reservaExpress.id
 		);
 
+		// Intentar marcar lead como convertido si existe
+		try {
+			const leadExistente = await Lead.findOne({
+				where: {
+					[Op.or]: [
+						{ email: datosReserva.email },
+						{ telefono: datosReserva.telefono },
+					],
+					convertido: false,
+				},
+			});
+
+			if (leadExistente) {
+				await leadExistente.update({
+					convertido: true,
+					reservaId: reservaExpress.id,
+					estadoRemarketing: "convertido",
+				});
+				console.log(
+					`✅ Lead ${leadExistente.id} marcado como convertido con reserva ${reservaExpress.id}`
+				);
+			}
+		} catch (leadError) {
+			console.warn("Aviso: error al actualizar lead:", leadError);
+			// No interrumpir el flujo si falla la actualización del lead
+		}
+
 		return res.json({
 			success: true,
 			message: "Reserva express creada correctamente",
@@ -1563,6 +1591,171 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			success: false,
 			message: "Error interno del servidor",
 		});
+	}
+});
+
+// Endpoint para capturar leads (usuarios que interactúan pero no completan la reserva)
+app.post("/capturar-lead", async (req, res) => {
+	try {
+		const datosLead = req.body || {};
+
+		console.log("📊 Lead capturado:", {
+			email: datosLead.email,
+			telefono: datosLead.telefono,
+			destino: datosLead.destino,
+			pasoAlcanzado: datosLead.pasoAlcanzado,
+		});
+
+		// Crear o actualizar lead
+		const [lead, created] = await Lead.findOrCreate({
+			where: {
+				email: datosLead.email || null,
+				telefono: datosLead.telefono || null,
+			},
+			defaults: {
+				nombre: datosLead.nombre || null,
+				email: datosLead.email || null,
+				telefono: datosLead.telefono || null,
+				origen: datosLead.origen || null,
+				destino: datosLead.destino || null,
+				fecha: datosLead.fecha || null,
+				pasajeros: parseInt(datosLead.pasajeros) || null,
+				ultimaPagina: datosLead.ultimaPagina || null,
+				tiempoEnSitio: parseInt(datosLead.tiempoEnSitio) || null,
+				pasoAlcanzado: datosLead.pasoAlcanzado || null,
+				dispositivo: datosLead.dispositivo || null,
+				navegador: datosLead.navegador || null,
+				sistemaOperativo: datosLead.sistemaOperativo || null,
+				ipAddress: req.ip || req.connection.remoteAddress || null,
+				userAgent: req.get("User-Agent") || null,
+				source: datosLead.source || "web",
+				utmSource: datosLead.utmSource || null,
+				utmMedium: datosLead.utmMedium || null,
+				utmCampaign: datosLead.utmCampaign || null,
+				utmTerm: datosLead.utmTerm || null,
+				utmContent: datosLead.utmContent || null,
+			},
+		});
+
+		// Si ya existía, actualizar con nueva información
+		if (!created) {
+			await lead.update({
+				nombre: datosLead.nombre || lead.nombre,
+				origen: datosLead.origen || lead.origen,
+				destino: datosLead.destino || lead.destino,
+				fecha: datosLead.fecha || lead.fecha,
+				pasajeros: parseInt(datosLead.pasajeros) || lead.pasajeros,
+				ultimaPagina: datosLead.ultimaPagina || lead.ultimaPagina,
+				tiempoEnSitio: parseInt(datosLead.tiempoEnSitio) || lead.tiempoEnSitio,
+				pasoAlcanzado: datosLead.pasoAlcanzado || lead.pasoAlcanzado,
+				dispositivo: datosLead.dispositivo || lead.dispositivo,
+				navegador: datosLead.navegador || lead.navegador,
+				sistemaOperativo: datosLead.sistemaOperativo || lead.sistemaOperativo,
+			});
+		}
+
+		console.log(
+			`✅ Lead ${created ? "creado" : "actualizado"} con ID:`,
+			lead.id
+		);
+
+		return res.json({
+			success: true,
+			message: `Lead ${created ? "capturado" : "actualizado"} correctamente`,
+			leadId: lead.id,
+		});
+	} catch (error) {
+		console.error("Error al capturar lead:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// Endpoint para obtener leads sin conversión (para remarketing)
+app.get("/api/leads", async (req, res) => {
+	try {
+		const {
+			page = 1,
+			limit = 50,
+			convertido = "false",
+			estadoRemarketing,
+			desde,
+			hasta,
+		} = req.query;
+
+		const where = {};
+
+		// Filtrar por estado de conversión
+		if (convertido === "true") {
+			where.convertido = true;
+		} else if (convertido === "false") {
+			where.convertido = false;
+		}
+
+		// Filtrar por estado de remarketing
+		if (estadoRemarketing) {
+			where.estadoRemarketing = estadoRemarketing;
+		}
+
+		// Filtrar por rango de fechas
+		if (desde || hasta) {
+			where.createdAt = {};
+			if (desde) where.createdAt[Op.gte] = new Date(desde);
+			if (hasta) where.createdAt[Op.lte] = new Date(hasta);
+		}
+
+		const { count, rows: leads } = await Lead.findAndCountAll({
+			where,
+			order: [["createdAt", "DESC"]],
+			limit: parseInt(limit),
+			offset: (parseInt(page) - 1) * parseInt(limit),
+		});
+
+		res.json({
+			success: true,
+			leads,
+			pagination: {
+				total: count,
+				page: parseInt(page),
+				limit: parseInt(limit),
+				totalPages: Math.ceil(count / limit),
+			},
+		});
+	} catch (error) {
+		console.error("Error obteniendo leads:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para marcar un lead como contactado
+app.put("/api/leads/:id/contactar", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { notas, estadoRemarketing } = req.body;
+
+		const lead = await Lead.findByPk(id);
+
+		if (!lead) {
+			return res.status(404).json({ error: "Lead no encontrado" });
+		}
+
+		await lead.update({
+			intentosContacto: lead.intentosContacto + 1,
+			ultimoContacto: new Date(),
+			estadoRemarketing: estadoRemarketing || lead.estadoRemarketing,
+			notas: notas || lead.notas,
+		});
+
+		res.json({
+			success: true,
+			message: "Lead actualizado correctamente",
+			lead,
+		});
+	} catch (error) {
+		console.error("Error actualizando lead:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
 
