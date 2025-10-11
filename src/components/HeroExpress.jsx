@@ -40,6 +40,7 @@ function HeroExpress({
 	const [stepError, setStepError] = useState("");
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [paymentConsent, setPaymentConsent] = useState(false);
+	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
 
 	// Pasos simplificados para flujo express
 	const steps = useMemo(
@@ -248,6 +249,30 @@ function HeroExpress({
 	const promoDiscountPercentage = Math.round(
 		(promotionDiscountRate || 0) * 100
 	);
+
+	// Validar si todos los campos obligatorios del paso 2 están completos
+	const todosLosCamposCompletos = useMemo(() => {
+		if (currentStep !== 1) return false;
+		
+		const nombreValido = formData.nombre?.trim().length > 0;
+		const emailValido = formData.email?.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+		const telefonoValido = formData.telefono?.trim().length > 0;
+		const consentimientoValido = paymentConsent;
+		
+		return nombreValido && emailValido && telefonoValido && consentimientoValido;
+	}, [currentStep, formData.nombre, formData.email, formData.telefono, paymentConsent]);
+
+	// Validar si todos los campos obligatorios del paso 2 están completos
+	const todosLosCamposCompletos = useMemo(() => {
+		if (currentStep !== 1) return false;
+		
+		const nombreValido = formData.nombre?.trim().length > 0;
+		const emailValido = formData.email?.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+		const telefonoValido = formData.telefono?.trim().length > 0;
+		const consentimientoValido = paymentConsent;
+		
+		return nombreValido && emailValido && telefonoValido && consentimientoValido;
+	}, [currentStep, formData.nombre, formData.email, formData.telefono, paymentConsent]);
 
 	return (
 		<section
@@ -710,7 +735,7 @@ function HeroExpress({
 													htmlFor="nombre-express"
 													className="text-base font-medium"
 												>
-													👤 Nombre completo
+													👤 Nombre completo <span className="text-destructive">*</span>
 												</Label>
 												<Input
 													id="nombre-express"
@@ -728,7 +753,7 @@ function HeroExpress({
 													htmlFor="email-express"
 													className="text-base font-medium"
 												>
-													📧 Correo electrónico
+													📧 Correo electrónico <span className="text-destructive">*</span>
 												</Label>
 												<Input
 													id="email-express"
@@ -747,7 +772,7 @@ function HeroExpress({
 													htmlFor="telefono-express"
 													className="text-base font-medium"
 												>
-													📱 Teléfono
+													📱 Teléfono <span className="text-destructive">*</span>
 												</Label>
 												<Input
 													id="telefono-express"
@@ -778,81 +803,136 @@ function HeroExpress({
 											/>
 										</div>
 
-										{/* Opciones de pago */}
-										{mostrarPrecio && !requiereCotizacionManual && (
-											<div className="space-y-4">
-												<h4 className="font-semibold text-lg">
-													💳 Selecciona tu opción de pago
-												</h4>
+												{/* Opciones de pago - Solo si todos los campos están completos */}
+												{mostrarPrecio && !requiereCotizacionManual && todosLosCamposCompletos && (
+													<div className="space-y-4">
+														<h4 className="font-semibold text-lg">
+															💳 Selecciona tu opción de pago
+														</h4>
 
-												{/* Opciones de monto */}
-												<div className="grid gap-3 md:grid-cols-2">
-													{paymentOptions.map((option) => (
-														<div
-															key={option.id}
-															className={`border rounded-lg p-4 cursor-pointer transition-all ${
-																option.recommended
-																	? "border-primary bg-primary/5 ring-2 ring-primary/20"
-																	: "border-gray-200 hover:border-primary/50"
-															}`}
-														>
-															<div className="flex justify-between items-start mb-2">
-																<div>
-																	<h5 className="font-semibold">
-																		{option.title}
-																	</h5>
-																	<p className="text-sm text-muted-foreground">
-																		{option.subtitle}
-																	</p>
+														{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
+														{!selectedPaymentType && (
+															<div className="space-y-3">
+																<p className="text-sm text-muted-foreground">
+																	Paso 1: Elige cuánto deseas pagar ahora
+																</p>
+																<div className="grid gap-3 md:grid-cols-2">
+																	{paymentOptions.map((option) => (
+																		<button
+																			key={option.id}
+																			type="button"
+																			onClick={() => setSelectedPaymentType(option.type)}
+																			className={`border rounded-lg p-4 text-left transition-all hover:border-primary hover:shadow-md ${
+																				option.recommended
+																					? "border-primary bg-primary/5 ring-2 ring-primary/20"
+																					: "border-gray-200"
+																			}`}
+																		>
+																			<div className="flex justify-between items-start mb-2">
+																				<div>
+																					<h5 className="font-semibold">
+																						{option.title}
+																					</h5>
+																					<p className="text-sm text-muted-foreground">
+																						{option.subtitle}
+																					</p>
+																				</div>
+																				{option.recommended && (
+																					<Badge variant="default" className="text-xs">
+																						Recomendado
+																					</Badge>
+																				)}
+																			</div>
+																			<p className="text-xl font-bold text-primary">
+																				{formatCurrency(option.amount)}
+																			</p>
+																		</button>
+																	))}
 																</div>
-																{option.recommended && (
-																	<Badge variant="default" className="text-xs">
-																		Recomendado
-																	</Badge>
-																)}
 															</div>
-															<p className="text-xl font-bold text-primary">
-																{formatCurrency(option.amount)}
-															</p>
+														)}
 
-															{/* Métodos de pago para esta opción */}
-															<div className="grid grid-cols-2 gap-2 mt-3">
-																{paymentMethods.map((method) => (
+														{/* Paso 2: Seleccionar método de pago una vez elegido el tipo */}
+														{selectedPaymentType && (
+															<div className="space-y-3">
+																<div className="flex items-center justify-between">
+																	<div>
+																		<p className="text-sm text-muted-foreground">
+																			Paso 2: Elige tu método de pago
+																		</p>
+																		<p className="text-lg font-semibold text-primary">
+																			Pagarás:{" "}
+																			{formatCurrency(
+																				paymentOptions.find((opt) => opt.type === selectedPaymentType)
+																					?.amount || 0
+																			)}
+																		</p>
+																	</div>
 																	<Button
-																		key={`${option.id}-${method.id}`}
 																		type="button"
-																		variant="outline"
-																		onClick={() =>
-																			handlePayment(method.gateway, option.type)
-																		}
-																		disabled={
-																			isSubmitting ||
-																			loadingGateway ===
-																				`${method.gateway}-${option.type}`
-																		}
-																		className="h-auto p-2 flex flex-col items-center gap-1"
+																		variant="ghost"
+																		size="sm"
+																		onClick={() => setSelectedPaymentType(null)}
+																		className="text-sm"
 																	>
-																		{loadingGateway ===
-																		`${method.gateway}-${option.type}` ? (
-																			<LoaderCircle className="h-4 w-4 animate-spin" />
-																		) : (
-																			<img
-																				src={method.image}
-																				alt={method.title}
-																				className="h-6 w-auto object-contain"
-																			/>
-																		)}
-																		<span className="text-xs">
-																			{method.title}
-																		</span>
+																		← Cambiar monto
 																	</Button>
-																))}
+																</div>
+																
+																<div className="grid gap-3 md:grid-cols-2">
+																	{paymentMethods.map((method) => (
+																		<Button
+																			key={method.id}
+																			type="button"
+																			variant="outline"
+																			onClick={() =>
+																				handlePayment(method.gateway, selectedPaymentType)
+																			}
+																			disabled={
+																				isSubmitting ||
+																				loadingGateway === `${method.gateway}-${selectedPaymentType}`
+																			}
+																			className="h-auto p-4 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5"
+																		>
+																			{loadingGateway === `${method.gateway}-${selectedPaymentType}` ? (
+																				<LoaderCircle className="h-8 w-8 animate-spin" />
+																			) : (
+																				<img
+																					src={method.image}
+																					alt={method.title}
+																					className="h-8 w-auto object-contain"
+																				/>
+																			)}
+																			<span className="text-sm font-medium">
+																				{method.title}
+																			</span>
+																			<span className="text-xs text-muted-foreground text-center">
+																				{method.subtitle}
+																			</span>
+																		</Button>
+																	))}
+																</div>
 															</div>
-														</div>
-													))}
-												</div>
-											</div>
-										)}
+														)}
+													</div>
+												)}
+
+												{/* Mensaje cuando faltan campos por completar */}
+												{mostrarPrecio && !requiereCotizacionManual && !todosLosCamposCompletos && (
+													<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+														<p className="text-sm text-amber-800 font-medium">
+															⚠️ Completa todos los campos obligatorios para ver las opciones de pago
+														</p>
+														<ul className="text-xs text-amber-700 mt-2 space-y-1 ml-5 list-disc">
+															{!formData.nombre?.trim() && <li>Nombre completo</li>}
+															{(!formData.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) && (
+																<li>Correo electrónico válido</li>
+															)}
+															{!formData.telefono?.trim() && <li>Teléfono</li>}
+															{!paymentConsent && <li>Aceptar términos y condiciones</li>}
+														</ul>
+													</div>
+												)}
 
 										{/* Consentimiento para pago */}
 										<div className="border border-gray-200 rounded-lg p-4 space-y-3">
