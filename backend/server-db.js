@@ -1672,9 +1672,10 @@ app.get("/api/reservas/estadisticas", async (req, res) => {
 		// Ingresos totales con manejo de errores mejorado
 		try {
 			// Usar consulta SQL directa para evitar problemas con nombres de columnas
+			// NOTA: La tabla se llama 'reservas' en minúsculas (definido en el modelo)
 			const [results] = await sequelize.query(
 				`SELECT SUM(CAST(totalConDescuento AS DECIMAL(10,2))) as totalIngresos 
-				 FROM Reservas 
+				 FROM reservas 
 				 WHERE estadoPago = 'pagado'`,
 				{ type: sequelize.QueryTypes.SELECT }
 			);
