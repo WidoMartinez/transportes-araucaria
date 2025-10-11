@@ -881,7 +881,7 @@ export default function AdminReservas() {
 													size="sm"
 													onClick={() => {
 														// Aquí se podría agregar funcionalidad para ver detalles
-														console.log("Ver detalles:", reserva);
+														// TODO: Implementar funcionalidad para ver detalles de la reserva
 													}}
 												>
 													<FileText className="w-4 h-4" />
