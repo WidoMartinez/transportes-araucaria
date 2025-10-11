@@ -12,3 +12,4 @@ sugiere hacer commits cada vez que se complete una tarea o funcionalidad
 sugiere hacer commits cada vez que se arregle un bug    
 sugiere hacer commints cuando hayan cambios pendientes de ser comiteados y sea necesario hacer un commit para continuar trabajando
 no modificar ningun archivo php ya que estos estan en el servidor de hostinger donde tambien se encuentra el front end
+Todos los PR deben generarse en espa;ol, todos los campos posibles
