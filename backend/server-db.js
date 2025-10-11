@@ -131,36 +131,6 @@ const initializeDatabase = async () => {
 		}
 		await syncDatabase(false); // false = no forzar recreación
 
-		// Verificar y migrar promociones si no existen
-		const promocionesExistentes = await Promocion.count();
-		if (promocionesExistentes === 0) {
-			console.log("🔄 Migrando promociones desde JSON...");
-			try {
-				const fs = await import("fs");
-				const pricingData = JSON.parse(
-					fs.readFileSync("./data/pricing.json", "utf8")
-				);
-
-				if (pricingData.dayPromotions && pricingData.dayPromotions.length > 0) {
-					for (const promo of pricingData.dayPromotions) {
-						await Promocion.create({
-							nombre: promo.nombre,
-							dia: "lunes", // Por defecto
-							tipo: "porcentaje",
-							valor: promo.descuentoPorcentaje || 0,
-							activo: promo.activo !== false,
-							descripcion: promo.descripcion || "",
-						});
-					}
-					console.log(
-						`✅ Migradas ${pricingData.dayPromotions.length} promociones`
-					);
-				}
-			} catch (error) {
-				console.log("⚠️ No se pudieron migrar las promociones:", error.message);
-			}
-		}
-
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
