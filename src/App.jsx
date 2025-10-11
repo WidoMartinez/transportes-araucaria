@@ -1143,11 +1143,14 @@ function App() {
 		// Enviar notificación por correo usando el archivo PHP de Hostinger
 		try {
 			// Usar endpoint absoluto para evitar problemas de CORS y ejecución PHP
-			const emailResponse = await fetch("https://www.transportesaraucaria.cl/enviar_correo_mejorado.php", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(dataToSend),
-			});
+			const emailResponse = await fetch(
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(dataToSend),
+				}
+			);
 
 			if (emailResponse.ok) {
 				const emailResult = await emailResponse.json();
