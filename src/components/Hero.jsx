@@ -14,11 +14,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { CheckCircle2, LoaderCircle } from "lucide-react";
+import { CheckCircle2, LoaderCircle, AlertCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
+import { InfoTooltip } from "./ui/tooltip-wrapper";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -78,9 +79,52 @@ function Hero({
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [discountUpdated, setDiscountUpdated] = useState(false);
+	
+	// Estados para validación visual en tiempo real
+	const [emailValidation, setEmailValidation] = useState({
+		isValid: null,
+		message: ""
+	});
+	const [phoneValidation, setPhoneValidation] = useState({
+		isValid: null,
+		message: ""
+	});
 
 	// Generar opciones de tiempo
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
+
+	// Función para validar email en tiempo real
+	const validateEmail = (email) => {
+		if (!email || email.trim() === "") {
+			return { isValid: null, message: "" };
+		}
+		
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		const isValid = emailRegex.test(email);
+		
+		return {
+			isValid,
+			message: isValid 
+				? "Email válido" 
+				: "Ingresa un email válido (ej: tu@email.cl)"
+		};
+	};
+
+	// Función para validar teléfono en tiempo real
+	const validatePhone = (phone) => {
+		if (!phone || phone.trim() === "") {
+			return { isValid: null, message: "" };
+		}
+		
+		const isValid = validarTelefono(phone);
+		
+		return {
+			isValid,
+			message: isValid 
+				? "Teléfono válido" 
+				: "Formato chileno: +56 9 1234 5678"
+		};
+	};
 
 	// Función para manejar el cambio de hora
 	const handleTimeChange = (field, value) => {
@@ -650,7 +694,9 @@ function Hero({
 									<div className="space-y-6">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
-												<Label htmlFor="origen-hero">Origen</Label>
+												<Label htmlFor="origen-hero">
+													Origen <span className="text-red-500">*</span>
+												</Label>
 												<select
 													id="origen-hero"
 													name="origen"
@@ -667,7 +713,9 @@ function Hero({
 												</select>
 											</div>
 											<div className="space-y-2">
-												<Label htmlFor="destino-hero">Destino</Label>
+												<Label htmlFor="destino-hero">
+													Destino <span className="text-red-500">*</span>
+												</Label>
 												<select
 													id="destino-hero"
 													name="destino"
@@ -688,7 +736,9 @@ function Hero({
 
 										<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 											<div className="space-y-2">
-												<Label htmlFor="fecha-hero">Fecha</Label>
+												<Label htmlFor="fecha-hero">
+													Fecha <span className="text-red-500">*</span>
+												</Label>
 												<Input
 													id="fecha-hero"
 													type="date"
@@ -700,7 +750,9 @@ function Hero({
 												/>
 											</div>
 											<div className="space-y-2">
-												<Label htmlFor="hora-hero">Hora</Label>
+												<Label htmlFor="hora-hero">
+													Hora <span className="text-red-500">*</span>
+												</Label>
 												<Select
 													value={formData.hora}
 													onValueChange={(value) =>
@@ -723,7 +775,9 @@ function Hero({
 												</Select>
 											</div>
 											<div className="space-y-2">
-												<Label htmlFor="pasajeros-hero">Pasajeros</Label>
+												<Label htmlFor="pasajeros-hero">
+													Pasajeros <span className="text-red-500">*</span>
+												</Label>
 												<select
 													id="pasajeros-hero"
 													name="pasajeros"
@@ -768,10 +822,15 @@ function Hero({
 												/>
 												<label
 													htmlFor="ida-vuelta"
-													className="text-sm text-muted-foreground"
+													className="text-sm font-medium cursor-pointer flex-1"
 												>
-													¿Deseas reservar también el regreso? Coordina ida y
-													vuelta en una sola solicitud.
+													¿Deseas reservar también el regreso?{" "}
+													<span className="inline-flex items-center gap-1">
+														Coordina ida y vuelta
+														<Badge variant="secondary" className="ml-1 bg-green-100 text-green-700 hover:bg-green-100">
+															+5% descuento
+														</Badge>
+													</span>
 												</label>
 											</div>
 											{formData.idaVuelta && (
@@ -814,9 +873,8 @@ function Hero({
 												</div>
 											)}
 											<p className="text-xs text-muted-foreground">
-												Validaremos la disponibilidad del retorno junto con tu
-												reserva inicial. Al reservar ida y vuelta obtienes un 5%
-												adicional de descuento.
+												💡 Validaremos la disponibilidad del retorno junto con tu
+												reserva inicial para garantizar tu traslado completo.
 											</p>
 										</div>
 										<div className="text-center text-sm text-muted-foreground">
@@ -833,8 +891,9 @@ function Hero({
 											<div className="rounded-xl border border-primary/20 bg-primary/10 p-6 text-foreground">
 												<div className="grid gap-4 md:grid-cols-2 md:items-center">
 													<div className="space-y-1">
-														<p className="text-sm uppercase tracking-wide text-muted-foreground">
+														<p className="text-sm uppercase tracking-wide text-muted-foreground flex items-center">
 															Vehículo sugerido
+															<InfoTooltip content="Seleccionado automáticamente según la cantidad de pasajeros y distancia del viaje" />
 														</p>
 														<p className="text-2xl font-semibold">
 															{cotizacion.vehiculo}
@@ -877,9 +936,10 @@ function Hero({
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
 														<div className="space-y-1 text-sm">
-															<p className="font-medium text-slate-600">
+															<p className="font-medium text-slate-600 flex items-center">
 																Descuento base ({baseDiscountPercentage}%):{" "}
 																{formatCurrency(pricing.descuentoBase)}
+																<InfoTooltip content="Descuento exclusivo por reservar online" side="right" />
 															</p>
 															{promoDiscountPercentage > 0 && (
 																<p className="font-medium text-slate-600">
@@ -960,7 +1020,9 @@ function Hero({
 									<div className="space-y-6">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
-												<Label htmlFor="nombre-hero">Nombre completo</Label>
+												<Label htmlFor="nombre-hero">
+													Nombre completo <span className="text-red-500">*</span>
+												</Label>
 												<Input
 													id="nombre-hero"
 													name="nombre"
@@ -970,29 +1032,99 @@ function Hero({
 												/>
 											</div>
 											<div className="space-y-2">
-												<Label htmlFor="email-hero">Email</Label>
-												<Input
-													id="email-hero"
-													type="email"
-													name="email"
-													value={formData.email}
-													onChange={handleInputChange}
-													placeholder="tu@email.cl"
-												/>
+												<Label htmlFor="email-hero">
+													Email <span className="text-red-500">*</span>
+												</Label>
+												<div className="relative">
+													<Input
+														id="email-hero"
+														type="email"
+														name="email"
+														value={formData.email}
+														onChange={(e) => {
+															handleInputChange(e);
+															setEmailValidation(validateEmail(e.target.value));
+														}}
+														placeholder="tu@email.cl"
+														className={
+															emailValidation.isValid === true
+																? "border-green-500 pr-10"
+																: emailValidation.isValid === false
+																? "border-red-500 pr-10"
+																: ""
+														}
+													/>
+													{emailValidation.isValid !== null && (
+														<div className="absolute right-3 top-1/2 -translate-y-1/2">
+															{emailValidation.isValid ? (
+																<CheckCircle2 className="h-5 w-5 text-green-500" />
+															) : (
+																<AlertCircle className="h-5 w-5 text-red-500" />
+															)}
+														</div>
+													)}
+												</div>
+												{emailValidation.message && (
+													<p
+														className={`text-sm flex items-center gap-1 ${
+															emailValidation.isValid
+																? "text-green-600"
+																: "text-red-500"
+														}`}
+													>
+														{emailValidation.message}
+													</p>
+												)}
 											</div>
 										</div>
 
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
-												<Label htmlFor="telefono-hero">Teléfono móvil</Label>
-												<Input
-													id="telefono-hero"
-													name="telefono"
-													value={formData.telefono}
-													onChange={handleInputChange}
-													placeholder="+56 9 1234 5678"
-												/>
-												{phoneError && (
+												<Label htmlFor="telefono-hero">
+													Teléfono móvil <span className="text-red-500">*</span>
+												</Label>
+												<div className="relative">
+													<Input
+														id="telefono-hero"
+														name="telefono"
+														value={formData.telefono}
+														onChange={(e) => {
+															handleInputChange(e);
+															setPhoneValidation(validatePhone(e.target.value));
+															// Limpiar el error global si existe
+															if (phoneError) setPhoneError("");
+														}}
+														placeholder="+56 9 1234 5678"
+														className={
+															phoneValidation.isValid === true
+																? "border-green-500 pr-10"
+																: phoneValidation.isValid === false
+																? "border-red-500 pr-10"
+																: ""
+														}
+													/>
+													{phoneValidation.isValid !== null && (
+														<div className="absolute right-3 top-1/2 -translate-y-1/2">
+															{phoneValidation.isValid ? (
+																<CheckCircle2 className="h-5 w-5 text-green-500" />
+															) : (
+																<AlertCircle className="h-5 w-5 text-red-500" />
+															)}
+														</div>
+													)}
+												</div>
+												{phoneValidation.message && (
+													<p
+														className={`text-sm flex items-center gap-1 ${
+															phoneValidation.isValid
+																? "text-green-600"
+																: "text-red-500"
+														}`}
+													>
+														{phoneValidation.message}
+													</p>
+												)}
+												{phoneError && !phoneValidation.message && (
 													<p className="text-sm text-red-500">{phoneError}</p>
 												)}
 											</div>
@@ -1088,7 +1220,10 @@ function Hero({
 												</h4>
 												<div className="grid gap-2 text-sm">
 													<div className="flex items-center justify-between">
-														<span>Ahorro base ({baseDiscountPercentage}%)</span>
+														<span className="flex items-center">
+															Ahorro base ({baseDiscountPercentage}%)
+															<InfoTooltip content="Descuento exclusivo por reservar online" side="right" />
+														</span>
 														<span className="font-semibold">
 															{formatCurrency(pricing.descuentoBase)}
 														</span>
@@ -1221,8 +1356,9 @@ function Hero({
 													</p>
 												</div>
 												<div className="space-y-2">
-													<p className="text-sm font-medium text-gray-500">
+													<p className="text-sm font-medium text-gray-500 flex items-center">
 														Vehículo
+														<InfoTooltip content="Seleccionado automáticamente según la cantidad de pasajeros y distancia del viaje" />
 													</p>
 													<p className="text-lg font-semibold text-gray-900">
 														{vehiculoSugerido}
@@ -1282,8 +1418,9 @@ function Hero({
 												</h4>
 												<div className="space-y-2">
 													<div className="flex items-center justify-between">
-														<span>
+														<span className="flex items-center">
 															Descuento base ({baseDiscountPercentage}%)
+															<InfoTooltip content="Descuento exclusivo por reservar online" side="right" />
 														</span>
 														<span className="font-semibold">
 															-{formatCurrency(pricing.descuentoBase)}
