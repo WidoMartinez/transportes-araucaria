@@ -127,6 +127,20 @@ function HeroExpress({
 			return;
 		}
 
+		// Validar ida y vuelta si está seleccionado
+		if (formData.idaVuelta) {
+			if (!formData.fechaRegreso) {
+				setStepError("Selecciona la fecha de regreso para tu viaje de ida y vuelta.");
+				return;
+			}
+
+			const fechaRegreso = new Date(`${formData.fechaRegreso}T00:00:00`);
+			if (fechaRegreso < fechaSeleccionada) {
+				setStepError("La fecha de regreso no puede ser anterior a la fecha de ida.");
+				return;
+			}
+		}
+
 		setStepError("");
 		setCurrentStep(1);
 	};
@@ -476,22 +490,96 @@ function HeroExpress({
 											</div>
 										</div>
 
+										{/* Opción de ida y vuelta */}
+										<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
+											<div className="flex items-start gap-3">
+												<Checkbox
+													id="ida-vuelta-express"
+													checked={formData.idaVuelta}
+													onCheckedChange={(value) => {
+														const isRoundTrip = Boolean(value);
+														handleInputChange({
+															target: { name: "idaVuelta", value: isRoundTrip },
+														});
+														if (!isRoundTrip) {
+															handleInputChange({
+																target: { name: "fechaRegreso", value: "" },
+															});
+														} else if (formData.fecha) {
+															// Auto-completar fecha de regreso con la fecha de ida si está disponible
+															handleInputChange({
+																target: {
+																	name: "fechaRegreso",
+																	value: formData.fecha,
+																},
+															});
+														}
+													}}
+												/>
+												<label
+													htmlFor="ida-vuelta-express"
+													className="text-sm font-medium leading-relaxed cursor-pointer"
+												>
+													¿También necesitas el regreso?
+													<span className="block text-muted-foreground font-normal">
+														Coordina ida y vuelta en una sola reserva y ahorra
+													</span>
+												</label>
+											</div>
+
+											{formData.idaVuelta && (
+												<div className="pt-4 border-t border-muted/40">
+													<div className="space-y-2">
+														<Label
+															htmlFor="fecha-regreso-express"
+															className="text-base font-medium"
+														>
+															<span className="flex items-center gap-2">
+																<Calendar className="h-4 w-4" />
+																Fecha de regreso
+															</span>
+														</Label>
+														<Input
+															id="fecha-regreso-express"
+															type="date"
+															name="fechaRegreso"
+															value={formData.fechaRegreso}
+															onChange={handleInputChange}
+															min={formData.fecha || minDateTime}
+															className="h-12 text-base"
+															required={formData.idaVuelta}
+														/>
+														<p className="text-xs text-muted-foreground">
+															💡 La hora exacta de regreso podrás especificarla
+															después del pago
+														</p>
+													</div>
+												</div>
+											)}
+										</div>
+
 										{/* Precio estimado */}
 										{mostrarPrecio ? (
 											<div className="rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 p-6">
 												<div className="grid gap-4 md:grid-cols-2 md:items-center">
 													<div className="space-y-2">
-														<div className="flex items-center gap-2">
+														<div className="flex items-center gap-2 flex-wrap">
 															<Badge variant="secondary">Precio estimado</Badge>
 															<Badge variant="default" className="bg-green-500">
 																-{baseDiscountPercentage}% web
 															</Badge>
+															{formData.idaVuelta && pricing.descuentoRoundTrip > 0 && (
+																<Badge variant="default" className="bg-blue-500">
+																	🔄 Ida y vuelta
+																</Badge>
+															)}
 														</div>
 														<p className="text-2xl font-bold text-primary">
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
 														<p className="text-sm text-muted-foreground">
 															Vehículo: {cotizacion.vehiculo}
+															{formData.idaVuelta && " · Ida y vuelta"}
 														</p>
 													</div>
 													<div className="text-left md:text-right space-y-1">
@@ -500,8 +588,19 @@ function HeroExpress({
 															{formatCurrency(pricing.precioBase)}
 														</p>
 														<p className="text-lg font-semibold text-green-600">
-															Ahorro: {formatCurrency(pricing.descuentoBase)}
+															Ahorro total:{" "}
+															{formatCurrency(
+																pricing.descuentoBase +
+																	pricing.descuentoRoundTrip +
+																	pricing.descuentoCodigo
+															)}
 														</p>
+														{formData.idaVuelta && pricing.descuentoRoundTrip > 0 && (
+															<p className="text-xs text-blue-600">
+																Incluye descuento ida y vuelta:{" "}
+																{formatCurrency(pricing.descuentoRoundTrip)}
+															</p>
+														)}
 													</div>
 												</div>
 											</div>
@@ -547,11 +646,36 @@ function HeroExpress({
 													<span className="text-muted-foreground">Ruta:</span>
 													<p className="font-medium">
 														{origenFinal} → {destinoFinal}
+														{formData.idaVuelta && (
+															<>
+																<br />
+																<span className="text-blue-600">
+																	{destinoFinal} → {origenFinal}
+																</span>
+															</>
+														)}
 													</p>
 												</div>
 												<div>
-													<span className="text-muted-foreground">Fecha:</span>
-													<p className="font-medium">{fechaLegible}</p>
+													<span className="text-muted-foreground">
+														Fecha{formData.idaVuelta && "s"}:
+													</span>
+													<p className="font-medium">
+														{fechaLegible}
+														{formData.idaVuelta && formData.fechaRegreso && (
+															<>
+																<br />
+																<span className="text-blue-600">
+																	{new Date(
+																		`${formData.fechaRegreso}T00:00:00`
+																	).toLocaleDateString("es-CL", {
+																		dateStyle: "long",
+																		timeZone: "America/Santiago",
+																	})}
+																</span>
+															</>
+														)}
+													</p>
 												</div>
 												<div>
 													<span className="text-muted-foreground">
@@ -570,6 +694,11 @@ function HeroExpress({
 															{formatCurrency(pricing.totalConDescuento)}
 														</span>
 													</div>
+													{formData.idaVuelta && (
+														<p className="text-xs text-blue-600 mt-1">
+															🔄 Incluye ida y vuelta
+														</p>
+													)}
 												</div>
 											)}
 										</div>
