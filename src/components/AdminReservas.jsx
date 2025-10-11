@@ -49,7 +49,19 @@ import {
 	AlertCircle,
 	RefreshCw,
 	Plus,
+	Settings,
+	Columns,
+	Check,
 } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuTrigger,
+	DropdownMenuCheckboxItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+} from "./ui/dropdown-menu";
 
 function AdminReservas() {
 	const [reservas, setReservas] = useState([]);
@@ -73,6 +85,63 @@ function AdminReservas() {
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalReservas, setTotalReservas] = useState(0);
 	const itemsPerPage = 20;
+
+	// Columnas visibles - definir columnas disponibles
+	const availableColumns = {
+		id: { label: "ID", visible: true, required: true },
+		cliente: { label: "Cliente", visible: true, required: true },
+		contacto: { label: "Contacto", visible: true, required: false },
+		ruta: { label: "Ruta", visible: true, required: false },
+		fechaHora: { label: "Fecha/Hora", visible: true, required: false },
+		pasajeros: { label: "Pasajeros", visible: true, required: false },
+		vehiculo: { label: "Vehículo", visible: false, required: false },
+		numeroVuelo: { label: "Nº Vuelo", visible: false, required: false },
+		hotel: { label: "Hotel", visible: false, required: false },
+		equipaje: { label: "Equipaje Especial", visible: false, required: false },
+		sillaInfantil: { label: "Silla Infantil", visible: false, required: false },
+		idaVuelta: { label: "Ida y Vuelta", visible: false, required: false },
+		fechaRegreso: { label: "Fecha Regreso", visible: false, required: false },
+		codigoDescuento: { label: "Código Descuento", visible: false, required: false },
+		metodoPago: { label: "Método Pago", visible: false, required: false },
+		referenciaPago: { label: "Referencia Pago", visible: false, required: false },
+		total: { label: "Total", visible: true, required: false },
+		estado: { label: "Estado", visible: true, required: false },
+		pago: { label: "Pago", visible: true, required: false },
+		saldo: { label: "Saldo", visible: true, required: false },
+		source: { label: "Fuente", visible: false, required: false },
+		ipAddress: { label: "IP", visible: false, required: false },
+		observaciones: { label: "Observaciones", visible: false, required: false },
+		acciones: { label: "Acciones", visible: true, required: true },
+	};
+
+	const [visibleColumns, setVisibleColumns] = useState(() => {
+		// Intentar cargar desde localStorage
+		const saved = localStorage.getItem("adminReservasColumns");
+		if (saved) {
+			try {
+				return JSON.parse(saved);
+			} catch {
+				return availableColumns;
+			}
+		}
+		return availableColumns;
+	});
+
+	// Guardar preferencias en localStorage cuando cambien
+	useEffect(() => {
+		localStorage.setItem("adminReservasColumns", JSON.stringify(visibleColumns));
+	}, [visibleColumns]);
+
+	// Función para alternar visibilidad de columna
+	const toggleColumn = (columnKey) => {
+		setVisibleColumns((prev) => ({
+			...prev,
+			[columnKey]: {
+				...prev[columnKey],
+				visible: !prev[columnKey].visible,
+			},
+		}));
+	};
 
 	// Estadísticas
 	const [estadisticas, setEstadisticas] = useState({
@@ -637,7 +706,31 @@ function AdminReservas() {
 			{/* Tabla de Reservas */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Lista de Reservas</CardTitle>
+					<div className="flex justify-between items-center">
+						<CardTitle>Lista de Reservas</CardTitle>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="outline" size="sm" className="gap-2">
+									<Columns className="w-4 h-4" />
+									Columnas
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="w-56">
+								<DropdownMenuLabel>Columnas visibles</DropdownMenuLabel>
+								<DropdownMenuSeparator />
+								{Object.entries(visibleColumns).map(([key, col]) => (
+									<DropdownMenuCheckboxItem
+										key={key}
+										checked={col.visible}
+										onCheckedChange={() => toggleColumn(key)}
+										disabled={col.required}
+									>
+										{col.label}
+									</DropdownMenuCheckboxItem>
+								))}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{error && (
@@ -651,23 +744,36 @@ function AdminReservas() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>ID</TableHead>
-									<TableHead>Cliente</TableHead>
-									<TableHead>Contacto</TableHead>
-									<TableHead>Ruta</TableHead>
-									<TableHead>Fecha/Hora</TableHead>
-									<TableHead>Pasajeros</TableHead>
-									<TableHead>Total</TableHead>
-									<TableHead>Estado</TableHead>
-									<TableHead>Pago</TableHead>
-									<TableHead>Saldo</TableHead>
-									<TableHead>Acciones</TableHead>
+									{visibleColumns.id.visible && <TableHead>ID</TableHead>}
+									{visibleColumns.cliente.visible && <TableHead>Cliente</TableHead>}
+									{visibleColumns.contacto.visible && <TableHead>Contacto</TableHead>}
+									{visibleColumns.ruta.visible && <TableHead>Ruta</TableHead>}
+									{visibleColumns.fechaHora.visible && <TableHead>Fecha/Hora</TableHead>}
+									{visibleColumns.pasajeros.visible && <TableHead>Pasajeros</TableHead>}
+									{visibleColumns.vehiculo.visible && <TableHead>Vehículo</TableHead>}
+									{visibleColumns.numeroVuelo.visible && <TableHead>Nº Vuelo</TableHead>}
+									{visibleColumns.hotel.visible && <TableHead>Hotel</TableHead>}
+									{visibleColumns.equipaje.visible && <TableHead>Equipaje</TableHead>}
+									{visibleColumns.sillaInfantil.visible && <TableHead>Silla Infantil</TableHead>}
+									{visibleColumns.idaVuelta.visible && <TableHead>Ida/Vuelta</TableHead>}
+									{visibleColumns.fechaRegreso.visible && <TableHead>Fecha Regreso</TableHead>}
+									{visibleColumns.codigoDescuento.visible && <TableHead>Código Desc.</TableHead>}
+									{visibleColumns.metodoPago.visible && <TableHead>Método Pago</TableHead>}
+									{visibleColumns.referenciaPago.visible && <TableHead>Ref. Pago</TableHead>}
+									{visibleColumns.total.visible && <TableHead>Total</TableHead>}
+									{visibleColumns.estado.visible && <TableHead>Estado</TableHead>}
+									{visibleColumns.pago.visible && <TableHead>Pago</TableHead>}
+									{visibleColumns.saldo.visible && <TableHead>Saldo</TableHead>}
+									{visibleColumns.source.visible && <TableHead>Fuente</TableHead>}
+									{visibleColumns.ipAddress.visible && <TableHead>IP</TableHead>}
+									{visibleColumns.observaciones.visible && <TableHead>Observaciones</TableHead>}
+									{visibleColumns.acciones.visible && <TableHead>Acciones</TableHead>}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{reservasFiltradas.length === 0 ? (
 									<TableRow>
-										<TableCell colSpan={11} className="text-center py-8">
+										<TableCell colSpan={Object.values(visibleColumns).filter(col => col.visible).length} className="text-center py-8">
 											<div className="text-muted-foreground">
 												<FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
 												<p>No se encontraron reservas</p>
@@ -677,93 +783,184 @@ function AdminReservas() {
 								) : (
 									reservasFiltradas.map((reserva) => (
 										<TableRow key={reserva.id}>
-											<TableCell className="font-medium">#{reserva.id}</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-2">
-													<User className="w-4 h-4 text-muted-foreground" />
-													<span className="font-medium">{reserva.nombre}</span>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1 text-sm">
-													<div className="flex items-center gap-1">
-														<Mail className="w-3 h-3 text-muted-foreground" />
-														<span className="truncate max-w-[150px]">
-															{reserva.email}
-														</span>
+											{visibleColumns.id.visible && (
+												<TableCell className="font-medium">#{reserva.id}</TableCell>
+											)}
+											{visibleColumns.cliente.visible && (
+												<TableCell>
+													<div className="flex items-center gap-2">
+														<User className="w-4 h-4 text-muted-foreground" />
+														<span className="font-medium">{reserva.nombre}</span>
 													</div>
-													<div className="flex items-center gap-1">
-														<Phone className="w-3 h-3 text-muted-foreground" />
-														<span>{reserva.telefono}</span>
+												</TableCell>
+											)}
+											{visibleColumns.contacto.visible && (
+												<TableCell>
+													<div className="space-y-1 text-sm">
+														<div className="flex items-center gap-1">
+															<Mail className="w-3 h-3 text-muted-foreground" />
+															<span className="truncate max-w-[150px]">
+																{reserva.email}
+															</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<Phone className="w-3 h-3 text-muted-foreground" />
+															<span>{reserva.telefono}</span>
+														</div>
 													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1 text-sm">
-													<div className="flex items-center gap-1">
-														<MapPin className="w-3 h-3 text-green-500" />
-														<span className="font-medium">{reserva.origen}</span>
+												</TableCell>
+											)}
+											{visibleColumns.ruta.visible && (
+												<TableCell>
+													<div className="space-y-1 text-sm">
+														<div className="flex items-center gap-1">
+															<MapPin className="w-3 h-3 text-green-500" />
+															<span className="font-medium">{reserva.origen}</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<MapPin className="w-3 h-3 text-red-500" />
+															<span className="font-medium">{reserva.destino}</span>
+														</div>
 													</div>
-													<div className="flex items-center gap-1">
-														<MapPin className="w-3 h-3 text-red-500" />
-														<span className="font-medium">{reserva.destino}</span>
+												</TableCell>
+											)}
+											{visibleColumns.fechaHora.visible && (
+												<TableCell>
+													<div className="space-y-1 text-sm">
+														<div className="flex items-center gap-1">
+															<Calendar className="w-3 h-3 text-muted-foreground" />
+															<span>{formatDate(reserva.fecha)}</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<Clock className="w-3 h-3 text-muted-foreground" />
+															<span>{reserva.hora || "-"}</span>
+														</div>
 													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1 text-sm">
+												</TableCell>
+											)}
+											{visibleColumns.pasajeros.visible && (
+												<TableCell>
 													<div className="flex items-center gap-1">
-														<Calendar className="w-3 h-3 text-muted-foreground" />
-														<span>{formatDate(reserva.fecha)}</span>
+														<Users className="w-4 h-4 text-muted-foreground" />
+														<span className="font-medium">{reserva.pasajeros}</span>
 													</div>
-													<div className="flex items-center gap-1">
-														<Clock className="w-3 h-3 text-muted-foreground" />
-														<span>{reserva.hora || "-"}</span>
-													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-1">
-													<Users className="w-4 h-4 text-muted-foreground" />
-													<span className="font-medium">{reserva.pasajeros}</span>
-												</div>
-											</TableCell>
-											<TableCell className="font-semibold">
-												{formatCurrency(reserva.totalConDescuento)}
-											</TableCell>
-											<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
-											<TableCell>
-												{getEstadoPagoBadge(reserva.estadoPago)}
-											</TableCell>
-											<TableCell>
-												<span
-													className={
-														reserva.saldoPendiente > 0
-															? "text-red-600 font-semibold"
-															: "text-green-600 font-semibold"
-													}
-												>
-													{formatCurrency(reserva.saldoPendiente)}
-												</span>
-											</TableCell>
-											<TableCell>
-												<div className="flex gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => handleViewDetails(reserva)}
+												</TableCell>
+											)}
+											{visibleColumns.vehiculo.visible && (
+												<TableCell>
+													<span className="text-sm">{reserva.vehiculo || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.numeroVuelo.visible && (
+												<TableCell>
+													<span className="text-sm">{reserva.numeroVuelo || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.hotel.visible && (
+												<TableCell>
+													<span className="text-sm truncate max-w-[150px]">{reserva.hotel || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.equipaje.visible && (
+												<TableCell>
+													<span className="text-sm truncate max-w-[120px]">{reserva.equipajeEspecial || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.sillaInfantil.visible && (
+												<TableCell>
+													<Badge variant={reserva.sillaInfantil ? "default" : "secondary"}>
+														{reserva.sillaInfantil ? "Sí" : "No"}
+													</Badge>
+												</TableCell>
+											)}
+											{visibleColumns.idaVuelta.visible && (
+												<TableCell>
+													<Badge variant={reserva.idaVuelta ? "default" : "secondary"}>
+														{reserva.idaVuelta ? "Sí" : "No"}
+													</Badge>
+												</TableCell>
+											)}
+											{visibleColumns.fechaRegreso.visible && (
+												<TableCell>
+													<span className="text-sm">{reserva.fechaRegreso ? formatDate(reserva.fechaRegreso) : "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.codigoDescuento.visible && (
+												<TableCell>
+													<span className="text-sm">{reserva.codigoDescuento || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.metodoPago.visible && (
+												<TableCell>
+													<span className="text-sm">{reserva.metodoPago || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.referenciaPago.visible && (
+												<TableCell>
+													<span className="text-sm truncate max-w-[120px]">{reserva.referenciaPago || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.total.visible && (
+												<TableCell className="font-semibold">
+													{formatCurrency(reserva.totalConDescuento)}
+												</TableCell>
+											)}
+											{visibleColumns.estado.visible && (
+												<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
+											)}
+											{visibleColumns.pago.visible && (
+												<TableCell>
+													{getEstadoPagoBadge(reserva.estadoPago)}
+												</TableCell>
+											)}
+											{visibleColumns.saldo.visible && (
+												<TableCell>
+													<span
+														className={
+															reserva.saldoPendiente > 0
+																? "text-red-600 font-semibold"
+																: "text-green-600 font-semibold"
+														}
 													>
-														<Eye className="w-4 h-4" />
-													</Button>
-													<Button
-														variant="default"
-														size="sm"
-														onClick={() => handleEdit(reserva)}
-													>
-														<Edit className="w-4 h-4" />
-													</Button>
-												</div>
-											</TableCell>
+														{formatCurrency(reserva.saldoPendiente)}
+													</span>
+												</TableCell>
+											)}
+											{visibleColumns.source.visible && (
+												<TableCell>
+													<Badge variant="outline">{reserva.source || "web"}</Badge>
+												</TableCell>
+											)}
+											{visibleColumns.ipAddress.visible && (
+												<TableCell>
+													<span className="text-xs text-muted-foreground">{reserva.ipAddress || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.observaciones.visible && (
+												<TableCell>
+													<span className="text-sm truncate max-w-[150px]">{reserva.observaciones || "-"}</span>
+												</TableCell>
+											)}
+											{visibleColumns.acciones.visible && (
+												<TableCell>
+													<div className="flex gap-2">
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => handleViewDetails(reserva)}
+														>
+															<Eye className="w-4 h-4" />
+														</Button>
+														<Button
+															variant="default"
+															size="sm"
+															onClick={() => handleEdit(reserva)}
+														>
+															<Edit className="w-4 h-4" />
+														</Button>
+													</div>
+												</TableCell>
+											)}
 										</TableRow>
 									))
 								)}
