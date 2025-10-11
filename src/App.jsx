@@ -4,6 +4,9 @@
 import "./App.css";
 import { useState, useEffect, useMemo, useCallback } from "react";
 
+// --- Hook personalizado para captura de leads ---
+import { useLeadCapture } from "./hooks/useLeadCapture";
+
 // --- Componentes UI ---
 import {
 	Dialog,
@@ -232,6 +235,12 @@ function App() {
 
 	// Estado para controlar el flujo de reservas (express o completo)
 	const [useExpressFlow, setUseExpressFlow] = useState(true);
+
+	// Hook para capturar leads para remarketing
+	const apiUrl =
+		import.meta.env.VITE_API_URL ||
+		"https://transportes-araucaria.onrender.com";
+	useLeadCapture(formData, useExpressFlow ? "express" : "completo", apiUrl);
 
 	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
 	const applyPricingPayload = useCallback((data, { signal } = {}) => {
