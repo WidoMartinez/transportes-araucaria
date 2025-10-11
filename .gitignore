@@ -28,3 +28,8 @@ Thumbs.db
 coverage/
 *.tgz
 *.log
+
+# PHP dependencies
+PHPMailer/
+vendor/
+composer.lock
