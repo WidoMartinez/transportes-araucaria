@@ -28,3 +28,6 @@ Thumbs.db
 coverage/
 *.tgz
 *.log
+
+# Backend data (sistema JSON eliminado)
+backend/data/
