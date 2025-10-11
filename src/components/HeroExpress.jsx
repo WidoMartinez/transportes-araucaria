@@ -131,13 +131,17 @@ function HeroExpress({
 		// Validar ida y vuelta si está seleccionado
 		if (formData.idaVuelta) {
 			if (!formData.fechaRegreso) {
-				setStepError("Selecciona la fecha de regreso para tu viaje de ida y vuelta.");
+				setStepError(
+					"Selecciona la fecha de regreso para tu viaje de ida y vuelta."
+				);
 				return;
 			}
 
 			const fechaRegreso = new Date(`${formData.fechaRegreso}T00:00:00`);
 			if (fechaRegreso < fechaSeleccionada) {
-				setStepError("La fecha de regreso no puede ser anterior a la fecha de ida.");
+				setStepError(
+					"La fecha de regreso no puede ser anterior a la fecha de ida."
+				);
 				return;
 			}
 		}
@@ -253,26 +257,24 @@ function HeroExpress({
 	// Validar si todos los campos obligatorios del paso 2 están completos
 	const todosLosCamposCompletos = useMemo(() => {
 		if (currentStep !== 1) return false;
-		
-		const nombreValido = formData.nombre?.trim().length > 0;
-		const emailValido = formData.email?.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
-		const telefonoValido = formData.telefono?.trim().length > 0;
-		const consentimientoValido = paymentConsent;
-		
-		return nombreValido && emailValido && telefonoValido && consentimientoValido;
-	}, [currentStep, formData.nombre, formData.email, formData.telefono, paymentConsent]);
 
-	// Validar si todos los campos obligatorios del paso 2 están completos
-	const todosLosCamposCompletos = useMemo(() => {
-		if (currentStep !== 1) return false;
-		
 		const nombreValido = formData.nombre?.trim().length > 0;
-		const emailValido = formData.email?.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+		const emailValido =
+			formData.email?.trim().length > 0 &&
+			/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
 		const telefonoValido = formData.telefono?.trim().length > 0;
 		const consentimientoValido = paymentConsent;
-		
-		return nombreValido && emailValido && telefonoValido && consentimientoValido;
-	}, [currentStep, formData.nombre, formData.email, formData.telefono, paymentConsent]);
+
+		return (
+			nombreValido && emailValido && telefonoValido && consentimientoValido
+		);
+	}, [
+		currentStep,
+		formData.nombre,
+		formData.email,
+		formData.telefono,
+		paymentConsent,
+	]);
 
 	return (
 		<section
@@ -593,11 +595,15 @@ function HeroExpress({
 															<Badge variant="default" className="bg-green-500">
 																-{baseDiscountPercentage}% web
 															</Badge>
-															{formData.idaVuelta && pricing.descuentoRoundTrip > 0 && (
-																<Badge variant="default" className="bg-blue-500">
-																	🔄 Ida y vuelta
-																</Badge>
-															)}
+															{formData.idaVuelta &&
+																pricing.descuentoRoundTrip > 0 && (
+																	<Badge
+																		variant="default"
+																		className="bg-blue-500"
+																	>
+																		🔄 Ida y vuelta
+																	</Badge>
+																)}
 														</div>
 														<p className="text-2xl font-bold text-primary">
 															{formatCurrency(pricing.totalConDescuento)}
@@ -620,12 +626,13 @@ function HeroExpress({
 																	pricing.descuentoCodigo
 															)}
 														</p>
-														{formData.idaVuelta && pricing.descuentoRoundTrip > 0 && (
-															<p className="text-xs text-blue-600">
-																Incluye descuento ida y vuelta:{" "}
-																{formatCurrency(pricing.descuentoRoundTrip)}
-															</p>
-														)}
+														{formData.idaVuelta &&
+															pricing.descuentoRoundTrip > 0 && (
+																<p className="text-xs text-blue-600">
+																	Incluye descuento ida y vuelta:{" "}
+																	{formatCurrency(pricing.descuentoRoundTrip)}
+																</p>
+															)}
 													</div>
 												</div>
 											</div>
@@ -735,7 +742,8 @@ function HeroExpress({
 													htmlFor="nombre-express"
 													className="text-base font-medium"
 												>
-													👤 Nombre completo <span className="text-destructive">*</span>
+													👤 Nombre completo{" "}
+													<span className="text-destructive">*</span>
 												</Label>
 												<Input
 													id="nombre-express"
@@ -753,7 +761,8 @@ function HeroExpress({
 													htmlFor="email-express"
 													className="text-base font-medium"
 												>
-													📧 Correo electrónico <span className="text-destructive">*</span>
+													📧 Correo electrónico{" "}
+													<span className="text-destructive">*</span>
 												</Label>
 												<Input
 													id="email-express"
@@ -772,7 +781,8 @@ function HeroExpress({
 													htmlFor="telefono-express"
 													className="text-base font-medium"
 												>
-													📱 Teléfono <span className="text-destructive">*</span>
+													📱 Teléfono{" "}
+													<span className="text-destructive">*</span>
 												</Label>
 												<Input
 													id="telefono-express"
@@ -803,136 +813,158 @@ function HeroExpress({
 											/>
 										</div>
 
-												{/* Opciones de pago - Solo si todos los campos están completos */}
-												{mostrarPrecio && !requiereCotizacionManual && todosLosCamposCompletos && (
-													<div className="space-y-4">
-														<h4 className="font-semibold text-lg">
-															💳 Selecciona tu opción de pago
-														</h4>
+										{/* Opciones de pago - Solo si todos los campos están completos */}
+										{mostrarPrecio &&
+											!requiereCotizacionManual &&
+											todosLosCamposCompletos && (
+												<div className="space-y-4">
+													<h4 className="font-semibold text-lg">
+														💳 Selecciona tu opción de pago
+													</h4>
 
-														{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
-														{!selectedPaymentType && (
-															<div className="space-y-3">
-																<p className="text-sm text-muted-foreground">
-																	Paso 1: Elige cuánto deseas pagar ahora
-																</p>
-																<div className="grid gap-3 md:grid-cols-2">
-																	{paymentOptions.map((option) => (
-																		<button
-																			key={option.id}
-																			type="button"
-																			onClick={() => setSelectedPaymentType(option.type)}
-																			className={`border rounded-lg p-4 text-left transition-all hover:border-primary hover:shadow-md ${
-																				option.recommended
-																					? "border-primary bg-primary/5 ring-2 ring-primary/20"
-																					: "border-gray-200"
-																			}`}
-																		>
-																			<div className="flex justify-between items-start mb-2">
-																				<div>
-																					<h5 className="font-semibold">
-																						{option.title}
-																					</h5>
-																					<p className="text-sm text-muted-foreground">
-																						{option.subtitle}
-																					</p>
-																				</div>
-																				{option.recommended && (
-																					<Badge variant="default" className="text-xs">
-																						Recomendado
-																					</Badge>
-																				)}
-																			</div>
-																			<p className="text-xl font-bold text-primary">
-																				{formatCurrency(option.amount)}
-																			</p>
-																		</button>
-																	))}
-																</div>
-															</div>
-														)}
-
-														{/* Paso 2: Seleccionar método de pago una vez elegido el tipo */}
-														{selectedPaymentType && (
-															<div className="space-y-3">
-																<div className="flex items-center justify-between">
-																	<div>
-																		<p className="text-sm text-muted-foreground">
-																			Paso 2: Elige tu método de pago
-																		</p>
-																		<p className="text-lg font-semibold text-primary">
-																			Pagarás:{" "}
-																			{formatCurrency(
-																				paymentOptions.find((opt) => opt.type === selectedPaymentType)
-																					?.amount || 0
-																			)}
-																		</p>
-																	</div>
-																	<Button
+													{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
+													{!selectedPaymentType && (
+														<div className="space-y-3">
+															<p className="text-sm text-muted-foreground">
+																Paso 1: Elige cuánto deseas pagar ahora
+															</p>
+															<div className="grid gap-3 md:grid-cols-2">
+																{paymentOptions.map((option) => (
+																	<button
+																		key={option.id}
 																		type="button"
-																		variant="ghost"
-																		size="sm"
-																		onClick={() => setSelectedPaymentType(null)}
-																		className="text-sm"
+																		onClick={() =>
+																			setSelectedPaymentType(option.type)
+																		}
+																		className={`border rounded-lg p-4 text-left transition-all hover:border-primary hover:shadow-md ${
+																			option.recommended
+																				? "border-primary bg-primary/5 ring-2 ring-primary/20"
+																				: "border-gray-200"
+																		}`}
 																	>
-																		← Cambiar monto
-																	</Button>
-																</div>
-																
-																<div className="grid gap-3 md:grid-cols-2">
-																	{paymentMethods.map((method) => (
-																		<Button
-																			key={method.id}
-																			type="button"
-																			variant="outline"
-																			onClick={() =>
-																				handlePayment(method.gateway, selectedPaymentType)
-																			}
-																			disabled={
-																				isSubmitting ||
-																				loadingGateway === `${method.gateway}-${selectedPaymentType}`
-																			}
-																			className="h-auto p-4 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5"
-																		>
-																			{loadingGateway === `${method.gateway}-${selectedPaymentType}` ? (
-																				<LoaderCircle className="h-8 w-8 animate-spin" />
-																			) : (
-																				<img
-																					src={method.image}
-																					alt={method.title}
-																					className="h-8 w-auto object-contain"
-																				/>
+																		<div className="flex justify-between items-start mb-2">
+																			<div>
+																				<h5 className="font-semibold">
+																					{option.title}
+																				</h5>
+																				<p className="text-sm text-muted-foreground">
+																					{option.subtitle}
+																				</p>
+																			</div>
+																			{option.recommended && (
+																				<Badge
+																					variant="default"
+																					className="text-xs"
+																				>
+																					Recomendado
+																				</Badge>
 																			)}
-																			<span className="text-sm font-medium">
-																				{method.title}
-																			</span>
-																			<span className="text-xs text-muted-foreground text-center">
-																				{method.subtitle}
-																			</span>
-																		</Button>
-																	))}
-																</div>
+																		</div>
+																		<p className="text-xl font-bold text-primary">
+																			{formatCurrency(option.amount)}
+																		</p>
+																	</button>
+																))}
 															</div>
-														)}
-													</div>
-												)}
+														</div>
+													)}
 
-												{/* Mensaje cuando faltan campos por completar */}
-												{mostrarPrecio && !requiereCotizacionManual && !todosLosCamposCompletos && (
-													<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-														<p className="text-sm text-amber-800 font-medium">
-															⚠️ Completa todos los campos obligatorios para ver las opciones de pago
-														</p>
-														<ul className="text-xs text-amber-700 mt-2 space-y-1 ml-5 list-disc">
-															{!formData.nombre?.trim() && <li>Nombre completo</li>}
-															{(!formData.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) && (
-																<li>Correo electrónico válido</li>
-															)}
-															{!formData.telefono?.trim() && <li>Teléfono</li>}
-															{!paymentConsent && <li>Aceptar términos y condiciones</li>}
-														</ul>
-													</div>
-												)}
+													{/* Paso 2: Seleccionar método de pago una vez elegido el tipo */}
+													{selectedPaymentType && (
+														<div className="space-y-3">
+															<div className="flex items-center justify-between">
+																<div>
+																	<p className="text-sm text-muted-foreground">
+																		Paso 2: Elige tu método de pago
+																	</p>
+																	<p className="text-lg font-semibold text-primary">
+																		Pagarás:{" "}
+																		{formatCurrency(
+																			paymentOptions.find(
+																				(opt) =>
+																					opt.type === selectedPaymentType
+																			)?.amount || 0
+																		)}
+																	</p>
+																</div>
+																<Button
+																	type="button"
+																	variant="ghost"
+																	size="sm"
+																	onClick={() => setSelectedPaymentType(null)}
+																	className="text-sm"
+																>
+																	← Cambiar monto
+																</Button>
+															</div>
+
+															<div className="grid gap-3 md:grid-cols-2">
+																{paymentMethods.map((method) => (
+																	<Button
+																		key={method.id}
+																		type="button"
+																		variant="outline"
+																		onClick={() =>
+																			handlePayment(
+																				method.gateway,
+																				selectedPaymentType
+																			)
+																		}
+																		disabled={
+																			isSubmitting ||
+																			loadingGateway ===
+																				`${method.gateway}-${selectedPaymentType}`
+																		}
+																		className="h-auto p-4 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5"
+																	>
+																		{loadingGateway ===
+																		`${method.gateway}-${selectedPaymentType}` ? (
+																			<LoaderCircle className="h-8 w-8 animate-spin" />
+																		) : (
+																			<img
+																				src={method.image}
+																				alt={method.title}
+																				className="h-8 w-auto object-contain"
+																			/>
+																		)}
+																		<span className="text-sm font-medium">
+																			{method.title}
+																		</span>
+																		<span className="text-xs text-muted-foreground text-center">
+																			{method.subtitle}
+																		</span>
+																	</Button>
+																))}
+															</div>
+														</div>
+													)}
+												</div>
+											)}
+
+										{/* Mensaje cuando faltan campos por completar */}
+										{mostrarPrecio &&
+											!requiereCotizacionManual &&
+											!todosLosCamposCompletos && (
+												<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+													<p className="text-sm text-amber-800 font-medium">
+														⚠️ Completa todos los campos obligatorios para ver
+														las opciones de pago
+													</p>
+													<ul className="text-xs text-amber-700 mt-2 space-y-1 ml-5 list-disc">
+														{!formData.nombre?.trim() && (
+															<li>Nombre completo</li>
+														)}
+														{(!formData.email?.trim() ||
+															!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+																formData.email
+															)) && <li>Correo electrónico válido</li>}
+														{!formData.telefono?.trim() && <li>Teléfono</li>}
+														{!paymentConsent && (
+															<li>Aceptar términos y condiciones</li>
+														)}
+													</ul>
+												</div>
+											)}
 
 										{/* Consentimiento para pago */}
 										<div className="border border-gray-200 rounded-lg p-4 space-y-3">
