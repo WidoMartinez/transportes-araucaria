@@ -1142,8 +1142,8 @@ function App() {
 
 		// Enviar notificación por correo usando el archivo PHP de Hostinger
 		try {
-			// Usar misma origen para evitar CORS entre www y raíz
-			const emailResponse = await fetch("/enviar_correo_mejorado.php", {
+			// Usar endpoint absoluto para evitar problemas de CORS y ejecución PHP
+			const emailResponse = await fetch("https://www.transportesaraucaria.cl/enviar_correo_mejorado.php", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(dataToSend),
