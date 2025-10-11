@@ -1671,37 +1671,20 @@ app.get("/api/reservas/estadisticas", async (req, res) => {
 
 		// Ingresos totales con manejo de errores mejorado
 		try {
-			// Usar consulta SQL directa para evitar problemas con nombres de columnas
-			// NOTA: La tabla se llama 'reservas' en minúsculas (definido en el modelo)
-			const [results] = await sequelize.query(
-				`SELECT SUM(CAST(totalConDescuento AS DECIMAL(10,2))) as totalIngresos 
-				 FROM reservas 
-				 WHERE estadoPago = 'pagado'`,
-				{ type: sequelize.QueryTypes.SELECT }
-			);
+			// Usar método de Sequelize que maneja automáticamente los nombres de columnas
+			// Esto evita problemas con camelCase vs snake_case
+			const reservasPagadasList = await Reserva.findAll({
+				where: { estadoPago: "pagado" },
+				attributes: ["totalConDescuento"],
+			});
 
-			if (results && results[0] && results[0].totalIngresos) {
-				totalIngresos = parseFloat(results[0].totalIngresos);
-			}
+			totalIngresos = reservasPagadasList.reduce((sum, reserva) => {
+				const monto = parseFloat(reserva.totalConDescuento) || 0;
+				return sum + monto;
+			}, 0);
 		} catch (error) {
 			console.error("Error calculando ingresos totales:", error.message);
-			// Si falla la consulta SQL, intentar método alternativo
-			try {
-				const reservasPagadasList = await Reserva.findAll({
-					where: { estadoPago: "pagado" },
-					attributes: ["totalConDescuento"],
-				});
-
-				totalIngresos = reservasPagadasList.reduce((sum, reserva) => {
-					const monto = parseFloat(reserva.totalConDescuento) || 0;
-					return sum + monto;
-				}, 0);
-			} catch (altError) {
-				console.error(
-					"Error con método alternativo de ingresos:",
-					altError.message
-				);
-			}
+			// Continuar con totalIngresos = 0
 		}
 
 		res.json({
