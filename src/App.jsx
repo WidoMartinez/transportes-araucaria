@@ -21,7 +21,7 @@ import { LoaderCircle } from "lucide-react";
 // --- Componentes de Sección ---
 import Header from "./components/Header";
 import Hero from "./components/Hero";
-import HeroExpress from "./components/HeroExpress";
+import HeroDashboard from "./components/HeroDashboard";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
 import Destacados from "./components/Destacados";
@@ -229,9 +229,6 @@ function App() {
 	}, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
-
-	// Estado para controlar el flujo de reservas (express o completo)
-	const [useExpressFlow, setUseExpressFlow] = useState(true);
 
 	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
 	const applyPricingPayload = useCallback((data, { signal } = {}) => {
@@ -1227,113 +1224,7 @@ function App() {
 		if (!result.success && result.message) alert(result.message);
 	};
 
-	// Función para enviar reserva express (flujo simplificado)
-	const enviarReservaExpress = async (source) => {
-		if (!validarTelefono(formData.telefono)) {
-			setPhoneError(
-				"Introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
-			);
-			return { success: false, error: "telefono" };
-		}
-		setPhoneError("");
-
-		if (isSubmitting) return { success: false, error: "procesando" };
-		setIsSubmitting(true);
-
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-
-		const dataToSend = {
-			nombre: formData.nombre,
-			email: formData.email,
-			telefono: formData.telefono,
-			origen: formData.origen,
-			destino: destinoFinal,
-			fecha: formData.fecha,
-			pasajeros: formData.pasajeros,
-			idaVuelta: formData.idaVuelta,
-			fechaRegreso: formData.fechaRegreso,
-			source,
-
-			// Datos de pricing calculados
-			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
-			abonoSugerido: pricing.abono,
-			saldoPendiente: pricing.saldoPendiente,
-			descuentoBase: pricing.descuentoBase,
-			descuentoPromocion: pricing.descuentoPromocion,
-			descuentoRoundTrip: pricing.descuentoRoundTrip,
-			descuentoOnline: pricing.descuentoOnline,
-			totalConDescuento: pricing.totalConDescuento,
-			codigoDescuento: codigoAplicado?.codigo || "",
-		};
-
-		console.log("📦 Enviando reserva express:", dataToSend);
-
-		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
-			const response = await fetch(`${apiUrl}/enviar-reserva-express`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(dataToSend),
-			});
-
-			const result = await response.json();
-
-			if (!response.ok) {
-				throw new Error(result.message || "Error en el servidor.");
-			}
-
-			console.log("✅ Reserva express creada:", result);
-
-			// Guardar ID de reserva para asociar pagos
-			if (result.reservaId) {
-				setReservationId(result.reservaId);
-			}
-
-			// Registrar conversión
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-				});
-			}
-
-			// Registrar uso del código si hay uno aplicado
-			if (codigoAplicado) {
-				try {
-					const usuarioId = generarUsuarioId();
-					await fetch(`${apiUrl}/api/codigos/usar`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							codigo: codigoAplicado.codigo,
-							usuarioId,
-						}),
-					});
-					console.log("✅ Uso del código registrado exitosamente");
-				} catch (error) {
-					console.error("Error registrando uso del código:", error);
-				}
-			}
-
-			return { success: true, reservaId: result.reservaId };
-		} catch (error) {
-			console.error("Error al enviar reserva express:", error);
-			return { success: false, error: "server", message: error.message };
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-
-	const handleWizardSubmit = () => {
-		if (useExpressFlow) {
-			return enviarReservaExpress("Reserva Express Web");
-		} else {
-			return enviarReserva("Reserva Web Autogestionada");
-		}
-	};
+	const handleWizardSubmit = () => enviarReserva("Reserva Web Autogestionada");
 
 	const minDateTime = useMemo(() => {
 		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
@@ -1358,7 +1249,7 @@ function App() {
 	}
 
 	if (isAdminView) {
-		return <AdminDashboard />;
+    return <AdminDashboard />;
 	}
 
 	return (
@@ -1378,86 +1269,36 @@ function App() {
 
 			<Header />
 
-			{/* Botón flotante para cambiar flujo */}
-			<div className="fixed bottom-4 right-4 z-50">
-				<Button
-					onClick={() => setUseExpressFlow(!useExpressFlow)}
-					className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg rounded-full px-4 py-2 text-sm font-medium"
-					title={
-						useExpressFlow
-							? "Cambiar a flujo completo"
-							: "Cambiar a flujo express"
-					}
-				>
-					{useExpressFlow ? "🔄 Flujo Completo" : "⚡ Flujo Express"}
-				</Button>
-			</div>
-
 			<main>
-				{useExpressFlow ? (
-					<HeroExpress
-						formData={formData}
-						handleInputChange={handleInputChange}
-						origenes={todosLosTramos}
-						destinos={destinosDisponibles}
-						maxPasajeros={maxPasajeros}
-						minDateTime={minDateTime}
-						phoneError={phoneError}
-						setPhoneError={setPhoneError}
-						isSubmitting={isSubmitting}
-						cotizacion={cotizacion}
-						pricing={pricing}
-						baseDiscountRate={onlineDiscountRate}
-						promotionDiscountRate={promotionDiscountRate}
-						handlePayment={handlePayment}
-						loadingGateway={loadingGateway}
-						onSubmitWizard={handleWizardSubmit}
-						validarTelefono={validarTelefono}
-						codigoAplicado={codigoAplicado}
-						codigoError={codigoError}
-						validandoCodigo={validandoCodigo}
-						onAplicarCodigo={validarCodigo}
-						onRemoverCodigo={removerCodigo}
-					/>
-				) : (
-					<Hero
-						formData={formData}
-						handleInputChange={handleInputChange}
-						origenes={todosLosTramos}
-						destinos={destinosDisponibles}
-						maxPasajeros={maxPasajeros}
-						minDateTime={minDateTime}
-						phoneError={phoneError}
-						setPhoneError={setPhoneError}
-						isSubmitting={isSubmitting}
-						cotizacion={cotizacion}
-						pricing={pricing}
-						descuentoRate={effectiveDiscountRate}
-						baseDiscountRate={onlineDiscountRate}
-						promotionDiscountRate={promotionDiscountRate}
-						roundTripDiscountRate={roundTripDiscountRate}
-						personalizedDiscountRate={personalizedDiscountRate}
-						descuentosPersonalizados={
-							descuentosGlobales?.descuentosPersonalizados || []
-						}
-						activePromotion={activePromotion}
-						reviewChecklist={reviewChecklist}
-						setReviewChecklist={setReviewChecklist}
-						setFormData={setFormData}
-						canPay={canPay}
-						handlePayment={handlePayment}
-						loadingGateway={loadingGateway}
-						onSubmitWizard={handleWizardSubmit}
-						validarTelefono={validarTelefono}
-						validarHorarioReserva={validarHorarioReserva}
-						showSummary={showConfirmationAlert}
-						codigoAplicado={codigoAplicado}
-						codigoError={codigoError}
-						validandoCodigo={validandoCodigo}
-						onAplicarCodigo={validarCodigo}
-						onRemoverCodigo={removerCodigo}
-					/>
-				)}
+				<HeroDashboard
+					formData={formData}
+					handleInputChange={handleInputChange}
+					origenes={todosLosTramos}
+					destinos={destinosDisponibles}
+					maxPasajeros={maxPasajeros}
+					minDateTime={minDateTime}
+					phoneError={phoneError}
+					setPhoneError={setPhoneError}
+					isSubmitting={isSubmitting}
+					cotizacion={cotizacion}
+					pricing={pricing}
+					baseDiscountRate={onlineDiscountRate}
+					promotionDiscountRate={promotionDiscountRate}
+					roundTripDiscountRate={roundTripDiscountRate}
+					personalizedDiscountRate={personalizedDiscountRate}
+					activePromotion={activePromotion}
+					setFormData={setFormData}
+					canPay={canPay}
+					handlePayment={handlePayment}
+					loadingGateway={loadingGateway}
+					onSubmitWizard={handleWizardSubmit}
+					validarTelefono={validarTelefono}
+					codigoAplicado={codigoAplicado}
+					codigoError={codigoError}
+					validandoCodigo={validandoCodigo}
+					onAplicarCodigo={validarCodigo}
+					onRemoverCodigo={removerCodigo}
+				/>
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />
