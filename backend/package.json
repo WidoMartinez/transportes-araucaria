@@ -9,6 +9,8 @@
 		"start:db": "node server-db.js",
 		"migrate": "node migrate.js",
 		"test:db": "node test-db.js",
+		"verificar": "node verificar-bd.js",
+		"verificar:sistema": "node verificar-sistema.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"author": "",
