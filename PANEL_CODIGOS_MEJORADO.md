@@ -97,18 +97,7 @@ const usuarioId = crypto
 - ✅ **Destinos aplicables**: Restricciones geográficas
 - ✅ **Montos mínimos**: Validación de compra
 
-## 🎯 Ventajas del Sistema Mejorado
-
-### **vs Sistema Anterior (JSON)**
-
-| Característica          | Sistema Anterior        | Sistema Mejorado |
-| ----------------------- | ----------------------- | ---------------- |
-| **Persistencia**        | ❌ Se pierde en deploys | ✅ Persistente   |
-| **Control de usuarios** | ❌ Limitado             | ✅ Completo      |
-| **Historial**           | ❌ No disponible        | ✅ Detallado     |
-| **Estadísticas**        | ❌ Básicas              | ✅ Avanzadas     |
-| **Filtros**             | ❌ No disponibles       | ✅ Múltiples     |
-| **Exportación**         | ❌ No disponible        | ✅ CSV           |
+## 🎯 Ventajas del Sistema
 
 ### **Beneficios para el Negocio**
 
@@ -124,8 +113,8 @@ const usuarioId = crypto
 
 ```bash
 # Los endpoints ya están disponibles en server-db.js
-# Solo necesitas usar el servidor con base de datos
-npm run start:db
+# El servidor usa base de datos MySQL en Hostinger
+npm start
 ```
 
 ### **2. Frontend**
@@ -150,36 +139,12 @@ DB_PASSWORD=tu_password
 DB_NAME=tu_base_de_datos
 ```
 
-## 📝 Próximos Pasos
+## 📝 Uso del Sistema
 
-1. **Probar el sistema** en desarrollo
-2. **Migrar datos existentes** de JSON a base de datos
-3. **Configurar en producción** con base de datos MySQL
-4. **Entrenar al equipo** en el uso del nuevo panel
-5. **Monitorear métricas** de uso y rendimiento
-
-## 🔄 Migración desde Sistema Anterior
-
-### **Paso 1: Backup de Datos Actuales**
-
-```bash
-# Hacer backup de pricing.json actual
-cp backend/data/pricing.json backend/data/pricing.json.backup
-```
-
-### **Paso 2: Migrar a Base de Datos**
-
-```bash
-# Ejecutar migración
-cd backend
-npm run migrate
-```
-
-### **Paso 3: Verificar Datos**
-
-- Revisar que todos los códigos se migraron
-- Verificar que los usuarios se mantuvieron
-- Probar funcionalidades del panel
+1. **El sistema está activo** con base de datos MySQL en Hostinger
+2. **Entrenar al equipo** en el uso del panel de administración
+3. **Monitorear métricas** de uso y rendimiento
+4. **Revisar estadísticas** periódicamente para optimizar códigos
 
 ## 🎉 Resultado Final
 
