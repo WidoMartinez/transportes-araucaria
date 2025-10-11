@@ -137,9 +137,29 @@ function AdminReservas() {
 			if (response.ok) {
 				const data = await response.json();
 				setEstadisticas(data);
+			} else {
+				console.warn(
+					`Error cargando estadísticas: ${response.status} ${response.statusText}`
+				);
+				// Establecer estadísticas por defecto en caso de error
+				setEstadisticas({
+					totalReservas: 0,
+					reservasPendientes: 0,
+					reservasConfirmadas: 0,
+					reservasPagadas: 0,
+					totalIngresos: 0,
+				});
 			}
 		} catch (error) {
 			console.error("Error cargando estadísticas:", error);
+			// Establecer estadísticas por defecto en caso de error
+			setEstadisticas({
+				totalReservas: 0,
+				reservasPendientes: 0,
+				reservasConfirmadas: 0,
+				reservasPagadas: 0,
+				totalIngresos: 0,
+			});
 		}
 	};
 
