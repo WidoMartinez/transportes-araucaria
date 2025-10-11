@@ -8,7 +8,12 @@
 		"start": "node server-db.js",
 		"start:db": "node server-db.js",
 		"migrate": "node migrate.js",
+		"migrate:enhanced": "node migrations/001_add_enhanced_fields.js up",
+		"migrate:auditoria": "node migrations/002_create_auditoria.js up",
+		"migrate:all": "npm run migrate:enhanced && npm run migrate:auditoria",
+		"migrate:rollback": "node migrations/002_create_auditoria.js down && node migrations/001_add_enhanced_fields.js down",
 		"test:db": "node test-db.js",
+		"test:connection": "node test-connection.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"author": "",
