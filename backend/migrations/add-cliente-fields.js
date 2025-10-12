@@ -1,5 +1,6 @@
 import sequelize from "../config/database.js";
 import { QueryInterface } from "sequelize";
+import process from "process";
 
 /**
  * Migración para agregar campos relacionados con clientes
@@ -153,8 +154,11 @@ async function addClienteFields() {
 // Ejecutar la migración
 addClienteFields()
 	.then(() => {
-		console.log("🎉 Migración finalizada");
+		console.log("🎉 Migración finalizada exitosamente");
+		process.exit(0);
 	})
 	.catch((error) => {
-		console.error("💥 Error fatal:", error);
+		console.error("💥 Error fatal en migración:", error);
+		console.error("Stack trace:", error.stack);
+		process.exit(1); // Salir con error para detener el despliegue
 	});
