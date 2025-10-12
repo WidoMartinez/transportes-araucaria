@@ -12,6 +12,7 @@ const Reserva = sequelize.define(
 		clienteId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
+			field: 'cliente_id', // Mapear a snake_case en la base de datos
 			comment: "ID del cliente asociado (si existe)",
 		},
 		rut: {
