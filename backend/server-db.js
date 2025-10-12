@@ -45,6 +45,23 @@ app.get("/health", (req, res) => {
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// Función para formatear RUT chileno
+const formatearRUT = (rut) => {
+	if (!rut) return null;
+	
+	// Eliminar puntos, guiones y espacios
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, '');
+	
+	if (rutLimpio.length < 2) return null;
+	
+	// Separar dígito verificador
+	const cuerpo = rutLimpio.slice(0, -1);
+	const dv = rutLimpio.slice(-1).toUpperCase();
+	
+	// Formatear sin puntos: XXXXXXXX-X
+	return `${cuerpo}-${dv}`;
+};
+
 const parsePromotionMetadata = (record) => {
 	if (!record || typeof record.descripcion !== "string") {
 		return null;
@@ -1371,12 +1388,15 @@ app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 
+		// Formatear RUT si se proporciona
+		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
+
 		console.log("Reserva web recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
-			rut: datosReserva.rut,
+			rut: rutFormateado,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1392,7 +1412,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
 			clienteId: datosReserva.clienteId || null,
-			rut: datosReserva.rut || null,
+			rut: rutFormateado,
 			origen: datosReserva.origen || "",
 			destino: datosReserva.destino || "",
 			fecha: datosReserva.fecha || new Date(),
@@ -1447,12 +1467,15 @@ app.post("/enviar-reserva-express", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 
+		// Formatear RUT si se proporciona
+		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
+
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
-			rut: datosReserva.rut,
+			rut: rutFormateado,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1487,7 +1510,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId || null,
-			rut: datosReserva.rut || null,
+			rut: rutFormateado,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1917,10 +1940,13 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 			});
 		}
 
+		// Formatear RUT si se proporciona
+		const rutFormateado = rut ? formatearRUT(rut) : null;
+
 		// Buscar cliente existente por email o RUT
 		let cliente = null;
-		if (rut) {
-			cliente = await Cliente.findOne({ where: { rut } });
+		if (rutFormateado) {
+			cliente = await Cliente.findOne({ where: { rut: rutFormateado } });
 		}
 		if (!cliente) {
 			cliente = await Cliente.findOne({ where: { email } });
@@ -1929,6 +1955,9 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 		if (cliente) {
 			// Actualizar datos opcionales sin sobrescribir histórico
 			const updateData = {};
+			if (rutFormateado && rutFormateado !== cliente.rut) {
+				updateData.rut = rutFormateado;
+			}
 			if (telefono && telefono !== cliente.telefono) {
 				updateData.telefono = telefono;
 			}
@@ -1945,7 +1974,7 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 		} else {
 			// Crear nuevo cliente
 			cliente = await Cliente.create({
-				rut: rut || null,
+				rut: rutFormateado,
 				nombre,
 				email,
 				telefono,
