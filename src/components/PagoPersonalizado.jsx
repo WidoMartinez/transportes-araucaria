@@ -4,43 +4,163 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { LoaderCircle, DollarSign, MapPin, User, Mail, Phone, Share2 } from "lucide-react";
+import { LoaderCircle, DollarSign, MapPin, User, Mail, Phone, Share2, Key, Calendar, Clock } from "lucide-react";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 
 function PagoPersonalizado() {
 	const [formData, setFormData] = useState({
+		codigo: "",
 		origen: "",
 		destino: "",
 		monto: "",
 		nombre: "",
 		email: "",
 		telefono: "",
+		direccion: "",
+		fecha: "",
+		hora: "",
 		descripcion: "",
 	});
 
 	const [loadingGateway, setLoadingGateway] = useState(null);
 	const [errors, setErrors] = useState({});
 	const [showShareLink, setShowShareLink] = useState(false);
+	const [codigoValido, setCodigoValido] = useState(false);
+	const [errorCodigo, setErrorCodigo] = useState("");
 
 	// Cargar datos desde URL si existen
 	useEffect(() => {
 		const params = new URLSearchParams(window.location.search);
+		const codigo = params.get("codigo");
 		const urlData = {
+			codigo: codigo || "",
 			origen: params.get("origen") || "",
 			destino: params.get("destino") || "",
 			monto: params.get("monto") || "",
 			nombre: params.get("nombre") || "",
 			email: params.get("email") || "",
 			telefono: params.get("telefono") || "",
+			direccion: params.get("direccion") || "",
+			fecha: params.get("fecha") || "",
+			hora: params.get("hora") || "",
 			descripcion: params.get("descripcion") || "",
 		};
 		
-		// Solo actualizar si hay datos en la URL
-		if (Object.values(urlData).some(val => val !== "")) {
+		// Si hay código en URL, procesarlo automáticamente
+		if (codigo) {
+			procesarCodigo(codigo);
+		} else if (Object.values(urlData).some(val => val !== "")) {
 			setFormData(urlData);
+			if (urlData.origen && urlData.destino && urlData.monto) {
+				setCodigoValido(true);
+			}
 		}
 	}, []);
+
+	// Función para parsear códigos de pago
+	// Formato: ORIGEN-DESTINO-MONTO
+	// Ejemplos: A-CARAHUE-35, TEMUCO-PUCON-60, A-LONQUIMAY-45
+	const procesarCodigo = (codigo) => {
+		setErrorCodigo("");
+		setCodigoValido(false);
+		
+		if (!codigo.trim()) {
+			return;
+		}
+
+		// Convertir a mayúsculas para procesamiento
+		const codigoUpper = codigo.toUpperCase().trim();
+		
+		// Intentar parsear el código
+		// Formato esperado: ORIGEN-DESTINO-MONTO
+		const partes = codigoUpper.split("-");
+		
+		if (partes.length < 3) {
+			setErrorCodigo("Formato de código inválido. Usa: ORIGEN-DESTINO-MONTO (ej: A-CARAHUE-35)");
+			return;
+		}
+
+		let origen = partes[0];
+		const destino = partes[1];
+		const montoStr = partes[2];
+
+		// Mapear abreviaciones comunes
+		const mapaOrigenes = {
+			"A": "Aeropuerto La Araucanía",
+			"AEROPUERTO": "Aeropuerto La Araucanía",
+			"TEMUCO": "Temuco",
+			"VILLARRICA": "Villarrica",
+			"PUCON": "Pucón",
+			"LONQUIMAY": "Lonquimay",
+		};
+
+		const mapaDestinos = {
+			"CARAHUE": "Carahue",
+			"TEMUCO": "Temuco",
+			"VILLARRICA": "Villarrica",
+			"PUCON": "Pucón",
+			"LONQUIMAY": "Lonquimay",
+			"CURACAUTIN": "Curacautín",
+			"VICTORIA": "Victoria",
+			"MALALCAHUELLO": "Malalcahuello",
+			"CONGUILLÍO": "Parque Nacional Conguillío",
+			"CONGUILLIO": "Parque Nacional Conguillío",
+			"CORRALCO": "Corralco",
+			"ICALMA": "Laguna Icalma",
+		};
+
+		// Convertir origen
+		origen = mapaOrigenes[origen] || origen;
+		
+		// Convertir destino
+		const destinoCompleto = mapaDestinos[destino] || destino;
+
+		// Parsear monto (el número representa miles de pesos)
+		const montoNumero = parseInt(montoStr);
+		if (isNaN(montoNumero) || montoNumero <= 0) {
+			setErrorCodigo("Monto inválido en el código");
+			return;
+		}
+
+		// El monto en el código representa miles (ej: 35 = $35.000)
+		const montoFinal = montoNumero * 1000;
+
+		// Actualizar formulario con los datos del código
+		setFormData((prev) => ({
+			...prev,
+			codigo: codigo,
+			origen: origen,
+			destino: destinoCompleto,
+			monto: montoFinal.toString(),
+		}));
+
+		setCodigoValido(true);
+		setErrorCodigo("");
+	};
+
+	const handleCodigoChange = (e) => {
+		const codigo = e.target.value;
+		setFormData((prev) => ({
+			...prev,
+			codigo: codigo,
+		}));
+		
+		// Procesar el código en tiempo real
+		if (codigo.trim()) {
+			procesarCodigo(codigo);
+		} else {
+			setCodigoValido(false);
+			setErrorCodigo("");
+			// Limpiar campos de traslado
+			setFormData((prev) => ({
+				...prev,
+				origen: "",
+				destino: "",
+				monto: "",
+			}));
+		}
+	};
 
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
@@ -117,6 +237,18 @@ function PagoPersonalizado() {
 			newErrors.telefono = "El teléfono es requerido";
 		}
 
+		if (!formData.direccion.trim()) {
+			newErrors.direccion = "La dirección es requerida";
+		}
+
+		if (!formData.fecha.trim()) {
+			newErrors.fecha = "La fecha es requerida";
+		}
+
+		if (!formData.hora.trim()) {
+			newErrors.hora = "La hora es requerida";
+		}
+
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
 	};
@@ -129,9 +261,13 @@ function PagoPersonalizado() {
 		setLoadingGateway(gateway);
 
 		const monto = parseInt(formData.monto) || 0;
-		const description = formData.descripcion.trim()
+		
+		// Construir descripción detallada
+		let description = formData.descripcion.trim()
 			? formData.descripcion
-			: `Traslado personalizado ${formData.origen} → ${formData.destino}`;
+			: `Traslado ${formData.origen} → ${formData.destino}`;
+		
+		description += ` | Fecha: ${formData.fecha} ${formData.hora} | Dirección: ${formData.direccion}`;
 
 		const apiUrl =
 			import.meta.env.VITE_API_URL ||
@@ -172,23 +308,41 @@ function PagoPersonalizado() {
 
 	const generateShareLink = () => {
 		const baseUrl = window.location.origin + window.location.pathname;
-		const params = new URLSearchParams({
-			view: "pago-personalizado",
-			origen: formData.origen,
-			destino: formData.destino,
-			monto: formData.monto,
-			descripcion: formData.descripcion || "",
-		});
 		
-		const link = `${baseUrl}?${params.toString()}`;
-		
-		// Copiar al portapapeles
-		navigator.clipboard.writeText(link).then(() => {
-			setShowShareLink(true);
-			setTimeout(() => setShowShareLink(false), 3000);
-		}).catch(() => {
-			alert(`Link generado:\n${link}`);
-		});
+		// Si hay un código válido, compartir con el código
+		if (formData.codigo && codigoValido) {
+			const params = new URLSearchParams({
+				view: "pago-personalizado",
+				codigo: formData.codigo,
+			});
+			
+			const link = `${baseUrl}?${params.toString()}`;
+			
+			navigator.clipboard.writeText(link).then(() => {
+				setShowShareLink(true);
+				setTimeout(() => setShowShareLink(false), 3000);
+			}).catch(() => {
+				alert(`Link generado:\n${link}`);
+			});
+		} else {
+			// Compartir con parámetros completos
+			const params = new URLSearchParams({
+				view: "pago-personalizado",
+				origen: formData.origen,
+				destino: formData.destino,
+				monto: formData.monto,
+				descripcion: formData.descripcion || "",
+			});
+			
+			const link = `${baseUrl}?${params.toString()}`;
+			
+			navigator.clipboard.writeText(link).then(() => {
+				setShowShareLink(true);
+				setTimeout(() => setShowShareLink(false), 3000);
+			}).catch(() => {
+				alert(`Link generado:\n${link}`);
+			});
+		}
 	};
 
 	const isFormValid = useMemo(() => {
@@ -199,7 +353,10 @@ function PagoPersonalizado() {
 			formData.nombre.trim() &&
 			formData.email.trim() &&
 			/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
-			formData.telefono.trim()
+			formData.telefono.trim() &&
+			formData.direccion.trim() &&
+			formData.fecha.trim() &&
+			formData.hora.trim()
 		);
 	}, [formData]);
 
@@ -229,71 +386,114 @@ function PagoPersonalizado() {
 
 				<Card className="shadow-lg">
 					<CardHeader>
-						<CardTitle className="text-2xl">Datos del traslado</CardTitle>
+						<CardTitle className="text-2xl">Ingresa tu código de pago</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-6">
-						{/* Información del traslado */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="origen" className="text-base font-medium flex items-center gap-2">
-									<MapPin className="w-4 h-4" />
-									Origen <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="origen"
-									name="origen"
-									value={formData.origen}
-									onChange={handleInputChange}
-									placeholder="Ej: Aeropuerto La Araucanía"
-									className={errors.origen ? "border-red-500" : ""}
-								/>
-								{errors.origen && (
-									<p className="text-sm text-red-500">{errors.origen}</p>
-								)}
-							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="destino" className="text-base font-medium flex items-center gap-2">
-									<MapPin className="w-4 h-4" />
-									Destino <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="destino"
-									name="destino"
-									value={formData.destino}
-									onChange={handleInputChange}
-									placeholder="Ej: Carahue"
-									className={errors.destino ? "border-red-500" : ""}
-								/>
-								{errors.destino && (
-									<p className="text-sm text-red-500">{errors.destino}</p>
-								)}
-							</div>
-						</div>
-
+						{/* Campo de código */}
 						<div className="space-y-2">
-							<Label htmlFor="monto" className="text-base font-medium flex items-center gap-2">
-								<DollarSign className="w-4 h-4" />
-								Monto a pagar <span className="text-destructive">*</span>
+							<Label htmlFor="codigo" className="text-base font-medium flex items-center gap-2">
+								<Key className="w-4 h-4" />
+								Código de pago
 							</Label>
 							<Input
-								id="monto"
-								name="monto"
-								value={formData.monto}
-								onChange={handleMontoChange}
-								placeholder="Ej: 25000"
-								type="text"
-								className={errors.monto ? "border-red-500" : ""}
+								id="codigo"
+								name="codigo"
+								value={formData.codigo}
+								onChange={handleCodigoChange}
+								placeholder="Ej: A-CARAHUE-35"
+								className={`text-lg font-mono ${errorCodigo ? "border-red-500" : codigoValido ? "border-green-500" : ""}`}
 							/>
-							{formData.monto && (
-								<p className="text-sm text-gray-600">
-									{formatCurrency(formData.monto)}
+							{errorCodigo && (
+								<p className="text-sm text-red-500">{errorCodigo}</p>
+							)}
+							{codigoValido && (
+								<p className="text-sm text-green-600">✓ Código válido - Datos cargados automáticamente</p>
+							)}
+							<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
+								<p className="text-sm text-blue-800">
+									<strong>💡 Formato del código:</strong> ORIGEN-DESTINO-MONTO
 								</p>
-							)}
-							{errors.monto && (
-								<p className="text-sm text-red-500">{errors.monto}</p>
-							)}
+								<p className="text-xs text-blue-600 mt-1">
+									Ejemplos: <code className="bg-white px-1 rounded">A-CARAHUE-35</code> (Aeropuerto → Carahue por $35.000), 
+									<code className="bg-white px-1 mx-1 rounded">TEMUCO-PUCON-60</code> (Temuco → Pucón por $60.000)
+								</p>
+							</div>
 						</div>
+					</CardContent>
+				</Card>
+
+				{/* Mostrar datos del traslado solo cuando hay código válido o datos cargados */}
+				{(codigoValido || (formData.origen && formData.destino && formData.monto)) && (
+					<Card className="shadow-lg mt-6">
+						<CardHeader>
+							<CardTitle className="text-2xl">Datos del traslado</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{/* Información del traslado (solo lectura si viene de código) */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="origen" className="text-base font-medium flex items-center gap-2">
+										<MapPin className="w-4 h-4" />
+										Origen <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="origen"
+										name="origen"
+										value={formData.origen}
+										onChange={handleInputChange}
+										placeholder="Ej: Aeropuerto La Araucanía"
+										className={errors.origen ? "border-red-500" : ""}
+										disabled={codigoValido}
+									/>
+									{errors.origen && (
+										<p className="text-sm text-red-500">{errors.origen}</p>
+									)}
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="destino" className="text-base font-medium flex items-center gap-2">
+										<MapPin className="w-4 h-4" />
+										Destino <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="destino"
+										name="destino"
+										value={formData.destino}
+										onChange={handleInputChange}
+										placeholder="Ej: Carahue"
+										className={errors.destino ? "border-red-500" : ""}
+										disabled={codigoValido}
+									/>
+									{errors.destino && (
+										<p className="text-sm text-red-500">{errors.destino}</p>
+									)}
+								</div>
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="monto" className="text-base font-medium flex items-center gap-2">
+									<DollarSign className="w-4 h-4" />
+									Monto a pagar <span className="text-destructive">*</span>
+								</Label>
+								<Input
+									id="monto"
+									name="monto"
+									value={formData.monto}
+									onChange={handleMontoChange}
+									placeholder="Ej: 25000"
+									type="text"
+									className={errors.monto ? "border-red-500" : ""}
+									disabled={codigoValido}
+								/>
+								{formData.monto && (
+									<p className="text-sm text-gray-600">
+										{formatCurrency(formData.monto)}
+									</p>
+								)}
+								{errors.monto && (
+									<p className="text-sm text-red-500">{errors.monto}</p>
+								)}
+							</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="descripcion" className="text-base font-medium">
@@ -395,6 +595,67 @@ function PagoPersonalizado() {
 										)}
 									</div>
 								</div>
+
+								{/* Nuevos campos requeridos */}
+								<div className="space-y-2">
+									<Label htmlFor="direccion" className="text-base font-medium flex items-center gap-2">
+										<MapPin className="w-4 h-4" />
+										Dirección de {formData.origen && formData.origen.toLowerCase().includes("aeropuerto") ? "llegada" : "origen"} <span className="text-destructive">*</span>
+									</Label>
+									<Input
+										id="direccion"
+										name="direccion"
+										value={formData.direccion}
+										onChange={handleInputChange}
+										placeholder="Ej: Hotel Dreams, Calle Principal 123, Pucón"
+										className={errors.direccion ? "border-red-500" : ""}
+									/>
+									{errors.direccion && (
+										<p className="text-sm text-red-500">{errors.direccion}</p>
+									)}
+									<p className="text-xs text-gray-500">
+										Dirección exacta donde debemos {formData.origen && formData.origen.toLowerCase().includes("aeropuerto") ? "dejarte" : "recogerte"}
+									</p>
+								</div>
+
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="fecha" className="text-base font-medium flex items-center gap-2">
+											<Calendar className="w-4 h-4" />
+											Fecha del traslado <span className="text-destructive">*</span>
+										</Label>
+										<Input
+											id="fecha"
+											name="fecha"
+											type="date"
+											value={formData.fecha}
+											onChange={handleInputChange}
+											className={errors.fecha ? "border-red-500" : ""}
+											min={new Date().toISOString().split('T')[0]}
+										/>
+										{errors.fecha && (
+											<p className="text-sm text-red-500">{errors.fecha}</p>
+										)}
+									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="hora" className="text-base font-medium flex items-center gap-2">
+											<Clock className="w-4 h-4" />
+											Hora del traslado <span className="text-destructive">*</span>
+										</Label>
+										<Input
+											id="hora"
+											name="hora"
+											type="time"
+											value={formData.hora}
+											onChange={handleInputChange}
+											className={errors.hora ? "border-red-500" : ""}
+										/>
+										{errors.hora && (
+											<p className="text-sm text-red-500">{errors.hora}</p>
+										)}
+									</div>
+								</div>
 							</div>
 						</div>
 
@@ -461,6 +722,7 @@ function PagoPersonalizado() {
 						</div>
 					</CardContent>
 				</Card>
+				)}
 
 				{/* Información adicional */}
 				<div className="mt-8 text-center text-sm text-gray-600">
