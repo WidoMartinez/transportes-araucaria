@@ -9,17 +9,16 @@ const Reserva = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
-		// TEMPORALMENTE COMENTADO: Descomentar después de ejecutar migración manualmente
-		// clienteId: {
-		// 	type: DataTypes.INTEGER,
-		// 	allowNull: true,
-		// 	comment: "ID del cliente asociado (si existe)",
-		// },
-		// rut: {
-		// 	type: DataTypes.STRING(20),
-		// 	allowNull: true,
-		// 	comment: "RUT del cliente (formato: 12345678-9)",
-		// },
+		clienteId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			comment: "ID del cliente asociado (si existe)",
+		},
+		rut: {
+			type: DataTypes.STRING(20),
+			allowNull: true,
+			comment: "RUT del cliente (formato: 12345678-9)",
+		},
 		nombre: {
 			type: DataTypes.STRING(255),
 			allowNull: false,
@@ -191,9 +190,8 @@ const Reserva = sequelize.define(
 			{ fields: ["fecha"] },
 			{ fields: ["estado"] },
 			{ fields: ["created_at"] },
-			// TEMPORALMENTE COMENTADO: Descomentar después de ejecutar migración
-			// { fields: ["clienteId"] },
-			// { fields: ["rut"] },
+			{ fields: ["clienteId"] },
+			{ fields: ["rut"] },
 		],
 	}
 );

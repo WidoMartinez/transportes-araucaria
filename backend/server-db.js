@@ -1375,8 +1375,8 @@ app.post("/enviar-reserva", async (req, res) => {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
-			// TEMP: clienteId: datosReserva.clienteId,
-			// TEMP: rut: datosReserva.rut,
+			clienteId: datosReserva.clienteId,
+			rut: datosReserva.rut,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1391,8 +1391,8 @@ app.post("/enviar-reserva", async (req, res) => {
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
-			// TEMP: clienteId: datosReserva.clienteId || null,
-			// TEMP: rut: datosReserva.rut || null,
+			clienteId: datosReserva.clienteId || null,
+			rut: datosReserva.rut || null,
 			origen: datosReserva.origen || "",
 			destino: datosReserva.destino || "",
 			fecha: datosReserva.fecha || new Date(),
@@ -1451,8 +1451,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
-			// TEMP: clienteId: datosReserva.clienteId,
-			// TEMP: rut: datosReserva.rut,
+			clienteId: datosReserva.clienteId,
+			rut: datosReserva.rut,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1486,8 +1486,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
-			// TEMP: clienteId: datosReserva.clienteId || null,
-			// TEMP: rut: datosReserva.rut || null,
+			clienteId: datosReserva.clienteId || null,
+			rut: datosReserva.rut || null,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -2213,6 +2213,48 @@ const startServer = async () => {
 	try {
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
+		
+		// Ejecutar migración automáticamente
+		try {
+			console.log("🔧 Ejecutando migración de base de datos...");
+			const queryInterface = sequelize.getQueryInterface();
+			
+			// Verificar si la tabla reservas existe
+			const tables = await queryInterface.showAllTables();
+			const reservasExists = tables.includes("reservas") || tables.includes("Reservas");
+			
+			if (reservasExists) {
+				// Verificar si las columnas ya existen
+				const reservasColumns = await queryInterface.describeTable("reservas").catch(() => ({}));
+				
+				if (!reservasColumns.cliente_id && !reservasColumns.clienteId) {
+					console.log("📦 Agregando columna cliente_id a reservas...");
+					await queryInterface.addColumn("reservas", "cliente_id", {
+						type: sequelize.Sequelize.INTEGER,
+						allowNull: true,
+					});
+					console.log("✅ Columna cliente_id agregada");
+				} else {
+					console.log("ℹ️  Columna cliente_id ya existe");
+				}
+				
+				if (!reservasColumns.rut) {
+					console.log("📦 Agregando columna rut a reservas...");
+					await queryInterface.addColumn("reservas", "rut", {
+						type: sequelize.Sequelize.STRING(20),
+						allowNull: true,
+					});
+					console.log("✅ Columna rut agregada");
+				} else {
+					console.log("ℹ️  Columna rut ya existe");
+				}
+			}
+			
+			console.log("✅ Migración completada");
+		} catch (migrationError) {
+			console.error("⚠️ Error en migración (no crítico):", migrationError.message);
+		}
+		
 	} catch (error) {
 		console.error(
 			"⚠️ Advertencia: No se pudo conectar a la base de datos:",
