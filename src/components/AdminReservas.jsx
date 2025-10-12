@@ -148,7 +148,7 @@ function AdminReservas() {
 	const [clienteSugerencias, setClienteSugerencias] = useState([]);
 	const [mostrandoSugerencias, setMostrandoSugerencias] = useState(false);
 	const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
-	
+
 	// Estados para columnas visibles
 	const [columnasVisibles, setColumnasVisibles] = useState({
 		id: true,
@@ -166,7 +166,7 @@ function AdminReservas() {
 		numViajes: false,
 		acciones: true,
 	});
-	
+
 	// Estado para modal de historial de cliente
 	const [showHistorialDialog, setShowHistorialDialog] = useState(false);
 	const [historialCliente, setHistorialCliente] = useState(null);
@@ -374,9 +374,17 @@ function AdminReservas() {
 				label: "Pendiente Detalles",
 				icon: AlertCircle,
 			},
-			confirmada: { variant: "default", label: "Confirmada", icon: CheckCircle2 },
+			confirmada: {
+				variant: "default",
+				label: "Confirmada",
+				icon: CheckCircle2,
+			},
 			cancelada: { variant: "destructive", label: "Cancelada", icon: XCircle },
-			completada: { variant: "default", label: "Completada", icon: CheckCircle2 },
+			completada: {
+				variant: "default",
+				label: "Completada",
+				icon: CheckCircle2,
+			},
 		};
 
 		const config = estados[estado] || estados.pendiente;
@@ -458,7 +466,9 @@ function AdminReservas() {
 	// Ver historial de un cliente
 	const verHistorialCliente = async (clienteId) => {
 		try {
-			const response = await fetch(`${apiUrl}/api/clientes/${clienteId}/historial`);
+			const response = await fetch(
+				`${apiUrl}/api/clientes/${clienteId}/historial`
+			);
 			if (response.ok) {
 				const data = await response.json();
 				setHistorialCliente(data);
@@ -488,7 +498,9 @@ function AdminReservas() {
 			if (response.ok) {
 				await fetchReservas();
 				alert(
-					`Cliente ${!esCliente ? "marcado" : "desmarcado"} como cliente exitosamente`
+					`Cliente ${
+						!esCliente ? "marcado" : "desmarcado"
+					} como cliente exitosamente`
 				);
 			}
 		} catch (error) {
@@ -537,8 +549,14 @@ function AdminReservas() {
 	// Guardar nueva reserva
 	const handleSaveNewReserva = async () => {
 		// Validaciones básicas
-		if (!newReservaForm.nombre || !newReservaForm.email || !newReservaForm.telefono) {
-			alert("Por favor completa los campos obligatorios: Nombre, Email y Teléfono");
+		if (
+			!newReservaForm.nombre ||
+			!newReservaForm.email ||
+			!newReservaForm.telefono
+		) {
+			alert(
+				"Por favor completa los campos obligatorios: Nombre, Email y Teléfono"
+			);
 			return;
 		}
 		if (!newReservaForm.origen || !newReservaForm.destino) {
@@ -554,7 +572,7 @@ function AdminReservas() {
 		try {
 			// Primero, crear o actualizar el cliente
 			let clienteId = newReservaForm.clienteId;
-			
+
 			if (!clienteId) {
 				const clienteResponse = await fetch(
 					`${apiUrl}/api/clientes/crear-o-actualizar`,
@@ -577,7 +595,10 @@ function AdminReservas() {
 			}
 
 			// Calcular saldo pendiente si no está establecido
-			const total = parseFloat(newReservaForm.totalConDescuento) || parseFloat(newReservaForm.precio) || 0;
+			const total =
+				parseFloat(newReservaForm.totalConDescuento) ||
+				parseFloat(newReservaForm.precio) ||
+				0;
 			const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
 			const saldo = total - abono;
 
@@ -679,9 +700,7 @@ function AdminReservas() {
 			setSelectedReservas([]);
 			setShowBulkStatusDialog(false);
 			setBulkEstado("");
-			alert(
-				`Estado actualizado para ${selectedReservas.length} reserva(s)`
-			);
+			alert(`Estado actualizado para ${selectedReservas.length} reserva(s)`);
 		} catch (error) {
 			console.error("Error actualizando estado:", error);
 			alert("Error al actualizar el estado de algunas reservas");
@@ -963,7 +982,10 @@ function AdminReservas() {
 											}
 											className="w-4 h-4"
 										/>
-										<Label htmlFor={`col-${key}`} className="cursor-pointer capitalize">
+										<Label
+											htmlFor={`col-${key}`}
+											className="cursor-pointer capitalize"
+										>
 											{key === "id" && "ID"}
 											{key === "cliente" && "Cliente"}
 											{key === "contacto" && "Contacto"}
@@ -1060,8 +1082,12 @@ function AdminReservas() {
 									{columnasVisibles.esCliente && <TableHead>Tipo</TableHead>}
 									{columnasVisibles.numViajes && <TableHead>Viajes</TableHead>}
 									{columnasVisibles.ruta && <TableHead>Ruta</TableHead>}
-									{columnasVisibles.fechaHora && <TableHead>Fecha/Hora</TableHead>}
-									{columnasVisibles.pasajeros && <TableHead>Pasajeros</TableHead>}
+									{columnasVisibles.fechaHora && (
+										<TableHead>Fecha/Hora</TableHead>
+									)}
+									{columnasVisibles.pasajeros && (
+										<TableHead>Pasajeros</TableHead>
+									)}
 									{columnasVisibles.total && <TableHead>Total</TableHead>}
 									{columnasVisibles.estado && <TableHead>Estado</TableHead>}
 									{columnasVisibles.pago && <TableHead>Pago</TableHead>}
@@ -1073,7 +1099,10 @@ function AdminReservas() {
 								{reservasFiltradas.length === 0 ? (
 									<TableRow>
 										<TableCell
-											colSpan={Object.values(columnasVisibles).filter(Boolean).length + 1}
+											colSpan={
+												Object.values(columnasVisibles).filter(Boolean).length +
+												1
+											}
 											className="text-center py-8"
 										>
 											<div className="text-muted-foreground">
@@ -1094,13 +1123,17 @@ function AdminReservas() {
 												/>
 											</TableCell>
 											{columnasVisibles.id && (
-												<TableCell className="font-medium">#{reserva.id}</TableCell>
+												<TableCell className="font-medium">
+													#{reserva.id}
+												</TableCell>
 											)}
 											{columnasVisibles.cliente && (
 												<TableCell>
 													<div className="flex items-center gap-2">
 														<User className="w-4 h-4 text-muted-foreground" />
-														<span className="font-medium">{reserva.nombre}</span>
+														<span className="font-medium">
+															{reserva.nombre}
+														</span>
 													</div>
 												</TableCell>
 											)}
@@ -1129,7 +1162,9 @@ function AdminReservas() {
 												<TableCell>
 													{reserva.clienteId ? (
 														<Badge
-															variant={reserva.esCliente ? "default" : "secondary"}
+															variant={
+																reserva.esCliente ? "default" : "secondary"
+															}
 															className="cursor-pointer"
 															onClick={() =>
 																toggleClienteManual(
@@ -1148,7 +1183,9 @@ function AdminReservas() {
 															)}
 														</Badge>
 													) : (
-														<span className="text-xs text-muted-foreground">-</span>
+														<span className="text-xs text-muted-foreground">
+															-
+														</span>
 													)}
 												</TableCell>
 											)}
@@ -1158,13 +1195,17 @@ function AdminReservas() {
 														<Button
 															variant="ghost"
 															size="sm"
-															onClick={() => verHistorialCliente(reserva.clienteId)}
+															onClick={() =>
+																verHistorialCliente(reserva.clienteId)
+															}
 														>
 															<History className="w-3 h-3 mr-1" />
 															{reserva.totalReservas || "Ver"}
 														</Button>
 													) : (
-														<span className="text-xs text-muted-foreground">-</span>
+														<span className="text-xs text-muted-foreground">
+															-
+														</span>
 													)}
 												</TableCell>
 											)}
@@ -1173,11 +1214,15 @@ function AdminReservas() {
 													<div className="space-y-1 text-sm">
 														<div className="flex items-center gap-1">
 															<MapPin className="w-3 h-3 text-green-500" />
-															<span className="font-medium">{reserva.origen}</span>
+															<span className="font-medium">
+																{reserva.origen}
+															</span>
 														</div>
 														<div className="flex items-center gap-1">
 															<MapPin className="w-3 h-3 text-red-500" />
-															<span className="font-medium">{reserva.destino}</span>
+															<span className="font-medium">
+																{reserva.destino}
+															</span>
 														</div>
 													</div>
 												</TableCell>
@@ -1200,7 +1245,9 @@ function AdminReservas() {
 												<TableCell>
 													<div className="flex items-center gap-1">
 														<Users className="w-4 h-4 text-muted-foreground" />
-														<span className="font-medium">{reserva.pasajeros}</span>
+														<span className="font-medium">
+															{reserva.pasajeros}
+														</span>
 													</div>
 												</TableCell>
 											)}
@@ -1275,7 +1322,9 @@ function AdminReservas() {
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+								onClick={() =>
+									setCurrentPage((p) => Math.min(totalPages, p + 1))
+								}
 								disabled={currentPage === totalPages}
 							>
 								Siguiente
@@ -1290,7 +1339,9 @@ function AdminReservas() {
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
 				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Detalles de Reserva #{selectedReserva?.id}</DialogTitle>
+						<DialogTitle>
+							Detalles de Reserva #{selectedReserva?.id}
+						</DialogTitle>
 						<DialogDescription>
 							Información completa de la reserva
 						</DialogDescription>
@@ -1321,7 +1372,9 @@ function AdminReservas() {
 
 							{/* Detalles del Viaje */}
 							<div>
-								<h3 className="font-semibold text-lg mb-3">Detalles del Viaje</h3>
+								<h3 className="font-semibold text-lg mb-3">
+									Detalles del Viaje
+								</h3>
 								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Origen</Label>
@@ -1390,7 +1443,9 @@ function AdminReservas() {
 									</div>
 									<div>
 										<Label className="text-muted-foreground">Hotel</Label>
-										<p className="font-medium">{selectedReserva.hotel || "-"}</p>
+										<p className="font-medium">
+											{selectedReserva.hotel || "-"}
+										</p>
 									</div>
 									<div>
 										<Label className="text-muted-foreground">
@@ -1789,7 +1844,8 @@ function AdminReservas() {
 					<DialogHeader>
 						<DialogTitle>Nueva Reserva Manual</DialogTitle>
 						<DialogDescription>
-							Crea una nueva reserva ingresando manualmente los datos del cliente y del viaje
+							Crea una nueva reserva ingresando manualmente los datos del
+							cliente y del viaje
 						</DialogDescription>
 					</DialogHeader>
 
@@ -1799,14 +1855,18 @@ function AdminReservas() {
 							<h3 className="font-semibold text-lg border-b pb-2">
 								Información del Cliente
 							</h3>
-							
+
 							{/* Indicador de cliente existente */}
 							{clienteSeleccionado && (
 								<div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
-									<p className="font-medium">✓ Cliente existente seleccionado</p>
+									<p className="font-medium">
+										✓ Cliente existente seleccionado
+									</p>
 									<p className="text-sm">
 										{clienteSeleccionado.esCliente && (
-											<Badge variant="default" className="mr-2">Cliente</Badge>
+											<Badge variant="default" className="mr-2">
+												Cliente
+											</Badge>
 										)}
 										{clienteSeleccionado.totalReservas > 0 && (
 											<span className="text-xs">
@@ -1827,10 +1887,15 @@ function AdminReservas() {
 										placeholder="Juan Pérez (escribe para buscar)"
 										value={newReservaForm.nombre}
 										onChange={(e) => {
-											setNewReservaForm({ ...newReservaForm, nombre: e.target.value });
+											setNewReservaForm({
+												...newReservaForm,
+												nombre: e.target.value,
+											});
 											buscarClientes(e.target.value);
 										}}
-										onBlur={() => setTimeout(() => setMostrandoSugerencias(false), 200)}
+										onBlur={() =>
+											setTimeout(() => setMostrandoSugerencias(false), 200)
+										}
 										onFocus={() => {
 											if (
 												newReservaForm.nombre.trim().length > 0 &&
@@ -1871,10 +1936,15 @@ function AdminReservas() {
 										placeholder="12345678-9"
 										value={newReservaForm.rut}
 										onChange={(e) => {
-											setNewReservaForm({ ...newReservaForm, rut: e.target.value });
+											setNewReservaForm({
+												...newReservaForm,
+												rut: e.target.value,
+											});
 											buscarClientes(e.target.value);
 										}}
-										onBlur={() => setTimeout(() => setMostrandoSugerencias(false), 200)}
+										onBlur={() =>
+											setTimeout(() => setMostrandoSugerencias(false), 200)
+										}
 									/>
 								</div>
 								<div className="space-y-2">
@@ -1887,7 +1957,10 @@ function AdminReservas() {
 										placeholder="juan@example.com"
 										value={newReservaForm.email}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, email: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												email: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -1900,7 +1973,10 @@ function AdminReservas() {
 										placeholder="+56912345678"
 										value={newReservaForm.telefono}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, telefono: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												telefono: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -1922,7 +1998,10 @@ function AdminReservas() {
 										placeholder="Aeropuerto Temuco"
 										value={newReservaForm.origen}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, origen: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												origen: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -1935,7 +2014,10 @@ function AdminReservas() {
 										placeholder="Pucón"
 										value={newReservaForm.destino}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, destino: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												destino: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -1948,7 +2030,10 @@ function AdminReservas() {
 										type="date"
 										value={newReservaForm.fecha}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, fecha: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												fecha: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -1959,7 +2044,10 @@ function AdminReservas() {
 										type="time"
 										value={newReservaForm.hora}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, hora: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												hora: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -2005,7 +2093,10 @@ function AdminReservas() {
 									id="new-idavuelta"
 									checked={newReservaForm.idaVuelta}
 									onChange={(e) =>
-										setNewReservaForm({ ...newReservaForm, idaVuelta: e.target.checked })
+										setNewReservaForm({
+											...newReservaForm,
+											idaVuelta: e.target.checked,
+										})
 									}
 									className="w-4 h-4"
 								/>
@@ -2073,7 +2164,10 @@ function AdminReservas() {
 										placeholder="Hotel Gran Pucón"
 										value={newReservaForm.hotel}
 										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, hotel: e.target.value })
+											setNewReservaForm({
+												...newReservaForm,
+												hotel: e.target.value,
+											})
 										}
 									/>
 								</div>
@@ -2189,7 +2283,10 @@ function AdminReservas() {
 									<Select
 										value={newReservaForm.estadoPago}
 										onValueChange={(value) =>
-											setNewReservaForm({ ...newReservaForm, estadoPago: value })
+											setNewReservaForm({
+												...newReservaForm,
+												estadoPago: value,
+											})
 										}
 									>
 										<SelectTrigger id="new-estadopago">
@@ -2207,7 +2304,10 @@ function AdminReservas() {
 										<Select
 											value={newReservaForm.metodoPago}
 											onValueChange={(value) =>
-												setNewReservaForm({ ...newReservaForm, metodoPago: value })
+												setNewReservaForm({
+													...newReservaForm,
+													metodoPago: value,
+												})
 											}
 										>
 											<SelectTrigger id="new-metodopago">
@@ -2215,7 +2315,9 @@ function AdminReservas() {
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="efectivo">Efectivo</SelectItem>
-												<SelectItem value="transferencia">Transferencia</SelectItem>
+												<SelectItem value="transferencia">
+													Transferencia
+												</SelectItem>
 												<SelectItem value="mercadopago">MercadoPago</SelectItem>
 												<SelectItem value="flow">Flow</SelectItem>
 											</SelectContent>
@@ -2290,7 +2392,9 @@ function AdminReservas() {
 								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Email</Label>
-										<p className="font-medium">{historialCliente.cliente.email}</p>
+										<p className="font-medium">
+											{historialCliente.cliente.email}
+										</p>
 									</div>
 									<div>
 										<Label className="text-muted-foreground">Teléfono</Label>
@@ -2301,7 +2405,9 @@ function AdminReservas() {
 									{historialCliente.cliente.rut && (
 										<div>
 											<Label className="text-muted-foreground">RUT</Label>
-											<p className="font-medium">{historialCliente.cliente.rut}</p>
+											<p className="font-medium">
+												{historialCliente.cliente.rut}
+											</p>
 										</div>
 									)}
 									<div>
@@ -2324,7 +2430,9 @@ function AdminReservas() {
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 								<Card>
 									<CardContent className="p-4">
-										<p className="text-sm text-muted-foreground">Total Reservas</p>
+										<p className="text-sm text-muted-foreground">
+											Total Reservas
+										</p>
 										<p className="text-2xl font-bold">
 											{historialCliente.estadisticas.totalReservas}
 										</p>
@@ -2332,7 +2440,9 @@ function AdminReservas() {
 								</Card>
 								<Card>
 									<CardContent className="p-4">
-										<p className="text-sm text-muted-foreground">Reservas Pagadas</p>
+										<p className="text-sm text-muted-foreground">
+											Reservas Pagadas
+										</p>
 										<p className="text-2xl font-bold text-green-600">
 											{historialCliente.estadisticas.totalPagadas}
 										</p>
@@ -2350,9 +2460,13 @@ function AdminReservas() {
 								</Card>
 								<Card>
 									<CardContent className="p-4">
-										<p className="text-sm text-muted-foreground">Total Gastado</p>
+										<p className="text-sm text-muted-foreground">
+											Total Gastado
+										</p>
 										<p className="text-2xl font-bold text-blue-600">
-											{formatCurrency(historialCliente.estadisticas.totalGastado)}
+											{formatCurrency(
+												historialCliente.estadisticas.totalGastado
+											)}
 										</p>
 									</CardContent>
 								</Card>
@@ -2387,7 +2501,8 @@ function AdminReservas() {
 														</div>
 														<div className="flex items-center gap-2 mt-1">
 															<Calendar className="w-3 h-3" />
-															{formatDate(reserva.fecha)} • {reserva.hora || "-"}
+															{formatDate(reserva.fecha)} •{" "}
+															{reserva.hora || "-"}
 														</div>
 													</div>
 												</div>
@@ -2418,7 +2533,9 @@ function AdminReservas() {
 			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>¿Eliminar reservas seleccionadas?</AlertDialogTitle>
+						<AlertDialogTitle>
+							¿Eliminar reservas seleccionadas?
+						</AlertDialogTitle>
 						<AlertDialogDescription>
 							Esta acción eliminará permanentemente {selectedReservas.length}{" "}
 							reserva(s). Esta acción no se puede deshacer.
@@ -2514,10 +2631,7 @@ function AdminReservas() {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<div className="py-4">
-						<Select
-							value={bulkEstadoPago}
-							onValueChange={setBulkEstadoPago}
-						>
+						<Select value={bulkEstadoPago} onValueChange={setBulkEstadoPago}>
 							<SelectTrigger>
 								<SelectValue placeholder="Selecciona un estado de pago" />
 							</SelectTrigger>
