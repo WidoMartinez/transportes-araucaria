@@ -97,18 +97,18 @@ async function addClienteFields() {
 			console.log("ℹ️  Tabla clientes ya existe, omitiendo creación");
 		}
 
-		// Verificar si el campo clienteId existe en reservas
+		// Verificar si el campo cliente_id existe en reservas (snake_case en MySQL)
 		const reservasColumns = await queryInterface.describeTable("reservas").catch(() => ({}));
 
-		if (!reservasColumns.clienteId) {
-			console.log("📦 Agregando campo clienteId a reservas...");
-			await queryInterface.addColumn("reservas", "clienteId", {
+		if (!reservasColumns.cliente_id && !reservasColumns.clienteId) {
+			console.log("📦 Agregando campo cliente_id a reservas...");
+			await queryInterface.addColumn("reservas", "cliente_id", {
 				type: sequelize.Sequelize.INTEGER,
 				allowNull: true,
 			});
-			console.log("✅ Campo clienteId agregado");
+			console.log("✅ Campo cliente_id agregado");
 		} else {
-			console.log("ℹ️  Campo clienteId ya existe en reservas");
+			console.log("ℹ️  Campo cliente_id ya existe en reservas");
 		}
 
 		if (!reservasColumns.rut) {
@@ -122,13 +122,13 @@ async function addClienteFields() {
 			console.log("ℹ️  Campo rut ya existe en reservas");
 		}
 
-		// Agregar índices a reservas si no existen
+		// Agregar índices a reservas si no existen (usando snake_case)
 		try {
 			console.log("📦 Agregando índices a reservas...");
-			await queryInterface.addIndex("reservas", ["clienteId"], {
-				name: "idx_reservas_clienteId",
+			await queryInterface.addIndex("reservas", ["cliente_id"], {
+				name: "idx_reservas_cliente_id",
 			}).catch(() => {
-				console.log("ℹ️  Índice idx_reservas_clienteId ya existe");
+				console.log("ℹ️  Índice idx_reservas_cliente_id ya existe");
 			});
 
 			await queryInterface.addIndex("reservas", ["rut"], {
