@@ -4,7 +4,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { LoaderCircle, DollarSign, MapPin, User, Mail, Phone, Share2, Key, Calendar, Clock } from "lucide-react";
+import { LoaderCircle, DollarSign, MapPin, User, Mail, Phone, Key, Calendar, Clock } from "lucide-react";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 
@@ -25,7 +25,6 @@ function PagoPersonalizado() {
 
 	const [loadingGateway, setLoadingGateway] = useState(null);
 	const [errors, setErrors] = useState({});
-	const [showShareLink, setShowShareLink] = useState(false);
 	const [codigoValido, setCodigoValido] = useState(false);
 	const [errorCodigo, setErrorCodigo] = useState("");
 
@@ -306,45 +305,6 @@ function PagoPersonalizado() {
 		}
 	};
 
-	const generateShareLink = () => {
-		const baseUrl = window.location.origin + window.location.pathname;
-		
-		// Si hay un código válido, compartir con el código
-		if (formData.codigo && codigoValido) {
-			const params = new URLSearchParams({
-				view: "pago-personalizado",
-				codigo: formData.codigo,
-			});
-			
-			const link = `${baseUrl}?${params.toString()}`;
-			
-			navigator.clipboard.writeText(link).then(() => {
-				setShowShareLink(true);
-				setTimeout(() => setShowShareLink(false), 3000);
-			}).catch(() => {
-				alert(`Link generado:\n${link}`);
-			});
-		} else {
-			// Compartir con parámetros completos
-			const params = new URLSearchParams({
-				view: "pago-personalizado",
-				origen: formData.origen,
-				destino: formData.destino,
-				monto: formData.monto,
-				descripcion: formData.descripcion || "",
-			});
-			
-			const link = `${baseUrl}?${params.toString()}`;
-			
-			navigator.clipboard.writeText(link).then(() => {
-				setShowShareLink(true);
-				setTimeout(() => setShowShareLink(false), 3000);
-			}).catch(() => {
-				alert(`Link generado:\n${link}`);
-			});
-		}
-	};
-
 	const isFormValid = useMemo(() => {
 		return (
 			formData.origen.trim() &&
@@ -359,14 +319,6 @@ function PagoPersonalizado() {
 			formData.hora.trim()
 		);
 	}, [formData]);
-
-	const canGenerateLink = useMemo(() => {
-		return (
-			formData.origen.trim() &&
-			formData.destino.trim() &&
-			parseInt(formData.monto) > 0
-		);
-	}, [formData.origen, formData.destino, formData.monto]);
 
 	return (
 		<section className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4">
@@ -384,43 +336,37 @@ function PagoPersonalizado() {
 					</Badge>
 				</div>
 
-				<Card className="shadow-lg">
-					<CardHeader>
-						<CardTitle className="text-2xl">Ingresa tu código de pago</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-6">
-						{/* Campo de código */}
-						<div className="space-y-2">
-							<Label htmlFor="codigo" className="text-base font-medium flex items-center gap-2">
-								<Key className="w-4 h-4" />
-								Código de pago
-							</Label>
-							<Input
-								id="codigo"
-								name="codigo"
-								value={formData.codigo}
-								onChange={handleCodigoChange}
-								placeholder="Ej: A-CARAHUE-35"
-								className={`text-lg font-mono ${errorCodigo ? "border-red-500" : codigoValido ? "border-green-500" : ""}`}
-							/>
-							{errorCodigo && (
-								<p className="text-sm text-red-500">{errorCodigo}</p>
-							)}
-							{codigoValido && (
-								<p className="text-sm text-green-600">✓ Código válido - Datos cargados automáticamente</p>
-							)}
-							<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-								<p className="text-sm text-blue-800">
-									<strong>💡 Formato del código:</strong> ORIGEN-DESTINO-MONTO
-								</p>
-								<p className="text-xs text-blue-600 mt-1">
-									Ejemplos: <code className="bg-white px-1 rounded">A-CARAHUE-35</code> (Aeropuerto → Carahue por $35.000), 
-									<code className="bg-white px-1 mx-1 rounded">TEMUCO-PUCON-60</code> (Temuco → Pucón por $60.000)
+				{/* Solo mostrar campo de código si NO viene de URL */}
+				{!codigoValido && (
+					<Card className="shadow-lg">
+						<CardHeader>
+							<CardTitle className="text-2xl">Ingresa tu código de pago</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{/* Campo de código */}
+							<div className="space-y-2">
+								<Label htmlFor="codigo" className="text-base font-medium flex items-center gap-2">
+									<Key className="w-4 h-4" />
+									Código de pago
+								</Label>
+								<Input
+									id="codigo"
+									name="codigo"
+									value={formData.codigo}
+									onChange={handleCodigoChange}
+									placeholder="Ingresa el código que recibiste"
+									className={`text-lg font-mono ${errorCodigo ? "border-red-500" : codigoValido ? "border-green-500" : ""}`}
+								/>
+								{errorCodigo && (
+									<p className="text-sm text-red-500">{errorCodigo}</p>
+								)}
+								<p className="text-xs text-gray-500">
+									Ingresa el código que te proporcionó el administrador
 								</p>
 							</div>
-						</div>
-					</CardContent>
-				</Card>
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Mostrar datos del traslado solo cuando hay código válido o datos cargados */}
 				{(codigoValido || (formData.origen && formData.destino && formData.monto)) && (
@@ -506,31 +452,6 @@ function PagoPersonalizado() {
 								onChange={handleInputChange}
 								placeholder="Ej: Transfer con equipaje especial"
 							/>
-							<p className="text-xs text-gray-500">
-								Si está vacío, se usará: "Traslado personalizado {formData.origen || "[origen]"} → {formData.destino || "[destino]"}"
-							</p>
-						</div>
-
-						{/* Botón para generar link compartible */}
-						<div className="border-t pt-4">
-							<Button
-								type="button"
-								variant="outline"
-								onClick={generateShareLink}
-								disabled={!canGenerateLink}
-								className="w-full md:w-auto"
-							>
-								<Share2 className="w-4 h-4 mr-2" />
-								Generar link compartible
-							</Button>
-							{showShareLink && (
-								<p className="text-sm text-green-600 mt-2">
-									✓ Link copiado al portapapeles
-								</p>
-							)}
-							<p className="text-xs text-gray-500 mt-2">
-								Genera un enlace con estos datos pre-llenados para compartir con tu cliente
-							</p>
 						</div>
 
 						{/* Datos del cliente */}
