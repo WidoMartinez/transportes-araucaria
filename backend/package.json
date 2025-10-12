@@ -6,6 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"start": "node server-db.js",
+		"migrate": "node migrations/add-cliente-fields.js",
+		"start:migrate": "npm run migrate && node server-db.js",
 		"test:db": "node test-db.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},

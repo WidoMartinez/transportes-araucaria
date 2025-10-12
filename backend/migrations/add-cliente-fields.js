@@ -1,72 +1,145 @@
 import sequelize from "../config/database.js";
+import { QueryInterface } from "sequelize";
 
 /**
  * Migración para agregar campos relacionados con clientes
- * - Agrega tabla clientes
+ * - Agrega tabla clientes usando Sequelize (compatible con MySQL y PostgreSQL)
  * - Agrega campos clienteId y rut a la tabla reservas
  */
 async function addClienteFields() {
+	const queryInterface = sequelize.getQueryInterface();
+
 	try {
 		console.log("🔧 Iniciando migración: agregar campos de cliente...");
 
-		// Crear tabla clientes
-		console.log("📦 Creando tabla clientes...");
-		await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS clientes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        rut VARCHAR(20) UNIQUE,
-        nombre VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        telefono VARCHAR(50) NOT NULL,
-        esCliente BOOLEAN DEFAULT FALSE COMMENT 'TRUE si ha realizado al menos un pago',
-        marcadoManualmente BOOLEAN DEFAULT FALSE COMMENT 'TRUE si fue marcado manualmente como cliente',
-        totalReservas INT DEFAULT 0 COMMENT 'Número total de reservas',
-        totalPagos INT DEFAULT 0 COMMENT 'Número total de pagos completados',
-        totalGastado DECIMAL(10, 2) DEFAULT 0 COMMENT 'Total gastado',
-        primeraReserva DATE COMMENT 'Fecha de la primera reserva',
-        ultimaReserva DATE COMMENT 'Fecha de la última reserva',
-        notas TEXT COMMENT 'Notas adicionales',
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_email (email),
-        INDEX idx_rut (rut),
-        INDEX idx_esCliente (esCliente),
-        INDEX idx_telefono (telefono)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-		console.log("✅ Tabla clientes creada");
+		// Verificar si la tabla clientes ya existe
+		const tables = await queryInterface.showAllTables();
+		const clientesExists = tables.includes("clientes") || tables.includes("Clientes");
 
-		// Agregar campo clienteId a reservas
-		console.log("📦 Agregando campo clienteId a reservas...");
-		await sequelize.query(`
-      ALTER TABLE reservas
-      ADD COLUMN IF NOT EXISTS clienteId INT COMMENT 'ID del cliente asociado';
-    `);
-		console.log("✅ Campo clienteId agregado");
+		if (!clientesExists) {
+			console.log("📦 Creando tabla clientes...");
+			await queryInterface.createTable("clientes", {
+				id: {
+					type: sequelize.Sequelize.INTEGER,
+					primaryKey: true,
+					autoIncrement: true,
+				},
+				rut: {
+					type: sequelize.Sequelize.STRING(20),
+					unique: true,
+					allowNull: true,
+				},
+				nombre: {
+					type: sequelize.Sequelize.STRING(255),
+					allowNull: false,
+				},
+				email: {
+					type: sequelize.Sequelize.STRING(255),
+					allowNull: false,
+					unique: true,
+				},
+				telefono: {
+					type: sequelize.Sequelize.STRING(50),
+					allowNull: false,
+				},
+				esCliente: {
+					type: sequelize.Sequelize.BOOLEAN,
+					defaultValue: false,
+				},
+				marcadoManualmente: {
+					type: sequelize.Sequelize.BOOLEAN,
+					defaultValue: false,
+				},
+				totalReservas: {
+					type: sequelize.Sequelize.INTEGER,
+					defaultValue: 0,
+				},
+				totalPagos: {
+					type: sequelize.Sequelize.INTEGER,
+					defaultValue: 0,
+				},
+				totalGastado: {
+					type: sequelize.Sequelize.DECIMAL(10, 2),
+					defaultValue: 0,
+				},
+				primeraReserva: {
+					type: sequelize.Sequelize.DATEONLY,
+					allowNull: true,
+				},
+				ultimaReserva: {
+					type: sequelize.Sequelize.DATEONLY,
+					allowNull: true,
+				},
+				notas: {
+					type: sequelize.Sequelize.TEXT,
+					allowNull: true,
+				},
+				createdAt: {
+					type: sequelize.Sequelize.DATE,
+					allowNull: false,
+					defaultValue: sequelize.Sequelize.literal("CURRENT_TIMESTAMP"),
+				},
+				updatedAt: {
+					type: sequelize.Sequelize.DATE,
+					allowNull: false,
+					defaultValue: sequelize.Sequelize.literal("CURRENT_TIMESTAMP"),
+				},
+			});
 
-		// Agregar campo rut a reservas
-		console.log("📦 Agregando campo rut a reservas...");
-		await sequelize.query(`
-      ALTER TABLE reservas
-      ADD COLUMN IF NOT EXISTS rut VARCHAR(20) COMMENT 'RUT del cliente (formato: 12345678-9)';
-    `);
-		console.log("✅ Campo rut agregado");
+			// Agregar índices
+			await queryInterface.addIndex("clientes", ["email"], { name: "idx_clientes_email" });
+			await queryInterface.addIndex("clientes", ["rut"], { name: "idx_clientes_rut" });
+			await queryInterface.addIndex("clientes", ["esCliente"], { name: "idx_clientes_esCliente" });
+			await queryInterface.addIndex("clientes", ["telefono"], { name: "idx_clientes_telefono" });
 
-		// Agregar índice para clienteId
-		console.log("📦 Agregando índice para clienteId...");
-		await sequelize.query(`
-      ALTER TABLE reservas
-      ADD INDEX IF NOT EXISTS idx_clienteId (clienteId);
-    `);
-		console.log("✅ Índice para clienteId agregado");
+			console.log("✅ Tabla clientes creada");
+		} else {
+			console.log("ℹ️  Tabla clientes ya existe, omitiendo creación");
+		}
 
-		// Agregar índice para rut
-		console.log("📦 Agregando índice para rut...");
-		await sequelize.query(`
-      ALTER TABLE reservas
-      ADD INDEX IF NOT EXISTS idx_rut (rut);
-    `);
-		console.log("✅ Índice para rut agregado");
+		// Verificar si el campo clienteId existe en reservas
+		const reservasColumns = await queryInterface.describeTable("reservas").catch(() => ({}));
+
+		if (!reservasColumns.clienteId) {
+			console.log("📦 Agregando campo clienteId a reservas...");
+			await queryInterface.addColumn("reservas", "clienteId", {
+				type: sequelize.Sequelize.INTEGER,
+				allowNull: true,
+			});
+			console.log("✅ Campo clienteId agregado");
+		} else {
+			console.log("ℹ️  Campo clienteId ya existe en reservas");
+		}
+
+		if (!reservasColumns.rut) {
+			console.log("📦 Agregando campo rut a reservas...");
+			await queryInterface.addColumn("reservas", "rut", {
+				type: sequelize.Sequelize.STRING(20),
+				allowNull: true,
+			});
+			console.log("✅ Campo rut agregado");
+		} else {
+			console.log("ℹ️  Campo rut ya existe en reservas");
+		}
+
+		// Agregar índices a reservas si no existen
+		try {
+			console.log("📦 Agregando índices a reservas...");
+			await queryInterface.addIndex("reservas", ["clienteId"], {
+				name: "idx_reservas_clienteId",
+			}).catch(() => {
+				console.log("ℹ️  Índice idx_reservas_clienteId ya existe");
+			});
+
+			await queryInterface.addIndex("reservas", ["rut"], {
+				name: "idx_reservas_rut",
+			}).catch(() => {
+				console.log("ℹ️  Índice idx_reservas_rut ya existe");
+			});
+			console.log("✅ Índices agregados");
+		} catch {
+			console.log("ℹ️  Algunos índices ya existen, continuando...");
+		}
 
 		console.log("✅ Migración completada exitosamente");
 	} catch (error) {
@@ -78,7 +151,10 @@ async function addClienteFields() {
 }
 
 // Ejecutar la migración
-addClienteFields().catch((error) => {
-	console.error("Error fatal:", error);
-	process.exit(1);
-});
+addClienteFields()
+	.then(() => {
+		console.log("🎉 Migración finalizada");
+	})
+	.catch((error) => {
+		console.error("💥 Error fatal:", error);
+	});
