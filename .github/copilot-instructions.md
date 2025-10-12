@@ -14,3 +14,5 @@ sugiere hacer commints cuando hayan cambios pendientes de ser comiteados y sea n
 no modificar ningun archivo php ya que estos estan en el servidor de hostinger donde tambien se encuentra el front end
 Todos los PR deben generarse en español, todos los campos posibles
 PULL REQUEST en español
+SI creas ramas para los PR procurar escribir en español
+Escribir los commits en español, todos
