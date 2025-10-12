@@ -150,7 +150,7 @@ function HeroExpress({
 		setCurrentStep(1);
 	};
 
-	// Validaciones del segundo paso (mínimas para pago)
+	// Validaciones del segundo paso (mínimas para captura de datos)
 	const handleStepTwoNext = async () => {
 		if (!formData.nombre?.trim()) {
 			setStepError("Ingresa tu nombre completo.");
@@ -181,13 +181,13 @@ function HeroExpress({
 		}
 
 		if (!paymentConsent) {
-			setStepError("Debes aceptar los términos para continuar con el pago.");
+			setStepError("Debes aceptar los términos para continuar.");
 			return;
 		}
 
 		setStepError("");
 
-		// Procesar la reserva express (sin hora específica)
+		// Captura silenciosa: Guardar datos del cliente antes del pago
 		const result = await onSubmitWizard();
 
 		if (!result.success) {
@@ -199,8 +199,10 @@ function HeroExpress({
 			return;
 		}
 
-		// Si llegamos aquí, la reserva se creó exitosamente
-		// El pago se maneja directamente desde aquí
+		// Si llegamos aquí, los datos se guardaron exitosamente
+		// Mostrar mensaje de confirmación
+		setStepError("");
+		alert("✅ ¡Reserva registrada! Ahora puedes proceder con el pago para confirmarla o te contactaremos para coordinar los detalles.");
 	};
 
 	const handleStepBack = () => {
@@ -819,8 +821,11 @@ function HeroExpress({
 											todosLosCamposCompletos && (
 												<div className="space-y-4">
 													<h4 className="font-semibold text-lg">
-														💳 Selecciona tu opción de pago
+														💳 Opción de pago (Opcional - Recomendado)
 													</h4>
+													<p className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 rounded-lg p-3">
+														💡 <strong>Puedes pagar ahora</strong> para confirmar tu reserva al instante, o <strong>guardar tu reserva</strong> y te contactaremos para coordinar el pago.
+													</p>
 
 													{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
 													{!selectedPaymentType && (
@@ -966,7 +971,7 @@ function HeroExpress({
 												</div>
 											)}
 
-										{/* Consentimiento para pago */}
+										{/* Consentimiento para captura de datos */}
 										<div className="border border-gray-200 rounded-lg p-4 space-y-3">
 											<div className="flex items-start gap-3">
 												<Checkbox
@@ -981,52 +986,62 @@ function HeroExpress({
 													className="text-sm leading-relaxed text-muted-foreground cursor-pointer"
 												>
 													✅ Acepto recibir la confirmación por email y
-													WhatsApp, y comprendo que podré especificar la hora
-													exacta y detalles adicionales después de confirmar el
-													pago.
+													WhatsApp. Comprendo que mi reserva quedará registrada
+													y podré pagar ahora o coordinar el pago posteriormente.
+													Podré especificar la hora exacta y detalles adicionales
+													después.
 												</label>
 											</div>
 										</div>
 
 										{/* Navegación */}
-										<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-											<Button
-												type="button"
-												variant="outline"
-												onClick={handleStepBack}
-												disabled={isSubmitting}
-												className="w-full sm:w-auto"
-											>
-												← Volver
-											</Button>
-
-											{requiereCotizacionManual ? (
-												<Button
-													asChild
-													className="w-full sm:w-auto"
-													variant="secondary"
-												>
-													<a href="#contacto">
-														Solicitar cotización personalizada
-													</a>
-												</Button>
-											) : (
+										<div className="space-y-3">
+											{!requiereCotizacionManual && (
+												<div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+													<p className="text-sm text-green-800">
+														<strong>📝 Guardar reserva:</strong> Registra tus datos ahora y elige pagar al instante (arriba) o te contactaremos para coordinar.
+													</p>
+												</div>
+											)}
+											<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
 												<Button
 													type="button"
-													onClick={handleStepTwoNext}
-													disabled={isSubmitting || !paymentConsent}
-													className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
+													variant="outline"
+													onClick={handleStepBack}
+													disabled={isSubmitting}
+													className="w-full sm:w-auto"
 												>
-													{isSubmitting ? (
-														<>
-															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-															Procesando reserva...
-														</>
-													) : (
-														"Confirmar reserva →"
-													)}
+													← Volver
 												</Button>
-											)}
+
+												{requiereCotizacionManual ? (
+													<Button
+														asChild
+														className="w-full sm:w-auto"
+														variant="secondary"
+													>
+														<a href="#contacto">
+															Solicitar cotización personalizada
+														</a>
+													</Button>
+												) : (
+													<Button
+														type="button"
+														onClick={handleStepTwoNext}
+														disabled={isSubmitting || !paymentConsent}
+														className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
+													>
+														{isSubmitting ? (
+															<>
+																<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+																Guardando reserva...
+															</>
+														) : (
+															"Guardar reserva →"
+														)}
+													</Button>
+												)}
+											</div>
 										</div>
 									</div>
 								)}
