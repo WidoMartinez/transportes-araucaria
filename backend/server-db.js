@@ -1959,6 +1959,52 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 	}
 });
 
+// Eliminar una reserva
+app.delete("/api/reservas/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await reserva.destroy();
+
+		res.json({
+			success: true,
+			message: "Reserva eliminada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Cambiar estado de una reserva
+app.put("/api/reservas/:id/estado", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { estado } = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await reserva.update({ estado });
+
+		res.json({
+			success: true,
+			message: "Estado actualizado",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error actualizando estado:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Endpoint para generar pagos desde el frontend
 app.post("/create-payment", async (req, res) => {
 	const { gateway, amount, description, email } = req.body || {};

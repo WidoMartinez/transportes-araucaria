@@ -52,7 +52,20 @@ import {
 	Star,
 	History,
 	Settings2,
+	Trash2,
+	CheckSquare,
+	Square,
 } from "lucide-react";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 function AdminReservas() {
 	const [reservas, setReservas] = useState([]);
@@ -157,6 +170,15 @@ function AdminReservas() {
 	// Estado para modal de historial de cliente
 	const [showHistorialDialog, setShowHistorialDialog] = useState(false);
 	const [historialCliente, setHistorialCliente] = useState(null);
+
+	// Estados para acciones masivas
+	const [selectedReservas, setSelectedReservas] = useState([]);
+	const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+	const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
+	const [showBulkPaymentDialog, setShowBulkPaymentDialog] = useState(false);
+	const [bulkEstado, setBulkEstado] = useState("");
+	const [bulkEstadoPago, setBulkEstadoPago] = useState("");
+	const [processingBulk, setProcessingBulk] = useState(false);
 
 	const apiUrl =
 		import.meta.env.VITE_API_URL ||
@@ -590,6 +612,119 @@ function AdminReservas() {
 		}
 	};
 
+	// Seleccionar/deseleccionar todas las reservas
+	const toggleSelectAll = () => {
+		if (selectedReservas.length === reservasFiltradas.length) {
+			setSelectedReservas([]);
+		} else {
+			setSelectedReservas(reservasFiltradas.map((r) => r.id));
+		}
+	};
+
+	// Seleccionar/deseleccionar una reserva
+	const toggleSelectReserva = (id) => {
+		if (selectedReservas.includes(id)) {
+			setSelectedReservas(selectedReservas.filter((rid) => rid !== id));
+		} else {
+			setSelectedReservas([...selectedReservas, id]);
+		}
+	};
+
+	// Eliminar reservas seleccionadas
+	const handleBulkDelete = async () => {
+		setProcessingBulk(true);
+		try {
+			const promises = selectedReservas.map((id) =>
+				fetch(`${apiUrl}/api/reservas/${id}`, {
+					method: "DELETE",
+				})
+			);
+
+			await Promise.all(promises);
+
+			await fetchReservas();
+			await fetchEstadisticas();
+			setSelectedReservas([]);
+			setShowBulkDeleteDialog(false);
+			alert(`${selectedReservas.length} reserva(s) eliminada(s) exitosamente`);
+		} catch (error) {
+			console.error("Error eliminando reservas:", error);
+			alert("Error al eliminar algunas reservas");
+		} finally {
+			setProcessingBulk(false);
+		}
+	};
+
+	// Cambiar estado de reservas seleccionadas
+	const handleBulkChangeStatus = async () => {
+		if (!bulkEstado) {
+			alert("Por favor selecciona un estado");
+			return;
+		}
+
+		setProcessingBulk(true);
+		try {
+			const promises = selectedReservas.map((id) =>
+				fetch(`${apiUrl}/api/reservas/${id}/estado`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ estado: bulkEstado }),
+				})
+			);
+
+			await Promise.all(promises);
+
+			await fetchReservas();
+			await fetchEstadisticas();
+			setSelectedReservas([]);
+			setShowBulkStatusDialog(false);
+			setBulkEstado("");
+			alert(
+				`Estado actualizado para ${selectedReservas.length} reserva(s)`
+			);
+		} catch (error) {
+			console.error("Error actualizando estado:", error);
+			alert("Error al actualizar el estado de algunas reservas");
+		} finally {
+			setProcessingBulk(false);
+		}
+	};
+
+	// Cambiar estado de pago de reservas seleccionadas
+	const handleBulkChangePayment = async () => {
+		if (!bulkEstadoPago) {
+			alert("Por favor selecciona un estado de pago");
+			return;
+		}
+
+		setProcessingBulk(true);
+		try {
+			const promises = selectedReservas.map((id) =>
+				fetch(`${apiUrl}/api/reservas/${id}/pago`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ estadoPago: bulkEstadoPago }),
+				})
+			);
+
+			await Promise.all(promises);
+
+			await fetchReservas();
+			await fetchEstadisticas();
+			setSelectedReservas([]);
+			setShowBulkPaymentDialog(false);
+			setBulkEstadoPago("");
+			alert(
+				`Estado de pago actualizado para ${selectedReservas.length} reserva(s)`
+			);
+		} catch (error) {
+			console.error("Error actualizando estado de pago:", error);
+			alert("Error al actualizar el estado de pago de algunas reservas");
+		} finally {
+			setProcessingBulk(false);
+		}
+	};
+
 	if (loading && reservas.length === 0) {
 		return (
 			<div className="flex items-center justify-center h-64">
@@ -858,10 +993,66 @@ function AdminReservas() {
 						</div>
 					)}
 
+					{/* Barra de acciones masivas */}
+					{selectedReservas.length > 0 && (
+						<div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md mb-4">
+							<div className="flex items-center justify-between flex-wrap gap-2">
+								<div className="flex items-center gap-2">
+									<CheckSquare className="w-4 h-4 text-blue-600" />
+									<span className="font-medium text-blue-900">
+										{selectedReservas.length} reserva(s) seleccionada(s)
+									</span>
+								</div>
+								<div className="flex gap-2 flex-wrap">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setShowBulkStatusDialog(true)}
+									>
+										Cambiar Estado
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setShowBulkPaymentDialog(true)}
+									>
+										Cambiar Estado Pago
+									</Button>
+									<Button
+										variant="destructive"
+										size="sm"
+										onClick={() => setShowBulkDeleteDialog(true)}
+									>
+										<Trash2 className="w-4 h-4 mr-1" />
+										Eliminar
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => setSelectedReservas([])}
+									>
+										Cancelar
+									</Button>
+								</div>
+							</div>
+						</div>
+					)}
+
 					<div className="overflow-x-auto">
 						<Table>
 							<TableHeader>
 								<TableRow>
+									<TableHead className="w-12">
+										<input
+											type="checkbox"
+											checked={
+												reservasFiltradas.length > 0 &&
+												selectedReservas.length === reservasFiltradas.length
+											}
+											onChange={toggleSelectAll}
+											className="w-4 h-4 cursor-pointer"
+										/>
+									</TableHead>
 									{columnasVisibles.id && <TableHead>ID</TableHead>}
 									{columnasVisibles.cliente && <TableHead>Cliente</TableHead>}
 									{columnasVisibles.contacto && <TableHead>Contacto</TableHead>}
@@ -882,7 +1073,7 @@ function AdminReservas() {
 								{reservasFiltradas.length === 0 ? (
 									<TableRow>
 										<TableCell
-											colSpan={Object.values(columnasVisibles).filter(Boolean).length}
+											colSpan={Object.values(columnasVisibles).filter(Boolean).length + 1}
 											className="text-center py-8"
 										>
 											<div className="text-muted-foreground">
@@ -894,6 +1085,14 @@ function AdminReservas() {
 								) : (
 									reservasFiltradas.map((reserva) => (
 										<TableRow key={reserva.id}>
+											<TableCell className="w-12">
+												<input
+													type="checkbox"
+													checked={selectedReservas.includes(reserva.id)}
+													onChange={() => toggleSelectReserva(reserva.id)}
+													className="w-4 h-4 cursor-pointer"
+												/>
+											</TableCell>
 											{columnasVisibles.id && (
 												<TableCell className="font-medium">#{reserva.id}</TableCell>
 											)}
@@ -2208,6 +2407,145 @@ function AdminReservas() {
 					)}
 				</DialogContent>
 			</Dialog>
+
+			{/* Dialog de confirmación para eliminar masivamente */}
+			<AlertDialog
+				open={showBulkDeleteDialog}
+				onOpenChange={setShowBulkDeleteDialog}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Eliminar reservas seleccionadas?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Esta acción eliminará permanentemente {selectedReservas.length}{" "}
+							reserva(s). Esta acción no se puede deshacer.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={processingBulk}>
+							Cancelar
+						</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleBulkDelete}
+							disabled={processingBulk}
+							className="bg-red-600 hover:bg-red-700"
+						>
+							{processingBulk ? (
+								<>
+									<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+									Eliminando...
+								</>
+							) : (
+								"Eliminar"
+							)}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Dialog para cambio masivo de estado */}
+			<AlertDialog
+				open={showBulkStatusDialog}
+				onOpenChange={setShowBulkStatusDialog}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Cambiar estado de reservas seleccionadas
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							Selecciona el nuevo estado para {selectedReservas.length}{" "}
+							reserva(s):
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<div className="py-4">
+						<Select value={bulkEstado} onValueChange={setBulkEstado}>
+							<SelectTrigger>
+								<SelectValue placeholder="Selecciona un estado" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="pendiente">Pendiente</SelectItem>
+								<SelectItem value="pendiente_detalles">
+									Pendiente Detalles
+								</SelectItem>
+								<SelectItem value="confirmada">Confirmada</SelectItem>
+								<SelectItem value="cancelada">Cancelada</SelectItem>
+								<SelectItem value="completada">Completada</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={processingBulk}>
+							Cancelar
+						</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleBulkChangeStatus}
+							disabled={processingBulk || !bulkEstado}
+						>
+							{processingBulk ? (
+								<>
+									<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+									Actualizando...
+								</>
+							) : (
+								"Actualizar Estado"
+							)}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Dialog para cambio masivo de estado de pago */}
+			<AlertDialog
+				open={showBulkPaymentDialog}
+				onOpenChange={setShowBulkPaymentDialog}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							Cambiar estado de pago de reservas seleccionadas
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							Selecciona el nuevo estado de pago para {selectedReservas.length}{" "}
+							reserva(s):
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<div className="py-4">
+						<Select
+							value={bulkEstadoPago}
+							onValueChange={setBulkEstadoPago}
+						>
+							<SelectTrigger>
+								<SelectValue placeholder="Selecciona un estado de pago" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="pendiente">Pendiente</SelectItem>
+								<SelectItem value="pagado">Pagado</SelectItem>
+								<SelectItem value="fallido">Fallido</SelectItem>
+								<SelectItem value="reembolsado">Reembolsado</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={processingBulk}>
+							Cancelar
+						</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleBulkChangePayment}
+							disabled={processingBulk || !bulkEstadoPago}
+						>
+							{processingBulk ? (
+								<>
+									<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+									Actualizando...
+								</>
+							) : (
+								"Actualizar Estado de Pago"
+							)}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
