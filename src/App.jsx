@@ -1347,7 +1347,11 @@ function App() {
 				}
 			}
 
-			return { success: true, reservaId: result.reservaId };
+			return { 
+				success: true, 
+				reservaId: result.reservaId,
+				codigoReserva: result.codigoReserva // Devolver el código generado
+			};
 		} catch (error) {
 			console.error("Error al enviar reserva express:", error);
 			return { success: false, error: "server", message: error.message };

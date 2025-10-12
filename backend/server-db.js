@@ -62,6 +62,13 @@ const formatearRUT = (rut) => {
 	return `${cuerpo}-${dv}`;
 };
 
+// Función para generar código único de reserva
+const generarCodigoReserva = () => {
+	const timestamp = Date.now().toString(36).toUpperCase();
+	const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+	return `RES-${timestamp}${random}`;
+};
+
 const parsePromotionMetadata = (record) => {
 	if (!record || typeof record.descripcion !== "string") {
 		return null;
@@ -1504,6 +1511,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
+		// Generar código único de reserva
+		const codigoReserva = generarCodigoReserva();
+
 		// Crear reserva express con campos mínimos
 		const reservaExpress = await Reserva.create({
 			nombre: datosReserva.nombre,
@@ -1546,21 +1556,78 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			userAgent: req.get("User-Agent") || "",
 			codigoDescuento: datosReserva.codigoDescuento || "",
 			estadoPago: "pendiente",
+			observaciones: codigoReserva, // Guardar el código en observaciones por ahora
 		});
 
 		console.log(
 			"✅ Reserva express guardada en base de datos con ID:",
-			reservaExpress.id
+			reservaExpress.id,
+			"Código:",
+			codigoReserva
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
+			codigoReserva: codigoReserva,
 			tipo: "express",
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva express:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// Endpoint para buscar reserva por código
+app.get("/api/reservas/codigo/:codigo", async (req, res) => {
+	try {
+		const { codigo } = req.params;
+
+		console.log("Buscando reserva con código:", codigo);
+
+		// Buscar la reserva por código (guardado en observaciones)
+		const reserva = await Reserva.findOne({
+			where: {
+				observaciones: codigo,
+				estadoPago: "pendiente", // Solo reservas pendientes de pago
+			},
+		});
+
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				message: "Código de reserva no encontrado o la reserva ya fue pagada.",
+			});
+		}
+
+		console.log("✅ Reserva encontrada:", reserva.id);
+
+		return res.json({
+			success: true,
+			message: "Reserva encontrada",
+			reserva: {
+				id: reserva.id,
+				nombre: reserva.nombre,
+				email: reserva.email,
+				telefono: reserva.telefono,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				pasajeros: reserva.pasajeros,
+				idaVuelta: reserva.idaVuelta,
+				fechaRegreso: reserva.fechaRegreso,
+				precio: reserva.precio,
+				vehiculo: reserva.vehiculo,
+				totalConDescuento: reserva.totalConDescuento,
+				abonoSugerido: reserva.abonoSugerido,
+			},
+		});
+	} catch (error) {
+		console.error("Error buscando reserva por código:", error);
 		return res.status(500).json({
 			success: false,
 			message: "Error interno del servidor",
