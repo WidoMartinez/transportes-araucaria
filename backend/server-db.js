@@ -15,6 +15,7 @@ import Destino from "./models/Destino.js";
 import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
+import Cliente from "./models/Cliente.js";
 
 dotenv.config();
 
@@ -1374,6 +1375,8 @@ app.post("/enviar-reserva", async (req, res) => {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
+			clienteId: datosReserva.clienteId,
+			rut: datosReserva.rut,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1388,6 +1391,8 @@ app.post("/enviar-reserva", async (req, res) => {
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
+			clienteId: datosReserva.clienteId || null,
+			rut: datosReserva.rut || null,
 			origen: datosReserva.origen || "",
 			destino: datosReserva.destino || "",
 			fecha: datosReserva.fecha || new Date(),
@@ -1446,6 +1451,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
+			clienteId: datosReserva.clienteId,
+			rut: datosReserva.rut,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1479,6 +1486,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
+			clienteId: datosReserva.clienteId || null,
+			rut: datosReserva.rut || null,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1770,6 +1779,20 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			referenciaPago: referenciaPago || reserva.referenciaPago,
 		});
 
+		// Si el pago es exitoso, actualizar el cliente
+		if (estadoPago === "pagado" && reserva.clienteId) {
+			const cliente = await Cliente.findByPk(reserva.clienteId);
+			if (cliente) {
+				await cliente.update({
+					esCliente: true,
+					totalPagos: cliente.totalPagos + 1,
+					totalGastado:
+						parseFloat(cliente.totalGastado) +
+						parseFloat(reserva.totalConDescuento || 0),
+				});
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Estado de pago actualizado",
@@ -1777,6 +1800,215 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando estado de pago:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS PARA GESTIONAR CLIENTES ---
+
+// Buscar cliente por email, RUT o nombre (autocompletado)
+app.get("/api/clientes/buscar", async (req, res) => {
+	try {
+		const { query } = req.query;
+
+		if (!query || query.length < 2) {
+			return res.json({ clientes: [] });
+		}
+
+		const clientes = await Cliente.findAll({
+			where: {
+				[Op.or]: [
+					{ email: { [Op.like]: `%${query}%` } },
+					{ nombre: { [Op.like]: `%${query}%` } },
+					{ rut: { [Op.like]: `%${query}%` } },
+					{ telefono: { [Op.like]: `%${query}%` } },
+				],
+			},
+			limit: 10,
+			order: [["ultimaReserva", "DESC"]],
+		});
+
+		res.json({ clientes });
+	} catch (error) {
+		console.error("Error buscando clientes:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener historial completo de un cliente
+app.get("/api/clientes/:id/historial", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const cliente = await Cliente.findByPk(id);
+		if (!cliente) {
+			return res.status(404).json({ error: "Cliente no encontrado" });
+		}
+
+		// Obtener todas las reservas del cliente
+		const reservas = await Reserva.findAll({
+			where: { clienteId: id },
+			order: [["created_at", "DESC"]],
+		});
+
+		// Calcular estadísticas
+		const estadisticas = {
+			totalReservas: reservas.length,
+			totalPagadas: reservas.filter((r) => r.estadoPago === "pagado").length,
+			totalPendientes: reservas.filter((r) => r.estadoPago === "pendiente")
+				.length,
+			totalGastado: reservas
+				.filter((r) => r.estadoPago === "pagado")
+				.reduce((sum, r) => sum + parseFloat(r.totalConDescuento || 0), 0),
+			ultimaReserva: reservas[0]?.created_at || null,
+			primeraReserva: reservas[reservas.length - 1]?.created_at || null,
+		};
+
+		res.json({
+			cliente,
+			reservas,
+			estadisticas,
+		});
+	} catch (error) {
+		console.error("Error obteniendo historial del cliente:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Marcar/desmarcar cliente manualmente
+app.put("/api/clientes/:id/marcar-cliente", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { esCliente, marcadoManualmente, notas } = req.body;
+
+		const cliente = await Cliente.findByPk(id);
+		if (!cliente) {
+			return res.status(404).json({ error: "Cliente no encontrado" });
+		}
+
+		await cliente.update({
+			esCliente: esCliente !== undefined ? esCliente : cliente.esCliente,
+			marcadoManualmente:
+				marcadoManualmente !== undefined
+					? marcadoManualmente
+					: cliente.marcadoManualmente,
+			notas: notas !== undefined ? notas : cliente.notas,
+		});
+
+		res.json({
+			success: true,
+			message: "Cliente actualizado",
+			cliente,
+		});
+	} catch (error) {
+		console.error("Error actualizando cliente:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear o actualizar cliente (desde formulario de reserva)
+app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
+	try {
+		const { rut, nombre, email, telefono, notas } = req.body;
+
+		if (!nombre || !email || !telefono) {
+			return res.status(400).json({
+				error: "Nombre, email y teléfono son obligatorios",
+			});
+		}
+
+		// Buscar cliente existente por email o RUT
+		let cliente = null;
+		if (rut) {
+			cliente = await Cliente.findOne({ where: { rut } });
+		}
+		if (!cliente) {
+			cliente = await Cliente.findOne({ where: { email } });
+		}
+
+		if (cliente) {
+			// Actualizar datos opcionales sin sobrescribir histórico
+			const updateData = {};
+			if (telefono && telefono !== cliente.telefono) {
+				updateData.telefono = telefono;
+			}
+			if (nombre && nombre !== cliente.nombre) {
+				updateData.nombre = nombre;
+			}
+			if (notas) {
+				updateData.notas = notas;
+			}
+
+			if (Object.keys(updateData).length > 0) {
+				await cliente.update(updateData);
+			}
+		} else {
+			// Crear nuevo cliente
+			cliente = await Cliente.create({
+				rut: rut || null,
+				nombre,
+				email,
+				telefono,
+				notas: notas || null,
+				totalReservas: 0,
+				totalPagos: 0,
+				esCliente: false,
+			});
+		}
+
+		res.json({
+			success: true,
+			cliente,
+			created: !cliente,
+		});
+	} catch (error) {
+		console.error("Error creando/actualizando cliente:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar una reserva
+app.delete("/api/reservas/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await reserva.destroy();
+
+		res.json({
+			success: true,
+			message: "Reserva eliminada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Cambiar estado de una reserva
+app.put("/api/reservas/:id/estado", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { estado } = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await reserva.update({ estado });
+
+		res.json({
+			success: true,
+			message: "Estado actualizado",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error actualizando estado:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
