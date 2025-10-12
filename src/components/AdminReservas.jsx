@@ -49,6 +49,9 @@ import {
 	AlertCircle,
 	RefreshCw,
 	Plus,
+	Star,
+	History,
+	Settings2,
 } from "lucide-react";
 
 function AdminReservas() {
@@ -100,8 +103,10 @@ function AdminReservas() {
 	// Formulario de nueva reserva
 	const [newReservaForm, setNewReservaForm] = useState({
 		nombre: "",
+		rut: "",
 		email: "",
 		telefono: "",
+		clienteId: null,
 		origen: "",
 		destino: "",
 		fecha: "",
@@ -125,6 +130,33 @@ function AdminReservas() {
 		metodoPago: "",
 		observaciones: "",
 	});
+
+	// Estados para autocompletado de clientes
+	const [clienteSugerencias, setClienteSugerencias] = useState([]);
+	const [mostrandoSugerencias, setMostrandoSugerencias] = useState(false);
+	const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+	
+	// Estados para columnas visibles
+	const [columnasVisibles, setColumnasVisibles] = useState({
+		id: true,
+		cliente: true,
+		contacto: true,
+		rut: false,
+		ruta: true,
+		fechaHora: true,
+		pasajeros: true,
+		total: true,
+		estado: true,
+		pago: true,
+		saldo: true,
+		esCliente: false,
+		numViajes: false,
+		acciones: true,
+	});
+	
+	// Estado para modal de historial de cliente
+	const [showHistorialDialog, setShowHistorialDialog] = useState(false);
+	const [historialCliente, setHistorialCliente] = useState(null);
 
 	const apiUrl =
 		import.meta.env.VITE_API_URL ||
@@ -364,12 +396,96 @@ function AdminReservas() {
 		return new Date(date).toLocaleDateString("es-CL");
 	};
 
+	// Buscar clientes para autocompletar
+	const buscarClientes = async (query) => {
+		if (!query || query.length < 2) {
+			setClienteSugerencias([]);
+			setMostrandoSugerencias(false);
+			return;
+		}
+
+		try {
+			const response = await fetch(
+				`${apiUrl}/api/clientes/buscar?query=${encodeURIComponent(query)}`
+			);
+			if (response.ok) {
+				const data = await response.json();
+				setClienteSugerencias(data.clientes || []);
+				setMostrandoSugerencias(data.clientes && data.clientes.length > 0);
+			}
+		} catch (error) {
+			console.error("Error buscando clientes:", error);
+		}
+	};
+
+	// Seleccionar cliente desde autocompletado
+	const seleccionarCliente = (cliente) => {
+		setClienteSeleccionado(cliente);
+		setNewReservaForm({
+			...newReservaForm,
+			nombre: cliente.nombre,
+			rut: cliente.rut || "",
+			email: cliente.email,
+			telefono: cliente.telefono,
+			clienteId: cliente.id,
+		});
+		setMostrandoSugerencias(false);
+		setClienteSugerencias([]);
+	};
+
+	// Ver historial de un cliente
+	const verHistorialCliente = async (clienteId) => {
+		try {
+			const response = await fetch(`${apiUrl}/api/clientes/${clienteId}/historial`);
+			if (response.ok) {
+				const data = await response.json();
+				setHistorialCliente(data);
+				setShowHistorialDialog(true);
+			}
+		} catch (error) {
+			console.error("Error obteniendo historial del cliente:", error);
+			alert("Error al cargar el historial del cliente");
+		}
+	};
+
+	// Marcar/desmarcar cliente manualmente
+	const toggleClienteManual = async (clienteId, esCliente) => {
+		try {
+			const response = await fetch(
+				`${apiUrl}/api/clientes/${clienteId}/marcar-cliente`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						esCliente: !esCliente,
+						marcadoManualmente: true,
+					}),
+				}
+			);
+
+			if (response.ok) {
+				await fetchReservas();
+				alert(
+					`Cliente ${!esCliente ? "marcado" : "desmarcado"} como cliente exitosamente`
+				);
+			}
+		} catch (error) {
+			console.error("Error actualizando cliente:", error);
+			alert("Error al actualizar el cliente");
+		}
+	};
+
 	// Abrir modal de nueva reserva
 	const handleNewReserva = () => {
+		setClienteSeleccionado(null);
+		setClienteSugerencias([]);
+		setMostrandoSugerencias(false);
 		setNewReservaForm({
 			nombre: "",
+			rut: "",
 			email: "",
 			telefono: "",
+			clienteId: null,
 			origen: "",
 			destino: "",
 			fecha: "",
@@ -414,6 +530,30 @@ function AdminReservas() {
 
 		setSaving(true);
 		try {
+			// Primero, crear o actualizar el cliente
+			let clienteId = newReservaForm.clienteId;
+			
+			if (!clienteId) {
+				const clienteResponse = await fetch(
+					`${apiUrl}/api/clientes/crear-o-actualizar`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							rut: newReservaForm.rut || null,
+							nombre: newReservaForm.nombre,
+							email: newReservaForm.email,
+							telefono: newReservaForm.telefono,
+						}),
+					}
+				);
+
+				if (clienteResponse.ok) {
+					const clienteData = await clienteResponse.json();
+					clienteId = clienteData.cliente.id;
+				}
+			}
+
 			// Calcular saldo pendiente si no está establecido
 			const total = parseFloat(newReservaForm.totalConDescuento) || parseFloat(newReservaForm.precio) || 0;
 			const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
@@ -421,6 +561,7 @@ function AdminReservas() {
 
 			const reservaData = {
 				...newReservaForm,
+				clienteId: clienteId,
 				totalConDescuento: total,
 				saldoPendiente: saldo,
 				source: "manual",
@@ -656,8 +797,58 @@ function AdminReservas() {
 
 			{/* Tabla de Reservas */}
 			<Card>
-				<CardHeader>
+				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Lista de Reservas</CardTitle>
+					<Dialog>
+						<DialogTrigger asChild>
+							<Button variant="outline" size="sm">
+								<Settings2 className="w-4 h-4 mr-2" />
+								Columnas
+							</Button>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Configurar Columnas Visibles</DialogTitle>
+								<DialogDescription>
+									Selecciona las columnas que deseas ver en la tabla
+								</DialogDescription>
+							</DialogHeader>
+							<div className="space-y-2">
+								{Object.entries(columnasVisibles).map(([key, value]) => (
+									<div key={key} className="flex items-center space-x-2">
+										<input
+											type="checkbox"
+											id={`col-${key}`}
+											checked={value}
+											onChange={(e) =>
+												setColumnasVisibles({
+													...columnasVisibles,
+													[key]: e.target.checked,
+												})
+											}
+											className="w-4 h-4"
+										/>
+										<Label htmlFor={`col-${key}`} className="cursor-pointer capitalize">
+											{key === "id" && "ID"}
+											{key === "cliente" && "Cliente"}
+											{key === "contacto" && "Contacto"}
+											{key === "rut" && "RUT"}
+											{key === "ruta" && "Ruta"}
+											{key === "fechaHora" && "Fecha/Hora"}
+											{key === "pasajeros" && "Pasajeros"}
+											{key === "total" && "Total"}
+											{key === "estado" && "Estado"}
+											{key === "pago" && "Pago"}
+											{key === "saldo" && "Saldo"}
+											{key === "esCliente" && "Es Cliente"}
+											{key === "numViajes" && "Núm. Viajes"}
+											{key === "acciones" && "Acciones"}
+										</Label>
+									</div>
+								))}
+							</div>
+						</DialogContent>
+					</Dialog>
 				</CardHeader>
 				<CardContent>
 					{error && (
@@ -671,23 +862,29 @@ function AdminReservas() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>ID</TableHead>
-									<TableHead>Cliente</TableHead>
-									<TableHead>Contacto</TableHead>
-									<TableHead>Ruta</TableHead>
-									<TableHead>Fecha/Hora</TableHead>
-									<TableHead>Pasajeros</TableHead>
-									<TableHead>Total</TableHead>
-									<TableHead>Estado</TableHead>
-									<TableHead>Pago</TableHead>
-									<TableHead>Saldo</TableHead>
-									<TableHead>Acciones</TableHead>
+									{columnasVisibles.id && <TableHead>ID</TableHead>}
+									{columnasVisibles.cliente && <TableHead>Cliente</TableHead>}
+									{columnasVisibles.contacto && <TableHead>Contacto</TableHead>}
+									{columnasVisibles.rut && <TableHead>RUT</TableHead>}
+									{columnasVisibles.esCliente && <TableHead>Tipo</TableHead>}
+									{columnasVisibles.numViajes && <TableHead>Viajes</TableHead>}
+									{columnasVisibles.ruta && <TableHead>Ruta</TableHead>}
+									{columnasVisibles.fechaHora && <TableHead>Fecha/Hora</TableHead>}
+									{columnasVisibles.pasajeros && <TableHead>Pasajeros</TableHead>}
+									{columnasVisibles.total && <TableHead>Total</TableHead>}
+									{columnasVisibles.estado && <TableHead>Estado</TableHead>}
+									{columnasVisibles.pago && <TableHead>Pago</TableHead>}
+									{columnasVisibles.saldo && <TableHead>Saldo</TableHead>}
+									{columnasVisibles.acciones && <TableHead>Acciones</TableHead>}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{reservasFiltradas.length === 0 ? (
 									<TableRow>
-										<TableCell colSpan={11} className="text-center py-8">
+										<TableCell
+											colSpan={Object.values(columnasVisibles).filter(Boolean).length}
+											className="text-center py-8"
+										>
 											<div className="text-muted-foreground">
 												<FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
 												<p>No se encontraron reservas</p>
@@ -697,93 +894,163 @@ function AdminReservas() {
 								) : (
 									reservasFiltradas.map((reserva) => (
 										<TableRow key={reserva.id}>
-											<TableCell className="font-medium">#{reserva.id}</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-2">
-													<User className="w-4 h-4 text-muted-foreground" />
-													<span className="font-medium">{reserva.nombre}</span>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1 text-sm">
-													<div className="flex items-center gap-1">
-														<Mail className="w-3 h-3 text-muted-foreground" />
-														<span className="truncate max-w-[150px]">
-															{reserva.email}
-														</span>
+											{columnasVisibles.id && (
+												<TableCell className="font-medium">#{reserva.id}</TableCell>
+											)}
+											{columnasVisibles.cliente && (
+												<TableCell>
+													<div className="flex items-center gap-2">
+														<User className="w-4 h-4 text-muted-foreground" />
+														<span className="font-medium">{reserva.nombre}</span>
 													</div>
-													<div className="flex items-center gap-1">
-														<Phone className="w-3 h-3 text-muted-foreground" />
-														<span>{reserva.telefono}</span>
+												</TableCell>
+											)}
+											{columnasVisibles.contacto && (
+												<TableCell>
+													<div className="space-y-1 text-sm">
+														<div className="flex items-center gap-1">
+															<Mail className="w-3 h-3 text-muted-foreground" />
+															<span className="truncate max-w-[150px]">
+																{reserva.email}
+															</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<Phone className="w-3 h-3 text-muted-foreground" />
+															<span>{reserva.telefono}</span>
+														</div>
 													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1 text-sm">
-													<div className="flex items-center gap-1">
-														<MapPin className="w-3 h-3 text-green-500" />
-														<span className="font-medium">{reserva.origen}</span>
+												</TableCell>
+											)}
+											{columnasVisibles.rut && (
+												<TableCell>
+													<span className="text-sm">{reserva.rut || "-"}</span>
+												</TableCell>
+											)}
+											{columnasVisibles.esCliente && (
+												<TableCell>
+													{reserva.clienteId ? (
+														<Badge
+															variant={reserva.esCliente ? "default" : "secondary"}
+															className="cursor-pointer"
+															onClick={() =>
+																toggleClienteManual(
+																	reserva.clienteId,
+																	reserva.esCliente
+																)
+															}
+														>
+															{reserva.esCliente ? (
+																<>
+																	<Star className="w-3 h-3 mr-1" />
+																	Cliente
+																</>
+															) : (
+																"Cotizador"
+															)}
+														</Badge>
+													) : (
+														<span className="text-xs text-muted-foreground">-</span>
+													)}
+												</TableCell>
+											)}
+											{columnasVisibles.numViajes && (
+												<TableCell>
+													{reserva.clienteId ? (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => verHistorialCliente(reserva.clienteId)}
+														>
+															<History className="w-3 h-3 mr-1" />
+															{reserva.totalReservas || "Ver"}
+														</Button>
+													) : (
+														<span className="text-xs text-muted-foreground">-</span>
+													)}
+												</TableCell>
+											)}
+											{columnasVisibles.ruta && (
+												<TableCell>
+													<div className="space-y-1 text-sm">
+														<div className="flex items-center gap-1">
+															<MapPin className="w-3 h-3 text-green-500" />
+															<span className="font-medium">{reserva.origen}</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<MapPin className="w-3 h-3 text-red-500" />
+															<span className="font-medium">{reserva.destino}</span>
+														</div>
 													</div>
-													<div className="flex items-center gap-1">
-														<MapPin className="w-3 h-3 text-red-500" />
-														<span className="font-medium">{reserva.destino}</span>
+												</TableCell>
+											)}
+											{columnasVisibles.fechaHora && (
+												<TableCell>
+													<div className="space-y-1 text-sm">
+														<div className="flex items-center gap-1">
+															<Calendar className="w-3 h-3 text-muted-foreground" />
+															<span>{formatDate(reserva.fecha)}</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<Clock className="w-3 h-3 text-muted-foreground" />
+															<span>{reserva.hora || "-"}</span>
+														</div>
 													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="space-y-1 text-sm">
+												</TableCell>
+											)}
+											{columnasVisibles.pasajeros && (
+												<TableCell>
 													<div className="flex items-center gap-1">
-														<Calendar className="w-3 h-3 text-muted-foreground" />
-														<span>{formatDate(reserva.fecha)}</span>
+														<Users className="w-4 h-4 text-muted-foreground" />
+														<span className="font-medium">{reserva.pasajeros}</span>
 													</div>
-													<div className="flex items-center gap-1">
-														<Clock className="w-3 h-3 text-muted-foreground" />
-														<span>{reserva.hora || "-"}</span>
-													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-1">
-													<Users className="w-4 h-4 text-muted-foreground" />
-													<span className="font-medium">{reserva.pasajeros}</span>
-												</div>
-											</TableCell>
-											<TableCell className="font-semibold">
-												{formatCurrency(reserva.totalConDescuento)}
-											</TableCell>
-											<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
-											<TableCell>
-												{getEstadoPagoBadge(reserva.estadoPago)}
-											</TableCell>
-											<TableCell>
-												<span
-													className={
-														reserva.saldoPendiente > 0
-															? "text-red-600 font-semibold"
-															: "text-green-600 font-semibold"
-													}
-												>
-													{formatCurrency(reserva.saldoPendiente)}
-												</span>
-											</TableCell>
-											<TableCell>
-												<div className="flex gap-2">
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => handleViewDetails(reserva)}
+												</TableCell>
+											)}
+											{columnasVisibles.total && (
+												<TableCell className="font-semibold">
+													{formatCurrency(reserva.totalConDescuento)}
+												</TableCell>
+											)}
+											{columnasVisibles.estado && (
+												<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
+											)}
+											{columnasVisibles.pago && (
+												<TableCell>
+													{getEstadoPagoBadge(reserva.estadoPago)}
+												</TableCell>
+											)}
+											{columnasVisibles.saldo && (
+												<TableCell>
+													<span
+														className={
+															reserva.saldoPendiente > 0
+																? "text-red-600 font-semibold"
+																: "text-green-600 font-semibold"
+														}
 													>
-														<Eye className="w-4 h-4" />
-													</Button>
-													<Button
-														variant="default"
-														size="sm"
-														onClick={() => handleEdit(reserva)}
-													>
-														<Edit className="w-4 h-4" />
-													</Button>
-												</div>
-											</TableCell>
+														{formatCurrency(reserva.saldoPendiente)}
+													</span>
+												</TableCell>
+											)}
+											{columnasVisibles.acciones && (
+												<TableCell>
+													<div className="flex gap-2">
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => handleViewDetails(reserva)}
+														>
+															<Eye className="w-4 h-4" />
+														</Button>
+														<Button
+															variant="default"
+															size="sm"
+															onClick={() => handleEdit(reserva)}
+														>
+															<Edit className="w-4 h-4" />
+														</Button>
+													</div>
+												</TableCell>
+											)}
 										</TableRow>
 									))
 								)}
@@ -1333,18 +1600,79 @@ function AdminReservas() {
 							<h3 className="font-semibold text-lg border-b pb-2">
 								Información del Cliente
 							</h3>
+							
+							{/* Indicador de cliente existente */}
+							{clienteSeleccionado && (
+								<div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
+									<p className="font-medium">✓ Cliente existente seleccionado</p>
+									<p className="text-sm">
+										{clienteSeleccionado.esCliente && (
+											<Badge variant="default" className="mr-2">Cliente</Badge>
+										)}
+										{clienteSeleccionado.totalReservas > 0 && (
+											<span className="text-xs">
+												{clienteSeleccionado.totalReservas} reserva(s) previa(s)
+											</span>
+										)}
+									</p>
+								</div>
+							)}
+
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-2">
+								<div className="space-y-2 relative">
 									<Label htmlFor="new-nombre">
 										Nombre Completo <span className="text-red-500">*</span>
 									</Label>
 									<Input
 										id="new-nombre"
-										placeholder="Juan Pérez"
+										placeholder="Juan Pérez (escribe para buscar)"
 										value={newReservaForm.nombre}
-										onChange={(e) =>
-											setNewReservaForm({ ...newReservaForm, nombre: e.target.value })
-										}
+										onChange={(e) => {
+											setNewReservaForm({ ...newReservaForm, nombre: e.target.value });
+											buscarClientes(e.target.value);
+										}}
+										onBlur={() => setTimeout(() => setMostrandoSugerencias(false), 200)}
+										onFocus={() => {
+											if (clienteSugerencias.length > 0) {
+												setMostrandoSugerencias(true);
+											}
+										}}
+									/>
+									{/* Sugerencias de autocompletado */}
+									{mostrandoSugerencias && clienteSugerencias.length > 0 && (
+										<div className="absolute z-50 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
+											{clienteSugerencias.map((cliente) => (
+												<div
+													key={cliente.id}
+													className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+													onClick={() => seleccionarCliente(cliente)}
+												>
+													<div className="font-medium">{cliente.nombre}</div>
+													<div className="text-sm text-gray-600">
+														{cliente.email} • {cliente.telefono}
+														{cliente.rut && ` • RUT: ${cliente.rut}`}
+													</div>
+													{cliente.esCliente && (
+														<Badge variant="default" className="text-xs mt-1">
+															Cliente • {cliente.totalReservas} reservas
+														</Badge>
+													)}
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-rut">RUT (opcional)</Label>
+									<Input
+										id="new-rut"
+										placeholder="12345678-9"
+										value={newReservaForm.rut}
+										onChange={(e) => {
+											setNewReservaForm({ ...newReservaForm, rut: e.target.value });
+											buscarClientes(e.target.value);
+										}}
+										onBlur={() => setTimeout(() => setMostrandoSugerencias(false), 200)}
 									/>
 								</div>
 								<div className="space-y-2">
@@ -1737,6 +2065,147 @@ function AdminReservas() {
 							</Button>
 						</div>
 					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Modal de Historial de Cliente */}
+			<Dialog open={showHistorialDialog} onOpenChange={setShowHistorialDialog}>
+				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle>
+							Historial del Cliente
+							{historialCliente && ` - ${historialCliente.cliente.nombre}`}
+						</DialogTitle>
+						<DialogDescription>
+							Todas las reservas y estadísticas del cliente
+						</DialogDescription>
+					</DialogHeader>
+
+					{historialCliente && (
+						<div className="space-y-6">
+							{/* Información del Cliente */}
+							<div className="bg-muted p-4 rounded-lg">
+								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+									<div>
+										<Label className="text-muted-foreground">Email</Label>
+										<p className="font-medium">{historialCliente.cliente.email}</p>
+									</div>
+									<div>
+										<Label className="text-muted-foreground">Teléfono</Label>
+										<p className="font-medium">
+											{historialCliente.cliente.telefono}
+										</p>
+									</div>
+									{historialCliente.cliente.rut && (
+										<div>
+											<Label className="text-muted-foreground">RUT</Label>
+											<p className="font-medium">{historialCliente.cliente.rut}</p>
+										</div>
+									)}
+									<div>
+										<Label className="text-muted-foreground">Tipo</Label>
+										<div>
+											{historialCliente.cliente.esCliente ? (
+												<Badge variant="default">
+													<Star className="w-3 h-3 mr-1" />
+													Cliente
+												</Badge>
+											) : (
+												<Badge variant="secondary">Cotizador</Badge>
+											)}
+										</div>
+									</div>
+								</div>
+							</div>
+
+							{/* Estadísticas */}
+							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+								<Card>
+									<CardContent className="p-4">
+										<p className="text-sm text-muted-foreground">Total Reservas</p>
+										<p className="text-2xl font-bold">
+											{historialCliente.estadisticas.totalReservas}
+										</p>
+									</CardContent>
+								</Card>
+								<Card>
+									<CardContent className="p-4">
+										<p className="text-sm text-muted-foreground">Reservas Pagadas</p>
+										<p className="text-2xl font-bold text-green-600">
+											{historialCliente.estadisticas.totalPagadas}
+										</p>
+									</CardContent>
+								</Card>
+								<Card>
+									<CardContent className="p-4">
+										<p className="text-sm text-muted-foreground">
+											Reservas Pendientes
+										</p>
+										<p className="text-2xl font-bold text-orange-600">
+											{historialCliente.estadisticas.totalPendientes}
+										</p>
+									</CardContent>
+								</Card>
+								<Card>
+									<CardContent className="p-4">
+										<p className="text-sm text-muted-foreground">Total Gastado</p>
+										<p className="text-2xl font-bold text-blue-600">
+											{formatCurrency(historialCliente.estadisticas.totalGastado)}
+										</p>
+									</CardContent>
+								</Card>
+							</div>
+
+							{/* Lista de Reservas */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Historial de Reservas ({historialCliente.reservas.length})
+								</h3>
+								<div className="space-y-2 max-h-96 overflow-y-auto">
+									{historialCliente.reservas.map((reserva) => (
+										<div
+											key={reserva.id}
+											className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer"
+											onClick={() => {
+												setShowHistorialDialog(false);
+												handleViewDetails(reserva);
+											}}
+										>
+											<div className="flex items-start justify-between">
+												<div className="flex-1">
+													<div className="flex items-center gap-2 mb-1">
+														<span className="font-medium">#{reserva.id}</span>
+														{getEstadoBadge(reserva.estado)}
+														{getEstadoPagoBadge(reserva.estadoPago)}
+													</div>
+													<div className="text-sm text-muted-foreground">
+														<div className="flex items-center gap-2">
+															<MapPin className="w-3 h-3" />
+															{reserva.origen} → {reserva.destino}
+														</div>
+														<div className="flex items-center gap-2 mt-1">
+															<Calendar className="w-3 h-3" />
+															{formatDate(reserva.fecha)} • {reserva.hora || "-"}
+														</div>
+													</div>
+												</div>
+												<div className="text-right">
+													<p className="font-semibold">
+														{formatCurrency(reserva.totalConDescuento)}
+													</p>
+													{reserva.saldoPendiente > 0 && (
+														<p className="text-sm text-red-600">
+															Saldo: {formatCurrency(reserva.saldoPendiente)}
+														</p>
+													)}
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+					)}
 				</DialogContent>
 			</Dialog>
 		</div>
