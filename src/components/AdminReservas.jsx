@@ -1832,7 +1832,10 @@ function AdminReservas() {
 										}}
 										onBlur={() => setTimeout(() => setMostrandoSugerencias(false), 200)}
 										onFocus={() => {
-											if (clienteSugerencias.length > 0) {
+											if (
+												newReservaForm.nombre.trim().length > 0 &&
+												clienteSugerencias.length > 0
+											) {
 												setMostrandoSugerencias(true);
 											}
 										}}
