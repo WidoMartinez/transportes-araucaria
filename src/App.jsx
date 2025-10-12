@@ -33,6 +33,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
+import PagoPersonalizado from "./components/PagoPersonalizado";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -170,9 +171,23 @@ const resolveIsFreightView = () => {
 	);
 };
 
+const resolveIsCustomPaymentView = () => {
+	if (typeof window === "undefined") return false;
+	const pathname = window.location.pathname.toLowerCase();
+	const params = new URLSearchParams(window.location.search);
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/pago-personalizado" ||
+		pathname.startsWith("/pago-personalizado/") ||
+		params.get("view") === "pago-personalizado" ||
+		hash === "#pago-personalizado"
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [isCustomPaymentView, setIsCustomPaymentView] = useState(resolveIsCustomPaymentView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -1388,6 +1403,10 @@ function App() {
 
 	if (isAdminView) {
 		return <AdminDashboard />;
+	}
+
+	if (isCustomPaymentView) {
+		return <PagoPersonalizado />;
 	}
 
 	return (
