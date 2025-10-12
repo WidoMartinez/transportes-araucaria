@@ -59,12 +59,13 @@ function PagoPersonalizado() {
 
 	// Función para parsear códigos de pago
 	// Formato: ORIGEN-DESTINO-MONTO
-	// Ejemplos: A-CARAHUE-35, TEMUCO-PUCON-60, A-LONQUIMAY-45
+	// Ejemplos: A-CARAHUE-35, TEMUCO-PUCON-60, A-LONQUIMAY-32.5
 	const procesarCodigo = (codigo) => {
 		setErrorCodigo("");
 		setCodigoValido(false);
 		
 		if (!codigo.trim()) {
+			setErrorCodigo("Ingresa un código válido");
 			return;
 		}
 
@@ -76,7 +77,7 @@ function PagoPersonalizado() {
 		const partes = codigoUpper.split("-");
 		
 		if (partes.length < 3) {
-			setErrorCodigo("Formato de código inválido. Usa: ORIGEN-DESTINO-MONTO (ej: A-CARAHUE-35)");
+			setErrorCodigo("Formato de código inválido");
 			return;
 		}
 
@@ -115,15 +116,16 @@ function PagoPersonalizado() {
 		// Convertir destino
 		const destinoCompleto = mapaDestinos[destino] || destino;
 
-		// Parsear monto (el número representa miles de pesos)
-		const montoNumero = parseInt(montoStr);
+		// Parsear monto - ahora soporta decimales
+		// Ejemplos: 35 = $35.000, 32.5 = $32.500, 47.25 = $47.250
+		const montoNumero = parseFloat(montoStr);
 		if (isNaN(montoNumero) || montoNumero <= 0) {
 			setErrorCodigo("Monto inválido en el código");
 			return;
 		}
 
-		// El monto en el código representa miles (ej: 35 = $35.000)
-		const montoFinal = montoNumero * 1000;
+		// El monto en el código representa miles (ej: 35 = $35.000, 32.5 = $32.500)
+		const montoFinal = Math.round(montoNumero * 1000);
 
 		// Actualizar formulario con los datos del código
 		setFormData((prev) => ({
@@ -145,20 +147,13 @@ function PagoPersonalizado() {
 			codigo: codigo,
 		}));
 		
-		// Procesar el código en tiempo real
-		if (codigo.trim()) {
-			procesarCodigo(codigo);
-		} else {
-			setCodigoValido(false);
-			setErrorCodigo("");
-			// Limpiar campos de traslado
-			setFormData((prev) => ({
-				...prev,
-				origen: "",
-				destino: "",
-				monto: "",
-			}));
-		}
+		// Limpiar errores y estado al escribir
+		setErrorCodigo("");
+		setCodigoValido(false);
+	};
+
+	const handleProcesarCodigo = () => {
+		procesarCodigo(formData.codigo);
 	};
 
 	const handleInputChange = (e) => {
@@ -349,19 +344,37 @@ function PagoPersonalizado() {
 									<Key className="w-4 h-4" />
 									Código de pago
 								</Label>
-								<Input
-									id="codigo"
-									name="codigo"
-									value={formData.codigo}
-									onChange={handleCodigoChange}
-									placeholder="Ingresa el código que recibiste"
-									className={`text-lg font-mono ${errorCodigo ? "border-red-500" : codigoValido ? "border-green-500" : ""}`}
-								/>
+								<div className="flex gap-2">
+									<Input
+										id="codigo"
+										name="codigo"
+										value={formData.codigo}
+										onChange={handleCodigoChange}
+										placeholder="Ingresa el código que recibiste"
+										className={`text-lg font-mono ${errorCodigo ? "border-red-500" : codigoValido ? "border-green-500" : ""}`}
+										onKeyPress={(e) => {
+											if (e.key === 'Enter') {
+												handleProcesarCodigo();
+											}
+										}}
+									/>
+									<Button
+										type="button"
+										onClick={handleProcesarCodigo}
+										disabled={!formData.codigo.trim() || codigoValido}
+										className="min-w-[120px]"
+									>
+										{codigoValido ? "✓ Cargado" : "Validar"}
+									</Button>
+								</div>
 								{errorCodigo && (
 									<p className="text-sm text-red-500">{errorCodigo}</p>
 								)}
+								{codigoValido && (
+									<p className="text-sm text-green-600">✓ Código válido - Datos cargados automáticamente</p>
+								)}
 								<p className="text-xs text-gray-500">
-									Ingresa el código que te proporcionó el administrador
+									Ingresa el código que te proporcionó el administrador y presiona "Validar"
 								</p>
 							</div>
 						</CardContent>
