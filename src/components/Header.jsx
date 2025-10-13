@@ -90,12 +90,6 @@ function Header() {
 							Fletes
 						</a>
 						<a
-							href={import.meta.env.DEV ? "/?view=pago-personalizado" : "/pago-personalizado"}
-							className="text-foreground hover:text-primary transition-colors"
-						>
-							Pago Personalizado
-						</a>
-						<a
 							href="#contacto"
 							className="text-foreground hover:text-primary transition-colors"
 						>
