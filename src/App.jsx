@@ -36,6 +36,7 @@ import CodigoDescuento from "./components/CodigoDescuento";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
+import { useTarifaDinamica, useDisponibilidadVehiculos } from "./hooks/useTarifaDinamica";
 
 // Descuentos ahora se cargan dinámicamente desde descuentosGlobales
 const ROUND_TRIP_DISCOUNT = 0.05;
@@ -836,6 +837,23 @@ function App() {
 		calcularCotizacion,
 	]);
 
+	// Calcular tarifa dinámica basada en anticipación, día y horario
+	const destinoParaTarifa = formData.destino === "Otro" ? formData.otroDestino : formData.destino;
+	const { tarifaDinamica, loading: loadingTarifa } = useTarifaDinamica(
+		cotizacion.precio || 0,
+		destinoParaTarifa,
+		formData.fecha,
+		formData.hora
+	);
+
+	// Verificar disponibilidad de vehículos
+	const tipoVehiculo = cotizacion.vehiculo === "Auto Privado" ? "auto" : "van";
+	const { disponibilidad, loading: loadingDisponibilidad } = useDisponibilidadVehiculos(
+		formData.fecha,
+		formData.hora,
+		tipoVehiculo
+	);
+
 	const validarTelefono = (telefono) =>
 		/^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/.test(telefono);
 
@@ -902,7 +920,12 @@ function App() {
 	};
 
 	const pricing = useMemo(() => {
-		const precioIda = cotizacion.precio || 0;
+		// Usar precio con tarifa dinámica si está disponible, sino usar precio base
+		const precioIdaBase = cotizacion.precio || 0;
+		const precioIdaConTarifa = tarifaDinamica?.precioFinal || precioIdaBase;
+		const ajusteTarifaDinamica = tarifaDinamica?.ajusteMonto || 0;
+		
+		const precioIda = precioIdaConTarifa;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
 
 		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
@@ -1017,6 +1040,10 @@ function App() {
 			totalConDescuento,
 			abono,
 			saldoPendiente,
+			// Información de tarifa dinámica
+			ajusteTarifaDinamica,
+			tarifaDinamica: tarifaDinamica,
+			disponibilidad: disponibilidad,
 		};
 	}, [
 		cotizacion.precio,
@@ -1026,6 +1053,8 @@ function App() {
 		personalizedDiscountRate,
 		formData.idaVuelta,
 		codigoAplicado,
+		tarifaDinamica,
+		disponibilidad,
 	]);
 
 	const {

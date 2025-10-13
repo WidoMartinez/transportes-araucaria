@@ -80,7 +80,7 @@ const parsePromotionMetadata = (record) => {
 		return parsed && typeof parsed === "object" && !Array.isArray(parsed)
 			? parsed
 			: null;
-	} catch (error) {
+	} catch {
 		return null;
 	}
 };
@@ -106,7 +106,7 @@ const parseJsonArray = (raw) => {
 		seen.add(trimmed);
 		try {
 			value = JSON.parse(trimmed);
-		} catch (error) {
+		} catch {
 			return [];
 		}
 	}
@@ -1656,10 +1656,13 @@ const calcularTarifaDinamica = async (precioBase, destino, fecha, hora) => {
  * @param {number} tiempoEsperaMaximo - Tiempo máximo de espera en minutos
  * @returns {Object} Información sobre disponibilidad de retorno
  */
-const verificarRetornoDisponible = async (destino, fecha, hora, tiempoEsperaMaximo = 240) => {
+// Función disponible para uso futuro (descuento de retorno)
+// eslint-disable-next-line no-unused-vars
+const _verificarRetornoDisponible = async (destino, fecha, hora, tiempoEsperaMaximo = 240) => {
 	try {
 		const fechaHoraLlegada = new Date(fecha + "T" + hora);
-		const tiempoLimite = new Date(fechaHoraLlegada.getTime() + tiempoEsperaMaximo * 60000);
+		// eslint-disable-next-line no-unused-vars
+		const _tiempoLimite = new Date(fechaHoraLlegada.getTime() + tiempoEsperaMaximo * 60000);
 
 		// Buscar reservas que llegan al mismo destino cerca de la hora
 		const reservasCercanas = await Reserva.findAll({
