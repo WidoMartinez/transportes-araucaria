@@ -16,8 +16,30 @@ import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
+import Producto from "./models/Producto.js";
+import ProductoReserva from "./models/ProductoReserva.js";
 
 dotenv.config();
+
+// --- RELACIONES ENTRE MODELOS ---
+// Relación muchos-a-muchos entre Producto y Reserva
+Reserva.belongsToMany(Producto, {
+	through: ProductoReserva,
+	foreignKey: "reservaId",
+	otherKey: "productoId",
+	as: "productos",
+});
+
+Producto.belongsToMany(Reserva, {
+	through: ProductoReserva,
+	foreignKey: "productoId",
+	otherKey: "reservaId",
+	as: "reservas",
+});
+
+// Relación directa para facilitar consultas
+ProductoReserva.belongsTo(Reserva, { foreignKey: "reservaId", as: "reserva" });
+ProductoReserva.belongsTo(Producto, { foreignKey: "productoId", as: "producto" });
 
 // --- CONFIGURACIÓN DE MERCADO PAGO ---
 const client = new MercadoPagoConfig({
@@ -140,6 +162,84 @@ app.use(
 	})
 );
 
+// --- INICIALIZACIÓN DE PRODUCTOS DE EJEMPLO ---
+const initializeExampleProducts = async () => {
+	try {
+		const count = await Producto.count();
+		if (count > 0) {
+			console.log("ℹ️  Ya existen productos en la base de datos");
+			return;
+		}
+
+		console.log("📦 Creando productos de ejemplo...");
+
+		const productosEjemplo = [
+			{
+				nombre: "Coca-Cola 500ml",
+				descripcion: "Bebida refrescante en botella de 500ml",
+				precio: 1500,
+				imagen: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=400&fit=crop",
+				categoria: "Bebidas",
+				activo: true,
+				orden: 1,
+			},
+			{
+				nombre: "Agua Mineral 500ml",
+				descripcion: "Agua mineral sin gas en botella de 500ml",
+				precio: 1000,
+				imagen: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400&h=400&fit=crop",
+				categoria: "Bebidas",
+				activo: true,
+				orden: 2,
+			},
+			{
+				nombre: "Sándwich Jamón y Queso",
+				descripcion: "Delicioso sándwich de jamón y queso con vegetales frescos",
+				precio: 3500,
+				imagen: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&h=400&fit=crop",
+				categoria: "Comida",
+				activo: true,
+				orden: 3,
+			},
+			{
+				nombre: "Galletas de Chocolate",
+				descripcion: "Paquete de galletas con chips de chocolate",
+				precio: 1800,
+				imagen: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&h=400&fit=crop",
+				categoria: "Snacks",
+				activo: true,
+				orden: 4,
+			},
+			{
+				nombre: "Café Americano",
+				descripcion: "Café americano caliente en vaso térmico",
+				precio: 2000,
+				imagen: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop",
+				categoria: "Bebidas",
+				activo: true,
+				orden: 5,
+			},
+			{
+				nombre: "Snack Mix",
+				descripcion: "Mezcla de frutos secos y snacks salados",
+				precio: 2500,
+				imagen: "https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=400&h=400&fit=crop",
+				categoria: "Snacks",
+				activo: true,
+				orden: 6,
+			},
+		];
+
+		for (const productoData of productosEjemplo) {
+			await Producto.create(productoData);
+		}
+
+		console.log("✅ Productos de ejemplo creados exitosamente");
+	} catch (error) {
+		console.error("⚠️ Error creando productos de ejemplo:", error.message);
+	}
+};
+
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 const initializeDatabase = async () => {
 	try {
@@ -150,6 +250,9 @@ const initializeDatabase = async () => {
 		await syncDatabase(false); // false = no forzar recreación
 
 		console.log("✅ Base de datos inicializada correctamente");
+		
+		// Inicializar productos de ejemplo
+		await initializeExampleProducts();
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
 		process.exit(1);
@@ -2038,6 +2141,219 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando estado:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS PARA PRODUCTOS ---
+
+// Obtener todos los productos (o solo activos)
+app.get("/api/productos", async (req, res) => {
+	try {
+		const { activos } = req.query;
+		const where = {};
+		
+		if (activos === "true") {
+			where.activo = true;
+		}
+
+		const productos = await Producto.findAll({
+			where,
+			order: [["orden", "ASC"], ["nombre", "ASC"]],
+		});
+
+		res.json(productos);
+	} catch (error) {
+		console.error("Error obteniendo productos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un producto específico
+app.get("/api/productos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const producto = await Producto.findByPk(id);
+
+		if (!producto) {
+			return res.status(404).json({ error: "Producto no encontrado" });
+		}
+
+		res.json(producto);
+	} catch (error) {
+		console.error("Error obteniendo producto:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo producto
+app.post("/api/productos", async (req, res) => {
+	try {
+		const { nombre, descripcion, precio, imagen, categoria, activo, orden, stock } = req.body;
+
+		if (!nombre || precio === undefined) {
+			return res.status(400).json({
+				error: "Nombre y precio son requeridos",
+			});
+		}
+
+		const producto = await Producto.create({
+			nombre,
+			descripcion,
+			precio,
+			imagen,
+			categoria: categoria || "General",
+			activo: activo !== undefined ? activo : true,
+			orden: orden || 0,
+			stock,
+		});
+
+		res.status(201).json(producto);
+	} catch (error) {
+		console.error("Error creando producto:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un producto
+app.put("/api/productos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { nombre, descripcion, precio, imagen, categoria, activo, orden, stock } = req.body;
+
+		const producto = await Producto.findByPk(id);
+		if (!producto) {
+			return res.status(404).json({ error: "Producto no encontrado" });
+		}
+
+		const updateData = {};
+		if (nombre !== undefined) updateData.nombre = nombre;
+		if (descripcion !== undefined) updateData.descripcion = descripcion;
+		if (precio !== undefined) updateData.precio = precio;
+		if (imagen !== undefined) updateData.imagen = imagen;
+		if (categoria !== undefined) updateData.categoria = categoria;
+		if (activo !== undefined) updateData.activo = activo;
+		if (orden !== undefined) updateData.orden = orden;
+		if (stock !== undefined) updateData.stock = stock;
+
+		await producto.update(updateData);
+
+		res.json(producto);
+	} catch (error) {
+		console.error("Error actualizando producto:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un producto
+app.delete("/api/productos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const producto = await Producto.findByPk(id);
+		if (!producto) {
+			return res.status(404).json({ error: "Producto no encontrado" });
+		}
+
+		await producto.destroy();
+
+		res.json({
+			success: true,
+			message: "Producto eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando producto:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Agregar productos a una reserva
+app.post("/api/reservas/:id/productos", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { productos } = req.body; // Array de { productoId, cantidad }
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		if (!Array.isArray(productos) || productos.length === 0) {
+			return res.status(400).json({
+				error: "Se debe proporcionar un array de productos",
+			});
+		}
+
+		// Eliminar productos anteriores de esta reserva
+		await ProductoReserva.destroy({ where: { reservaId: id } });
+
+		// Agregar los nuevos productos
+		const productosReserva = [];
+		for (const item of productos) {
+			const producto = await Producto.findByPk(item.productoId);
+			if (!producto) {
+				continue; // Saltar productos que no existen
+			}
+
+			const cantidad = parseInt(item.cantidad) || 1;
+			const precioUnitario = parseFloat(producto.precio);
+			const subtotal = cantidad * precioUnitario;
+
+			const productoReserva = await ProductoReserva.create({
+				reservaId: id,
+				productoId: item.productoId,
+				cantidad,
+				precioUnitario,
+				subtotal,
+			});
+
+			productosReserva.push({
+				...productoReserva.toJSON(),
+				producto: producto.toJSON(),
+			});
+		}
+
+		res.status(201).json({
+			success: true,
+			productos: productosReserva,
+		});
+	} catch (error) {
+		console.error("Error agregando productos a reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener productos de una reserva
+app.get("/api/reservas/:id/productos", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		const productosReserva = await ProductoReserva.findAll({
+			where: { reservaId: id },
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		const totalProductos = productosReserva.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			productos: productosReserva,
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error obteniendo productos de reserva:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
