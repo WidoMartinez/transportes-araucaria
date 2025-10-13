@@ -33,6 +33,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
+import ProductosReserva from "./components/ProductosReserva";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -170,9 +171,21 @@ const resolveIsFreightView = () => {
 	);
 };
 
+const resolveIsProductosView = () => {
+	if (typeof window === "undefined") return false;
+	const pathname = window.location.pathname.toLowerCase();
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/productos" ||
+		pathname.startsWith("/productos/") ||
+		hash === "#productos"
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [isProductosView, setIsProductosView] = useState(resolveIsProductosView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -1388,6 +1401,10 @@ function App() {
 
 	if (isAdminView) {
 		return <AdminDashboard />;
+	}
+
+	if (isProductosView) {
+		return <ProductosReserva />;
 	}
 
 	return (
