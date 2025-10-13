@@ -387,85 +387,119 @@ function PagoPersonalizado() {
 						<CardHeader>
 							<CardTitle className="text-2xl">Datos del traslado</CardTitle>
 						</CardHeader>
-						<CardContent className="space-y-6">
-							{/* Información del traslado (solo lectura si viene de código) */}
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-2">
-									<Label htmlFor="origen" className="text-base font-medium flex items-center gap-2">
-										<MapPin className="w-4 h-4" />
-										Origen <span className="text-destructive">*</span>
-									</Label>
-									<Input
-										id="origen"
-										name="origen"
-										value={formData.origen}
-										onChange={handleInputChange}
-										placeholder="Ej: Aeropuerto La Araucanía"
-										className={errors.origen ? "border-red-500" : ""}
-										disabled={codigoValido}
-									/>
-									{errors.origen && (
-										<p className="text-sm text-red-500">{errors.origen}</p>
-									)}
-								</div>
+<CardContent className="space-y-6">
+{/* Resumen compacto cuando el código es válido */}
+{codigoValido ? (
+<div className="bg-gray-50 rounded-lg p-4 border-2 border-primary/20">
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+<div>
+<p className="text-gray-500 text-xs mb-1">Origen</p>
+<p className="font-semibold flex items-center gap-1">
+<MapPin className="w-4 h-4 text-primary" />
+{formData.origen}
+</p>
+</div>
+<div>
+<p className="text-gray-500 text-xs mb-1">Destino</p>
+<p className="font-semibold flex items-center gap-1">
+<MapPin className="w-4 h-4 text-primary" />
+{formData.destino}
+</p>
+</div>
+<div>
+<p className="text-gray-500 text-xs mb-1">Monto</p>
+<p className="font-bold text-primary text-lg flex items-center gap-1">
+<DollarSign className="w-4 h-4" />
+{formatCurrency(formData.monto)}
+</p>
+</div>
+</div>
+{formData.descripcion && (
+<div className="mt-3 pt-3 border-t border-gray-200">
+<p className="text-gray-500 text-xs mb-1">Descripción</p>
+<p className="text-sm">{formData.descripcion}</p>
+</div>
+)}
+</div>
+) : (
+<>
+{/* Información del traslado (editable cuando NO viene de código) */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div className="space-y-2">
+<Label htmlFor="origen" className="text-base font-medium flex items-center gap-2">
+<MapPin className="w-4 h-4" />
+Origen <span className="text-destructive">*</span>
+</Label>
+<Input
+id="origen"
+name="origen"
+value={formData.origen}
+onChange={handleInputChange}
+placeholder="Ej: Aeropuerto La Araucanía"
+className={errors.origen ? "border-red-500" : ""}
+/>
+{errors.origen && (
+<p className="text-sm text-red-500">{errors.origen}</p>
+)}
+</div>
 
-								<div className="space-y-2">
-									<Label htmlFor="destino" className="text-base font-medium flex items-center gap-2">
-										<MapPin className="w-4 h-4" />
-										Destino <span className="text-destructive">*</span>
-									</Label>
-									<Input
-										id="destino"
-										name="destino"
-										value={formData.destino}
-										onChange={handleInputChange}
-										placeholder="Ej: Carahue"
-										className={errors.destino ? "border-red-500" : ""}
-										disabled={codigoValido}
-									/>
-									{errors.destino && (
-										<p className="text-sm text-red-500">{errors.destino}</p>
-									)}
-								</div>
-							</div>
+<div className="space-y-2">
+<Label htmlFor="destino" className="text-base font-medium flex items-center gap-2">
+<MapPin className="w-4 h-4" />
+Destino <span className="text-destructive">*</span>
+</Label>
+<Input
+id="destino"
+name="destino"
+value={formData.destino}
+onChange={handleInputChange}
+placeholder="Ej: Carahue"
+className={errors.destino ? "border-red-500" : ""}
+/>
+{errors.destino && (
+<p className="text-sm text-red-500">{errors.destino}</p>
+)}
+</div>
+</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="monto" className="text-base font-medium flex items-center gap-2">
-									<DollarSign className="w-4 h-4" />
-									Monto a pagar <span className="text-destructive">*</span>
-								</Label>
-								<Input
-									id="monto"
-									name="monto"
-									value={formData.monto}
-									onChange={handleMontoChange}
-									placeholder="Ej: 25000"
-									type="text"
-									className={errors.monto ? "border-red-500" : ""}
-									disabled={codigoValido}
-								/>
-								{formData.monto && (
-									<p className="text-sm text-gray-600">
-										{formatCurrency(formData.monto)}
-									</p>
-								)}
-								{errors.monto && (
-									<p className="text-sm text-red-500">{errors.monto}</p>
-								)}
-							</div>
+<div className="space-y-2">
+<Label htmlFor="monto" className="text-base font-medium flex items-center gap-2">
+<DollarSign className="w-4 h-4" />
+Monto a pagar <span className="text-destructive">*</span>
+</Label>
+<Input
+id="monto"
+name="monto"
+value={formData.monto}
+onChange={handleMontoChange}
+placeholder="Ej: 25000"
+type="text"
+className={errors.monto ? "border-red-500" : ""}
+/>
+{formData.monto && (
+<p className="text-sm text-gray-600">
+{formatCurrency(formData.monto)}
+</p>
+)}
+{errors.monto && (
+<p className="text-sm text-red-500">{errors.monto}</p>
+)}
+</div>
 
-						<div className="space-y-2">
-							<Label htmlFor="descripcion" className="text-base font-medium">
-								Descripción del servicio (opcional)
-							</Label>
-							<Input
-								id="descripcion"
-								name="descripcion"
-								value={formData.descripcion}
-								onChange={handleInputChange}
-								placeholder="Ej: Transfer con equipaje especial"
-							/>
-						</div>
+<div className="space-y-2">
+<Label htmlFor="descripcion" className="text-base font-medium">
+Descripción del servicio (opcional)
+</Label>
+<Input
+id="descripcion"
+name="descripcion"
+value={formData.descripcion}
+onChange={handleInputChange}
+placeholder="Ej: Transfer con equipaje especial"
+/>
+</div>
+</>
+)}
 
 						{/* Datos del cliente */}
 						<div className="border-t pt-6">
