@@ -1,0 +1,273 @@
+<?php
+/**
+ * enviar_notificacion_asignacion.php
+ * 
+ * ARCHIVO DE REFERENCIA - NO USAR DIRECTAMENTE
+ * Este archivo debe ser copiado manualmente al servidor de Hostinger
+ * 
+ * Endpoint para enviar notificaciones por email cuando se asigna
+ * conductor y vehículo a una reserva
+ * 
+ * INSTRUCCIONES:
+ * 1. Copiar este archivo al servidor de Hostinger (mismo directorio que enviar_correo_mejorado.php)
+ * 2. Renombrar a: enviar_notificacion_asignacion.php (sin .template)
+ * 3. Configurar las credenciales SMTP si son diferentes
+ * 4. Descomentar la llamada a fetch() en backend/utils/emailHelpers.js
+ */
+
+// Habilitar errores para desarrollo (comentar en producción)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Cargar PHPMailer
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require 'PHPMailer/src/Exception.php';
+require 'PHPMailer/src/PHPMailer.php';
+require 'PHPMailer/src/SMTP.php';
+
+// Configuración de CORS
+$allowed_origins = [
+    'https://www.transportesaraucaria.cl',
+    'https://transportesaraucaria.cl',
+    'http://localhost:5173',
+    'https://transportes-araucaria.onrender.com'
+];
+
+if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+}
+
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit(0);
+}
+
+header('Content-Type: application/json');
+
+// Configuración de email
+$emailHost = getenv('EMAIL_HOST') ?: 'smtp.hostinger.com';
+$emailPort = getenv('EMAIL_PORT') ?: 465;
+$emailUser = getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl';
+$emailPass = getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.';
+$emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
+$brandName = 'Transportes Araucaria';
+
+// Obtener datos JSON
+$json_data = file_get_contents('php://input');
+$data = json_decode($json_data, true);
+
+if (!$data) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Error: No se recibieron datos válidos.']);
+    exit;
+}
+
+// Extraer datos
+$reservaId = htmlspecialchars($data['reservaId'] ?? 'Sin ID');
+$nombre = htmlspecialchars($data['nombre'] ?? 'Cliente');
+$email = filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL);
+$telefono = htmlspecialchars($data['telefono'] ?? 'No especificado');
+$origen = htmlspecialchars($data['origen'] ?? 'No especificado');
+$destino = htmlspecialchars($data['destino'] ?? 'No especificado');
+$fecha = htmlspecialchars($data['fecha'] ?? 'No especificada');
+$hora = htmlspecialchars($data['hora'] ?? 'No especificada');
+$conductorNombre = htmlspecialchars($data['conductorNombre'] ?? 'Por confirmar');
+$vehiculoTipo = htmlspecialchars($data['vehiculoTipo'] ?? 'Por confirmar');
+$vehiculoPatente = htmlspecialchars($data['vehiculoPatente'] ?? '****');
+
+if (!$email) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Email del cliente no válido']);
+    exit;
+}
+
+// HTML del correo para el cliente
+$clienteHtml = "
+<div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px;'>
+    <div style='background-color: #003366; color: white; padding: 20px; text-align: center;'>
+        <h1 style='margin: 0;'>✅ Conductor y Vehículo Asignados</h1>
+        <p style='margin: 5px 0 0;'>{$brandName}</p>
+    </div>
+    <div style='padding: 20px;'>
+        <p>Estimado/a <strong>{$nombre}</strong>,</p>
+        
+        <p>Nos complace informarle que se ha asignado un conductor y vehículo para su viaje:</p>
+        
+        <div style='background-color: #e3f2fd; border: 2px solid #3b82f6; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+            <h2 style='margin: 0 0 10px; color: #003366;'>Información del Servicio</h2>
+            <table style='width: 100%; border-collapse: collapse;'>
+                <tr>
+                    <td style='padding: 8px; font-weight: bold;'>👤 Conductor:</td>
+                    <td style='padding: 8px;'>{$conductorNombre}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px; font-weight: bold;'>🚗 Vehículo:</td>
+                    <td style='padding: 8px;'>{$vehiculoTipo} (***{$vehiculoPatente})</td>
+                </tr>
+            </table>
+        </div>
+        
+        <h3 style='color: #003366;'>Detalles de su Viaje</h3>
+        <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>📍 Origen:</td>
+                <td style='padding: 8px;'>{$origen}</td>
+            </tr>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>📍 Destino:</td>
+                <td style='padding: 8px;'>{$destino}</td>
+            </tr>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>📅 Fecha:</td>
+                <td style='padding: 8px;'>{$fecha}</td>
+            </tr>
+            <tr>
+                <td style='padding: 8px; font-weight: bold;'>🕐 Hora:</td>
+                <td style='padding: 8px;'>{$hora}</td>
+            </tr>
+        </table>
+        
+        <div style='background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;'>
+            <p style='margin: 0; font-size: 14px;'>
+                <strong>📞 ¿Necesita contactarnos?</strong><br>
+                Teléfono: <a href='tel:+56912345678'>+56 9 1234 5678</a><br>
+                Email: <a href='mailto:contacto@transportesaraucaria.cl'>contacto@transportesaraucaria.cl</a>
+            </p>
+        </div>
+        
+        <p style='text-align: center; color: #666; font-size: 12px; margin-top: 30px;'>
+            Gracias por confiar en {$brandName}<br>
+            Su seguridad y comodidad son nuestra prioridad
+        </p>
+    </div>
+    <div style='background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #666;'>
+        <p style='margin: 0;'>Este es un correo automático, por favor no responder.</p>
+        <p style='margin: 5px 0 0;'>Reserva ID: {$reservaId} | Fecha de envío: " . date('Y-m-d H:i:s') . "</p>
+    </div>
+</div>";
+
+// HTML del correo para el administrador
+$adminHtml = "
+<div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px;'>
+    <div style='background-color: #28a745; color: white; padding: 20px; text-align: center;'>
+        <h1 style='margin: 0;'>✅ Asignación Confirmada</h1>
+        <p style='margin: 5px 0 0;'>Notificación enviada al cliente</p>
+    </div>
+    <div style='padding: 20px;'>
+        <h2>Reserva ID: {$reservaId}</h2>
+        
+        <h3>Cliente</h3>
+        <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>Nombre:</td>
+                <td style='padding: 8px;'>{$nombre}</td>
+            </tr>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>Email:</td>
+                <td style='padding: 8px;'><a href='mailto:{$email}'>{$email}</a></td>
+            </tr>
+            <tr>
+                <td style='padding: 8px; font-weight: bold;'>Teléfono:</td>
+                <td style='padding: 8px;'><a href='tel:{$telefono}'>{$telefono}</a></td>
+            </tr>
+        </table>
+        
+        <h3>Asignación</h3>
+        <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>Conductor:</td>
+                <td style='padding: 8px;'>{$conductorNombre}</td>
+            </tr>
+            <tr>
+                <td style='padding: 8px; font-weight: bold;'>Vehículo:</td>
+                <td style='padding: 8px;'>{$vehiculoTipo} (***{$vehiculoPatente})</td>
+            </tr>
+        </table>
+        
+        <h3>Viaje</h3>
+        <table style='width: 100%; border-collapse: collapse;'>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>Origen:</td>
+                <td style='padding: 8px;'>{$origen}</td>
+            </tr>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>Destino:</td>
+                <td style='padding: 8px;'>{$destino}</td>
+            </tr>
+            <tr style='border-bottom: 1px solid #eee;'>
+                <td style='padding: 8px; font-weight: bold;'>Fecha:</td>
+                <td style='padding: 8px;'>{$fecha}</td>
+            </tr>
+            <tr>
+                <td style='padding: 8px; font-weight: bold;'>Hora:</td>
+                <td style='padding: 8px;'>{$hora}</td>
+            </tr>
+        </table>
+    </div>
+</div>";
+
+try {
+    // Configurar PHPMailer para el correo al cliente
+    $mail = new PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host       = $emailHost;
+    $mail->SMTPAuth   = true;
+    $mail->Username   = $emailUser;
+    $mail->Password   = $emailPass;
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    $mail->Port       = $emailPort;
+    $mail->CharSet    = 'UTF-8';
+
+    // Remitente y destinatario (cliente)
+    $mail->setFrom($emailUser, $brandName);
+    $mail->addAddress($email, $nombre);
+
+    // Contenido
+    $mail->isHTML(true);
+    $mail->Subject = "Conductor asignado - {$brandName}";
+    $mail->Body    = $clienteHtml;
+
+    $mail->send();
+    $emailClienteSent = true;
+    
+    // Enviar copia al administrador
+    $mailAdmin = new PHPMailer(true);
+    $mailAdmin->isSMTP();
+    $mailAdmin->Host       = $emailHost;
+    $mailAdmin->SMTPAuth   = true;
+    $mailAdmin->Username   = $emailUser;
+    $mailAdmin->Password   = $emailPass;
+    $mailAdmin->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    $mailAdmin->Port       = $emailPort;
+    $mailAdmin->CharSet    = 'UTF-8';
+
+    $mailAdmin->setFrom($emailUser, $brandName);
+    $mailAdmin->addAddress($emailTo);
+
+    $mailAdmin->isHTML(true);
+    $mailAdmin->Subject = "Asignación confirmada - Reserva {$reservaId}";
+    $mailAdmin->Body    = $adminHtml;
+
+    $mailAdmin->send();
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Notificaciones enviadas correctamente',
+        'reservaId' => $reservaId,
+        'emailCliente' => $email
+    ]);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error enviando notificaciones',
+        'error' => $mail->ErrorInfo
+    ]);
+}
