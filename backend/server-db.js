@@ -16,8 +16,17 @@ import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
+import Vehiculo from "./models/Vehiculo.js";
+import Conductor from "./models/Conductor.js";
+import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
 
 dotenv.config();
+
+// --- DEFINIR RELACIONES ENTRE MODELOS ---
+Reserva.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculoAsignado' });
+Reserva.belongsTo(Conductor, { foreignKey: 'conductorId', as: 'conductorAsignado' });
+Vehiculo.hasMany(Reserva, { foreignKey: 'vehiculoId' });
+Conductor.hasMany(Reserva, { foreignKey: 'conductorId' });
 
 // --- CONFIGURACIÓN DE MERCADO PAGO ---
 const client = new MercadoPagoConfig({
@@ -149,10 +158,136 @@ const initializeDatabase = async () => {
 		}
 		await syncDatabase(false); // false = no forzar recreación
 
+		// Inicializar configuraciones de tarifa dinámica por defecto
+		await initializeDynamicPricingConfig();
+
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
 		process.exit(1);
+	}
+};
+
+// --- INICIALIZAR CONFIGURACIONES DE TARIFA DINÁMICA ---
+const initializeDynamicPricingConfig = async () => {
+	try {
+		const count = await ConfiguracionTarifaDinamica.count();
+		if (count > 0) {
+			console.log("✅ Configuraciones de tarifa dinámica ya existen");
+			return;
+		}
+
+		console.log("📝 Creando configuraciones de tarifa dinámica por defecto...");
+
+		// 1. Recargo por reserva el mismo día (+25%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Recargo mismo día",
+			tipo: "anticipacion",
+			diasMinimos: 0,
+			diasMaximos: 0,
+			porcentajeAjuste: 25.0,
+			activo: true,
+			prioridad: 10,
+			descripcion: "Recargo del 25% para reservas realizadas el mismo día del viaje",
+		});
+
+		// 2. Recargo leve 1-3 días (+10%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Recargo 1-3 días",
+			tipo: "anticipacion",
+			diasMinimos: 1,
+			diasMaximos: 3,
+			porcentajeAjuste: 10.0,
+			activo: true,
+			prioridad: 9,
+			descripcion: "Recargo del 10% para reservas con 1-3 días de anticipación",
+		});
+
+		// 3. Precio normal 4-13 días (0%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Precio estándar 4-13 días",
+			tipo: "anticipacion",
+			diasMinimos: 4,
+			diasMaximos: 13,
+			porcentajeAjuste: 0.0,
+			activo: true,
+			prioridad: 8,
+			descripcion: "Precio base para reservas con 4-13 días de anticipación",
+		});
+
+		// 4. Descuento 2 semanas (-5%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Descuento 2 semanas",
+			tipo: "anticipacion",
+			diasMinimos: 14,
+			diasMaximos: 20,
+			porcentajeAjuste: -5.0,
+			activo: true,
+			prioridad: 7,
+			descripcion: "Descuento del 5% para reservas con 2-3 semanas de anticipación",
+		});
+
+		// 5. Descuento 3 semanas (-10%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Descuento 3 semanas",
+			tipo: "anticipacion",
+			diasMinimos: 21,
+			diasMaximos: 29,
+			porcentajeAjuste: -10.0,
+			activo: true,
+			prioridad: 6,
+			descripcion: "Descuento del 10% para reservas con 3-4 semanas de anticipación",
+		});
+
+		// 6. Descuento 1 mes o más (-15%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Descuento 1+ mes",
+			tipo: "anticipacion",
+			diasMinimos: 30,
+			diasMaximos: null, // Sin límite
+			porcentajeAjuste: -15.0,
+			activo: true,
+			prioridad: 5,
+			descripcion: "Descuento del 15% para reservas con 1 mes o más de anticipación",
+		});
+
+		// 7. Alta demanda: Viernes, Sábado, Domingo (+10%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Alta demanda fin de semana",
+			tipo: "dia_semana",
+			diasSemana: [5, 6, 0], // Viernes, Sábado, Domingo
+			porcentajeAjuste: 10.0,
+			activo: true,
+			prioridad: 4,
+			descripcion: "Recargo del 10% para viajes en viernes, sábado y domingo",
+		});
+
+		// 8. Horario temprano: Antes de 9am (+15%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Horario temprano (antes 9am)",
+			tipo: "horario",
+			horaInicio: "00:00:00",
+			horaFin: "09:00:00",
+			porcentajeAjuste: 15.0,
+			activo: true,
+			prioridad: 3,
+			descripcion: "Recargo adicional del 15% para viajes antes de las 9:00 AM",
+		});
+
+		// 9. Descuento de retorno (50%)
+		await ConfiguracionTarifaDinamica.create({
+			nombre: "Descuento viaje de retorno",
+			tipo: "descuento_retorno",
+			porcentajeAjuste: -50.0,
+			tiempoEsperaMaximo: 240, // 4 horas
+			activo: true,
+			prioridad: 2,
+			descripcion: "Descuento del 50% cuando hay un vehículo disponible para retorno en menos de 4 horas",
+		});
+
+		console.log("✅ Configuraciones de tarifa dinámica creadas exitosamente");
+	} catch (error) {
+		console.error("❌ Error creando configuraciones de tarifa dinámica:", error);
 	}
 };
 
@@ -422,11 +557,17 @@ const buildPricingPayload = async () => {
 		minHorasAnticipacion: destino.minHorasAnticipacion || 5,
 	}));
 
+	// Obtener configuraciones de tarifa dinámica
+	const tarifaDinamica = await ConfiguracionTarifaDinamica.findAll({
+		order: [["prioridad", "DESC"], ["tipo", "ASC"]],
+	});
+
 	return {
 		destinos: destinosFormateados,
 		dayPromotions: dayPromotionsFormatted,
 		descuentosGlobales: descuentosFormatted,
 		codigosDescuento: codigosFormateados,
+		tarifaDinamica: tarifaDinamica || [],
 		updatedAt: new Date().toISOString(),
 	};
 };
@@ -1380,6 +1521,448 @@ app.get("/api/codigos/historial", async (req, res) => {
 	} catch (error) {
 		console.error("Error obteniendo historial:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ============================================
+// FUNCIONES PARA CÁLCULO DE TARIFA DINÁMICA
+// ============================================
+
+/**
+ * Calcula la tarifa dinámica basada en anticipación, día de la semana y horario
+ * @param {number} precioBase - Precio base del viaje
+ * @param {string} destino - Nombre del destino
+ * @param {string} fecha - Fecha del viaje (formato YYYY-MM-DD)
+ * @param {string} hora - Hora del viaje (formato HH:MM:SS)
+ * @returns {Object} Resultado con precio ajustado y detalles de ajustes aplicados
+ */
+const calcularTarifaDinamica = async (precioBase, destino, fecha, hora) => {
+	try {
+		// Obtener todas las configuraciones activas ordenadas por prioridad
+		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+			where: { activo: true },
+			order: [["prioridad", "DESC"]],
+		});
+
+		const fechaViaje = new Date(fecha + "T" + hora);
+		const hoy = new Date();
+		hoy.setHours(0, 0, 0, 0);
+		
+		const fechaViajeInicio = new Date(fecha);
+		fechaViajeInicio.setHours(0, 0, 0, 0);
+		
+		// Calcular días de anticipación
+		const diasAnticipacion = Math.floor(
+			(fechaViajeInicio - hoy) / (1000 * 60 * 60 * 24)
+		);
+		
+		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+		const horaViaje = hora.split(":")[0] + ":" + hora.split(":")[1];
+
+		let ajusteTotal = 0;
+		const ajustesAplicados = [];
+
+		// Aplicar cada configuración según su tipo
+		for (const config of configuraciones) {
+			// Verificar si el destino está excluido
+			if (config.destinosExcluidos && Array.isArray(config.destinosExcluidos)) {
+				if (config.destinosExcluidos.includes(destino)) {
+					continue; // Saltar esta configuración
+				}
+			}
+
+			let aplicar = false;
+			let detalleAjuste = "";
+
+			switch (config.tipo) {
+				case "anticipacion":
+					// Verificar si los días de anticipación caen en el rango
+					if (
+						diasAnticipacion >= (config.diasMinimos || 0) &&
+						(config.diasMaximos === null || diasAnticipacion <= config.diasMaximos)
+					) {
+						aplicar = true;
+						detalleAjuste = `${config.nombre} (${diasAnticipacion} días anticipación)`;
+					}
+					break;
+
+				case "dia_semana":
+					// Verificar si el día de la semana está en la lista
+					if (
+						config.diasSemana &&
+						Array.isArray(config.diasSemana) &&
+						config.diasSemana.includes(diaSemana)
+					) {
+						aplicar = true;
+						const nombresDias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+						detalleAjuste = `${config.nombre} (${nombresDias[diaSemana]})`;
+					}
+					break;
+
+				case "horario":
+					// Verificar si la hora está en el rango
+					if (config.horaInicio && config.horaFin) {
+						const horaInicioConfig = config.horaInicio.substring(0, 5);
+						const horaFinConfig = config.horaFin.substring(0, 5);
+						
+						if (horaViaje >= horaInicioConfig && horaViaje < horaFinConfig) {
+							aplicar = true;
+							detalleAjuste = `${config.nombre} (${horaViaje})`;
+						}
+					}
+					break;
+
+				case "descuento_retorno":
+					// Este tipo se maneja por separado cuando se detecta un vehículo disponible
+					// No se aplica automáticamente aquí
+					break;
+			}
+
+			if (aplicar) {
+				const ajuste = parseFloat(config.porcentajeAjuste);
+				ajusteTotal += ajuste;
+				ajustesAplicados.push({
+					nombre: config.nombre,
+					tipo: config.tipo,
+					porcentaje: ajuste,
+					detalle: detalleAjuste,
+				});
+			}
+		}
+
+		// Calcular precio final
+		const ajusteMonto = Math.round(precioBase * (ajusteTotal / 100));
+		const precioFinal = Math.round(precioBase + ajusteMonto);
+
+		return {
+			precioBase,
+			ajusteTotal: ajusteTotal,
+			ajusteMonto,
+			precioFinal,
+			diasAnticipacion,
+			ajustesAplicados,
+		};
+	} catch (error) {
+		console.error("Error en calcularTarifaDinamica:", error);
+		throw error;
+	}
+};
+
+/**
+ * Verificar si hay un vehículo disponible para retorno en el destino
+ * @param {string} destino - Destino del viaje
+ * @param {string} fecha - Fecha de llegada estimada
+ * @param {string} hora - Hora de llegada estimada
+ * @param {number} tiempoEsperaMaximo - Tiempo máximo de espera en minutos
+ * @returns {Object} Información sobre disponibilidad de retorno
+ */
+const verificarRetornoDisponible = async (destino, fecha, hora, tiempoEsperaMaximo = 240) => {
+	try {
+		const fechaHoraLlegada = new Date(fecha + "T" + hora);
+		const tiempoLimite = new Date(fechaHoraLlegada.getTime() + tiempoEsperaMaximo * 60000);
+
+		// Buscar reservas que llegan al mismo destino cerca de la hora
+		const reservasCercanas = await Reserva.findAll({
+			where: {
+				destino: destino,
+				fecha: fecha,
+				vehiculoId: {
+					[Op.ne]: null,
+				},
+				estado: {
+					[Op.in]: ["confirmada", "pendiente_detalles"],
+				},
+			},
+			include: [
+				{
+					model: Vehiculo,
+					as: "vehiculoAsignado",
+					where: { activo: true },
+				},
+			],
+		});
+
+		// Verificar cuáles vehículos estarán disponibles en el tiempo requerido
+		const vehiculosDisponibles = [];
+		
+		for (const reserva of reservasCercanas) {
+			const horaLlegadaReserva = new Date(fecha + "T" + reserva.hora);
+			
+			// Si la reserva llega antes y dentro del tiempo de espera
+			if (horaLlegadaReserva <= fechaHoraLlegada && 
+			    horaLlegadaReserva >= new Date(fechaHoraLlegada.getTime() - tiempoEsperaMaximo * 60000)) {
+				vehiculosDisponibles.push({
+					vehiculoId: reserva.vehiculoId,
+					horaDisponible: reserva.hora,
+					tiempoEspera: Math.round((fechaHoraLlegada - horaLlegadaReserva) / 60000),
+				});
+			}
+		}
+
+		return {
+			disponible: vehiculosDisponibles.length > 0,
+			vehiculos: vehiculosDisponibles,
+			cantidadDisponible: vehiculosDisponibles.length,
+		};
+	} catch (error) {
+		console.error("Error verificando retorno disponible:", error);
+		return {
+			disponible: false,
+			vehiculos: [],
+			cantidadDisponible: 0,
+		};
+	}
+};
+
+// ============================================
+// ENDPOINTS PARA GESTIÓN DE VEHÍCULOS
+// ============================================
+
+// Obtener todos los vehículos
+app.get("/api/vehiculos", async (req, res) => {
+	try {
+		const vehiculos = await Vehiculo.findAll({
+			order: [["activo", "DESC"], ["tipo", "ASC"], ["placa", "ASC"]],
+		});
+		res.json(vehiculos);
+	} catch (error) {
+		console.error("Error obteniendo vehículos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nuevo vehículo
+app.post("/api/vehiculos", async (req, res) => {
+	try {
+		const vehiculo = await Vehiculo.create(req.body);
+		res.status(201).json(vehiculo);
+	} catch (error) {
+		console.error("Error creando vehículo:", error);
+		res.status(500).json({ error: "Error creando vehículo" });
+	}
+});
+
+// Actualizar vehículo
+app.put("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const vehiculo = await Vehiculo.findByPk(req.params.id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+		await vehiculo.update(req.body);
+		res.json(vehiculo);
+	} catch (error) {
+		console.error("Error actualizando vehículo:", error);
+		res.status(500).json({ error: "Error actualizando vehículo" });
+	}
+});
+
+// Eliminar vehículo
+app.delete("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const vehiculo = await Vehiculo.findByPk(req.params.id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+		await vehiculo.destroy();
+		res.json({ message: "Vehículo eliminado correctamente" });
+	} catch (error) {
+		console.error("Error eliminando vehículo:", error);
+		res.status(500).json({ error: "Error eliminando vehículo" });
+	}
+});
+
+// Verificar disponibilidad de vehículos para una fecha/hora
+app.post("/api/vehiculos/disponibilidad", async (req, res) => {
+	try {
+		const { fecha, hora, tipo } = req.body;
+		
+		if (!fecha || !hora) {
+			return res.status(400).json({ error: "Fecha y hora son requeridos" });
+		}
+
+		// Obtener todos los vehículos del tipo solicitado (o todos si no se especifica)
+		const whereClause = {
+			activo: true,
+			enMantenimiento: false,
+		};
+		
+		if (tipo) {
+			whereClause.tipo = tipo;
+		}
+
+		const vehiculosActivos = await Vehiculo.findAll({
+			where: whereClause,
+		});
+
+		// Obtener reservas para esa fecha
+		const reservas = await Reserva.findAll({
+			where: {
+				fecha: fecha,
+				vehiculoId: {
+					[Op.ne]: null,
+				},
+				estado: {
+					[Op.in]: ["confirmada", "pendiente_detalles"],
+				},
+			},
+			attributes: ["vehiculoId", "hora"],
+		});
+
+		// Calcular vehículos disponibles
+		const vehiculosReservados = new Set(reservas.map(r => r.vehiculoId));
+		const vehiculosDisponibles = vehiculosActivos.filter(
+			v => !vehiculosReservados.has(v.id)
+		);
+
+		res.json({
+			total: vehiculosActivos.length,
+			disponibles: vehiculosDisponibles.length,
+			ocupados: vehiculosReservados.size,
+			vehiculos: vehiculosDisponibles,
+			hayDisponibilidad: vehiculosDisponibles.length > 0,
+		});
+	} catch (error) {
+		console.error("Error verificando disponibilidad:", error);
+		res.status(500).json({ error: "Error verificando disponibilidad" });
+	}
+});
+
+// ============================================
+// ENDPOINTS PARA GESTIÓN DE CONDUCTORES
+// ============================================
+
+// Obtener todos los conductores
+app.get("/api/conductores", async (req, res) => {
+	try {
+		const conductores = await Conductor.findAll({
+			order: [["activo", "DESC"], ["nombre", "ASC"]],
+		});
+		res.json(conductores);
+	} catch (error) {
+		console.error("Error obteniendo conductores:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nuevo conductor
+app.post("/api/conductores", async (req, res) => {
+	try {
+		const conductor = await Conductor.create(req.body);
+		res.status(201).json(conductor);
+	} catch (error) {
+		console.error("Error creando conductor:", error);
+		res.status(500).json({ error: "Error creando conductor" });
+	}
+});
+
+// Actualizar conductor
+app.put("/api/conductores/:id", async (req, res) => {
+	try {
+		const conductor = await Conductor.findByPk(req.params.id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+		await conductor.update(req.body);
+		res.json(conductor);
+	} catch (error) {
+		console.error("Error actualizando conductor:", error);
+		res.status(500).json({ error: "Error actualizando conductor" });
+	}
+});
+
+// Eliminar conductor
+app.delete("/api/conductores/:id", async (req, res) => {
+	try {
+		const conductor = await Conductor.findByPk(req.params.id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+		await conductor.destroy();
+		res.json({ message: "Conductor eliminado correctamente" });
+	} catch (error) {
+		console.error("Error eliminando conductor:", error);
+		res.status(500).json({ error: "Error eliminando conductor" });
+	}
+});
+
+// ============================================
+// ENDPOINTS PARA CONFIGURACIÓN DE TARIFA DINÁMICA
+// ============================================
+
+// Obtener todas las configuraciones
+app.get("/api/tarifa-dinamica", async (req, res) => {
+	try {
+		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+			order: [["prioridad", "DESC"], ["tipo", "ASC"]],
+		});
+		res.json(configuraciones);
+	} catch (error) {
+		console.error("Error obteniendo configuraciones:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nueva configuración
+app.post("/api/tarifa-dinamica", async (req, res) => {
+	try {
+		const config = await ConfiguracionTarifaDinamica.create(req.body);
+		invalidatePricingCache(); // Invalidar cache de precios
+		res.status(201).json(config);
+	} catch (error) {
+		console.error("Error creando configuración:", error);
+		res.status(500).json({ error: "Error creando configuración" });
+	}
+});
+
+// Actualizar configuración
+app.put("/api/tarifa-dinamica/:id", async (req, res) => {
+	try {
+		const config = await ConfiguracionTarifaDinamica.findByPk(req.params.id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+		await config.update(req.body);
+		invalidatePricingCache(); // Invalidar cache de precios
+		res.json(config);
+	} catch (error) {
+		console.error("Error actualizando configuración:", error);
+		res.status(500).json({ error: "Error actualizando configuración" });
+	}
+});
+
+// Eliminar configuración
+app.delete("/api/tarifa-dinamica/:id", async (req, res) => {
+	try {
+		const config = await ConfiguracionTarifaDinamica.findByPk(req.params.id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+		await config.destroy();
+		invalidatePricingCache(); // Invalidar cache de precios
+		res.json({ message: "Configuración eliminada correctamente" });
+	} catch (error) {
+		console.error("Error eliminando configuración:", error);
+		res.status(500).json({ error: "Error eliminando configuración" });
+	}
+});
+
+// Calcular tarifa dinámica para una reserva
+app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
+	try {
+		const { precioBase, destino, fecha, hora } = req.body;
+		
+		if (!precioBase || !fecha || !hora) {
+			return res.status(400).json({ 
+				error: "Precio base, fecha y hora son requeridos" 
+			});
+		}
+
+		const result = await calcularTarifaDinamica(precioBase, destino, fecha, hora);
+		res.json(result);
+	} catch (error) {
+		console.error("Error calculando tarifa dinámica:", error);
+		res.status(500).json({ error: "Error calculando tarifa dinámica" });
 	}
 });
 
