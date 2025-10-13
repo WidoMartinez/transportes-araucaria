@@ -185,7 +185,7 @@ const resolveIsProductosView = () => {
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
-	const [isProductosView, setIsProductosView] = useState(resolveIsProductosView);
+	const [isProductosView] = useState(resolveIsProductosView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
