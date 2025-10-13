@@ -41,6 +41,7 @@ function MenuProductos({ open, onOpenChange, onConfirm, reservaId }) {
 				fetchProductosReserva();
 			}
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open, reservaId]);
 
 	const fetchProductos = async () => {
