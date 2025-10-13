@@ -19,6 +19,12 @@ import Cliente from "./models/Cliente.js";
 import Conductor from "./models/Conductor.js";
 import Vehiculo from "./models/Vehiculo.js";
 import ViajesConductor from "./models/ViajesConductor.js";
+import {
+	obtenerUltimos4Patente,
+	formatearInfoConductor,
+	formatearInfoVehiculo,
+	notificarAsignacionConductor,
+} from "./utils/emailHelpers.js";
 
 dotenv.config();
 
@@ -1906,6 +1912,17 @@ app.put("/api/reservas/:id/asignar", async (req, res) => {
 		const conductor = conductorId ? await Conductor.findByPk(conductorId) : null;
 		const vehiculo = vehiculoId ? await Vehiculo.findByPk(vehiculoId) : null;
 
+		// Enviar notificación por email si se asignaron conductor y vehículo
+		if (conductor && vehiculo && reserva.email) {
+			try {
+				await notificarAsignacionConductor(reserva, conductor, vehiculo);
+				console.log(`✅ Notificación de asignación enviada para reserva ${id}`);
+			} catch (emailError) {
+				console.error("⚠️ Error enviando notificación de asignación:", emailError);
+				// No fallar la asignación si el email falla
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Conductor y vehículo asignados exitosamente",
@@ -1913,6 +1930,9 @@ app.put("/api/reservas/:id/asignar", async (req, res) => {
 				...reserva.toJSON(),
 				conductor,
 				vehiculo,
+				// Información formateada para mostrar al cliente
+				conductorDisplay: formatearInfoConductor(conductor),
+				vehiculoDisplay: formatearInfoVehiculo(vehiculo),
 			},
 		});
 	} catch (error) {
