@@ -16,6 +16,9 @@ import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
+import Conductor from "./models/Conductor.js";
+import Vehiculo from "./models/Vehiculo.js";
+import ViajesConductor from "./models/ViajesConductor.js";
 
 dotenv.config();
 
@@ -1751,7 +1754,23 @@ app.get("/api/reservas/:id", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		res.json(reserva);
+		// Incluir información de conductor y vehículo si están asignados
+		let conductor = null;
+		let vehiculo = null;
+
+		if (reserva.conductorId) {
+			conductor = await Conductor.findByPk(reserva.conductorId);
+		}
+
+		if (reserva.vehiculoId) {
+			vehiculo = await Vehiculo.findByPk(reserva.vehiculoId);
+		}
+
+		res.json({
+			...reserva.toJSON(),
+			conductor,
+			vehiculo,
+		});
 	} catch (error) {
 		console.error("Error obteniendo reserva:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
@@ -1823,6 +1842,81 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando estado de pago:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Asignar conductor y vehículo a una reserva
+app.put("/api/reservas/:id/asignar", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { conductorId, vehiculoId, montoPago, notas } = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Verificar que existan el conductor y vehículo si se proporcionan
+		if (conductorId) {
+			const conductor = await Conductor.findByPk(conductorId);
+			if (!conductor) {
+				return res.status(404).json({ error: "Conductor no encontrado" });
+			}
+		}
+
+		if (vehiculoId) {
+			const vehiculo = await Vehiculo.findByPk(vehiculoId);
+			if (!vehiculo) {
+				return res.status(404).json({ error: "Vehículo no encontrado" });
+			}
+		}
+
+		// Actualizar la reserva
+		await reserva.update({
+			conductorId: conductorId !== undefined ? conductorId : reserva.conductorId,
+			vehiculoId: vehiculoId !== undefined ? vehiculoId : reserva.vehiculoId,
+		});
+
+		// Si se asignan ambos, crear o actualizar el registro de viaje
+		if (conductorId && vehiculoId) {
+			const viajeExistente = await ViajesConductor.findOne({
+				where: { reservaId: id },
+			});
+
+			if (viajeExistente) {
+				await viajeExistente.update({
+					conductorId,
+					vehiculoId,
+					montoPago: montoPago !== undefined ? montoPago : viajeExistente.montoPago,
+					notas: notas !== undefined ? notas : viajeExistente.notas,
+				});
+			} else {
+				await ViajesConductor.create({
+					conductorId,
+					vehiculoId,
+					reservaId: id,
+					montoPago: montoPago || 0,
+					notas: notas || null,
+				});
+			}
+		}
+
+		// Obtener datos actualizados con conductor y vehículo
+		const conductor = conductorId ? await Conductor.findByPk(conductorId) : null;
+		const vehiculo = vehiculoId ? await Vehiculo.findByPk(vehiculoId) : null;
+
+		res.json({
+			success: true,
+			message: "Conductor y vehículo asignados exitosamente",
+			reserva: {
+				...reserva.toJSON(),
+				conductor,
+				vehiculo,
+			},
+		});
+	} catch (error) {
+		console.error("Error asignando conductor y vehículo:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -1992,6 +2086,455 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error creando/actualizando cliente:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ===== ENDPOINTS PARA GESTIONAR CONDUCTORES =====
+
+// Obtener todos los conductores
+app.get("/api/conductores", async (req, res) => {
+	try {
+		const { activo } = req.query;
+		const whereClause = {};
+		
+		if (activo !== undefined) {
+			whereClause.activo = activo === "true";
+		}
+
+		const conductores = await Conductor.findAll({
+			where: whereClause,
+			order: [["nombre", "ASC"]],
+		});
+
+		res.json({ conductores });
+	} catch (error) {
+		console.error("Error obteniendo conductores:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un conductor por ID
+app.get("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const conductor = await Conductor.findByPk(id);
+
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		// Obtener viajes del conductor
+		const viajes = await ViajesConductor.findAll({
+			where: { conductorId: id },
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res.json({ conductor, viajes });
+	} catch (error) {
+		console.error("Error obteniendo conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear conductor
+app.post("/api/conductores", async (req, res) => {
+	try {
+		const { nombre, telefono, email, notas } = req.body;
+
+		if (!nombre || !telefono) {
+			return res.status(400).json({
+				error: "Nombre y teléfono son obligatorios",
+			});
+		}
+
+		const conductor = await Conductor.create({
+			nombre,
+			telefono,
+			email,
+			notas,
+			activo: true,
+		});
+
+		res.json({
+			success: true,
+			message: "Conductor creado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error creando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar conductor
+app.put("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { nombre, telefono, email, notas, activo } = req.body;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		await conductor.update({
+			nombre: nombre !== undefined ? nombre : conductor.nombre,
+			telefono: telefono !== undefined ? telefono : conductor.telefono,
+			email: email !== undefined ? email : conductor.email,
+			notas: notas !== undefined ? notas : conductor.notas,
+			activo: activo !== undefined ? activo : conductor.activo,
+		});
+
+		res.json({
+			success: true,
+			message: "Conductor actualizado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error actualizando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar conductor
+app.delete("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		// Verificar si tiene viajes asignados
+		const viajesCount = await ViajesConductor.count({
+			where: { conductorId: id },
+		});
+
+		if (viajesCount > 0) {
+			return res.status(400).json({
+				error: "No se puede eliminar un conductor con viajes asignados",
+			});
+		}
+
+		await conductor.destroy();
+
+		res.json({
+			success: true,
+			message: "Conductor eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ===== ENDPOINTS PARA GESTIONAR VEHÍCULOS =====
+
+// Obtener todos los vehículos
+app.get("/api/vehiculos", async (req, res) => {
+	try {
+		const { activo, tipo } = req.query;
+		const whereClause = {};
+		
+		if (activo !== undefined) {
+			whereClause.activo = activo === "true";
+		}
+		if (tipo) {
+			whereClause.tipo = tipo;
+		}
+
+		const vehiculos = await Vehiculo.findAll({
+			where: whereClause,
+			order: [["tipo", "ASC"], ["patente", "ASC"]],
+		});
+
+		res.json({ vehiculos });
+	} catch (error) {
+		console.error("Error obteniendo vehículos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un vehículo por ID
+app.get("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const vehiculo = await Vehiculo.findByPk(id);
+
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		// Obtener viajes del vehículo
+		const viajes = await ViajesConductor.findAll({
+			where: { vehiculoId: id },
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res.json({ vehiculo, viajes });
+	} catch (error) {
+		console.error("Error obteniendo vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear vehículo
+app.post("/api/vehiculos", async (req, res) => {
+	try {
+		const { patente, tipo, capacidad, marca, modelo, anio, notas } = req.body;
+
+		if (!patente || !tipo) {
+			return res.status(400).json({
+				error: "Patente y tipo son obligatorios",
+			});
+		}
+
+		// Verificar si ya existe un vehículo con esa patente
+		const existente = await Vehiculo.findOne({ where: { patente } });
+		if (existente) {
+			return res.status(400).json({
+				error: "Ya existe un vehículo con esa patente",
+			});
+		}
+
+		const vehiculo = await Vehiculo.create({
+			patente,
+			tipo,
+			capacidad: capacidad || 4,
+			marca,
+			modelo,
+			anio,
+			notas,
+			activo: true,
+		});
+
+		res.json({
+			success: true,
+			message: "Vehículo creado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error creando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar vehículo
+app.put("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { patente, tipo, capacidad, marca, modelo, anio, notas, activo } = req.body;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		// Si se actualiza la patente, verificar que no esté duplicada
+		if (patente && patente !== vehiculo.patente) {
+			const existente = await Vehiculo.findOne({ where: { patente } });
+			if (existente) {
+				return res.status(400).json({
+					error: "Ya existe un vehículo con esa patente",
+				});
+			}
+		}
+
+		await vehiculo.update({
+			patente: patente !== undefined ? patente : vehiculo.patente,
+			tipo: tipo !== undefined ? tipo : vehiculo.tipo,
+			capacidad: capacidad !== undefined ? capacidad : vehiculo.capacidad,
+			marca: marca !== undefined ? marca : vehiculo.marca,
+			modelo: modelo !== undefined ? modelo : vehiculo.modelo,
+			anio: anio !== undefined ? anio : vehiculo.anio,
+			notas: notas !== undefined ? notas : vehiculo.notas,
+			activo: activo !== undefined ? activo : vehiculo.activo,
+		});
+
+		res.json({
+			success: true,
+			message: "Vehículo actualizado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error actualizando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar vehículo
+app.delete("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		// Verificar si tiene viajes asignados
+		const viajesCount = await ViajesConductor.count({
+			where: { vehiculoId: id },
+		});
+
+		if (viajesCount > 0) {
+			return res.status(400).json({
+				error: "No se puede eliminar un vehículo con viajes asignados",
+			});
+		}
+
+		await vehiculo.destroy();
+
+		res.json({
+			success: true,
+			message: "Vehículo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ===== ENDPOINTS PARA GESTIONAR VIAJES DE CONDUCTORES =====
+
+// Crear un viaje (asignar conductor y vehículo a una reserva)
+app.post("/api/viajes", async (req, res) => {
+	try {
+		const { conductorId, vehiculoId, reservaId, montoPago, notas } = req.body;
+
+		if (!conductorId || !vehiculoId || !reservaId) {
+			return res.status(400).json({
+				error: "conductorId, vehiculoId y reservaId son obligatorios",
+			});
+		}
+
+		// Verificar que existan el conductor, vehículo y reserva
+		const conductor = await Conductor.findByPk(conductorId);
+		const vehiculo = await Vehiculo.findByPk(vehiculoId);
+		const reserva = await Reserva.findByPk(reservaId);
+
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Crear el registro de viaje
+		const viaje = await ViajesConductor.create({
+			conductorId,
+			vehiculoId,
+			reservaId,
+			montoPago: montoPago || 0,
+			notas,
+		});
+
+		// Actualizar la reserva con conductor y vehículo
+		await reserva.update({
+			conductorId,
+			vehiculoId,
+		});
+
+		res.json({
+			success: true,
+			message: "Viaje creado exitosamente",
+			viaje,
+		});
+	} catch (error) {
+		console.error("Error creando viaje:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un viaje (principalmente el monto de pago)
+app.put("/api/viajes/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { montoPago, notas } = req.body;
+
+		const viaje = await ViajesConductor.findByPk(id);
+		if (!viaje) {
+			return res.status(404).json({ error: "Viaje no encontrado" });
+		}
+
+		await viaje.update({
+			montoPago: montoPago !== undefined ? montoPago : viaje.montoPago,
+			notas: notas !== undefined ? notas : viaje.notas,
+		});
+
+		res.json({
+			success: true,
+			message: "Viaje actualizado exitosamente",
+			viaje,
+		});
+	} catch (error) {
+		console.error("Error actualizando viaje:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener historial de viajes de un conductor
+app.get("/api/conductores/:id/viajes", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		const viajes = await ViajesConductor.findAll({
+			where: { conductorId: id },
+			order: [["createdAt", "DESC"]],
+		});
+
+		// Obtener información detallada de cada viaje
+		const viajesDetallados = await Promise.all(
+			viajes.map(async (viaje) => {
+				const reserva = await Reserva.findByPk(viaje.reservaId);
+				const vehiculo = await Vehiculo.findByPk(viaje.vehiculoId);
+				return {
+					...viaje.toJSON(),
+					reserva,
+					vehiculo,
+				};
+			})
+		);
+
+		// Calcular estadísticas
+		const totalViajes = viajes.length;
+		const totalPagado = viajes.reduce(
+			(sum, v) => sum + parseFloat(v.montoPago || 0),
+			0
+		);
+
+		res.json({
+			conductor,
+			viajes: viajesDetallados,
+			estadisticas: {
+				totalViajes,
+				totalPagado,
+			},
+		});
+	} catch (error) {
+		console.error("Error obteniendo viajes del conductor:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });

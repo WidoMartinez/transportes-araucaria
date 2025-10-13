@@ -7,7 +7,8 @@
 	"scripts": {
 		"start": "node server-db.js",
 		"migrate": "node migrations/add-cliente-fields.js",
-		"start:migrate": "node migrations/add-cliente-fields.js && node server-db.js || (echo 'MIGRACIÓN FALLÓ - ABORTANDO' && exit 1)",
+		"migrate:conductores": "node migrations/add-conductores-vehiculos.js",
+		"start:migrate": "node migrations/add-cliente-fields.js && node migrations/add-conductores-vehiculos.js && node server-db.js || (echo 'MIGRACIÓN FALLÓ - ABORTANDO' && exit 1)",
 		"test:db": "node test-db.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},

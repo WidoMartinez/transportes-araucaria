@@ -20,6 +20,18 @@ const Reserva = sequelize.define(
 			allowNull: true,
 			comment: "RUT del cliente (formato: 12345678-9)",
 		},
+		conductorId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: 'conductor_id',
+			comment: "ID del conductor asignado a la reserva",
+		},
+		vehiculoId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: 'vehiculo_id',
+			comment: "ID del vehículo asignado a la reserva",
+		},
 		nombre: {
 			type: DataTypes.STRING(255),
 			allowNull: false,
@@ -193,6 +205,8 @@ const Reserva = sequelize.define(
 			{ fields: ["created_at"] },
 			{ fields: ["clienteId"] },
 			{ fields: ["rut"] },
+			{ fields: ["conductorId"] },
+			{ fields: ["vehiculoId"] },
 		],
 	}
 );
