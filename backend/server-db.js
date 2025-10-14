@@ -2255,7 +2255,7 @@ app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
 		if (patenteNorm !== vehiculo.patente) {
 			const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
 			if (existente) {
-				return res.status(400).json({
+				return res.status(409).json({
 					error: "Ya existe un vehículo con esta patente",
 				});
 			}
