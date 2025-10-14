@@ -2276,7 +2276,7 @@ app.post("/api/conductores", async (req, res) => {
 		// Verificar si ya existe un conductor con ese RUT
 		const existente = await Conductor.findOne({ where: { rut: rutFormateado } });
 		if (existente) {
-			return res.status(400).json({
+			return res.status(409).json({
 				error: "Ya existe un conductor con este RUT",
 			});
 		}
