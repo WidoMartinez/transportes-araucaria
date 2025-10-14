@@ -2253,9 +2253,15 @@ app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
 		let capacidadNorm;
 		if (capacidad !== undefined) {
 			const capacidadNum = Number(capacidad);
+			const MAX_CAPACIDAD = 50; // Si el valor máximo es configurable, reemplazar por la variable correspondiente
 			if (isNaN(capacidadNum) || capacidadNum <= 0) {
 				return res.status(400).json({
 					error: "La capacidad debe ser un número positivo válido",
+				});
+			}
+			if (capacidadNum > MAX_CAPACIDAD) {
+				return res.status(400).json({
+					error: `La capacidad máxima permitida es ${MAX_CAPACIDAD}`,
 				});
 			}
 			capacidadNorm = capacidadNum;
