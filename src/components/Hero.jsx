@@ -54,7 +54,7 @@ function Hero({
 	promotionDiscountRate,
 	roundTripDiscountRate,
 	personalizedDiscountRate,
-	// descuentosPersonalizados is available but not used directly
+	// descuentosPersonalizados está disponible pero no se utiliza directamente
 	activePromotion,
 	reviewChecklist,
 	setReviewChecklist,
