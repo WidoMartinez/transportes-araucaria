@@ -80,7 +80,7 @@ const parsePromotionMetadata = (record) => {
 		return parsed && typeof parsed === "object" && !Array.isArray(parsed)
 			? parsed
 			: null;
-	} catch {
+	} catch (error) {
 		return null;
 	}
 };
