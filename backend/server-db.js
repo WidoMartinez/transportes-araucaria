@@ -2457,8 +2457,8 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 			}
 		}
 
-		// Normalizar email: cadena vacía a null
-		const emailNorm = email === '' ? null : email;
+		// Normalizar email: aplicar trim y cadena vacía a null
+		const emailNorm = (typeof email === 'string' && email.trim() === '') ? null : (typeof email === 'string' ? email.trim() : email);
 		
 		// Normalizar fecha: cadena vacía a null
 		const fechaNorm = fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
