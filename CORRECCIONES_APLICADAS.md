@@ -332,11 +332,12 @@ curl http://localhost:3001/api/sync-all
 
 Verificar que estén configuradas en Render:
 ```env
-DB_HOST=srv1551.hstgr.io
-DB_PORT=3306
-DB_NAME=u419311572_transportes_araucaria
-DB_USER=u419311572_admin
-DB_PASSWORD=***
+# Configurar estos valores en Render.com como variables de entorno
+DB_HOST=<HOST>
+DB_PORT=<PORT>
+DB_NAME=<NAME>
+DB_USER=<USER>
+DB_PASSWORD=<PASSWORD>
 ```
 
 ---
