@@ -45,7 +45,7 @@ const Vehiculo = sequelize.define(
 			defaultValue: 4,
 			validate: {
 				min: 1,
-				max: 50,
+				max: 100,
 			},
 		},
 		estado: {
