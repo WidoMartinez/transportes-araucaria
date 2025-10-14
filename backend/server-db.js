@@ -2220,11 +2220,36 @@ app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
 		// Normalizar patente si viene
 		const patenteNorm = patente ? patente.trim().toUpperCase() : vehiculo.patente;
 		
-		// Normalizar año: convertir cadena vacía a null, de lo contrario convertir a número
-		const anioNorm = anio === '' ? null : (anio !== undefined ? Number(anio) : vehiculo.anio);
+		// Validar y normalizar año
+		let anioNorm;
+		if (anio === '') {
+			anioNorm = null;
+		} else if (anio !== undefined) {
+			const anioNum = Number(anio);
+			const currentYear = new Date().getFullYear();
+			if (isNaN(anioNum) || anioNum < 1900 || anioNum > currentYear + 1) {
+				return res.status(400).json({
+					error: "El año debe ser un número válido entre 1900 y " + (currentYear + 1),
+				});
+			}
+			anioNorm = anioNum;
+		} else {
+			anioNorm = vehiculo.anio;
+		}
 		
-		// Normalizar capacidad: convertir cadena a número
-		const capacidadNorm = capacidad !== undefined ? Number(capacidad) : vehiculo.capacidad;
+		// Validar y normalizar capacidad
+		let capacidadNorm;
+		if (capacidad !== undefined) {
+			const capacidadNum = Number(capacidad);
+			if (isNaN(capacidadNum) || capacidadNum <= 0) {
+				return res.status(400).json({
+					error: "La capacidad debe ser un número positivo válido",
+				});
+			}
+			capacidadNorm = capacidadNum;
+		} else {
+			capacidadNorm = vehiculo.capacidad;
+		}
 
 		// Si se está cambiando la patente, verificar que no exista otra con ese valor
 		if (patenteNorm !== vehiculo.patente) {
