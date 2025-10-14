@@ -83,7 +83,7 @@ const toNumber = (value, fallback = 0) => {
 
 // Funciones de validación robustas para campos numéricos
 const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
-	const parsed = parseInt(value);
+	const parsed = parseInt(value, 10);
 	if (isNaN(parsed)) {
 		console.warn(`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`);
 		return defaultValue;
