@@ -45,8 +45,20 @@ const authAdmin = (req, res, next) => {
 	// TODO: Implementar validación de token/sesión real
 	// Por ahora, verificamos que exista un header de autorización
 	const authHeader = req.headers['authorization'];
-	const adminToken = process.env.ADMIN_TOKEN || 'admin-secret-token';
+	const adminToken = process.env.ADMIN_TOKEN;
 	
+	if (!adminToken) {
+		// Misconfiguration: ADMIN_TOKEN must be set
+		return res.status(500).json({
+			error: "ADMIN_TOKEN no configurado en el entorno del servidor."
+		});
+	}
+	if (adminToken === 'admin-secret-token') {
+		// Insecure default token should not be used
+		return res.status(500).json({
+			error: "ADMIN_TOKEN tiene un valor inseguro por defecto. Cambie la configuración."
+		});
+	}
 	if (!authHeader || authHeader !== `Bearer ${adminToken}`) {
 		return res.status(401).json({ 
 			error: "No autorizado. Se requiere autenticación de administrador." 
