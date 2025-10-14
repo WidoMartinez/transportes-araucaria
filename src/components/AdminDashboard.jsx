@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
