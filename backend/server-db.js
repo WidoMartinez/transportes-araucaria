@@ -2161,10 +2161,10 @@ app.post("/api/vehiculos", authAdmin, async (req, res) => {
 			isNaN(capacidadNorm) ||
 			!Number.isInteger(capacidadNorm) ||
 			capacidadNorm < 1 ||
-			capacidadNorm > 100
+			capacidadNorm > 50
 		) {
 			return res.status(400).json({
-				error: "Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 100."
+				error: "Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 50."
 			});
 		}
 		// Verificar si ya existe un vehículo con esa patente normalizada
