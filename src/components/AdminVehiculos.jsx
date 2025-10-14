@@ -490,12 +490,13 @@ function AdminVehiculos() {
 									min="1"
 									max="50"
 									value={formData.capacidad}
-									onChange={(e) =>
+									onChange={(e) => {
+										const v = Number(e.target.value);
 										setFormData({
 											...formData,
-											capacidad: parseInt(e.target.value) || 4,
-										})
-									}
+											capacidad: Number.isNaN(v) ? '' : v,
+										});
+									}}
 								/>
 							</div>
 						</div>
