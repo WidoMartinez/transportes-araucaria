@@ -153,7 +153,11 @@ function AdminVehiculos() {
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(formData),
+				body: JSON.stringify({
+					...formData,
+					anio: formData.anio ? Number(formData.anio) : null,
+					capacidad: Number.isFinite(Number(formData.capacidad)) ? Number(formData.capacidad) : 4,
+				}),
 			});
 
 			const data = await response.json();
