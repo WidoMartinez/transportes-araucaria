@@ -90,7 +90,7 @@ Se ha implementado un sistema completo de gestión de vehículos y conductores e
 - Badges de estado con colores
 - Búsqueda en tiempo real
 - Filtros múltiples
-- Mensajes de error claros
+- Mensajes de error mediante alertas genéricas
 
 **Integración:**
 - Añadidos botones "Vehículos" y "Conductores" en `AdminDashboard.jsx`
