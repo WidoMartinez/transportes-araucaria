@@ -74,7 +74,7 @@ Se ha implementado un sistema completo de gestión de vehículos y conductores e
 - Formateo automático de RUT chileno
 - Validación de unicidad (patente para vehículos, RUT para conductores)
 - Manejo de errores robusto
-- Transacciones para mantener integridad de datos
+- (Las operaciones actuales son unitarias; no se requieren transacciones. Se implementarán si se agregan operaciones multi-paso.)
 
 ### Frontend
 
