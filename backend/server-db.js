@@ -89,7 +89,7 @@ const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
 		return defaultValue;
 	}
 	if (parsed < 1) {
-		console.warn(`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${defaultValue}`);
+		console.warn(`⚠️ Valor menor a 1 para ${fieldName}: ${parsed}, usando ${defaultValue}`);
 		return defaultValue;
 	}
 	return parsed;
