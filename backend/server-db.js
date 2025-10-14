@@ -2451,7 +2451,7 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 				where: { rut: rutFormateado },
 			});
 			if (existente) {
-				return res.status(400).json({
+				return res.status(409).json({
 					error: "Ya existe un conductor con este RUT",
 				});
 			}
