@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
@@ -7,8 +7,10 @@ import AdminVehiculos from "./AdminVehiculos";
 import AdminConductores from "./AdminConductores";
 
 function AdminDashboard() {
-  const url = new URL(window.location.href);
-  const currentPanel = url.searchParams.get("panel") || "pricing";
+  const [active, setActive] = useState(() => {
+    const url = new URL(window.location.href);
+    return url.searchParams.get("panel") || "pricing";
+  });
 
   const setPanel = (panel) => {
     const u = new URL(window.location.href);
@@ -18,9 +20,8 @@ function AdminDashboard() {
       u.searchParams.set("panel", panel);
     }
     window.history.replaceState({}, "", u.toString());
+    setActive(panel);
   };
-
-  const active = useMemo(() => currentPanel, [currentPanel]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
