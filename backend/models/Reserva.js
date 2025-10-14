@@ -144,14 +144,16 @@ const Reserva = sequelize.define(
 			),
 			defaultValue: "pendiente",
 		},
-		// Campo virtual para no persistir hasta que exista en BD
+		// Campo virtual calculado: true si tiene detalles completos del viaje
 		detallesCompletos: {
 			type: DataTypes.VIRTUAL,
 			get() {
-				return this.getDataValue("detallesCompletos") ?? false;
-			},
-			set(val) {
-				this.setDataValue("detallesCompletos", Boolean(val));
+				// Una reserva tiene detalles completos si tiene al menos el número de vuelo o hotel
+				const tieneNumeroVuelo = this.getDataValue("numeroVuelo") && 
+					this.getDataValue("numeroVuelo").trim() !== "";
+				const tieneHotel = this.getDataValue("hotel") && 
+					this.getDataValue("hotel").trim() !== "";
+				return tieneNumeroVuelo || tieneHotel;
 			},
 		},
 		ipAddress: {
