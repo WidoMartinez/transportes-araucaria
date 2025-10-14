@@ -40,12 +40,59 @@ const signParams = (params) => {
 const app = express();
 app.use(express.json());
 
+// Middleware de autenticación para rutas administrativas
+const authAdmin = (req, res, next) => {
+	// TODO: Implementar validación de token/sesión real
+	// Por ahora, verificamos que exista un header de autorización
+	const authHeader = req.headers['authorization'];
+	const adminToken = process.env.ADMIN_TOKEN || 'admin-secret-token';
+	
+	if (!authHeader || authHeader !== `Bearer ${adminToken}`) {
+		return res.status(401).json({ 
+			error: "No autorizado. Se requiere autenticación de administrador." 
+		});
+	}
+	
+	next();
+};
+
 app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+// Función para validar RUT chileno con dígito verificador (Módulo 11)
+const validarRUT = (rut) => {
+	if (!rut) return false;
+	
+	// Eliminar puntos, guiones y espacios
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, '');
+	
+	if (rutLimpio.length < 2) return false;
+	
+	// Separar cuerpo y dígito verificador
+	const cuerpo = rutLimpio.slice(0, -1);
+	const dv = rutLimpio.slice(-1).toUpperCase();
+	
+	// Validar que el cuerpo sea numérico
+	if (!/^\d+$/.test(cuerpo)) return false;
+	
+	// Calcular dígito verificador esperado
+	let suma = 0;
+	let multiplicador = 2;
+	
+	for (let i = cuerpo.length - 1; i >= 0; i--) {
+		suma += parseInt(cuerpo.charAt(i)) * multiplicador;
+		multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+	}
+	
+	const dvEsperado = 11 - (suma % 11);
+	const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+	
+	return dv === dvCalculado;
+};
 
 // Función para formatear RUT chileno
 const formatearRUT = (rut) => {
@@ -2080,7 +2127,7 @@ app.get("/api/vehiculos/:id", async (req, res) => {
 });
 
 // Crear un nuevo vehículo
-app.post("/api/vehiculos", async (req, res) => {
+app.post("/api/vehiculos", authAdmin, async (req, res) => {
 	try {
 		const {
 			patente,
@@ -2099,23 +2146,30 @@ app.post("/api/vehiculos", async (req, res) => {
 			});
 		}
 
-		// Verificar si ya existe un vehículo con esa patente
-		const existente = await Vehiculo.findOne({ where: { patente } });
+		// Normalizar patente: convertir a mayúsculas y trim para evitar duplicados por casing
+		const patenteNorm = patente?.trim().toUpperCase();
+		
+		// Normalizar año: convertir cadena vacía a null para respetar allowNull
+		const anioNorm = anio === '' || anio === null || anio === undefined ? null : Number(anio);
+		
+		// Normalizar capacidad
+		const capacidadNorm = capacidad === '' || capacidad === null || capacidad === undefined ? 4 : Number(capacidad);
+
+		// Verificar si ya existe un vehículo con esa patente normalizada
+		const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
 		if (existente) {
 			return res.status(409).json({
 				error: "Ya existe un vehículo con esta patente",
 			});
 		}
 
-		const anioNum = Number.isFinite(Number(anio)) ? Number(anio) : null;
-		const capacidadNum = Number.isFinite(Number(capacidad)) ? Number(capacidad) : 4;
 		const vehiculo = await Vehiculo.create({
-			patente,
+			patente: patenteNorm,
 			tipo,
 			marca,
 			modelo,
-			anio: anioNum,
-			capacidad: capacidadNum,
+			anio: anioNorm,
+			capacidad: capacidadNorm,
 			estado: estado || "disponible",
 			observaciones,
 		});
@@ -2132,7 +2186,7 @@ app.post("/api/vehiculos", async (req, res) => {
 });
 
 // Actualizar un vehículo
-app.put("/api/vehiculos/:id", async (req, res) => {
+app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const {
@@ -2151,9 +2205,18 @@ app.put("/api/vehiculos/:id", async (req, res) => {
 			return res.status(404).json({ error: "Vehículo no encontrado" });
 		}
 
+		// Normalizar patente si viene
+		const patenteNorm = patente ? patente.trim().toUpperCase() : vehiculo.patente;
+		
+		// Normalizar año: convertir cadena vacía a null, de lo contrario convertir a número
+		const anioNorm = anio === '' ? null : (anio !== undefined ? Number(anio) : vehiculo.anio);
+		
+		// Normalizar capacidad: convertir cadena a número
+		const capacidadNorm = capacidad !== undefined ? Number(capacidad) : vehiculo.capacidad;
+
 		// Si se está cambiando la patente, verificar que no exista otra con ese valor
-		if (patente && patente !== vehiculo.patente) {
-			const existente = await Vehiculo.findOne({ where: { patente } });
+		if (patenteNorm !== vehiculo.patente) {
+			const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
 			if (existente) {
 				return res.status(400).json({
 					error: "Ya existe un vehículo con esta patente",
@@ -2162,12 +2225,12 @@ app.put("/api/vehiculos/:id", async (req, res) => {
 		}
 
 		await vehiculo.update({
-			patente: patente || vehiculo.patente,
+			patente: patenteNorm,
 			tipo: tipo || vehiculo.tipo,
 			marca: marca !== undefined ? marca : vehiculo.marca,
 			modelo: modelo !== undefined ? modelo : vehiculo.modelo,
-			anio: anio !== undefined ? anio : vehiculo.anio,
-			capacidad: capacidad !== undefined ? capacidad : vehiculo.capacidad,
+			anio: anioNorm,
+			capacidad: capacidadNorm,
 			estado: estado !== undefined ? estado : vehiculo.estado,
 			observaciones:
 				observaciones !== undefined ? observaciones : vehiculo.observaciones,
@@ -2185,7 +2248,7 @@ app.put("/api/vehiculos/:id", async (req, res) => {
 });
 
 // Eliminar un vehículo
-app.delete("/api/vehiculos/:id", async (req, res) => {
+app.delete("/api/vehiculos/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -2248,7 +2311,7 @@ app.get("/api/conductores/:id", async (req, res) => {
 });
 
 // Crear un nuevo conductor
-app.post("/api/conductores", async (req, res) => {
+app.post("/api/conductores", authAdmin, async (req, res) => {
 	try {
 		const {
 			nombre,
@@ -2267,11 +2330,22 @@ app.post("/api/conductores", async (req, res) => {
 			});
 		}
 
+		// Validar RUT con dígito verificador
+		if (!validarRUT(rut)) {
+			return res.status(400).json({ error: "RUT inválido. Verifique el dígito verificador." });
+		}
+
 		// Formatear RUT
 		const rutFormateado = formatearRUT(rut);
 		if (!rutFormateado) {
 			return res.status(400).json({ error: "RUT inválido" });
 		}
+
+		// Normalizar email: cadena vacía a null para respetar validación isEmail
+		const emailNorm = email?.trim() === '' || !email ? null : email.trim();
+		
+		// Normalizar fecha: cadena vacía a null para evitar fechas inválidas
+		const fechaNorm = !fechaVencimientoLicencia || fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
 
 		// Verificar si ya existe un conductor con ese RUT
 		const existente = await Conductor.findOne({ where: { rut: rutFormateado } });
@@ -2285,9 +2359,9 @@ app.post("/api/conductores", async (req, res) => {
 			nombre,
 			rut: rutFormateado,
 			telefono,
-			email,
+			email: emailNorm,
 			licencia,
-			fechaVencimientoLicencia,
+			fechaVencimientoLicencia: fechaNorm,
 			estado: estado || "disponible",
 			observaciones,
 		});
@@ -2304,7 +2378,7 @@ app.post("/api/conductores", async (req, res) => {
 });
 
 // Actualizar un conductor
-app.put("/api/conductores/:id", async (req, res) => {
+app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const {
@@ -2323,9 +2397,14 @@ app.put("/api/conductores/:id", async (req, res) => {
 			return res.status(404).json({ error: "Conductor no encontrado" });
 		}
 
-		// Si se está cambiando el RUT, formatear y verificar que no exista otro con ese valor
+		// Si se está cambiando el RUT, validar y formatear
 		let rutFormateado = conductor.rut;
 		if (rut && rut !== conductor.rut) {
+			// Validar RUT con dígito verificador
+			if (!validarRUT(rut)) {
+				return res.status(400).json({ error: "RUT inválido. Verifique el dígito verificador." });
+			}
+			
 			rutFormateado = formatearRUT(rut);
 			if (!rutFormateado) {
 				return res.status(400).json({ error: "RUT inválido" });
@@ -2341,15 +2420,21 @@ app.put("/api/conductores/:id", async (req, res) => {
 			}
 		}
 
+		// Normalizar email: cadena vacía a null
+		const emailNorm = email === '' ? null : email;
+		
+		// Normalizar fecha: cadena vacía a null
+		const fechaNorm = fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
+
 		await conductor.update({
 			nombre: nombre || conductor.nombre,
 			rut: rutFormateado,
 			telefono: telefono || conductor.telefono,
-			email: email !== undefined ? email : conductor.email,
+			email: email !== undefined ? emailNorm : conductor.email,
 			licencia: licencia !== undefined ? licencia : conductor.licencia,
 			fechaVencimientoLicencia:
 				fechaVencimientoLicencia !== undefined
-					? fechaVencimientoLicencia
+					? fechaNorm
 					: conductor.fechaVencimientoLicencia,
 			estado: estado !== undefined ? estado : conductor.estado,
 			observaciones:
@@ -2368,7 +2453,7 @@ app.put("/api/conductores/:id", async (req, res) => {
 });
 
 // Eliminar un conductor
-app.delete("/api/conductores/:id", async (req, res) => {
+app.delete("/api/conductores/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
