@@ -176,10 +176,14 @@ function AdminVehiculos() {
 
 	const handleDelete = async () => {
 		try {
+			const ADMIN_TOKEN = localStorage.getItem("adminToken");
 			const response = await fetch(
 				`${API_BASE_URL}/api/vehiculos/${selectedVehiculo.id}`,
 				{
 					method: "DELETE",
+					headers: {
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
 				}
 			);
 
