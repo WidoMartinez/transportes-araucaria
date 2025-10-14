@@ -1661,8 +1661,6 @@ const calcularTarifaDinamica = async (precioBase, destino, fecha, hora) => {
 const _verificarRetornoDisponible = async (destino, fecha, hora, tiempoEsperaMaximo = 240) => {
 	try {
 		const fechaHoraLlegada = new Date(fecha + "T" + hora);
-		// eslint-disable-next-line no-unused-vars
-		const _tiempoLimite = new Date(fechaHoraLlegada.getTime() + tiempoEsperaMaximo * 60000);
 
 		// Buscar reservas que llegan al mismo destino cerca de la hora
 		const reservasCercanas = await Reserva.findAll({
