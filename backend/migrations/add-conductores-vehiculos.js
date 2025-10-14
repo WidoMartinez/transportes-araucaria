@@ -19,10 +19,15 @@ async function addConductoresVehiculos() {
 		console.log("🔧 Iniciando migración: agregar conductores y vehículos...");
 
 		// Verificar tablas existentes
-		const tables = await queryInterface.showAllTables();
-		const conductoresExists = tables.includes("conductores") || tables.includes("Conductores");
-		const vehiculosExists = tables.includes("vehiculos") || tables.includes("Vehiculos");
-		const viajesExists = tables.includes("viajes_conductor") || tables.includes("ViajesConductor");
+		// Obtener todas las tablas y normalizar los nombres para evitar problemas de mayúsculas/minúsculas
+		const tablesRaw = await queryInterface.showAllTables();
+		const tables = tablesRaw.map((t) => t.toString().toLowerCase());
+
+		// Verificar si existen las tablas conductores y vehiculos
+		const conductoresExists = tables.includes("conductores");
+		const vehiculosExists = tables.includes("vehiculos");
+		const viajesExists =
+			tables.includes("viajes_conductor") || tables.includes("ViajesConductor");
 
 		// ===== CREAR TABLA CONDUCTORES =====
 		if (!conductoresExists) {
@@ -67,8 +72,12 @@ async function addConductoresVehiculos() {
 			console.log("✅ Tabla conductores creada");
 
 			// Agregar índices para conductores
-			await queryInterface.addIndex("conductores", ["nombre"], { name: "idx_conductores_nombre" });
-			await queryInterface.addIndex("conductores", ["activo"], { name: "idx_conductores_activo" });
+			await queryInterface.addIndex("conductores", ["nombre"], {
+				name: "idx_conductores_nombre",
+			});
+			await queryInterface.addIndex("conductores", ["activo"], {
+				name: "idx_conductores_activo",
+			});
 			console.log("✅ Índices de conductores creados");
 		} else {
 			console.log("ℹ️  Tabla conductores ya existe, omitiendo...");
@@ -131,9 +140,15 @@ async function addConductoresVehiculos() {
 			console.log("✅ Tabla vehiculos creada");
 
 			// Agregar índices para vehiculos
-			await queryInterface.addIndex("vehiculos", ["patente"], { name: "idx_vehiculos_patente" });
-			await queryInterface.addIndex("vehiculos", ["tipo"], { name: "idx_vehiculos_tipo" });
-			await queryInterface.addIndex("vehiculos", ["activo"], { name: "idx_vehiculos_activo" });
+			await queryInterface.addIndex("vehiculos", ["patente"], {
+				name: "idx_vehiculos_patente",
+			});
+			await queryInterface.addIndex("vehiculos", ["tipo"], {
+				name: "idx_vehiculos_tipo",
+			});
+			await queryInterface.addIndex("vehiculos", ["activo"], {
+				name: "idx_vehiculos_activo",
+			});
 			console.log("✅ Índices de vehiculos creados");
 		} else {
 			console.log("ℹ️  Tabla vehiculos ya existe, omitiendo...");
@@ -183,10 +198,18 @@ async function addConductoresVehiculos() {
 			console.log("✅ Tabla viajes_conductor creada");
 
 			// Agregar índices para viajes_conductor
-			await queryInterface.addIndex("viajes_conductor", ["conductor_id"], { name: "idx_viajes_conductor_id" });
-			await queryInterface.addIndex("viajes_conductor", ["vehiculo_id"], { name: "idx_viajes_vehiculo_id" });
-			await queryInterface.addIndex("viajes_conductor", ["reserva_id"], { name: "idx_viajes_reserva_id" });
-			await queryInterface.addIndex("viajes_conductor", ["createdAt"], { name: "idx_viajes_created_at" });
+			await queryInterface.addIndex("viajes_conductor", ["conductor_id"], {
+				name: "idx_viajes_conductor_id",
+			});
+			await queryInterface.addIndex("viajes_conductor", ["vehiculo_id"], {
+				name: "idx_viajes_vehiculo_id",
+			});
+			await queryInterface.addIndex("viajes_conductor", ["reserva_id"], {
+				name: "idx_viajes_reserva_id",
+			});
+			await queryInterface.addIndex("viajes_conductor", ["createdAt"], {
+				name: "idx_viajes_created_at",
+			});
 			console.log("✅ Índices de viajes_conductor creados");
 		} else {
 			console.log("ℹ️  Tabla viajes_conductor ya existe, omitiendo...");
@@ -194,7 +217,7 @@ async function addConductoresVehiculos() {
 
 		// ===== AGREGAR CAMPOS A TABLA RESERVAS =====
 		const reservasColumns = await queryInterface.describeTable("reservas");
-		
+
 		if (!reservasColumns.conductor_id) {
 			console.log("📦 Agregando campo conductor_id a reservas...");
 			await queryInterface.addColumn("reservas", "conductor_id", {
@@ -204,7 +227,9 @@ async function addConductoresVehiculos() {
 			console.log("✅ Campo conductor_id agregado");
 
 			// Agregar índice
-			await queryInterface.addIndex("reservas", ["conductor_id"], { name: "idx_reservas_conductor_id" });
+			await queryInterface.addIndex("reservas", ["conductor_id"], {
+				name: "idx_reservas_conductor_id",
+			});
 			console.log("✅ Índice conductor_id creado");
 		} else {
 			console.log("ℹ️  Campo conductor_id ya existe en reservas");
@@ -219,7 +244,9 @@ async function addConductoresVehiculos() {
 			console.log("✅ Campo vehiculo_id agregado");
 
 			// Agregar índice
-			await queryInterface.addIndex("reservas", ["vehiculo_id"], { name: "idx_reservas_vehiculo_id" });
+			await queryInterface.addIndex("reservas", ["vehiculo_id"], {
+				name: "idx_reservas_vehiculo_id",
+			});
 			console.log("✅ Índice vehiculo_id creado");
 		} else {
 			console.log("ℹ️  Campo vehiculo_id ya existe en reservas");
