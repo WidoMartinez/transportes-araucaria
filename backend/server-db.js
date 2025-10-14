@@ -81,6 +81,33 @@ const toNumber = (value, fallback = 0) => {
 	return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+// Funciones de validación robustas para campos numéricos
+const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
+	const parsed = parseInt(value);
+	if (isNaN(parsed)) {
+		console.warn(`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`);
+		return defaultValue;
+	}
+	if (parsed < 1) {
+		console.warn(`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${defaultValue}`);
+		return defaultValue;
+	}
+	return parsed;
+};
+
+const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
+	const parsed = parseFloat(value);
+	if (isNaN(parsed)) {
+		console.warn(`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`);
+		return defaultValue;
+	}
+	if (parsed < 0) {
+		console.warn(`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando 0`);
+		return 0;
+	}
+	return parsed;
+};
+
 const parseJsonArray = (raw) => {
 	if (!raw) return [];
 	let value = raw;
@@ -1051,20 +1078,21 @@ app.get("/api/sync-all", async (req, res) => {
 			.default;
 
 		// Sincronizar tablas una por una para evitar conflictos
+		// NOTA: Removido alter:true para evitar modificar estructura en producción
 		console.log("Sincronizando tabla codigos_descuento...");
-		await CodigoDescuento.sync({ force: false, alter: true });
+		await CodigoDescuento.sync({ force: false });
 
 		console.log("Sincronizando tabla reservas...");
-		await Reserva.sync({ force: false, alter: true });
+		await Reserva.sync({ force: false });
 
 		console.log("Sincronizando tabla destinos...");
-		await Destino.sync({ force: false, alter: true });
+		await Destino.sync({ force: false });
 
 		console.log("Sincronizando tabla promociones...");
-		await Promocion.sync({ force: false, alter: true });
+		await Promocion.sync({ force: false });
 
 		console.log("Sincronizando tabla descuentos_globales...");
-		await DescuentoGlobal.sync({ force: false, alter: true });
+		await DescuentoGlobal.sync({ force: false });
 
 		// Verificar estructura de las tablas principales
 		const [codigosResults] = await sequelize.query(
@@ -1097,8 +1125,8 @@ app.get("/api/codigos/sync", async (req, res) => {
 		// Verificar conexión primero
 		await sequelize.authenticate();
 
-		// Forzar sincronización para actualizar la estructura de la tabla
-		await sequelize.sync({ force: false, alter: true });
+		// Sincronizar sin alterar estructura (usar migraciones para cambios de esquema)
+		await sequelize.sync({ force: false });
 
 		// Verificar que las columnas existen
 		const [results] = await sequelize.query("DESCRIBE codigos_descuento");
@@ -1154,8 +1182,8 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		// Verificar conexión primero
 		await sequelize.authenticate();
 
-		// Intentar sincronizar la tabla para asegurar que tiene todas las columnas
-		await sequelize.sync({ force: false, alter: true });
+		// Sincronizar sin alterar estructura (usar migraciones para cambios de esquema)
+		await sequelize.sync({ force: false });
 
 		const totalCodigos = await CodigoDescuento.count();
 		const codigosActivos = await CodigoDescuento.count({
@@ -1406,7 +1434,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			source: datosReserva.source || "web",
 		});
 
-		// Guardar reserva en la base de datos
+		// Guardar reserva en la base de datos con validaciones robustas
 		const reservaGuardada = await Reserva.create({
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
@@ -1417,8 +1445,8 @@ app.post("/enviar-reserva", async (req, res) => {
 			destino: datosReserva.destino || "",
 			fecha: datosReserva.fecha || new Date(),
 			hora: datosReserva.hora || "00:00:00",
-			pasajeros: parseInt(datosReserva.pasajeros) || 1,
-			precio: parseFloat(datosReserva.precio) || 0,
+			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+			precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 			vehiculo: datosReserva.vehiculo || "",
 			numeroVuelo: datosReserva.numeroVuelo || "",
 			hotel: datosReserva.hotel || "",
@@ -1427,13 +1455,13 @@ app.post("/enviar-reserva", async (req, res) => {
 			idaVuelta: Boolean(datosReserva.idaVuelta),
 			fechaRegreso: datosReserva.fechaRegreso || null,
 			horaRegreso: datosReserva.horaRegreso || null,
-			abonoSugerido: parseFloat(datosReserva.abonoSugerido) || 0,
-			saldoPendiente: parseFloat(datosReserva.saldoPendiente) || 0,
-			descuentoBase: parseFloat(datosReserva.descuentoBase) || 0,
-			descuentoPromocion: parseFloat(datosReserva.descuentoPromocion) || 0,
-			descuentoRoundTrip: parseFloat(datosReserva.descuentoRoundTrip) || 0,
-			descuentoOnline: parseFloat(datosReserva.descuentoOnline) || 0,
-			totalConDescuento: parseFloat(datosReserva.totalConDescuento) || 0,
+			abonoSugerido: parsePositiveDecimal(datosReserva.abonoSugerido, "abonoSugerido", 0),
+			saldoPendiente: parsePositiveDecimal(datosReserva.saldoPendiente, "saldoPendiente", 0),
+			descuentoBase: parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0),
+			descuentoPromocion: parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0),
+			descuentoRoundTrip: parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0),
+			descuentoOnline: parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0),
+			totalConDescuento: parsePositiveDecimal(datosReserva.totalConDescuento, "totalConDescuento", 0),
 			mensaje: datosReserva.mensaje || "",
 			source: datosReserva.source || "web",
 			estado: "pendiente",
@@ -1515,8 +1543,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
 			hora: "08:00:00", // Hora por defecto - se actualiza después
-			pasajeros: parseInt(datosReserva.pasajeros) || 1,
-			precio: parseFloat(datosReserva.precio) || 0,
+			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+			precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 			vehiculo: datosReserva.vehiculo || "",
 
 			// Campos que se completarán después del pago (opcionales por ahora)
@@ -1528,20 +1556,19 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			fechaRegreso: datosReserva.fechaRegreso || null,
 			horaRegreso: null,
 
-			// Campos financieros
-			abonoSugerido: parseFloat(datosReserva.abonoSugerido) || 0,
-			saldoPendiente: parseFloat(datosReserva.saldoPendiente) || 0,
-			descuentoBase: parseFloat(datosReserva.descuentoBase) || 0,
-			descuentoPromocion: parseFloat(datosReserva.descuentoPromocion) || 0,
-			descuentoRoundTrip: parseFloat(datosReserva.descuentoRoundTrip) || 0,
-			descuentoOnline: parseFloat(datosReserva.descuentoOnline) || 0,
-			totalConDescuento: parseFloat(datosReserva.totalConDescuento) || 0,
+			// Campos financieros con validación
+			abonoSugerido: parsePositiveDecimal(datosReserva.abonoSugerido, "abonoSugerido", 0),
+			saldoPendiente: parsePositiveDecimal(datosReserva.saldoPendiente, "saldoPendiente", 0),
+			descuentoBase: parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0),
+			descuentoPromocion: parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0),
+			descuentoRoundTrip: parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0),
+			descuentoOnline: parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0),
+			totalConDescuento: parsePositiveDecimal(datosReserva.totalConDescuento, "totalConDescuento", 0),
 			mensaje: datosReserva.mensaje || "",
 
 			// Metadata del sistema
 			source: datosReserva.source || "express_web",
 			estado: "pendiente_detalles", // Estado específico para reservas express
-			detallesCompletos: false, // Se marcará como true después del pago
 			ipAddress: req.ip || req.connection.remoteAddress || "",
 			userAgent: req.get("User-Agent") || "",
 			codigoDescuento: datosReserva.codigoDescuento || "",
@@ -1785,14 +1812,18 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 	}
 });
 
-// Actualizar estado de pago de una reserva
+// Actualizar estado de pago de una reserva (con transacciones para garantizar consistencia)
 app.put("/api/reservas/:id/pago", async (req, res) => {
+	// Usar transacción para asegurar que reserva y cliente se actualizan juntos
+	const transaction = await sequelize.transaction();
+	
 	try {
 		const { id } = req.params;
 		const { estadoPago, metodoPago, referenciaPago } = req.body;
 
-		const reserva = await Reserva.findByPk(id);
+		const reserva = await Reserva.findByPk(id, { transaction });
 		if (!reserva) {
+			await transaction.rollback();
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
@@ -1800,11 +1831,11 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			estadoPago,
 			metodoPago: metodoPago || reserva.metodoPago,
 			referenciaPago: referenciaPago || reserva.referenciaPago,
-		});
+		}, { transaction });
 
-		// Si el pago es exitoso, actualizar el cliente
+		// Si el pago es exitoso, actualizar el cliente en la misma transacción
 		if (estadoPago === "pagado" && reserva.clienteId) {
-			const cliente = await Cliente.findByPk(reserva.clienteId);
+			const cliente = await Cliente.findByPk(reserva.clienteId, { transaction });
 			if (cliente) {
 				await cliente.update({
 					esCliente: true,
@@ -1812,9 +1843,12 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 					totalGastado:
 						parseFloat(cliente.totalGastado) +
 						parseFloat(reserva.totalConDescuento || 0),
-				});
+				}, { transaction });
 			}
 		}
+
+		// Confirmar transacción solo si todo fue exitoso
+		await transaction.commit();
 
 		res.json({
 			success: true,
@@ -1822,6 +1856,8 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			reserva,
 		});
 	} catch (error) {
+		// Revertir todos los cambios si hay error
+		await transaction.rollback();
 		console.error("Error actualizando estado de pago:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
@@ -2243,46 +2279,10 @@ const startServer = async () => {
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 		
-		// Ejecutar migración automáticamente
-		try {
-			console.log("🔧 Ejecutando migración de base de datos...");
-			const queryInterface = sequelize.getQueryInterface();
-			
-			// Verificar si la tabla reservas existe
-			const tables = await queryInterface.showAllTables();
-			const reservasExists = tables.includes("reservas") || tables.includes("Reservas");
-			
-			if (reservasExists) {
-				// Verificar si las columnas ya existen
-				const reservasColumns = await queryInterface.describeTable("reservas").catch(() => ({}));
-				
-				if (!reservasColumns.cliente_id && !reservasColumns.clienteId) {
-					console.log("📦 Agregando columna cliente_id a reservas...");
-					await queryInterface.addColumn("reservas", "cliente_id", {
-						type: sequelize.Sequelize.INTEGER,
-						allowNull: true,
-					});
-					console.log("✅ Columna cliente_id agregada");
-				} else {
-					console.log("ℹ️  Columna cliente_id ya existe");
-				}
-				
-				if (!reservasColumns.rut) {
-					console.log("📦 Agregando columna rut a reservas...");
-					await queryInterface.addColumn("reservas", "rut", {
-						type: sequelize.Sequelize.STRING(20),
-						allowNull: true,
-					});
-					console.log("✅ Columna rut agregada");
-				} else {
-					console.log("ℹ️  Columna rut ya existe");
-				}
-			}
-			
-			console.log("✅ Migración completada");
-		} catch (migrationError) {
-			console.error("⚠️ Error en migración (no crítico):", migrationError.message);
-		}
+		// NOTA: Las migraciones de base de datos deben ejecutarse con el script
+		// separado: npm run migrate o npm run start:migrate
+		// Esto evita duplicar lógica y asegura que las migraciones se ejecuten
+		// de forma controlada antes del inicio del servidor
 		
 	} catch (error) {
 		console.error(

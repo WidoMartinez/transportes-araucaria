@@ -14,14 +14,15 @@ const Cliente = sequelize.define(
 			type: DataTypes.STRING(20),
 			allowNull: true,
 			unique: true,
-			comment: "RUT del cliente (formato: 12.345.678-9)",
+			comment: "RUT del cliente (formato: 12345678-9 sin puntos)",
 			validate: {
 				isChileanRutFormat(value) {
 					if (value == null || value === "") return; // allow null/empty
-					// Chilean RUT format: XX.XXX.XXX-X or X.XXX.XXX-X or XXXXXXXX-X
-					const rutRegex = /^(\d{1,2}\.\d{3}\.\d{3}-[\dkK])|(\d{7,8}-[\dkK])$/;
+					// Chilean RUT format: XXXXXXXX-X (sin puntos, solo guión)
+					// Acepta 7 a 8 dígitos, guión, y un dígito o K
+					const rutRegex = /^\d{7,8}-[\dkK]$/;
 					if (!rutRegex.test(value)) {
-						throw new Error("El RUT debe tener el formato chileno (XX.XXX.XXX-X o XXXXXXXX-X)");
+						throw new Error("El RUT debe tener el formato XXXXXXXX-X (sin puntos)");
 					}
 				}
 			},
