@@ -15,4 +15,6 @@ no modificar ningun archivo php ya que estos estan en el servidor de hostinger d
 Todos los PR deben generarse en español, todos los campos posibles
 PULL REQUEST en español
 SI creas ramas para los PR procurar escribir en español
-Escribir los commits en español, todos
+Escribir los commits en español, todos los commits
+Siempre revisar documentacion de PR anteriores o que este relacionada con la modificacion en curso
+Cada vez que mencione a @copilot siempre contestar aunque sea para poner "leido" y señalar en cual commits se halla la respuesta, nunca dejar menciones sin respuesta
