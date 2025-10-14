@@ -87,7 +87,7 @@ backend/
     type: DataTypes.VIRTUAL,
     get() {
 -     return this.getDataValue("detallesCompletos") ?? false;
-+     return this.getDataValue("numeroVuelo") && 
++     return this.getDataValue("numeroVuelo") || 
 +            this.getDataValue("hotel");
     }
   }
