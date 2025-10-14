@@ -2107,13 +2107,15 @@ app.post("/api/vehiculos", async (req, res) => {
 			});
 		}
 
+		const anioNum = Number.isFinite(Number(anio)) ? Number(anio) : null;
+		const capacidadNum = Number.isFinite(Number(capacidad)) ? Number(capacidad) : 4;
 		const vehiculo = await Vehiculo.create({
 			patente,
 			tipo,
 			marca,
 			modelo,
-			anio,
-			capacidad: capacidad || 4,
+			anio: anioNum,
+			capacidad: capacidadNum,
 			estado: estado || "disponible",
 			observaciones,
 		});
