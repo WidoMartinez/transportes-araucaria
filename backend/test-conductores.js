@@ -74,8 +74,12 @@ const testPatentes = [
 	{ input: "ABCD12", expected: "CD12" },
 	{ input: "AB-CD-12", expected: "CD12" },
 	{ input: "XY1234", expected: "1234" },
-	{ input: "123", expected: "123" },
+	{ input: "123", expected: "*123" },
+	{ input: "ab", expected: "**AB" },
 	{ input: null, expected: "****" },
+	{ input: "", expected: "****" },
+	{ input: "  ", expected: "****" },
+	{ input: 123, expected: "****" }, // no es string
 ];
 
 console.log("   Pruebas de obtenerUltimos4Patente:");

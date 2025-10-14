@@ -9,17 +9,29 @@
  * @returns {string} - Últimos 4 caracteres de la patente
  */
 export function obtenerUltimos4Patente(patente) {
-	if (!patente) return "****";
+	// Validar que la patente sea un string válido
+	if (!patente || typeof patente !== "string") {
+		return "****";
+	}
 	
-	// Eliminar guiones y espacios
-	const patenteLimpia = patente.replace(/[-\s]/g, "");
+	// Eliminar guiones, espacios y caracteres especiales, convertir a mayúsculas
+	const patenteLimpia = patente
+		.replace(/[-\s.]/g, "")
+		.toUpperCase()
+		.trim();
+	
+	// Si no hay caracteres válidos, retornar placeholder
+	if (patenteLimpia.length === 0) {
+		return "****";
+	}
 	
 	// Obtener últimos 4 caracteres
 	if (patenteLimpia.length >= 4) {
 		return patenteLimpia.slice(-4);
 	}
 	
-	return patenteLimpia;
+	// Si tiene menos de 4 caracteres, rellenar con asteriscos al inicio
+	return "*".repeat(4 - patenteLimpia.length) + patenteLimpia;
 }
 
 /**
@@ -58,6 +70,9 @@ export function formatearInfoVehiculo(vehiculo) {
  * @returns {Promise<Object>} - Respuesta del servidor
  */
 export async function notificarAsignacionConductor(reserva, conductor, vehiculo) {
+	// Importar axios dinámicamente para evitar problemas de dependencias circulares
+	const axios = (await import("axios")).default;
+	
 	try {
 		const emailUrl = process.env.EMAIL_NOTIFICATION_URL || 
 			"https://www.transportesaraucaria.cl/enviar_notificacion_asignacion.php";
@@ -76,24 +91,38 @@ export async function notificarAsignacionConductor(reserva, conductor, vehiculo)
 			vehiculoPatente: vehiculo ? obtenerUltimos4Patente(vehiculo.patente) : null,
 		};
 
-		// Por ahora, solo logeamos la notificación
-		// En el futuro, se puede implementar el endpoint PHP correspondiente
-		console.log("📧 Notificación de asignación de conductor/vehículo:", payload);
+		console.log("📧 Enviando notificación de asignación de conductor/vehículo:", payload);
 		
-		// TODO: Descomentar cuando el endpoint PHP esté disponible
-		// const response = await fetch(emailUrl, {
-		// 	method: "POST",
-		// 	headers: {
-		// 		"Content-Type": "application/json",
-		// 	},
-		// 	body: JSON.stringify(payload),
-		// });
-		
-		// return await response.json();
-		
-		return { success: true, message: "Notificación registrada (desarrollo)" };
+		// Intentar enviar la notificación al endpoint PHP
+		try {
+			const response = await axios.post(emailUrl, payload, {
+				headers: {
+					"Content-Type": "application/json",
+				},
+				timeout: 10000, // 10 segundos de timeout
+			});
+			
+			console.log("✅ Notificación enviada exitosamente:", response.data);
+			return response.data;
+		} catch (fetchError) {
+			// Si el endpoint no está disponible, logear pero no fallar
+			console.warn("⚠️ No se pudo enviar notificación al endpoint PHP:", fetchError.message);
+			console.log("ℹ️ Asegúrate de que el archivo enviar_notificacion_asignacion.php esté en el servidor");
+			
+			// Retornar éxito de todas formas para no bloquear la asignación
+			return { 
+				success: false, 
+				message: "Notificación no enviada - endpoint no disponible",
+				error: fetchError.message 
+			};
+		}
 	} catch (error) {
-		console.error("Error enviando notificación de asignación:", error);
-		throw error;
+		console.error("❌ Error procesando notificación de asignación:", error);
+		// No lanzar error para evitar que falle la asignación si el email falla
+		return { 
+			success: false, 
+			message: "Error procesando notificación",
+			error: error.message 
+		};
 	}
 }

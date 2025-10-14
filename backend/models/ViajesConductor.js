@@ -58,4 +58,25 @@ const ViajesConductor = sequelize.define(
 	}
 );
 
+// Definir asociaciones
+// Estas asociaciones permiten hacer eager loading de datos relacionados
+import Reserva from "./Reserva.js";
+import Conductor from "./Conductor.js";
+import Vehiculo from "./Vehiculo.js";
+
+ViajesConductor.belongsTo(Reserva, {
+	foreignKey: "reservaId",
+	as: "reserva",
+});
+
+ViajesConductor.belongsTo(Conductor, {
+	foreignKey: "conductorId",
+	as: "conductor",
+});
+
+ViajesConductor.belongsTo(Vehiculo, {
+	foreignKey: "vehiculoId",
+	as: "vehiculo",
+});
+
 export default ViajesConductor;
