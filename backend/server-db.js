@@ -2102,7 +2102,7 @@ app.post("/api/vehiculos", async (req, res) => {
 		// Verificar si ya existe un vehículo con esa patente
 		const existente = await Vehiculo.findOne({ where: { patente } });
 		if (existente) {
-			return res.status(400).json({
+			return res.status(409).json({
 				error: "Ya existe un vehículo con esta patente",
 			});
 		}
