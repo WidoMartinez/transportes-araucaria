@@ -2155,6 +2155,18 @@ app.post("/api/vehiculos", authAdmin, async (req, res) => {
 		// Normalizar capacidad
 		const capacidadNorm = capacidad === '' || capacidad === null || capacidad === undefined ? 4 : Number(capacidad);
 
+		// Validar año y capacidad
+		if (
+			(anioNorm !== null && (isNaN(anioNorm) || anioNorm < 1900 || anioNorm > new Date().getFullYear() + 1)) ||
+			isNaN(capacidadNorm) ||
+			!Number.isInteger(capacidadNorm) ||
+			capacidadNorm < 1 ||
+			capacidadNorm > 100
+		) {
+			return res.status(400).json({
+				error: "Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 100."
+			});
+		}
 		// Verificar si ya existe un vehículo con esa patente normalizada
 		const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
 		if (existente) {
