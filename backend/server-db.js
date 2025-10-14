@@ -16,6 +16,8 @@ import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
+import Vehiculo from "./models/Vehiculo.js";
+import Conductor from "./models/Conductor.js";
 
 dotenv.config();
 
@@ -2029,6 +2031,358 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error creando/actualizando cliente:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ==================== RUTAS DE VEHÍCULOS ====================
+
+// Listar todos los vehículos
+app.get("/api/vehiculos", async (req, res) => {
+	try {
+		const { estado, tipo } = req.query;
+		const where = {};
+
+		if (estado) {
+			where.estado = estado;
+		}
+		if (tipo) {
+			where.tipo = tipo;
+		}
+
+		const vehiculos = await Vehiculo.findAll({
+			where,
+			order: [["patente", "ASC"]],
+		});
+
+		res.json({ vehiculos });
+	} catch (error) {
+		console.error("Error obteniendo vehículos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un vehículo por ID
+app.get("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const vehiculo = await Vehiculo.findByPk(id);
+
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		res.json({ vehiculo });
+	} catch (error) {
+		console.error("Error obteniendo vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo vehículo
+app.post("/api/vehiculos", async (req, res) => {
+	try {
+		const {
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad,
+			estado,
+			observaciones,
+		} = req.body;
+
+		if (!patente || !tipo) {
+			return res.status(400).json({
+				error: "Patente y tipo son obligatorios",
+			});
+		}
+
+		// Verificar si ya existe un vehículo con esa patente
+		const existente = await Vehiculo.findOne({ where: { patente } });
+		if (existente) {
+			return res.status(400).json({
+				error: "Ya existe un vehículo con esta patente",
+			});
+		}
+
+		const vehiculo = await Vehiculo.create({
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad: capacidad || 4,
+			estado: estado || "disponible",
+			observaciones,
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Vehículo creado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error creando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un vehículo
+app.put("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad,
+			estado,
+			observaciones,
+		} = req.body;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		// Si se está cambiando la patente, verificar que no exista otra con ese valor
+		if (patente && patente !== vehiculo.patente) {
+			const existente = await Vehiculo.findOne({ where: { patente } });
+			if (existente) {
+				return res.status(400).json({
+					error: "Ya existe un vehículo con esta patente",
+				});
+			}
+		}
+
+		await vehiculo.update({
+			patente: patente || vehiculo.patente,
+			tipo: tipo || vehiculo.tipo,
+			marca: marca !== undefined ? marca : vehiculo.marca,
+			modelo: modelo !== undefined ? modelo : vehiculo.modelo,
+			anio: anio !== undefined ? anio : vehiculo.anio,
+			capacidad: capacidad !== undefined ? capacidad : vehiculo.capacidad,
+			estado: estado !== undefined ? estado : vehiculo.estado,
+			observaciones:
+				observaciones !== undefined ? observaciones : vehiculo.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Vehículo actualizado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error actualizando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un vehículo
+app.delete("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		await vehiculo.destroy();
+
+		res.json({
+			success: true,
+			message: "Vehículo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ==================== RUTAS DE CONDUCTORES ====================
+
+// Listar todos los conductores
+app.get("/api/conductores", async (req, res) => {
+	try {
+		const { estado } = req.query;
+		const where = {};
+
+		if (estado) {
+			where.estado = estado;
+		}
+
+		const conductores = await Conductor.findAll({
+			where,
+			order: [["nombre", "ASC"]],
+		});
+
+		res.json({ conductores });
+	} catch (error) {
+		console.error("Error obteniendo conductores:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un conductor por ID
+app.get("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const conductor = await Conductor.findByPk(id);
+
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		res.json({ conductor });
+	} catch (error) {
+		console.error("Error obteniendo conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo conductor
+app.post("/api/conductores", async (req, res) => {
+	try {
+		const {
+			nombre,
+			rut,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado,
+			observaciones,
+		} = req.body;
+
+		if (!nombre || !rut || !telefono) {
+			return res.status(400).json({
+				error: "Nombre, RUT y teléfono son obligatorios",
+			});
+		}
+
+		// Formatear RUT
+		const rutFormateado = formatearRUT(rut);
+		if (!rutFormateado) {
+			return res.status(400).json({ error: "RUT inválido" });
+		}
+
+		// Verificar si ya existe un conductor con ese RUT
+		const existente = await Conductor.findOne({ where: { rut: rutFormateado } });
+		if (existente) {
+			return res.status(400).json({
+				error: "Ya existe un conductor con este RUT",
+			});
+		}
+
+		const conductor = await Conductor.create({
+			nombre,
+			rut: rutFormateado,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado: estado || "disponible",
+			observaciones,
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Conductor creado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error creando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un conductor
+app.put("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			nombre,
+			rut,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado,
+			observaciones,
+		} = req.body;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		// Si se está cambiando el RUT, formatear y verificar que no exista otro con ese valor
+		let rutFormateado = conductor.rut;
+		if (rut && rut !== conductor.rut) {
+			rutFormateado = formatearRUT(rut);
+			if (!rutFormateado) {
+				return res.status(400).json({ error: "RUT inválido" });
+			}
+
+			const existente = await Conductor.findOne({
+				where: { rut: rutFormateado },
+			});
+			if (existente) {
+				return res.status(400).json({
+					error: "Ya existe un conductor con este RUT",
+				});
+			}
+		}
+
+		await conductor.update({
+			nombre: nombre || conductor.nombre,
+			rut: rutFormateado,
+			telefono: telefono || conductor.telefono,
+			email: email !== undefined ? email : conductor.email,
+			licencia: licencia !== undefined ? licencia : conductor.licencia,
+			fechaVencimientoLicencia:
+				fechaVencimientoLicencia !== undefined
+					? fechaVencimientoLicencia
+					: conductor.fechaVencimientoLicencia,
+			estado: estado !== undefined ? estado : conductor.estado,
+			observaciones:
+				observaciones !== undefined ? observaciones : conductor.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Conductor actualizado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error actualizando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un conductor
+app.delete("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		await conductor.destroy();
+
+		res.json({
+			success: true,
+			message: "Conductor eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando conductor:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
