@@ -102,8 +102,9 @@ const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
 		return defaultValue;
 	}
 	if (parsed < 0) {
-		console.warn(`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando 0`);
-		return 0;
+		const fallback = Math.max(0, defaultValue);
+		console.warn(`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${fallback}`);
+		return fallback;
 	}
 	return parsed;
 };
