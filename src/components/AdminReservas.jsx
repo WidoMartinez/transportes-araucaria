@@ -231,7 +231,7 @@ function AdminReservas() {
 			const response = await fetch(`${apiUrl}/api/vehiculos`);
 			if (response.ok) {
 				const data = await response.json();
-				setVehiculos(data);
+				setVehiculos(data.vehiculos || []);
 			}
 		} catch (error) {
 			console.error("Error cargando vehículos:", error);
@@ -244,7 +244,7 @@ function AdminReservas() {
 			const response = await fetch(`${apiUrl}/api/conductores`);
 			if (response.ok) {
 				const data = await response.json();
-				setConductores(data);
+				setConductores(data.conductores || []);
 			}
 		} catch (error) {
 			console.error("Error cargando conductores:", error);
