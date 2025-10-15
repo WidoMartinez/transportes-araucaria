@@ -1,4 +1,5 @@
 /* eslint-env node */
+/* global process */
 /**
  * Prueba para verificar la generación de códigos de reserva
  */
