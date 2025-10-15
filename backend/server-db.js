@@ -236,7 +236,21 @@ const initializeDatabase = async () => {
 		if (!connected) {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
-		await syncDatabase(false); // false = no forzar recreación
+		
+		// Sincronizar todos los modelos en orden específico
+		// Primero las tablas sin dependencias, luego las que tienen FK
+		const modelsToSync = [
+			Cliente,
+			Destino,
+			CodigoDescuento,
+			Promocion,
+			DescuentoGlobal,
+			Vehiculo,
+			Conductor,
+			Reserva, // Al final porque tiene FK a Cliente
+		];
+		
+		await syncDatabase(false, modelsToSync); // false = no forzar recreación
 
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {

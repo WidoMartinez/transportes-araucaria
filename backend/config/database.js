@@ -38,9 +38,32 @@ export const testConnection = async () => {
 };
 
 // Función para sincronizar los modelos con la base de datos
-export const syncDatabase = async (force = false) => {
+export const syncDatabase = async (force = false, models = []) => {
 	try {
-		await sequelize.sync({ force });
+		// Si se proporcionan modelos específicos, sincronizarlos en orden
+		if (models && models.length > 0) {
+			console.log(`🔄 Sincronizando ${models.length} modelos...`);
+			for (const model of models) {
+				try {
+					// alter: true creará la tabla si no existe, o la modificará si ya existe
+					// force: true eliminará y recreará la tabla (solo usar en desarrollo)
+					await model.sync({ force, alter: !force });
+					console.log(`✅ Modelo ${model.name} sincronizado`);
+				} catch (modelError) {
+					console.error(`❌ Error sincronizando modelo ${model.name}:`, modelError.message);
+					// Intentar sin alter si falla (para tablas nuevas)
+					try {
+						await model.sync({ force: false, alter: false });
+						console.log(`✅ Modelo ${model.name} creado sin alter`);
+					} catch (retryError) {
+						console.error(`❌ Error crítico en ${model.name}:`, retryError.message);
+					}
+				}
+			}
+		} else {
+			// Sincronización general de todos los modelos registrados
+			await sequelize.sync({ force, alter: !force });
+		}
 		console.log("✅ Base de datos sincronizada correctamente.");
 		return true;
 	} catch (error) {
