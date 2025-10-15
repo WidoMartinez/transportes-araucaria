@@ -72,6 +72,18 @@ app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Endpoint de diagnóstico de configuración de BD (solo para debug)
+app.get("/debug/db-config", (req, res) => {
+	res.json({
+		host: process.env.DB_HOST || "srv1551.hstgr.io",
+		port: process.env.DB_PORT || 3306,
+		database: process.env.DB_NAME || "u419311572_transportes_araucaria",
+		user: process.env.DB_USER || "u419311572_admin",
+		hasPassword: !!process.env.DB_PASSWORD,
+		passwordLength: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.length : 0,
+	});
+});
+
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 

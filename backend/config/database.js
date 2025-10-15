@@ -15,8 +15,14 @@ const sequelize = new Sequelize({
 	pool: {
 		max: 5,
 		min: 0,
-		acquire: 30000,
+		acquire: 60000, // Aumentado a 60 segundos
 		idle: 10000,
+	},
+	dialectOptions: {
+		connectTimeout: 60000, // Timeout de conexión: 60 segundos
+	},
+	retry: {
+		max: 3, // Número máximo de reintentos
 	},
 	define: {
 		timestamps: true,
