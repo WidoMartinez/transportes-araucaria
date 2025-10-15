@@ -2058,6 +2058,32 @@ app.get("/api/reservas/:id", async (req, res) => {
 	}
 });
 
+// Buscar reserva por código de reserva (público)
+app.get("/api/reservas/codigo/:codigo", async (req, res) => {
+	try {
+		const { codigo } = req.params;
+		
+		console.log(`🔍 Buscando reserva con código: ${codigo}`);
+		
+		const reserva = await Reserva.findOne({
+			where: {
+				codigoReserva: codigo.toUpperCase(),
+			},
+		});
+
+		if (!reserva) {
+			console.log(`❌ No se encontró reserva con código: ${codigo}`);
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		console.log(`✅ Reserva encontrada: ID ${reserva.id}`);
+		res.json(reserva);
+	} catch (error) {
+		console.error("Error buscando reserva por código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Actualizar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
 	try {

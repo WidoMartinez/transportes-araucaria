@@ -52,6 +52,7 @@ function Footer() {
 							<FooterLink href="#servicios">Servicios</FooterLink>
 							<FooterLink href="#destinos">Destinos</FooterLink>
 							<FooterLink href="#contacto">Contacto</FooterLink>
+							<FooterLink href="#consultar-reserva">Consultar Reserva</FooterLink>
 							<FooterLink href="#">Términos y Condiciones</FooterLink>
 						</nav>
 					</div>

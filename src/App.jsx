@@ -33,6 +33,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
+import ConsultarReserva from "./components/ConsultarReserva";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -170,9 +171,16 @@ const resolveIsFreightView = () => {
 	);
 };
 
+// Resolver si la URL es para consultar reserva
+const resolveIsConsultaView = () => {
+	const hash = window.location.hash;
+	return hash === "#consultar-reserva" || hash === "#consulta";
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -210,6 +218,7 @@ function App() {
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
+	const [codigoReservaCreada, setCodigoReservaCreada] = useState("");
 	const [phoneError, setPhoneError] = useState("");
 	const [reviewChecklist, setReviewChecklist] = useState({
 		viaje: false,
@@ -1183,6 +1192,12 @@ function App() {
 			const result = await response.json();
 			if (!response.ok)
 				throw new Error(result.message || "Error en el servidor.");
+			
+			// Guardar el código de reserva si existe en la respuesta
+			if (result.codigoReserva) {
+				setCodigoReservaCreada(result.codigoReserva);
+			}
+			
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof gtag === "function") {
@@ -1396,6 +1411,10 @@ function App() {
 		return <AdminDashboard />;
 	}
 
+	if (isConsultaView) {
+		return <ConsultarReserva />;
+	}
+
 	return (
 		<div className="min-h-screen bg-background text-foreground">
 			{loadingPrecios && (
@@ -1408,7 +1427,52 @@ function App() {
 				open={showConfirmationAlert}
 				onOpenChange={setShowConfirmationAlert}
 			>
-				{/* El contenido del Dialog no requiere cambios */}
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="text-2xl text-green-600">
+							✅ ¡Reserva Enviada Correctamente!
+						</DialogTitle>
+						<DialogDescription>
+							Tu solicitud de reserva ha sido recibida con éxito.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						{codigoReservaCreada && (
+							<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+								<p className="text-sm font-medium text-blue-700 mb-1">
+									Código de Reserva
+								</p>
+								<p className="text-2xl font-bold text-blue-900 tracking-wider font-mono">
+									{codigoReservaCreada}
+								</p>
+								<p className="text-xs text-blue-600 mt-2">
+									Guarda este código para consultar tu reserva
+								</p>
+							</div>
+						)}
+						<p className="text-sm text-muted-foreground">
+							Te enviaremos una confirmación por correo electrónico con todos los detalles de tu viaje.
+						</p>
+						<p className="text-sm text-muted-foreground">
+							Nuestro equipo revisará tu solicitud y te contactará pronto.
+						</p>
+					</div>
+					<DialogFooter className="sm:justify-between gap-2">
+						{codigoReservaCreada && (
+							<Button
+								variant="outline"
+								onClick={() => window.location.href = `#consultar-reserva`}
+							>
+								Consultar Reserva
+							</Button>
+						)}
+						<DialogClose asChild>
+							<Button type="button">
+								Entendido
+							</Button>
+						</DialogClose>
+					</DialogFooter>
+				</DialogContent>
 			</Dialog>
 
 			<Header />

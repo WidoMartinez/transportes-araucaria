@@ -90,6 +90,12 @@ function Header() {
 							Fletes
 						</a>
 						<a
+							href="#consultar-reserva"
+							className="text-foreground hover:text-primary transition-colors font-medium"
+						>
+							Consultar Reserva
+						</a>
+						<a
 							href="#contacto"
 							className="text-foreground hover:text-primary transition-colors"
 						>
