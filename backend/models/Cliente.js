@@ -92,7 +92,7 @@ const Cliente = sequelize.define(
 		indexes: [
 			{ fields: ["email"] },
 			{ fields: ["rut"] },
-			{ fields: ["esCliente"] },
+			{ fields: ["es_cliente"] }, // Usar el nombre real de la columna en la BD (snake_case)
 			{ fields: ["telefono"] },
 		],
 	}
