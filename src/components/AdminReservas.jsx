@@ -76,6 +76,14 @@ function AdminReservas() {
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
 	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [saving, setSaving] = useState(false);
+	
+	// Estados para asignación de vehículo/conductor
+	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+	const [vehiculos, setVehiculos] = useState([]);
+	const [conductores, setConductores] = useState([]);
+	const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
+	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
+	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
 
 	// Filtros y búsqueda
 	const [searchTerm, setSearchTerm] = useState("");
@@ -214,6 +222,86 @@ function AdminReservas() {
 				reservasPagadas: 0,
 				totalIngresos: 0,
 			});
+		}
+	};
+
+	// Cargar vehículos disponibles
+	const fetchVehiculos = async () => {
+		try {
+			const response = await fetch(`${apiUrl}/api/vehiculos`);
+			if (response.ok) {
+				const data = await response.json();
+				setVehiculos(data);
+			}
+		} catch (error) {
+			console.error("Error cargando vehículos:", error);
+		}
+	};
+
+	// Cargar conductores disponibles
+	const fetchConductores = async () => {
+		try {
+			const response = await fetch(`${apiUrl}/api/conductores`);
+			if (response.ok) {
+				const data = await response.json();
+				setConductores(data);
+			}
+		} catch (error) {
+			console.error("Error cargando conductores:", error);
+		}
+	};
+
+	// Abrir diálogo de asignación
+	const handleAsignar = (reserva) => {
+		setSelectedReserva(reserva);
+		setVehiculoSeleccionado(reserva.vehiculoId?.toString() || "");
+		setConductorSeleccionado(reserva.conductorId?.toString() || "");
+		setShowAsignarDialog(true);
+		// Cargar vehículos y conductores si aún no se han cargado
+		if (vehiculos.length === 0) fetchVehiculos();
+		if (conductores.length === 0) fetchConductores();
+	};
+
+	// Guardar asignación de vehículo/conductor
+	const handleGuardarAsignacion = async () => {
+		if (!vehiculoSeleccionado) {
+			alert("Debe seleccionar al menos un vehículo");
+			return;
+		}
+
+		setLoadingAsignacion(true);
+		try {
+			const ADMIN_TOKEN = localStorage.getItem("adminToken");
+			const response = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+					body: JSON.stringify({
+						vehiculoId: parseInt(vehiculoSeleccionado),
+						conductorId: conductorSeleccionado
+							? parseInt(conductorSeleccionado)
+							: null,
+					}),
+				}
+			);
+
+			if (response.ok) {
+				await fetchReservas(); // Recargar reservas
+				setShowAsignarDialog(false);
+				alert("Vehículo y conductor asignados correctamente");
+			} else {
+				const data = await response.json();
+				alert(data.error || "Error al asignar vehículo/conductor");
+			}
+		} catch (error) {
+			console.error("Error asignando vehículo/conductor:", error);
+			alert("Error al asignar vehículo/conductor");
+		} finally {
+			setLoadingAsignacion(false);
 		}
 	};
 
@@ -1294,6 +1382,17 @@ function AdminReservas() {
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
+														{/* Solo mostrar botón de asignar si está pagado */}
+														{reserva.estadoPago === "pagado" && (
+															<Button
+																variant="secondary"
+																size="sm"
+																onClick={() => handleAsignar(reserva)}
+																title="Asignar vehículo y conductor"
+															>
+																🚗
+															</Button>
+														)}
 													</div>
 												</TableCell>
 											)}
@@ -2663,6 +2762,134 @@ function AdminReservas() {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{/* Dialog para asignar vehículo y conductor */}
+			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>
+							Asignar Vehículo y Conductor - Reserva #
+							{selectedReserva?.id}
+						</DialogTitle>
+						<DialogDescription>
+							Asigna un vehículo y opcionalmente un conductor a esta reserva
+							pagada
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-4 py-4">
+						{/* Información de la reserva */}
+						<div className="bg-muted p-3 rounded-lg space-y-1 text-sm">
+							<p>
+								<strong>Cliente:</strong> {selectedReserva?.nombre}
+							</p>
+							<p>
+								<strong>Ruta:</strong> {selectedReserva?.origen} →{" "}
+								{selectedReserva?.destino}
+							</p>
+							<p>
+								<strong>Fecha:</strong>{" "}
+								{selectedReserva?.fecha
+									? new Date(selectedReserva.fecha).toLocaleDateString(
+											"es-CL"
+									  )
+									: ""}
+							</p>
+							<p>
+								<strong>Pasajeros:</strong> {selectedReserva?.pasajeros}
+							</p>
+						</div>
+
+						{/* Selector de vehículo */}
+						<div className="space-y-2">
+							<Label htmlFor="vehiculo">
+								Vehículo <span className="text-red-500">*</span>
+							</Label>
+							<Select
+								value={vehiculoSeleccionado}
+								onValueChange={setVehiculoSeleccionado}
+							>
+								<SelectTrigger id="vehiculo">
+									<SelectValue placeholder="Selecciona un vehículo" />
+								</SelectTrigger>
+								<SelectContent>
+									{vehiculos.map((v) => (
+										<SelectItem key={v.id} value={v.id.toString()}>
+											{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
+											{v.capacidad} pasajeros
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						{/* Selector de conductor (opcional) */}
+						<div className="space-y-2">
+							<Label htmlFor="conductor">Conductor (opcional)</Label>
+							<Select
+								value={conductorSeleccionado}
+								onValueChange={setConductorSeleccionado}
+							>
+								<SelectTrigger id="conductor">
+									<SelectValue placeholder="Selecciona un conductor (opcional)" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="">Sin asignar</SelectItem>
+									{conductores.map((c) => (
+										<SelectItem key={c.id} value={c.id.toString()}>
+											{c.nombre} - {c.rut}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						{/* Mostrar asignaciones actuales si existen */}
+						{(selectedReserva?.vehiculo_asignado ||
+							selectedReserva?.conductor_asignado) && (
+							<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+								<p className="font-semibold">Asignación actual:</p>
+								{selectedReserva.vehiculo_asignado && (
+									<p>
+										🚗 Vehículo:{" "}
+										{selectedReserva.vehiculo_asignado.patente} (
+										{selectedReserva.vehiculo_asignado.tipo})
+									</p>
+								)}
+								{selectedReserva.conductor_asignado && (
+									<p>
+										👤 Conductor:{" "}
+										{selectedReserva.conductor_asignado.nombre}
+									</p>
+								)}
+							</div>
+						)}
+					</div>
+
+					<div className="flex justify-end gap-2">
+						<Button
+							variant="outline"
+							onClick={() => setShowAsignarDialog(false)}
+							disabled={loadingAsignacion}
+						>
+							Cancelar
+						</Button>
+						<Button
+							onClick={handleGuardarAsignacion}
+							disabled={loadingAsignacion || !vehiculoSeleccionado}
+						>
+							{loadingAsignacion ? (
+								<>
+									<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+									Guardando...
+								</>
+							) : (
+								"Asignar"
+							)}
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
