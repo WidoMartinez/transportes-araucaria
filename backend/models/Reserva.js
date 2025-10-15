@@ -9,6 +9,13 @@ const Reserva = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
+		codigoReserva: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			unique: true,
+			field: 'codigo_reserva',
+			comment: "Código único de reserva (formato: AR-YYYYMMDD-XXXX)",
+		},
 		clienteId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
@@ -210,6 +217,7 @@ const Reserva = sequelize.define(
 		tableName: "reservas",
 		timestamps: true,
 		indexes: [
+			{ fields: ["codigo_reserva"], unique: true }, // Índice único para código de reserva
 			{ fields: ["email"] },
 			{ fields: ["fecha"] },
 			{ fields: ["estado"] },

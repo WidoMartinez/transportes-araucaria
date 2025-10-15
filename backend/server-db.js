@@ -91,6 +91,34 @@ app.get("/debug/db-config", (req, res) => {
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// Función para generar código único de reserva (formato: AR-YYYYMMDD-XXXX)
+const generarCodigoReserva = async () => {
+	const fecha = new Date();
+	const año = fecha.getFullYear();
+	const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+	const dia = String(fecha.getDate()).padStart(2, '0');
+	const fechaStr = `${año}${mes}${dia}`;
+	
+	// Obtener el número de reservas del día para generar un consecutivo
+	const inicioDelDia = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+	const finDelDia = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 23, 59, 59);
+	
+	const reservasDelDia = await Reserva.count({
+		where: {
+			created_at: {
+				[Op.gte]: inicioDelDia,
+				[Op.lte]: finDelDia,
+			},
+		},
+	});
+	
+	// Generar número consecutivo (siguiente número del día)
+	const consecutivo = String(reservasDelDia + 1).padStart(4, '0');
+	
+	// Formato: AR-YYYYMMDD-XXXX
+	return `AR-${fechaStr}-${consecutivo}`;
+};
+
 // Función para validar RUT chileno con dígito verificador (Módulo 11)
 const validarRUT = (rut) => {
 	if (!rut) return false;
@@ -1511,6 +1539,9 @@ app.post("/enviar-reserva", async (req, res) => {
 		// Formatear RUT si se proporciona
 		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
 
+		// Generar código único de reserva
+		const codigoReserva = await generarCodigoReserva();
+
 		console.log("Reserva web recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
@@ -1524,10 +1555,12 @@ app.post("/enviar-reserva", async (req, res) => {
 			pasajeros: datosReserva.pasajeros,
 			totalConDescuento: datosReserva.totalConDescuento,
 			source: datosReserva.source || "web",
+			codigoReserva,
 		});
 
 		// Guardar reserva en la base de datos con validaciones robustas
 		const reservaGuardada = await Reserva.create({
+			codigoReserva,
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
@@ -1565,13 +1598,16 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		console.log(
 			"✅ Reserva guardada en base de datos con ID:",
-			reservaGuardada.id
+			reservaGuardada.id,
+			"- Código:",
+			reservaGuardada.codigoReserva
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva recibida y guardada correctamente",
 			reservaId: reservaGuardada.id,
+			codigoReserva: reservaGuardada.codigoReserva,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva:", error);
@@ -1590,6 +1626,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		// Formatear RUT si se proporciona
 		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
 
+		// Generar código único de reserva
+		const codigoReserva = await generarCodigoReserva();
+
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
@@ -1602,6 +1641,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			pasajeros: datosReserva.pasajeros,
 			totalConDescuento: datosReserva.totalConDescuento,
 			source: datosReserva.source || "express_web",
+			codigoReserva,
 		});
 
 		// Validar campos mínimos requeridos
@@ -1626,6 +1666,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		// Crear reserva express con campos mínimos
 		const reservaExpress = await Reserva.create({
+			codigoReserva,
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
@@ -1669,13 +1710,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		console.log(
 			"✅ Reserva express guardada en base de datos con ID:",
-			reservaExpress.id
+			reservaExpress.id,
+			"- Código:",
+			reservaExpress.codigoReserva
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
+			codigoReserva: reservaExpress.codigoReserva,
 			tipo: "express",
 		});
 	} catch (error) {
