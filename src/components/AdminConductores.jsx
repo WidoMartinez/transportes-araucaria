@@ -145,21 +145,21 @@ function AdminConductores() {
 				return;
 			}
 
-			const url = selectedConductor
-				? `${API_BASE_URL}/api/conductores/${selectedConductor.id}`
-				: `${API_BASE_URL}/api/conductores`;
+		const url = selectedConductor
+			? `${API_BASE_URL}/api/conductores/${selectedConductor.id}`
+			: `${API_BASE_URL}/api/conductores`;
 
-			const method = selectedConductor ? "PUT" : "POST";
+		const method = selectedConductor ? "PUT" : "POST";
 
-			const response = await fetch(url, {
-				method,
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(formData),
-			});
-
-			const data = await response.json();
+		const ADMIN_TOKEN = localStorage.getItem("adminToken");
+		const response = await fetch(url, {
+			method,
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${ADMIN_TOKEN}`,
+			},
+			body: JSON.stringify(formData),
+		});			const data = await response.json();
 
 			if (response.ok) {
 				await fetchConductores();

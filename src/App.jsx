@@ -1387,6 +1387,23 @@ function App() {
 	}
 
 	if (isAdminView) {
+		// Verificar si el token de admin está guardado en localStorage
+		const savedToken = localStorage.getItem("adminToken");
+		
+		if (!savedToken) {
+			// Solicitar el token al usuario
+			const token = prompt("Ingrese el token de administrador:");
+			if (token) {
+				localStorage.setItem("adminToken", token);
+				// Recargar la página para aplicar el token
+				window.location.reload();
+			} else {
+				// Si el usuario cancela, redirigir a la página principal
+				window.location.href = "/";
+				return null;
+			}
+		}
+		
 		return <AdminDashboard />;
 	}
 
