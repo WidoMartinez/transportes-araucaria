@@ -41,6 +41,10 @@ function HeroExpress({
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [paymentConsent, setPaymentConsent] = useState(false);
 	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
+	const [codigoReserva, setCodigoReserva] = useState(""); // Código de reserva generado
+	const [mostrarCodigoReserva, setMostrarCodigoReserva] = useState(false); // Mostrar código después de guardar
+	const [buscarPorCodigo, setBuscarPorCodigo] = useState(false); // Modo búsqueda por código
+	const [codigoBusqueda, setCodigoBusqueda] = useState(""); // Código ingresado por el usuario
 
 	// Pasos simplificados para flujo express
 	const steps = useMemo(
@@ -150,7 +154,7 @@ function HeroExpress({
 		setCurrentStep(1);
 	};
 
-	// Validaciones del segundo paso (mínimas para pago)
+	// Validaciones del segundo paso (mínimas para captura de datos)
 	const handleStepTwoNext = async () => {
 		if (!formData.nombre?.trim()) {
 			setStepError("Ingresa tu nombre completo.");
@@ -181,13 +185,13 @@ function HeroExpress({
 		}
 
 		if (!paymentConsent) {
-			setStepError("Debes aceptar los términos para continuar con el pago.");
+			setStepError("Debes aceptar los términos para continuar.");
 			return;
 		}
 
 		setStepError("");
 
-		// Procesar la reserva express (sin hora específica)
+		// Captura silenciosa: Guardar datos del cliente antes del pago
 		const result = await onSubmitWizard();
 
 		if (!result.success) {
@@ -199,12 +203,69 @@ function HeroExpress({
 			return;
 		}
 
-		// Si llegamos aquí, la reserva se creó exitosamente
-		// El pago se maneja directamente desde aquí
+		// Si llegamos aquí, los datos se guardaron exitosamente
+		// Guardar el código de reserva y mostrar la pantalla de confirmación
+		if (result.codigoReserva) {
+			setCodigoReserva(result.codigoReserva);
+			setMostrarCodigoReserva(true);
+		}
+		setStepError("");
 	};
 
 	const handleStepBack = () => {
 		setCurrentStep((prev) => Math.max(prev - 1, 0));
+	};
+
+	// Función para buscar reserva por código
+	const handleBuscarReservaPorCodigo = async () => {
+		if (!codigoBusqueda.trim()) {
+			setStepError("Ingresa tu código de reserva.");
+			return;
+		}
+
+		setIsSubmitting(true);
+		setStepError("");
+
+		try {
+			const apiUrl = import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+			const response = await fetch(`${apiUrl}/api/reservas/codigo/${codigoBusqueda}`, {
+				method: "GET",
+				headers: { "Content-Type": "application/json" },
+			});
+
+			const result = await response.json();
+
+			if (!response.ok || !result.success) {
+				setStepError(result.message || "Código de reserva no encontrado. Verifica e intenta nuevamente.");
+				return;
+			}
+
+			// Cargar los datos de la reserva en el formulario
+			const reserva = result.reserva;
+			handleInputChange({ target: { name: "nombre", value: reserva.nombre } });
+			handleInputChange({ target: { name: "email", value: reserva.email } });
+			handleInputChange({ target: { name: "telefono", value: reserva.telefono } });
+			handleInputChange({ target: { name: "origen", value: reserva.origen } });
+			handleInputChange({ target: { name: "destino", value: reserva.destino } });
+			handleInputChange({ target: { name: "fecha", value: reserva.fecha } });
+			handleInputChange({ target: { name: "pasajeros", value: reserva.pasajeros } });
+			
+			if (reserva.idaVuelta) {
+				handleInputChange({ target: { name: "idaVuelta", value: true } });
+				handleInputChange({ target: { name: "fechaRegreso", value: reserva.fechaRegreso } });
+			}
+
+			// Ir al paso 2 con los datos cargados
+			setCurrentStep(1);
+			setBuscarPorCodigo(false);
+			setPaymentConsent(true); // Ya aceptó términos al guardar
+			setCodigoReserva(codigoBusqueda); // Guardar el código para referencia
+		} catch (error) {
+			console.error("Error buscando reserva:", error);
+			setStepError("Error al buscar la reserva. Intenta nuevamente.");
+		} finally {
+			setIsSubmitting(false);
+		}
 	};
 
 	// Opciones de pago simplificadas
@@ -321,6 +382,16 @@ function HeroExpress({
 						<p className="text-lg text-white/95 drop-shadow-md font-medium">
 							Proceso súper rápido • Solo 2 pasos • Pago seguro
 						</p>
+						<Button
+							onClick={() => {
+								setShowBookingModule(true);
+								setBuscarPorCodigo(true);
+							}}
+							variant="outline"
+							className="bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg font-semibold backdrop-blur-sm"
+						>
+							🔍 Continuar con código de reserva
+						</Button>
 					</div>
 				)}
 
@@ -345,7 +416,11 @@ function HeroExpress({
 									<Button
 										variant="ghost"
 										size="sm"
-										onClick={() => setShowBookingModule(false)}
+										onClick={() => {
+											setShowBookingModule(false);
+											setBuscarPorCodigo(false);
+											setMostrarCodigoReserva(false);
+										}}
 										className="text-gray-500 hover:text-gray-700"
 									>
 										← Volver
@@ -411,8 +486,144 @@ function HeroExpress({
 							</CardHeader>
 
 							<CardContent className="space-y-6">
+								{/* PANTALLA: Buscar reserva por código */}
+								{buscarPorCodigo && !mostrarCodigoReserva && (
+									<div className="space-y-6">
+										<div className="text-center mb-6">
+											<h4 className="text-2xl font-bold text-primary mb-2">
+												🔍 Continuar con tu reserva
+											</h4>
+											<p className="text-muted-foreground">
+												Ingresa tu código de reserva para continuar con el pago
+											</p>
+										</div>
+
+										<div className="max-w-md mx-auto space-y-4">
+											<div className="space-y-2">
+												<Label htmlFor="codigo-busqueda" className="text-base font-medium">
+													Código de reserva
+												</Label>
+												<Input
+													id="codigo-busqueda"
+													value={codigoBusqueda}
+													onChange={(e) => setCodigoBusqueda(e.target.value.toUpperCase())}
+													placeholder="Ej: RES-12345678"
+													className="h-12 text-lg text-center font-mono"
+													maxLength={15}
+												/>
+												<p className="text-xs text-muted-foreground text-center">
+													El código se encuentra en tu correo de confirmación
+												</p>
+											</div>
+
+											{stepError && (
+												<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+													⚠️ {stepError}
+												</div>
+											)}
+
+											<div className="flex flex-col gap-3">
+												<Button
+													onClick={handleBuscarReservaPorCodigo}
+													disabled={isSubmitting || !codigoBusqueda.trim()}
+													className="w-full bg-primary hover:bg-primary/90"
+												>
+													{isSubmitting ? (
+														<>
+															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+															Buscando reserva...
+														</>
+													) : (
+														"Buscar y continuar →"
+													)}
+												</Button>
+												<Button
+													variant="outline"
+													onClick={() => {
+														setBuscarPorCodigo(false);
+														setCodigoBusqueda("");
+														setStepError("");
+													}}
+													className="w-full"
+												>
+													← Hacer una nueva reserva
+												</Button>
+											</div>
+										</div>
+									</div>
+								)}
+
+								{/* PANTALLA: Mostrar código de reserva guardada */}
+								{mostrarCodigoReserva && codigoReserva && (
+									<div className="space-y-6">
+										<div className="text-center space-y-4">
+											<div className="flex justify-center">
+												<div className="bg-green-500 text-white rounded-full p-4">
+													<svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+													</svg>
+												</div>
+											</div>
+											<h4 className="text-2xl font-bold text-green-600">
+												¡Reserva guardada exitosamente!
+											</h4>
+											<p className="text-muted-foreground max-w-md mx-auto">
+												Tus datos han sido registrados. Puedes continuar con el pago ahora o hacerlo más tarde con tu código de reserva.
+											</p>
+										</div>
+
+										<div className="max-w-md mx-auto bg-primary/5 border-2 border-primary/20 rounded-lg p-6 space-y-4">
+											<div className="text-center">
+												<p className="text-sm text-muted-foreground mb-2">Tu código de reserva es:</p>
+												<div className="bg-white border-2 border-primary rounded-lg p-4">
+													<p className="text-3xl font-bold text-primary font-mono tracking-wider">
+														{codigoReserva}
+													</p>
+												</div>
+												<p className="text-xs text-muted-foreground mt-2">
+													📧 También lo recibirás por email
+												</p>
+											</div>
+
+											<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+												<p className="text-sm text-blue-800">
+													<strong>💡 Guarda este código.</strong> Lo necesitarás para continuar con el pago más adelante.
+												</p>
+											</div>
+										</div>
+
+										<div className="max-w-md mx-auto space-y-3">
+											<p className="text-center text-sm text-muted-foreground">
+												¿Deseas proceder con el pago ahora?
+											</p>
+											<div className="flex flex-col gap-3">
+												<Button
+													onClick={() => {
+														setMostrarCodigoReserva(false);
+														// Ya estamos en paso 2 con datos cargados, listo para pago
+													}}
+													className="w-full bg-primary hover:bg-primary/90"
+												>
+													💳 Sí, pagar ahora
+												</Button>
+												<Button
+													variant="outline"
+													onClick={() => {
+														setShowBookingModule(false);
+														setMostrarCodigoReserva(false);
+														setCurrentStep(0);
+													}}
+													className="w-full"
+												>
+													🕐 No, pagaré después
+												</Button>
+											</div>
+										</div>
+									</div>
+								)}
+
 								{/* PASO 1: Información básica del viaje */}
-								{currentStep === 0 && (
+								{!buscarPorCodigo && !mostrarCodigoReserva && currentStep === 0 && (
 									<div className="space-y-6">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
@@ -666,7 +877,7 @@ function HeroExpress({
 								)}
 
 								{/* PASO 2: Datos personales y pago */}
-								{currentStep === 1 && (
+								{!buscarPorCodigo && !mostrarCodigoReserva && currentStep === 1 && (
 									<div className="space-y-6">
 										{/* Resumen del viaje */}
 										<div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -819,8 +1030,11 @@ function HeroExpress({
 											todosLosCamposCompletos && (
 												<div className="space-y-4">
 													<h4 className="font-semibold text-lg">
-														💳 Selecciona tu opción de pago
+														💳 Opción de pago (Opcional - Recomendado)
 													</h4>
+													<p className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 rounded-lg p-3">
+														💡 <strong>Puedes pagar ahora</strong> para confirmar tu reserva al instante, o <strong>guardar tu reserva</strong> y te contactaremos para coordinar el pago.
+													</p>
 
 													{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
 													{!selectedPaymentType && (
@@ -966,7 +1180,7 @@ function HeroExpress({
 												</div>
 											)}
 
-										{/* Consentimiento para pago */}
+										{/* Consentimiento para captura de datos */}
 										<div className="border border-gray-200 rounded-lg p-4 space-y-3">
 											<div className="flex items-start gap-3">
 												<Checkbox
@@ -981,52 +1195,62 @@ function HeroExpress({
 													className="text-sm leading-relaxed text-muted-foreground cursor-pointer"
 												>
 													✅ Acepto recibir la confirmación por email y
-													WhatsApp, y comprendo que podré especificar la hora
-													exacta y detalles adicionales después de confirmar el
-													pago.
+													WhatsApp. Comprendo que mi reserva quedará registrada
+													y podré pagar ahora o coordinar el pago posteriormente.
+													Podré especificar la hora exacta y detalles adicionales
+													después.
 												</label>
 											</div>
 										</div>
 
 										{/* Navegación */}
-										<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-											<Button
-												type="button"
-												variant="outline"
-												onClick={handleStepBack}
-												disabled={isSubmitting}
-												className="w-full sm:w-auto"
-											>
-												← Volver
-											</Button>
-
-											{requiereCotizacionManual ? (
-												<Button
-													asChild
-													className="w-full sm:w-auto"
-													variant="secondary"
-												>
-													<a href="#contacto">
-														Solicitar cotización personalizada
-													</a>
-												</Button>
-											) : (
+										<div className="space-y-3">
+											{!requiereCotizacionManual && (
+												<div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+													<p className="text-sm text-green-800">
+														<strong>📝 Guardar reserva:</strong> Registra tus datos ahora y elige pagar al instante (arriba) o te contactaremos para coordinar.
+													</p>
+												</div>
+											)}
+											<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
 												<Button
 													type="button"
-													onClick={handleStepTwoNext}
-													disabled={isSubmitting || !paymentConsent}
-													className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
+													variant="outline"
+													onClick={handleStepBack}
+													disabled={isSubmitting}
+													className="w-full sm:w-auto"
 												>
-													{isSubmitting ? (
-														<>
-															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-															Procesando reserva...
-														</>
-													) : (
-														"Confirmar reserva →"
-													)}
+													← Volver
 												</Button>
-											)}
+
+												{requiereCotizacionManual ? (
+													<Button
+														asChild
+														className="w-full sm:w-auto"
+														variant="secondary"
+													>
+														<a href="#contacto">
+															Solicitar cotización personalizada
+														</a>
+													</Button>
+												) : (
+													<Button
+														type="button"
+														onClick={handleStepTwoNext}
+														disabled={isSubmitting || !paymentConsent}
+														className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
+													>
+														{isSubmitting ? (
+															<>
+																<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+																Guardando reserva...
+															</>
+														) : (
+															"Guardar reserva →"
+														)}
+													</Button>
+												)}
+											</div>
 										</div>
 									</div>
 								)}
