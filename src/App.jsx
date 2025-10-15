@@ -229,6 +229,8 @@ function App() {
 	}, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
+	// Código de reserva legible
+	const [codigoReserva, setCodigoReserva] = useState(null);
 
 	// Estado para controlar el flujo de reservas (express o completo)
 	const [useExpressFlow, setUseExpressFlow] = useState(true);
@@ -1183,6 +1185,16 @@ function App() {
 			const result = await response.json();
 			if (!response.ok)
 				throw new Error(result.message || "Error en el servidor.");
+			
+			// Guardar ID y código de reserva
+			if (result.reservaId) {
+				setReservationId(result.reservaId);
+			}
+			if (result.codigoReserva) {
+				setCodigoReserva(result.codigoReserva);
+				console.log("✅ Reserva creada con código:", result.codigoReserva);
+			}
+			
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof gtag === "function") {
@@ -1317,9 +1329,13 @@ function App() {
 
 			console.log("✅ Reserva express creada:", result);
 
-			// Guardar ID de reserva para asociar pagos
+			// Guardar ID y código de reserva para asociar pagos
 			if (result.reservaId) {
 				setReservationId(result.reservaId);
+			}
+			if (result.codigoReserva) {
+				setCodigoReserva(result.codigoReserva);
+				console.log("✅ Código de reserva:", result.codigoReserva);
 			}
 
 			// Registrar conversión
@@ -1419,7 +1435,34 @@ function App() {
 				open={showConfirmationAlert}
 				onOpenChange={setShowConfirmationAlert}
 			>
-				{/* El contenido del Dialog no requiere cambios */}
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="text-2xl">✅ Reserva Enviada</DialogTitle>
+						<DialogDescription>
+							Tu solicitud de reserva ha sido recibida correctamente.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						{codigoReserva && (
+							<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+								<p className="text-sm text-gray-600 mb-1">Código de reserva:</p>
+								<p className="text-2xl font-bold text-blue-600">{codigoReserva}</p>
+								<p className="text-xs text-gray-500 mt-2">
+									Guarda este código para futuras consultas sobre tu reserva.
+								</p>
+							</div>
+						)}
+						<div className="space-y-2 text-sm">
+							<p>📧 Te hemos enviado un correo de confirmación con los detalles de tu reserva.</p>
+							<p>📞 Nuestro equipo se pondrá en contacto contigo pronto para confirmar todos los detalles.</p>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button onClick={() => setShowConfirmationAlert(false)}>
+							Entendido
+						</Button>
+					</DialogFooter>
+				</DialogContent>
 			</Dialog>
 
 			<Header />
