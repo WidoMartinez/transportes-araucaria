@@ -9,6 +9,13 @@ const Reserva = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
+		codigoReserva: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			unique: true,
+			field: "codigo_reserva",
+			comment: "Código único de reserva (formato: AR-YYYYMMDD-XXXX)",
+		},
 		clienteId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
@@ -197,6 +204,7 @@ const Reserva = sequelize.define(
 			{ fields: ["created_at"] },
 			{ fields: ["clienteId"] },
 			{ fields: ["rut"] },
+			{ fields: ["codigo_reserva"], unique: true },
 		],
 	}
 );

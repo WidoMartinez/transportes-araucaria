@@ -204,6 +204,50 @@ const parseJsonArray = (raw) => {
 	return Array.isArray(value) ? value : [];
 };
 
+// Función para generar código único de reserva
+const generarCodigoReserva = async () => {
+	try {
+		// Obtener fecha actual
+		const fecha = new Date();
+		const año = fecha.getFullYear();
+		const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+		const dia = String(fecha.getDate()).padStart(2, '0');
+		const fechaStr = `${año}${mes}${dia}`;
+		
+		// Calcular inicio y fin del día actual
+		const inicioDelDia = new Date(fecha);
+		inicioDelDia.setHours(0, 0, 0, 0);
+		
+		const finDelDia = new Date(fecha);
+		finDelDia.setHours(23, 59, 59, 999);
+		
+		// Contar reservas creadas hoy
+		const reservasDelDia = await Reserva.count({
+			where: {
+				createdAt: {
+					[Op.gte]: inicioDelDia,
+					[Op.lte]: finDelDia,
+				},
+			},
+		});
+		
+		// Generar consecutivo (siguiente número del día)
+		const consecutivo = String(reservasDelDia + 1).padStart(4, '0');
+		
+		// Formato: AR-YYYYMMDD-XXXX
+		const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
+		
+		console.log(`📋 Código de reserva generado: ${codigoReserva}`);
+		
+		return codigoReserva;
+	} catch (error) {
+		console.error("Error generando código de reserva:", error);
+		// Generar código de respaldo con timestamp si falla la consulta
+		const timestamp = Date.now();
+		return `AR-${timestamp}`;
+	}
+};
+
 const normalizeDestinosAplicables = (raw) => {
 	const parsed = parseJsonArray(raw);
 	return parsed
@@ -1493,12 +1537,16 @@ app.post("/enviar-reserva", async (req, res) => {
 			? formatearRUT(datosReserva.rut)
 			: null;
 
+		// Generar código único de reserva
+		const codigoReserva = await generarCodigoReserva();
+
 		console.log("Reserva web recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
 			rut: rutFormateado,
+			codigoReserva: codigoReserva,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1510,6 +1558,7 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		// Guardar reserva en la base de datos con validaciones robustas
 		const reservaGuardada = await Reserva.create({
+			codigoReserva: codigoReserva,
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
@@ -1575,13 +1624,16 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		console.log(
 			"✅ Reserva guardada en base de datos con ID:",
-			reservaGuardada.id
+			reservaGuardada.id,
+			"Código:",
+			reservaGuardada.codigoReserva
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva recibida y guardada correctamente",
 			reservaId: reservaGuardada.id,
+			codigoReserva: reservaGuardada.codigoReserva,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva:", error);
@@ -1602,12 +1654,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			? formatearRUT(datosReserva.rut)
 			: null;
 
+		// Generar código único de reserva
+		const codigoReserva = await generarCodigoReserva();
+
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
 			rut: rutFormateado,
+			codigoReserva: codigoReserva,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1638,6 +1694,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		// Crear reserva express con campos mínimos
 		const reservaExpress = await Reserva.create({
+			codigoReserva: codigoReserva,
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
@@ -1709,13 +1766,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		console.log(
 			"✅ Reserva express guardada en base de datos con ID:",
-			reservaExpress.id
+			reservaExpress.id,
+			"Código:",
+			reservaExpress.codigoReserva
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
+			codigoReserva: reservaExpress.codigoReserva,
 			tipo: "express",
 		});
 	} catch (error) {
