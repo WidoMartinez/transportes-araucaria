@@ -9,6 +9,13 @@ const Reserva = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
+		codigoReserva: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			unique: true,
+			field: 'codigo_reserva',
+			comment: "Código único de reserva legible (formato: RES-YYYYMMDD-XXXX)",
+		},
 		clienteId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
@@ -218,6 +225,7 @@ const Reserva = sequelize.define(
 			{ fields: ["rut"] },
 			{ fields: ["vehiculo_id"] }, // Índice para FK de vehículo
 			{ fields: ["conductor_id"] }, // Índice para FK de conductor
+			{ fields: ["codigo_reserva"], unique: true }, // Índice único para código de reserva
 		],
 	}
 );
