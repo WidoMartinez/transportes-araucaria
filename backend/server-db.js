@@ -16,6 +16,8 @@ import Promocion from "./models/Promocion.js";
 import DescuentoGlobal from "./models/DescuentoGlobal.js";
 import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
+import Vehiculo from "./models/Vehiculo.js";
+import Conductor from "./models/Conductor.js";
 
 dotenv.config();
 
@@ -38,12 +40,71 @@ const signParams = (params) => {
 const app = express();
 app.use(express.json());
 
+// Middleware de autenticación para rutas administrativas
+const authAdmin = (req, res, next) => {
+	// TODO: Implementar validación de token/sesión real
+	// Por ahora, verificamos que exista un header de autorización
+	const authHeader = req.headers['authorization'];
+	const adminToken = process.env.ADMIN_TOKEN;
+	
+	if (!adminToken) {
+		// Misconfiguration: ADMIN_TOKEN must be set
+		return res.status(500).json({
+			error: "ADMIN_TOKEN no configurado en el entorno del servidor."
+		});
+	}
+	if (adminToken === 'admin-secret-token') {
+		// Insecure default token should not be used
+		return res.status(500).json({
+			error: "ADMIN_TOKEN tiene un valor inseguro por defecto. Cambie la configuración."
+		});
+	}
+	if (!authHeader || authHeader !== `Bearer ${adminToken}`) {
+		return res.status(401).json({ 
+			error: "No autorizado. Se requiere autenticación de administrador." 
+		});
+	}
+	
+	next();
+};
+
 app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+// Función para validar RUT chileno con dígito verificador (Módulo 11)
+const validarRUT = (rut) => {
+	if (!rut) return false;
+	
+	// Eliminar puntos, guiones y espacios
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, '');
+	
+	if (rutLimpio.length < 2) return false;
+	
+	// Separar cuerpo y dígito verificador
+	const cuerpo = rutLimpio.slice(0, -1);
+	const dv = rutLimpio.slice(-1).toUpperCase();
+	
+	// Validar que el cuerpo sea numérico
+	if (!/^\d+$/.test(cuerpo)) return false;
+	
+	// Calcular dígito verificador esperado
+	let suma = 0;
+	let multiplicador = 2;
+	
+	for (let i = cuerpo.length - 1; i >= 0; i--) {
+		suma += parseInt(cuerpo.charAt(i)) * multiplicador;
+		multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+	}
+	
+	const dvEsperado = 11 - (suma % 11);
+	const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+	
+	return dv === dvCalculado;
+};
 
 // Función para formatear RUT chileno
 const formatearRUT = (rut) => {
@@ -2029,6 +2090,441 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error creando/actualizando cliente:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ==================== RUTAS DE VEHÍCULOS ====================
+
+// Listar todos los vehículos
+app.get("/api/vehiculos", async (req, res) => {
+	try {
+		const { estado, tipo } = req.query;
+		const where = {};
+
+		if (estado) {
+			where.estado = estado;
+		}
+		if (tipo) {
+			where.tipo = tipo;
+		}
+
+		const vehiculos = await Vehiculo.findAll({
+			where,
+			order: [["patente", "ASC"]],
+		});
+
+		res.json({ vehiculos });
+	} catch (error) {
+		console.error("Error obteniendo vehículos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un vehículo por ID
+app.get("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const vehiculo = await Vehiculo.findByPk(id);
+
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		res.json({ vehiculo });
+	} catch (error) {
+		console.error("Error obteniendo vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo vehículo
+app.post("/api/vehiculos", authAdmin, async (req, res) => {
+	try {
+		const {
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad,
+			estado,
+			observaciones,
+		} = req.body;
+
+		if (!patente || !tipo) {
+			return res.status(400).json({
+				error: "Patente y tipo son obligatorios",
+			});
+		}
+
+		// Normalizar patente: convertir a mayúsculas y trim para evitar duplicados por casing
+		const patenteNorm = patente?.trim().toUpperCase();
+		
+		// Normalizar año: convertir cadena vacía a null para respetar allowNull
+		const anioNorm = anio === '' || anio === null || anio === undefined ? null : Number(anio);
+		
+		// Normalizar capacidad
+		const capacidadNorm = capacidad === '' || capacidad === null || capacidad === undefined ? 4 : Number(capacidad);
+
+		// Validar año y capacidad
+		if (
+			(anioNorm !== null && (isNaN(anioNorm) || anioNorm < 1900 || anioNorm > new Date().getFullYear() + 1)) ||
+			isNaN(capacidadNorm) ||
+			!Number.isInteger(capacidadNorm) ||
+			capacidadNorm < 1 ||
+			capacidadNorm > 50
+		) {
+			return res.status(400).json({
+				error: "Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 50."
+			});
+		}
+		// Verificar si ya existe un vehículo con esa patente normalizada
+		const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
+		if (existente) {
+			return res.status(409).json({
+				error: "Ya existe un vehículo con esta patente",
+			});
+		}
+
+		const vehiculo = await Vehiculo.create({
+			patente: patenteNorm,
+			tipo,
+			marca,
+			modelo,
+			anio: anioNorm,
+			capacidad: capacidadNorm,
+			estado: estado || "disponible",
+			observaciones,
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Vehículo creado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error creando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un vehículo
+app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad,
+			estado,
+			observaciones,
+		} = req.body;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		// Normalizar patente si viene
+		const patenteNorm = patente ? patente.trim().toUpperCase() : vehiculo.patente;
+		
+		// Validar y normalizar año
+		let anioNorm;
+		if (anio === '') {
+			anioNorm = null;
+		} else if (anio !== undefined) {
+			const anioNum = Number(anio);
+			const currentYear = new Date().getFullYear();
+			if (isNaN(anioNum) || anioNum < 1900 || anioNum > currentYear + 1) {
+				return res.status(400).json({
+					error: "El año debe ser un número válido entre 1900 y " + (currentYear + 1),
+				});
+			}
+			anioNorm = anioNum;
+		} else {
+			anioNorm = vehiculo.anio;
+		}
+		
+		// Validar y normalizar capacidad
+		let capacidadNorm;
+		if (capacidad !== undefined) {
+			const capacidadNum = Number(capacidad);
+			const MAX_CAPACIDAD = 50; // Si el valor máximo es configurable, reemplazar por la variable correspondiente
+			if (isNaN(capacidadNum) || capacidadNum <= 0) {
+				return res.status(400).json({
+					error: "La capacidad debe ser un número positivo válido",
+				});
+			}
+			if (capacidadNum > MAX_CAPACIDAD) {
+				return res.status(400).json({
+					error: `La capacidad máxima permitida es ${MAX_CAPACIDAD}`,
+				});
+			}
+			capacidadNorm = capacidadNum;
+		} else {
+			capacidadNorm = vehiculo.capacidad;
+		}
+
+		// Si se está cambiando la patente, verificar que no exista otra con ese valor
+		if (patenteNorm !== vehiculo.patente) {
+			const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
+			if (existente) {
+				return res.status(409).json({
+					error: "Ya existe un vehículo con esta patente",
+				});
+			}
+		}
+
+		await vehiculo.update({
+			patente: patenteNorm,
+			tipo: tipo || vehiculo.tipo,
+			marca: marca !== undefined ? marca : vehiculo.marca,
+			modelo: modelo !== undefined ? modelo : vehiculo.modelo,
+			anio: anioNorm,
+			capacidad: capacidadNorm,
+			estado: estado !== undefined ? estado : vehiculo.estado,
+			observaciones:
+				observaciones !== undefined ? observaciones : vehiculo.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Vehículo actualizado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error actualizando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un vehículo
+app.delete("/api/vehiculos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		await vehiculo.destroy();
+
+		res.json({
+			success: true,
+			message: "Vehículo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ==================== RUTAS DE CONDUCTORES ====================
+
+// Listar todos los conductores
+app.get("/api/conductores", async (req, res) => {
+	try {
+		const { estado } = req.query;
+		const where = {};
+
+		if (estado) {
+			where.estado = estado;
+		}
+
+		const conductores = await Conductor.findAll({
+			where,
+			order: [["nombre", "ASC"]],
+		});
+
+		res.json({ conductores });
+	} catch (error) {
+		console.error("Error obteniendo conductores:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un conductor por ID
+app.get("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const conductor = await Conductor.findByPk(id);
+
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		res.json({ conductor });
+	} catch (error) {
+		console.error("Error obteniendo conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo conductor
+app.post("/api/conductores", authAdmin, async (req, res) => {
+	try {
+		const {
+			nombre,
+			rut,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado,
+			observaciones,
+		} = req.body;
+
+		if (!nombre || !rut || !telefono) {
+			return res.status(400).json({
+				error: "Nombre, RUT y teléfono son obligatorios",
+			});
+		}
+
+		// Validar RUT con dígito verificador
+		if (!validarRUT(rut)) {
+			return res.status(400).json({ error: "RUT inválido. Verifique el dígito verificador." });
+		}
+
+		// Formatear RUT
+		const rutFormateado = formatearRUT(rut);
+		if (!rutFormateado) {
+			return res.status(400).json({ error: "RUT inválido" });
+		}
+
+		// Normalizar email: cadena vacía a null para respetar validación isEmail
+		const emailNorm = email?.trim() === '' || !email ? null : email.trim();
+		
+		// Normalizar fecha: cadena vacía a null para evitar fechas inválidas
+		const fechaNorm = !fechaVencimientoLicencia || fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
+
+		// Verificar si ya existe un conductor con ese RUT
+		const existente = await Conductor.findOne({ where: { rut: rutFormateado } });
+		if (existente) {
+			return res.status(409).json({
+				error: "Ya existe un conductor con este RUT",
+			});
+		}
+
+		const conductor = await Conductor.create({
+			nombre,
+			rut: rutFormateado,
+			telefono,
+			email: emailNorm,
+			licencia,
+			fechaVencimientoLicencia: fechaNorm,
+			estado: estado || "disponible",
+			observaciones,
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Conductor creado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error creando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un conductor
+app.put("/api/conductores/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			nombre,
+			rut,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado,
+			observaciones,
+		} = req.body;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		// Si se está cambiando el RUT, validar y formatear
+		let rutFormateado = conductor.rut;
+		if (rut && rut !== conductor.rut) {
+			// Validar RUT con dígito verificador
+			if (!validarRUT(rut)) {
+				return res.status(400).json({ error: "RUT inválido. Verifique el dígito verificador." });
+			}
+			
+			rutFormateado = formatearRUT(rut);
+			if (!rutFormateado) {
+				return res.status(400).json({ error: "RUT inválido" });
+			}
+
+			const existente = await Conductor.findOne({
+				where: { rut: rutFormateado },
+			});
+			if (existente) {
+				return res.status(409).json({
+					error: "Ya existe un conductor con este RUT",
+				});
+			}
+		}
+
+		// Normalizar email: aplicar trim y cadena vacía a null
+		const emailNorm = (typeof email === 'string' && email.trim() === '') ? null : (typeof email === 'string' ? email.trim() : email);
+		
+		// Normalizar fecha: cadena vacía a null
+		const fechaNorm = fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
+
+		await conductor.update({
+			nombre: nombre || conductor.nombre,
+			rut: rutFormateado,
+			telefono: telefono || conductor.telefono,
+			email: email !== undefined ? emailNorm : conductor.email,
+			licencia: licencia !== undefined ? licencia : conductor.licencia,
+			fechaVencimientoLicencia:
+				fechaVencimientoLicencia !== undefined
+					? fechaNorm
+					: conductor.fechaVencimientoLicencia,
+			estado: estado !== undefined ? estado : conductor.estado,
+			observaciones:
+				observaciones !== undefined ? observaciones : conductor.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Conductor actualizado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error actualizando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un conductor
+app.delete("/api/conductores/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		await conductor.destroy();
+
+		res.json({
+			success: true,
+			message: "Conductor eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando conductor:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
