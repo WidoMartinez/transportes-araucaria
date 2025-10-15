@@ -255,7 +255,7 @@ function AdminReservas() {
 	const handleAsignar = (reserva) => {
 		setSelectedReserva(reserva);
 		setVehiculoSeleccionado(reserva.vehiculoId?.toString() || "");
-		setConductorSeleccionado(reserva.conductorId?.toString() || "");
+		setConductorSeleccionado(reserva.conductorId?.toString() || "none");
 		setShowAsignarDialog(true);
 		// Cargar vehículos y conductores si aún no se han cargado
 		if (vehiculos.length === 0) fetchVehiculos();
@@ -282,9 +282,10 @@ function AdminReservas() {
 					},
 					body: JSON.stringify({
 						vehiculoId: parseInt(vehiculoSeleccionado),
-						conductorId: conductorSeleccionado
-							? parseInt(conductorSeleccionado)
-							: null,
+						conductorId:
+							conductorSeleccionado && conductorSeleccionado !== "none"
+								? parseInt(conductorSeleccionado)
+								: null,
 					}),
 				}
 			);
@@ -2834,7 +2835,7 @@ function AdminReservas() {
 									<SelectValue placeholder="Selecciona un conductor (opcional)" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">Sin asignar</SelectItem>
+									<SelectItem value="none">Sin asignar</SelectItem>
 									{conductores.map((c) => (
 										<SelectItem key={c.id} value={c.id.toString()}>
 											{c.nombre} - {c.rut}
