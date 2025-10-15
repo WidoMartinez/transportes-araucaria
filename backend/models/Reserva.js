@@ -63,6 +63,18 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(100),
 			allowNull: true,
 		},
+		vehiculoId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: 'vehiculo_id',
+			comment: "ID del vehículo asignado",
+		},
+		conductorId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: 'conductor_id',
+			comment: "ID del conductor asignado",
+		},
 		numeroVuelo: {
 			type: DataTypes.STRING(50),
 			allowNull: true,
@@ -120,6 +132,18 @@ const Reserva = sequelize.define(
 			type: DataTypes.DECIMAL(10, 2),
 			allowNull: true,
 			defaultValue: 0,
+		},
+		ajusteTarifaDinamica: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			defaultValue: 0,
+			comment: "Ajuste por tarifa dinámica (puede ser positivo o negativo)",
+		},
+		descuentoRetorno: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			defaultValue: 0,
+			comment: "Descuento por viaje de retorno (50% cuando hay vehículo disponible)",
 		},
 		totalConDescuento: {
 			type: DataTypes.DECIMAL(10, 2),

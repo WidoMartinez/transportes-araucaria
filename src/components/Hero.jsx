@@ -54,7 +54,7 @@ function Hero({
 	promotionDiscountRate,
 	roundTripDiscountRate,
 	personalizedDiscountRate,
-	descuentosPersonalizados,
+	// descuentosPersonalizados está disponible pero no se utiliza directamente
 	activePromotion,
 	reviewChecklist,
 	setReviewChecklist,
@@ -877,6 +877,33 @@ function Hero({
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
 														<div className="space-y-1 text-sm">
+															{/* Ajustes de tarifa dinámica */}
+															{pricing.tarifaDinamica?.ajustesAplicados && 
+															 pricing.tarifaDinamica.ajustesAplicados.length > 0 && (
+																<div className="border-l-2 border-blue-500 pl-2 mb-2">
+																	<p className="text-xs font-semibold text-blue-700 mb-1">
+																		📊 Tarifa Dinámica ({pricing.tarifaDinamica.diasAnticipacion} días anticipación)
+																	</p>
+																	{pricing.tarifaDinamica.ajustesAplicados.map((ajuste, idx) => (
+																		<p key={idx} className={`text-xs ${ajuste.porcentaje > 0 ? 'text-red-600' : 'text-green-600'}`}>
+																			{ajuste.detalle}: {ajuste.porcentaje > 0 ? '+' : ''}{ajuste.porcentaje}%
+																		</p>
+																	))}
+																	<p className="text-xs font-semibold mt-1">
+																		Ajuste total: {formatCurrency(pricing.ajusteTarifaDinamica || 0)}
+																	</p>
+																</div>
+															)}
+
+															{/* Disponibilidad de vehículos */}
+															{pricing.disponibilidad && !pricing.disponibilidad.hayDisponibilidad && (
+																<div className="border-l-2 border-red-500 pl-2 mb-2">
+																	<p className="text-xs font-semibold text-red-700">
+																		⚠️ No hay vehículos disponibles para esta fecha/hora
+																	</p>
+																</div>
+															)}
+
 															<p className="font-medium text-slate-600">
 																Descuento base ({baseDiscountPercentage}%):{" "}
 																{formatCurrency(pricing.descuentoBase)}
