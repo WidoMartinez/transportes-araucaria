@@ -59,9 +59,30 @@ const Reserva = sequelize.define(
 			allowNull: false,
 			defaultValue: 0,
 		},
+		vehiculoId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: 'vehiculo_id',
+			comment: "ID del vehículo asignado",
+			references: {
+				model: 'vehiculos',
+				key: 'id'
+			}
+		},
+		conductorId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: 'conductor_id',
+			comment: "ID del conductor asignado",
+			references: {
+				model: 'conductores',
+				key: 'id'
+			}
+		},
 		vehiculo: {
 			type: DataTypes.STRING(100),
 			allowNull: true,
+			comment: "Campo de texto legado para vehículo (mantener por compatibilidad)",
 		},
 		numeroVuelo: {
 			type: DataTypes.STRING(50),
@@ -195,6 +216,8 @@ const Reserva = sequelize.define(
 			{ fields: ["created_at"] },
 			{ fields: ["cliente_id"] }, // Usar el nombre real de la columna en la BD
 			{ fields: ["rut"] },
+			{ fields: ["vehiculo_id"] }, // Índice para FK de vehículo
+			{ fields: ["conductor_id"] }, // Índice para FK de conductor
 		],
 	}
 );

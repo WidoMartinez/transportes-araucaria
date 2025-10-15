@@ -18,8 +18,12 @@ import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
+import { setupAssociations } from "./models/associations.js";
 
 dotenv.config();
+
+// Establecer las asociaciones entre modelos
+setupAssociations();
 
 // --- CONFIGURACIÓN DE MERCADO PAGO ---
 const client = new MercadoPagoConfig({
@@ -1756,6 +1760,20 @@ app.get("/api/reservas", async (req, res) => {
 
 		const { count, rows: reservas } = await Reserva.findAndCountAll({
 			where: whereClause,
+			include: [
+				{
+					model: Vehiculo,
+					as: "vehiculo_asignado",
+					attributes: ["id", "patente", "tipo", "marca", "modelo", "capacidad"],
+					required: false, // LEFT JOIN
+				},
+				{
+					model: Conductor,
+					as: "conductor_asignado",
+					attributes: ["id", "nombre", "rut", "telefono"],
+					required: false, // LEFT JOIN
+				},
+			],
 			order: [["created_at", "DESC"]],
 			limit: parseInt(limit),
 			offset: parseInt(offset),
@@ -1874,6 +1892,66 @@ app.get("/api/reservas/:id", async (req, res) => {
 });
 
 // Actualizar estado de una reserva
+// Asignar vehículo y conductor a una reserva
+app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { vehiculoId, conductorId } = req.body;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Validar que el vehículo existe si se proporciona
+		if (vehiculoId) {
+			const vehiculo = await Vehiculo.findByPk(vehiculoId);
+			if (!vehiculo) {
+				return res.status(404).json({ error: "Vehículo no encontrado" });
+			}
+		}
+
+		// Validar que el conductor existe si se proporciona
+		if (conductorId) {
+			const conductor = await Conductor.findByPk(conductorId);
+			if (!conductor) {
+				return res.status(404).json({ error: "Conductor no encontrado" });
+			}
+		}
+
+		// Actualizar la reserva
+		await reserva.update({
+			vehiculoId: vehiculoId || null,
+			conductorId: conductorId || null,
+		});
+
+		// Recargar la reserva con las relaciones
+		const reservaActualizada = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Vehiculo,
+					as: "vehiculo_asignado",
+					attributes: ["id", "patente", "tipo", "marca", "modelo"],
+				},
+				{
+					model: Conductor,
+					as: "conductor_asignado",
+					attributes: ["id", "nombre", "rut", "telefono"],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			message: "Vehículo y conductor asignados correctamente",
+			reserva: reservaActualizada,
+		});
+	} catch (error) {
+		console.error("Error asignando vehículo/conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 app.put("/api/reservas/:id/estado", async (req, res) => {
 	try {
 		const { id } = req.params;
