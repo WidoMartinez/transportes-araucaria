@@ -19,6 +19,8 @@ import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
+import ContinuarReserva from "./ContinuarReserva";
+import CompletarDetalles from "./CompletarDetalles";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -54,7 +56,7 @@ function Hero({
 	promotionDiscountRate,
 	roundTripDiscountRate,
 	personalizedDiscountRate,
-	descuentosPersonalizados,
+	// descuentosPersonalizados, // No usado en este componente
 	activePromotion,
 	reviewChecklist,
 	setReviewChecklist,
@@ -78,6 +80,9 @@ function Hero({
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [discountUpdated, setDiscountUpdated] = useState(false);
+	const [showContinuarReserva, setShowContinuarReserva] = useState(false);
+	const [showCompletarDetalles, setShowCompletarDetalles] = useState(false);
+	const [reservaIdParaCompletar, setReservaIdParaCompletar] = useState(null);
 
 	// Generar opciones de tiempo
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
@@ -88,6 +93,50 @@ function Hero({
 			...prev,
 			[field]: value,
 		}));
+	};
+
+	// Manejadores para continuar con reserva
+	const handleCompletarReserva = (reservaId) => {
+		setReservaIdParaCompletar(reservaId);
+		setShowContinuarReserva(false);
+		setShowCompletarDetalles(true);
+	};
+
+	const handlePayReservation = (reserva) => {
+		// Cerrar el diálogo de continuar reserva
+		setShowContinuarReserva(false);
+		
+		// Pre-llenar el formulario con los datos de la reserva
+		setFormData({
+			nombre: reserva.nombre || "",
+			telefono: reserva.telefono || "",
+			email: reserva.email || "",
+			origen: reserva.origen || "Aeropuerto La Araucanía",
+			destino: reserva.destino || "",
+			fecha: reserva.fecha || "",
+			hora: reserva.hora || "",
+			pasajeros: reserva.pasajeros?.toString() || "1",
+			numeroVuelo: reserva.numeroVuelo || "",
+			hotel: reserva.hotel || "",
+			equipajeEspecial: reserva.equipajeEspecial || "",
+			sillaInfantil: reserva.sillaInfantil ? "si" : "no",
+			mensaje: reserva.observaciones || "",
+			idaVuelta: Boolean(reserva.idaVuelta),
+			fechaRegreso: reserva.fechaRegreso || "",
+			horaRegreso: reserva.horaRegreso || "",
+			otroOrigen: "",
+			otroDestino: "",
+		});
+
+		// Abrir el módulo de reserva y avanzar al paso de pago
+		setShowBookingModule(true);
+		setCurrentStep(2); // Ir directamente al paso de confirmación/pago
+	};
+
+	const handleCancelarCompletarDetalles = () => {
+		setShowCompletarDetalles(false);
+		setReservaIdParaCompletar(null);
+		setShowContinuarReserva(false);
 	};
 
 	// Mostrar indicador cuando se actualizan los descuentos
@@ -472,7 +521,7 @@ function Hero({
 			{/* Overlay que cubre toda la imagen de fondo */}
 			<div className="absolute inset-0 bg-black/50"></div>
 			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
-				{!showBookingModule && (
+				{!showBookingModule && !showContinuarReserva && !showCompletarDetalles && (
 					<>
 						<h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
 							Traslados Privados Aeropuerto La Araucanía
@@ -505,7 +554,7 @@ function Hero({
 					</>
 				)}
 
-				{!showBookingModule && (
+				{!showBookingModule && !showContinuarReserva && (
 					<div className="flex flex-col items-center justify-center space-y-6">
 						<Button
 							onClick={() => setShowBookingModule(true)}
@@ -516,6 +565,49 @@ function Hero({
 						<p className="text-lg text-white/95 drop-shadow-md font-medium">
 							Proceso rápido y seguro • Sin costos ocultos
 						</p>
+						<div className="flex items-center gap-3 text-white/90">
+							<div className="h-px flex-1 bg-white/30"></div>
+							<span className="text-sm">o</span>
+							<div className="h-px flex-1 bg-white/30"></div>
+						</div>
+						<Button
+							onClick={() => setShowContinuarReserva(true)}
+							variant="outline"
+							className="bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg font-semibold backdrop-blur-sm"
+						>
+							📋 Continuar con una reserva existente
+						</Button>
+					</div>
+				)}
+
+				{/* Mostrar módulo de continuar reserva */}
+				{showContinuarReserva && !showCompletarDetalles && (
+					<div className="w-full max-w-4xl mx-auto">
+						<div className="mb-4">
+							<Button
+								variant="ghost"
+								onClick={() => setShowContinuarReserva(false)}
+								className="text-white hover:text-white/80 hover:bg-white/10"
+							>
+								← Volver
+							</Button>
+						</div>
+						<ContinuarReserva
+							onComplete={handleCompletarReserva}
+							onCancel={() => setShowContinuarReserva(false)}
+							onPayReservation={handlePayReservation}
+						/>
+					</div>
+				)}
+
+				{/* Mostrar módulo de completar detalles */}
+				{showCompletarDetalles && reservaIdParaCompletar && (
+					<div className="w-full">
+						<CompletarDetalles
+							reservaId={reservaIdParaCompletar}
+							onComplete={handleCancelarCompletarDetalles}
+							onCancel={handleCancelarCompletarDetalles}
+						/>
 					</div>
 				)}
 
