@@ -1,8 +1,8 @@
 # 🚀 Guía de Despliegue en Render.com
 
-## Último PR Implementado: #68
+## Último PR Implementado: ID de Reserva
 
-**Funcionalidad**: Persistir clienteId y RUT en endpoints de reserva + validación de formato RUT
+**Funcionalidad**: Generar código único de reserva (formato AR-YYYYMMDD-XXXX) para todas las reservas
 
 ---
 
@@ -10,20 +10,20 @@
 
 ### Archivos Modificados:
 
-1. ✅ `backend/models/Cliente.js` - Validación de RUT chileno
-2. ✅ `backend/models/Reserva.js` - Campos clienteId y rut agregados
-3. ✅ `backend/server-db.js` - Endpoints actualizados con clienteId y rut
-4. ✅ `backend/migrations/add-cliente-fields.js` - **Migración de base de datos**
-5. ✅ `backend/package.json` - Scripts para ejecutar migración
-6. ✅ `render.yaml` - Configuración para ejecutar migración en despliegue
+1. ✅ `backend/models/Reserva.js` - Campo `codigoReserva` agregado
+2. ✅ `backend/server-db.js` - Función de generación de código y endpoints actualizados
+3. ✅ `backend/migrations/add-codigo-reserva.js` - **Nueva migración de base de datos**
+4. ✅ `src/components/AdminReservas.jsx` - Visualización del código en el panel admin
 
 ### Nuevas Características:
 
-- ✨ Validación automática de formato RUT chileno (XX.XXX.XXX-X o XXXXXXXX-X)
-- ✨ Persistencia de `clienteId` en tablas de reservas
-- ✨ Persistencia de `rut` en tablas de reservas
-- 🔧 Endpoints `/enviar-reserva` y `/enviar-reserva-express` actualizados
-- 🗃️ **Migración automática de base de datos en cada despliegue**
+- ✨ Generación automática de código único de reserva (formato: `AR-YYYYMMDD-XXXX`)
+- ✨ Campo `codigoReserva` en modelo de Reserva con índice único
+- ✨ Código generado automáticamente al crear reserva (normal y express)
+- ✨ Código visible en panel administrativo (tabla y vista de detalles)
+- ✨ Consecutivo diario para facilitar identificación
+- 🔧 Endpoints `/enviar-reserva` y `/enviar-reserva-express` devuelven el código
+- 🗃️ **Migración automática de base de datos**
 
 ---
 
@@ -31,14 +31,13 @@
 
 ### ⚠️ IMPORTANTE: Migración de Base de Datos
 
-Este PR incluye una **migración de base de datos** que se ejecutará automáticamente al desplegar.
+Este PR incluye una **migración de base de datos** que debe ejecutarse antes del despliegue.
 
 **La migración agregará:**
 
-- ✅ Tabla `clientes` (si no existe)
-- ✅ Campo `clienteId` en tabla `reservas`
-- ✅ Campo `rut` en tabla `reservas`
-- ✅ Índices para optimizar consultas
+- ✅ Campo `codigo_reserva` en tabla `reservas` (VARCHAR(50), único)
+- ✅ Índice único en `codigo_reserva` para garantizar unicidad
+- ✅ Soporte para formato `AR-YYYYMMDD-XXXX`
 
 **La migración es idempotente**: Se puede ejecutar múltiples veces sin problemas. Si las tablas/campos ya existen, los omitirá.
 
@@ -108,7 +107,7 @@ Logs → Buscar mensajes como:
 Desde la consola del navegador o Postman, prueba:
 
 ```javascript
-// Test endpoint de reserva con nuevos campos
+// Test endpoint de reserva - debe devolver codigoReserva
 fetch("https://tu-backend.onrender.com/enviar-reserva", {
 	method: "POST",
 	headers: { "Content-Type": "application/json" },
@@ -116,23 +115,55 @@ fetch("https://tu-backend.onrender.com/enviar-reserva", {
 		nombre: "Juan Pérez",
 		email: "juan@example.com",
 		telefono: "+56912345678",
-		clienteId: 1, // ← NUEVO CAMPO
-		rut: "12.345.678-9", // ← NUEVO CAMPO
 		origen: "Temuco",
 		destino: "Pucón",
 		fecha: "2025-10-20",
 		pasajeros: 2,
+		totalConDescuento: 50000,
 	}),
-});
+})
+	.then((res) => res.json())
+	.then((data) => {
+		console.log("✅ Reserva creada:", data);
+		console.log("📋 Código de reserva:", data.codigoReserva); // ← NUEVO CAMPO
+		// Debería ver algo como: AR-20251015-0001
+	});
 ```
 
 ### 3. Verificar Base de Datos
 
-Revisa que las columnas `clienteId` y `rut` existan en la tabla `reservas`:
+Revisa que la columna `codigo_reserva` exista en la tabla `reservas`:
 
 ```sql
-SELECT clienteId, rut, nombre, email FROM reservas LIMIT 5;
+-- Ejemplo de consulta para ver códigos de reserva
+SELECT id, codigo_reserva, nombre, email, fecha, created_at
+FROM reservas
+ORDER BY created_at DESC
+LIMIT 10;
+
+-- Verificar que el índice único existe
+SHOW INDEX FROM reservas WHERE Key_name = 'idx_reservas_codigo_reserva';
 ```
+
+### 4. Verificar Respuesta del Servidor
+
+La respuesta del endpoint ahora incluye el `codigoReserva`:
+
+```json
+{
+	"success": true,
+	"message": "Reserva recibida y guardada correctamente",
+	"reservaId": 123,
+	"codigoReserva": "AR-20251015-0001"
+}
+```
+
+### 5. Verificar en Panel Administrativo
+
+1. Ve a `/admin?panel=reservas`
+2. Verifica que las reservas muestren el código bajo el ID
+3. Abre los detalles de una reserva
+4. El código debe mostrarse en un cuadro azul destacado
 
 ---
 
@@ -144,23 +175,24 @@ SELECT clienteId, rut, nombre, email FROM reservas LIMIT 5;
 
 - Verifica los logs de Render
 - Asegúrate que las migraciones se ejecutaron correctamente
-- Revisa que la base de datos tenga las columnas nuevas
+- Revisa que la base de datos tenga la columna `codigo_reserva`
 
-### Problema 2: Validación de RUT falla
+### Problema 2: Código de reserva no se genera
 
-**Causa**: El formato del RUT no coincide con el regex
+**Causa**: La migración no se ejecutó correctamente
 **Solución**:
 
-- Usar formato `12.345.678-9` (con puntos y guión)
-- O formato `12345678-9` (sin puntos, con guión)
+- Ejecuta manualmente la migración: `node backend/migrations/add-codigo-reserva.js`
+- Verifica que la columna `codigo_reserva` existe en la tabla `reservas`
+- Revisa los logs del servidor para errores
 
-### Problema 3: clienteId null en base de datos
+### Problema 3: Código duplicado (error de unicidad)
 
-**Causa**: El frontend no está enviando el campo
+**Causa**: Poco probable, pero podría ocurrir con alta concurrencia
 **Solución**:
 
-- Actualiza también el frontend (ya incluido en el PR)
-- Verifica que `datosReserva.clienteId` se esté enviando desde el formulario
+- El sistema reintentar automáticamente con un nuevo consecutivo
+- Si persiste, revisa que el índice único esté correctamente creado
 
 ---
 
