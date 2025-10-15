@@ -1710,6 +1710,33 @@ app.post("/enviar-reserva", async (req, res) => {
 			reservaGuardada.codigoReserva
 		);
 
+		// Enviar email de confirmación llamando al PHP en Hostinger
+		try {
+			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucania.cl/enviar_correo_completo.php";
+			
+			const emailData = {
+				...datosReserva,
+				codigoReserva: reservaGuardada.codigoReserva,
+				rut: rutFormateado,
+			};
+
+			console.log("📧 Enviando email de confirmación al PHP...");
+			
+			const emailResponse = await axios.post(phpUrl, emailData, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000, // 10 segundos timeout
+			});
+
+			if (emailResponse.data.success) {
+				console.log("✅ Email enviado correctamente");
+			} else {
+				console.warn("⚠️ Email no se pudo enviar:", emailResponse.data.message);
+			}
+		} catch (emailError) {
+			console.error("❌ Error enviando email:", emailError.message);
+			// No fallar la respuesta si el email falla
+		}
+
 		return res.json({
 			success: true,
 			message: "Reserva recibida y guardada correctamente",
