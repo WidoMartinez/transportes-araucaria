@@ -193,7 +193,7 @@ const Reserva = sequelize.define(
 			{ fields: ["fecha"] },
 			{ fields: ["estado"] },
 			{ fields: ["created_at"] },
-			{ fields: ["clienteId"] },
+			{ fields: ["cliente_id"] }, // Usar el nombre real de la columna en la BD
 			{ fields: ["rut"] },
 		],
 	}
