@@ -142,25 +142,25 @@ function AdminVehiculos() {
 				return;
 			}
 
-		const url = selectedVehiculo
-			? `${API_BASE_URL}/api/vehiculos/${selectedVehiculo.id}`
-			: `${API_BASE_URL}/api/vehiculos`;
+			const url = selectedVehiculo
+				? `${API_BASE_URL}/api/vehiculos/${selectedVehiculo.id}`
+				: `${API_BASE_URL}/api/vehiculos`;
 
-		const method = selectedVehiculo ? "PUT" : "POST";
+			const method = selectedVehiculo ? "PUT" : "POST";
 
-		const ADMIN_TOKEN = localStorage.getItem("adminToken");
-		const response = await fetch(url, {
-			method,
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${ADMIN_TOKEN}`,
-			},
-			body: JSON.stringify({
-				...formData,
-				anio: formData.anio ? Number(formData.anio) : null,
-				capacidad: Number.isFinite(Number(formData.capacidad)) ? Number(formData.capacidad) : 4,
-			}),
-		});			const data = await response.json();
+			const response = await fetch(url, {
+				method,
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					...formData,
+					anio: formData.anio ? Number(formData.anio) : null,
+					capacidad: Number.isFinite(Number(formData.capacidad)) ? Number(formData.capacidad) : 4,
+				}),
+			});
+
+			const data = await response.json();
 
 			if (response.ok) {
 				await fetchVehiculos();

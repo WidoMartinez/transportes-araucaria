@@ -1286,13 +1286,19 @@ function App() {
 
 			if (emailResponse.ok) {
 				const emailResult = await emailResponse.json();
-				console.log("✅ Correo de notificación enviado exitosamente:", emailResult);
+				console.log(
+					"✅ Correo de notificación enviado exitosamente:",
+					emailResult
+				);
 				// Guardar el ID de la reserva del PHP si está disponible
 				if (emailResult && emailResult.id_reserva) {
 					setReservationId(emailResult.id_reserva);
 				}
 			} else {
-				console.warn("⚠️ Error al enviar correo de notificación:", await emailResponse.text());
+				console.warn(
+					"⚠️ Error al enviar correo de notificación:",
+					await emailResponse.text()
+				);
 			}
 		} catch (emailError) {
 			console.error("❌ Error al enviar notificación por correo:", emailError);
@@ -1387,23 +1393,6 @@ function App() {
 	}
 
 	if (isAdminView) {
-		// Verificar si el token de admin está guardado en localStorage
-		const savedToken = localStorage.getItem("adminToken");
-		
-		if (!savedToken) {
-			// Solicitar el token al usuario
-			const token = prompt("Ingrese el token de administrador:");
-			if (token) {
-				localStorage.setItem("adminToken", token);
-				// Recargar la página para aplicar el token
-				window.location.reload();
-			} else {
-				// Si el usuario cancela, redirigir a la página principal
-				window.location.href = "/";
-				return null;
-			}
-		}
-		
 		return <AdminDashboard />;
 	}
 

@@ -18,12 +18,8 @@ import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
-import { setupAssociations } from "./models/associations.js";
 
 dotenv.config();
-
-// Establecer las asociaciones entre modelos
-setupAssociations();
 
 // --- CONFIGURACIÓN DE MERCADO PAGO ---
 const client = new MercadoPagoConfig({
@@ -48,27 +44,28 @@ app.use(express.json());
 const authAdmin = (req, res, next) => {
 	// TODO: Implementar validación de token/sesión real
 	// Por ahora, verificamos que exista un header de autorización
-	const authHeader = req.headers['authorization'];
+	const authHeader = req.headers["authorization"];
 	const adminToken = process.env.ADMIN_TOKEN;
-	
+
 	if (!adminToken) {
 		// Misconfiguration: ADMIN_TOKEN must be set
 		return res.status(500).json({
-			error: "ADMIN_TOKEN no configurado en el entorno del servidor."
+			error: "ADMIN_TOKEN no configurado en el entorno del servidor.",
 		});
 	}
-	if (adminToken === 'admin-secret-token') {
+	if (adminToken === "admin-secret-token") {
 		// Insecure default token should not be used
 		return res.status(500).json({
-			error: "ADMIN_TOKEN tiene un valor inseguro por defecto. Cambie la configuración."
+			error:
+				"ADMIN_TOKEN tiene un valor inseguro por defecto. Cambie la configuración.",
 		});
 	}
 	if (!authHeader || authHeader !== `Bearer ${adminToken}`) {
-		return res.status(401).json({ 
-			error: "No autorizado. Se requiere autenticación de administrador." 
+		return res.status(401).json({
+			error: "No autorizado. Se requiere autenticación de administrador.",
 		});
 	}
-	
+
 	next();
 };
 
@@ -76,93 +73,54 @@ app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Endpoint de diagnóstico de configuración de BD (solo para debug)
-app.get("/debug/db-config", (req, res) => {
-	res.json({
-		host: process.env.DB_HOST || "srv1551.hstgr.io",
-		port: process.env.DB_PORT || 3306,
-		database: process.env.DB_NAME || "u419311572_transportes_araucaria",
-		user: process.env.DB_USER || "u419311572_admin",
-		hasPassword: !!process.env.DB_PASSWORD,
-		passwordLength: process.env.DB_PASSWORD ? process.env.DB_PASSWORD.length : 0,
-	});
-});
-
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-// Función para generar código único de reserva (formato: AR-YYYYMMDD-XXXX)
-const generarCodigoReserva = async () => {
-	const fecha = new Date();
-	const año = fecha.getFullYear();
-	const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-	const dia = String(fecha.getDate()).padStart(2, '0');
-	const fechaStr = `${año}${mes}${dia}`;
-	
-	// Obtener el número de reservas del día para generar un consecutivo
-	const inicioDelDia = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
-	const finDelDia = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 23, 59, 59);
-	
-	const reservasDelDia = await Reserva.count({
-		where: {
-			created_at: {
-				[Op.gte]: inicioDelDia,
-				[Op.lte]: finDelDia,
-			},
-		},
-	});
-	
-	// Generar número consecutivo (siguiente número del día)
-	const consecutivo = String(reservasDelDia + 1).padStart(4, '0');
-	
-	// Formato: AR-YYYYMMDD-XXXX
-	return `AR-${fechaStr}-${consecutivo}`;
-};
 
 // Función para validar RUT chileno con dígito verificador (Módulo 11)
 const validarRUT = (rut) => {
 	if (!rut) return false;
-	
+
 	// Eliminar puntos, guiones y espacios
-	const rutLimpio = rut.toString().replace(/[.\-\s]/g, '');
-	
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, "");
+
 	if (rutLimpio.length < 2) return false;
-	
+
 	// Separar cuerpo y dígito verificador
 	const cuerpo = rutLimpio.slice(0, -1);
 	const dv = rutLimpio.slice(-1).toUpperCase();
-	
+
 	// Validar que el cuerpo sea numérico
 	if (!/^\d+$/.test(cuerpo)) return false;
-	
+
 	// Calcular dígito verificador esperado
 	let suma = 0;
 	let multiplicador = 2;
-	
+
 	for (let i = cuerpo.length - 1; i >= 0; i--) {
 		suma += parseInt(cuerpo.charAt(i)) * multiplicador;
 		multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
 	}
-	
+
 	const dvEsperado = 11 - (suma % 11);
-	const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
-	
+	const dvCalculado =
+		dvEsperado === 11 ? "0" : dvEsperado === 10 ? "K" : dvEsperado.toString();
+
 	return dv === dvCalculado;
 };
 
 // Función para formatear RUT chileno
 const formatearRUT = (rut) => {
 	if (!rut) return null;
-	
+
 	// Eliminar puntos, guiones y espacios
-	const rutLimpio = rut.toString().replace(/[.\-\s]/g, '');
-	
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, "");
+
 	if (rutLimpio.length < 2) return null;
-	
+
 	// Separar dígito verificador
 	const cuerpo = rutLimpio.slice(0, -1);
 	const dv = rutLimpio.slice(-1).toUpperCase();
-	
+
 	// Formatear sin puntos: XXXXXXXX-X
 	return `${cuerpo}-${dv}`;
 };
@@ -190,11 +148,15 @@ const toNumber = (value, fallback = 0) => {
 const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
 	const parsed = parseInt(value, 10);
 	if (isNaN(parsed)) {
-		console.warn(`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`);
+		console.warn(
+			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`
+		);
 		return defaultValue;
 	}
 	if (parsed < 1) {
-		console.warn(`⚠️ Valor menor a 1 para ${fieldName}: ${parsed}, usando ${defaultValue}`);
+		console.warn(
+			`⚠️ Valor menor a 1 para ${fieldName}: ${parsed}, usando ${defaultValue}`
+		);
 		return defaultValue;
 	}
 	return parsed;
@@ -203,12 +165,16 @@ const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
 const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
 	const parsed = parseFloat(value);
 	if (isNaN(parsed)) {
-		console.warn(`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`);
+		console.warn(
+			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`
+		);
 		return defaultValue;
 	}
 	if (parsed < 0) {
 		const fallback = Math.max(0, defaultValue);
-		console.warn(`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${fallback}`);
+		console.warn(
+			`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${fallback}`
+		);
 		return fallback;
 	}
 	return parsed;
@@ -280,21 +246,7 @@ const initializeDatabase = async () => {
 		if (!connected) {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
-		
-		// Sincronizar todos los modelos en orden específico
-		// Primero las tablas sin dependencias, luego las que tienen FK
-		const modelsToSync = [
-			Cliente,
-			Destino,
-			CodigoDescuento,
-			Promocion,
-			DescuentoGlobal,
-			Vehiculo,
-			Conductor,
-			Reserva, // Al final porque tiene FK a Cliente
-		];
-		
-		await syncDatabase(false, modelsToSync); // false = no forzar recreación
+		await syncDatabase(false); // false = no forzar recreación
 
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
@@ -1537,10 +1489,9 @@ app.post("/enviar-reserva", async (req, res) => {
 		const datosReserva = req.body || {};
 
 		// Formatear RUT si se proporciona
-		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
-
-		// Generar código único de reserva
-		const codigoReserva = await generarCodigoReserva();
+		const rutFormateado = datosReserva.rut
+			? formatearRUT(datosReserva.rut)
+			: null;
 
 		console.log("Reserva web recibida:", {
 			nombre: datosReserva.nombre,
@@ -1555,12 +1506,10 @@ app.post("/enviar-reserva", async (req, res) => {
 			pasajeros: datosReserva.pasajeros,
 			totalConDescuento: datosReserva.totalConDescuento,
 			source: datosReserva.source || "web",
-			codigoReserva,
 		});
 
 		// Guardar reserva en la base de datos con validaciones robustas
 		const reservaGuardada = await Reserva.create({
-			codigoReserva,
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
@@ -1580,13 +1529,41 @@ app.post("/enviar-reserva", async (req, res) => {
 			idaVuelta: Boolean(datosReserva.idaVuelta),
 			fechaRegreso: datosReserva.fechaRegreso || null,
 			horaRegreso: datosReserva.horaRegreso || null,
-			abonoSugerido: parsePositiveDecimal(datosReserva.abonoSugerido, "abonoSugerido", 0),
-			saldoPendiente: parsePositiveDecimal(datosReserva.saldoPendiente, "saldoPendiente", 0),
-			descuentoBase: parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0),
-			descuentoPromocion: parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0),
-			descuentoRoundTrip: parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0),
-			descuentoOnline: parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0),
-			totalConDescuento: parsePositiveDecimal(datosReserva.totalConDescuento, "totalConDescuento", 0),
+			abonoSugerido: parsePositiveDecimal(
+				datosReserva.abonoSugerido,
+				"abonoSugerido",
+				0
+			),
+			saldoPendiente: parsePositiveDecimal(
+				datosReserva.saldoPendiente,
+				"saldoPendiente",
+				0
+			),
+			descuentoBase: parsePositiveDecimal(
+				datosReserva.descuentoBase,
+				"descuentoBase",
+				0
+			),
+			descuentoPromocion: parsePositiveDecimal(
+				datosReserva.descuentoPromocion,
+				"descuentoPromocion",
+				0
+			),
+			descuentoRoundTrip: parsePositiveDecimal(
+				datosReserva.descuentoRoundTrip,
+				"descuentoRoundTrip",
+				0
+			),
+			descuentoOnline: parsePositiveDecimal(
+				datosReserva.descuentoOnline,
+				"descuentoOnline",
+				0
+			),
+			totalConDescuento: parsePositiveDecimal(
+				datosReserva.totalConDescuento,
+				"totalConDescuento",
+				0
+			),
 			mensaje: datosReserva.mensaje || "",
 			source: datosReserva.source || "web",
 			estado: "pendiente",
@@ -1598,16 +1575,13 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		console.log(
 			"✅ Reserva guardada en base de datos con ID:",
-			reservaGuardada.id,
-			"- Código:",
-			reservaGuardada.codigoReserva
+			reservaGuardada.id
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva recibida y guardada correctamente",
 			reservaId: reservaGuardada.id,
-			codigoReserva: reservaGuardada.codigoReserva,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva:", error);
@@ -1624,10 +1598,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		const datosReserva = req.body || {};
 
 		// Formatear RUT si se proporciona
-		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
-
-		// Generar código único de reserva
-		const codigoReserva = await generarCodigoReserva();
+		const rutFormateado = datosReserva.rut
+			? formatearRUT(datosReserva.rut)
+			: null;
 
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
@@ -1641,7 +1614,6 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			pasajeros: datosReserva.pasajeros,
 			totalConDescuento: datosReserva.totalConDescuento,
 			source: datosReserva.source || "express_web",
-			codigoReserva,
 		});
 
 		// Validar campos mínimos requeridos
@@ -1666,7 +1638,6 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		// Crear reserva express con campos mínimos
 		const reservaExpress = await Reserva.create({
-			codigoReserva,
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
@@ -1690,13 +1661,41 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			horaRegreso: null,
 
 			// Campos financieros con validación
-			abonoSugerido: parsePositiveDecimal(datosReserva.abonoSugerido, "abonoSugerido", 0),
-			saldoPendiente: parsePositiveDecimal(datosReserva.saldoPendiente, "saldoPendiente", 0),
-			descuentoBase: parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0),
-			descuentoPromocion: parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0),
-			descuentoRoundTrip: parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0),
-			descuentoOnline: parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0),
-			totalConDescuento: parsePositiveDecimal(datosReserva.totalConDescuento, "totalConDescuento", 0),
+			abonoSugerido: parsePositiveDecimal(
+				datosReserva.abonoSugerido,
+				"abonoSugerido",
+				0
+			),
+			saldoPendiente: parsePositiveDecimal(
+				datosReserva.saldoPendiente,
+				"saldoPendiente",
+				0
+			),
+			descuentoBase: parsePositiveDecimal(
+				datosReserva.descuentoBase,
+				"descuentoBase",
+				0
+			),
+			descuentoPromocion: parsePositiveDecimal(
+				datosReserva.descuentoPromocion,
+				"descuentoPromocion",
+				0
+			),
+			descuentoRoundTrip: parsePositiveDecimal(
+				datosReserva.descuentoRoundTrip,
+				"descuentoRoundTrip",
+				0
+			),
+			descuentoOnline: parsePositiveDecimal(
+				datosReserva.descuentoOnline,
+				"descuentoOnline",
+				0
+			),
+			totalConDescuento: parsePositiveDecimal(
+				datosReserva.totalConDescuento,
+				"totalConDescuento",
+				0
+			),
 			mensaje: datosReserva.mensaje || "",
 
 			// Metadata del sistema
@@ -1710,16 +1709,13 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		console.log(
 			"✅ Reserva express guardada en base de datos con ID:",
-			reservaExpress.id,
-			"- Código:",
-			reservaExpress.codigoReserva
+			reservaExpress.id
 		);
 
 		return res.json({
 			success: true,
 			message: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
-			codigoReserva: reservaExpress.codigoReserva,
 			tipo: "express",
 		});
 	} catch (error) {
@@ -1804,20 +1800,6 @@ app.get("/api/reservas", async (req, res) => {
 
 		const { count, rows: reservas } = await Reserva.findAndCountAll({
 			where: whereClause,
-			include: [
-				{
-					model: Vehiculo,
-					as: "vehiculo_asignado",
-					attributes: ["id", "patente", "tipo", "marca", "modelo", "capacidad"],
-					required: false, // LEFT JOIN
-				},
-				{
-					model: Conductor,
-					as: "conductor_asignado",
-					attributes: ["id", "nombre", "rut", "telefono"],
-					required: false, // LEFT JOIN
-				},
-			],
 			order: [["created_at", "DESC"]],
 			limit: parseInt(limit),
 			offset: parseInt(offset),
@@ -1936,66 +1918,6 @@ app.get("/api/reservas/:id", async (req, res) => {
 });
 
 // Actualizar estado de una reserva
-// Asignar vehículo y conductor a una reserva
-app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { vehiculoId, conductorId } = req.body;
-
-		const reserva = await Reserva.findByPk(id);
-		if (!reserva) {
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
-
-		// Validar que el vehículo existe si se proporciona
-		if (vehiculoId) {
-			const vehiculo = await Vehiculo.findByPk(vehiculoId);
-			if (!vehiculo) {
-				return res.status(404).json({ error: "Vehículo no encontrado" });
-			}
-		}
-
-		// Validar que el conductor existe si se proporciona
-		if (conductorId) {
-			const conductor = await Conductor.findByPk(conductorId);
-			if (!conductor) {
-				return res.status(404).json({ error: "Conductor no encontrado" });
-			}
-		}
-
-		// Actualizar la reserva
-		await reserva.update({
-			vehiculoId: vehiculoId || null,
-			conductorId: conductorId || null,
-		});
-
-		// Recargar la reserva con las relaciones
-		const reservaActualizada = await Reserva.findByPk(id, {
-			include: [
-				{
-					model: Vehiculo,
-					as: "vehiculo_asignado",
-					attributes: ["id", "patente", "tipo", "marca", "modelo"],
-				},
-				{
-					model: Conductor,
-					as: "conductor_asignado",
-					attributes: ["id", "nombre", "rut", "telefono"],
-				},
-			],
-		});
-
-		res.json({
-			success: true,
-			message: "Vehículo y conductor asignados correctamente",
-			reserva: reservaActualizada,
-		});
-	} catch (error) {
-		console.error("Error asignando vehículo/conductor:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
 app.put("/api/reservas/:id/estado", async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -2026,7 +1948,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 app.put("/api/reservas/:id/pago", async (req, res) => {
 	// Usar transacción para asegurar que reserva y cliente se actualizan juntos
 	const transaction = await sequelize.transaction();
-	
+
 	try {
 		const { id } = req.params;
 		const { estadoPago, metodoPago, referenciaPago } = req.body;
@@ -2037,23 +1959,31 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		await reserva.update({
-			estadoPago,
-			metodoPago: metodoPago || reserva.metodoPago,
-			referenciaPago: referenciaPago || reserva.referenciaPago,
-		}, { transaction });
+		await reserva.update(
+			{
+				estadoPago,
+				metodoPago: metodoPago || reserva.metodoPago,
+				referenciaPago: referenciaPago || reserva.referenciaPago,
+			},
+			{ transaction }
+		);
 
 		// Si el pago es exitoso, actualizar el cliente en la misma transacción
 		if (estadoPago === "pagado" && reserva.clienteId) {
-			const cliente = await Cliente.findByPk(reserva.clienteId, { transaction });
+			const cliente = await Cliente.findByPk(reserva.clienteId, {
+				transaction,
+			});
 			if (cliente) {
-				await cliente.update({
-					esCliente: true,
-					totalPagos: cliente.totalPagos + 1,
-					totalGastado:
-						parseFloat(cliente.totalGastado) +
-						parseFloat(reserva.totalConDescuento || 0),
-				}, { transaction });
+				await cliente.update(
+					{
+						esCliente: true,
+						totalPagos: cliente.totalPagos + 1,
+						totalGastado:
+							parseFloat(cliente.totalGastado) +
+							parseFloat(reserva.totalConDescuento || 0),
+					},
+					{ transaction }
+				);
 			}
 		}
 
@@ -2308,27 +2238,37 @@ app.post("/api/vehiculos", authAdmin, async (req, res) => {
 
 		// Normalizar patente: convertir a mayúsculas y trim para evitar duplicados por casing
 		const patenteNorm = patente?.trim().toUpperCase();
-		
+
 		// Normalizar año: convertir cadena vacía a null para respetar allowNull
-		const anioNorm = anio === '' || anio === null || anio === undefined ? null : Number(anio);
-		
+		const anioNorm =
+			anio === "" || anio === null || anio === undefined ? null : Number(anio);
+
 		// Normalizar capacidad
-		const capacidadNorm = capacidad === '' || capacidad === null || capacidad === undefined ? 4 : Number(capacidad);
+		const capacidadNorm =
+			capacidad === "" || capacidad === null || capacidad === undefined
+				? 4
+				: Number(capacidad);
 
 		// Validar año y capacidad
 		if (
-			(anioNorm !== null && (isNaN(anioNorm) || anioNorm < 1900 || anioNorm > new Date().getFullYear() + 1)) ||
+			(anioNorm !== null &&
+				(isNaN(anioNorm) ||
+					anioNorm < 1900 ||
+					anioNorm > new Date().getFullYear() + 1)) ||
 			isNaN(capacidadNorm) ||
 			!Number.isInteger(capacidadNorm) ||
 			capacidadNorm < 1 ||
 			capacidadNorm > 50
 		) {
 			return res.status(400).json({
-				error: "Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 50."
+				error:
+					"Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 50.",
 			});
 		}
 		// Verificar si ya existe un vehículo con esa patente normalizada
-		const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
+		const existente = await Vehiculo.findOne({
+			where: { patente: patenteNorm },
+		});
 		if (existente) {
 			return res.status(409).json({
 				error: "Ya existe un vehículo con esta patente",
@@ -2378,25 +2318,29 @@ app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
 		}
 
 		// Normalizar patente si viene
-		const patenteNorm = patente ? patente.trim().toUpperCase() : vehiculo.patente;
-		
+		const patenteNorm = patente
+			? patente.trim().toUpperCase()
+			: vehiculo.patente;
+
 		// Validar y normalizar año
 		let anioNorm;
-		if (anio === '') {
+		if (anio === "") {
 			anioNorm = null;
 		} else if (anio !== undefined) {
 			const anioNum = Number(anio);
 			const currentYear = new Date().getFullYear();
 			if (isNaN(anioNum) || anioNum < 1900 || anioNum > currentYear + 1) {
 				return res.status(400).json({
-					error: "El año debe ser un número válido entre 1900 y " + (currentYear + 1),
+					error:
+						"El año debe ser un número válido entre 1900 y " +
+						(currentYear + 1),
 				});
 			}
 			anioNorm = anioNum;
 		} else {
 			anioNorm = vehiculo.anio;
 		}
-		
+
 		// Validar y normalizar capacidad
 		let capacidadNorm;
 		if (capacidad !== undefined) {
@@ -2419,7 +2363,9 @@ app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
 
 		// Si se está cambiando la patente, verificar que no exista otra con ese valor
 		if (patenteNorm !== vehiculo.patente) {
-			const existente = await Vehiculo.findOne({ where: { patente: patenteNorm } });
+			const existente = await Vehiculo.findOne({
+				where: { patente: patenteNorm },
+			});
 			if (existente) {
 				return res.status(409).json({
 					error: "Ya existe un vehículo con esta patente",
@@ -2535,7 +2481,9 @@ app.post("/api/conductores", authAdmin, async (req, res) => {
 
 		// Validar RUT con dígito verificador
 		if (!validarRUT(rut)) {
-			return res.status(400).json({ error: "RUT inválido. Verifique el dígito verificador." });
+			return res
+				.status(400)
+				.json({ error: "RUT inválido. Verifique el dígito verificador." });
 		}
 
 		// Formatear RUT
@@ -2545,13 +2493,18 @@ app.post("/api/conductores", authAdmin, async (req, res) => {
 		}
 
 		// Normalizar email: cadena vacía a null para respetar validación isEmail
-		const emailNorm = email?.trim() === '' || !email ? null : email.trim();
-		
+		const emailNorm = email?.trim() === "" || !email ? null : email.trim();
+
 		// Normalizar fecha: cadena vacía a null para evitar fechas inválidas
-		const fechaNorm = !fechaVencimientoLicencia || fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
+		const fechaNorm =
+			!fechaVencimientoLicencia || fechaVencimientoLicencia === ""
+				? null
+				: fechaVencimientoLicencia;
 
 		// Verificar si ya existe un conductor con ese RUT
-		const existente = await Conductor.findOne({ where: { rut: rutFormateado } });
+		const existente = await Conductor.findOne({
+			where: { rut: rutFormateado },
+		});
 		if (existente) {
 			return res.status(409).json({
 				error: "Ya existe un conductor con este RUT",
@@ -2605,9 +2558,11 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 		if (rut && rut !== conductor.rut) {
 			// Validar RUT con dígito verificador
 			if (!validarRUT(rut)) {
-				return res.status(400).json({ error: "RUT inválido. Verifique el dígito verificador." });
+				return res
+					.status(400)
+					.json({ error: "RUT inválido. Verifique el dígito verificador." });
 			}
-			
+
 			rutFormateado = formatearRUT(rut);
 			if (!rutFormateado) {
 				return res.status(400).json({ error: "RUT inválido" });
@@ -2624,10 +2579,16 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 		}
 
 		// Normalizar email: aplicar trim y cadena vacía a null
-		const emailNorm = (typeof email === 'string' && email.trim() === '') ? null : (typeof email === 'string' ? email.trim() : email);
-		
+		const emailNorm =
+			typeof email === "string" && email.trim() === ""
+				? null
+				: typeof email === "string"
+				? email.trim()
+				: email;
+
 		// Normalizar fecha: cadena vacía a null
-		const fechaNorm = fechaVencimientoLicencia === '' ? null : fechaVencimientoLicencia;
+		const fechaNorm =
+			fechaVencimientoLicencia === "" ? null : fechaVencimientoLicencia;
 
 		await conductor.update({
 			nombre: nombre || conductor.nombre,
@@ -2923,12 +2884,11 @@ const startServer = async () => {
 	try {
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
-		
+
 		// NOTA: Las migraciones de base de datos deben ejecutarse con el script
 		// separado: npm run migrate o npm run start:migrate
 		// Esto evita duplicar lógica y asegura que las migraciones se ejecuten
 		// de forma controlada antes del inicio del servidor
-		
 	} catch (error) {
 		console.error(
 			"⚠️ Advertencia: No se pudo conectar a la base de datos:",
