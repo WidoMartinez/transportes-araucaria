@@ -88,11 +88,11 @@ return res.json({
 - Genera códigos para **todas las reservas existentes** sin código
 - Los códigos se generan según la fecha de creación original
 
-**Cómo ejecutar:**
-```bash
-cd backend/migrations
-node add-codigo-reserva-column.js
-```
+**Ejecución:** ⭐ **AUTOMÁTICA** al iniciar el servidor
+- La migración se ejecuta automáticamente en `initializeDatabase()`
+- No requiere acceso al Shell de Render (compatible con plan Free)
+- Se ejecuta de forma segura cada vez que el servidor inicia
+- Si la columna ya existe, no hace nada (idempotente)
 
 ### 6. **Documentación Actualizada**
 
@@ -152,27 +152,29 @@ node add-codigo-reserva-column.js
 
 ## 🚀 Pasos para Desplegar
 
-### 1. Verificar Cambios Localmente (Opcional)
-```bash
-# Si tienes base de datos local
-cd backend/migrations
-node add-codigo-reserva-column.js
-```
-
-### 2. Hacer Commit de los Cambios
+### 1. ✅ Hacer Commit (Completado)
 ```bash
 git add .
 git commit -m "Implementar generación automática de código de reserva"
 git push origin main
 ```
 
-### 3. Ejecutar Migración en Render
-1. Ir a Render.com → Tu servicio backend
-2. Abrir "Shell"
-3. Ejecutar:
-   ```bash
-   cd backend/migrations
-   node add-codigo-reserva-column.js
+### 2. ⏳ Esperar Despliegue Automático en Render
+- Render detectará el push automáticamente
+- Iniciará el proceso de despliegue
+- **La migración se ejecutará automáticamente** al iniciar el servidor
+- No requiere acceso al Shell (compatible con plan Free)
+
+### 3. 👀 Monitorear el Despliegue
+1. Ve a Render.com → Tu servicio backend
+2. Ve a la pestaña "Logs"
+3. Busca estos mensajes:
+   ```
+   🔄 Verificando migración de codigo_reserva...
+   ✅ Columna codigo_reserva agregada exitosamente
+   📋 Generando códigos para X reservas existentes...
+   ✅ Códigos generados para X reservas
+   ✅ Migración de codigo_reserva completada
    ```
 
 ### 4. Verificar que Funciona

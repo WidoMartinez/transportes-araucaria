@@ -284,6 +284,84 @@ app.use(
 );
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
+// Función para ejecutar migración automática del código de reserva
+const ejecutarMigracionCodigoReserva = async () => {
+	try {
+		console.log("🔄 Verificando migración de codigo_reserva...");
+
+		// Verificar si la columna ya existe
+		const [columns] = await sequelize.query(`
+			SHOW COLUMNS FROM reservas LIKE 'codigo_reserva';
+		`);
+
+		if (columns.length === 0) {
+			console.log("📋 Agregando columna codigo_reserva...");
+			
+			// Agregar la columna
+			await sequelize.query(`
+				ALTER TABLE reservas 
+				ADD COLUMN codigo_reserva VARCHAR(50) NULL UNIQUE
+				COMMENT 'Código único de reserva (formato: AR-YYYYMMDD-XXXX)';
+			`);
+
+			// Crear índice único
+			await sequelize.query(`
+				CREATE UNIQUE INDEX idx_codigo_reserva 
+				ON reservas(codigo_reserva);
+			`);
+
+			console.log("✅ Columna codigo_reserva agregada exitosamente");
+		} else {
+			console.log("✅ Columna codigo_reserva ya existe");
+		}
+
+		// Generar códigos para reservas sin código
+		const [reservasSinCodigo] = await sequelize.query(`
+			SELECT id, created_at 
+			FROM reservas 
+			WHERE codigo_reserva IS NULL 
+			ORDER BY created_at ASC;
+		`);
+
+		if (reservasSinCodigo.length > 0) {
+			console.log(`📋 Generando códigos para ${reservasSinCodigo.length} reservas existentes...`);
+
+			const reservasPorFecha = {};
+			
+			for (const reserva of reservasSinCodigo) {
+				const fecha = new Date(reserva.created_at);
+				const año = fecha.getFullYear();
+				const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+				const dia = String(fecha.getDate()).padStart(2, '0');
+				const fechaStr = `${año}${mes}${dia}`;
+
+				if (!reservasPorFecha[fechaStr]) {
+					reservasPorFecha[fechaStr] = 0;
+				}
+
+				reservasPorFecha[fechaStr]++;
+				const consecutivo = String(reservasPorFecha[fechaStr]).padStart(4, '0');
+				const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
+
+				await sequelize.query(`
+					UPDATE reservas 
+					SET codigo_reserva = :codigoReserva 
+					WHERE id = :id;
+				`, {
+					replacements: { codigoReserva, id: reserva.id }
+				});
+			}
+
+			console.log(`✅ Códigos generados para ${reservasSinCodigo.length} reservas`);
+		}
+
+		console.log("✅ Migración de codigo_reserva completada");
+	} catch (error) {
+		// Si hay error pero no es crítico, solo advertir
+		console.warn("⚠️ Advertencia en migración de codigo_reserva:", error.message);
+	}
+};
+
 const initializeDatabase = async () => {
 	try {
 		const connected = await testConnection();
@@ -291,6 +369,9 @@ const initializeDatabase = async () => {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
 		await syncDatabase(false); // false = no forzar recreación
+
+		// Ejecutar migración automática para agregar codigo_reserva
+		await ejecutarMigracionCodigoReserva();
 
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
