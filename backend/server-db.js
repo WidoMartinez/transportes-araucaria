@@ -1764,16 +1764,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			? formatearRUT(datosReserva.rut)
 			: null;
 
-		// Generar código único de reserva
-		const codigoReserva = await generarCodigoReserva();
-
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
 			rut: rutFormateado,
-			codigoReserva: codigoReserva,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
@@ -1802,8 +1798,62 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
-		// Crear reserva express con campos mínimos
-		const reservaExpress = await Reserva.create({
+		// Verificar si existe una reserva activa sin pagar para este email
+		const reservaExistente = await Reserva.findOne({
+			where: {
+				email: datosReserva.email.toLowerCase().trim(),
+				estado: {
+					[Op.in]: ["pendiente", "pendiente_detalles"],
+				},
+				estadoPago: "pendiente",
+			},
+			order: [["createdAt", "DESC"]],
+		});
+
+		let reservaExpress;
+		let esModificacion = false;
+
+		if (reservaExistente) {
+			// MODIFICAR reserva existente sin pagar
+			console.log(`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`);
+			esModificacion = true;
+
+			// Actualizar la reserva existente con los nuevos datos
+			await reservaExistente.update({
+				nombre: datosReserva.nombre,
+				telefono: datosReserva.telefono,
+				rut: rutFormateado,
+				origen: datosReserva.origen,
+				destino: datosReserva.destino,
+				fecha: datosReserva.fecha,
+				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+				vehiculo: datosReserva.vehiculo || "",
+				idaVuelta: Boolean(datosReserva.idaVuelta),
+				fechaRegreso: datosReserva.fechaRegreso || null,
+				abonoSugerido: parsePositiveDecimal(datosReserva.abonoSugerido, "abonoSugerido", 0),
+				saldoPendiente: parsePositiveDecimal(datosReserva.saldoPendiente, "saldoPendiente", 0),
+				descuentoBase: parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0),
+				descuentoPromocion: parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0),
+				descuentoRoundTrip: parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0),
+				descuentoOnline: parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0),
+				totalConDescuento: parsePositiveDecimal(datosReserva.totalConDescuento, "totalConDescuento", 0),
+				mensaje: datosReserva.mensaje || reservaExistente.mensaje,
+				codigoDescuento: datosReserva.codigoDescuento || reservaExistente.codigoDescuento,
+				// Mantener el código de reserva original
+				// Actualizar metadata
+				ipAddress: req.ip || req.connection.remoteAddress || reservaExistente.ipAddress,
+				userAgent: req.get("User-Agent") || reservaExistente.userAgent,
+			});
+
+			reservaExpress = reservaExistente;
+			console.log(`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`);
+		} else {
+			// CREAR nueva reserva
+			const codigoReserva = await generarCodigoReserva();
+			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
+
+			reservaExpress = await Reserva.create({
 			codigoReserva: codigoReserva,
 			nombre: datosReserva.nombre,
 			email: datosReserva.email,
@@ -1872,14 +1922,15 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			userAgent: req.get("User-Agent") || "",
 			codigoDescuento: datosReserva.codigoDescuento || "",
 			estadoPago: "pendiente",
-		});
+			});
 
-		console.log(
-			"✅ Reserva express guardada en base de datos con ID:",
-			reservaExpress.id,
-			"Código:",
-			reservaExpress.codigoReserva
-		);
+			console.log(
+				"✅ Reserva express guardada en base de datos con ID:",
+				reservaExpress.id,
+				"Código:",
+				reservaExpress.codigoReserva
+			);
+		}
 
 		// Enviar notificación por email usando el PHP de Hostinger
 		try {
@@ -1911,10 +1962,13 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		return res.json({
 			success: true,
-			message: "Reserva express creada correctamente",
+			message: esModificacion 
+				? "Reserva modificada correctamente" 
+				: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
 			codigoReserva: reservaExpress.codigoReserva,
 			tipo: "express",
+			esModificacion: esModificacion,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva express:", error);
@@ -2137,6 +2191,55 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 		res.json(reserva);
 	} catch (error) {
 		console.error("Error buscando reserva por código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Verificar si existe una reserva activa sin pagar para un email
+app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
+	try {
+		const { email } = req.params;
+		
+		console.log(`🔍 Verificando reserva activa para email: ${email}`);
+		
+		// Buscar reservas activas (pendiente o pendiente_detalles) sin pagar
+		const reservaActiva = await Reserva.findOne({
+			where: {
+				email: email.toLowerCase().trim(),
+				estado: {
+					[Op.in]: ["pendiente", "pendiente_detalles"],
+				},
+				estadoPago: "pendiente",
+			},
+			order: [["createdAt", "DESC"]], // La más reciente primero
+		});
+
+		if (!reservaActiva) {
+			console.log(`✅ No hay reserva activa sin pagar para: ${email}`);
+			return res.json({ 
+				tieneReservaActiva: false,
+				mensaje: "No hay reservas activas sin pagar"
+			});
+		}
+
+		console.log(`⚠️ Se encontró reserva activa sin pagar: ID ${reservaActiva.id}, Código: ${reservaActiva.codigoReserva}`);
+		res.json({ 
+			tieneReservaActiva: true,
+			reserva: {
+				id: reservaActiva.id,
+				codigoReserva: reservaActiva.codigoReserva,
+				origen: reservaActiva.origen,
+				destino: reservaActiva.destino,
+				fecha: reservaActiva.fecha,
+				pasajeros: reservaActiva.pasajeros,
+				precio: reservaActiva.precio,
+				totalConDescuento: reservaActiva.totalConDescuento,
+				createdAt: reservaActiva.createdAt,
+			},
+			mensaje: "Se encontró una reserva activa sin pagar. Se modificará en lugar de crear una nueva."
+		});
+	} catch (error) {
+		console.error("Error verificando reserva activa:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });

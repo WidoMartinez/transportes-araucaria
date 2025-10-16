@@ -41,6 +41,8 @@ function HeroExpress({
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [paymentConsent, setPaymentConsent] = useState(false);
 	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
+	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
+	const [verificandoReserva, setVerificandoReserva] = useState(false);
 
 	// Pasos simplificados para flujo express
 	const steps = useMemo(
@@ -100,6 +102,36 @@ function HeroExpress({
 		formData.destino === "Otro" ||
 		(formData.destino && !tieneCotizacionAutomatica);
 	const mostrarPrecio = tieneCotizacionAutomatica;
+
+	// Verificar si el email tiene una reserva activa sin pagar
+	const verificarReservaActiva = async (email) => {
+		if (!email || !email.trim()) {
+			setReservaActiva(null);
+			return;
+		}
+
+		setVerificandoReserva(true);
+		try {
+			const apiUrl = import.meta.env.VITE_API_URL || "https://transportes-araucania-backend.onrender.com";
+			const response = await fetch(`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(email.trim())}`);
+			
+			if (response.ok) {
+				const data = await response.json();
+				if (data.tieneReservaActiva) {
+					setReservaActiva(data.reserva);
+					console.log("⚠️ Se encontró reserva activa sin pagar:", data.reserva);
+				} else {
+					setReservaActiva(null);
+				}
+			}
+		} catch (error) {
+			console.error("Error verificando reserva activa:", error);
+			// No mostramos error al usuario, simplemente continuamos
+			setReservaActiva(null);
+		} finally {
+			setVerificandoReserva(false);
+		}
+	};
 
 	// Validaciones del primer paso (mínimas)
 	const handleStepOneNext = () => {
@@ -800,10 +832,29 @@ function HeroExpress({
 													name="email"
 													value={formData.email}
 													onChange={handleInputChange}
+													onBlur={(e) => verificarReservaActiva(e.target.value)}
 													placeholder="tu@email.cl"
 													className="h-12 text-base"
 													required
 												/>
+												{verificandoReserva && (
+													<p className="text-xs text-blue-600 flex items-center gap-1">
+														<LoaderCircle className="w-3 h-3 animate-spin" />
+														Verificando reservas...
+													</p>
+												)}
+												{reservaActiva && (
+													<div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm">
+														<p className="font-medium text-amber-800 mb-1">
+															⚠️ Tienes una reserva sin pagar
+														</p>
+														<p className="text-amber-700 text-xs">
+															Código: <span className="font-mono font-semibold">{reservaActiva.codigoReserva}</span>
+															<br />
+															Al continuar, se modificará tu reserva existente en lugar de crear una nueva.
+														</p>
+													</div>
+												)}
 											</div>
 
 											<div className="space-y-2">
