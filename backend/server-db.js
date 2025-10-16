@@ -1712,7 +1712,7 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		// Enviar email de confirmación llamando al PHP en Hostinger
 		try {
-			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucania.cl/enviar_correo_completo.php";
+			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_completo.php";
 			
 			const emailData = {
 				...datosReserva,
@@ -1892,7 +1892,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 			const phpUrl =
 				process.env.PHP_EMAIL_URL ||
-				"https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 
 			const emailResponse = await axios.post(phpUrl, emailDataExpress, {
 				headers: { "Content-Type": "application/json" },
