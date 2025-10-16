@@ -20,7 +20,7 @@ import { LoaderCircle } from "lucide-react";
 
 // --- Componentes de Sección ---
 import Header from "./components/Header";
-import Hero from "./components/Hero";
+// Hero eliminado - solo flujo express disponible
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
@@ -239,8 +239,7 @@ function App() {
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
-	// Estado para controlar el flujo de reservas (express o completo)
-	const [useExpressFlow, setUseExpressFlow] = useState(true);
+	// Solo flujo express disponible - flujo normal eliminado
 
 	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
 	const applyPricingPayload = useCallback((data, { signal } = {}) => {
@@ -1111,6 +1110,8 @@ function App() {
 		}
 	};
 
+	// ELIMINADO - Solo flujo express disponible
+	/* 
 	const enviarReserva = async (source) => {
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError(
@@ -1238,10 +1239,12 @@ function App() {
 			setIsSubmitting(false);
 		}
 	};
+	*/
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		const result = await enviarReserva("Formulario de Contacto");
+		// Cambio: ahora solo usa flujo express
+		const result = await enviarReservaExpress("Formulario de Contacto Express");
 		if (!result.success && result.message) alert(result.message);
 	};
 
@@ -1388,11 +1391,8 @@ function App() {
 	};
 
 	const handleWizardSubmit = () => {
-		if (useExpressFlow) {
-			return enviarReservaExpress("Reserva Express Web");
-		} else {
-			return enviarReserva("Reserva Web Autogestionada");
-		}
+		// Solo flujo express disponible
+		return enviarReservaExpress("Reserva Express Web");
 	};
 
 	const minDateTime = useMemo(() => {
@@ -1487,24 +1487,9 @@ function App() {
 
 			<Header />
 
-			{/* Botón flotante para cambiar flujo */}
-			<div className="fixed bottom-4 right-4 z-50">
-				<Button
-					onClick={() => setUseExpressFlow(!useExpressFlow)}
-					className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg rounded-full px-4 py-2 text-sm font-medium"
-					title={
-						useExpressFlow
-							? "Cambiar a flujo completo"
-							: "Cambiar a flujo express"
-					}
-				>
-					{useExpressFlow ? "🔄 Flujo Completo" : "⚡ Flujo Express"}
-				</Button>
-			</div>
-
 			<main>
-				{useExpressFlow ? (
-					<HeroExpress
+				{/* Solo flujo express disponible */}
+				<HeroExpress
 						formData={formData}
 						handleInputChange={handleInputChange}
 						origenes={todosLosTramos}
@@ -1528,45 +1513,6 @@ function App() {
 						onAplicarCodigo={validarCodigo}
 						onRemoverCodigo={removerCodigo}
 					/>
-				) : (
-					<Hero
-						formData={formData}
-						handleInputChange={handleInputChange}
-						origenes={todosLosTramos}
-						destinos={destinosDisponibles}
-						maxPasajeros={maxPasajeros}
-						minDateTime={minDateTime}
-						phoneError={phoneError}
-						setPhoneError={setPhoneError}
-						isSubmitting={isSubmitting}
-						cotizacion={cotizacion}
-						pricing={pricing}
-						descuentoRate={effectiveDiscountRate}
-						baseDiscountRate={onlineDiscountRate}
-						promotionDiscountRate={promotionDiscountRate}
-						roundTripDiscountRate={roundTripDiscountRate}
-						personalizedDiscountRate={personalizedDiscountRate}
-						descuentosPersonalizados={
-							descuentosGlobales?.descuentosPersonalizados || []
-						}
-						activePromotion={activePromotion}
-						reviewChecklist={reviewChecklist}
-						setReviewChecklist={setReviewChecklist}
-						setFormData={setFormData}
-						canPay={canPay}
-						handlePayment={handlePayment}
-						loadingGateway={loadingGateway}
-						onSubmitWizard={handleWizardSubmit}
-						validarTelefono={validarTelefono}
-						validarHorarioReserva={validarHorarioReserva}
-						showSummary={showConfirmationAlert}
-						codigoAplicado={codigoAplicado}
-						codigoError={codigoError}
-						validandoCodigo={validandoCodigo}
-						onAplicarCodigo={validarCodigo}
-						onRemoverCodigo={removerCodigo}
-					/>
-				)}
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />
