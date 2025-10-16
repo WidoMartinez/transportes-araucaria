@@ -1,5 +1,4 @@
 /* eslint-env node */
-/* global process */
 // Migración para crear tabla de códigos de pago
 import sequelize from "../config/database.js";
 

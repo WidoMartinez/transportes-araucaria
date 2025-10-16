@@ -97,6 +97,7 @@ function AdminCodigosPago() {
 
 	useEffect(() => {
 		cargarCodigos();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	// Manejar cambios en el formulario
