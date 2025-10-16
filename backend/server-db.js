@@ -106,7 +106,7 @@ const parseJsonArray = (raw) => {
 		seen.add(trimmed);
 		try {
 			value = JSON.parse(trimmed);
-		} catch {
+		} catch (error) {
 			return [];
 		}
 	}
