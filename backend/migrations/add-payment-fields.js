@@ -45,7 +45,7 @@ async function addPaymentFields() {
 		if (!columnNames.includes("pago_gateway")) {
 			console.log("➕ Agregando columna pago_gateway...");
 			await sequelize.query(
-				"ALTER TABLE reservas ADD COLUMN pago_gateway VARCHAR(50) NULL COMMENT 'Gateway de pago utilizado (mercadopago, flow, etc)'"
+				"ALTER TABLE reservas ADD COLUMN pago_gateway VARCHAR(50) NULL COMMENT 'Gateway de pago utilizado (flow, transferencia, efectivo, etc)'"
 			);
 			console.log("✅ Columna pago_gateway agregada");
 		}

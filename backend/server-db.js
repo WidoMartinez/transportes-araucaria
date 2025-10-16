@@ -4,7 +4,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { MercadoPagoConfig, Preference } from "mercadopago";
 import axios from "axios";
 import crypto from "crypto";
 import { testConnection, syncDatabase } from "./config/database.js";
@@ -21,11 +20,6 @@ import Conductor from "./models/Conductor.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 
 dotenv.config();
-
-// --- CONFIGURACIÓN DE MERCADO PAGO ---
-const client = new MercadoPagoConfig({
-	accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-});
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -2924,41 +2918,6 @@ app.post("/create-payment", async (req, res) => {
 	const backendBase =
 		process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 
-	if (gateway === "mercadopago") {
-		const preferenceData = {
-			items: [
-				{
-					title: description,
-					unit_price: Number(amount),
-					quantity: 1,
-				},
-			],
-			back_urls: {
-				success: `${frontendBase}/pago-exitoso`,
-				failure: `${frontendBase}/pago-fallido`,
-				pending: `${frontendBase}/pago-pendiente`,
-			},
-			auto_return: "approved",
-			payer: {
-				email,
-			},
-		};
-
-		try {
-			const preference = new Preference(client);
-			const result = await preference.create({ body: preferenceData });
-			return res.json({ url: result.init_point });
-		} catch (error) {
-			console.error(
-				"Error al crear preferencia de Mercado Pago:",
-				error.response ? error.response.data : error.message
-			);
-			return res.status(500).json({
-				message: "Error al generar el pago con Mercado Pago.",
-			});
-		}
-	}
-
 	if (gateway === "flow") {
 		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
 		const params = {
@@ -3003,28 +2962,7 @@ app.post("/create-payment", async (req, res) => {
 	return res.status(400).json({ message: "Pasarela de pago no valida." });
 });
 
-// --- ENDPOINTS DE PAGO (mantener los existentes) ---
-app.post("/api/create-preference", async (req, res) => {
-	try {
-		const { items, back_urls, auto_return } = req.body;
-
-		const preference = new Preference(client);
-		const result = await preference.create({
-			body: {
-				items,
-				back_urls,
-				auto_return,
-				notification_url: `${process.env.BACKEND_URL}/api/webhook-mercadopago`,
-			},
-		});
-
-		res.json(result);
-	} catch (error) {
-		console.error("Error creando preferencia:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
+// --- ENDPOINT DE PAGO FLOW ---
 app.post("/api/create-flow-payment", async (req, res) => {
 	try {
 		const { amount, subject, email, nombre, apellido, telefono } = req.body;
@@ -3060,142 +2998,6 @@ app.post("/api/create-flow-payment", async (req, res) => {
 	} catch (error) {
 		console.error("Error creando pago Flow:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
-// Webhook para MercadoPago - Maneja notificaciones de pago
-app.post("/api/webhook-mercadopago", async (req, res) => {
-	try {
-		console.log("🔔 Webhook MercadoPago recibido:", req.body);
-
-		const { type, data } = req.body;
-
-		// Responder rápido a MercadoPago (requisito de la API)
-		res.status(200).send("OK");
-
-		// Procesar solo notificaciones de pago
-		if (type !== "payment") {
-			console.log("ℹ️  Tipo de notificación no es payment, ignorando");
-			return;
-		}
-
-		// Obtener ID del pago
-		const paymentId = data?.id;
-		if (!paymentId) {
-			console.log("⚠️  No se recibió payment ID");
-			return;
-		}
-
-		console.log(`🔍 Consultando pago MercadoPago ID: ${paymentId}`);
-
-		// Consultar detalles del pago a la API de MercadoPago
-		const mpResponse = await axios.get(
-			`https://api.mercadopago.com/v1/payments/${paymentId}`,
-			{
-				headers: {
-					Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-				},
-			}
-		);
-
-		const payment = mpResponse.data;
-		console.log("💳 Detalles del pago:", {
-			id: payment.id,
-			status: payment.status,
-			status_detail: payment.status_detail,
-			amount: payment.transaction_amount,
-		});
-
-		// Solo procesar pagos aprobados
-		if (payment.status !== "approved") {
-			console.log(
-				`ℹ️  Pago no aprobado (status: ${payment.status}), no se actualiza reserva`
-			);
-			return;
-		}
-
-		// Extraer datos relevantes
-		const externalReference =
-			payment.external_reference || payment.metadata?.reserva_id;
-		const email = payment.payer?.email;
-
-		if (!externalReference && !email) {
-			console.log(
-				"⚠️  No se puede identificar la reserva (falta external_reference o email)"
-			);
-			return;
-		}
-
-		// Buscar reserva por ID o email
-		let reserva;
-		if (externalReference) {
-			reserva = await Reserva.findByPk(externalReference);
-		}
-		if (!reserva && email) {
-			reserva = await Reserva.findOne({
-				where: { email: email },
-				order: [["created_at", "DESC"]],
-			});
-		}
-
-		if (!reserva) {
-			console.log("⚠️  Reserva no encontrada en la base de datos");
-			return;
-		}
-
-		console.log(`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`);
-
-		// Actualizar estado de pago en la reserva
-		await reserva.update({
-			estadoPago: "aprobado",
-			pagoId: payment.id.toString(),
-			pagoGateway: "mercadopago",
-			pagoMonto: payment.transaction_amount,
-			pagoFecha: new Date(payment.date_approved || new Date()),
-			estado: reserva.estado === "pendiente_detalles" ? reserva.estado : "confirmada",
-		});
-
-		console.log("💾 Reserva actualizada con información de pago");
-
-		// Enviar correo de confirmación de pago
-		try {
-			console.log("📧 Enviando email de confirmación de pago...");
-
-			const emailData = {
-				email: reserva.email,
-				nombre: reserva.nombre,
-				codigoReserva: reserva.codigoReserva,
-				origen: reserva.origen,
-				destino: reserva.destino,
-				fecha: reserva.fecha,
-				hora: reserva.hora,
-				pasajeros: reserva.pasajeros,
-				vehiculo: reserva.vehiculo,
-				monto: payment.transaction_amount,
-				gateway: "MercadoPago",
-				paymentId: payment.id.toString(),
-				estadoPago: "approved",
-			};
-
-			const phpUrl =
-				process.env.PHP_EMAIL_URL ||
-				"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
-
-			const emailResponse = await axios.post(phpUrl, emailData, {
-				headers: { "Content-Type": "application/json" },
-				timeout: 10000,
-			});
-
-			console.log("✅ Email de confirmación de pago enviado:", emailResponse.data);
-		} catch (emailError) {
-			console.error(
-				"❌ Error al enviar email de confirmación (no crítico):",
-				emailError.message
-			);
-		}
-	} catch (error) {
-		console.error("❌ Error procesando webhook MercadoPago:", error.message);
-		// No lanzar error para no reintentar el webhook
 	}
 });
 
