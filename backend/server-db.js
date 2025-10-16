@@ -1879,6 +1879,34 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			reservaExpress.codigoReserva
 		);
 
+		// Enviar notificación por email usando el PHP de Hostinger
+		try {
+			console.log("📧 Enviando email de notificación express...");
+			const emailDataExpress = {
+				...datosReserva,
+				codigoReserva: reservaExpress.codigoReserva,
+				precio: reservaExpress.precio,
+				totalConDescuento: reservaExpress.totalConDescuento,
+				source: reservaExpress.source || "express_web",
+			};
+
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
+
+			const emailResponse = await axios.post(phpUrl, emailDataExpress, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000,
+			});
+
+			console.log("✅ Email express enviado exitosamente:", emailResponse.data);
+		} catch (emailError) {
+			console.error(
+				"❌ Error al enviar email express (no afecta la reserva):",
+				emailError.message
+			);
+		}
+
 		return res.json({
 			success: true,
 			message: "Reserva express creada correctamente",

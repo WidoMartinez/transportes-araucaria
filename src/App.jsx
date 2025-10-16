@@ -1288,7 +1288,10 @@ function App() {
 
 		console.log("📦 Enviando reserva express:", dataToSend);
 
-		// Enviar notificación por correo usando el archivo PHP de Hostinger
+		// Ya NO llamamos al PHP aquí, el backend de Node.js lo hará automáticamente
+		// después de guardar la reserva y generar el código
+		
+		/* COMENTADO - Ahora el backend llama al PHP automáticamente
 		try {
 			const emailResponse = await fetch(
 				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
@@ -1319,6 +1322,7 @@ function App() {
 			console.error("❌ Error al enviar notificación por correo:", emailError);
 			// No interrumpimos el flujo si falla el correo
 		}
+		FIN DEL COMENTARIO */
 
 		try {
 			const apiUrl =
@@ -1341,6 +1345,12 @@ function App() {
 			// Guardar ID de reserva para asociar pagos
 			if (result.reservaId) {
 				setReservationId(result.reservaId);
+			}
+
+			// Guardar código de reserva para mostrarlo al usuario
+			if (result.codigoReserva) {
+				setCodigoReservaCreada(result.codigoReserva);
+				console.log("📋 Código de reserva generado:", result.codigoReserva);
 			}
 
 			// Registrar conversión

@@ -130,6 +130,7 @@ $emailHref = $email ?: '#';
 $hasValidCustomerEmail = $email !== '';
 
 $telefono = htmlspecialchars($data['telefono'] ?? 'No especificado');
+$codigoReserva = htmlspecialchars($data['codigoReserva'] ?? '');
 $source = htmlspecialchars($data['source'] ?? 'Sitio Web');
 $mensaje = htmlspecialchars($data['mensaje'] ?? '');
 $origen = htmlspecialchars($data['origen'] ?? 'No especificado');
@@ -168,6 +169,7 @@ $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' :
 
 // Preparar datos completos para guardar
 $reservaCompleta = [
+    'codigoReserva' => $codigoReserva,
     'nombre' => $nombre,
     'email' => $email,
     'telefono' => $telefono,
@@ -223,7 +225,15 @@ $emailHtml = "
             <p style='margin: 5px 0 0;'>Recibida desde: {$source}</p>
             " . ($reservaGuardada ? "<p style='margin: 5px 0 0; font-size: 12px;'>✅ Reserva guardada en sistema</p>" : "<p style='margin: 5px 0 0; font-size: 12px; color: #ffeb3b;'>⚠️ Reserva NO guardada en sistema</p>") . "
         </div>
-        <div style='padding: 20px;'>
+        <div style='padding: 20px;'>"
+        . ($codigoReserva ? "
+            <div style='background-color: #3b82f6; color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 25px;'>
+                <h2 style='margin: 0 0 10px; font-size: 18px;'>📋 CÓDIGO DE RESERVA</h2>
+                <div style='background-color: white; color: #3b82f6; padding: 15px; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 2px;'>
+                    {$codigoReserva}
+                </div>
+                <p style='margin: 10px 0 0; font-size: 12px;'>Guarda este código para consultar tu reserva</p>
+            </div>" : "") . "
             <div style='background-color: #e3f2fd; border: 2px solid #3b82f6; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 25px;'>
                 <h2 style='margin: 0 0 10px;'>Resumen del Viaje</h2>
                 <p style='margin: 5px 0; font-size: 18px;'><strong>Valor:</strong> <span style='font-size: 22px; font-weight: bold;'>{$formattedPrice}</span></p>
