@@ -18,7 +18,9 @@ import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
+import CodigoPago from "./models/CodigoPago.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
+import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 
 dotenv.config();
 
@@ -374,6 +376,7 @@ const initializeDatabase = async () => {
 		// Ejecutar migraciones automáticas
 		await ejecutarMigracionCodigoReserva();
 		await addPaymentFields();
+		await addCodigosPagoTable();
 
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
@@ -1881,6 +1884,31 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			reservaExpress.codigoReserva
 		);
 
+		// Si la reserva fue creada con un código de pago, marcarlo como usado
+		if (datosReserva.codigoPago) {
+			try {
+				console.log(`📋 Marcando código de pago como usado: ${datosReserva.codigoPago}`);
+				const codigoPago = await CodigoPago.findOne({
+					where: { codigo: datosReserva.codigoPago }
+				});
+
+				if (codigoPago && codigoPago.estado === 'activo') {
+					const nuevosUsos = codigoPago.usosActuales + 1;
+					await codigoPago.update({
+						usosActuales: nuevosUsos,
+						estado: nuevosUsos >= codigoPago.usosMaximos ? 'usado' : 'activo',
+						reservaId: reservaExpress.id,
+						emailCliente: datosReserva.email,
+						fechaUso: new Date()
+					});
+					console.log(`✅ Código de pago actualizado: ${datosReserva.codigoPago}`);
+				}
+			} catch (codigoError) {
+				console.error('⚠️ Error actualizando código de pago:', codigoError.message);
+				// No fallar la reserva por esto
+			}
+		}
+
 		// Enviar notificación por email usando el PHP de Hostinger
 		try {
 			console.log("📧 Enviando email de notificación express...");
@@ -1970,6 +1998,309 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		return res.status(500).json({
 			success: false,
 			message: "Error interno del servidor",
+		});
+	}
+});
+
+// --- ENDPOINTS PARA CODIGOS DE PAGO ---
+
+// Crear un nuevo código de pago
+app.post("/api/codigos-pago", authAdmin, async (req, res) => {
+	try {
+		const {
+			codigo,
+			origen,
+			destino,
+			monto,
+			descripcion,
+			vehiculo,
+			pasajeros,
+			idaVuelta,
+			fechaVencimiento,
+			usosMaximos,
+			observaciones,
+		} = req.body;
+
+		// Validar campos requeridos
+		if (!codigo || !origen || !destino || !monto) {
+			return res.status(400).json({
+				success: false,
+				message: "Faltan campos requeridos: codigo, origen, destino, monto",
+			});
+		}
+
+		// Verificar que el código no exista
+		const codigoExistente = await CodigoPago.findOne({ where: { codigo } });
+		if (codigoExistente) {
+			return res.status(409).json({
+				success: false,
+				message: "El código ya existe",
+			});
+		}
+
+		// Crear el código de pago
+		const codigoPago = await CodigoPago.create({
+			codigo,
+			origen,
+			destino,
+			monto,
+			descripcion,
+			vehiculo,
+			pasajeros: pasajeros || 1,
+			idaVuelta: idaVuelta || false,
+			fechaVencimiento,
+			usosMaximos: usosMaximos || 1,
+			observaciones,
+			estado: "activo",
+		});
+
+		console.log(`✅ Código de pago creado: ${codigo}`);
+
+		res.json({
+			success: true,
+			codigoPago,
+		});
+	} catch (error) {
+		console.error("Error creando código de pago:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+			error: error.message,
+		});
+	}
+});
+
+// Validar un código de pago (disponible para todos)
+app.get("/api/codigos-pago/:codigo", async (req, res) => {
+	try {
+		const { codigo } = req.params;
+
+		const codigoPago = await CodigoPago.findOne({
+			where: { codigo },
+		});
+
+		if (!codigoPago) {
+			return res.status(404).json({
+				success: false,
+				message: "Código de pago no encontrado",
+			});
+		}
+
+		// Verificar si el código está activo
+		if (codigoPago.estado !== "activo") {
+			return res.status(400).json({
+				success: false,
+				message: `El código está ${codigoPago.estado}`,
+				estado: codigoPago.estado,
+			});
+		}
+
+		// Verificar si está vencido
+		if (
+			codigoPago.fechaVencimiento &&
+			new Date(codigoPago.fechaVencimiento) < new Date()
+		) {
+			// Actualizar estado a vencido
+			await codigoPago.update({ estado: "vencido" });
+			return res.status(400).json({
+				success: false,
+				message: "El código ha vencido",
+				estado: "vencido",
+			});
+		}
+
+		// Verificar si ha alcanzado el máximo de usos
+		if (codigoPago.usosActuales >= codigoPago.usosMaximos) {
+			return res.status(400).json({
+				success: false,
+				message: "El código ya ha sido utilizado el máximo de veces",
+			});
+		}
+
+		// Devolver información del código
+		res.json({
+			success: true,
+			codigoPago: {
+				codigo: codigoPago.codigo,
+				origen: codigoPago.origen,
+				destino: codigoPago.destino,
+				monto: codigoPago.monto,
+				descripcion: codigoPago.descripcion,
+				vehiculo: codigoPago.vehiculo,
+				pasajeros: codigoPago.pasajeros,
+				idaVuelta: codigoPago.idaVuelta,
+				estado: codigoPago.estado,
+			},
+		});
+	} catch (error) {
+		console.error("Error validando código de pago:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+			error: error.message,
+		});
+	}
+});
+
+// Marcar un código de pago como usado (después del pago exitoso)
+app.put("/api/codigos-pago/:codigo/usar", async (req, res) => {
+	try {
+		const { codigo } = req.params;
+		const { reservaId, emailCliente } = req.body;
+
+		const codigoPago = await CodigoPago.findOne({
+			where: { codigo },
+		});
+
+		if (!codigoPago) {
+			return res.status(404).json({
+				success: false,
+				message: "Código de pago no encontrado",
+			});
+		}
+
+		// Verificar si el código está activo
+		if (codigoPago.estado !== "activo") {
+			return res.status(400).json({
+				success: false,
+				message: `El código está ${codigoPago.estado}`,
+			});
+		}
+
+		// Incrementar usos
+		const nuevosUsos = codigoPago.usosActuales + 1;
+
+		// Actualizar el código
+		await codigoPago.update({
+			usosActuales: nuevosUsos,
+			estado: nuevosUsos >= codigoPago.usosMaximos ? "usado" : "activo",
+			reservaId,
+			emailCliente,
+			fechaUso: new Date(),
+		});
+
+		console.log(
+			`✅ Código de pago usado: ${codigo} (usos: ${nuevosUsos}/${codigoPago.usosMaximos})`
+		);
+
+		res.json({
+			success: true,
+			message: "Código marcado como usado",
+			codigoPago,
+		});
+	} catch (error) {
+		console.error("Error marcando código como usado:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+			error: error.message,
+		});
+	}
+});
+
+// Obtener todos los códigos de pago (admin)
+app.get("/api/codigos-pago", authAdmin, async (req, res) => {
+	try {
+		const { estado, page = 1, limit = 50 } = req.query;
+
+		const whereClause = {};
+		if (estado) {
+			whereClause.estado = estado;
+		}
+
+		const offset = (page - 1) * limit;
+
+		const { rows: codigosPago, count } = await CodigoPago.findAndCountAll({
+			where: whereClause,
+			order: [["createdAt", "DESC"]],
+			limit: parseInt(limit),
+			offset: offset,
+		});
+
+		res.json({
+			success: true,
+			codigosPago,
+			pagination: {
+				total: count,
+				page: parseInt(page),
+				limit: parseInt(limit),
+				totalPages: Math.ceil(count / limit),
+			},
+		});
+	} catch (error) {
+		console.error("Error obteniendo códigos de pago:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+			error: error.message,
+		});
+	}
+});
+
+// Actualizar un código de pago (admin)
+app.put("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
+	try {
+		const { codigo } = req.params;
+		const updates = req.body;
+
+		const codigoPago = await CodigoPago.findOne({ where: { codigo } });
+
+		if (!codigoPago) {
+			return res.status(404).json({
+				success: false,
+				message: "Código de pago no encontrado",
+			});
+		}
+
+		// No permitir cambiar el código mismo
+		delete updates.codigo;
+
+		await codigoPago.update(updates);
+
+		console.log(`✅ Código de pago actualizado: ${codigo}`);
+
+		res.json({
+			success: true,
+			codigoPago,
+		});
+	} catch (error) {
+		console.error("Error actualizando código de pago:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+			error: error.message,
+		});
+	}
+});
+
+// Eliminar un código de pago (admin)
+app.delete("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
+	try {
+		const { codigo } = req.params;
+
+		const codigoPago = await CodigoPago.findOne({ where: { codigo } });
+
+		if (!codigoPago) {
+			return res.status(404).json({
+				success: false,
+				message: "Código de pago no encontrado",
+			});
+		}
+
+		await codigoPago.destroy();
+
+		console.log(`✅ Código de pago eliminado: ${codigo}`);
+
+		res.json({
+			success: true,
+			message: "Código de pago eliminado correctamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando código de pago:", error);
+		res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+			error: error.message,
 		});
 	}
 });
