@@ -182,8 +182,32 @@ const Reserva = sequelize.define(
 			allowNull: true,
 		},
 		estadoPago: {
-			type: DataTypes.ENUM("pendiente", "pagado", "fallido", "reembolsado"),
+			type: DataTypes.ENUM("pendiente", "aprobado", "pagado", "fallido", "reembolsado"),
 			defaultValue: "pendiente",
+		},
+		pagoId: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "pago_id",
+			comment: "ID de transacción del gateway de pago",
+		},
+		pagoGateway: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "pago_gateway",
+			comment: "Gateway de pago utilizado (mercadopago, flow, etc)",
+		},
+		pagoMonto: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			field: "pago_monto",
+			comment: "Monto pagado en la transacción",
+		},
+		pagoFecha: {
+			type: DataTypes.DATE,
+			allowNull: true,
+			field: "pago_fecha",
+			comment: "Fecha y hora del pago confirmado",
 		},
 		referenciaPago: {
 			type: DataTypes.STRING(255),

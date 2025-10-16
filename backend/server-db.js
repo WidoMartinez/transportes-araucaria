@@ -18,6 +18,7 @@ import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
+import addPaymentFields from "./migrations/add-payment-fields.js";
 
 dotenv.config();
 
@@ -370,8 +371,9 @@ const initializeDatabase = async () => {
 		}
 		await syncDatabase(false); // false = no forzar recreación
 
-		// Ejecutar migración automática para agregar codigo_reserva
+		// Ejecutar migraciones automáticas
 		await ejecutarMigracionCodigoReserva();
+		await addPaymentFields();
 
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
@@ -3061,14 +3063,264 @@ app.post("/api/create-flow-payment", async (req, res) => {
 	}
 });
 
-app.post("/api/webhook-mercadopago", (req, res) => {
-	console.log("Webhook MercadoPago recibido:", req.body);
-	res.status(200).send("OK");
+// Webhook para MercadoPago - Maneja notificaciones de pago
+app.post("/api/webhook-mercadopago", async (req, res) => {
+	try {
+		console.log("🔔 Webhook MercadoPago recibido:", req.body);
+
+		const { type, data } = req.body;
+
+		// Responder rápido a MercadoPago (requisito de la API)
+		res.status(200).send("OK");
+
+		// Procesar solo notificaciones de pago
+		if (type !== "payment") {
+			console.log("ℹ️  Tipo de notificación no es payment, ignorando");
+			return;
+		}
+
+		// Obtener ID del pago
+		const paymentId = data?.id;
+		if (!paymentId) {
+			console.log("⚠️  No se recibió payment ID");
+			return;
+		}
+
+		console.log(`🔍 Consultando pago MercadoPago ID: ${paymentId}`);
+
+		// Consultar detalles del pago a la API de MercadoPago
+		const mpResponse = await axios.get(
+			`https://api.mercadopago.com/v1/payments/${paymentId}`,
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+				},
+			}
+		);
+
+		const payment = mpResponse.data;
+		console.log("💳 Detalles del pago:", {
+			id: payment.id,
+			status: payment.status,
+			status_detail: payment.status_detail,
+			amount: payment.transaction_amount,
+		});
+
+		// Solo procesar pagos aprobados
+		if (payment.status !== "approved") {
+			console.log(
+				`ℹ️  Pago no aprobado (status: ${payment.status}), no se actualiza reserva`
+			);
+			return;
+		}
+
+		// Extraer datos relevantes
+		const externalReference =
+			payment.external_reference || payment.metadata?.reserva_id;
+		const email = payment.payer?.email;
+
+		if (!externalReference && !email) {
+			console.log(
+				"⚠️  No se puede identificar la reserva (falta external_reference o email)"
+			);
+			return;
+		}
+
+		// Buscar reserva por ID o email
+		let reserva;
+		if (externalReference) {
+			reserva = await Reserva.findByPk(externalReference);
+		}
+		if (!reserva && email) {
+			reserva = await Reserva.findOne({
+				where: { email: email },
+				order: [["created_at", "DESC"]],
+			});
+		}
+
+		if (!reserva) {
+			console.log("⚠️  Reserva no encontrada en la base de datos");
+			return;
+		}
+
+		console.log(`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`);
+
+		// Actualizar estado de pago en la reserva
+		await reserva.update({
+			estadoPago: "aprobado",
+			pagoId: payment.id.toString(),
+			pagoGateway: "mercadopago",
+			pagoMonto: payment.transaction_amount,
+			pagoFecha: new Date(payment.date_approved || new Date()),
+			estado: reserva.estado === "pendiente_detalles" ? reserva.estado : "confirmada",
+		});
+
+		console.log("💾 Reserva actualizada con información de pago");
+
+		// Enviar correo de confirmación de pago
+		try {
+			console.log("📧 Enviando email de confirmación de pago...");
+
+			const emailData = {
+				email: reserva.email,
+				nombre: reserva.nombre,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				pasajeros: reserva.pasajeros,
+				vehiculo: reserva.vehiculo,
+				monto: payment.transaction_amount,
+				gateway: "MercadoPago",
+				paymentId: payment.id.toString(),
+				estadoPago: "approved",
+			};
+
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
+
+			const emailResponse = await axios.post(phpUrl, emailData, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000,
+			});
+
+			console.log("✅ Email de confirmación de pago enviado:", emailResponse.data);
+		} catch (emailError) {
+			console.error(
+				"❌ Error al enviar email de confirmación (no crítico):",
+				emailError.message
+			);
+		}
+	} catch (error) {
+		console.error("❌ Error procesando webhook MercadoPago:", error.message);
+		// No lanzar error para no reintentar el webhook
+	}
 });
 
-app.post("/api/flow-confirmation", (req, res) => {
-	console.log("Confirmación Flow recibida:", req.body);
-	res.status(200).send("OK");
+// Webhook para Flow - Maneja confirmaciones de pago
+app.post("/api/flow-confirmation", async (req, res) => {
+	try {
+		console.log("🔔 Confirmación Flow recibida:", req.body);
+
+		const { token } = req.body;
+
+		if (!token) {
+			console.log("⚠️  No se recibió token de Flow");
+			return res.status(400).send("Missing token");
+		}
+
+		// Consultar estado del pago en Flow
+		const params = {
+			apiKey: process.env.FLOW_API_KEY,
+			token: token,
+		};
+		params.s = signParams(params);
+
+		const flowResponse = await axios.get(
+			"https://www.flow.cl/api/payment/getStatus",
+			{ params }
+		);
+
+		const payment = flowResponse.data;
+		console.log("💳 Estado del pago Flow:", {
+			flowOrder: payment.flowOrder,
+			status: payment.status,
+			amount: payment.amount,
+		});
+
+		// Responder a Flow
+		res.status(200).send("OK");
+
+		// Solo procesar pagos exitosos (status 2 = pagado)
+		if (payment.status !== 2) {
+			console.log(
+				`ℹ️  Pago no exitoso (status: ${payment.status}), no se actualiza reserva`
+			);
+			return;
+		}
+
+		// Extraer email del optional
+		const optional = payment.optional ? JSON.parse(payment.optional) : {};
+		const email = payment.payer?.email || optional.email;
+		const commerceOrder = payment.commerceOrder;
+
+		if (!commerceOrder && !email) {
+			console.log(
+				"⚠️  No se puede identificar la reserva (falta commerceOrder o email)"
+			);
+			return;
+		}
+
+		// Buscar reserva por email (más reciente)
+		let reserva;
+		if (email) {
+			reserva = await Reserva.findOne({
+				where: { email: email },
+				order: [["created_at", "DESC"]],
+			});
+		}
+
+		if (!reserva) {
+			console.log("⚠️  Reserva no encontrada en la base de datos");
+			return;
+		}
+
+		console.log(`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`);
+
+		// Actualizar estado de pago en la reserva
+		await reserva.update({
+			estadoPago: "aprobado",
+			pagoId: payment.flowOrder.toString(),
+			pagoGateway: "flow",
+			pagoMonto: payment.amount,
+			pagoFecha: new Date(payment.paymentDate || new Date()),
+			estado: reserva.estado === "pendiente_detalles" ? reserva.estado : "confirmada",
+		});
+
+		console.log("💾 Reserva actualizada con información de pago Flow");
+
+		// Enviar correo de confirmación de pago
+		try {
+			console.log("📧 Enviando email de confirmación de pago...");
+
+			const emailData = {
+				email: reserva.email,
+				nombre: reserva.nombre,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				pasajeros: reserva.pasajeros,
+				vehiculo: reserva.vehiculo,
+				monto: payment.amount,
+				gateway: "Flow",
+				paymentId: payment.flowOrder.toString(),
+				estadoPago: "approved",
+			};
+
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
+
+			const emailResponse = await axios.post(phpUrl, emailData, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000,
+			});
+
+			console.log("✅ Email de confirmación de pago Flow enviado:", emailResponse.data);
+		} catch (emailError) {
+			console.error(
+				"❌ Error al enviar email de confirmación (no crítico):",
+				emailError.message
+			);
+		}
+	} catch (error) {
+		console.error("❌ Error procesando confirmación Flow:", error.message);
+		res.status(500).send("Error");
+	}
 });
 
 // --- UTILIDADES DE KEEP ALIVE ---
