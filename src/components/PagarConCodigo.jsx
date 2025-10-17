@@ -120,44 +120,77 @@ function PagarConCodigo() {
 		setError("");
 
 		try {
-			// 1. Crear la reserva con el código de pago
-			const reservaResponse = await fetch(
-				`${backendUrl}/enviar-reserva-express`,
-				{
+			// 1. Iniciar el pago según el gateway, pasando los datos necesarios para la reserva
+			let paymentUrl = null;
+
+			const reservaPayload = {
+				nombre: formData.nombre,
+				email: formData.email,
+				telefono: formData.telefono,
+				origen: codigoValidado.origen,
+				destino: codigoValidado.destino,
+				fecha: new Date().toISOString().split("T")[0], // Fecha actual por defecto
+				pasajeros: codigoValidado.pasajeros,
+				precio: codigoValidado.monto,
+				totalConDescuento: codigoValidado.monto,
+				vehiculo: codigoValidado.vehiculo || "Por asignar",
+				numeroVuelo: formData.numeroVuelo,
+				hotel: formData.hotel,
+				mensaje: formData.mensaje,
+				idaVuelta: codigoValidado.idaVuelta,
+				codigoPago: codigoValidado.codigo,
+				source: "codigo_pago",
+			};
+
+			if (gateway === "mercadopago") {
+				const paymentResponse = await fetch(
+					`${backendUrl}/api/create-preference`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							title: `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`,
+							price: parseFloat(codigoValidado.monto),
+							email: formData.email,
+							reservaData: reservaPayload, // pasar datos de reserva para crearla tras pago exitoso
+						}),
+					}
+				);
+
+				const paymentData = await paymentResponse.json();
+
+				if (paymentData.init_point) {
+					paymentUrl = paymentData.init_point;
+				}
+			} else if (gateway === "flow") {
+				const paymentResponse = await fetch(`${backendUrl}/api/create-flow`, {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
-						nombre: formData.nombre,
+						amount: parseFloat(codigoValidado.monto),
+						subject: `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`,
 						email: formData.email,
-						telefono: formData.telefono,
-						origen: codigoValidado.origen,
-						destino: codigoValidado.destino,
-						fecha: new Date().toISOString().split("T")[0], // Fecha actual por defecto
-						pasajeros: codigoValidado.pasajeros,
-						precio: codigoValidado.monto,
-						totalConDescuento: codigoValidado.monto,
-						vehiculo: codigoValidado.vehiculo || "Por asignar",
-						numeroVuelo: formData.numeroVuelo,
-						hotel: formData.hotel,
-						mensaje: formData.mensaje,
-						idaVuelta: codigoValidado.idaVuelta,
-						codigoPago: codigoValidado.codigo,
-						source: "codigo_pago",
+						reservaData: reservaPayload, // pasar datos de reserva para crearla tras pago exitoso
 					}),
+				});
+
+				const paymentData = await paymentResponse.json();
+
+				if (paymentData.url) {
+					paymentUrl = paymentData.url + "?token=" + paymentData.token;
 				}
-			);
-
-			const reservaData = await reservaResponse.json();
-
-			if (!reservaData.success) {
-				setError(reservaData.message || "Error al crear la reserva");
-				return;
 			}
 
-			// 2. Iniciar el pago según el gateway
-			let paymentUrl = null;
+			if (paymentUrl) {
+				// Redirigir al gateway de pago
+				window.location.href = paymentUrl;
+			} else {
+				setError("Error al procesar el pago. Intenta nuevamente.");
+			}
 
 			if (gateway === "mercadopago") {
 				const paymentResponse = await fetch(
