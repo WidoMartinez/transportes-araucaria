@@ -34,7 +34,6 @@ import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
-import PagarConCodigo from "./components/PagarConCodigo";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -178,17 +177,10 @@ const resolveIsConsultaView = () => {
 	return hash === "#consultar-reserva" || hash === "#consulta";
 };
 
-// Resolver si la URL es para pagar con código
-const resolveIsPagarCodigoView = () => {
-	const hash = window.location.hash;
-	return hash === "#pagar-codigo" || hash === "#codigo-pago";
-};
-
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
-	const [isPagarCodigoView, setIsPagarCodigoView] = useState(resolveIsPagarCodigoView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -234,19 +226,25 @@ function App() {
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
-	// Sincronizar vistas cuando cambia el hash o el historial
+	// Sincronizar vista de Fletes cuando cambia el hash o el historial
 	useEffect(() => {
-		const syncViews = () => {
-			setIsFreightView(resolveIsFreightView());
-			setIsAdminView(resolveIsAdminView());
-			setIsConsultaView(resolveIsConsultaView());
-			setIsPagarCodigoView(resolveIsPagarCodigoView());
-		};
-		window.addEventListener("hashchange", syncViews);
-		window.addEventListener("popstate", syncViews);
+		const syncFreight = () => setIsFreightView(resolveIsFreightView());
+		window.addEventListener("hashchange", syncFreight);
+		window.addEventListener("popstate", syncFreight);
 		return () => {
-			window.removeEventListener("hashchange", syncViews);
-			window.removeEventListener("popstate", syncViews);
+			window.removeEventListener("hashchange", syncFreight);
+			window.removeEventListener("popstate", syncFreight);
+		};
+	}, []);
+
+	// Sincronizar vista de Consulta por Código cuando cambia el hash o el historial
+	useEffect(() => {
+		const syncConsulta = () => setIsConsultaView(resolveIsConsultaView());
+		window.addEventListener("hashchange", syncConsulta);
+		window.addEventListener("popstate", syncConsulta);
+		return () => {
+			window.removeEventListener("hashchange", syncConsulta);
+			window.removeEventListener("popstate", syncConsulta);
 		};
 	}, []);
 	// ID de la reserva para asociar pagos (webhook)
@@ -1436,10 +1434,6 @@ function App() {
 
 	if (isConsultaView) {
 		return <ConsultarReserva />;
-	}
-
-	if (isPagarCodigoView) {
-		return <PagarConCodigo />;
 	}
 
 	return (

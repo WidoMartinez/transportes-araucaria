@@ -2,7 +2,13 @@ import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
 	Search,
@@ -18,15 +24,20 @@ import {
 	CheckCircle2,
 	Loader2,
 	FileText,
+	CreditCard,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "https://transportes-araucania-backend.onrender.com";
+const API_URL =
+	import.meta.env.VITE_API_URL ||
+	"https://transportes-araucania-backend.onrender.com";
 
 function ConsultarReserva() {
 	const [codigoReserva, setCodigoReserva] = useState("");
 	const [reserva, setReserva] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+	const [paying, setPaying] = useState(false);
+	const [payError, setPayError] = useState(null);
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -39,7 +50,9 @@ function ConsultarReserva() {
 		setReserva(null);
 
 		try {
-			const response = await fetch(`${API_URL}/api/reservas/codigo/${codigoReserva.trim()}`);
+			const response = await fetch(
+				`${API_URL}/api/reservas/codigo/${codigoReserva.trim()}`
+			);
 
 			if (!response.ok) {
 				if (response.status === 404) {
@@ -54,6 +67,52 @@ function ConsultarReserva() {
 			setError(err.message);
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const continuarPago = async (tipo = "abono") => {
+		if (!reserva) return;
+		try {
+			setPaying(true);
+			setPayError(null);
+			const apiBase =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucania-backend.onrender.com";
+			const amount =
+				tipo === "total"
+					? Number(reserva.totalConDescuento || 0)
+					: Number(reserva.abonoSugerido || 0);
+			if (!amount || amount <= 0) {
+				throw new Error("No hay monto disponible para generar el pago");
+			}
+			const description =
+				tipo === "total"
+					? `Pago total reserva ${reserva.codigoReserva} (${reserva.destino})`
+					: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
+
+			const resp = await fetch(`${apiBase}/create-payment`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					gateway: "flow",
+					amount,
+					description,
+					email: reserva.email,
+					reservationId: reserva.id,
+				}),
+			});
+			if (!resp.ok) {
+				const detail = await resp.text().catch(() => "");
+				throw new Error(`Error al generar pago (${resp.status}) ${detail}`);
+			}
+			const data = await resp.json();
+			if (!data.url)
+				throw new Error("Respuesta inválida del servidor de pagos");
+			window.open(data.url, "_blank");
+		} catch (e) {
+			setPayError(e.message || "No se pudo iniciar el pago");
+		} finally {
+			setPaying(false);
 		}
 	};
 
@@ -76,10 +135,26 @@ function ConsultarReserva() {
 	const getEstadoBadge = (estado) => {
 		const estados = {
 			pendiente: { variant: "secondary", icon: Clock, label: "Pendiente" },
-			pendiente_detalles: { variant: "secondary", icon: AlertCircle, label: "Pendiente Detalles" },
-			confirmada: { variant: "default", icon: CheckCircle2, label: "Confirmada" },
-			completada: { variant: "default", icon: CheckCircle2, label: "Completada" },
-			cancelada: { variant: "destructive", icon: AlertCircle, label: "Cancelada" },
+			pendiente_detalles: {
+				variant: "secondary",
+				icon: AlertCircle,
+				label: "Pendiente Detalles",
+			},
+			confirmada: {
+				variant: "default",
+				icon: CheckCircle2,
+				label: "Confirmada",
+			},
+			completada: {
+				variant: "default",
+				icon: CheckCircle2,
+				label: "Completada",
+			},
+			cancelada: {
+				variant: "destructive",
+				icon: AlertCircle,
+				label: "Cancelada",
+			},
 		};
 
 		const config = estados[estado] || estados.pendiente;
@@ -124,7 +199,8 @@ function ConsultarReserva() {
 					<CardHeader>
 						<CardTitle>Buscar por Código de Reserva</CardTitle>
 						<CardDescription>
-							El código tiene el formato: AR-YYYYMMDD-XXXX (Ej: AR-20251015-0001)
+							El código tiene el formato: AR-YYYYMMDD-XXXX (Ej:
+							AR-20251015-0001)
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
@@ -135,7 +211,9 @@ function ConsultarReserva() {
 									id="codigo"
 									placeholder="AR-20251015-0001"
 									value={codigoReserva}
-									onChange={(e) => setCodigoReserva(e.target.value.toUpperCase())}
+									onChange={(e) =>
+										setCodigoReserva(e.target.value.toUpperCase())
+									}
 									onKeyPress={(e) => e.key === "Enter" && buscarReserva()}
 									className="font-mono"
 								/>
@@ -277,18 +355,24 @@ function ConsultarReserva() {
 									</div>
 									<div>
 										<Label className="text-muted-foreground">Vehículo</Label>
-										<p className="font-medium">{reserva.vehiculo || "Por asignar"}</p>
+										<p className="font-medium">
+											{reserva.vehiculo || "Por asignar"}
+										</p>
 									</div>
 									{reserva.idaVuelta && (
 										<>
 											<div>
-												<Label className="text-muted-foreground">Fecha Regreso</Label>
+												<Label className="text-muted-foreground">
+													Fecha Regreso
+												</Label>
 												<p className="font-medium">
 													{formatDate(reserva.fechaRegreso)}
 												</p>
 											</div>
 											<div>
-												<Label className="text-muted-foreground">Hora Regreso</Label>
+												<Label className="text-muted-foreground">
+													Hora Regreso
+												</Label>
 												<p className="font-medium">
 													{reserva.horaRegreso || "No especificada"}
 												</p>
@@ -311,10 +395,14 @@ function ConsultarReserva() {
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Precio Base</Label>
-										<p className="font-medium">{formatCurrency(reserva.precio)}</p>
+										<p className="font-medium">
+											{formatCurrency(reserva.precio)}
+										</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">Total a Pagar</Label>
+										<Label className="text-muted-foreground">
+											Total a Pagar
+										</Label>
 										<p className="font-medium text-lg text-green-600">
 											{formatCurrency(reserva.totalConDescuento)}
 										</p>
@@ -322,21 +410,76 @@ function ConsultarReserva() {
 									{reserva.abonoSugerido > 0 && (
 										<>
 											<div>
-												<Label className="text-muted-foreground">Abono Sugerido</Label>
-												<p className="font-medium">{formatCurrency(reserva.abonoSugerido)}</p>
+												<Label className="text-muted-foreground">
+													Abono Sugerido
+												</Label>
+												<p className="font-medium">
+													{formatCurrency(reserva.abonoSugerido)}
+												</p>
 											</div>
 											<div>
-												<Label className="text-muted-foreground">Saldo Pendiente</Label>
-												<p className="font-medium">{formatCurrency(reserva.saldoPendiente)}</p>
+												<Label className="text-muted-foreground">
+													Saldo Pendiente
+												</Label>
+												<p className="font-medium">
+													{formatCurrency(reserva.saldoPendiente)}
+												</p>
 											</div>
 										</>
 									)}
 								</div>
+
+								{/* Acciones de pago si está pendiente */}
+								{reserva.estadoPago !== "pagado" && (
+									<div className="mt-6 space-y-3">
+										{payError && (
+											<div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded p-3 text-sm">
+												<AlertCircle className="w-4 h-4" />
+												<span>{payError}</span>
+											</div>
+										)}
+										<div className="flex flex-wrap gap-3">
+											<Button
+												onClick={() => continuarPago("abono")}
+												disabled={paying || !reserva.abonoSugerido}
+												className="bg-green-600 hover:bg-green-700 gap-2"
+											>
+												{paying ? (
+													<>
+														<Loader2 className="w-4 h-4 animate-spin" />
+														Generando pago...
+													</>
+												) : (
+													<>
+														<CreditCard className="w-4 h-4" />
+														Continuar con el pago (40%)
+													</>
+												)}
+											</Button>
+											<Button
+												variant="outline"
+												onClick={() => continuarPago("total")}
+												disabled={paying}
+												className="gap-2"
+											>
+												<CreditCard className="w-4 h-4" />
+												Pagar el 100%
+											</Button>
+										</div>
+										<p className="text-xs text-muted-foreground">
+											Se abrirá una ventana para completar el pago de forma
+											segura con Flow.
+										</p>
+									</div>
+								)}
 							</CardContent>
 						</Card>
 
 						{/* Servicios Adicionales */}
-						{(reserva.numeroVuelo || reserva.hotel || reserva.equipajeEspecial || reserva.sillaInfantil) && (
+						{(reserva.numeroVuelo ||
+							reserva.hotel ||
+							reserva.equipajeEspecial ||
+							reserva.sillaInfantil) && (
 							<Card>
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2">
@@ -348,7 +491,9 @@ function ConsultarReserva() {
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										{reserva.numeroVuelo && (
 											<div>
-												<Label className="text-muted-foreground">Número de Vuelo</Label>
+												<Label className="text-muted-foreground">
+													Número de Vuelo
+												</Label>
 												<p className="font-medium">{reserva.numeroVuelo}</p>
 											</div>
 										)}
@@ -360,13 +505,19 @@ function ConsultarReserva() {
 										)}
 										{reserva.equipajeEspecial && (
 											<div>
-												<Label className="text-muted-foreground">Equipaje Especial</Label>
-												<p className="font-medium">{reserva.equipajeEspecial}</p>
+												<Label className="text-muted-foreground">
+													Equipaje Especial
+												</Label>
+												<p className="font-medium">
+													{reserva.equipajeEspecial}
+												</p>
 											</div>
 										)}
 										{reserva.sillaInfantil && (
 											<div>
-												<Label className="text-muted-foreground">Silla Infantil</Label>
+												<Label className="text-muted-foreground">
+													Silla Infantil
+												</Label>
 												<p className="font-medium">✅ Requerida</p>
 											</div>
 										)}

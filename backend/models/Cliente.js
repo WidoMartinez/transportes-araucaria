@@ -82,12 +82,17 @@ const Cliente = sequelize.define(
 			allowNull: true,
 			comment: "Fecha de la última reserva",
 		},
-		notas: {
-			type: DataTypes.TEXT,
-			allowNull: true,
-			comment: "Notas adicionales sobre el cliente",
-		},
-	},
+                notas: {
+                        type: DataTypes.TEXT,
+                        allowNull: true,
+                        comment: "Notas adicionales sobre el cliente",
+                },
+                clasificacion: {
+                        type: DataTypes.STRING(100),
+                        allowNull: true,
+                        comment: "Etiqueta descriptiva asignada según las reservas completadas",
+                },
+        },
 	{
 		tableName: "clientes",
 		timestamps: true,

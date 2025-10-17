@@ -103,16 +103,30 @@ const Reserva = sequelize.define(
 			allowNull: true,
 			defaultValue: 0,
 		},
-		saldoPendiente: {
-			type: DataTypes.DECIMAL(10, 2),
-			allowNull: true,
-			defaultValue: 0,
-		},
-		descuentoBase: {
-			type: DataTypes.DECIMAL(10, 2),
-			allowNull: true,
-			defaultValue: 0,
-		},
+                saldoPendiente: {
+                        type: DataTypes.DECIMAL(10, 2),
+                        allowNull: true,
+                        defaultValue: 0,
+                },
+                abonoPagado: {
+                        type: DataTypes.BOOLEAN,
+                        defaultValue: false,
+                        allowNull: false,
+                        field: "abono_pagado",
+                        comment: "TRUE cuando el abono sugerido fue pagado",
+                },
+                saldoPagado: {
+                        type: DataTypes.BOOLEAN,
+                        defaultValue: false,
+                        allowNull: false,
+                        field: "saldo_pagado",
+                        comment: "TRUE cuando el saldo restante fue pagado por completo",
+                },
+                descuentoBase: {
+                        type: DataTypes.DECIMAL(10, 2),
+                        allowNull: true,
+                        defaultValue: 0,
+                },
 		descuentoPromocion: {
 			type: DataTypes.DECIMAL(10, 2),
 			allowNull: true,
@@ -195,7 +209,7 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(50),
 			allowNull: true,
 			field: "pago_gateway",
-			comment: "Gateway de pago utilizado (mercadopago, flow, etc)",
+			comment: "Gateway de pago utilizado (flow, transferencia, efectivo, etc)",
 		},
 		pagoMonto: {
 			type: DataTypes.DECIMAL(10, 2),
