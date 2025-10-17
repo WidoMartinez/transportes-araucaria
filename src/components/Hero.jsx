@@ -83,6 +83,9 @@ function Hero({
 	const [showContinuarReserva, setShowContinuarReserva] = useState(false);
 	const [showCompletarDetalles, setShowCompletarDetalles] = useState(false);
 	const [reservaIdParaCompletar, setReservaIdParaCompletar] = useState(null);
+	const [codigoReserva, setCodigoReserva] = useState("");
+	const [buscandoReserva, setBuscandoReserva] = useState(false);
+	const [errorCodigoReserva, setErrorCodigoReserva] = useState("");
 
 	// Generar opciones de tiempo
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
@@ -137,6 +140,66 @@ function Hero({
 		setShowCompletarDetalles(false);
 		setReservaIdParaCompletar(null);
 		setShowContinuarReserva(false);
+	};
+
+	// Función para continuar con código de reserva desde el módulo
+	const handleContinuarConCodigo = async () => {
+		if (!codigoReserva.trim()) {
+			setErrorCodigoReserva("Por favor, ingresa un código de reserva");
+			return;
+		}
+
+		setBuscandoReserva(true);
+		setErrorCodigoReserva("");
+
+		try {
+			const apiUrl =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucaria.onrender.com";
+			const response = await fetch(`${apiUrl}/api/reservas/${codigoReserva.trim()}`);
+
+			if (!response.ok) {
+				if (response.status === 404) {
+					throw new Error("No se encontró una reserva con ese código");
+				}
+				throw new Error("Error al buscar la reserva");
+			}
+
+			const data = await response.json();
+			const reserva = data.reserva;
+
+			// Pre-llenar el formulario con los datos de la reserva
+			setFormData({
+				nombre: reserva.nombre || "",
+				telefono: reserva.telefono || "",
+				email: reserva.email || "",
+				origen: reserva.origen || "Aeropuerto La Araucanía",
+				destino: reserva.destino || "",
+				fecha: reserva.fecha || "",
+				hora: reserva.hora || "",
+				pasajeros: reserva.pasajeros?.toString() || "1",
+				numeroVuelo: reserva.numeroVuelo || "",
+				hotel: reserva.hotel || "",
+				equipajeEspecial: reserva.equipajeEspecial || "",
+				sillaInfantil: reserva.sillaInfantil ? "si" : "no",
+				mensaje: reserva.observaciones || "",
+				idaVuelta: Boolean(reserva.idaVuelta),
+				fechaRegreso: reserva.fechaRegreso || "",
+				horaRegreso: reserva.horaRegreso || "",
+				otroOrigen: "",
+				otroDestino: "",
+			});
+
+			// Avanzar directamente al paso 2 (pagar)
+			setCurrentStep(2);
+			setCodigoReserva("");
+			setErrorCodigoReserva("");
+		} catch (err) {
+			console.error("Error buscando reserva:", err);
+			setErrorCodigoReserva(err.message || "No se pudo cargar la información de la reserva");
+		} finally {
+			setBuscandoReserva(false);
+		}
 	};
 
 	// Mostrar indicador cuando se actualizan los descuentos
@@ -740,6 +803,71 @@ function Hero({
 							<CardContent className="space-y-8">
 								{currentStep === 0 && (
 									<div className="space-y-6">
+										{/* Sección para continuar con código de reserva */}
+										<div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-4">
+											<div className="flex items-center gap-2 mb-3">
+												<Badge variant="outline" className="border-primary text-primary">
+													Opción rápida
+												</Badge>
+												<p className="text-sm font-medium text-foreground">
+													¿Ya tienes una reserva? Continúa al pago
+												</p>
+											</div>
+											<div className="flex gap-3">
+												<div className="flex-1">
+													<Input
+														placeholder="Ingresa tu código de reserva (Ej: 12345)"
+														value={codigoReserva}
+														onChange={(e) => {
+															setCodigoReserva(e.target.value);
+															setErrorCodigoReserva("");
+														}}
+														disabled={buscandoReserva}
+														onKeyDown={(e) => {
+															if (e.key === "Enter" && codigoReserva.trim()) {
+																e.preventDefault();
+																handleContinuarConCodigo();
+															}
+														}}
+													/>
+												</div>
+												<Button
+													type="button"
+													onClick={handleContinuarConCodigo}
+													disabled={buscandoReserva || !codigoReserva.trim()}
+													className="whitespace-nowrap"
+												>
+													{buscandoReserva ? (
+														<>
+															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+															Buscando...
+														</>
+													) : (
+														"Ir a pagar"
+													)}
+												</Button>
+											</div>
+											{errorCodigoReserva && (
+												<p className="text-sm text-destructive mt-2">
+													{errorCodigoReserva}
+												</p>
+											)}
+											<p className="text-xs text-muted-foreground mt-2">
+												Si ya iniciaste una reserva, ingresa el código para continuar directamente al pago
+											</p>
+										</div>
+
+										<div className="relative">
+											<div className="absolute inset-0 flex items-center">
+												<span className="w-full border-t" />
+											</div>
+											<div className="relative flex justify-center text-xs uppercase">
+												<span className="bg-background px-2 text-muted-foreground">
+													o completa una nueva reserva
+												</span>
+											</div>
+										</div>
+
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
 												<Label htmlFor="origen-hero">Origen</Label>
