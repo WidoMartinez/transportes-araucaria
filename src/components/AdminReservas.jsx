@@ -2328,19 +2328,30 @@ function AdminReservas() {
                                                                 />
                                                         </div>
 
-                                                        {/* Observaciones */}
-                                                        <div className="space-y-2">
-                                                                <Label htmlFor="observaciones">Observaciones Internas</Label>
-								<Textarea
-									id="observaciones"
-									placeholder="Notas internas sobre la reserva..."
-									value={formData.observaciones}
-									onChange={(e) =>
-										setFormData({ ...formData, observaciones: e.target.value })
-									}
-									rows={4}
-								/>
-							</div>
+                                        {/* Observaciones */}
+                                        <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                        <Label htmlFor="observaciones">Observaciones Internas</Label>
+                                                        <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => setFormData({ ...formData, observaciones: "" })}
+                                                                disabled={!formData.observaciones || formData.observaciones.length === 0}
+                                                        >
+                                                                Borrar todo
+                                                        </Button>
+                                                </div>
+                                                <Textarea
+                                                        id="observaciones"
+                                                        placeholder="Notas internas sobre la reserva..."
+                                                        value={formData.observaciones}
+                                                        onChange={(e) =>
+                                                                setFormData({ ...formData, observaciones: e.target.value })
+                                                        }
+                                                        rows={4}
+                                                />
+                                        </div>
 
 							{/* Resumen Financiero */}
 							<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
