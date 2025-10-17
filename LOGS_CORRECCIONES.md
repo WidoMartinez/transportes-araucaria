@@ -2,7 +2,7 @@
 
 ## 📅 Fecha: 17 de octubre de 2025
 
-### 🐛 Error Corregido: Timeout en Envío de Emails
+### 🐛 Error Corregido #1: Timeout en Envío de Emails
 
 **Síntoma:**
 ```
@@ -42,6 +42,51 @@ El timeout debe considerar:
 - ✅ Buffer de seguridad (5-10s)
 
 **Recomendación:** Timeout >= 30s para email, 60s para reportes
+
+---
+
+### 🐛 Error Corregido #2: Migración add-payment-fields Fallando
+
+**Síntoma:**
+```
+❌ Error en migración de campos de pago: TypeError: Cannot read properties of null (reading 'Field')
+```
+
+**Causa:**
+- Desestructuración incorrecta en línea 12: `const [columns] = await sequelize.query(...)`
+- `sequelize.query()` con `QueryTypes.SELECT` retorna el array directamente, no envuelto
+- El uso de `Object.values(columns)` convertía el array en objeto y luego fallaba
+
+**Solución Aplicada:**
+- Revertir a sintaxis original sin desestructuración
+- Cambiar de `const [columns]` a `const columns`
+- Eliminar `Object.values()` innecesario
+
+**Antes (INCORRECTO):**
+```javascript
+const [columns] = await sequelize.query("SHOW COLUMNS FROM reservas", {
+    type: QueryTypes.SELECT,
+});
+const columnNames = Object.values(columns).map((col) => col.Field);
+```
+
+**Después (CORRECTO):**
+```javascript
+const columns = await sequelize.query(
+    "SHOW COLUMNS FROM reservas",
+    { type: QueryTypes.SELECT }
+);
+const columnNames = columns.map((col) => col.Field);
+```
+
+**Lección Aprendida:**
+- ⚠️ No aplicar "mejoras" de formato sin probar
+- ⚠️ Sequelize.query() con QueryTypes.SELECT retorna array directamente
+- ✅ Siempre probar migraciones localmente antes de deploy
+
+**Commit:** `0e68fac`
+
+---
 
 ### 2. No Bloquear el Flujo Principal
 
