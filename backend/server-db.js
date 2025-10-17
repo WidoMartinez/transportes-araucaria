@@ -1850,7 +1850,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			console.log(`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`);
 		} else {
 			// CREAR nueva reserva
-			const codigoReserva = await generarCodigoReserva();
+			// Generar un código de reserva único usando UUID y fecha
+			const datePrefix = new Date().toISOString().slice(0,10).replace(/-/g,"");
+			const uuid = crypto.randomUUID();
+			const codigoReserva = `${datePrefix}-${uuid}`;
 			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
 
 			reservaExpress = await Reserva.create({
