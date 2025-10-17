@@ -2533,6 +2533,56 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
         }
 });
 
+// Actualizar campos generales de una reserva (admin)
+app.put("/api/reservas/:id", authAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const reserva = await Reserva.findByPk(id);
+        if (!reserva) {
+            return res.status(404).json({ error: "Reserva no encontrada" });
+        }
+
+        const {
+            nombre,
+            email,
+            telefono,
+            fecha,
+            hora,
+            pasajeros,
+            numeroVuelo,
+            hotel,
+            equipajeEspecial,
+            sillaInfantil,
+            idaVuelta,
+            fechaRegreso,
+            horaRegreso,
+            mensaje,
+        } = req.body || {};
+
+        await reserva.update({
+            nombre: nombre !== undefined ? nombre : reserva.nombre,
+            email: email !== undefined ? email : reserva.email,
+            telefono: telefono !== undefined ? telefono : reserva.telefono,
+            fecha: fecha !== undefined ? fecha : reserva.fecha,
+            hora: hora !== undefined ? hora : reserva.hora,
+            pasajeros: pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
+            numeroVuelo: numeroVuelo !== undefined ? numeroVuelo : reserva.numeroVuelo,
+            hotel: hotel !== undefined ? hotel : reserva.hotel,
+            equipajeEspecial: equipajeEspecial !== undefined ? equipajeEspecial : reserva.equipajeEspecial,
+            sillaInfantil: sillaInfantil !== undefined ? Boolean(sillaInfantil) : reserva.sillaInfantil,
+            idaVuelta: idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
+            fechaRegreso: fechaRegreso !== undefined ? fechaRegreso : reserva.fechaRegreso,
+            horaRegreso: horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
+            mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
+        });
+
+        res.json({ success: true, message: "Reserva actualizada", reserva });
+    } catch (error) {
+        console.error("Error actualizando reserva:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
 // Actualizar ruta (origen/destino) de una reserva
 app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
     try {

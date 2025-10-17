@@ -526,6 +526,14 @@ function AdminReservas() {
         const handleEdit = (reserva) => {
                 setSelectedReserva(reserva);
                 setFormData({
+                        nombre: reserva.nombre || "",
+                        email: reserva.email || "",
+                        telefono: reserva.telefono || "",
+                        origen: reserva.origen || "",
+                        destino: reserva.destino || "",
+                        fecha: (reserva.fecha || "").toString().substring(0,10),
+                        hora: reserva.hora || "",
+                        pasajeros: String(reserva.pasajeros || ""),
                         estado: reserva.estado || "",
                         estadoPago: reserva.estadoPago || "",
                         metodoPago: reserva.metodoPago || "",
@@ -541,8 +549,8 @@ function AdminReservas() {
                         equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
 			horaRegreso: reserva.horaRegreso || "",
-                        origen: reserva.origen || "",
-                        destino: reserva.destino || "",
+                        idaVuelta: Boolean(reserva.idaVuelta),
+                        fechaRegreso: (reserva.fechaRegreso || "").toString().substring(0,10),
                 });
 		// Reset edición de ruta
 		setEditOrigenEsOtro(false);
@@ -585,6 +593,36 @@ function AdminReservas() {
 
 		setSaving(true);
 		try {
+            // Actualizar datos generales de la reserva
+            try {
+                const ADMIN_TOKEN = localStorage.getItem("adminToken");
+                const generalResp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${ADMIN_TOKEN}` },
+                    body: JSON.stringify({
+                        nombre: formData.nombre,
+                        email: formData.email,
+                        telefono: formData.telefono,
+                        fecha: formData.fecha,
+                        hora: formData.hora,
+                        pasajeros: Number(formData.pasajeros) || selectedReserva.pasajeros,
+                        numeroVuelo: formData.numeroVuelo,
+                        hotel: formData.hotel,
+                        equipajeEspecial: formData.equipajeEspecial,
+                        sillaInfantil: Boolean(formData.sillaInfantil),
+                        idaVuelta: Boolean(formData.idaVuelta),
+                        fechaRegreso: formData.fechaRegreso || null,
+                        horaRegreso: formData.horaRegreso || null,
+                        mensaje: selectedReserva.mensaje,
+                    }),
+                });
+                if (!generalResp.ok) {
+                    const t = await generalResp.text();
+                    console.warn("No se pudo actualizar datos generales:", t);
+                }
+            } catch (e) {
+                console.warn("Error actualizando datos generales (no crítico):", e.message);
+            }
 			// Actualizar ruta si cambió
 			const origenFinalEdit = editOrigenEsOtro ? (editOtroOrigen || formData.origen) : formData.origen;
 			const destinoFinalEdit = editDestinoEsOtro ? (editOtroDestino || formData.destino) : formData.destino;
@@ -623,17 +661,14 @@ function AdminReservas() {
 				}
 			}
 			// Actualizar estado
-			const estadoResponse = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						estado: formData.estado,
-						observaciones: formData.observaciones,
-					}),
-				}
-			);
+            const estadoResponse = await fetch(
+                `${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ estado: formData.estado, observaciones: formData.observaciones }),
+                }
+            );
 
 			if (!estadoResponse.ok) {
 				throw new Error("Error al actualizar el estado");
