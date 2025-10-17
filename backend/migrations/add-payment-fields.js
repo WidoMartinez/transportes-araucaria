@@ -9,15 +9,15 @@ async function addPaymentFields() {
 		console.log("🔄 Verificando campos de pago en tabla reservas...");
 
 		// Obtener columnas existentes
-		const [columns] = await sequelize.query(
+		const columns = await sequelize.query(
 			"SHOW COLUMNS FROM reservas",
 			{ type: QueryTypes.SELECT }
 		);
 
-		const columnNames = Object.values(columns).map((col) => col.Field);
+		const columnNames = columns.map((col) => col.Field);
 
 		// Verificar si estadoPago necesita actualización con nuevo valor 'aprobado'
-		const estadoPagoColumn = Object.values(columns).find(
+		const estadoPagoColumn = columns.find(
 			(col) => col.Field === "estado_pago"
 		);
 
