@@ -43,13 +43,14 @@ $email = $data['email'];
 $nombre = $data['nombre'];
 $codigoReserva = $data['codigoReserva'];
 $vehiculo = $data['vehiculo'];
+$vehiculoTipo = $data['vehiculoTipo'] ?? '';
 $origen = $data['origen'] ?? 'No especificado';
 $destino = $data['destino'] ?? 'No especificado';
 $fecha = $data['fecha'] ?? '';
 $hora = $data['hora'] ?? '';
 $pasajeros = $data['pasajeros'] ?? '';
 $conductorNombre = $data['conductorNombre'] ?? '';
-$conductorRut = $data['conductorRut'] ?? '';
+// Por privacidad, no mostraremos RUT del conductor en el correo
 
 // Cargar config correo
 $configFile = __DIR__ . '/config_reservas.php';
@@ -98,9 +99,7 @@ try {
         $conductorHtml = "
             <tr>
                 <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Conductor:</strong></td>
-                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$conductorNombre}"
-                . ($conductorRut ? " ({$conductorRut})" : "") .
-            "</td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$conductorNombre}</td>
             </tr>";
     }
 
@@ -140,7 +139,7 @@ try {
                     </tr>
                     <tr>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Vehículo:</strong></td>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vehiculo}</td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>" . (!empty($vehiculoTipo) ? $vehiculoTipo : (explode(' ', trim($vehiculo))[0] ?? $vehiculo)) . "</td>
                     </tr>
                     {$conductorHtml}
                 </table>
@@ -162,4 +161,3 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error enviando correo: ' . $e->getMessage()]);
 }
-

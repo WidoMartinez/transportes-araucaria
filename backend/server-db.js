@@ -2550,7 +2550,8 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
         }
 
         // Actualizar la reserva con datos legibles
-        const vehiculoLabel = `${vehiculo.tipo?.toUpperCase?.() || vehiculo.tipo || "Vehículo"} ${vehiculo.patente}`;
+        const vehiculoTipo = (vehiculo.tipo?.toUpperCase?.() || vehiculo.tipo || "Vehículo").toString();
+        const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
 
         await reserva.update({
             vehiculo: vehiculoLabel,
@@ -2576,9 +2577,11 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 fecha: reserva.fecha,
                 hora: reserva.hora,
                 pasajeros: reserva.pasajeros,
-                vehiculo: vehiculoLabel,
+                // En el correo solo mostraremos el tipo, no la patente completa
+                vehiculo: vehiculoTipo,
+                vehiculoTipo: vehiculoTipo,
                 conductorNombre: conductor?.nombre || null,
-                conductorRut: conductor?.rut || null,
+                // No enviar RUT del conductor por privacidad
             };
 
             await axios.post(phpUrl, payload, {
