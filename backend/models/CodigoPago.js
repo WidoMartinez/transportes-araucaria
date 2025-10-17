@@ -100,6 +100,8 @@ const CodigoPago = sequelize.define(
 	{
 		tableName: "codigos_pago",
 		timestamps: true,
+		createdAt: 'created_at',
+		updatedAt: 'updated_at',
 		indexes: [
 			{ fields: ["codigo"], unique: true },
 			{ fields: ["estado"] },
