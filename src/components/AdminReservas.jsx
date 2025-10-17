@@ -86,6 +86,11 @@ function AdminReservas() {
 	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
 	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
+	// Estados para pre-cargar y validar contra asignación actual
+	const [assignedPatente, setAssignedPatente] = useState("");
+	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
+	const [assignedVehiculoId, setAssignedVehiculoId] = useState(null);
+	const [assignedConductorId, setAssignedConductorId] = useState(null);
 	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
 	const [loadingHistorial, setLoadingHistorial] = useState(false);
 
@@ -280,14 +285,66 @@ function AdminReservas() {
 	// Abrir diálogo de asignación
 	const handleAsignar = (reserva) => {
 		setSelectedReserva(reserva);
-		setVehiculoSeleccionado(reserva.vehiculoId?.toString() || "");
-		setConductorSeleccionado(reserva.conductorId?.toString() || "none");
+		// Derivar patente del label "TIPO PATENTE"
+		const pat = (reserva.vehiculo || "")
+			.trim()
+			.split(" ")
+			.pop()
+			.toUpperCase();
+		setAssignedPatente(pat || "");
+		// Intentar extraer nombre de conductor desde observaciones
+		const obs = (reserva.observaciones || "").toString();
+		const m = obs.match(/Conductor asignado:\s*([^(|\n]+?)(?:\s*\(|$)/i);
+		const nombreCon = m ? m[1].trim() : "";
+		setAssignedConductorNombre(nombreCon);
+		// Intentar preseleccionar si los catálogos ya existen
+		let preVeh = "";
+		if (vehiculos.length > 0 && pat) {
+			const found = vehiculos.find((v) => (v.patente || "").toUpperCase() === pat);
+			if (found) {
+				preVeh = found.id.toString();
+				setAssignedVehiculoId(found.id);
+			}
+		}
+		let preCon = "none";
+		if (conductores.length > 0 && nombreCon) {
+			const foundC = conductores.find(
+				(c) => (c.nombre || "").toLowerCase() === nombreCon.toLowerCase()
+			);
+			if (foundC) {
+				preCon = foundC.id.toString();
+				setAssignedConductorId(foundC.id);
+			}
+		}
+		setVehiculoSeleccionado(preVeh);
+		setConductorSeleccionado(preCon);
 		setEnviarNotificacion(true);
 		setShowAsignarDialog(true);
 		// Cargar vehículos y conductores si aún no se han cargado
 		if (vehiculos.length === 0) fetchVehiculos();
 		if (conductores.length === 0) fetchConductores();
 	};
+
+	// Pre-cargar selección cuando se abren catálogos
+	useEffect(() => {
+		if (!showAsignarDialog) return;
+		if (!vehiculoSeleccionado && assignedPatente && vehiculos.length > 0) {
+			const found = vehiculos.find((v) => (v.patente || "").toUpperCase() === assignedPatente);
+			if (found) {
+				setVehiculoSeleccionado(found.id.toString());
+				setAssignedVehiculoId(found.id);
+			}
+		}
+		if (assignedConductorNombre && conductores.length > 0) {
+			const foundC = conductores.find(
+				(c) => (c.nombre || "").toLowerCase() === assignedConductorNombre.toLowerCase()
+			);
+			if (foundC) {
+				setConductorSeleccionado(foundC.id.toString());
+				setAssignedConductorId(foundC.id);
+			}
+		}
+	}, [showAsignarDialog, vehiculos, conductores, assignedPatente, assignedConductorNombre]);
 
 	// Guardar asignación de vehículo/conductor
 	const handleGuardarAsignacion = async () => {
@@ -3126,12 +3183,16 @@ function AdminReservas() {
 									<SelectValue placeholder="Selecciona un vehículo" />
 								</SelectTrigger>
 								<SelectContent>
-									{vehiculos.map((v) => (
-										<SelectItem key={v.id} value={v.id.toString()}>
+										{vehiculos.map((v) => (
+											<SelectItem
+												key={v.id}
+												value={v.id.toString()}
+												disabled={assignedVehiculoId !== null && assignedVehiculoId === v.id}
+											>
 											{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
 											{v.capacidad} pasajeros
-										</SelectItem>
-									))}
+											</SelectItem>
+										))}
 								</SelectContent>
 							</Select>
 						</div>
@@ -3148,11 +3209,15 @@ function AdminReservas() {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="none">Sin asignar</SelectItem>
-									{conductores.map((c) => (
-										<SelectItem key={c.id} value={c.id.toString()}>
+										{conductores.map((c) => (
+											<SelectItem
+												key={c.id}
+												value={c.id.toString()}
+												disabled={assignedConductorId !== null && assignedConductorId === c.id}
+											>
 											{c.nombre} - {c.rut}
-										</SelectItem>
-									))}
+											</SelectItem>
+										))}
 								</SelectContent>
 							</Select>
 						</div>
@@ -3199,9 +3264,16 @@ function AdminReservas() {
 						>
 							Cancelar
 						</Button>
-						<Button
+						{(() => {
+							const sameAssignment =
+								assignedVehiculoId !== null &&
+								vehiculoSeleccionado &&
+								Number(vehiculoSeleccionado) === Number(assignedVehiculoId) &&
+								(String(assignedConductorId ?? "none") === String(conductorSeleccionado || "none"));
+							return (
+								<Button
 							onClick={handleGuardarAsignacion}
-							disabled={loadingAsignacion || !vehiculoSeleccionado}
+							disabled={loadingAsignacion || !vehiculoSeleccionado || sameAssignment}
 						>
 							{loadingAsignacion ? (
 								<>
@@ -3209,9 +3281,11 @@ function AdminReservas() {
 									Guardando...
 								</>
 							) : (
-								"Asignar"
+								sameAssignment ? "Sin cambios" : "Asignar"
 							)}
-						</Button>
+							</Button>
+							);
+						})()}
 					</div>
 				</DialogContent>
 			</Dialog>
