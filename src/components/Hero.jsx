@@ -1657,7 +1657,7 @@ function Hero({
 													<p className="text-sm font-medium text-foreground">
 														Selecciona tu medio de pago
 													</p>
-													<div className="grid gap-4 md:grid-cols-2">
+													<div className={`grid gap-4 ${paymentMethods.length === 1 ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
 														{paymentMethods.map((method) => {
 															const isSelected = selectedMethod === method.id;
 															const methodLoading =

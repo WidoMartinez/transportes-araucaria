@@ -1087,7 +1087,9 @@ function App() {
 
 			const data = await response.json();
 			if (data.url) {
-				window.open(data.url, "_blank");
+				// Usar location.href para evitar el bloqueo de popups
+				// Los navegadores no bloquean la redirección en la misma pestaña
+				window.location.href = data.url;
 			} else {
 				throw new Error(
 					data.message || "No se pudo generar el enlace de pago."
