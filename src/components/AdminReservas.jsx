@@ -2183,27 +2183,33 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-4">
-						{/* Información del Cliente (solo lectura) */}
-						<div className="bg-muted p-4 rounded-lg">
-								<h4 className="font-semibold mb-2">Cliente</h4>
-								<p className="text-sm">
-									<strong>Nombre:</strong> {selectedReserva.nombre}
-								</p>
-								<p className="text-sm">
-									<strong>Email:</strong> {selectedReserva.email}
-								</p>
-								<p className="text-sm">
-									<strong>Teléfono:</strong> {selectedReserva.telefono}
-								</p>
-								<p className="text-sm">
-									<strong>Ruta:</strong> {selectedReserva.origen} →{" "}
-									{selectedReserva.destino}
-								</p>
-								<p className="text-sm">
-									<strong>Fecha:</strong> {formatDate(selectedReserva.fecha)} a
-									las {selectedReserva.hora}
-								</p>
+						{/* Información del Cliente (editable) */}
+						<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div className="space-y-1">
+								<Label>Nombre</Label>
+								<Input value={formData.nombre || ""} onChange={(e)=>setFormData({...formData, nombre:e.target.value})} />
 							</div>
+							<div className="space-y-1">
+								<Label>Email</Label>
+								<Input type="email" value={formData.email || ""} onChange={(e)=>setFormData({...formData, email:e.target.value})} />
+							</div>
+							<div className="space-y-1">
+								<Label>Teléfono</Label>
+								<Input value={formData.telefono || ""} onChange={(e)=>setFormData({...formData, telefono:e.target.value})} />
+							</div>
+							<div className="space-y-1">
+								<Label>Fecha</Label>
+								<Input type="date" value={formData.fecha || ""} onChange={(e)=>setFormData({...formData, fecha:e.target.value})} />
+							</div>
+							<div className="space-y-1">
+								<Label>Hora</Label>
+								<Input type="time" value={formData.hora || ""} onChange={(e)=>setFormData({...formData, hora:e.target.value})} />
+							</div>
+							<div className="space-y-1">
+								<Label>Pasajeros</Label>
+								<Input type="number" min="1" value={formData.pasajeros || ""} onChange={(e)=>setFormData({...formData, pasajeros:e.target.value})} />
+							</div>
+						</div>
 
 							{/* Estado */}
 							<div className="space-y-2">
