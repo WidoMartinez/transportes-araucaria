@@ -2052,9 +2052,9 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 app.get("/api/codigos-pago/:codigo", async (req, res) => {
 	try {
 		const { codigo } = req.params;
-
+		const codigoUpper = codigo.toUpperCase();
 		const codigoPago = await CodigoPago.findOne({
-			where: { codigo },
+			where: { codigo: codigoUpper },
 		});
 
 		if (!codigoPago) {
