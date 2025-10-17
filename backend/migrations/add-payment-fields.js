@@ -9,22 +9,23 @@ async function addPaymentFields() {
 		console.log("🔄 Verificando campos de pago en tabla reservas...");
 
 		// Obtener columnas existentes
-		const columns = await sequelize.query(
-			"SHOW COLUMNS FROM reservas",
-			{ type: QueryTypes.SELECT }
-		);
+		const [columns] = await sequelize.query("SHOW COLUMNS FROM reservas", {
+			type: QueryTypes.SELECT,
+		});
 
-		const columnNames = columns.map((col) => col.Field);
+		const columnNames = Object.values(columns).map((col) => col.Field);
 
 		// Verificar si estadoPago necesita actualización con nuevo valor 'aprobado'
-		const estadoPagoColumn = columns.find(
+		const estadoPagoColumn = Object.values(columns).find(
 			(col) => col.Field === "estado_pago"
 		);
 
 		if (estadoPagoColumn) {
 			const enumValues = estadoPagoColumn.Type;
 			if (!enumValues.includes("aprobado")) {
-				console.log("📝 Actualizando ENUM de estado_pago para incluir 'aprobado'...");
+				console.log(
+					"📝 Actualizando ENUM de estado_pago para incluir 'aprobado'..."
+				);
 				await sequelize.query(
 					"ALTER TABLE reservas MODIFY COLUMN estado_pago ENUM('pendiente', 'aprobado', 'pagado', 'fallido', 'reembolsado') DEFAULT 'pendiente'"
 				);
@@ -70,9 +71,7 @@ async function addPaymentFields() {
 
 		// Agregar índices para mejorar búsquedas
 		try {
-			await sequelize.query(
-				"CREATE INDEX idx_pago_id ON reservas(pago_id)"
-			);
+			await sequelize.query("CREATE INDEX idx_pago_id ON reservas(pago_id)");
 			console.log("✅ Índice idx_pago_id creado");
 		} catch (error) {
 			if (!error.message.includes("Duplicate key name")) {

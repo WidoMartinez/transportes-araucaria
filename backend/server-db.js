@@ -1720,7 +1720,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			
 			const emailResponse = await axios.post(phpUrl, emailData, {
 				headers: { "Content-Type": "application/json" },
-				timeout: 10000, // 10 segundos timeout
+				timeout: 30000, // 30 segundos timeout
 			});
 
 			if (emailResponse.data.success) {
@@ -1943,7 +1943,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 			const emailResponse = await axios.post(phpUrl, emailDataExpress, {
 				headers: { "Content-Type": "application/json" },
-				timeout: 10000,
+				timeout: 30000,
 			});
 
 			console.log("✅ Email express enviado exitosamente:", emailResponse.data);
@@ -3212,7 +3212,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 			const emailResponse = await axios.post(phpUrl, emailData, {
 				headers: { "Content-Type": "application/json" },
-				timeout: 10000,
+				timeout: 30000,
 			});
 
 			console.log("✅ Email de confirmación de pago Flow enviado:", emailResponse.data);
