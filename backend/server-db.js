@@ -2959,7 +2959,7 @@ app.post("/create-payment", async (req, res) => {
 		}
 	}
 
-	return res.status(400).json({ message: "Pasarela de pago no valida." });
+	return res.status(400).json({ message: "Pasarela de pago no válida." });
 });
 
 // --- ENDPOINT DE PAGO FLOW ---
