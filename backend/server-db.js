@@ -2537,7 +2537,8 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { vehiculoId, conductorId } = req.body || {};
+        const { vehiculoId, conductorId, sendEmail } = req.body || {};
+        const shouldSend = sendEmail !== false;
 
         if (!vehiculoId || !Number.isFinite(Number(vehiculoId))) {
             return res.status(400).json({ error: "vehiculoId es requerido y debe ser numérico" });
@@ -2626,11 +2627,15 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 // No enviar RUT del conductor por privacidad
             };
 
-            await axios.post(phpUrl, payload, {
-                headers: { "Content-Type": "application/json" },
-                timeout: 30000,
-            });
-            console.log("📧 Email de asignación enviado");
+            if (shouldSend) {
+                await axios.post(phpUrl, payload, {
+                    headers: { "Content-Type": "application/json" },
+                    timeout: 30000,
+                });
+                console.log("📧 Email de asignación enviado");
+            } else {
+                console.log("ℹ️ Email de asignación no enviado (sendEmail=false)");
+            }
         } catch (emailErr) {
             console.warn("⚠️ No se pudo enviar email de asignación:", emailErr.message);
         }

@@ -12,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import { Checkbox } from "./ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -84,6 +85,7 @@ function AdminReservas() {
 	const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
 	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
+	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
 	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
 	const [loadingHistorial, setLoadingHistorial] = useState(false);
 
@@ -280,6 +282,7 @@ function AdminReservas() {
 		setSelectedReserva(reserva);
 		setVehiculoSeleccionado(reserva.vehiculoId?.toString() || "");
 		setConductorSeleccionado(reserva.conductorId?.toString() || "none");
+		setEnviarNotificacion(true);
 		setShowAsignarDialog(true);
 		// Cargar vehículos y conductores si aún no se han cargado
 		if (vehiculos.length === 0) fetchVehiculos();
@@ -310,6 +313,7 @@ function AdminReservas() {
 							conductorSeleccionado && conductorSeleccionado !== "none"
 								? parseInt(conductorSeleccionado)
 								: null,
+						sendEmail: Boolean(enviarNotificacion),
 					}),
 				}
 			);
@@ -1491,7 +1495,7 @@ function AdminReservas() {
 															<Edit className="w-4 h-4" />
 														</Button>
 														{/* Solo mostrar botón de asignar si está pagado */}
-														{reserva.estadoPago === "pagado" && (
+														{reserva.estadoPago === "pagado" && !reserva.vehiculo && (
 															<Button
 																variant="secondary"
 																size="sm"
@@ -1650,12 +1654,23 @@ function AdminReservas() {
 										<Label className="text-muted-foreground">Pasajeros</Label>
 										<p className="font-medium">{selectedReserva.pasajeros}</p>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">Vehículo</Label>
-										<p className="font-medium">
-											{selectedReserva.vehiculo || "-"}
-										</p>
-									</div>
+										<div>
+											<div className="flex items-center justify-between">
+												<Label className="text-muted-foreground">Vehículo</Label>
+												{selectedReserva.estadoPago === "pagado" && (
+													<Button
+														variant="outline"
+														size="xs"
+														onClick={() => handleAsignar(selectedReserva)}
+													>
+														Reasignar
+													</Button>
+												)}
+											</div>
+											<p className="font-medium">
+												{selectedReserva.vehiculo || "-"}
+											</p>
+										</div>
 									{selectedReserva.idaVuelta && (
 										<>
 											<div>
@@ -3140,6 +3155,18 @@ function AdminReservas() {
 									))}
 								</SelectContent>
 							</Select>
+						</div>
+
+						{/* Enviar notificación */}
+						<div className="flex items-center gap-2 pt-2">
+							<Checkbox
+								id="enviar-notificacion"
+								checked={enviarNotificacion}
+								onCheckedChange={(v) => setEnviarNotificacion(Boolean(v))}
+							/>
+							<label htmlFor="enviar-notificacion" className="text-sm text-muted-foreground cursor-pointer">
+								Enviar notificación por correo al cliente
+							</label>
 						</div>
 
 						{/* Mostrar asignaciones actuales si existen */}
