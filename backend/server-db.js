@@ -2212,7 +2212,7 @@ app.get("/api/codigos-pago", authAdmin, async (req, res) => {
 
 		const { rows: codigosPago, count } = await CodigoPago.findAndCountAll({
 			where: whereClause,
-			order: [["createdAt", "DESC"]],
+			order: [["created_at", "DESC"]],
 			limit: parseInt(limit),
 			offset: offset,
 		});
