@@ -320,8 +320,8 @@ function AdminReservas() {
 				alert("Vehículo y conductor asignados correctamente");
 				// Refrescar historial si estamos viendo detalles
 				if (showDetailDialog && selectedReserva?.id) {
+					setLoadingHistorial(true);
 					try {
-						setLoadingHistorial(true);
 						const ADMIN_TOKEN = localStorage.getItem("adminToken");
 						const resp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`, {
 							headers: ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {},
@@ -330,8 +330,11 @@ function AdminReservas() {
 							const data = await resp.json();
 							setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
 						}
-					} catch {}
-					finally { setLoadingHistorial(false); }
+					} catch (e) {
+						// noop
+					}
+					setLoadingHistorial(false);
+				}
 			} else {
 				const data = await response.json();
 				alert(data.error || "Error al asignar vehículo/conductor");
