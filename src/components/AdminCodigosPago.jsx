@@ -20,7 +20,7 @@ import {
 	DialogDescription,
 } from "./ui/dialog";
 import { Alert, AlertDescription } from "./ui/alert";
-import { LoaderCircle, Plus, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { LoaderCircle, Plus, Trash2 } from "lucide-react";
 
 // Componente de administración de códigos de pago
 function AdminCodigosPago() {
