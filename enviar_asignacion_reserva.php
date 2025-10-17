@@ -44,6 +44,7 @@ $nombre = $data['nombre'];
 $codigoReserva = $data['codigoReserva'];
 $vehiculo = $data['vehiculo'];
 $vehiculoTipo = $data['vehiculoTipo'] ?? '';
+$vehiculoPatenteLast4 = $data['vehiculoPatenteLast4'] ?? '';
 $origen = $data['origen'] ?? 'No especificado';
 $destino = $data['destino'] ?? 'No especificado';
 $fecha = $data['fecha'] ?? '';
@@ -139,7 +140,10 @@ try {
                     </tr>
                     <tr>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Vehículo:</strong></td>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>" . (!empty($vehiculoTipo) ? $vehiculoTipo : (explode(' ', trim($vehiculo))[0] ?? $vehiculo)) . "</td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>"
+                        . (!empty($vehiculoTipo) ? $vehiculoTipo : (explode(' ', trim($vehiculo))[0] ?? $vehiculo))
+                        . (!empty($vehiculoPatenteLast4) ? " <span style='color:#6b7280'>(patente •••{$vehiculoPatenteLast4})</span>" : "") .
+                        "</td>
                     </tr>
                     {$conductorHtml}
                 </table>

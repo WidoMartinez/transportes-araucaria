@@ -84,6 +84,28 @@ function AdminReservas() {
 	const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
 	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
+	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
+	const [loadingHistorial, setLoadingHistorial] = useState(false);
+
+	const fetchHistorialAsignaciones = async (reservaId) => {
+		try {
+			setLoadingHistorial(true);
+			const ADMIN_TOKEN = localStorage.getItem("adminToken");
+			const resp = await fetch(`${apiUrl}/api/reservas/${reservaId}/asignaciones`, {
+				headers: ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {},
+			});
+			if (resp.ok) {
+				const data = await resp.json();
+				setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
+			} else {
+				setHistorialAsignaciones([]);
+			}
+		} catch (e) {
+			setHistorialAsignaciones([]);
+		} finally {
+			setLoadingHistorial(false);
+		}
+	};
 
 	// Filtros y búsqueda
 	const [searchTerm, setSearchTerm] = useState("");
@@ -296,6 +318,20 @@ function AdminReservas() {
 				await fetchReservas(); // Recargar reservas
 				setShowAsignarDialog(false);
 				alert("Vehículo y conductor asignados correctamente");
+				// Refrescar historial si estamos viendo detalles
+				if (showDetailDialog && selectedReserva?.id) {
+					try {
+						setLoadingHistorial(true);
+						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						const resp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`, {
+							headers: ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {},
+						});
+						if (resp.ok) {
+							const data = await resp.json();
+							setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
+						}
+					} catch {}
+					finally { setLoadingHistorial(false); }
 			} else {
 				const data = await response.json();
 				alert(data.error || "Error al asignar vehículo/conductor");
@@ -419,9 +455,28 @@ function AdminReservas() {
 	};
 
 	// Abrir modal de detalles
-	const handleViewDetails = (reserva) => {
+	const handleViewDetails = async (reserva) => {
 		setSelectedReserva(reserva);
 		setShowDetailDialog(true);
+
+		// Cargar historial de asignaciones (uso interno)
+		try {
+			setLoadingHistorial(true);
+			const ADMIN_TOKEN = localStorage.getItem("adminToken");
+			const resp = await fetch(`${apiUrl}/api/reservas/${reserva.id}/asignaciones`, {
+				headers: ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {},
+			});
+			if (resp.ok) {
+				const data = await resp.json();
+				setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
+			} else {
+				setHistorialAsignaciones([]);
+			}
+		} catch (e) {
+			setHistorialAsignaciones([]);
+		} finally {
+			setLoadingHistorial(false);
+		}
 	};
 
 	// Guardar cambios
@@ -1619,6 +1674,36 @@ function AdminReservas() {
 										</>
 									)}
 								</div>
+							</div>
+
+							{/* Historial de Asignaciones (interno) */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">Historial de Asignaciones</h3>
+								{loadingHistorial ? (
+									<p className="text-sm text-muted-foreground">Cargando historial...</p>
+								) : historialAsignaciones.length === 0 ? (
+									<p className="text-sm text-muted-foreground">Sin cambios de asignación</p>
+								) : (
+									<div className="space-y-2">
+										{historialAsignaciones.map((h) => (
+											<div key={h.id} className="p-2 border rounded-md text-sm">
+												<div className="flex justify-between">
+													<span>
+														Vehículo: <strong>{h.vehiculo || "-"}</strong>
+														{h.conductor && (
+															<>
+																{" "}• Conductor: <strong>{h.conductor}</strong>
+															</>
+														)}
+													</span>
+													<span className="text-muted-foreground">
+														{new Date(h.created_at).toLocaleString("es-CL")}
+													</span>
+												</div>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 
 							{/* Información Adicional */}

@@ -447,6 +447,18 @@ const initializeDatabase = async () => {
                 await addPaymentFields();
                 await addAbonoFlags();
 
+			// Asegurar tabla de historial de asignaciones (para uso interno)
+			await sequelize.query(`
+				CREATE TABLE IF NOT EXISTS reserva_asignaciones (
+					id INT AUTO_INCREMENT PRIMARY KEY,
+					reserva_id INT NOT NULL,
+					vehiculo VARCHAR(100) NULL,
+					conductor VARCHAR(255) NULL,
+					created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+					INDEX idx_reserva_asignaciones_reserva_id (reserva_id)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			`);
+
                 console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
@@ -2552,6 +2564,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
         // Actualizar la reserva con datos legibles
         const vehiculoTipo = (vehiculo.tipo?.toUpperCase?.() || vehiculo.tipo || "Vehículo").toString();
         const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
+        const patenteLast4 = (vehiculo.patente || "").toString().slice(-4);
 
         await reserva.update({
             vehiculo: vehiculoLabel,
@@ -2561,6 +2574,34 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 ? `${reserva.observaciones ? reserva.observaciones + " | " : ""}Conductor asignado: ${conductor.nombre} (${conductor.rut})`
                 : reserva.observaciones,
         });
+
+        // Registrar en historial solo si hubo cambio
+        try {
+            const [rows] = await sequelize.query(
+                `SELECT vehiculo, conductor FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC LIMIT 1`,
+                { replacements: { id } }
+            );
+
+            const ultimo = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+            const nuevoVehiculo = vehiculoTipo;
+            const nuevoConductor = conductor ? conductor.nombre : null;
+            const cambio = !ultimo || ultimo.vehiculo !== nuevoVehiculo || (ultimo.conductor || null) !== (nuevoConductor || null);
+
+            if (cambio) {
+                await sequelize.query(
+                    `INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor) VALUES (:reservaId, :vehiculo, :conductor)`,
+                    {
+                        replacements: {
+                            reservaId: id,
+                            vehiculo: nuevoVehiculo,
+                            conductor: nuevoConductor,
+                        },
+                    }
+                );
+            }
+        } catch (histErr) {
+            console.warn("⚠️ No se pudo registrar historial de asignación:", histErr.message);
+        }
 
         // Intentar enviar notificación por email al pasajero
         try {
@@ -2580,6 +2621,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 // En el correo solo mostraremos el tipo, no la patente completa
                 vehiculo: vehiculoTipo,
                 vehiculoTipo: vehiculoTipo,
+                vehiculoPatenteLast4: patenteLast4 || null,
                 conductorNombre: conductor?.nombre || null,
                 // No enviar RUT del conductor por privacidad
             };
@@ -2601,6 +2643,21 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
     } catch (error) {
         console.error("Error asignando vehículo/conductor:", error);
         return res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// Obtener historial de asignaciones de una reserva (uso interno)
+app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await sequelize.query(
+            `SELECT id, vehiculo, conductor, created_at FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC`,
+            { replacements: { id } }
+        );
+        res.json({ historial: rows || [] });
+    } catch (error) {
+        console.error("Error obteniendo historial de asignaciones:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 
