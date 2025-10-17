@@ -349,11 +349,14 @@ function AdminCodigosPago() {
 									type="number"
 									value={formData.monto}
 									onChange={handleInputChange}
-									placeholder="25000"
+									placeholder="35520"
 									min="0"
-									step="1000"
+									step="1"
 									required
 								/>
+								<p className="text-xs text-gray-500">
+									Puede incluir montos no cerrados (ej: 35520)
+								</p>
 							</div>
 
 							<div className="space-y-2">

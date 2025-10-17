@@ -348,6 +348,7 @@ sequenceDiagram
 - `A-VLL-35` = Aeropuerto a Villarrica por $35.000
 - `P-TCO-30` = Pucón a Temuco por $30.000
 - `TCO-A-25` = Temuco a Aeropuerto por $25.000
+- `A-TCO-35520` = Aeropuerto a Temuco por $35.520 (montos no cerrados)
 
 **Prefijos Comunes:**
 - `A` = Aeropuerto
@@ -358,6 +359,8 @@ sequenceDiagram
 - `L` = Lonquimay
 
 ### Flexibilidad
+
+El sistema permite cualquier formato de código y **soporta montos cerrados y no cerrados** (por ejemplo: $25.000 o $35.520). Se recomienda usar códigos descriptivos y fáciles de comunicar por teléfono.
 
 El sistema permite cualquier formato de código, pero se recomienda usar códigos descriptivos y fáciles de comunicar por teléfono.
 

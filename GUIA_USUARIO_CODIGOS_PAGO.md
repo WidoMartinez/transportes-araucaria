@@ -87,8 +87,8 @@ Sí, usamos plataformas de pago certificadas (Flow y Mercado Pago) con las máxi
 1. **Haz clic en "Nuevo Código"**
 
 2. **Completa los datos requeridos:**
-   - **Código*** (ej: A-TCO-25)
-   - **Monto*** (ej: 25000)
+   - **Código*** (ej: A-TCO-25, A-VLL-35520)
+   - **Monto*** (ej: 25000 o 35520 para montos no cerrados)
    - **Origen*** (ej: Aeropuerto Temuco)
    - **Destino*** (ej: Temuco Centro)
 
@@ -136,7 +136,7 @@ En el panel de "Códigos de Pago" verás una tabla con:
 Para facilitar la identificación:
 
 ```
-[Origen]-[Destino]-[Monto en miles]
+[Origen]-[Destino]-[Monto o referencia]
 ```
 
 **Ejemplos:**
@@ -145,6 +145,9 @@ Para facilitar la identificación:
 - `P-TCO-30` = Pucón → Temuco ($30.000)
 - `TCO-P-30` = Temuco → Pucón ($30.000)
 - `A-M-45` = Aeropuerto → Malalcahuello ($45.000)
+- `A-TCO-35520` = Aeropuerto → Temuco ($35.520) - monto no cerrado
+
+**Nota:** El sistema acepta montos cerrados (25000) y no cerrados (35520).
 
 **Prefijos Comunes:**
 - `A` = Aeropuerto
