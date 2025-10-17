@@ -1931,6 +1931,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				// Actualizar metadata
 				ipAddress: req.ip || req.connection.remoteAddress || reservaExistente.ipAddress,
 				userAgent: req.get("User-Agent") || reservaExistente.userAgent,
+				referenciaPago: datosReserva.referenciaPago || reservaExistente.referenciaPago,
 			});
 
 			reservaExpress = reservaExistente;
@@ -1954,6 +1955,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
 			precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 			vehiculo: datosReserva.vehiculo || "",
+			referenciaPago: datosReserva.referenciaPago || null,
 
 			// Campos que se completarán después del pago (opcionales por ahora)
 			numeroVuelo: "",
@@ -3876,6 +3878,31 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		});
 
 		console.log("💾 Reserva actualizada con información de pago Flow");
+
+		// Si la reserva proviene de un código de pago, marcarlo como usado
+		try {
+			const codigoDePago = reserva.referenciaPago;
+			if (codigoDePago && typeof codigoDePago === "string" && codigoDePago.trim().length > 0) {
+				const codigo = codigoDePago.trim().toUpperCase();
+				const registro = await CodigoPago.findOne({ where: { codigo } });
+				if (registro) {
+					const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+					const estado = nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+					await registro.update({
+						usosActuales: nuevosUsos,
+						reservaId: reserva.id,
+						emailCliente: reserva.email,
+						fechaUso: new Date(),
+						estado,
+					});
+					console.log("✅ Código de pago marcado como usado:", codigo);
+				} else {
+					console.log("ℹ️ Código de pago no encontrado para marcar uso:", codigo);
+				}
+			}
+		} catch (cpError) {
+			console.warn("⚠️ No se pudo marcar el código de pago como usado:", cpError.message);
+		}
 
 		// Enviar correo de confirmación de pago
 		try {

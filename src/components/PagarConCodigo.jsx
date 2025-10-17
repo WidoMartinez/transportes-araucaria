@@ -83,7 +83,7 @@ function PagarConCodigo() {
 	};
 
 	// Validar datos del formulario
-	const validarDatos = () => {
+  const validarDatos = () => {
 		if (!formData.nombre.trim()) {
 			setError("Por favor ingresa tu nombre completo");
 			return false;
@@ -107,7 +107,68 @@ function PagarConCodigo() {
 
 		setError("");
 		return true;
-	};
+  };
+
+  // Pago con código: crea reserva express y genera link de Flow
+  const procesarPagoConCodigoFlow = async () => {
+    if (!validarDatos() || !codigoValidado) return;
+    setProcesando(true);
+    setLoadingGateway("flow");
+    setError("");
+    try {
+      const reservaPayload = {
+        nombre: formData.nombre,
+        email: formData.email,
+        telefono: formData.telefono,
+        origen: codigoValidado.origen,
+        destino: codigoValidado.destino,
+        fecha: new Date().toISOString().split("T")[0],
+        pasajeros: codigoValidado.pasajeros || 1,
+        precio: codigoValidado.monto,
+        totalConDescuento: codigoValidado.monto,
+        vehiculo: codigoValidado.vehiculo || "Por asignar",
+        numeroVuelo: formData.numeroVuelo,
+        hotel: formData.hotel,
+        mensaje: formData.mensaje,
+        idaVuelta: !!codigoValidado.idaVuelta,
+        referenciaPago: codigoValidado.codigo,
+        source: "codigo_pago",
+      };
+
+      const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reservaPayload),
+      });
+      const rj = await r.json();
+      if (!r.ok || rj.success === false) {
+        throw new Error(rj.message || "No se pudo crear la reserva");
+      }
+
+      const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`;
+      const p = await fetch(`${backendUrl}/create-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gateway: "flow",
+          amount: parseFloat(codigoValidado.monto),
+          description,
+          email: formData.email,
+        }),
+      });
+      const pj = await p.json();
+      if (p.ok && pj.url) {
+        window.location.href = pj.url;
+      } else {
+        throw new Error(pj.message || "No se pudo generar el enlace de pago");
+      }
+    } catch (e) {
+      setError(e.message || "Error al procesar el pago.");
+    } finally {
+      setProcesando(false);
+      setLoadingGateway(null);
+    }
+  };
 
 	// Procesar el pago
 	const procesarPago = async (gateway) => {
@@ -501,13 +562,13 @@ function PagarConCodigo() {
 									<div className="space-y-4">
 										<h4 className="font-semibold text-lg">Método de pago</h4>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<Button
-												type="button"
-												variant="outline"
-												onClick={() => procesarPago("flow")}
-												disabled={procesando}
-												className="h-auto p-6 flex flex-col items-center gap-3"
-											>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={procesarPagoConCodigoFlow}
+                      disabled={procesando}
+                      className="h-auto p-6 flex flex-col items-center gap-3"
+                    >
 												{loadingGateway === "flow" ? (
 													<LoaderCircle className="h-8 w-8 animate-spin" />
 												) : (
