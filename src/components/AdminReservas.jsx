@@ -183,6 +183,28 @@ function AdminReservas() {
 		observaciones: "",
 	});
 
+	// Catálogo de destinos (para selects)
+	const [destinosCatalog, setDestinosCatalog] = useState([]);
+	const [origenEsOtro, setOrigenEsOtro] = useState(false);
+	const [destinoEsOtro, setDestinoEsOtro] = useState(false);
+	const [otroOrigen, setOtroOrigen] = useState("");
+	const [otroDestino, setOtroDestino] = useState("");
+
+	const fetchDestinosCatalog = async () => {
+		try {
+			const resp = await fetch(`${apiUrl}/pricing`);
+			if (resp.ok) {
+				const data = await resp.json();
+				const names = Array.isArray(data.destinos)
+					? data.destinos.map((d) => d.nombre).filter(Boolean)
+					: [];
+				setDestinosCatalog(names);
+			}
+		} catch (e) {
+			setDestinosCatalog([]);
+		}
+	};
+
 	// Estados para autocompletado de clientes
 	const [clienteSugerencias, setClienteSugerencias] = useState([]);
 	const [mostrandoSugerencias, setMostrandoSugerencias] = useState(false);
@@ -787,6 +809,7 @@ function AdminReservas() {
 			observaciones: "",
 		});
 		setShowNewDialog(true);
+		fetchDestinosCatalog();
 	};
 
 	// Guardar nueva reserva
@@ -802,7 +825,10 @@ function AdminReservas() {
 			);
 			return;
 		}
-		if (!newReservaForm.origen || !newReservaForm.destino) {
+		const origenFinal = origenEsOtro ? (otroOrigen || newReservaForm.origen) : newReservaForm.origen;
+		const destinoFinal = destinoEsOtro ? (otroDestino || newReservaForm.destino) : newReservaForm.destino;
+
+		if (!origenFinal || !destinoFinal) {
 			alert("Por favor completa los campos obligatorios: Origen y Destino");
 			return;
 		}
@@ -845,9 +871,28 @@ function AdminReservas() {
 			const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
 			const saldo = total - abono;
 
+			// Crear destino si es 'otro' y no existe
+			if (destinoEsOtro && destinoFinal && !destinosCatalog.includes(destinoFinal)) {
+				try {
+					const ADMIN_TOKEN = localStorage.getItem("adminToken");
+					await fetch(`${apiUrl}/api/destinos`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${ADMIN_TOKEN}`,
+						},
+						body: JSON.stringify({ nombre: destinoFinal, activo: false, precioIda: 0, precioVuelta: 0, precioIdaVuelta: 0 }),
+					});
+				} catch (e) {
+					console.warn("No se pudo registrar destino nuevo (no crítico)", e.message);
+				}
+			}
+
 			const reservaData = {
 				...newReservaForm,
 				clienteId: clienteId,
+				origen: origenFinal,
+				destino: destinoFinal,
 				totalConDescuento: total,
 				saldoPendiente: saldo,
 				source: "manual",
@@ -2447,38 +2492,69 @@ function AdminReservas() {
 								Detalles del Viaje
 							</h3>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-2">
-									<Label htmlFor="new-origen">
-										Origen <span className="text-red-500">*</span>
-									</Label>
-									<Input
-										id="new-origen"
-										placeholder="Aeropuerto Temuco"
-										value={newReservaForm.origen}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												origen: e.target.value,
-											})
-										}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="new-destino">
-										Destino <span className="text-red-500">*</span>
-									</Label>
-									<Input
-										id="new-destino"
-										placeholder="Pucón"
-										value={newReservaForm.destino}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												destino: e.target.value,
-											})
-										}
-									/>
-								</div>
+                                <div className="space-y-2">
+                                        <Label htmlFor="new-origen">
+                                                Origen <span className="text-red-500">*</span>
+                                        </Label>
+                                        {!origenEsOtro ? (
+                                                <select
+                                                        id="new-origen"
+                                                        className="border rounded-md h-10 px-3 w-full"
+                                                        value={newReservaForm.origen}
+                                                        onChange={(e) => setNewReservaForm({ ...newReservaForm, origen: e.target.value })}
+                                                >
+                                                        <option value="">Seleccionar origen</option>
+                                                        <option value="Aeropuerto La Araucanía">Aeropuerto La Araucanía</option>
+                                                        {destinosCatalog.map((n) => (
+                                                                <option key={n} value={n}>{n}</option>
+                                                        ))}
+                                                </select>
+                                        ) : (
+                                                <Input
+                                                        id="new-origen-otro"
+                                                        placeholder="Especificar origen"
+                                                        value={otroOrigen}
+                                                        onChange={(e) => setOtroOrigen(e.target.value)}
+                                                />
+                                        )}
+                                        <div className="text-xs text-muted-foreground">
+                                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                                        <input type="checkbox" checked={origenEsOtro} onChange={(e) => setOrigenEsOtro(e.target.checked)} />
+                                                        Origen no está en la lista
+                                                </label>
+                                        </div>
+                                </div>
+                                <div className="space-y-2">
+                                        <Label htmlFor="new-destino">
+                                                Destino <span className="text-red-500">*</span>
+                                        </Label>
+                                        {!destinoEsOtro ? (
+                                                <select
+                                                        id="new-destino"
+                                                        className="border rounded-md h-10 px-3 w-full"
+                                                        value={newReservaForm.destino}
+                                                        onChange={(e) => setNewReservaForm({ ...newReservaForm, destino: e.target.value })}
+                                                >
+                                                        <option value="">Seleccionar destino</option>
+                                                        {destinosCatalog.map((n) => (
+                                                                <option key={n} value={n}>{n}</option>
+                                                        ))}
+                                                </select>
+                                        ) : (
+                                                <Input
+                                                        id="new-destino-otro"
+                                                        placeholder="Especificar destino"
+                                                        value={otroDestino}
+                                                        onChange={(e) => setOtroDestino(e.target.value)}
+                                                />
+                                        )}
+                                        <div className="text-xs text-muted-foreground">
+                                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                                        <input type="checkbox" checked={destinoEsOtro} onChange={(e) => setDestinoEsOtro(e.target.checked)} />
+                                                        Destino no está en la lista (se agregará a la base de datos como inactivo)
+                                                </label>
+                                        </div>
+                                </div>
 								<div className="space-y-2">
 									<Label htmlFor="new-fecha">
 										Fecha <span className="text-red-500">*</span>

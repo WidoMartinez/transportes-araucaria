@@ -2862,6 +2862,52 @@ app.get("/api/vehiculos", async (req, res) => {
 	}
 });
 
+// ==================== RUTAS DE DESTINOS (ADMIN) ====================
+// Listar destinos (opcionalmente solo activos)
+app.get("/api/destinos", async (req, res) => {
+    try {
+        const { activos } = req.query;
+        const where = {};
+        if (activos === "true") where.activo = true;
+        const destinos = await Destino.findAll({ where, order: [["orden", "ASC"], ["nombre", "ASC"]] });
+        res.json({ destinos });
+    } catch (error) {
+        console.error("Error obteniendo destinos:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// Crear destino rápido (sin activarlo por defecto)
+app.post("/api/destinos", authAdmin, async (req, res) => {
+    try {
+        const { nombre, precioIda = 0, precioVuelta = 0, precioIdaVuelta = 0, descripcion = "" } = req.body || {};
+        if (!nombre || !nombre.trim()) {
+            return res.status(400).json({ error: "Nombre de destino es requerido" });
+        }
+        const existing = await Destino.findOne({ where: { nombre: nombre.trim() } });
+        if (existing) {
+            return res.json({ success: true, destino: existing, existed: true });
+        }
+        const destino = await Destino.create({
+            nombre: nombre.trim(),
+            precioIda: Number(precioIda) || 0,
+            precioVuelta: Number(precioVuelta) || 0,
+            precioIdaVuelta: Number(precioIdaVuelta) || 0,
+            activo: false,
+            descripcion,
+            tiempo: "",
+            imagen: "",
+            maxPasajeros: 4,
+            minHorasAnticipacion: 5,
+            orden: 9999,
+        });
+        res.status(201).json({ success: true, destino, existed: false });
+    } catch (error) {
+        console.error("Error creando destino:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
 // Obtener un vehículo por ID
 app.get("/api/vehiculos/:id", async (req, res) => {
 	try {
