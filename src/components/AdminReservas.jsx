@@ -3390,55 +3390,7 @@ function AdminReservas() {
 							</Select>
 						</div>
 
-						{/* Ruta */}
-						<div className="space-y-2">
-							<h4 className="font-semibold">Ruta</h4>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-1">
-									<Label>Origen</Label>
-									{!editOrigenEsOtro ? (
-										<select
-											className="border rounded-md h-10 px-3 w-full"
-											value={formData.origen || ""}
-											onChange={(e) => setFormData({ ...formData, origen: e.target.value })}
-										>
-											<option value="">Seleccionar origen</option>
-											<option value="Aeropuerto La Araucanía">Aeropuerto La Araucanía</option>
-											{destinosCatalog.map((n) => (
-												<option key={n} value={n}>{n}</option>
-											))}
-										</select>
-									) : (
-										<Input placeholder="Especificar origen" value={editOtroOrigen} onChange={(e) => setEditOtroOrigen(e.target.value)} />
-									)}
-									<label className="text-xs text-muted-foreground inline-flex items-center gap-2 cursor-pointer">
-										<input type="checkbox" checked={editOrigenEsOtro} onChange={(e) => setEditOrigenEsOtro(e.target.checked)} />
-										Origen no está en la lista
-									</label>
-								</div>
-								<div className="space-y-1">
-									<Label>Destino</Label>
-									{!editDestinoEsOtro ? (
-										<select
-											className="border rounded-md h-10 px-3 w-full"
-											value={formData.destino || ""}
-											onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
-										>
-											<option value="">Seleccionar destino</option>
-											{destinosCatalog.map((n) => (
-												<option key={n} value={n}>{n}</option>
-											))}
-										</select>
-									) : (
-										<Input placeholder="Especificar destino" value={editOtroDestino} onChange={(e) => setEditOtroDestino(e.target.value)} />
-									)}
-									<label className="text-xs text-muted-foreground inline-flex items-center gap-2 cursor-pointer">
-										<input type="checkbox" checked={editDestinoEsOtro} onChange={(e) => setEditDestinoEsOtro(e.target.checked)} />
-										Destino no está en la lista (se agregará como inactivo)
-									</label>
-								</div>
-							</div>
-						</div>
+							{/* Sin edición de ruta en reasignación */}
 
 						{/* Enviar notificación */}
 						<div className="flex items-center gap-2 pt-2">

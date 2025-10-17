@@ -2637,13 +2637,12 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
         const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
         const patenteLast4 = (vehiculo.patente || "").toString().slice(-4);
 
+        // Actualizar solo el campo 'vehiculo'.
+        // Ya no modificamos 'observaciones' aquí para evitar contaminar
+        // las notas internas con historial de asignaciones. Ese historial
+        // se registra en la tabla reserva_asignaciones.
         await reserva.update({
             vehiculo: vehiculoLabel,
-            // Nota: si en el futuro se agregan columnas vehiculo_id / conductor_id,
-            // se deben incluir aquí también.
-            observaciones: conductor
-                ? `${reserva.observaciones ? reserva.observaciones + " | " : ""}Conductor asignado: ${conductor.nombre} (${conductor.rut})`
-                : reserva.observaciones,
         });
 
         // Registrar en historial solo si hubo cambio
