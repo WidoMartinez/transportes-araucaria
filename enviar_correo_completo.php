@@ -124,6 +124,7 @@ $totalConDescuento = $data['totalConDescuento'] ?? $precio;
 // Datos adicionales del formulario
 $otroOrigen = htmlspecialchars($data['otroOrigen'] ?? '');
 $otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
+$codigoReserva = htmlspecialchars($data['codigoReserva'] ?? '');
 
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 $formattedTotalConDescuento = $totalConDescuento ? '$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP' : 'A consultar';
@@ -185,7 +186,25 @@ $emailHtml = "
     </div>
 
     <!-- Contenido Principal -->
-    <div style='padding: 30px 25px;'>
+    <div style='padding: 30px 25px;'>";
+
+// Código de Reserva (si existe)
+if (!empty($codigoReserva)) {
+    $emailHtml .= "
+        <!-- Código de Reserva -->
+        <div style='background: #dbeafe; border: 3px solid #3b82f6; border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: center;'>
+            <div style='display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;'>
+                <svg width='24' height='24' fill='#1e40af' viewBox='0 0 24 24'>
+                    <path d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' stroke='#1e40af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/>
+                </svg>
+                <h3 style='margin: 0; color: #1e40af; font-size: 18px; font-weight: 600;'>Código de Reserva</h3>
+            </div>
+            <p style='margin: 0; font-size: 32px; font-weight: 800; color: #1e3a8a; letter-spacing: 2px; font-family: monospace;'>{$codigoReserva}</p>
+            <p style='margin: 10px 0 0; font-size: 13px; color: #1e40af;'>Guarda este código para consultar tu reserva</p>
+        </div>";
+}
+
+$emailHtml .= "
         <!-- Resumen Financiero -->
         <div style='background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 30px;'>
             <h2 style='margin: 0 0 15px; color: #0c4a6e; font-size: 22px;'>💰 Resumen Financiero</h2>

@@ -20,7 +20,7 @@ import { LoaderCircle } from "lucide-react";
 
 // --- Componentes de Sección ---
 import Header from "./components/Header";
-import Hero from "./components/Hero";
+// Hero eliminado - solo flujo express disponible
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
@@ -33,6 +33,7 @@ import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
+import ConsultarReserva from "./components/ConsultarReserva";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -170,9 +171,16 @@ const resolveIsFreightView = () => {
 	);
 };
 
+// Resolver si la URL es para consultar reserva
+const resolveIsConsultaView = () => {
+	const hash = window.location.hash;
+	return hash === "#consultar-reserva" || hash === "#consulta";
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -210,6 +218,7 @@ function App() {
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
+	const [codigoReservaCreada, setCodigoReservaCreada] = useState("");
 	const [phoneError, setPhoneError] = useState("");
 	const [reviewChecklist, setReviewChecklist] = useState({
 		viaje: false,
@@ -230,8 +239,7 @@ function App() {
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
-	// Estado para controlar el flujo de reservas (express o completo)
-	const [useExpressFlow, setUseExpressFlow] = useState(true);
+	// Solo flujo express disponible - flujo normal eliminado
 
 	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
 	const applyPricingPayload = useCallback((data, { signal } = {}) => {
@@ -1087,9 +1095,7 @@ function App() {
 
 			const data = await response.json();
 			if (data.url) {
-				// Usar location.href para evitar el bloqueo de popups
-				// Los navegadores no bloquean la redirección en la misma pestaña
-				window.location.href = data.url;
+				window.open(data.url, "_blank");
 			} else {
 				throw new Error(
 					data.message || "No se pudo generar el enlace de pago."
@@ -1104,6 +1110,8 @@ function App() {
 		}
 	};
 
+	// ELIMINADO - Solo flujo express disponible
+	/* 
 	const enviarReserva = async (source) => {
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError(
@@ -1185,6 +1193,12 @@ function App() {
 			const result = await response.json();
 			if (!response.ok)
 				throw new Error(result.message || "Error en el servidor.");
+			
+			// Guardar el código de reserva si existe en la respuesta
+			if (result.codigoReserva) {
+				setCodigoReservaCreada(result.codigoReserva);
+			}
+			
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof gtag === "function") {
@@ -1225,10 +1239,12 @@ function App() {
 			setIsSubmitting(false);
 		}
 	};
+	*/
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		const result = await enviarReserva("Formulario de Contacto");
+		// Cambio: ahora solo usa flujo express
+		const result = await enviarReservaExpress("Formulario de Contacto Express");
 		if (!result.success && result.message) alert(result.message);
 	};
 
@@ -1275,7 +1291,10 @@ function App() {
 
 		console.log("📦 Enviando reserva express:", dataToSend);
 
-		// Enviar notificación por correo usando el archivo PHP de Hostinger
+		// Ya NO llamamos al PHP aquí, el backend de Node.js lo hará automáticamente
+		// después de guardar la reserva y generar el código
+		
+		/* COMENTADO - Ahora el backend llama al PHP automáticamente
 		try {
 			const emailResponse = await fetch(
 				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
@@ -1288,18 +1307,25 @@ function App() {
 
 			if (emailResponse.ok) {
 				const emailResult = await emailResponse.json();
-				console.log("✅ Correo de notificación enviado exitosamente:", emailResult);
+				console.log(
+					"✅ Correo de notificación enviado exitosamente:",
+					emailResult
+				);
 				// Guardar el ID de la reserva del PHP si está disponible
 				if (emailResult && emailResult.id_reserva) {
 					setReservationId(emailResult.id_reserva);
 				}
 			} else {
-				console.warn("⚠️ Error al enviar correo de notificación:", await emailResponse.text());
+				console.warn(
+					"⚠️ Error al enviar correo de notificación:",
+					await emailResponse.text()
+				);
 			}
 		} catch (emailError) {
 			console.error("❌ Error al enviar notificación por correo:", emailError);
 			// No interrumpimos el flujo si falla el correo
 		}
+		FIN DEL COMENTARIO */
 
 		try {
 			const apiUrl =
@@ -1322,6 +1348,12 @@ function App() {
 			// Guardar ID de reserva para asociar pagos
 			if (result.reservaId) {
 				setReservationId(result.reservaId);
+			}
+
+			// Guardar código de reserva para mostrarlo al usuario
+			if (result.codigoReserva) {
+				setCodigoReservaCreada(result.codigoReserva);
+				console.log("📋 Código de reserva generado:", result.codigoReserva);
 			}
 
 			// Registrar conversión
@@ -1359,11 +1391,8 @@ function App() {
 	};
 
 	const handleWizardSubmit = () => {
-		if (useExpressFlow) {
-			return enviarReservaExpress("Reserva Express Web");
-		} else {
-			return enviarReserva("Reserva Web Autogestionada");
-		}
+		// Solo flujo express disponible
+		return enviarReservaExpress("Reserva Express Web");
 	};
 
 	const minDateTime = useMemo(() => {
@@ -1389,24 +1418,11 @@ function App() {
 	}
 
 	if (isAdminView) {
-		// Verificar si el token de admin está guardado en localStorage
-		const savedToken = localStorage.getItem("adminToken");
-		
-		if (!savedToken) {
-			// Solicitar el token al usuario
-			const token = prompt("Ingrese el token de administrador:");
-			if (token) {
-				localStorage.setItem("adminToken", token);
-				// Recargar la página para aplicar el token
-				window.location.reload();
-			} else {
-				// Si el usuario cancela, redirigir a la página principal
-				window.location.href = "/";
-				return null;
-			}
-		}
-		
 		return <AdminDashboard />;
+	}
+
+	if (isConsultaView) {
+		return <ConsultarReserva />;
 	}
 
 	return (
@@ -1421,29 +1437,59 @@ function App() {
 				open={showConfirmationAlert}
 				onOpenChange={setShowConfirmationAlert}
 			>
-				{/* El contenido del Dialog no requiere cambios */}
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="text-2xl text-green-600">
+							✅ ¡Reserva Enviada Correctamente!
+						</DialogTitle>
+						<DialogDescription>
+							Tu solicitud de reserva ha sido recibida con éxito.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-4 py-4">
+						{codigoReservaCreada && (
+							<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+								<p className="text-sm font-medium text-blue-700 mb-1">
+									Código de Reserva
+								</p>
+								<p className="text-2xl font-bold text-blue-900 tracking-wider font-mono">
+									{codigoReservaCreada}
+								</p>
+								<p className="text-xs text-blue-600 mt-2">
+									Guarda este código para consultar tu reserva
+								</p>
+							</div>
+						)}
+						<p className="text-sm text-muted-foreground">
+							Te enviaremos una confirmación por correo electrónico con todos los detalles de tu viaje.
+						</p>
+						<p className="text-sm text-muted-foreground">
+							Nuestro equipo revisará tu solicitud y te contactará pronto.
+						</p>
+					</div>
+					<DialogFooter className="sm:justify-between gap-2">
+						{codigoReservaCreada && (
+							<Button
+								variant="outline"
+								onClick={() => window.location.href = `#consultar-reserva`}
+							>
+								Consultar Reserva
+							</Button>
+						)}
+						<DialogClose asChild>
+							<Button type="button">
+								Entendido
+							</Button>
+						</DialogClose>
+					</DialogFooter>
+				</DialogContent>
 			</Dialog>
 
 			<Header />
 
-			{/* Botón flotante para cambiar flujo */}
-			<div className="fixed bottom-4 right-4 z-50">
-				<Button
-					onClick={() => setUseExpressFlow(!useExpressFlow)}
-					className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg rounded-full px-4 py-2 text-sm font-medium"
-					title={
-						useExpressFlow
-							? "Cambiar a flujo completo"
-							: "Cambiar a flujo express"
-					}
-				>
-					{useExpressFlow ? "🔄 Flujo Completo" : "⚡ Flujo Express"}
-				</Button>
-			</div>
-
 			<main>
-				{useExpressFlow ? (
-					<HeroExpress
+				{/* Solo flujo express disponible */}
+				<HeroExpress
 						formData={formData}
 						handleInputChange={handleInputChange}
 						origenes={todosLosTramos}
@@ -1467,45 +1513,6 @@ function App() {
 						onAplicarCodigo={validarCodigo}
 						onRemoverCodigo={removerCodigo}
 					/>
-				) : (
-					<Hero
-						formData={formData}
-						handleInputChange={handleInputChange}
-						origenes={todosLosTramos}
-						destinos={destinosDisponibles}
-						maxPasajeros={maxPasajeros}
-						minDateTime={minDateTime}
-						phoneError={phoneError}
-						setPhoneError={setPhoneError}
-						isSubmitting={isSubmitting}
-						cotizacion={cotizacion}
-						pricing={pricing}
-						descuentoRate={effectiveDiscountRate}
-						baseDiscountRate={onlineDiscountRate}
-						promotionDiscountRate={promotionDiscountRate}
-						roundTripDiscountRate={roundTripDiscountRate}
-						personalizedDiscountRate={personalizedDiscountRate}
-						descuentosPersonalizados={
-							descuentosGlobales?.descuentosPersonalizados || []
-						}
-						activePromotion={activePromotion}
-						reviewChecklist={reviewChecklist}
-						setReviewChecklist={setReviewChecklist}
-						setFormData={setFormData}
-						canPay={canPay}
-						handlePayment={handlePayment}
-						loadingGateway={loadingGateway}
-						onSubmitWizard={handleWizardSubmit}
-						validarTelefono={validarTelefono}
-						validarHorarioReserva={validarHorarioReserva}
-						showSummary={showConfirmationAlert}
-						codigoAplicado={codigoAplicado}
-						codigoError={codigoError}
-						validandoCodigo={validandoCodigo}
-						onAplicarCodigo={validarCodigo}
-						onRemoverCodigo={removerCodigo}
-					/>
-				)}
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />

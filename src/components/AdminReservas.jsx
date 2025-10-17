@@ -1213,7 +1213,14 @@ function AdminReservas() {
 											</TableCell>
 											{columnasVisibles.id && (
 												<TableCell className="font-medium">
-													#{reserva.id}
+													<div className="space-y-1">
+														<div>#{reserva.id}</div>
+														{reserva.codigoReserva && (
+															<div className="text-xs text-blue-600 font-mono">
+																{reserva.codigoReserva}
+															</div>
+														)}
+													</div>
 												</TableCell>
 											)}
 											{columnasVisibles.cliente && (
@@ -1449,6 +1456,37 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-6">
+							{/* Código de Reserva */}
+							{selectedReserva.codigoReserva && (
+								<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+									<div className="flex items-center justify-between">
+										<div>
+											<Label className="text-blue-700 text-sm font-medium">
+												Código de Reserva
+											</Label>
+											<p className="text-2xl font-bold text-blue-900 tracking-wider">
+												{selectedReserva.codigoReserva}
+											</p>
+										</div>
+										<div className="bg-blue-100 p-2 rounded">
+											<svg
+												className="w-6 h-6 text-blue-700"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+												/>
+											</svg>
+										</div>
+									</div>
+								</div>
+							)}
+
 							{/* Información del Cliente */}
 							<div>
 								<h3 className="font-semibold text-lg mb-3">
@@ -1842,7 +1880,6 @@ function AdminReservas() {
 										<SelectValue placeholder="Seleccionar método" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="mercadopago">MercadoPago</SelectItem>
 										<SelectItem value="flow">Flow</SelectItem>
 										<SelectItem value="transferencia">Transferencia</SelectItem>
 										<SelectItem value="efectivo">Efectivo</SelectItem>
@@ -2418,7 +2455,6 @@ function AdminReservas() {
 												<SelectItem value="transferencia">
 													Transferencia
 												</SelectItem>
-												<SelectItem value="mercadopago">MercadoPago</SelectItem>
 												<SelectItem value="flow">Flow</SelectItem>
 											</SelectContent>
 										</Select>

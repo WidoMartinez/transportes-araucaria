@@ -9,10 +9,17 @@ const Reserva = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
+		codigoReserva: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			unique: true,
+			field: "codigo_reserva",
+			comment: "Código único de reserva (formato: AR-YYYYMMDD-XXXX)",
+		},
 		clienteId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
-			field: 'cliente_id', // Mapear a snake_case en la base de datos
+			field: "cliente_id", // Mapear a snake_case en la base de datos
 			comment: "ID del cliente asociado (si existe)",
 		},
 		rut: {
@@ -59,30 +66,9 @@ const Reserva = sequelize.define(
 			allowNull: false,
 			defaultValue: 0,
 		},
-		vehiculoId: {
-			type: DataTypes.INTEGER,
-			allowNull: true,
-			field: 'vehiculo_id',
-			comment: "ID del vehículo asignado",
-			references: {
-				model: 'vehiculos',
-				key: 'id'
-			}
-		},
-		conductorId: {
-			type: DataTypes.INTEGER,
-			allowNull: true,
-			field: 'conductor_id',
-			comment: "ID del conductor asignado",
-			references: {
-				model: 'conductores',
-				key: 'id'
-			}
-		},
 		vehiculo: {
 			type: DataTypes.STRING(100),
 			allowNull: true,
-			comment: "Campo de texto legado para vehículo (mantener por compatibilidad)",
 		},
 		numeroVuelo: {
 			type: DataTypes.STRING(50),
@@ -170,9 +156,11 @@ const Reserva = sequelize.define(
 			type: DataTypes.VIRTUAL,
 			get() {
 				// Una reserva tiene detalles completos si tiene al menos el número de vuelo o hotel
-				const tieneNumeroVuelo = this.getDataValue("numeroVuelo") && 
+				const tieneNumeroVuelo =
+					this.getDataValue("numeroVuelo") &&
 					this.getDataValue("numeroVuelo").trim() !== "";
-				const tieneHotel = this.getDataValue("hotel") && 
+				const tieneHotel =
+					this.getDataValue("hotel") &&
 					this.getDataValue("hotel").trim() !== "";
 				return tieneNumeroVuelo || tieneHotel;
 			},
@@ -194,8 +182,32 @@ const Reserva = sequelize.define(
 			allowNull: true,
 		},
 		estadoPago: {
-			type: DataTypes.ENUM("pendiente", "pagado", "fallido", "reembolsado"),
+			type: DataTypes.ENUM("pendiente", "aprobado", "pagado", "fallido", "reembolsado"),
 			defaultValue: "pendiente",
+		},
+		pagoId: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "pago_id",
+			comment: "ID de transacción del gateway de pago",
+		},
+		pagoGateway: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "pago_gateway",
+			comment: "Gateway de pago utilizado (flow, transferencia, efectivo, etc)",
+		},
+		pagoMonto: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			field: "pago_monto",
+			comment: "Monto pagado en la transacción",
+		},
+		pagoFecha: {
+			type: DataTypes.DATE,
+			allowNull: true,
+			field: "pago_fecha",
+			comment: "Fecha y hora del pago confirmado",
 		},
 		referenciaPago: {
 			type: DataTypes.STRING(255),
@@ -214,10 +226,9 @@ const Reserva = sequelize.define(
 			{ fields: ["fecha"] },
 			{ fields: ["estado"] },
 			{ fields: ["created_at"] },
-			{ fields: ["cliente_id"] }, // Usar el nombre real de la columna en la BD
+			{ fields: ["clienteId"] },
 			{ fields: ["rut"] },
-			{ fields: ["vehiculo_id"] }, // Índice para FK de vehículo
-			{ fields: ["conductor_id"] }, // Índice para FK de conductor
+			{ fields: ["codigo_reserva"], unique: true },
 		],
 	}
 );

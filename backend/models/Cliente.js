@@ -22,9 +22,11 @@ const Cliente = sequelize.define(
 					// Acepta 7 a 8 dígitos, guión, y un dígito o K
 					const rutRegex = /^\d{7,8}-[\dkK]$/;
 					if (!rutRegex.test(value)) {
-						throw new Error("El RUT debe tener el formato XXXXXXXX-X (sin puntos)");
+						throw new Error(
+							"El RUT debe tener el formato XXXXXXXX-X (sin puntos)"
+						);
 					}
-				}
+				},
 			},
 		},
 		nombre: {
@@ -92,7 +94,7 @@ const Cliente = sequelize.define(
 		indexes: [
 			{ fields: ["email"] },
 			{ fields: ["rut"] },
-			{ fields: ["es_cliente"] }, // Usar el nombre real de la columna en la BD (snake_case)
+			{ fields: ["esCliente"] },
 			{ fields: ["telefono"] },
 		],
 	}

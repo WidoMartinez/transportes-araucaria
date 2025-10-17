@@ -9,7 +9,6 @@ import { Checkbox } from "./ui/checkbox";
 import { LoaderCircle, Calendar, Users } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
-import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
 
 function HeroExpress({
@@ -41,6 +40,8 @@ function HeroExpress({
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [paymentConsent, setPaymentConsent] = useState(false);
 	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
+	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
+	const [verificandoReserva, setVerificandoReserva] = useState(false);
 
 	// Pasos simplificados para flujo express
 	const steps = useMemo(
@@ -101,6 +102,36 @@ function HeroExpress({
 		(formData.destino && !tieneCotizacionAutomatica);
 	const mostrarPrecio = tieneCotizacionAutomatica;
 
+	// Verificar si el email tiene una reserva activa sin pagar
+	const verificarReservaActiva = async (email) => {
+		if (!email || !email.trim()) {
+			setReservaActiva(null);
+			return;
+		}
+
+		setVerificandoReserva(true);
+		try {
+			const apiUrl = import.meta.env.VITE_API_URL || "https://transportes-araucania-backend.onrender.com";
+			const response = await fetch(`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(email.trim())}`);
+			
+			if (response.ok) {
+				const data = await response.json();
+				if (data.tieneReservaActiva) {
+					setReservaActiva(data.reserva);
+					console.log("⚠️ Se encontró reserva activa sin pagar:", data.reserva);
+				} else {
+					setReservaActiva(null);
+				}
+			}
+		} catch (error) {
+			console.error("Error verificando reserva activa:", error);
+			// No mostramos error al usuario, simplemente continuamos
+			setReservaActiva(null);
+		} finally {
+			setVerificandoReserva(false);
+		}
+	};
+
 	// Validaciones del primer paso (mínimas)
 	const handleStepOneNext = () => {
 		if (!formData.origen?.trim()) {
@@ -150,27 +181,27 @@ function HeroExpress({
 		setCurrentStep(1);
 	};
 
-	// Validaciones del segundo paso (mínimas para pago)
-	const handleStepTwoNext = async () => {
+	// Validar datos antes de guardar o pagar
+	const validarDatosReserva = () => {
 		if (!formData.nombre?.trim()) {
 			setStepError("Ingresa tu nombre completo.");
-			return;
+			return false;
 		}
 
 		if (!formData.email?.trim()) {
 			setStepError("Ingresa tu correo electrónico.");
-			return;
+			return false;
 		}
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) {
 			setStepError("El correo electrónico no es válido.");
-			return;
+			return false;
 		}
 
 		if (!formData.telefono?.trim()) {
 			setStepError("Ingresa tu teléfono móvil.");
-			return;
+			return false;
 		}
 
 		// Validación suave del teléfono (no bloquea el proceso)
@@ -181,13 +212,21 @@ function HeroExpress({
 		}
 
 		if (!paymentConsent) {
-			setStepError("Debes aceptar los términos para continuar con el pago.");
-			return;
+			setStepError("Debes aceptar los términos para continuar.");
+			return false;
 		}
 
 		setStepError("");
+		return true;
+	};
 
-		// Procesar la reserva express (sin hora específica)
+	// Guardar reserva para continuar después (sin pago inmediato)
+	const handleGuardarReserva = async () => {
+		if (!validarDatosReserva()) {
+			return;
+		}
+
+		// Procesar la reserva express (sin pago)
 		const result = await onSubmitWizard();
 
 		if (!result.success) {
@@ -199,8 +238,30 @@ function HeroExpress({
 			return;
 		}
 
-		// Si llegamos aquí, la reserva se creó exitosamente
-		// El pago se maneja directamente desde aquí
+		// Mostrar mensaje de éxito
+		alert("✅ Reserva guardada exitosamente. Te hemos enviado la confirmación por email. Podrás completar el pago más tarde usando el enlace que te enviamos.");
+	};
+
+	// Procesar pago (guarda reserva primero y luego redirige a pago)
+	const handleProcesarPago = async (gateway, type) => {
+		if (!validarDatosReserva()) {
+			return;
+		}
+
+		// Primero guardar la reserva
+		const result = await onSubmitWizard();
+
+		if (!result.success) {
+			if (result.message) {
+				setStepError(`Error: ${result.message}`);
+			} else {
+				setStepError("Ocurrió un error. Por favor, inténtalo de nuevo.");
+			}
+			return;
+		}
+
+		// Si la reserva se guardó exitosamente, proceder con el pago
+		handlePayment(gateway, type);
 	};
 
 	const handleStepBack = () => {
@@ -237,13 +298,6 @@ function HeroExpress({
 				title: "Flow",
 				subtitle: "Webpay • Tarjetas • Transferencia",
 				image: flow,
-			},
-			{
-				id: "mercadopago",
-				gateway: "mercadopago",
-				title: "Mercado Pago",
-				subtitle: "Tarjetas • Billetera digital",
-				image: merPago,
 			},
 		],
 		[]
@@ -770,10 +824,29 @@ function HeroExpress({
 													name="email"
 													value={formData.email}
 													onChange={handleInputChange}
+													onBlur={(e) => verificarReservaActiva(e.target.value)}
 													placeholder="tu@email.cl"
 													className="h-12 text-base"
 													required
 												/>
+												{verificandoReserva && (
+													<p className="text-xs text-blue-600 flex items-center gap-1">
+														<LoaderCircle className="w-3 h-3 animate-spin" />
+														Verificando reservas...
+													</p>
+												)}
+												{reservaActiva && (
+													<div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm">
+														<p className="font-medium text-amber-800 mb-1">
+															⚠️ Tienes una reserva sin pagar
+														</p>
+														<p className="text-amber-700 text-xs">
+															Código: <span className="font-mono font-semibold">{reservaActiva.codigoReserva}</span>
+															<br />
+															Al continuar, se modificará tu reserva existente en lugar de crear una nueva.
+														</p>
+													</div>
+												)}
 											</div>
 
 											<div className="space-y-2">
@@ -819,14 +892,14 @@ function HeroExpress({
 											todosLosCamposCompletos && (
 												<div className="space-y-4">
 													<h4 className="font-semibold text-lg">
-														💳 Selecciona tu opción de pago
+														💳 Opciones de pago
 													</h4>
 
 													{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
 													{!selectedPaymentType && (
 														<div className="space-y-3">
 															<p className="text-sm text-muted-foreground">
-																Paso 1: Elige cuánto deseas pagar ahora
+																Elige cuánto deseas pagar ahora
 															</p>
 															<div className="grid gap-3 md:grid-cols-2">
 																{paymentOptions.map((option) => (
@@ -875,7 +948,7 @@ function HeroExpress({
 															<div className="flex items-center justify-between">
 																<div>
 																	<p className="text-sm text-muted-foreground">
-																		Paso 2: Elige tu método de pago
+																		Elige tu método de pago
 																	</p>
 																	<p className="text-lg font-semibold text-primary">
 																		Pagarás:{" "}
@@ -905,7 +978,7 @@ function HeroExpress({
 																		type="button"
 																		variant="outline"
 																		onClick={() =>
-																			handlePayment(
+																			handleProcesarPago(
 																				method.gateway,
 																				selectedPaymentType
 																			)
@@ -989,21 +1062,24 @@ function HeroExpress({
 										</div>
 
 										{/* Navegación */}
-										<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-											<Button
-												type="button"
-												variant="outline"
-												onClick={handleStepBack}
-												disabled={isSubmitting}
-												className="w-full sm:w-auto"
-											>
-												← Volver
-											</Button>
+										<div className="space-y-3">
+											{/* Botón de volver */}
+											<div className="flex justify-start">
+												<Button
+													type="button"
+													variant="outline"
+													onClick={handleStepBack}
+													disabled={isSubmitting}
+													size="sm"
+												>
+													← Volver
+												</Button>
+											</div>
 
 											{requiereCotizacionManual ? (
 												<Button
 													asChild
-													className="w-full sm:w-auto"
+													className="w-full"
 													variant="secondary"
 												>
 													<a href="#contacto">
@@ -1011,21 +1087,49 @@ function HeroExpress({
 													</a>
 												</Button>
 											) : (
-												<Button
-													type="button"
-													onClick={handleStepTwoNext}
-													disabled={isSubmitting || !paymentConsent}
-													className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
-												>
-													{isSubmitting ? (
-														<>
-															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-															Procesando reserva...
-														</>
-													) : (
-														"Confirmar reserva →"
+												<div className="space-y-3">
+													{/* Botón para guardar reserva sin pagar */}
+													<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+														<div className="flex items-start gap-3 mb-3">
+															<div className="flex-1">
+																<h5 className="font-medium text-blue-900 mb-1">
+																	💾 Guardar y continuar después
+																</h5>
+																<p className="text-sm text-blue-700">
+																	Guarda tu reserva ahora y recibe un enlace por email para pagar más tarde
+																</p>
+															</div>
+														</div>
+														<Button
+															type="button"
+															onClick={handleGuardarReserva}
+															disabled={isSubmitting || !todosLosCamposCompletos}
+															variant="outline"
+															className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
+														>
+															{isSubmitting ? (
+																<>
+																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+																	Guardando reserva...
+																</>
+															) : (
+																"Guardar reserva para después"
+															)}
+														</Button>
+													</div>
+
+													{/* Instrucciones para pago inmediato */}
+													{todosLosCamposCompletos && (
+														<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+															<p className="text-sm text-green-800 font-medium mb-2">
+																✅ ¿Listo para pagar? Selecciona el monto y método de pago arriba
+															</p>
+															<p className="text-xs text-green-700">
+																Al elegir una opción de pago arriba, tu reserva se guardará automáticamente y serás redirigido al proceso de pago seguro
+															</p>
+														</div>
 													)}
-												</Button>
+												</div>
 											)}
 										</div>
 									</div>
