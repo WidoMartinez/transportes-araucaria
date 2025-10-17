@@ -2561,6 +2561,35 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 : reserva.observaciones,
         });
 
+        // Intentar enviar notificación por email al pasajero
+        try {
+            const phpUrl =
+                process.env.PHP_ASIGNACION_URL ||
+                "https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
+
+            const payload = {
+                email: reserva.email,
+                nombre: reserva.nombre,
+                codigoReserva: reserva.codigoReserva,
+                origen: reserva.origen,
+                destino: reserva.destino,
+                fecha: reserva.fecha,
+                hora: reserva.hora,
+                pasajeros: reserva.pasajeros,
+                vehiculo: vehiculoLabel,
+                conductorNombre: conductor?.nombre || null,
+                conductorRut: conductor?.rut || null,
+            };
+
+            await axios.post(phpUrl, payload, {
+                headers: { "Content-Type": "application/json" },
+                timeout: 30000,
+            });
+            console.log("📧 Email de asignación enviado");
+        } catch (emailErr) {
+            console.warn("⚠️ No se pudo enviar email de asignación:", emailErr.message);
+        }
+
         return res.json({
             success: true,
             message: "Asignación actualizada",
