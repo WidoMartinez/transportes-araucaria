@@ -215,49 +215,66 @@ function AdminReservas() {
 	const [mostrandoSugerencias, setMostrandoSugerencias] = useState(false);
 	const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
-    // Estados para columnas visibles (con persistencia)
-    const DEFAULT_COLUMNAS_VISIBLES = {
-        id: true,
-        cliente: true,
-        contacto: true,
-        rut: false,
-        ruta: true,
-        fechaHora: true,
-        pasajeros: true,
-        total: true,
-        estado: true,
-        pago: true,
-        saldo: true,
-        esCliente: false,
-        numViajes: false,
-        acciones: true,
-    };
-    const COLUMNAS_STORAGE_KEY = "adminReservas_columnasVisibles_v1";
-    const [columnasVisibles, setColumnasVisibles] = useState(DEFAULT_COLUMNAS_VISIBLES);
+    // Columnas (config centralizada + persistencia)
+    const COLUMN_DEFINITIONS = [
+        { key: "id", label: "ID", defaultVisible: true },
+        { key: "cliente", label: "Cliente", defaultVisible: true },
+        { key: "contacto", label: "Contacto", defaultVisible: true },
+        { key: "rut", label: "RUT", defaultVisible: false },
+        { key: "ruta", label: "Ruta", defaultVisible: true },
+        { key: "fechaHora", label: "Fecha/Hora", defaultVisible: true },
+        { key: "pasajeros", label: "Pasajeros", defaultVisible: true },
+        { key: "total", label: "Total", defaultVisible: true },
+        { key: "estado", label: "Estado", defaultVisible: true },
+        { key: "pago", label: "Pago", defaultVisible: true },
+        { key: "saldo", label: "Saldo", defaultVisible: true },
+        { key: "esCliente", label: "Es Cliente", defaultVisible: false },
+        { key: "numViajes", label: "Núm. Viajes", defaultVisible: false },
+        { key: "acciones", label: "Acciones", defaultVisible: true },
+    ];
 
-    // Cargar configuración de columnas desde localStorage
-    useEffect(() => {
+    const DEFAULT_COLUMNAS_VISIBLES = COLUMN_DEFINITIONS.reduce((acc, d) => {
+        acc[d.key] = Boolean(d.defaultVisible);
+        return acc;
+    }, {});
+
+    // Claves storage (v2 con fallback a v1)
+    const COLUMNAS_STORAGE_KEY = "adminReservas_columnasVisibles_v2";
+    const COLUMNAS_STORAGE_FALLBACK_KEYS = [
+        "adminReservas_columnasVisibles_v2",
+        "adminReservas_columnasVisibles_v1",
+    ];
+
+    // Inicialización perezosa desde storage para evitar reseteos al montar
+    const [columnasVisibles, setColumnasVisibles] = useState(() => {
         try {
-            const raw = localStorage.getItem(COLUMNAS_STORAGE_KEY);
-            if (raw) {
-                const parsed = JSON.parse(raw) || {};
-                // Mezclar con los valores por defecto para evitar claves faltantes
-                const merged = { ...DEFAULT_COLUMNAS_VISIBLES };
-                for (const k of Object.keys(DEFAULT_COLUMNAS_VISIBLES)) {
-                    if (typeof parsed[k] === "boolean") merged[k] = parsed[k];
-                }
-                setColumnasVisibles(merged);
+            let parsed = null;
+            for (const k of COLUMNAS_STORAGE_FALLBACK_KEYS) {
+                const raw = localStorage.getItem(k);
+                if (!raw) continue;
+                try {
+                    const obj = JSON.parse(raw);
+                    if (obj && typeof obj === "object") {
+                        parsed = obj;
+                        break;
+                    }
+                } catch {}
             }
-        } catch {}
-    }, []);
+            if (!parsed) return { ...DEFAULT_COLUMNAS_VISIBLES };
+            const merged = { ...DEFAULT_COLUMNAS_VISIBLES };
+            for (const k of Object.keys(DEFAULT_COLUMNAS_VISIBLES)) {
+                if (typeof parsed[k] === "boolean") merged[k] = parsed[k];
+            }
+            return merged;
+        } catch {
+            return { ...DEFAULT_COLUMNAS_VISIBLES };
+        }
+    });
 
     // Guardar configuración de columnas cuando cambie
     useEffect(() => {
         try {
-            localStorage.setItem(
-                COLUMNAS_STORAGE_KEY,
-                JSON.stringify(columnasVisibles)
-            );
+            localStorage.setItem(COLUMNAS_STORAGE_KEY, JSON.stringify(columnasVisibles));
         } catch {}
     }, [columnasVisibles]);
 
@@ -1369,43 +1386,27 @@ function AdminReservas() {
 									Selecciona las columnas que deseas ver en la tabla
 								</DialogDescription>
 							</DialogHeader>
-							<div className="space-y-2">
-								{Object.entries(columnasVisibles).map(([key, value]) => (
-									<div key={key} className="flex items-center space-x-2">
-										<input
-											type="checkbox"
-											id={`col-${key}`}
-											checked={value}
-											onChange={(e) =>
-												setColumnasVisibles({
-													...columnasVisibles,
-													[key]: e.target.checked,
-												})
-											}
-											className="w-4 h-4"
-										/>
-										<Label
-											htmlFor={`col-${key}`}
-											className="cursor-pointer capitalize"
-										>
-											{key === "id" && "ID"}
-											{key === "cliente" && "Cliente"}
-											{key === "contacto" && "Contacto"}
-											{key === "rut" && "RUT"}
-											{key === "ruta" && "Ruta"}
-											{key === "fechaHora" && "Fecha/Hora"}
-											{key === "pasajeros" && "Pasajeros"}
-											{key === "total" && "Total"}
-											{key === "estado" && "Estado"}
-											{key === "pago" && "Pago"}
-											{key === "saldo" && "Saldo"}
-											{key === "esCliente" && "Es Cliente"}
-											{key === "numViajes" && "Núm. Viajes"}
-											{key === "acciones" && "Acciones"}
-										</Label>
-									</div>
-								))}
-							</div>
+                            <div className="space-y-2">
+                                {COLUMN_DEFINITIONS.map(({ key, label }) => (
+                                    <div key={key} className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            id={`col-${key}`}
+                                            checked={Boolean(columnasVisibles[key])}
+                                            onChange={(e) =>
+                                                setColumnasVisibles({
+                                                    ...columnasVisibles,
+                                                    [key]: e.target.checked,
+                                                })
+                                            }
+                                            className="w-4 h-4"
+                                        />
+                                        <Label htmlFor={`col-${key}`} className="cursor-pointer">
+                                            {label}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
 							<div className="flex justify-end gap-2 mt-4">
 								<Button
 									variant="outline"
