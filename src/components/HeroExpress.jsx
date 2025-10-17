@@ -364,19 +364,26 @@ function HeroExpress({
 					</>
 				)}
 
-				{!showBookingModule && (
-					<div className="flex flex-col items-center justify-center space-y-6">
-						<Button
-							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
-						>
-							🚀 Reservar ahora
-						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso súper rápido • Solo 2 pasos • Pago seguro
-						</p>
-					</div>
-				)}
+					{!showBookingModule && (
+						<div className="flex flex-col items-center justify-center space-y-6">
+							<Button
+								onClick={() => setShowBookingModule(true)}
+								className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
+							>
+								🚀 Reservar ahora
+							</Button>
+							<p className="text-lg text-white/95 drop-shadow-md font-medium">
+								Proceso súper rápido • Solo 2 pasos • Pago seguro
+							</p>
+							<Button
+								variant="outline"
+								className="border-white text-white hover:bg-white/10"
+								asChild
+							>
+								<a href="#consultar-reserva">Continuar con código</a>
+							</Button>
+						</div>
+					)}
 
 				{showBookingModule && (
 					<div className="w-full">

@@ -5,28 +5,31 @@ import { Label } from "./ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
-	Search,
-	Calendar,
-	MapPin,
-	User,
-	Phone,
-	Mail,
-	Clock,
-	Users,
-	DollarSign,
-	AlertCircle,
-	CheckCircle2,
-	Loader2,
-	FileText,
+    Search,
+    Calendar,
+    MapPin,
+    User,
+    Phone,
+    Mail,
+    Clock,
+    Users,
+    DollarSign,
+    AlertCircle,
+    CheckCircle2,
+    Loader2,
+    FileText,
+    CreditCard,
 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL || "https://transportes-araucania-backend.onrender.com";
 
 function ConsultarReserva() {
-	const [codigoReserva, setCodigoReserva] = useState("");
-	const [reserva, setReserva] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
+    const [codigoReserva, setCodigoReserva] = useState("");
+    const [reserva, setReserva] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [paying, setPaying] = useState(false);
+    const [payError, setPayError] = useState(null);
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -55,7 +58,46 @@ function ConsultarReserva() {
 		} finally {
 			setLoading(false);
 		}
-	};
+    };
+
+    const continuarPago = async (tipo = "abono") => {
+        if (!reserva) return;
+        try {
+            setPaying(true);
+            setPayError(null);
+            const apiBase = import.meta.env.VITE_API_URL || "https://transportes-araucania-backend.onrender.com";
+            const amount = tipo === "total" ? Number(reserva.totalConDescuento || 0) : Number(reserva.abonoSugerido || 0);
+            if (!amount || amount <= 0) {
+                throw new Error("No hay monto disponible para generar el pago");
+            }
+            const description = tipo === "total"
+                ? `Pago total reserva ${reserva.codigoReserva} (${reserva.destino})`
+                : `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
+
+            const resp = await fetch(`${apiBase}/create-payment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    gateway: "flow",
+                    amount,
+                    description,
+                    email: reserva.email,
+                    reservationId: reserva.id,
+                }),
+            });
+            if (!resp.ok) {
+                const detail = await resp.text().catch(() => "");
+                throw new Error(`Error al generar pago (${resp.status}) ${detail}`);
+            }
+            const data = await resp.json();
+            if (!data.url) throw new Error("Respuesta inválida del servidor de pagos");
+            window.open(data.url, "_blank");
+        } catch (e) {
+            setPayError(e.message || "No se pudo iniciar el pago");
+        } finally {
+            setPaying(false);
+        }
+    };
 
 	const formatDate = (date) => {
 		if (!date) return "No especificada";
@@ -67,11 +109,11 @@ function ConsultarReserva() {
 	};
 
 	const formatCurrency = (amount) => {
-		return new Intl.NumberFormat("es-CL", {
-			style: "currency",
-			currency: "CLP",
-		}).format(amount || 0);
-	};
+		   return new Intl.NumberFormat("es-CL", {
+			   style: "currency",
+			   currency: "CLP",
+		   }).format(amount || 0);
+	   };
 
 	const getEstadoBadge = (estado) => {
 		const estados = {
@@ -110,58 +152,58 @@ function ConsultarReserva() {
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
 			<div className="max-w-4xl mx-auto">
 				{/* Encabezado */}
-				<div className="text-center mb-8">
-					<h1 className="text-4xl font-bold text-slate-900 mb-2">
-						Consultar Reserva
-					</h1>
-					<p className="text-slate-600">
-						Ingresa tu código de reserva para ver los detalles de tu viaje
-					</p>
-				</div>
+				   <div className="text-center mb-8">
+					   <h1 className="text-4xl font-bold text-slate-900 mb-2">
+						   Consultar Reserva
+					   </h1>
+					   <p className="text-slate-600">
+						   Ingresa tu código de reserva para ver los detalles de tu viaje
+					   </p>
+				   </div>
 
-				{/* Buscador */}
-				<Card className="mb-8">
-					<CardHeader>
-						<CardTitle>Buscar por Código de Reserva</CardTitle>
-						<CardDescription>
-							El código tiene el formato: AR-YYYYMMDD-XXXX (Ej: AR-20251015-0001)
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div className="flex gap-4">
-							<div className="flex-1">
-								<Label htmlFor="codigo">Código de Reserva</Label>
-								<Input
-									id="codigo"
-									placeholder="AR-20251015-0001"
-									value={codigoReserva}
-									onChange={(e) => setCodigoReserva(e.target.value.toUpperCase())}
-									onKeyPress={(e) => e.key === "Enter" && buscarReserva()}
-									className="font-mono"
-								/>
-							</div>
-							<div className="flex items-end">
-								<Button
-									onClick={buscarReserva}
-									disabled={loading}
-									className="gap-2"
-								>
-									{loading ? (
-										<>
-											<Loader2 className="w-4 h-4 animate-spin" />
-											Buscando...
-										</>
-									) : (
-										<>
-											<Search className="w-4 h-4" />
-											Buscar
-										</>
-									)}
-								</Button>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+				   {/* Buscador */}
+				   <Card className="mb-8">
+					   <CardHeader>
+						   <CardTitle>Buscar por Código de Reserva</CardTitle>
+						   <CardDescription>
+							   El código tiene el formato: AR-YYYYMMDD-XXXX (Ej: AR-20251015-0001)
+						   </CardDescription>
+					   </CardHeader>
+					   <CardContent>
+						   <div className="flex gap-4">
+							   <div className="flex-1">
+								   <Label htmlFor="codigo">Código de Reserva</Label>
+								   <Input
+									   id="codigo"
+									   placeholder="AR-20251015-0001"
+									   value={codigoReserva}
+									   onChange={(e) => setCodigoReserva(e.target.value.toUpperCase())}
+									   onKeyPress={(e) => e.key === "Enter" && buscarReserva()}
+									   className="font-mono"
+								   />
+							   </div>
+							   <div className="flex items-end">
+								   <Button
+									   onClick={buscarReserva}
+									   disabled={loading}
+									   className="gap-2"
+								   >
+									   {loading ? (
+										   <>
+											   <Loader2 className="w-4 h-4 animate-spin" />
+											   Buscando...
+										   </>
+									   ) : (
+										   <>
+											   <Search className="w-4 h-4" />
+											   Buscar
+										   </>
+									   )}
+								   </Button>
+							   </div>
+						   </div>
+					   </CardContent>
+				   </Card>
 
 				{/* Error */}
 				{error && (
@@ -299,41 +341,84 @@ function ConsultarReserva() {
 							</CardContent>
 						</Card>
 
-						{/* Información de Pago */}
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<DollarSign className="w-5 h-5" />
-									Información de Pago
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">Precio Base</Label>
-										<p className="font-medium">{formatCurrency(reserva.precio)}</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Total a Pagar</Label>
-										<p className="font-medium text-lg text-green-600">
-											{formatCurrency(reserva.totalConDescuento)}
-										</p>
-									</div>
-									{reserva.abonoSugerido > 0 && (
-										<>
-											<div>
-												<Label className="text-muted-foreground">Abono Sugerido</Label>
-												<p className="font-medium">{formatCurrency(reserva.abonoSugerido)}</p>
-											</div>
-											<div>
-												<Label className="text-muted-foreground">Saldo Pendiente</Label>
-												<p className="font-medium">{formatCurrency(reserva.saldoPendiente)}</p>
-											</div>
-										</>
-									)}
-								</div>
-							</CardContent>
-						</Card>
+                {/* Información de Pago */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <DollarSign className="w-5 h-5" />
+                            Información de Pago
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-muted-foreground">Precio Base</Label>
+                                <p className="font-medium">{formatCurrency(reserva.precio)}</p>
+                            </div>
+                            <div>
+                                <Label className="text-muted-foreground">Total a Pagar</Label>
+                                <p className="font-medium text-lg text-green-600">
+                                    {formatCurrency(reserva.totalConDescuento)}
+                                </p>
+                            </div>
+                            {reserva.abonoSugerido > 0 && (
+                                <>
+                                    <div>
+                                        <Label className="text-muted-foreground">Abono Sugerido</Label>
+                                        <p className="font-medium">{formatCurrency(reserva.abonoSugerido)}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-muted-foreground">Saldo Pendiente</Label>
+                                        <p className="font-medium">{formatCurrency(reserva.saldoPendiente)}</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Acciones de pago si está pendiente */}
+                        {reserva.estadoPago !== "pagado" && (
+                            <div className="mt-6 space-y-3">
+                                {payError && (
+                                    <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded p-3 text-sm">
+                                        <AlertCircle className="w-4 h-4" />
+                                        <span>{payError}</span>
+                                    </div>
+                                )}
+                                <div className="flex flex-wrap gap-3">
+                                    <Button
+                                        onClick={() => continuarPago("abono")}
+                                        disabled={paying || !reserva.abonoSugerido}
+                                        className="bg-green-600 hover:bg-green-700 gap-2"
+                                    >
+                                        {paying ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Generando pago...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CreditCard className="w-4 h-4" />
+                                                Continuar con el pago (40%)
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => continuarPago("total")}
+                                        disabled={paying}
+                                        className="gap-2"
+                                    >
+                                        <CreditCard className="w-4 h-4" />
+                                        Pagar el 100%
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Se abrirá una ventana para completar el pago de forma segura con Flow.
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
 						{/* Servicios Adicionales */}
 						{(reserva.numeroVuelo || reserva.hotel || reserva.equipajeEspecial || reserva.sillaInfantil) && (

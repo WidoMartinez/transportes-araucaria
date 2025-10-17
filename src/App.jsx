@@ -236,6 +236,17 @@ function App() {
 			window.removeEventListener("popstate", syncFreight);
 		};
 	}, []);
+
+	// Sincronizar vista de Consulta por Código cuando cambia el hash o el historial
+	useEffect(() => {
+		const syncConsulta = () => setIsConsultaView(resolveIsConsultaView());
+		window.addEventListener("hashchange", syncConsulta);
+		window.addEventListener("popstate", syncConsulta);
+		return () => {
+			window.removeEventListener("hashchange", syncConsulta);
+			window.removeEventListener("popstate", syncConsulta);
+		};
+	}, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
