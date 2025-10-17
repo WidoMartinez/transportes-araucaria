@@ -215,23 +215,51 @@ function AdminReservas() {
 	const [mostrandoSugerencias, setMostrandoSugerencias] = useState(false);
 	const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
-	// Estados para columnas visibles
-	const [columnasVisibles, setColumnasVisibles] = useState({
-		id: true,
-		cliente: true,
-		contacto: true,
-		rut: false,
-		ruta: true,
-		fechaHora: true,
-		pasajeros: true,
-		total: true,
-		estado: true,
-		pago: true,
-		saldo: true,
-		esCliente: false,
-		numViajes: false,
-		acciones: true,
-	});
+    // Estados para columnas visibles (con persistencia)
+    const DEFAULT_COLUMNAS_VISIBLES = {
+        id: true,
+        cliente: true,
+        contacto: true,
+        rut: false,
+        ruta: true,
+        fechaHora: true,
+        pasajeros: true,
+        total: true,
+        estado: true,
+        pago: true,
+        saldo: true,
+        esCliente: false,
+        numViajes: false,
+        acciones: true,
+    };
+    const COLUMNAS_STORAGE_KEY = "adminReservas_columnasVisibles_v1";
+    const [columnasVisibles, setColumnasVisibles] = useState(DEFAULT_COLUMNAS_VISIBLES);
+
+    // Cargar configuración de columnas desde localStorage
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(COLUMNAS_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw) || {};
+                // Mezclar con los valores por defecto para evitar claves faltantes
+                const merged = { ...DEFAULT_COLUMNAS_VISIBLES };
+                for (const k of Object.keys(DEFAULT_COLUMNAS_VISIBLES)) {
+                    if (typeof parsed[k] === "boolean") merged[k] = parsed[k];
+                }
+                setColumnasVisibles(merged);
+            }
+        } catch {}
+    }, []);
+
+    // Guardar configuración de columnas cuando cambie
+    useEffect(() => {
+        try {
+            localStorage.setItem(
+                COLUMNAS_STORAGE_KEY,
+                JSON.stringify(columnasVisibles)
+            );
+        } catch {}
+    }, [columnasVisibles]);
 
 	// Estado para modal de historial de cliente
 	const [showHistorialDialog, setShowHistorialDialog] = useState(false);
