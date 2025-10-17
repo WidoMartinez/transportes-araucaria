@@ -1406,6 +1406,37 @@ function AdminReservas() {
 									</div>
 								))}
 							</div>
+							<div className="flex justify-end gap-2 mt-4">
+								<Button
+									variant="outline"
+									onClick={() => {
+										setColumnasVisibles(DEFAULT_COLUMNAS_VISIBLES);
+										try {
+											localStorage.setItem(
+												COLUMNAS_STORAGE_KEY,
+												JSON.stringify(DEFAULT_COLUMNAS_VISIBLES)
+											);
+										} catch {}
+									}}
+								>
+									Restablecer columnas
+								</Button>
+								<Button
+									onClick={() => {
+										try {
+											localStorage.setItem(
+												COLUMNAS_STORAGE_KEY,
+												JSON.stringify(columnasVisibles)
+											);
+											alert("Columnas guardadas");
+										} catch {
+											alert("No se pudo guardar la configuración");
+										}
+									}}
+								>
+									Guardar columnas
+								</Button>
+							</div>
 						</DialogContent>
 					</Dialog>
 				</CardHeader>
