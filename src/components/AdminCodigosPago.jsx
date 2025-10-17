@@ -46,8 +46,13 @@ function AdminCodigosPago() {
 	});
 
 	const backendUrl =
-		import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
-	const adminToken = import.meta.env.VITE_ADMIN_TOKEN || "admin-secret-token";
+		import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+	const adminToken =
+		import.meta.env.VITE_ADMIN_TOKEN ||
+		(typeof window !== "undefined"
+			? localStorage.getItem("adminToken") || ""
+			: "") ||
+		"admin-secret-token";
 
 	const formatCurrency = (value) => {
 		return new Intl.NumberFormat("es-CL", {
