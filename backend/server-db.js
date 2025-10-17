@@ -2521,6 +2521,57 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
         }
 });
 
+// Asignar vehículo y (opcional) conductor a una reserva
+app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { vehiculoId, conductorId } = req.body || {};
+
+        if (!vehiculoId || !Number.isFinite(Number(vehiculoId))) {
+            return res.status(400).json({ error: "vehiculoId es requerido y debe ser numérico" });
+        }
+
+        const reserva = await Reserva.findByPk(id);
+        if (!reserva) {
+            return res.status(404).json({ error: "Reserva no encontrada" });
+        }
+
+        const vehiculo = await Vehiculo.findByPk(Number(vehiculoId));
+        if (!vehiculo) {
+            return res.status(404).json({ error: "Vehículo no encontrado" });
+        }
+
+        let conductor = null;
+        if (conductorId) {
+            conductor = await Conductor.findByPk(Number(conductorId));
+            if (!conductor) {
+                return res.status(404).json({ error: "Conductor no encontrado" });
+            }
+        }
+
+        // Actualizar la reserva con datos legibles
+        const vehiculoLabel = `${vehiculo.tipo?.toUpperCase?.() || vehiculo.tipo || "Vehículo"} ${vehiculo.patente}`;
+
+        await reserva.update({
+            vehiculo: vehiculoLabel,
+            // Nota: si en el futuro se agregan columnas vehiculo_id / conductor_id,
+            // se deben incluir aquí también.
+            observaciones: conductor
+                ? `${reserva.observaciones ? reserva.observaciones + " | " : ""}Conductor asignado: ${conductor.nombre} (${conductor.rut})`
+                : reserva.observaciones,
+        });
+
+        return res.json({
+            success: true,
+            message: "Asignación actualizada",
+            reserva,
+        });
+    } catch (error) {
+        console.error("Error asignando vehículo/conductor:", error);
+        return res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
 // --- ENDPOINTS PARA GESTIONAR CLIENTES ---
 
 // Buscar cliente por email, RUT o nombre (autocompletado)
