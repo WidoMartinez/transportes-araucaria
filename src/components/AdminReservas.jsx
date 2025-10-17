@@ -3321,10 +3321,21 @@ function AdminReservas() {
 							<p>
 								<strong>Cliente:</strong> {selectedReserva?.nombre}
 							</p>
-							<p>
-								<strong>Ruta:</strong> {selectedReserva?.origen} →{" "}
-								{selectedReserva?.destino}
-							</p>
+                            <div className="flex items-center justify-between gap-3">
+                                <p className="m-0">
+                                    <strong>Ruta:</strong> {selectedReserva?.origen} → {selectedReserva?.destino}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setShowAsignarDialog(false);
+                                        handleEdit(selectedReserva);
+                                    }}
+                                >
+                                    Editar ruta
+                                </Button>
+                            </div>
 							<p>
 								<strong>Fecha:</strong>{" "}
 								{selectedReserva?.fecha
