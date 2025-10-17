@@ -1884,31 +1884,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			reservaExpress.codigoReserva
 		);
 
-		// Si la reserva fue creada con un código de pago, marcarlo como usado
-		if (datosReserva.codigoPago) {
-			try {
-				console.log(`📋 Marcando código de pago como usado: ${datosReserva.codigoPago}`);
-				const codigoPago = await CodigoPago.findOne({
-					where: { codigo: datosReserva.codigoPago }
-				});
-
-				if (codigoPago && codigoPago.estado === 'activo') {
-					const nuevosUsos = codigoPago.usosActuales + 1;
-					await codigoPago.update({
-						usosActuales: nuevosUsos,
-						estado: nuevosUsos >= codigoPago.usosMaximos ? 'usado' : 'activo',
-						reservaId: reservaExpress.id,
-						emailCliente: datosReserva.email,
-						fechaUso: new Date()
-					});
-					console.log(`✅ Código de pago actualizado: ${datosReserva.codigoPago}`);
-				}
-			} catch (codigoError) {
-				console.error('⚠️ Error actualizando código de pago:', codigoError.message);
-				// No fallar la reserva por esto
-			}
-		}
-
+		// Si la reserva fue creada con un código de pago, NO marcarlo como usado aquí.
+		// El código debe marcarse como usado SOLO después de la confirmación de pago,
+		// idealmente en el webhook de confirmación de Flow/Mercado Pago.
 		// Enviar notificación por email usando el PHP de Hostinger
 		try {
 			console.log("📧 Enviando email de notificación express...");
