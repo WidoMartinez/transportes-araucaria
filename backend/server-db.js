@@ -18,8 +18,13 @@ import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
+import addAbonoFlags from "./migrations/add-abono-flags.js";
+import setupAssociations from "./models/associations.js";
 
 dotenv.config();
+
+// Configurar asociaciones entre modelos para habilitar includes en consultas
+setupAssociations();
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -176,9 +181,9 @@ const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
 };
 
 const parseJsonArray = (raw) => {
-	if (!raw) return [];
-	let value = raw;
-	const seen = new Set();
+        if (!raw) return [];
+        let value = raw;
+        const seen = new Set();
 
 	while (typeof value === "string") {
 		const trimmed = value.trim();
@@ -196,7 +201,79 @@ const parseJsonArray = (raw) => {
 		}
 	}
 
-	return Array.isArray(value) ? value : [];
+        return Array.isArray(value) ? value : [];
+};
+
+// Determinar la clasificación del cliente según reservas completadas
+const obtenerClasificacionCliente = (reservasCompletadas) => {
+        if (!reservasCompletadas || reservasCompletadas <= 0) {
+                return null;
+        }
+        if (reservasCompletadas >= 10) {
+                return "Cliente Élite";
+        }
+        if (reservasCompletadas >= 5) {
+                return "Cliente Premium";
+        }
+        if (reservasCompletadas >= 3) {
+                return "Cliente Frecuente";
+        }
+        return "Cliente Activo";
+};
+
+// Actualizar métricas y clasificación del cliente después de modificar una reserva
+const actualizarResumenCliente = async (clienteId, transaction) => {
+        if (!clienteId) {
+                return null;
+        }
+
+        const reservasCliente = await Reserva.findAll({
+                where: { clienteId },
+                order: [["created_at", "DESC"]],
+                transaction,
+        });
+
+        if (!reservasCliente || reservasCliente.length === 0) {
+                return null;
+        }
+
+        const totalReservasCliente = reservasCliente.length;
+        const reservasCompletadas = reservasCliente.filter(
+                (reserva) => reserva.estado === "completada"
+        ).length;
+        const reservasPagadas = reservasCliente.filter(
+                (reserva) => reserva.estadoPago === "pagado"
+        ).length;
+        const totalGastado = reservasCliente
+                .filter((reserva) => reserva.estadoPago === "pagado")
+                .reduce((suma, reserva) => suma + parseFloat(reserva.totalConDescuento || 0), 0);
+
+        const clasificacion = obtenerClasificacionCliente(reservasCompletadas);
+
+        const cliente = await Cliente.findByPk(clienteId, { transaction });
+        if (!cliente) {
+                return null;
+        }
+
+        await cliente.update(
+                {
+                        esCliente:
+                                reservasPagadas > 0 ||
+                                reservasCompletadas > 0 ||
+                                cliente.esCliente,
+                        totalReservas: totalReservasCliente,
+                        totalPagos: reservasPagadas,
+                        totalGastado,
+                        clasificacion,
+                        ultimaReserva: reservasCliente[0]?.fecha || cliente.ultimaReserva,
+                        primeraReserva:
+                                reservasCliente[totalReservasCliente - 1]?.fecha ||
+                                cliente.primeraReserva,
+                },
+                { transaction }
+        );
+
+        return cliente;
 };
 
 // Función para generar código único de reserva
@@ -365,11 +442,12 @@ const initializeDatabase = async () => {
 		}
 		await syncDatabase(false); // false = no forzar recreación
 
-		// Ejecutar migraciones automáticas
-		await ejecutarMigracionCodigoReserva();
-		await addPaymentFields();
+                // Ejecutar migraciones automáticas
+                await ejecutarMigracionCodigoReserva();
+                await addPaymentFields();
+                await addAbonoFlags();
 
-		console.log("✅ Base de datos inicializada correctamente");
+                console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
 		process.exit(1);
@@ -1982,7 +2060,23 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		console.log(`Completando detalles para reserva ${id}:`, detalles);
 
 		// Buscar la reserva
-		const reserva = await Reserva.findByPk(id);
+                const reserva = await Reserva.findByPk(id, {
+                        include: [
+                                {
+                                        model: Cliente,
+                                        as: "cliente",
+                                        attributes: [
+                                                "id",
+                                                "nombre",
+                                                "email",
+                                                "telefono",
+                                                "esCliente",
+                                                "clasificacion",
+                                                "totalReservas",
+                                        ],
+                                },
+                        ],
+                });
 		if (!reserva) {
 			return res.status(404).json({
 				success: false,
@@ -2044,12 +2138,27 @@ app.get("/api/reservas", async (req, res) => {
 			if (fecha_hasta) whereClause.fecha[Op.lte] = fecha_hasta;
 		}
 
-		const { count, rows: reservas } = await Reserva.findAndCountAll({
-			where: whereClause,
-			order: [["created_at", "DESC"]],
-			limit: parseInt(limit),
-			offset: parseInt(offset),
-		});
+                const { count, rows: reservas } = await Reserva.findAndCountAll({
+                        where: whereClause,
+                        order: [["created_at", "DESC"]],
+                        limit: parseInt(limit),
+                        offset: parseInt(offset),
+                        include: [
+                                {
+                                        model: Cliente,
+                                        as: "cliente",
+                                        attributes: [
+                                                "id",
+                                                "nombre",
+                                                "email",
+                                                "telefono",
+                                                "esCliente",
+                                                "clasificacion",
+                                                "totalReservas",
+                                        ],
+                                },
+                        ],
+                });
 
 		res.json({
 			reservas,
@@ -2170,11 +2279,26 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 		
 		console.log(`🔍 Buscando reserva con código: ${codigo}`);
 		
-		const reserva = await Reserva.findOne({
-			where: {
-				codigoReserva: codigo.toUpperCase(),
-			},
-		});
+                const reserva = await Reserva.findOne({
+                        where: {
+                                codigoReserva: codigo.toUpperCase(),
+                        },
+                        include: [
+                                {
+                                        model: Cliente,
+                                        as: "cliente",
+                                        attributes: [
+                                                "id",
+                                                "nombre",
+                                                "email",
+                                                "telefono",
+                                                "esCliente",
+                                                "clasificacion",
+                                                "totalReservas",
+                                        ],
+                                },
+                        ],
+                });
 
 		if (!reserva) {
 			console.log(`❌ No se encontró reserva con código: ${codigo}`);
@@ -2267,61 +2391,134 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 // Actualizar estado de pago de una reserva (con transacciones para garantizar consistencia)
 app.put("/api/reservas/:id/pago", async (req, res) => {
-	// Usar transacción para asegurar que reserva y cliente se actualizan juntos
-	const transaction = await sequelize.transaction();
+        const transaction = await sequelize.transaction();
 
-	try {
-		const { id } = req.params;
-		const { estadoPago, metodoPago, referenciaPago } = req.body;
+        try {
+                const { id } = req.params;
+                const { estadoPago, metodoPago, referenciaPago, montoPagado, tipoPago } = req.body;
 
-		const reserva = await Reserva.findByPk(id, { transaction });
-		if (!reserva) {
-			await transaction.rollback();
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
+                const reserva = await Reserva.findByPk(id, { transaction });
+                if (!reserva) {
+                        await transaction.rollback();
+                        return res.status(404).json({ error: "Reserva no encontrada" });
+                }
 
-		await reserva.update(
-			{
-				estadoPago,
-				metodoPago: metodoPago || reserva.metodoPago,
-				referenciaPago: referenciaPago || reserva.referenciaPago,
-			},
-			{ transaction }
-		);
+                const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+                const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+                const saldoPendienteActual = parseFloat(
+                        reserva.saldoPendiente != null
+                                ? reserva.saldoPendiente
+                                : Math.max(totalReserva - abonoSugerido, 0)
+                );
+                const montoPago =
+                        montoPagado !== undefined && montoPagado !== null
+                                ? parsePositiveDecimal(montoPagado, "montoPagado", 0)
+                                : null;
 
-		// Si el pago es exitoso, actualizar el cliente en la misma transacción
-		if (estadoPago === "pagado" && reserva.clienteId) {
-			const cliente = await Cliente.findByPk(reserva.clienteId, {
-				transaction,
-			});
-			if (cliente) {
-				await cliente.update(
-					{
-						esCliente: true,
-						totalPagos: cliente.totalPagos + 1,
-						totalGastado:
-							parseFloat(cliente.totalGastado) +
-							parseFloat(reserva.totalConDescuento || 0),
-					},
-					{ transaction }
-				);
-			}
-		}
+                let nuevoEstadoPago = estadoPago || reserva.estadoPago;
+                let nuevoEstadoReserva = reserva.estado;
+                let nuevoSaldoPendiente = saldoPendienteActual;
+                let abonoPagado = reserva.abonoPagado;
+                let saldoPagado = reserva.saldoPagado;
+                const fechaPago = new Date();
 
-		// Confirmar transacción solo si todo fue exitoso
-		await transaction.commit();
+                if (montoPago && montoPago > 0) {
+                        if (tipoPago === "abono") {
+                                abonoPagado = true;
+                                nuevoSaldoPendiente = Math.max(totalReserva - montoPago, 0);
+                        } else if (tipoPago === "saldo") {
+                                saldoPagado = true;
+                                nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
+                        } else if (tipoPago === "total") {
+                                abonoPagado = true;
+                                saldoPagado = true;
+                                nuevoSaldoPendiente = 0;
+                        } else {
+                                nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
+                                if (!abonoPagado && montoPago >= abonoSugerido) {
+                                        abonoPagado = true;
+                                }
+                        }
+                } else if (tipoPago === "abono" && !abonoPagado) {
+                        abonoPagado = true;
+                } else if (tipoPago === "saldo") {
+                        saldoPagado = true;
+                        nuevoSaldoPendiente = 0;
+                } else if (tipoPago === "total") {
+                        abonoPagado = true;
+                        saldoPagado = true;
+                        nuevoSaldoPendiente = 0;
+                }
 
-		res.json({
-			success: true,
-			message: "Estado de pago actualizado",
-			reserva,
-		});
-	} catch (error) {
-		// Revertir todos los cambios si hay error
-		await transaction.rollback();
-		console.error("Error actualizando estado de pago:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
+                if (abonoPagado && ["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
+                        nuevoEstadoReserva = "confirmada";
+                }
+
+                if (saldoPagado || nuevoSaldoPendiente <= 0) {
+                        saldoPagado = true;
+                        nuevoSaldoPendiente = 0;
+                        nuevoEstadoReserva = "completada";
+                        nuevoEstadoPago = "pagado";
+                }
+
+                const payloadActualizacion = {
+                        estadoPago: nuevoEstadoPago,
+                        metodoPago: metodoPago || reserva.metodoPago,
+                        referenciaPago: referenciaPago || reserva.referenciaPago,
+                        saldoPendiente: nuevoSaldoPendiente,
+                        abonoPagado,
+                        saldoPagado,
+                        estado: nuevoEstadoReserva,
+                };
+
+                if (montoPago && montoPago > 0) {
+                        payloadActualizacion.pagoMonto = montoPago;
+                        payloadActualizacion.pagoFecha = fechaPago;
+                } else if (saldoPagado && !reserva.saldoPagado) {
+                        payloadActualizacion.pagoFecha = fechaPago;
+                }
+
+                await reserva.update(payloadActualizacion, { transaction });
+
+                let clienteActualizado = null;
+                if (reserva.clienteId) {
+                        clienteActualizado = await actualizarResumenCliente(
+                                reserva.clienteId,
+                                transaction
+                        );
+                }
+
+                await transaction.commit();
+
+                const reservaActualizada = await Reserva.findByPk(id, {
+                        include: [
+                                {
+                                        model: Cliente,
+                                        as: "cliente",
+                                        attributes: [
+                                                "id",
+                                                "nombre",
+                                                "email",
+                                                "telefono",
+                                                "esCliente",
+                                                "clasificacion",
+                                                "totalReservas",
+                                        ],
+                                },
+                        ],
+                });
+
+                res.json({
+                        success: true,
+                        message: "Estado de pago actualizado",
+                        reserva: reservaActualizada,
+                        cliente: clienteActualizado,
+                });
+        } catch (error) {
+                await transaction.rollback();
+                console.error("Error actualizando estado de pago:", error);
+                res.status(500).json({ error: "Error interno del servidor" });
+        }
 });
 
 // --- ENDPOINTS PARA GESTIONAR CLIENTES ---

@@ -108,15 +108,17 @@ function AdminReservas() {
 	});
 
 	// Formulario de edición
-	const [formData, setFormData] = useState({
-		estado: "",
-		estadoPago: "",
-		metodoPago: "",
-		referenciaPago: "",
-		observaciones: "",
-		numeroVuelo: "",
-		hotel: "",
-		equipajeEspecial: "",
+        const [formData, setFormData] = useState({
+                estado: "",
+                estadoPago: "",
+                metodoPago: "",
+                referenciaPago: "",
+                tipoPago: "",
+                montoPagado: "",
+                observaciones: "",
+                numeroVuelo: "",
+                hotel: "",
+                equipajeEspecial: "",
 		sillaInfantil: false,
 		horaRegreso: "",
 	});
@@ -334,8 +336,25 @@ function AdminReservas() {
 				throw new Error(`Error ${response.status}: ${response.statusText}`);
 			}
 
-			const data = await response.json();
-			setReservas(data.reservas || []);
+                        const data = await response.json();
+                        const reservasNormalizadas = (data.reservas || []).map((reserva) => {
+                                const cliente = reserva.cliente || {};
+                                return {
+                                        ...reserva,
+                                        esCliente:
+                                                reserva.esCliente !== undefined
+                                                        ? reserva.esCliente
+                                                        : cliente.esCliente || false,
+                                        clasificacionCliente: cliente.clasificacion || null,
+                                        totalReservas:
+                                                reserva.totalReservas !== undefined
+                                                        ? reserva.totalReservas
+                                                        : cliente.totalReservas || 0,
+                                        abonoPagado: Boolean(reserva.abonoPagado),
+                                        saldoPagado: Boolean(reserva.saldoPagado),
+                                };
+                        });
+                        setReservas(reservasNormalizadas);
 			setTotalPages(data.pagination?.totalPages || 1);
 			setTotalReservas(data.pagination?.total || 0);
 		} catch (error) {
@@ -377,17 +396,22 @@ function AdminReservas() {
 	}, [reservas, searchTerm, estadoPagoFiltro]);
 
 	// Abrir modal de edición
-	const handleEdit = (reserva) => {
-		setSelectedReserva(reserva);
-		setFormData({
-			estado: reserva.estado || "",
-			estadoPago: reserva.estadoPago || "",
-			metodoPago: reserva.metodoPago || "",
-			referenciaPago: reserva.referenciaPago || "",
-			observaciones: reserva.observaciones || "",
-			numeroVuelo: reserva.numeroVuelo || "",
-			hotel: reserva.hotel || "",
-			equipajeEspecial: reserva.equipajeEspecial || "",
+        const handleEdit = (reserva) => {
+                setSelectedReserva(reserva);
+                setFormData({
+                        estado: reserva.estado || "",
+                        estadoPago: reserva.estadoPago || "",
+                        metodoPago: reserva.metodoPago || "",
+                        referenciaPago: reserva.referenciaPago || "",
+                        tipoPago: "",
+                        montoPagado:
+                                reserva.pagoMonto !== undefined && reserva.pagoMonto !== null
+                                        ? String(reserva.pagoMonto)
+                                        : "",
+                        observaciones: reserva.observaciones || "",
+                        numeroVuelo: reserva.numeroVuelo || "",
+                        hotel: reserva.hotel || "",
+                        equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
 			horaRegreso: reserva.horaRegreso || "",
 		});
@@ -423,19 +447,30 @@ function AdminReservas() {
 				throw new Error("Error al actualizar el estado");
 			}
 
-			// Actualizar pago
-			const pagoResponse = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						estadoPago: formData.estadoPago,
-						metodoPago: formData.metodoPago,
-						referenciaPago: formData.referenciaPago,
-					}),
-				}
-			);
+                        const montoPagadoValue =
+                                formData.montoPagado !== ""
+                                        ? Number.parseFloat(formData.montoPagado)
+                                        : null;
+
+                        // Actualizar pago
+                        const pagoResponse = await fetch(
+                                `${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
+                                {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                                estadoPago: formData.estadoPago,
+                                                metodoPago: formData.metodoPago,
+                                                referenciaPago: formData.referenciaPago,
+                                                tipoPago: formData.tipoPago || null,
+                                                montoPagado:
+                                                        montoPagadoValue !== null &&
+                                                        !Number.isNaN(montoPagadoValue)
+                                                                ? montoPagadoValue
+                                                                : null,
+                                        }),
+                                }
+                        );
 
 			if (!pagoResponse.ok) {
 				throw new Error("Error al actualizar el pago");
@@ -1256,35 +1291,42 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.esCliente && (
 												<TableCell>
-													{reserva.clienteId ? (
-														<Badge
-															variant={
-																reserva.esCliente ? "default" : "secondary"
-															}
-															className="cursor-pointer"
-															onClick={() =>
-																toggleClienteManual(
-																	reserva.clienteId,
-																	reserva.esCliente
-																)
-															}
-														>
-															{reserva.esCliente ? (
-																<>
-																	<Star className="w-3 h-3 mr-1" />
-																	Cliente
-																</>
-															) : (
-																"Cotizador"
-															)}
-														</Badge>
-													) : (
-														<span className="text-xs text-muted-foreground">
-															-
-														</span>
-													)}
-												</TableCell>
-											)}
+                                                                                                {reserva.clienteId ? (
+                                                                                                        <Badge
+                                                                                                                variant={
+                                                                                                                        reserva.esCliente ? "default" : "secondary"
+                                                                                                                }
+                                                                                                                className="cursor-pointer"
+                                                                                                                onClick={() =>
+                                                                                                                        toggleClienteManual(
+                                                                                                                                reserva.clienteId,
+                                                                                                                                reserva.esCliente
+                                                                                                                        )
+                                                                                                                }
+                                                                                                        >
+                                                                                                                {reserva.esCliente ? (
+                                                                                                                        <>
+                                                                                                                                <Star className="w-3 h-3 mr-1" />
+                                                                                                                                Cliente
+                                                                                                                        </>
+                                                                                                                ) : (
+                                                                                                                        "Cotizador"
+                                                                                                                )}
+                                                                                                        </Badge>
+                                                                                                ) : (
+                                                                                                        <span className="text-xs text-muted-foreground">
+                                                                                                                -
+                                                                                                        </span>
+                                                                                                )}
+                                                                                                {reserva.clasificacionCliente && (
+                                                                                                        <div className="mt-1">
+                                                                                                                <Badge variant="outline">
+                                                                                                                        {reserva.clasificacionCliente}
+                                                                                                                </Badge>
+                                                                                                        </div>
+                                                                                                )}
+                                                                                        </TableCell>
+                                                                                )}
 											{columnasVisibles.numViajes && (
 												<TableCell>
 													{reserva.clienteId ? (
@@ -1492,21 +1534,35 @@ function AdminReservas() {
 								<h3 className="font-semibold text-lg mb-3">
 									Información del Cliente
 								</h3>
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">Nombre</Label>
-										<p className="font-medium">{selectedReserva.nombre}</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Email</Label>
-										<p className="font-medium">{selectedReserva.email}</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Teléfono</Label>
-										<p className="font-medium">{selectedReserva.telefono}</p>
-									</div>
-								</div>
-							</div>
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">Nombre</Label>
+                                                                                <p className="font-medium">{selectedReserva.nombre}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">Email</Label>
+                                                                                <p className="font-medium">{selectedReserva.email}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">Teléfono</Label>
+                                                                                <p className="font-medium">{selectedReserva.telefono}</p>
+                                                                        </div>
+                                                                        {(selectedReserva.cliente?.clasificacion ||
+                                                                                selectedReserva.clasificacionCliente) && (
+                                                                                <div>
+                                                                                        <Label className="text-muted-foreground">
+                                                                                                Clasificación
+                                                                                        </Label>
+                                                                                        <div className="mt-1">
+                                                                                                <Badge variant="outline">
+                                                                                                        {selectedReserva.cliente?.clasificacion ||
+                                                                                                                selectedReserva.clasificacionCliente}
+                                                                                                </Badge>
+                                                                                        </div>
+                                                                                </div>
+                                                                        )}
+                                                                </div>
+                                                        </div>
 
 							{/* Detalles del Viaje */}
 							<div>
@@ -1664,25 +1720,61 @@ function AdminReservas() {
 											{formatCurrency(selectedReserva.abonoSugerido)}
 										</p>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Saldo Pendiente
-										</Label>
-										<p
-											className={`font-bold ${
-												selectedReserva.saldoPendiente > 0
-													? "text-red-600"
-													: "text-green-600"
-											}`}
-										>
-											{formatCurrency(selectedReserva.saldoPendiente)}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Código de Descuento
-										</Label>
-										<p className="font-medium">
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">
+                                                                                        Saldo Pendiente
+                                                                                </Label>
+                                                                                <p
+                                                                                        className={`font-bold ${
+                                                                                                selectedReserva.saldoPendiente > 0
+                                                                                                        ? "text-red-600"
+                                                                                                        : "text-green-600"
+                                                                                        }`}
+                                                                                >
+                                                                                        {formatCurrency(selectedReserva.saldoPendiente)}
+                                                                                </p>
+                                                                        </div>
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">
+                                                                                        Estado del Abono
+                                                                                </Label>
+                                                                                <div className="mt-1">
+                                                                                        <Badge
+                                                                                                variant={
+                                                                                                        selectedReserva.abonoPagado
+                                                                                                                ? "default"
+                                                                                                                : "secondary"
+                                                                                                }
+                                                                                        >
+                                                                                                {selectedReserva.abonoPagado
+                                                                                                        ? "Abono pagado"
+                                                                                                        : "Pendiente"}
+                                                                                        </Badge>
+                                                                                </div>
+                                                                        </div>
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">
+                                                                                        Estado del Saldo
+                                                                                </Label>
+                                                                                <div className="mt-1">
+                                                                                        <Badge
+                                                                                                variant={
+                                                                                                        selectedReserva.saldoPagado
+                                                                                                                ? "default"
+                                                                                                                : "secondary"
+                                                                                                }
+                                                                                        >
+                                                                                                {selectedReserva.saldoPagado
+                                                                                                        ? "Saldo pagado"
+                                                                                                        : "Pendiente"}
+                                                                                        </Badge>
+                                                                                </div>
+                                                                        </div>
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">
+                                                                                        Código de Descuento
+                                                                                </Label>
+                                                                                <p className="font-medium">
 											{selectedReserva.codigoDescuento || "-"}
 										</p>
 									</div>
@@ -1888,24 +1980,60 @@ function AdminReservas() {
 								</Select>
 							</div>
 
-							{/* Referencia de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="referenciaPago">
-									Referencia de Pago (opcional)
-								</Label>
-								<Input
-									id="referenciaPago"
-									placeholder="ID de transacción, número de transferencia, etc."
-									value={formData.referenciaPago}
-									onChange={(e) =>
-										setFormData({ ...formData, referenciaPago: e.target.value })
-									}
-								/>
-							</div>
+                                                        {/* Referencia de Pago */}
+                                                        <div className="space-y-2">
+                                                                <Label htmlFor="referenciaPago">
+                                                                        Referencia de Pago (opcional)
+                                                                </Label>
+                                                                <Input
+                                                                        id="referenciaPago"
+                                                                        placeholder="ID de transacción, número de transferencia, etc."
+                                                                        value={formData.referenciaPago}
+                                                                        onChange={(e) =>
+                                                                                setFormData({ ...formData, referenciaPago: e.target.value })
+                                                                        }
+                                                                />
+                                                        </div>
 
-							{/* Observaciones */}
-							<div className="space-y-2">
-								<Label htmlFor="observaciones">Observaciones Internas</Label>
+                                                        {/* Tipo de pago registrado */}
+                                                        <div className="space-y-2">
+                                                                <Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
+                                                                <Select
+                                                                        value={formData.tipoPago}
+                                                                        onValueChange={(value) =>
+                                                                                setFormData({ ...formData, tipoPago: value })
+                                                                        }
+                                                                >
+                                                                        <SelectTrigger id="tipoPago">
+                                                                                <SelectValue placeholder="Selecciona el tipo de pago" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                                <SelectItem value="abono">Abono</SelectItem>
+                                                                                <SelectItem value="saldo">Saldo</SelectItem>
+                                                                                <SelectItem value="total">Pago total</SelectItem>
+                                                                        </SelectContent>
+                                                                </Select>
+                                                        </div>
+
+                                                        {/* Monto del pago */}
+                                                        <div className="space-y-2">
+                                                                <Label htmlFor="montoPagado">Monto Registrado (CLP)</Label>
+                                                                <Input
+                                                                        id="montoPagado"
+                                                                        type="number"
+                                                                        min="0"
+                                                                        step="1000"
+                                                                        placeholder="Ej: 40000"
+                                                                        value={formData.montoPagado}
+                                                                        onChange={(e) =>
+                                                                                setFormData({ ...formData, montoPagado: e.target.value })
+                                                                        }
+                                                                />
+                                                        </div>
+
+                                                        {/* Observaciones */}
+                                                        <div className="space-y-2">
+                                                                <Label htmlFor="observaciones">Observaciones Internas</Label>
 								<Textarea
 									id="observaciones"
 									placeholder="Notas internas sobre la reserva..."
@@ -1922,33 +2050,61 @@ function AdminReservas() {
 								<h4 className="font-semibold mb-2 text-blue-900">
 									Resumen Financiero
 								</h4>
-								<div className="space-y-1 text-sm">
-									<div className="flex justify-between">
-										<span>Total:</span>
-										<span className="font-semibold">
-											{formatCurrency(selectedReserva.totalConDescuento)}
-										</span>
-									</div>
-									<div className="flex justify-between">
-										<span>Abono Sugerido:</span>
-										<span className="font-semibold">
-											{formatCurrency(selectedReserva.abonoSugerido)}
-										</span>
-									</div>
-									<div className="flex justify-between border-t border-blue-300 pt-1">
-										<span className="font-semibold">Saldo Pendiente:</span>
-										<span
-											className={`font-bold ${
-												selectedReserva.saldoPendiente > 0
-													? "text-red-600"
-													: "text-green-600"
-											}`}
-										>
-											{formatCurrency(selectedReserva.saldoPendiente)}
-										</span>
-									</div>
-								</div>
-							</div>
+                                                                <div className="space-y-1 text-sm">
+                                                                        <div className="flex justify-between">
+                                                                                <span>Total:</span>
+                                                                                <span className="font-semibold">
+                                                                                        {formatCurrency(selectedReserva.totalConDescuento)}
+                                                                                </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                                <span>Abono Sugerido:</span>
+                                                                                <span className="font-semibold">
+                                                                                        {formatCurrency(selectedReserva.abonoSugerido)}
+                                                                                </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between border-t border-blue-300 pt-1">
+                                                                                <span className="font-semibold">Saldo Pendiente:</span>
+                                                                                <span
+                                                                                        className={`font-bold ${
+                                                                                                selectedReserva.saldoPendiente > 0
+                                                                                                        ? "text-red-600"
+                                                                                                        : "text-green-600"
+                                                                                        }`}
+                                                                                >
+                                                                                        {formatCurrency(selectedReserva.saldoPendiente)}
+                                                                                </span>
+                                                                        </div>
+                                                                        <div className="flex justify-between pt-1">
+                                                                                <span>Estado del Abono:</span>
+                                                                                <Badge
+                                                                                        variant={
+                                                                                                selectedReserva.abonoPagado
+                                                                                                        ? "default"
+                                                                                                        : "secondary"
+                                                                                        }
+                                                                                >
+                                                                                        {selectedReserva.abonoPagado
+                                                                                                ? "Abono pagado"
+                                                                                                : "Pendiente"}
+                                                                                </Badge>
+                                                                        </div>
+                                                                        <div className="flex justify-between">
+                                                                                <span>Estado del Saldo:</span>
+                                                                                <Badge
+                                                                                        variant={
+                                                                                                selectedReserva.saldoPagado
+                                                                                                        ? "default"
+                                                                                                        : "secondary"
+                                                                                        }
+                                                                                >
+                                                                                        {selectedReserva.saldoPagado
+                                                                                                ? "Saldo pagado"
+                                                                                                : "Pendiente"}
+                                                                                </Badge>
+                                                                        </div>
+                                                                </div>
+                                                        </div>
 
 							{/* Botones */}
 							<div className="flex justify-end gap-2 pt-4">
@@ -1999,17 +2155,22 @@ function AdminReservas() {
 									<p className="font-medium">
 										✓ Cliente existente seleccionado
 									</p>
-									<p className="text-sm">
-										{clienteSeleccionado.esCliente && (
-											<Badge variant="default" className="mr-2">
-												Cliente
-											</Badge>
-										)}
-										{clienteSeleccionado.totalReservas > 0 && (
-											<span className="text-xs">
-												{clienteSeleccionado.totalReservas} reserva(s) previa(s)
-											</span>
-										)}
+                                                                        <p className="text-sm">
+                                                                                {clienteSeleccionado.esCliente && (
+                                                                                        <Badge variant="default" className="mr-2">
+                                                                                                Cliente
+                                                                                        </Badge>
+                                                                                )}
+                                                                                {clienteSeleccionado.clasificacion && (
+                                                                                        <Badge variant="outline" className="mr-2">
+                                                                                                {clienteSeleccionado.clasificacion}
+                                                                                        </Badge>
+                                                                                )}
+                                                                                {clienteSeleccionado.totalReservas > 0 && (
+                                                                                        <span className="text-xs">
+                                                                                                {clienteSeleccionado.totalReservas} reserva(s) previa(s)
+                                                                                        </span>
+                                                                                )}
 									</p>
 								</div>
 							)}
@@ -2546,21 +2707,33 @@ function AdminReservas() {
 											</p>
 										</div>
 									)}
-									<div>
-										<Label className="text-muted-foreground">Tipo</Label>
-										<div>
-											{historialCliente.cliente.esCliente ? (
-												<Badge variant="default">
-													<Star className="w-3 h-3 mr-1" />
-													Cliente
-												</Badge>
-											) : (
-												<Badge variant="secondary">Cotizador</Badge>
-											)}
-										</div>
-									</div>
-								</div>
-							</div>
+                                                                        <div>
+                                                                                <Label className="text-muted-foreground">Tipo</Label>
+                                                                                <div>
+                                                                                        {historialCliente.cliente.esCliente ? (
+                                                                                                <Badge variant="default">
+                                                                                                        <Star className="w-3 h-3 mr-1" />
+                                                                                                        Cliente
+                                                                                                </Badge>
+                                                                                        ) : (
+                                                                                                <Badge variant="secondary">Cotizador</Badge>
+                                                                                        )}
+                                                                                </div>
+                                                                        </div>
+                                                                        {historialCliente.cliente.clasificacion && (
+                                                                                <div>
+                                                                                        <Label className="text-muted-foreground">
+                                                                                                Clasificación
+                                                                                        </Label>
+                                                                                        <div>
+                                                                                                <Badge variant="outline">
+                                                                                                        {historialCliente.cliente.clasificacion}
+                                                                                                </Badge>
+                                                                                        </div>
+                                                                                </div>
+                                                                        )}
+                                                                </div>
+                                                        </div>
 
 							{/* Estadísticas */}
 							<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
