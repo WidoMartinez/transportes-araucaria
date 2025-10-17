@@ -2889,6 +2889,7 @@ app.get("/api/destinos", async (req, res) => {
         const { activos } = req.query;
         const where = {};
         if (activos === "true") where.activo = true;
+        if (activos === "false") where.activo = false;
         const destinos = await Destino.findAll({ where, order: [["orden", "ASC"], ["nombre", "ASC"]] });
         res.json({ destinos });
     } catch (error) {
@@ -2924,6 +2925,49 @@ app.post("/api/destinos", authAdmin, async (req, res) => {
         res.status(201).json({ success: true, destino, existed: false });
     } catch (error) {
         console.error("Error creando destino:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// Actualizar destino (activar, precios, nombre, etc.)
+app.put("/api/destinos/:id", authAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const destino = await Destino.findByPk(id);
+        if (!destino) {
+            return res.status(404).json({ error: "Destino no encontrado" });
+        }
+        const {
+            nombre,
+            precioIda,
+            precioVuelta,
+            precioIdaVuelta,
+            activo,
+            descripcion,
+            tiempo,
+            imagen,
+            maxPasajeros,
+            minHorasAnticipacion,
+            orden,
+        } = req.body || {};
+
+        await destino.update({
+            nombre: nombre !== undefined ? nombre : destino.nombre,
+            precioIda: precioIda !== undefined ? Number(precioIda) : destino.precioIda,
+            precioVuelta: precioVuelta !== undefined ? Number(precioVuelta) : destino.precioVuelta,
+            precioIdaVuelta: precioIdaVuelta !== undefined ? Number(precioIdaVuelta) : destino.precioIdaVuelta,
+            activo: activo !== undefined ? Boolean(activo) : destino.activo,
+            descripcion: descripcion !== undefined ? descripcion : destino.descripcion,
+            tiempo: tiempo !== undefined ? tiempo : destino.tiempo,
+            imagen: imagen !== undefined ? imagen : destino.imagen,
+            maxPasajeros: maxPasajeros !== undefined ? Number(maxPasajeros) : destino.maxPasajeros,
+            minHorasAnticipacion: minHorasAnticipacion !== undefined ? Number(minHorasAnticipacion) : destino.minHorasAnticipacion,
+            orden: orden !== undefined ? Number(orden) : destino.orden,
+        });
+
+        res.json({ success: true, destino });
+    } catch (error) {
+        console.error("Error actualizando destino:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
