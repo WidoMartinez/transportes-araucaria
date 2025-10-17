@@ -195,7 +195,7 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(50),
 			allowNull: true,
 			field: "pago_gateway",
-			comment: "Gateway de pago utilizado (mercadopago, flow, etc)",
+			comment: "Gateway de pago utilizado (flow, transferencia, efectivo, etc)",
 		},
 		pagoMonto: {
 			type: DataTypes.DECIMAL(10, 2),

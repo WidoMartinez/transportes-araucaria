@@ -17,7 +17,6 @@ import {
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
-import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
@@ -401,13 +400,6 @@ function Hero({
 				title: "Flow",
 				subtitle: "Webpay, tarjetas y transferencia",
 				image: flow,
-			},
-			{
-				id: "mercadopago",
-				gateway: "mercadopago",
-				title: "Mercado Pago",
-				subtitle: "Tarjetas y billetera Mercado Pago",
-				image: merPago,
 			},
 		],
 		[]

@@ -9,7 +9,6 @@ import { Checkbox } from "./ui/checkbox";
 import { LoaderCircle, Calendar, Users } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
-import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
 
 function HeroExpress({
@@ -299,13 +298,6 @@ function HeroExpress({
 				title: "Flow",
 				subtitle: "Webpay • Tarjetas • Transferencia",
 				image: flow,
-			},
-			{
-				id: "mercadopago",
-				gateway: "mercadopago",
-				title: "Mercado Pago",
-				subtitle: "Tarjetas • Billetera digital",
-				image: merPago,
 			},
 		],
 		[]

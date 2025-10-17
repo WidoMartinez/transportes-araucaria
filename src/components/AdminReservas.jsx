@@ -1880,7 +1880,6 @@ function AdminReservas() {
 										<SelectValue placeholder="Seleccionar método" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="mercadopago">MercadoPago</SelectItem>
 										<SelectItem value="flow">Flow</SelectItem>
 										<SelectItem value="transferencia">Transferencia</SelectItem>
 										<SelectItem value="efectivo">Efectivo</SelectItem>
@@ -2456,7 +2455,6 @@ function AdminReservas() {
 												<SelectItem value="transferencia">
 													Transferencia
 												</SelectItem>
-												<SelectItem value="mercadopago">MercadoPago</SelectItem>
 												<SelectItem value="flow">Flow</SelectItem>
 											</SelectContent>
 										</Select>
