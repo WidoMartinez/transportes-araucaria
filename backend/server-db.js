@@ -3435,26 +3435,29 @@ app.delete("/api/reservas/:id", async (req, res) => {
 
 // Cambiar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { estado } = req.body;
+    try {
+        const { id } = req.params;
+        const { estado, observaciones } = req.body || {};
 
-		const reserva = await Reserva.findByPk(id);
-		if (!reserva) {
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
+        const reserva = await Reserva.findByPk(id);
+        if (!reserva) {
+            return res.status(404).json({ error: "Reserva no encontrada" });
+        }
 
-		await reserva.update({ estado });
+        await reserva.update({
+            estado,
+            observaciones: observaciones !== undefined ? observaciones : reserva.observaciones,
+        });
 
-		res.json({
-			success: true,
-			message: "Estado actualizado",
-			reserva,
-		});
-	} catch (error) {
-		console.error("Error actualizando estado:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
+        res.json({
+            success: true,
+            message: "Estado actualizado",
+            reserva,
+        });
+    } catch (error) {
+        console.error("Error actualizando estado:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
 });
 
 // Endpoint para generar pagos desde el frontend
