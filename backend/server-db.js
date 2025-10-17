@@ -2533,6 +2533,26 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
         }
 });
 
+// Actualizar ruta (origen/destino) de una reserva
+app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { origen, destino } = req.body || {};
+        if (!origen || !destino) {
+            return res.status(400).json({ error: "Origen y Destino son requeridos" });
+        }
+        const reserva = await Reserva.findByPk(id);
+        if (!reserva) {
+            return res.status(404).json({ error: "Reserva no encontrada" });
+        }
+        await reserva.update({ origen, destino });
+        res.json({ success: true, message: "Ruta actualizada", reserva });
+    } catch (error) {
+        console.error("Error actualizando ruta de reserva:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
 // Asignar vehículo y (opcional) conductor a una reserva
 app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
     try {

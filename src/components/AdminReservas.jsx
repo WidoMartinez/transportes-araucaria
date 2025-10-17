@@ -77,6 +77,11 @@ function AdminReservas() {
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
 	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [saving, setSaving] = useState(false);
+	// Estados para editar ruta con 'otro'
+	const [editOrigenEsOtro, setEditOrigenEsOtro] = useState(false);
+	const [editDestinoEsOtro, setEditDestinoEsOtro] = useState(false);
+	const [editOtroOrigen, setEditOtroOrigen] = useState("");
+	const [editOtroDestino, setEditOtroDestino] = useState("");
 	
 	// Estados para asignación de vehículo/conductor
 	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
@@ -536,9 +541,18 @@ function AdminReservas() {
                         equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
 			horaRegreso: reserva.horaRegreso || "",
-		});
-		setShowEditDialog(true);
-	};
+                        origen: reserva.origen || "",
+                        destino: reserva.destino || "",
+                });
+		// Reset edición de ruta
+		setEditOrigenEsOtro(false);
+		setEditDestinoEsOtro(false);
+		setEditOtroOrigen("");
+		setEditOtroDestino("");
+		// Cargar catálogo de destinos para selects
+		fetchDestinosCatalog();
+                setShowEditDialog(true);
+        };
 
 	// Abrir modal de detalles
 	const handleViewDetails = async (reserva) => {
@@ -571,6 +585,43 @@ function AdminReservas() {
 
 		setSaving(true);
 		try {
+			// Actualizar ruta si cambió
+			const origenFinalEdit = editOrigenEsOtro ? (editOtroOrigen || formData.origen) : formData.origen;
+			const destinoFinalEdit = editDestinoEsOtro ? (editOtroDestino || formData.destino) : formData.destino;
+			if ((origenFinalEdit && origenFinalEdit !== selectedReserva.origen) || (destinoFinalEdit && destinoFinalEdit !== selectedReserva.destino)) {
+				// Crear destino si es 'otro' y no existe
+				if (editDestinoEsOtro && destinoFinalEdit && !destinosCatalog.includes(destinoFinalEdit)) {
+					try {
+						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						await fetch(`${apiUrl}/api/destinos`, {
+							method: "POST",
+							headers: { "Content-Type": "application/json", Authorization: `Bearer ${ADMIN_TOKEN}` },
+							body: JSON.stringify({ nombre: destinoFinalEdit, activo: false, precioIda: 0, precioVuelta: 0, precioIdaVuelta: 0 }),
+						});
+					} catch {}
+				}
+				// También registrar origen si es 'otro' y no existe
+				if (editOrigenEsOtro && origenFinalEdit && !destinosCatalog.includes(origenFinalEdit)) {
+					try {
+						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						await fetch(`${apiUrl}/api/destinos`, {
+							method: "POST",
+							headers: { "Content-Type": "application/json", Authorization: `Bearer ${ADMIN_TOKEN}` },
+							body: JSON.stringify({ nombre: origenFinalEdit, activo: false, precioIda: 0, precioVuelta: 0, precioIdaVuelta: 0 }),
+						});
+					} catch {}
+				}
+				// Actualizar ruta
+				const ADMIN_TOKEN = localStorage.getItem("adminToken");
+				const rutaResp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/ruta`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json", Authorization: `Bearer ${ADMIN_TOKEN}` },
+					body: JSON.stringify({ origen: origenFinalEdit, destino: destinoFinalEdit }),
+				});
+				if (!rutaResp.ok) {
+					throw new Error("Error al actualizar la ruta");
+				}
+			}
 			// Actualizar estado
 			const estadoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
@@ -2097,8 +2148,8 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-4">
-							{/* Información del Cliente (solo lectura) */}
-							<div className="bg-muted p-4 rounded-lg">
+						{/* Información del Cliente (solo lectura) */}
+						<div className="bg-muted p-4 rounded-lg">
 								<h4 className="font-semibold mb-2">Cliente</h4>
 								<p className="text-sm">
 									<strong>Nombre:</strong> {selectedReserva.nombre}
@@ -3296,6 +3347,56 @@ function AdminReservas() {
 										))}
 								</SelectContent>
 							</Select>
+						</div>
+
+						{/* Ruta */}
+						<div className="space-y-2">
+							<h4 className="font-semibold">Ruta</h4>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-1">
+									<Label>Origen</Label>
+									{!editOrigenEsOtro ? (
+										<select
+											className="border rounded-md h-10 px-3 w-full"
+											value={formData.origen || ""}
+											onChange={(e) => setFormData({ ...formData, origen: e.target.value })}
+										>
+											<option value="">Seleccionar origen</option>
+											<option value="Aeropuerto La Araucanía">Aeropuerto La Araucanía</option>
+											{destinosCatalog.map((n) => (
+												<option key={n} value={n}>{n}</option>
+											))}
+										</select>
+									) : (
+										<Input placeholder="Especificar origen" value={editOtroOrigen} onChange={(e) => setEditOtroOrigen(e.target.value)} />
+									)}
+									<label className="text-xs text-muted-foreground inline-flex items-center gap-2 cursor-pointer">
+										<input type="checkbox" checked={editOrigenEsOtro} onChange={(e) => setEditOrigenEsOtro(e.target.checked)} />
+										Origen no está en la lista
+									</label>
+								</div>
+								<div className="space-y-1">
+									<Label>Destino</Label>
+									{!editDestinoEsOtro ? (
+										<select
+											className="border rounded-md h-10 px-3 w-full"
+											value={formData.destino || ""}
+											onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
+										>
+											<option value="">Seleccionar destino</option>
+											{destinosCatalog.map((n) => (
+												<option key={n} value={n}>{n}</option>
+											))}
+										</select>
+									) : (
+										<Input placeholder="Especificar destino" value={editOtroDestino} onChange={(e) => setEditOtroDestino(e.target.value)} />
+									)}
+									<label className="text-xs text-muted-foreground inline-flex items-center gap-2 cursor-pointer">
+										<input type="checkbox" checked={editDestinoEsOtro} onChange={(e) => setEditDestinoEsOtro(e.target.checked)} />
+										Destino no está en la lista (se agregará como inactivo)
+									</label>
+								</div>
+							</div>
 						</div>
 
 						{/* Enviar notificación */}
