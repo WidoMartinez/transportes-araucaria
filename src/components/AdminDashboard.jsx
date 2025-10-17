@@ -5,6 +5,7 @@ import AdminCodigosMejorado from "./AdminCodigosMejorado";
 import AdminReservas from "./AdminReservas";
 import AdminVehiculos from "./AdminVehiculos";
 import AdminConductores from "./AdminConductores";
+import AdminCodigosPago from "./AdminCodigosPago";
 
 function AdminDashboard() {
   const [active, setActive] = useState(() => {
@@ -52,6 +53,10 @@ function AdminDashboard() {
             className={`px-3 py-2 rounded border ${active === "codigos-mejorado" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("codigos-mejorado")}
           >Códigos (Mejorado)</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "codigos-pago" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("codigos-pago")}
+          >Códigos de Pago</button>
         </div>
 
         {active === "reservas" ? (
@@ -64,6 +69,8 @@ function AdminDashboard() {
           <AdminCodigos />
         ) : active === "codigos-mejorado" ? (
           <AdminCodigosMejorado />
+        ) : active === "codigos-pago" ? (
+          <AdminCodigosPago />
         ) : (
           <AdminPricing />
         )}
