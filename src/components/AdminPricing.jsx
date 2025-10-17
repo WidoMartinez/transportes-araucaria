@@ -130,6 +130,25 @@ function AdminPricing() {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
+    // Gestión de destinos inactivos
+    const [inactiveDestinos, setInactiveDestinos] = useState([]);
+    const [loadingInactive, setLoadingInactive] = useState(false);
+    const [savingRowId, setSavingRowId] = useState(null);
+
+    const fetchInactiveDestinos = useCallback(async () => {
+        try {
+            setLoadingInactive(true);
+            const resp = await fetch(`${API_BASE_URL}/api/destinos?activos=false`);
+            if (resp.ok) {
+                const data = await resp.json();
+                setInactiveDestinos(Array.isArray(data.destinos) ? data.destinos : []);
+            }
+        } catch (e) {
+            setInactiveDestinos([]);
+        } finally {
+            setLoadingInactive(false);
+        }
+    }, []);
 
 	const fetchPricing = useCallback(async () => {
 		setLoading(true);
@@ -207,7 +226,8 @@ function AdminPricing() {
 
 	useEffect(() => {
 		fetchPricing();
-	}, [fetchPricing]);
+		fetchInactiveDestinos();
+	}, [fetchPricing, fetchInactiveDestinos]);
 
 	useEffect(() => {
 		if (success) {
@@ -848,6 +868,108 @@ function AdminPricing() {
 						</p>
 					)}
 				</header>
+
+                {/* Sección de Destinos Inactivos */}
+                <section className="mb-10 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-semibold text-white">🗂️ Destinos Inactivos</h2>
+                        <button
+                            type="button"
+                            onClick={fetchInactiveDestinos}
+                            className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 text-sm hover:bg-slate-700"
+                        >
+                            {loadingInactive ? "Cargando..." : "Refrescar"}
+                        </button>
+                    </div>
+                    {loadingInactive ? (
+                        <p className="text-slate-400 text-sm">Cargando destinos inactivos…</p>
+                    ) : inactiveDestinos.length === 0 ? (
+                        <p className="text-slate-400 text-sm">No hay destinos inactivos para configurar.</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="text-left border-b border-slate-800">
+                                        <th className="py-2 pr-2">Nombre</th>
+                                        <th className="py-2 pr-2">Precio Ida</th>
+                                        <th className="py-2 pr-2">Precio Vuelta</th>
+                                        <th className="py-2 pr-2">Ida y Vuelta</th>
+                                        <th className="py-2 pr-2">Activo</th>
+                                        <th className="py-2 pr-2 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {inactiveDestinos.map((d) => (
+                                        <tr key={d.id} className="border-b border-slate-800">
+                                            <td className="py-2 pr-2">
+                                                <input
+                                                    className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1"
+                                                    value={d.nombre}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, nombre: e.target.value } : x))}
+                                                />
+                                            </td>
+                                            <td className="py-2 pr-2">
+                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIda || 0}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIda: Number(e.target.value) || 0 } : x))}
+                                                />
+                                            </td>
+                                            <td className="py-2 pr-2">
+                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioVuelta || 0}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioVuelta: Number(e.target.value) || 0 } : x))}
+                                                />
+                                            </td>
+                                            <td className="py-2 pr-2">
+                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIdaVuelta || 0}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIdaVuelta: Number(e.target.value) || 0 } : x))}
+                                                />
+                                            </td>
+                                            <td className="py-2 pr-2">
+                                                <input type="checkbox" checked={Boolean(d.activo)} onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, activo: e.target.checked } : x))} />
+                                            </td>
+                                            <td className="py-2 pr-2 text-right">
+                                                <button
+                                                    type="button"
+                                                    disabled={savingRowId === d.id}
+                                                    onClick={async () => {
+                                                        try {
+                                                            setSavingRowId(d.id);
+                                                            const ADMIN_TOKEN = localStorage.getItem("adminToken");
+                                                            const resp = await fetch(`${API_BASE_URL}/api/destinos/${d.id}`, {
+                                                                method: "PUT",
+                                                                headers: {
+                                                                    "Content-Type": "application/json",
+                                                                    Authorization: `Bearer ${ADMIN_TOKEN}`,
+                                                                },
+                                                                body: JSON.stringify({
+                                                                    nombre: d.nombre,
+                                                                    precioIda: d.precioIda,
+                                                                    precioVuelta: d.precioVuelta,
+                                                                    precioIdaVuelta: d.precioIdaVuelta,
+                                                                    activo: d.activo,
+                                                                }),
+                                                            });
+                                                            if (resp.ok) {
+                                                                await fetchInactiveDestinos();
+                                                                await fetchPricing();
+                                                            } else {
+                                                                alert("No se pudo guardar el destino");
+                                                            }
+                                                        } finally {
+                                                            setSavingRowId(null);
+                                                        }
+                                                    }}
+                                                    className="rounded-md border border-green-600 bg-green-700 px-3 py-1 text-sm hover:bg-green-600 disabled:opacity-60"
+                                                >
+                                                    {savingRowId === d.id ? "Guardando…" : (d.activo ? "Guardar" : "Dar de alta")}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
 
 				<form onSubmit={handleSubmit} className="space-y-10">
 					{/* Sección de Descuentos Globales */}
