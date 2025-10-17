@@ -3493,9 +3493,15 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
             return res.status(404).json({ error: "Reserva no encontrada" });
         }
 
+        // Permitir dejar observaciones vacías: si viene "" lo convertimos a NULL
+        const obsValue =
+            observaciones !== undefined
+                ? (typeof observaciones === "string" && observaciones.trim() === "" ? null : observaciones)
+                : reserva.observaciones;
+
         await reserva.update({
             estado,
-            observaciones: observaciones !== undefined ? observaciones : reserva.observaciones,
+            observaciones: obsValue,
         });
 
         res.json({
