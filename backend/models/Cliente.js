@@ -36,7 +36,6 @@ const Cliente = sequelize.define(
 		email: {
 			type: DataTypes.STRING(255),
 			allowNull: false,
-			unique: true,
 			comment: "Email principal del cliente",
 		},
 		telefono: {
