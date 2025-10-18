@@ -34,6 +34,7 @@ import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
+import PagarConCodigo from "./components/PagarConCodigo";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -177,10 +178,17 @@ const resolveIsConsultaView = () => {
 	return hash === "#consultar-reserva" || hash === "#consulta";
 };
 
+// Resolver si la URL es para pagar con código
+const resolveIsPayCodeView = () => {
+    const hash = window.location.hash.toLowerCase();
+    return hash === "#pagar-con-codigo" || hash === "#pago-codigo";
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
+    const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -247,6 +255,17 @@ function App() {
 			window.removeEventListener("popstate", syncConsulta);
 		};
 	}, []);
+
+    // Sincronizar vista de pago con código
+    useEffect(() => {
+        const syncPayCode = () => setIsPayCodeView(resolveIsPayCodeView());
+        window.addEventListener("hashchange", syncPayCode);
+        window.addEventListener("popstate", syncPayCode);
+        return () => {
+            window.removeEventListener("hashchange", syncPayCode);
+            window.removeEventListener("popstate", syncPayCode);
+        };
+    }, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
@@ -1435,6 +1454,10 @@ function App() {
 	if (isConsultaView) {
 		return <ConsultarReserva />;
 	}
+
+    if (isPayCodeView) {
+        return <PagarConCodigo />;
+    }
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
