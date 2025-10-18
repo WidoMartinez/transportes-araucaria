@@ -27,9 +27,9 @@ import {
 	CreditCard,
 } from "lucide-react";
 
-const API_URL =
-	import.meta.env.VITE_API_URL ||
-	"https://transportes-araucania-backend.onrender.com";
+import { getBackendUrl } from "../lib/backend";
+
+const API_URL = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
 
 function ConsultarReserva() {
 	const [codigoReserva, setCodigoReserva] = useState("");
@@ -75,9 +75,7 @@ function ConsultarReserva() {
 		try {
 			setPaying(true);
 			setPayError(null);
-			const apiBase =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucania-backend.onrender.com";
+			const apiBase = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
 			const amount =
 				tipo === "total"
 					? Number(reserva.totalConDescuento || 0)

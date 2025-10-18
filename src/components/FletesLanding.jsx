@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/logo.png";
 import camionford from "../assets/camionford.png";
+import { getBackendUrl } from "../lib/backend";
 
 const initialFormState = {
 	nombre: "",
@@ -141,9 +142,7 @@ Tipo: Flete Nacional`,
 			}
 
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				await fetch(`${apiUrl}/enviar-reserva`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },

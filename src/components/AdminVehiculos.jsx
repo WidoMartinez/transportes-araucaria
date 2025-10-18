@@ -36,6 +36,7 @@ import {
 	Car,
 	AlertCircle,
 } from "lucide-react";
+import { getBackendUrl } from "../lib/backend";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -47,8 +48,7 @@ import {
 	AlertDialogTitle,
 } from "./ui/alert-dialog";
 
-const API_BASE_URL =
-	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function AdminVehiculos() {
 	const [vehiculos, setVehiculos] = useState([]);

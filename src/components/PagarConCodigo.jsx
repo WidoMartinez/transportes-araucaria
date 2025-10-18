@@ -7,7 +7,7 @@ import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
 import { LoaderCircle, CheckCircle, AlertCircle } from "lucide-react";
 import flow from "../assets/formasPago/flow.png";
-import merPago from "../assets/formasPago/mp.png";
+import { getBackendUrl } from "../lib/backend";
 
 // Componente para pagar usando un código de pago estandarizado
 function PagarConCodigo() {
@@ -30,8 +30,7 @@ function PagarConCodigo() {
 	const [procesando, setProcesando] = useState(false);
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
-	const backendUrl =
-		import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+	const backendUrl = getBackendUrl();
 
 	const formatCurrency = (value) => {
 		return new Intl.NumberFormat("es-CL", {
@@ -170,146 +169,6 @@ function PagarConCodigo() {
     }
   };
 
-	// Procesar el pago
-	const procesarPago = async (gateway) => {
-		if (!validarDatos()) {
-			return;
-		}
-
-		setProcesando(true);
-		setLoadingGateway(gateway);
-		setError("");
-
-		try {
-			// 1. Iniciar el pago según el gateway, pasando los datos necesarios para la reserva
-			let paymentUrl = null;
-
-			const reservaPayload = {
-				nombre: formData.nombre,
-				email: formData.email,
-				telefono: formData.telefono,
-				origen: codigoValidado.origen,
-				destino: codigoValidado.destino,
-				fecha: new Date().toISOString().split("T")[0], // Fecha actual por defecto
-				pasajeros: codigoValidado.pasajeros,
-				precio: codigoValidado.monto,
-				totalConDescuento: codigoValidado.monto,
-				vehiculo: codigoValidado.vehiculo || "Por asignar",
-				numeroVuelo: formData.numeroVuelo,
-				hotel: formData.hotel,
-				mensaje: formData.mensaje,
-				idaVuelta: codigoValidado.idaVuelta,
-				codigoPago: codigoValidado.codigo,
-				source: "codigo_pago",
-			};
-
-			if (gateway === "mercadopago") {
-				const paymentResponse = await fetch(
-					`${backendUrl}/api/create-preference`,
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							title: `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`,
-							price: parseFloat(codigoValidado.monto),
-							email: formData.email,
-							reservaData: reservaPayload, // pasar datos de reserva para crearla tras pago exitoso
-						}),
-					}
-				);
-
-				const paymentData = await paymentResponse.json();
-
-				if (paymentData.init_point) {
-					paymentUrl = paymentData.init_point;
-				}
-			} else if (gateway === "flow") {
-				const paymentResponse = await fetch(`${backendUrl}/api/create-flow`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						amount: parseFloat(codigoValidado.monto),
-						subject: `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`,
-						email: formData.email,
-						reservaData: reservaPayload, // pasar datos de reserva para crearla tras pago exitoso
-					}),
-				});
-
-				const paymentData = await paymentResponse.json();
-
-				if (paymentData.url) {
-					paymentUrl = paymentData.url + "?token=" + paymentData.token;
-				}
-			}
-
-			if (paymentUrl) {
-				// Redirigir al gateway de pago
-				window.location.href = paymentUrl;
-			} else {
-				setError("Error al procesar el pago. Intenta nuevamente.");
-			}
-
-			if (gateway === "mercadopago") {
-				const paymentResponse = await fetch(
-					`${backendUrl}/api/create-preference`,
-					{
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							title: `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`,
-							price: parseFloat(codigoValidado.monto),
-							email: formData.email,
-							reservaId: reservaData.reservaId,
-						}),
-					}
-				);
-
-				const paymentData = await paymentResponse.json();
-
-				if (paymentData.init_point) {
-					paymentUrl = paymentData.init_point;
-				}
-			} else if (gateway === "flow") {
-				const paymentResponse = await fetch(`${backendUrl}/api/create-flow`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						amount: parseFloat(codigoValidado.monto),
-						subject: `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`,
-						email: formData.email,
-						reservaId: reservaData.reservaId,
-					}),
-				});
-
-				const paymentData = await paymentResponse.json();
-
-				if (paymentData.url) {
-					paymentUrl = paymentData.url + "?token=" + paymentData.token;
-				}
-			}
-
-			if (paymentUrl) {
-				// Redirigir al gateway de pago
-				window.location.href = paymentUrl;
-			} else {
-				setError("Error al procesar el pago. Intenta nuevamente.");
-			}
-		} catch (error) {
-			console.error("Error procesando pago:", error);
-			setError("Error al procesar el pago. Intenta nuevamente.");
-		} finally {
-			setProcesando(false);
-			setLoadingGateway(null);
-		}
-	};
 
 	return (
 		<section className="py-16 bg-gradient-to-b from-gray-50 to-white">
@@ -562,51 +421,27 @@ function PagarConCodigo() {
 									<div className="space-y-4">
 										<h4 className="font-semibold text-lg">Método de pago</h4>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={procesarPagoConCodigoFlow}
-                      disabled={procesando}
-                      className="h-auto p-6 flex flex-col items-center gap-3"
-                    >
-												{loadingGateway === "flow" ? (
-													<LoaderCircle className="h-8 w-8 animate-spin" />
-												) : (
-													<img
-														src={flow}
-														alt="Flow"
-														className="h-8 w-auto object-contain"
-													/>
-												)}
-												<span className="text-sm font-medium">Flow</span>
-												<span className="text-xs text-muted-foreground">
-													Webpay • Tarjetas • Transferencia
-												</span>
-											</Button>
-
-											<Button
-												type="button"
-												variant="outline"
-												onClick={() => procesarPago("mercadopago")}
-												disabled={procesando}
-												className="h-auto p-6 flex flex-col items-center gap-3"
-											>
-												{loadingGateway === "mercadopago" ? (
-													<LoaderCircle className="h-8 w-8 animate-spin" />
-												) : (
-													<img
-														src={merPago}
-														alt="Mercado Pago"
-														className="h-8 w-auto object-contain"
-													/>
-												)}
-												<span className="text-sm font-medium">
-													Mercado Pago
-												</span>
-												<span className="text-xs text-muted-foreground">
-													Tarjetas • Billetera digital
-												</span>
-											</Button>
+					<Button
+					  type="button"
+					  variant="outline"
+					  onClick={procesarPagoConCodigoFlow}
+					  disabled={procesando}
+					  className="h-auto p-6 flex flex-col items-center gap-3 w-full"
+					>
+						{loadingGateway === "flow" ? (
+							<LoaderCircle className="h-8 w-8 animate-spin" />
+						) : (
+							<img
+								src={flow}
+								alt="Flow"
+								className="h-8 w-auto object-contain"
+							/>
+						)}
+						<span className="text-sm font-medium">Flow</span>
+						<span className="text-xs text-muted-foreground">
+							Webpay • Tarjetas • Transferencia
+						</span>
+					</Button>
 										</div>
 									</div>
 

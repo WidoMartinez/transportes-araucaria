@@ -20,6 +20,7 @@ import flow from "../assets/formasPago/flow.png";
 import CodigoDescuento from "./CodigoDescuento";
 import ContinuarReserva from "./ContinuarReserva";
 import CompletarDetalles from "./CompletarDetalles";
+import { getBackendUrl } from "../lib/backend";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -152,9 +153,7 @@ function Hero({
 		setErrorCodigoReserva("");
 
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(`${apiUrl}/api/reservas/${codigoReserva.trim()}`);
 
 			if (!response.ok) {

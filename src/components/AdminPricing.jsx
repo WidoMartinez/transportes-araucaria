@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { destinosBase as destinosIniciales } from "@/data/destinos";
+import { getBackendUrl } from "../lib/backend";
 
-const API_BASE_URL =
-	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 const nuevoDestinoTemplate = {
 	nombre: "",

@@ -22,6 +22,7 @@ import {
 import { Alert, AlertDescription } from "./ui/alert";
 import { LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { destinosBase } from "../data/destinos";
+import { getBackendUrl } from "../lib/backend";
 
 function AdminCodigosPago() {
 	const [codigosPago, setCodigosPago] = useState([]);
@@ -43,9 +44,7 @@ function AdminCodigosPago() {
 		usosMaximos: 1,
 		observaciones: "",
 	});
-	const backendUrl =
-		import.meta.env.VITE_API_URL ||
-		"https://transportes-araucaria.onrender.com";
+	const backendUrl = getBackendUrl();
 	const adminToken =
 		import.meta.env.VITE_ADMIN_TOKEN ||
 		(typeof window !== "undefined"

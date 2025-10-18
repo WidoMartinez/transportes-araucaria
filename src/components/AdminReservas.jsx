@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { getBackendUrl } from "../lib/backend";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -291,9 +292,7 @@ function AdminReservas() {
 	const [bulkEstadoPago, setBulkEstadoPago] = useState("");
 	const [processingBulk, setProcessingBulk] = useState(false);
 
-	const apiUrl =
-		import.meta.env.VITE_API_URL ||
-		"https://transportes-araucaria.onrender.com";
+	const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 	// Cargar estadísticas
 	const fetchEstadisticas = async () => {

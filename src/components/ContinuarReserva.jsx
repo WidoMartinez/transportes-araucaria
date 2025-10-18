@@ -26,6 +26,8 @@ import {
 	FileText,
 } from "lucide-react";
 
+import { getBackendUrl } from "../lib/backend";
+
 // Función para formatear precio
 const formatCurrency = (amount) => {
 	return new Intl.NumberFormat("es-CL", {
@@ -65,9 +67,7 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 		setReservaEncontrada(null);
 
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(`${apiUrl}/api/reservas/${reservaId.trim()}`);
 
 			if (!response.ok) {
@@ -102,9 +102,7 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 		setError("");
 
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(
 				`${apiUrl}/api/reservas/${reservaEncontrada.id}/observaciones`,
 				{

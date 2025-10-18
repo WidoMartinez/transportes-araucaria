@@ -28,7 +28,8 @@ import {
 	DollarSign,
 } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { getBackendUrl } from "../lib/backend";
+const API_BASE_URL = getBackendUrl();
 
 export default function HistorialCodigos() {
 	const [historial, setHistorial] = useState([]);

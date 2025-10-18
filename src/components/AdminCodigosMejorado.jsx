@@ -50,7 +50,8 @@ import {
 	Trash,
 } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { getBackendUrl } from "../lib/backend";
+const API_BASE_URL = getBackendUrl();
 
 export default function AdminCodigosMejorado() {
 	const [codigos, setCodigos] = useState([]);

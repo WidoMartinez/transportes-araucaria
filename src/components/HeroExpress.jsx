@@ -10,6 +10,7 @@ import { LoaderCircle, Calendar, Users } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import CodigoDescuento from "./CodigoDescuento";
+import { getBackendUrl } from "../lib/backend";
 
 function HeroExpress({
 	formData,
@@ -111,7 +112,7 @@ function HeroExpress({
 
 		setVerificandoReserva(true);
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL || "https://transportes-araucania-backend.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
 			const response = await fetch(`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(email.trim())}`);
 			
 			if (response.ok) {

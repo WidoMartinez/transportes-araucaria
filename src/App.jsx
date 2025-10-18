@@ -35,6 +35,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
+import { getBackendUrl } from "./lib/backend";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -338,9 +339,7 @@ function App() {
 				let data = payload;
 
 				if (!data) {
-					const apiUrl =
-						import.meta.env.VITE_API_URL ||
-						"https://transportes-araucaria.onrender.com";
+					const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 					console.log("?? Fetching desde:", `${apiUrl}/pricing`);
 
 					const response = await fetch(`${apiUrl}/pricing`, {
@@ -403,9 +402,7 @@ function App() {
 		setCodigoError(null);
 
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const usuarioId = generarUsuarioId();
 
 			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
@@ -1102,9 +1099,7 @@ function App() {
 						vehiculo || "A confirmar"
 				  })`;
 
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
+		const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 		try {
 			const response = await fetch(`${apiUrl}/create-payment`, {
@@ -1208,9 +1203,7 @@ function App() {
 		}
 
 		// Usar el servidor backend de Render para todas las peticiones
-		const apiUrl =
-			import.meta.env.VITE_API_URL ||
-			"https://transportes-araucaria.onrender.com";
+		const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 		const emailApiUrl = `${apiUrl}/enviar-reserva`;
 		const headers = { "Content-Type": "application/json" };
 
@@ -1240,9 +1233,7 @@ function App() {
 			// Registrar el uso del código si hay uno aplicado
 			if (codigoAplicado) {
 				try {
-					const apiUrl =
-						import.meta.env.VITE_API_URL ||
-						"https://transportes-araucaria.onrender.com";
+					const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 					const usuarioId = generarUsuarioId();
 
 					await fetch(`${apiUrl}/api/codigos/usar`, {
@@ -1358,9 +1349,7 @@ function App() {
 		FIN DEL COMENTARIO */
 
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(`${apiUrl}/enviar-reserva-express`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
