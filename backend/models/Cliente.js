@@ -13,7 +13,6 @@ const Cliente = sequelize.define(
 		rut: {
 			type: DataTypes.STRING(20),
 			allowNull: true,
-			unique: true,
 			comment: "RUT del cliente (formato: 12345678-9 sin puntos)",
 			validate: {
 				isChileanRutFormat(value) {

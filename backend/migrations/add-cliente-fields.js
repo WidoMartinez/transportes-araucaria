@@ -27,7 +27,6 @@ async function addClienteFields() {
 				},
 				rut: {
 					type: sequelize.Sequelize.STRING(20),
-					unique: true,
 					allowNull: true,
 				},
 				nombre: {
