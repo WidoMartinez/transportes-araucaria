@@ -137,7 +137,7 @@ const parsePromotionMetadata = (record) => {
 			? parsed
 			: null;
 	} catch (error) {
-		console.error('Error parsePromotionMetadata:', error);
+		console.error("Error parsePromotionMetadata:", error);
 		return null;
 	}
 };
@@ -200,7 +200,7 @@ const parseJsonArray = (raw) => {
 		try {
 			value = JSON.parse(trimmed);
 		} catch (error) {
-			console.error('Error parseJsonArray:', error);
+			console.error("Error parseJsonArray:", error);
 			return [];
 		}
 	}
@@ -2358,12 +2358,10 @@ app.delete("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
 				.json({ success: false, message: "Código de pago no encontrado" });
 		}
 		if (registro.estado === "usado") {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					message: "No se puede eliminar un código usado",
-				});
+			return res.status(400).json({
+				success: false,
+				message: "No se puede eliminar un código usado",
+			});
 		}
 		await CodigoPago.destroy({ where: { codigo } });
 		return res.json({

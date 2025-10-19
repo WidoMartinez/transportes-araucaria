@@ -102,30 +102,30 @@ const Reserva = sequelize.define(
 			allowNull: true,
 			defaultValue: 0,
 		},
-                saldoPendiente: {
-                        type: DataTypes.DECIMAL(10, 2),
-                        allowNull: true,
-                        defaultValue: 0,
-                },
-                abonoPagado: {
-                        type: DataTypes.BOOLEAN,
-                        defaultValue: false,
-                        allowNull: false,
-                        field: "abono_pagado",
-                        comment: "TRUE cuando el abono sugerido fue pagado",
-                },
-                saldoPagado: {
-                        type: DataTypes.BOOLEAN,
-                        defaultValue: false,
-                        allowNull: false,
-                        field: "saldo_pagado",
-                        comment: "TRUE cuando el saldo restante fue pagado por completo",
-                },
-                descuentoBase: {
-                        type: DataTypes.DECIMAL(10, 2),
-                        allowNull: true,
-                        defaultValue: 0,
-                },
+		saldoPendiente: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			defaultValue: 0,
+		},
+		abonoPagado: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false,
+			field: "abono_pagado",
+			comment: "TRUE cuando el abono sugerido fue pagado",
+		},
+		saldoPagado: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false,
+			field: "saldo_pagado",
+			comment: "TRUE cuando el saldo restante fue pagado por completo",
+		},
+		descuentoBase: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			defaultValue: 0,
+		},
 		descuentoPromocion: {
 			type: DataTypes.DECIMAL(10, 2),
 			allowNull: true,
@@ -195,7 +195,13 @@ const Reserva = sequelize.define(
 			allowNull: true,
 		},
 		estadoPago: {
-			type: DataTypes.ENUM("pendiente", "aprobado", "pagado", "fallido", "reembolsado"),
+			type: DataTypes.ENUM(
+				"pendiente",
+				"aprobado",
+				"pagado",
+				"fallido",
+				"reembolsado"
+			),
 			defaultValue: "pendiente",
 		},
 		pagoId: {
