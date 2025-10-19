@@ -22,6 +22,8 @@ function PagarConCodigo() {
 		nombre: "",
 		email: "",
 		telefono: "",
+		fecha: "",
+		hora: "",
 		numeroVuelo: "",
 		hotel: "",
 		mensaje: "",
@@ -104,6 +106,17 @@ function PagarConCodigo() {
 			return false;
 		}
 
+		// Validar fecha y hora del viaje para poder coordinar la recogida
+		if (!formData.fecha) {
+			setError("Por favor selecciona la fecha del servicio");
+			return false;
+		}
+
+		if (!formData.hora) {
+			setError("Por favor selecciona la hora del servicio");
+			return false;
+		}
+
 		setError("");
 		return true;
   };
@@ -121,7 +134,9 @@ function PagarConCodigo() {
         telefono: formData.telefono,
         origen: codigoValidado.origen,
         destino: codigoValidado.destino,
-        fecha: new Date().toISOString().split("T")[0],
+				// Usar fecha y hora proporcionadas por el cliente
+				fecha: formData.fecha || new Date().toISOString().split("T")[0],
+				hora: formData.hora || "",
         pasajeros: codigoValidado.pasajeros || 1,
         precio: codigoValidado.monto,
         totalConDescuento: codigoValidado.monto,
@@ -143,6 +158,41 @@ function PagarConCodigo() {
       if (!r.ok || rj.success === false) {
         throw new Error(rj.message || "No se pudo crear la reserva");
       }
+
+			// Si la reserva se creó o modificó, intentar actualizar detalles adicionales
+			// en caso de que exista una reserva previa que no haya guardado hora/otros campos.
+			try {
+				const reservaId = rj.reservaId || rj.reserva?.id || null;
+				if (reservaId) {
+					const detallesPayload = {
+						hora: formData.hora || "",
+						// Incluir fecha para que el backend la persista (evita discrepancias por conversiones)
+						fecha: formData.fecha || "",
+						numeroVuelo: formData.numeroVuelo || "",
+						hotel: formData.hotel || "",
+						equipajeEspecial: formData.mensaje || "",
+						sillaInfantil: formData.sillaInfantil || false,
+						idaVuelta: !!codigoValidado.idaVuelta,
+						fechaRegreso: codigoValidado.fechaRegreso || null,
+						horaRegreso: codigoValidado.horaRegreso || null,
+					};
+
+					const upd = await fetch(`${backendUrl}/completar-reserva-detalles/${reservaId}`, {
+						method: "PUT",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(detallesPayload),
+					});
+
+					if (!upd.ok) {
+						// No bloquear el flujo de pago si la actualización de detalles falla
+						console.warn("No se pudo actualizar detalles de la reserva:", await upd.text().catch(() => ""));
+					} else {
+						console.log("Detalles de reserva actualizados correctamente para ID:", reservaId);
+					}
+				}
+			} catch (err) {
+				console.error("Error actualizando detalles de reserva (no crítico):", err);
+			}
 
       const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`;
       const p = await fetch(`${backendUrl}/create-payment`, {
@@ -368,6 +418,32 @@ function PagarConCodigo() {
 													value={formData.telefono}
 													onChange={handleInputChange}
 													placeholder="+56 9 1234 5678"
+													required
+												/>
+											</div>
+
+											{/* Fecha y hora del servicio */}
+											<div className="space-y-2">
+												<Label htmlFor="fecha">Fecha del servicio <span className="text-red-500">*</span></Label>
+												<Input
+													id="fecha"
+													name="fecha"
+													type="date"
+													value={formData.fecha}
+													onChange={handleInputChange}
+													min={new Date().toISOString().split("T")[0]}
+													required
+												/>
+											</div>
+
+											<div className="space-y-2">
+												<Label htmlFor="hora">Hora del servicio <span className="text-red-500">*</span></Label>
+												<Input
+													id="hora"
+													name="hora"
+													type="time"
+													value={formData.hora}
+													onChange={handleInputChange}
 													required
 												/>
 											</div>

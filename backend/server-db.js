@@ -1905,7 +1905,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			console.log(`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`);
 			esModificacion = true;
 
-			// Actualizar la reserva existente con los nuevos datos
+			// Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
 			await reservaExistente.update({
 				nombre: datosReserva.nombre,
 				telefono: datosReserva.telefono,
@@ -1913,6 +1913,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				origen: datosReserva.origen,
 				destino: datosReserva.destino,
 				fecha: datosReserva.fecha,
+				hora: datosReserva.hora || reservaExistente.hora,
 				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
 				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 				vehiculo: datosReserva.vehiculo || "",
@@ -2282,6 +2283,8 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		// Actualizar con los detalles proporcionados
 		const datosActualizados = {
 			hora: detalles.hora || reserva.hora,
+			// Permitir actualizar la fecha explicitamente si la envía el cliente
+			fecha: detalles.fecha || reserva.fecha,
 			numeroVuelo: detalles.numeroVuelo || "",
 			hotel: detalles.hotel || "",
 			equipajeEspecial: detalles.equipajeEspecial || "",
