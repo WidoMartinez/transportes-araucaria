@@ -96,7 +96,9 @@ function AdminReservas() {
 	const fetchPagoHistorial = async () => {
 		if (!selectedReserva) return;
 		try {
-			const resp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`);
+			const resp = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`
+			);
 			if (resp.ok) {
 				const data = await resp.json();
 				setPagoHistorial(Array.isArray(data.pagos) ? data.pagos : []);
@@ -847,7 +849,10 @@ function AdminReservas() {
 			// - Si seleccionó 'total' o 'saldo' y no indicó monto, completar el pago restante.
 			let montoPagadoValue = null;
 			const tipo = formData.tipoPago;
-			const totalReserva = Number(selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0) || 0;
+			const totalReserva =
+				Number(
+					selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0
+				) || 0;
 			const abonoSugerido = Number(selectedReserva?.abonoSugerido || 0) || 0;
 			const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
 			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
@@ -1707,26 +1712,40 @@ function AdminReservas() {
 					</Dialog>
 
 					{/* Modal para registrar pago manual */}
-					<Dialog open={showRegisterPayment} onOpenChange={setShowRegisterPayment}>
+					<Dialog
+						open={showRegisterPayment}
+						onOpenChange={setShowRegisterPayment}
+					>
 						<DialogContent className="max-w-md">
 							<DialogHeader>
 								<DialogTitle>Registrar pago manual</DialogTitle>
-								<DialogDescription>Registra un pago y guarda un historial con origen manual/web.</DialogDescription>
+								<DialogDescription>
+									Registra un pago y guarda un historial con origen manual/web.
+								</DialogDescription>
 							</DialogHeader>
 							<div className="space-y-4 mt-2">
 								<div className="space-y-2">
 									<Label>Monto (CLP)</Label>
-									<Input type="number" value={regPagoMonto} onChange={(e)=>setRegPagoMonto(e.target.value)} />
+									<Input
+										type="number"
+										value={regPagoMonto}
+										onChange={(e) => setRegPagoMonto(e.target.value)}
+									/>
 								</div>
 								<div className="space-y-2">
 									<Label>Método</Label>
-									<Select value={regPagoMetodo} onValueChange={(v)=>setRegPagoMetodo(v)}>
+									<Select
+										value={regPagoMetodo}
+										onValueChange={(v) => setRegPagoMetodo(v)}
+									>
 										<SelectTrigger>
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="efectivo">Efectivo</SelectItem>
-											<SelectItem value="transferencia">Transferencia</SelectItem>
+											<SelectItem value="transferencia">
+												Transferencia
+											</SelectItem>
 											<SelectItem value="flow">Flow</SelectItem>
 											<SelectItem value="otro">Otro</SelectItem>
 										</SelectContent>
@@ -1734,29 +1753,57 @@ function AdminReservas() {
 								</div>
 								<div className="space-y-2">
 									<Label>Referencia</Label>
-									<Input value={regPagoReferencia} onChange={(e)=>setRegPagoReferencia(e.target.value)} />
+									<Input
+										value={regPagoReferencia}
+										onChange={(e) => setRegPagoReferencia(e.target.value)}
+									/>
 								</div>
 								<div className="flex justify-end gap-2 pt-4 border-t">
-									<Button variant="outline" onClick={()=>setShowRegisterPayment(false)}>Cancelar</Button>
-									<Button onClick={async ()=>{
-										if(!selectedReserva) return;
-										try{
-											const ADMIN_TOKEN = localStorage.getItem('adminToken');
-											const resp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,{
-												method: 'POST',
-												headers: { 'Content-Type': 'application/json', ...(ADMIN_TOKEN?{Authorization:`Bearer ${ADMIN_TOKEN}`}:{}) },
-												body: JSON.stringify({ amount: Number(regPagoMonto)||0, metodo: regPagoMetodo, referencia: regPagoReferencia, source: regPagoSource })
-											});
-											if(!resp.ok) throw new Error('Error registrando pago');
-											setShowRegisterPayment(false);
-											setRegPagoMonto(''); setRegPagoMetodo(''); setRegPagoReferencia('');
-											// recargar reserva y pagos
-											await fetchReservas();
-											await fetchPagoHistorial();
-										}catch(e){
-											console.error(e); alert('Error registrando pago: '+e.message);
-										}
-									}}>Registrar</Button>
+									<Button
+										variant="outline"
+										onClick={() => setShowRegisterPayment(false)}
+									>
+										Cancelar
+									</Button>
+									<Button
+										onClick={async () => {
+											if (!selectedReserva) return;
+											try {
+												const ADMIN_TOKEN = localStorage.getItem("adminToken");
+												const resp = await fetch(
+													`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,
+													{
+														method: "POST",
+														headers: {
+															"Content-Type": "application/json",
+															...(ADMIN_TOKEN
+																? { Authorization: `Bearer ${ADMIN_TOKEN}` }
+																: {}),
+														},
+														body: JSON.stringify({
+															amount: Number(regPagoMonto) || 0,
+															metodo: regPagoMetodo,
+															referencia: regPagoReferencia,
+															source: regPagoSource,
+														}),
+													}
+												);
+												if (!resp.ok) throw new Error("Error registrando pago");
+												setShowRegisterPayment(false);
+												setRegPagoMonto("");
+												setRegPagoMetodo("");
+												setRegPagoReferencia("");
+												// recargar reserva y pagos
+												await fetchReservas();
+												await fetchPagoHistorial();
+											} catch (e) {
+												console.error(e);
+												alert("Error registrando pago: " + e.message);
+											}
+										}}
+									>
+										Registrar
+									</Button>
 								</div>
 							</div>
 						</DialogContent>
@@ -1766,21 +1813,37 @@ function AdminReservas() {
 					<div className="mt-4">
 						<h4 className="font-semibold mb-2">Historial de pagos</h4>
 						<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
-							{pagoHistorial && pagoHistorial.length>0 ? (
-								pagoHistorial.map(p => (
-									<div key={p.id} className="flex justify-between items-center py-2 border-b">
+							{pagoHistorial && pagoHistorial.length > 0 ? (
+								pagoHistorial.map((p) => (
+									<div
+										key={p.id}
+										className="flex justify-between items-center py-2 border-b"
+									>
 										<div>
-											<div className="font-medium">{p.source === 'web' ? 'Pago web' : 'Pago manual'}</div>
-											<div className="text-sm text-muted-foreground">{p.metodo || '-'} • {p.referencia || '-'}</div>
+											<div className="font-medium">
+												{p.source === "web" ? "Pago web" : "Pago manual"}
+											</div>
+											<div className="text-sm text-muted-foreground">
+												{p.metodo || "-"} • {p.referencia || "-"}
+											</div>
 										</div>
 										<div className="text-right text-sm">
-											<div>{new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(p.amount)}</div>
-											<div className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()}</div>
+											<div>
+												{new Intl.NumberFormat("es-CL", {
+													style: "currency",
+													currency: "CLP",
+												}).format(p.amount)}
+											</div>
+											<div className="text-xs text-muted-foreground">
+												{new Date(p.createdAt).toLocaleString()}
+											</div>
 										</div>
 									</div>
 								))
 							) : (
-								<p className="text-sm text-muted-foreground">No hay pagos registrados.</p>
+								<p className="text-sm text-muted-foreground">
+									No hay pagos registrados.
+								</p>
 							)}
 						</div>
 					</div>
@@ -2737,11 +2800,23 @@ function AdminReservas() {
 								<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
 								{/* Determinar si ya se registró el abono del 40% */}
 								{(() => {
-									const montoPagadoNum = parseFloat(formData.montoPagado || 0) || 0;
-									const totalReservaNum = parseFloat(selectedReserva?.totalConDescuento || selectedReserva?.precio || 0) || 0;
-									const abonoSugeridoNum = parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
-									const umbralAbono = Math.max(totalReservaNum * 0.4, abonoSugeridoNum || 0);
-									const yaAbono40 = Boolean(selectedReserva?.abonoPagado) || montoPagadoNum >= umbralAbono;
+									const montoPagadoNum =
+										parseFloat(formData.montoPagado || 0) || 0;
+									const totalReservaNum =
+										parseFloat(
+											selectedReserva?.totalConDescuento ||
+												selectedReserva?.precio ||
+												0
+										) || 0;
+									const abonoSugeridoNum =
+										parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+									const umbralAbono = Math.max(
+										totalReservaNum * 0.4,
+										abonoSugeridoNum || 0
+									);
+									const yaAbono40 =
+										Boolean(selectedReserva?.abonoPagado) ||
+										montoPagadoNum >= umbralAbono;
 									return (
 										<Select
 											value={formData.tipoPago}
@@ -2777,7 +2852,16 @@ function AdminReservas() {
 									id="montoPagado"
 									type="text"
 									readOnly
-									value={selectedReserva ? (selectedReserva.pagoMonto ? new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(selectedReserva.pagoMonto) : '') : ''}
+									value={
+										selectedReserva
+											? selectedReserva.pagoMonto
+												? new Intl.NumberFormat("es-CL", {
+														style: "currency",
+														currency: "CLP",
+												  }).format(selectedReserva.pagoMonto)
+												: ""
+											: ""
+									}
 								/>
 							</div>
 
@@ -2785,15 +2869,18 @@ function AdminReservas() {
 							<div className="space-y-2">
 								<Label>Registrar pago manual</Label>
 								<div className="flex gap-2">
-									<Button type="button" onClick={() => setShowRegisterPayment(true)}>
+									<Button
+										type="button"
+										onClick={() => setShowRegisterPayment(true)}
+									>
 										Registrar pago
 									</Button>
 									<span className="text-sm text-muted-foreground self-center">
-										Registra pagos manuales y guarda un historial (manual / web).
+										Registra pagos manuales y guarda un historial (manual /
+										web).
 									</span>
 								</div>
 							</div>
-
 
 							{/* Observaciones */}
 							<div className="space-y-2">

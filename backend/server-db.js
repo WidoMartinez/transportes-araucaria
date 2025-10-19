@@ -2998,23 +2998,23 @@ const ensureReservaPagosTable = async () => {
 };
 
 // Endpoint: obtener historial de pagos de una reserva
-app.get('/api/reservas/:id/pagos', async (req, res) => {
+app.get("/api/reservas/:id/pagos", async (req, res) => {
 	try {
 		const { id } = req.params;
 		await ensureReservaPagosTable();
 		const [rows] = await sequelize.query(
-			'SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC',
+			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC",
 			{ replacements: { id } }
 		);
 		res.json({ success: true, pagos: rows });
 	} catch (error) {
-		console.error('Error obteniendo historial de pagos:', error);
-		res.status(500).json({ error: 'Error interno del servidor' });
+		console.error("Error obteniendo historial de pagos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
 
 // Endpoint: registrar pago manual para una reserva (inserta en historial y actualiza reserva)
-app.post('/api/reservas/:id/pagos', async (req, res) => {
+app.post("/api/reservas/:id/pagos", async (req, res) => {
 	const transaction = await sequelize.transaction();
 	try {
 		const { id } = req.params;
@@ -3023,13 +3023,13 @@ app.post('/api/reservas/:id/pagos', async (req, res) => {
 		const monto = parseFloat(amount || 0) || 0;
 		if (monto <= 0) {
 			await transaction.rollback();
-			return res.status(400).json({ error: 'Monto inválido' });
+			return res.status(400).json({ error: "Monto inválido" });
 		}
 
 		const reserva = await Reserva.findByPk(id, { transaction });
 		if (!reserva) {
 			await transaction.rollback();
-			return res.status(404).json({ error: 'Reserva no encontrada' });
+			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
 		await ensureReservaPagosTable();
@@ -3045,8 +3045,8 @@ app.post('/api/reservas/:id/pagos', async (req, res) => {
 				amount: monto,
 				metodo: metodo || null,
 				referencia: referencia || null,
-				source: source || 'manual',
-				isManual: source === 'web' ? 0 : 1,
+				source: source || "manual",
+				isManual: source === "web" ? 0 : 1,
 			},
 			transaction,
 		});
@@ -3065,27 +3065,31 @@ app.post('/api/reservas/:id/pagos', async (req, res) => {
 		let saldoPagado = reserva.saldoPagado;
 
 		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
-			nuevoEstadoPago = 'pagado';
-			nuevoEstadoReserva = 'completada';
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
 			nuevoSaldoPendiente = 0;
 			abonoPagado = true;
 			saldoPagado = true;
 		} else if (pagoTotalNuevo > 0) {
 			if (
 				pagoTotalNuevo >= umbralAbono &&
-				['pendiente', 'pendiente_detalles'].includes(nuevoEstadoReserva)
+				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
 			) {
-				nuevoEstadoReserva = 'confirmada';
+				nuevoEstadoReserva = "confirmada";
 			}
-			nuevoEstadoPago = 'parcial';
+			nuevoEstadoPago = "parcial";
 			if (pagoTotalNuevo >= umbralAbono) abonoPagado = true;
 		}
 
-		if (nuevoSaldoPendiente <= 0 && pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+		if (
+			nuevoSaldoPendiente <= 0 &&
+			pagoTotalNuevo >= totalReserva &&
+			totalReserva > 0
+		) {
 			saldoPagado = true;
 			abonoPagado = true;
-			nuevoEstadoPago = 'pagado';
-			nuevoEstadoReserva = 'completada';
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
 		}
 
 		const updatePayload = {
@@ -3112,7 +3116,7 @@ app.post('/api/reservas/:id/pagos', async (req, res) => {
 
 		// Devolver reserva actualizada y el pago insertado
 		const [rows] = await sequelize.query(
-			'SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC LIMIT 1',
+			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC LIMIT 1",
 			{ replacements: { id } }
 		);
 		const pagoInsertado = rows[0] || null;
@@ -3121,25 +3125,30 @@ app.post('/api/reservas/:id/pagos', async (req, res) => {
 			include: [
 				{
 					model: Cliente,
-					as: 'cliente',
+					as: "cliente",
 					attributes: [
-						'id',
-						'nombre',
-						'email',
-						'telefono',
-						'esCliente',
-						'clasificacion',
-						'totalReservas',
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
 					],
 				},
 			],
 		});
 
-		res.json({ success: true, reserva: reservaActualizada, pago: pagoInsertado, cliente: clienteActualizado });
+		res.json({
+			success: true,
+			reserva: reservaActualizada,
+			pago: pagoInsertado,
+			cliente: clienteActualizado,
+		});
 	} catch (error) {
 		await transaction.rollback();
-		console.error('Error registrando pago manual:', error);
-		res.status(500).json({ error: 'Error interno del servidor' });
+		console.error("Error registrando pago manual:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
 
