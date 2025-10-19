@@ -470,7 +470,18 @@ const initializeDatabase = async () => {
         if (!connected) {
             throw new Error("No se pudo conectar a la base de datos");
         }
-        await syncDatabase(false); // false = no forzar recreación
+		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
+		await syncDatabase(false, [
+			Destino,
+			Cliente,
+			Vehiculo,
+			Conductor,
+			Reserva,
+			CodigoDescuento,
+			CodigoPago,
+			Promocion,
+			DescuentoGlobal,
+		]); // false = no forzar recreación
 
         // Ejecutar migraciones automáticas
         await ejecutarMigracionCodigoReserva();
@@ -2692,7 +2703,12 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
                         ],
                     });
                 }
-            } catch {}
+			} catch (err) {
+				// Ignorar errores no críticos intencionalmente
+				// `void err;` evita la advertencia de variable no usada y permite
+				// habilitar un registro rápido si es necesario en el futuro.
+				void err;
+			}
         }
 
         if (!reserva) {
@@ -2793,7 +2809,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 
 	try {
 		const { id } = req.params;
-		const { estadoPago, metodoPago, referenciaPago, montoPagado, tipoPago } =
+	const { estadoPago, metodoPago, referenciaPago, montoPagado, tipoPago: _tipoPago } =
 			req.body;
 
 		const reserva = await Reserva.findByPk(id, { transaction });
