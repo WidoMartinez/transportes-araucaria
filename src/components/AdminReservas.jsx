@@ -794,17 +794,72 @@ function AdminReservas() {
 	};
 
 	// Función para obtener el badge del estado de pago
-	const getEstadoPagoBadge = (estadoPago) => {
-		const estados = {
-			pendiente: { variant: "secondary", label: "Pendiente" },
-			pagado: { variant: "default", label: "Pagado" },
-			fallido: { variant: "destructive", label: "Fallido" },
-			reembolsado: { variant: "outline", label: "Reembolsado" },
-		};
+	// Ahora acepta el objeto `reserva` completo para derivar el estado
+	// a partir de campos reales (monto pagado, total, saldoPendiente, estadoPago)
+	const getEstadoPagoBadge = (reservaOrEstado) => {
+		// Compatibilidad: si pasan solo el estado como string
+		const reserva =
+			typeof reservaOrEstado === "string"
+				? { estadoPago: reservaOrEstado }
+				: reservaOrEstado || {};
 
-		const config = estados[estadoPago] || estados.pendiente;
+		// Extraer valores numéricos seguros
+		const montoTotal = Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
+		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
+		// Derivamos saldo cuando sea necesario, pero no lo requerimos explícitamente aquí
 
-		return <Badge variant={config.variant}>{config.label}</Badge>;
+		// Normalizar estado comunicado por backend
+		const estadoPagoRaw = (reserva.estadoPago || "").toString().toLowerCase();
+
+		// Determinar estado derivado con reglas claras:
+		// - reembolsado y fallido mantienen prioridad
+		// - si montoPagado >= montoTotal && montoTotal > 0 => 'pagado'
+		// - si montoPagado > 0 && montoPagado < montoTotal => 'parcial'
+		// - si montoPagado == 0 => 'pendiente'
+		// - si backend indica status destructivo (fallido) o similar, respetarlo
+
+		let label = "Pendiente";
+		let variant = "secondary";
+
+		if (estadoPagoRaw === "reembolsado") {
+			label = "Reembolsado";
+			variant = "outline";
+		} else if (estadoPagoRaw === "fallido" || estadoPagoRaw === "rechazado") {
+			label = "Fallido";
+			variant = "destructive";
+		} else if (montoTotal > 0 && montoPagado >= montoTotal) {
+			label = "Pagado";
+			variant = "default";
+		} else if (montoPagado > 0 && montoPagado < montoTotal) {
+			label = "Pago parcial";
+			variant = "outline";
+		} else if (estadoPagoRaw === "pagado") {
+			// respaldo por si backend marca 'pagado' pero montos no coinciden
+			label = "Pagado";
+			variant = "default";
+		} else {
+			label = "Pendiente";
+			variant = "secondary";
+		}
+
+		// Mostrar badge con etiqueta y, opcionalmente, info de montos en texto pequeño
+		const montoInfo = montoPagado > 0 ? ` (${new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(montoPagado)})` : "";
+
+		return (
+			<div className="flex flex-col text-sm">
+				<Badge variant={variant}>{label}</Badge>
+				{montoInfo ? (
+					<span className="text-xs text-muted-foreground mt-1">Pagó: {montoInfo}</span>
+				) : null}
+			</div>
+		);
+	};
+
+	// Helper para saber si la reserva está 100% pagada según montos
+	const isPagoCompleto = (reserva) => {
+		const montoTotal = Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
+		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
+		return montoTotal > 0 && montoPagado >= montoTotal;
 	};
 
 	// Formatear moneda
@@ -1416,7 +1471,10 @@ function AdminReservas() {
 												COLUMNAS_STORAGE_KEY,
 												JSON.stringify(DEFAULT_COLUMNAS_VISIBLES)
 											);
-										} catch {}
+										} catch (e) {
+											// Log en español para facilitar debugging
+											console.warn("No se pudo restablecer columnas en localStorage:", e);
+										}
 									}}
 								>
 									Restablecer columnas
@@ -1708,7 +1766,7 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.pago && (
 												<TableCell>
-													{getEstadoPagoBadge(reserva.estadoPago)}
+													{getEstadoPagoBadge(reserva)}
 												</TableCell>
 											)}
 											{columnasVisibles.saldo && (
@@ -1741,8 +1799,8 @@ function AdminReservas() {
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
-														{/* Solo mostrar botón de asignar si está pagado */}
-														{reserva.estadoPago === "pagado" && !reserva.vehiculo && (
+														{/* Solo mostrar botón de asignar si el pago está completo */}
+														{isPagoCompleto(reserva) && !reserva.vehiculo && (
 															<Button
 																variant="secondary"
 																size="sm"
@@ -2146,7 +2204,7 @@ function AdminReservas() {
 											Estado de Pago
 										</Label>
 										<div className="mt-1">
-											{getEstadoPagoBadge(selectedReserva.estadoPago)}
+											{getEstadoPagoBadge(selectedReserva)}
 										</div>
 									</div>
 									<div>
@@ -3199,7 +3257,7 @@ function AdminReservas() {
 													<div className="flex items-center gap-2 mb-1">
 														<span className="font-medium">#{reserva.id}</span>
 														{getEstadoBadge(reserva.estado)}
-														{getEstadoPagoBadge(reserva.estadoPago)}
+														{getEstadoPagoBadge(reserva)}
 													</div>
 													<div className="text-sm text-muted-foreground">
 														<div className="flex items-center gap-2">
