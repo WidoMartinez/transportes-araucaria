@@ -225,19 +225,21 @@ const normalizeTimeGlobal = (hora) => {
 
 // Determinar la clasificación del cliente según reservas completadas
 const obtenerClasificacionCliente = (reservasCompletadas) => {
-	if (!reservasCompletadas || reservasCompletadas <= 0) {
-		return null;
-	}
-	if (reservasCompletadas >= 10) {
-		return "Cliente Élite";
-	}
-	if (reservasCompletadas >= 5) {
-		return "Cliente Premium";
-	}
-	if (reservasCompletadas >= 3) {
-		return "Cliente Frecuente";
-	}
-	return "Cliente Activo";
+    if (!reservasCompletadas || reservasCompletadas <= 0) {
+        return null;
+    }
+    if (reservasCompletadas >= 10) {
+        return "Cliente Élite";
+    }
+    if (reservasCompletadas >= 5) {
+        return "Cliente Premium";
+    }
+    if (reservasCompletadas >= 3) {
+        return "Cliente Frecuente";
+    }
+    // Para 1-2 reservas completadas ya se muestra la etiqueta general "Cliente".
+    // No devolver una clasificación adicional para evitar duplicidad con "Cliente Activo".
+    return null;
 };
 
 // Actualizar métricas y clasificación del cliente después de modificar una reserva

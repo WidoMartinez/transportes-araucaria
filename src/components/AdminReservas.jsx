@@ -1995,27 +1995,31 @@ function AdminReservas() {
 																)
 															}
 														>
-															{reserva.esCliente ? (
-																<>
-																	<Star className="w-3 h-3 mr-1" />
-																	Cliente
-																</>
-															) : (
-																"Cotizador"
-															)}
+                                            {reserva.esCliente ? (
+                                                <>
+                                                    <Star className="w-3 h-3 mr-1" />
+                                                    Cliente
+                                                </>
+                                            ) : (
+                                                // Para reservas provenientes del sistema de pago con código,
+                                                // etiquetar como "Cliente con código" en vez de "Cotizador".
+                                                (reserva?.source === "codigo_pago" || (reserva?.referenciaPago && String(reserva.referenciaPago).trim().length > 0))
+                                                    ? "Cliente con código"
+                                                    : "Cotizador"
+                                            )}
 														</Badge>
 													) : (
 														<span className="text-xs text-muted-foreground">
 															-
 														</span>
 													)}
-													{reserva.clasificacionCliente && (
-														<div className="mt-1">
-															<Badge variant="outline">
-																{reserva.clasificacionCliente}
-															</Badge>
-														</div>
-													)}
+                                            {reserva.clasificacionCliente && reserva.clasificacionCliente !== "Cliente Activo" && (
+                                                <div className="mt-1">
+                                                    <Badge variant="outline">
+                                                        {reserva.clasificacionCliente}
+                                                    </Badge>
+                                                </div>
+                                            )}
 												</TableCell>
 											)}
 											{columnasVisibles.numViajes && (
@@ -2236,20 +2240,23 @@ function AdminReservas() {
 										<Label className="text-muted-foreground">Teléfono</Label>
 										<p className="font-medium">{selectedReserva.telefono}</p>
 									</div>
-									{(selectedReserva.cliente?.clasificacion ||
-										selectedReserva.clasificacionCliente) && (
-										<div>
-											<Label className="text-muted-foreground">
-												Clasificación
-											</Label>
-											<div className="mt-1">
-												<Badge variant="outline">
-													{selectedReserva.cliente?.clasificacion ||
-														selectedReserva.clasificacionCliente}
-												</Badge>
-											</div>
-										</div>
-									)}
+                            {(
+                                (selectedReserva.cliente?.clasificacion && selectedReserva.cliente?.clasificacion !== "Cliente Activo") ||
+                                (selectedReserva.clasificacionCliente && selectedReserva.clasificacionCliente !== "Cliente Activo")
+                            ) && (
+                                <div>
+                                    <Label className="text-muted-foreground">
+                                        Clasificación
+                                    </Label>
+                                    <div className="mt-1">
+                                        <Badge variant="outline">
+                                            {selectedReserva.cliente?.clasificacion !== "Cliente Activo" && selectedReserva.cliente?.clasificacion
+                                                ? selectedReserva.cliente.clasificacion
+                                                : selectedReserva.clasificacionCliente}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            )}
 								</div>
 							</div>
 
@@ -3029,11 +3036,11 @@ function AdminReservas() {
 												Cliente
 											</Badge>
 										)}
-										{clienteSeleccionado.clasificacion && (
-											<Badge variant="outline" className="mr-2">
-												{clienteSeleccionado.clasificacion}
-											</Badge>
-										)}
+                                {clienteSeleccionado.clasificacion && clienteSeleccionado.clasificacion !== "Cliente Activo" && (
+                                    <Badge variant="outline" className="mr-2">
+                                        {clienteSeleccionado.clasificacion}
+                                    </Badge>
+                                )}
 										{clienteSeleccionado.totalReservas > 0 && (
 											<span className="text-xs">
 												{clienteSeleccionado.totalReservas} reserva(s) previa(s)
@@ -3644,18 +3651,18 @@ function AdminReservas() {
 											)}
 										</div>
 									</div>
-									{historialCliente.cliente.clasificacion && (
-										<div>
-											<Label className="text-muted-foreground">
-												Clasificación
-											</Label>
-											<div>
-												<Badge variant="outline">
-													{historialCliente.cliente.clasificacion}
-												</Badge>
-											</div>
-										</div>
-									)}
+                            {historialCliente.cliente.clasificacion && historialCliente.cliente.clasificacion !== "Cliente Activo" && (
+                                <div>
+                                    <Label className="text-muted-foreground">
+                                        Clasificación
+                                    </Label>
+                                    <div>
+                                        <Badge variant="outline">
+                                            {historialCliente.cliente.clasificacion}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            )}
 								</div>
 							</div>
 
