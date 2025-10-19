@@ -791,7 +791,8 @@ function AdminReservas() {
 				}
 			}
 			// Determinar estado final: si el pago fue marcado como 'pagado', marcar como 'confirmada'
-			const estadoFinal = formData.estadoPago === "pagado" ? "confirmada" : formData.estado;
+			const estadoFinal =
+				formData.estadoPago === "pagado" ? "confirmada" : formData.estado;
 			const estadoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
 				{
@@ -1216,21 +1217,21 @@ function AdminReservas() {
 				}
 			}
 
-			   // Si el estado de pago es 'pagado', la reserva se marca como 'confirmada'
-			   let estadoFinal = newReservaForm.estado;
-			   if (newReservaForm.estadoPago === "pagado") {
-				   estadoFinal = "confirmada";
-			   }
-			   const reservaData = {
-				   ...newReservaForm,
-				   estado: estadoFinal,
-				   clienteId: clienteId,
-				   origen: origenFinal,
-				   destino: destinoFinal,
-				   totalConDescuento: total,
-				   saldoPendiente: saldo,
-				   source: "manual",
-			   };
+			// Si el estado de pago es 'pagado', la reserva se marca como 'confirmada'
+			let estadoFinal = newReservaForm.estado;
+			if (newReservaForm.estadoPago === "pagado") {
+				estadoFinal = "confirmada";
+			}
+			const reservaData = {
+				...newReservaForm,
+				estado: estadoFinal,
+				clienteId: clienteId,
+				origen: origenFinal,
+				destino: destinoFinal,
+				totalConDescuento: total,
+				saldoPendiente: saldo,
+				source: "manual",
+			};
 
 			const response = await fetch(`${apiUrl}/enviar-reserva`, {
 				method: "POST",
