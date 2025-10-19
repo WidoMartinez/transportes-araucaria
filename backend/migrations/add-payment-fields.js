@@ -16,19 +16,21 @@ async function addPaymentFields() {
 
 		const columnNames = columns.map((col) => col.Field);
 
-		// Verificar si estadoPago necesita actualización con nuevo valor 'aprobado'
+		// Verificar si estado_pago necesita actualización con nuevos valores 'aprobado' y 'parcial'
 		const estadoPagoColumn = columns.find(
 			(col) => col.Field === "estado_pago"
 		);
 
 		if (estadoPagoColumn) {
 			const enumValues = estadoPagoColumn.Type;
-			if (!enumValues.includes("aprobado")) {
+			const needsAprobado = !enumValues.includes("aprobado");
+			const needsParcial = !enumValues.includes("parcial");
+			if (needsAprobado || needsParcial) {
 				console.log(
-					"📝 Actualizando ENUM de estado_pago para incluir 'aprobado'..."
+					"📝 Actualizando ENUM de estado_pago para incluir 'aprobado' y/o 'parcial'..."
 				);
 				await sequelize.query(
-					"ALTER TABLE reservas MODIFY COLUMN estado_pago ENUM('pendiente', 'aprobado', 'pagado', 'fallido', 'reembolsado') DEFAULT 'pendiente'"
+					"ALTER TABLE reservas MODIFY COLUMN estado_pago ENUM('pendiente', 'aprobado', 'parcial', 'pagado', 'fallido', 'reembolsado') DEFAULT 'pendiente'"
 				);
 				console.log("✅ ENUM de estado_pago actualizado");
 			}

@@ -29,7 +29,8 @@ import {
 
 import { getBackendUrl } from "../lib/backend";
 
-const API_URL = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
+const API_URL =
+	getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
 
 function ConsultarReserva() {
 	const [codigoReserva, setCodigoReserva] = useState("");
@@ -75,13 +76,14 @@ function ConsultarReserva() {
 		try {
 			setPaying(true);
 			setPayError(null);
-			const apiBase = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
+			const apiBase =
+				getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
 			const amount =
 				tipo === "total"
 					? Number(reserva.totalConDescuento || 0)
-						: tipo === "saldo"
-						? Number(reserva.saldoPendiente || 0)
-						: Number(reserva.abonoSugerido || 0);
+					: tipo === "saldo"
+					? Number(reserva.saldoPendiente || 0)
+					: Number(reserva.abonoSugerido || 0);
 			if (!amount || amount <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
@@ -430,7 +432,7 @@ function ConsultarReserva() {
 								</div>
 
 								{/* Acciones de pago si está pendiente */}
-									{reserva.estadoPago !== "pagado" && (
+								{reserva.estadoPago !== "pagado" && (
 									<div className="mt-6 space-y-3">
 										{payError && (
 											<div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded p-3 text-sm">
@@ -475,7 +477,8 @@ function ConsultarReserva() {
 													className="gap-2"
 												>
 													<CreditCard className="w-4 h-4" />
-													Pagar saldo pendiente ({formatCurrency(reserva.saldoPendiente)})
+													Pagar saldo pendiente (
+													{formatCurrency(reserva.saldoPendiente)})
 												</Button>
 											)}
 										</div>

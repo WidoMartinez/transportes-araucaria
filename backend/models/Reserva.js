@@ -194,16 +194,17 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(50),
 			allowNull: true,
 		},
-		estadoPago: {
-			type: DataTypes.ENUM(
-				"pendiente",
-				"aprobado",
-				"pagado",
-				"fallido",
-				"reembolsado"
-			),
-			defaultValue: "pendiente",
-		},
+    estadoPago: {
+        type: DataTypes.ENUM(
+            "pendiente",
+            "aprobado",
+            "parcial",
+            "pagado",
+            "fallido",
+            "reembolsado"
+        ),
+        defaultValue: "pendiente",
+    },
 		pagoId: {
 			type: DataTypes.STRING(255),
 			allowNull: true,

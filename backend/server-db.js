@@ -2419,20 +2419,20 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		}
 
 		// Actualizar con los detalles proporcionados
-		const datosActualizados = {
-			hora: detalles.hora || reserva.hora,
-			// Permitir actualizar la fecha explicitamente si la envía el cliente
-			fecha: detalles.fecha || reserva.fecha,
-			numeroVuelo: detalles.numeroVuelo || "",
-			hotel: detalles.hotel || "",
-			equipajeEspecial: detalles.equipajeEspecial || "",
-			sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
-			idaVuelta: Boolean(detalles.idaVuelta),
-			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
-			horaRegreso: detalles.horaRegreso || reserva.horaRegreso,
-			detallesCompletos: true,
-			estado: "confirmada", // Cambiar estado a confirmada
-		};
+        const datosActualizados = {
+            hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
+            // Permitir actualizar la fecha explicitamente si la envía el cliente
+            fecha: detalles.fecha || reserva.fecha,
+            numeroVuelo: detalles.numeroVuelo || "",
+            hotel: detalles.hotel || "",
+            equipajeEspecial: detalles.equipajeEspecial || "",
+            sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
+            idaVuelta: Boolean(detalles.idaVuelta),
+            fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
+            horaRegreso: normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
+            // No escribir campos virtuales; solo estado
+            estado: reserva.estado === "completada" ? "completada" : "confirmada",
+        };
 
 		await reserva.update(datosActualizados);
 
@@ -2743,17 +2743,17 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-	const totalReserva = parseFloat(reserva.totalConDescuento || 0);
-		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+        const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+        const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
 		const saldoPendienteActual = parseFloat(
 			reserva.saldoPendiente != null
 				? reserva.saldoPendiente
 				: Math.max(totalReserva - abonoSugerido, 0)
 		);
-		const montoPago =
-			montoPagado !== undefined && montoPagado !== null
-				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
-				: null;
+        const montoPago =
+            montoPagado !== undefined && montoPagado !== null
+                ? parsePositiveDecimal(montoPagado, "montoPagado", 0)
+                : null;
 
 		// monto ya pagado previamente (si existe) y nuevo acumulado
 		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
@@ -2762,69 +2762,47 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			pagoTotalNuevo = pagoPrevio + montoPago;
 		}
 
-	let nuevoEstadoPago = estadoPago || reserva.estadoPago;
-		let nuevoEstadoReserva = reserva.estado;
-		let nuevoSaldoPendiente = saldoPendienteActual;
-		let abonoPagado = reserva.abonoPagado;
-		let saldoPagado = reserva.saldoPagado;
-		const fechaPago = new Date();
+        let nuevoEstadoPago = estadoPago || reserva.estadoPago;
+        let nuevoEstadoReserva = reserva.estado;
+        let nuevoSaldoPendiente = saldoPendienteActual;
+        let abonoPagado = reserva.abonoPagado;
+        let saldoPagado = reserva.saldoPagado;
+        const fechaPago = new Date();
 
-		if (montoPago && montoPago > 0) {
-			if (tipoPago === "abono") {
-				abonoPagado = true;
-				nuevoSaldoPendiente = Math.max(totalReserva - montoPago, 0);
-			} else if (tipoPago === "saldo") {
-				saldoPagado = true;
-				nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
-			} else if (tipoPago === "total") {
-				abonoPagado = true;
-				saldoPagado = true;
-				nuevoSaldoPendiente = 0;
-			} else {
-				nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
-				if (!abonoPagado && montoPago >= abonoSugerido) {
-					abonoPagado = true;
-				}
-			}
-		} else if (tipoPago === "abono" && !abonoPagado) {
-			abonoPagado = true;
-		} else if (tipoPago === "saldo") {
-			saldoPagado = true;
-			nuevoSaldoPendiente = 0;
-		} else if (tipoPago === "total") {
-			abonoPagado = true;
-			saldoPagado = true;
-			nuevoSaldoPendiente = 0;
-		}
+        // Umbral de confirmación: 40% del total (o el abono sugerido, si es mayor)
+        const umbralAbono = Math.max(Math.round(totalReserva * 0.4), abonoSugerido || 0);
 
-		// Si se pagó al menos el abono sugerido o se registró abono, confirmar la reserva
-		if (
-			abonoPagado &&
-			["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
-		) {
-			nuevoEstadoReserva = "confirmada";
-		}
+        if (montoPago && montoPago > 0) {
+            // Recalcular saldo en base al nuevo acumulado
+            nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+        }
 
-		// Determinar si el pago acumulado alcanza estado parcial o pagado
-		// - si se pagó el total => 'pagado'
-		// - si se pagó >= 40% pero < total => 'parcial'
-		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
-			nuevoEstadoPago = "pagado";
-		} else if (pagoTotalNuevo > 0 && pagoTotalNuevo < totalReserva) {
-			// marca parcial cuando se ha pagado al menos 40% del total
-			const porcentaje = totalReserva > 0 ? pagoTotalNuevo / totalReserva : 0;
-			if (porcentaje >= 0.4) {
-				nuevoEstadoPago = "parcial";
-			}
-		}
+        // Evaluar estados según acumulado
+        if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+            // Pago completo
+            nuevoEstadoPago = "pagado";
+            nuevoEstadoReserva = "completada";
+            nuevoSaldoPendiente = 0;
+            abonoPagado = true;
+            saldoPagado = true;
+        } else if (pagoTotalNuevo > 0) {
+            // Pago parcial
+            if (pagoTotalNuevo >= umbralAbono && ["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
+                nuevoEstadoReserva = "confirmada";
+            }
+            nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migración
+            if (pagoTotalNuevo >= umbralAbono) {
+                abonoPagado = true;
+            }
+        }
 
-		// Si se pagó el saldo por completo, marcar como completada y pagado
-		if (saldoPagado || nuevoSaldoPendiente <= 0) {
-			saldoPagado = true;
-			nuevoSaldoPendiente = 0;
-			nuevoEstadoReserva = "completada";
-			nuevoEstadoPago = "pagado";
-		}
+        // Si se especificó explícitamente tipoPago 'saldo' y saldo queda 0 por el acumulado, asegurar flags
+        if (nuevoSaldoPendiente <= 0 && pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+            saldoPagado = true;
+            abonoPagado = true;
+            nuevoEstadoPago = "pagado";
+            nuevoEstadoReserva = "completada";
+        }
 
 		const payloadActualizacion = {
 			estadoPago: nuevoEstadoPago,
@@ -4078,14 +4056,14 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			return;
 		}
 
-		// Buscar reserva por email (más reciente)
-		let reserva;
-		if (email) {
-			reserva = await Reserva.findOne({
-				where: { email: email },
-				order: [["created_at", "DESC"]],
-			});
-		}
+        // Buscar reserva por email (más reciente)
+        let reserva;
+        if (email) {
+            reserva = await Reserva.findOne({
+                where: { email: email },
+                order: [["created_at", "DESC"]],
+            });
+        }
 
 		if (!reserva) {
 			console.log("⚠️  Reserva no encontrada en la base de datos");
@@ -4096,16 +4074,47 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`
 		);
 
-		// Actualizar estado de pago en la reserva
-		await reserva.update({
-			estadoPago: "aprobado",
-			pagoId: payment.flowOrder.toString(),
-			pagoGateway: "flow",
-			pagoMonto: payment.amount,
-			pagoFecha: new Date(payment.paymentDate || new Date()),
-			estado:
-				reserva.estado === "pendiente_detalles" ? reserva.estado : "confirmada",
-		});
+        // Reglas: parcial (>= 40% del total) => confirmada, total => completada
+        const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
+        const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+        const montoActual = Number(payment.amount) || 0;
+        const pagoAcumulado = pagoPrevio + montoActual;
+        const umbralAbono = Math.max(Math.round(totalReserva * 0.4), parseFloat(reserva.abonoSugerido || 0) || 0);
+
+        let nuevoEstadoPago = reserva.estadoPago;
+        let nuevoEstadoReserva = reserva.estado;
+        let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
+        let abonoPagado = reserva.abonoPagado;
+        let saldoPagado = reserva.saldoPagado;
+
+        if (pagoAcumulado >= totalReserva && totalReserva > 0) {
+            nuevoEstadoPago = "pagado";
+            nuevoEstadoReserva = "completada";
+            nuevoSaldoPendiente = 0;
+            abonoPagado = true;
+            saldoPagado = true;
+        } else if (pagoAcumulado > 0) {
+            nuevoEstadoPago = "parcial";
+            if (pagoAcumulado >= umbralAbono && ["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
+                nuevoEstadoReserva = "confirmada";
+            }
+            if (pagoAcumulado >= umbralAbono) {
+                abonoPagado = true;
+            }
+        }
+
+        // Actualizar estado de pago en la reserva (acumulando pagoMonto)
+        await reserva.update({
+            estadoPago: nuevoEstadoPago,
+            pagoId: payment.flowOrder.toString(),
+            pagoGateway: "flow",
+            pagoMonto: pagoAcumulado,
+            pagoFecha: new Date(payment.paymentDate || new Date()),
+            estado: nuevoEstadoReserva,
+            saldoPendiente: nuevoSaldoPendiente,
+            abonoPagado,
+            saldoPagado,
+        });
 
 		console.log("💾 Reserva actualizada con información de pago Flow");
 
