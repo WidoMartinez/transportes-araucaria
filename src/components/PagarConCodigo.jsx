@@ -169,50 +169,17 @@ function PagarConCodigo() {
 				throw new Error(rj.message || "No se pudo crear la reserva");
 			}
 
-			// Si la reserva se creó o modificó, intentar actualizar detalles adicionales
-			// en caso de que exista una reserva previa que no haya guardado hora/otros campos.
-			try {
-				const reservaId = rj.reservaId || rj.reserva?.id || null;
-				if (reservaId) {
-					const detallesPayload = {
-						// Incluir fecha/hora solo si fueron entregadas por el cliente
-						...(formData.fecha ? { fecha: formData.fecha } : {}),
-						...(formData.hora ? { hora: formData.hora } : {}),
-						numeroVuelo: formData.numeroVuelo || "",
-						hotel: formData.hotel || "",
-						equipajeEspecial: formData.mensaje || "",
-						sillaInfantil: formData.sillaInfantil || false,
-						idaVuelta: !!codigoValidado.idaVuelta,
-						fechaRegreso: codigoValidado.fechaRegreso || null,
-						horaRegreso: codigoValidado.horaRegreso || null,
-					};
-
-					const upd = await fetch(
-						`${backendUrl}/completar-reserva-detalles/${reservaId}`,
-						{
-							method: "PUT",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify(detallesPayload),
-						}
-					);
-
-					if (!upd.ok) {
-						// No bloquear el flujo de pago si la actualización de detalles falla
-						console.warn(
-							"No se pudo actualizar detalles de la reserva:",
-							await upd.text().catch(() => "")
-						);
-					} else {
-						console.log(
-							"Detalles de reserva actualizados correctamente para ID:",
-							reservaId
-						);
-					}
-				}
-			} catch (err) {
-				console.error(
-					"Error actualizando detalles de reserva (no crítico):",
-					err
+			// NOTA: no llamamos a `/completar-reserva-detalles/:id` desde el frontend porque
+			// ese endpoint en el backend marca la reserva como 'confirmada'. El backend
+			// debe marcar confirmada solo cuando reciba el webhook/callback de pago.
+			// Simplemente registramos el ID de reserva si existe y seguimos con el flujo
+			// de pago (no bloquear el proceso).
+			const reservaId = rj.reservaId || rj.reserva?.id || null;
+			if (reservaId) {
+				console.log(
+					"Reserva creada (detalles pendientes) ID:",
+					reservaId,
+					"- no se llamará a completar-reserva-detalles desde frontend"
 				);
 			}
 
