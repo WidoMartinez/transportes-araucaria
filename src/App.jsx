@@ -1308,7 +1308,16 @@ function App() {
 			descuentoOnline: pricing.descuentoOnline,
 			totalConDescuento: pricing.totalConDescuento,
 			codigoDescuento: codigoAplicado?.codigo || "",
+			// Estado inicial: marcar como pendiente hasta confirmar pago
+			estado: "pendiente",
+			estadoPago: "pendiente",
+			pagoMonto: 0,
 		};
+
+		// Enviar hora solo si el usuario la proporcionó (evita que el backend asuma 08:00)
+		if (formData.hora) {
+			dataToSend.hora = formData.hora;
+		}
 
 		console.log("📦 Enviando reserva express:", dataToSend);
 
