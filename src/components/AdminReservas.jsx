@@ -862,11 +862,10 @@ function AdminReservas() {
 				const restante = Math.max(totalReserva - pagoPrevio, 0);
 				montoPagadoValue = restante > 0 ? restante : null;
 			} else {
-				// Para otros tipos (ej. 'abono'), si se ingresó monto manual se respeta,
-				// si no, se calcula el abono necesario (40%/abonoSugerido)
-				if (formData.montoPagado !== "") {
-					montoPagadoValue = Number.parseFloat(formData.montoPagado);
-				} else if (tipo === "abono") {
+				// Para otros tipos (ej. 'abono'), calcular solo el nuevo abono necesario.
+				// Nota: el campo 'Monto Registrado' es solo informativo y refleja el acumulado,
+				// no debe reutilizarse como nuevo monto a sumar para evitar duplicar pagos.
+				if (tipo === "abono") {
 					const necesario = Math.max(umbralAbono - pagoPrevio, 0);
 					montoPagadoValue = necesario > 0 ? necesario : null;
 				} else {

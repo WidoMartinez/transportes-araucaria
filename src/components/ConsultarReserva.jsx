@@ -38,7 +38,7 @@ function ConsultarReserva() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [paying, setPaying] = useState(false);
-	const [payError, setPayError] = useState(null);
+    const [payError, setPayError] = useState(null);
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -48,7 +48,7 @@ function ConsultarReserva() {
 
 		setLoading(true);
 		setError(null);
-		setReserva(null);
+        setReserva(null);
 
 		try {
 			const response = await fetch(
@@ -62,8 +62,8 @@ function ConsultarReserva() {
 				throw new Error("Error al buscar la reserva");
 			}
 
-			const data = await response.json();
-			setReserva(data);
+            const data = await response.json();
+            setReserva(data);
 		} catch (err) {
 			setError(err.message);
 		} finally {
@@ -188,11 +188,17 @@ function ConsultarReserva() {
 		return <Badge variant={config.variant}>{config.label}</Badge>;
 	};
 
-	// Mostrar solo el botón de saldo cuando la reserva está confirmada/completada y hay saldo pendiente
-	const shouldShowOnlySaldo =
-		reserva &&
-		(reserva.estado === "confirmada" || reserva.estado === "completada") &&
-		Number(reserva.saldoPendiente) > 0;
+    
+
+    // Mostrar botón de saldo solo cuando ya existe pago parcial
+    const canPaySaldo =
+        reserva &&
+        (reserva.estado === "confirmada" || reserva.estado === "completada") &&
+        reserva.estadoPago === "parcial" &&
+        Number(reserva.saldoPendiente) > 0;
+
+    // En ese escenario, debe ser la única opción disponible
+    const shouldShowOnlySaldo = canPaySaldo;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
@@ -251,8 +257,8 @@ function ConsultarReserva() {
 								</Button>
 							</div>
 						</div>
-					</CardContent>
-				</Card>
+                    </CardContent>
+                </Card>
 
 				{/* Error */}
 				{error && (
@@ -483,19 +489,19 @@ function ConsultarReserva() {
 											</Button>
 											)}
 
-											{/* Botón para pagar saldo pendiente si existe */}
-											{reserva.saldoPendiente > 0 && (
-												<Button
-													variant="secondary"
-													onClick={() => continuarPago("saldo")}
-													disabled={paying}
-													className="gap-2"
-												>
-													<CreditCard className="w-4 h-4" />
-													Pagar saldo pendiente (
-													{formatCurrency(reserva.saldoPendiente)})
-												</Button>
-											)}
+                                            {/* Botón para pagar saldo pendiente solo si hay pago parcial confirmado */}
+                                            {canPaySaldo && (
+                                                <Button
+                                                    variant="secondary"
+                                                    onClick={() => continuarPago("saldo")}
+                                                    disabled={paying}
+                                                    className="gap-2"
+                                                >
+                                                    <CreditCard className="w-4 h-4" />
+                                                    Pagar saldo pendiente (
+                                                    {formatCurrency(reserva.saldoPendiente)})
+                                                </Button>
+                                            )}
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
