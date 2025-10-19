@@ -2797,7 +2797,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
         const fechaPago = new Date();
 
         // Umbral de confirmación: 40% del total (o el abono sugerido, si es mayor)
-        const umbralAbono = Math.max(Math.round(totalReserva * 0.4), abonoSugerido || 0);
+        const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
 
         if (montoPago && montoPago > 0) {
             // Recalcular saldo en base al nuevo acumulado
@@ -4106,7 +4106,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
         const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
         const montoActual = Number(payment.amount) || 0;
         const pagoAcumulado = pagoPrevio + montoActual;
-        const umbralAbono = Math.max(Math.round(totalReserva * 0.4), parseFloat(reserva.abonoSugerido || 0) || 0);
+        const umbralAbono = Math.max(totalReserva * 0.4, parseFloat(reserva.abonoSugerido || 0) || 0);
 
         let nuevoEstadoPago = reserva.estadoPago;
         let nuevoEstadoReserva = reserva.estado;
