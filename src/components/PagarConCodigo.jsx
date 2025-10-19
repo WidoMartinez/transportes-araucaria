@@ -122,6 +122,8 @@ function PagarConCodigo() {
 	};
 
 	// Pago con código: crea reserva express y genera link de Flow
+	// IMPORTANTE: El backend debe mantener la reserva en estado 'pendiente' hasta recibir la confirmación de pago exitosa desde Flow.
+	// No debe cambiar el estado a 'confirmada' antes de recibir el webhook/callback de Flow.
 	const procesarPagoConCodigoFlow = async () => {
 		if (!validarDatos() || !codigoValidado) return;
 		setProcesando(true);
