@@ -86,6 +86,36 @@ function AdminReservas() {
 
 	// Estados para asignación de vehículo/conductor
 	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
+	const [regPagoMonto, setRegPagoMonto] = useState("");
+	const [regPagoMetodo, setRegPagoMetodo] = useState("");
+	const [regPagoReferencia, setRegPagoReferencia] = useState("");
+	const [regPagoSource, setRegPagoSource] = useState("manual");
+	const [pagoHistorial, setPagoHistorial] = useState([]);
+
+	const fetchPagoHistorial = async () => {
+		if (!selectedReserva) return;
+		try {
+			const resp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`);
+			if (resp.ok) {
+				const data = await resp.json();
+				setPagoHistorial(Array.isArray(data.pagos) ? data.pagos : []);
+			} else {
+				setPagoHistorial([]);
+			}
+		} catch (e) {
+			setPagoHistorial([]);
+		}
+	};
+
+	// Recargar historial de pagos cuando cambie la reserva seleccionada o se cierre el modal de registro
+	useEffect(() => {
+		if (selectedReserva) {
+			fetchPagoHistorial();
+		} else {
+			setPagoHistorial([]);
+		}
+	}, [selectedReserva, showRegisterPayment]);
 	const [vehiculos, setVehiculos] = useState([]);
 	const [conductores, setConductores] = useState([]);
 	const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
@@ -809,10 +839,35 @@ function AdminReservas() {
 				throw new Error("Error al actualizar el estado");
 			}
 
-			const montoPagadoValue =
-				formData.montoPagado !== ""
-					? Number.parseFloat(formData.montoPagado)
-					: null;
+			// Determinar monto a enviar para la actualización de pago.
+			// Reglas:
+			// - Si el admin ingresó manualmente un monto, usarlo.
+			// - Si no ingresó monto y seleccionó tipo 'abono', calcular el 40% (o abonoSugerido si es mayor)
+			//   restando lo ya pagado previamente para enviar solo el nuevo abono necesario.
+			// - Si seleccionó 'total' o 'saldo' y no indicó monto, completar el pago restante.
+			let montoPagadoValue = null;
+			const tipo = formData.tipoPago;
+			const totalReserva = Number(selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0) || 0;
+			const abonoSugerido = Number(selectedReserva?.abonoSugerido || 0) || 0;
+			const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
+			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
+
+			// Si se selecciona 'saldo' o 'total' (Completar pago), siempre enviar el restante
+			if (tipo === "saldo" || tipo === "total") {
+				const restante = Math.max(totalReserva - pagoPrevio, 0);
+				montoPagadoValue = restante > 0 ? restante : null;
+			} else {
+				// Para otros tipos (ej. 'abono'), si se ingresó monto manual se respeta,
+				// si no, se calcula el abono necesario (40%/abonoSugerido)
+				if (formData.montoPagado !== "") {
+					montoPagadoValue = Number.parseFloat(formData.montoPagado);
+				} else if (tipo === "abono") {
+					const necesario = Math.max(umbralAbono - pagoPrevio, 0);
+					montoPagadoValue = necesario > 0 ? necesario : null;
+				} else {
+					montoPagadoValue = null;
+				}
+			}
 
 			// Actualizar pago
 			const pagoResponse = await fetch(
@@ -1650,6 +1705,85 @@ function AdminReservas() {
 							</div>
 						</DialogContent>
 					</Dialog>
+
+					{/* Modal para registrar pago manual */}
+					<Dialog open={showRegisterPayment} onOpenChange={setShowRegisterPayment}>
+						<DialogContent className="max-w-md">
+							<DialogHeader>
+								<DialogTitle>Registrar pago manual</DialogTitle>
+								<DialogDescription>Registra un pago y guarda un historial con origen manual/web.</DialogDescription>
+							</DialogHeader>
+							<div className="space-y-4 mt-2">
+								<div className="space-y-2">
+									<Label>Monto (CLP)</Label>
+									<Input type="number" value={regPagoMonto} onChange={(e)=>setRegPagoMonto(e.target.value)} />
+								</div>
+								<div className="space-y-2">
+									<Label>Método</Label>
+									<Select value={regPagoMetodo} onValueChange={(v)=>setRegPagoMetodo(v)}>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="efectivo">Efectivo</SelectItem>
+											<SelectItem value="transferencia">Transferencia</SelectItem>
+											<SelectItem value="flow">Flow</SelectItem>
+											<SelectItem value="otro">Otro</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-2">
+									<Label>Referencia</Label>
+									<Input value={regPagoReferencia} onChange={(e)=>setRegPagoReferencia(e.target.value)} />
+								</div>
+								<div className="flex justify-end gap-2 pt-4 border-t">
+									<Button variant="outline" onClick={()=>setShowRegisterPayment(false)}>Cancelar</Button>
+									<Button onClick={async ()=>{
+										if(!selectedReserva) return;
+										try{
+											const ADMIN_TOKEN = localStorage.getItem('adminToken');
+											const resp = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,{
+												method: 'POST',
+												headers: { 'Content-Type': 'application/json', ...(ADMIN_TOKEN?{Authorization:`Bearer ${ADMIN_TOKEN}`}:{}) },
+												body: JSON.stringify({ amount: Number(regPagoMonto)||0, metodo: regPagoMetodo, referencia: regPagoReferencia, source: regPagoSource })
+											});
+											if(!resp.ok) throw new Error('Error registrando pago');
+											setShowRegisterPayment(false);
+											setRegPagoMonto(''); setRegPagoMetodo(''); setRegPagoReferencia('');
+											// recargar reserva y pagos
+											await fetchReservas();
+											await fetchPagoHistorial();
+										}catch(e){
+											console.error(e); alert('Error registrando pago: '+e.message);
+										}
+									}}>Registrar</Button>
+								</div>
+							</div>
+						</DialogContent>
+					</Dialog>
+
+					{/* Panel de historial de pagos */}
+					<div className="mt-4">
+						<h4 className="font-semibold mb-2">Historial de pagos</h4>
+						<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
+							{pagoHistorial && pagoHistorial.length>0 ? (
+								pagoHistorial.map(p => (
+									<div key={p.id} className="flex justify-between items-center py-2 border-b">
+										<div>
+											<div className="font-medium">{p.source === 'web' ? 'Pago web' : 'Pago manual'}</div>
+											<div className="text-sm text-muted-foreground">{p.metodo || '-'} • {p.referencia || '-'}</div>
+										</div>
+										<div className="text-right text-sm">
+											<div>{new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(p.amount)}</div>
+											<div className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString()}</div>
+										</div>
+									</div>
+								))
+							) : (
+								<p className="text-sm text-muted-foreground">No hay pagos registrados.</p>
+							)}
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent>
 					{error && (
@@ -2601,38 +2735,65 @@ function AdminReservas() {
 							{/* Tipo de pago registrado */}
 							<div className="space-y-2">
 								<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
-								<Select
-									value={formData.tipoPago}
-									onValueChange={(value) =>
-										setFormData({ ...formData, tipoPago: value })
-									}
-								>
-									<SelectTrigger id="tipoPago">
-										<SelectValue placeholder="Selecciona el tipo de pago" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="abono">Abono</SelectItem>
-										<SelectItem value="saldo">Saldo</SelectItem>
-										<SelectItem value="total">Pago total</SelectItem>
-									</SelectContent>
-								</Select>
+								{/* Determinar si ya se registró el abono del 40% */}
+								{(() => {
+									const montoPagadoNum = parseFloat(formData.montoPagado || 0) || 0;
+									const totalReservaNum = parseFloat(selectedReserva?.totalConDescuento || selectedReserva?.precio || 0) || 0;
+									const abonoSugeridoNum = parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+									const umbralAbono = Math.max(totalReservaNum * 0.4, abonoSugeridoNum || 0);
+									const yaAbono40 = Boolean(selectedReserva?.abonoPagado) || montoPagadoNum >= umbralAbono;
+									return (
+										<Select
+											value={formData.tipoPago}
+											onValueChange={(value) =>
+												setFormData({ ...formData, tipoPago: value })
+											}
+										>
+											<SelectTrigger id="tipoPago">
+												<SelectValue placeholder="Selecciona el tipo de pago" />
+											</SelectTrigger>
+											<SelectContent>
+												{yaAbono40 ? (
+													// Si ya se pagó el abono del 40%, solo permitir completar el pago
+													<SelectItem value="saldo">Completar pago</SelectItem>
+												) : (
+													// Opciones por defecto: Abono 40% y Abono total
+													<>
+														<SelectItem value="abono">Abono 40%</SelectItem>
+														<SelectItem value="total">Abono total</SelectItem>
+													</>
+												)}
+											</SelectContent>
+										</Select>
+									);
+								})()}
 							</div>
 
 							{/* Monto del pago */}
 							<div className="space-y-2">
+								{/* Mostrar monto registrado actual (solo informativo). Los pagos manuales se registran en el apartado 'Registrar pago'. */}
 								<Label htmlFor="montoPagado">Monto Registrado (CLP)</Label>
 								<Input
 									id="montoPagado"
-									type="number"
-									min="0"
-									step="1000"
-									placeholder="Ej: 40000"
-									value={formData.montoPagado}
-									onChange={(e) =>
-										setFormData({ ...formData, montoPagado: e.target.value })
-									}
+									type="text"
+									readOnly
+									value={selectedReserva ? (selectedReserva.pagoMonto ? new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP'}).format(selectedReserva.pagoMonto) : '') : ''}
 								/>
 							</div>
+
+							{/* Botón y modal para registrar pago manual */}
+							<div className="space-y-2">
+								<Label>Registrar pago manual</Label>
+								<div className="flex gap-2">
+									<Button type="button" onClick={() => setShowRegisterPayment(true)}>
+										Registrar pago
+									</Button>
+									<span className="text-sm text-muted-foreground self-center">
+										Registra pagos manuales y guarda un historial (manual / web).
+									</span>
+								</div>
+							</div>
+
 
 							{/* Observaciones */}
 							<div className="space-y-2">
