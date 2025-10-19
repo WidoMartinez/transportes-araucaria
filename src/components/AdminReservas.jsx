@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo } from "react";
 import { getBackendUrl } from "../lib/backend";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -84,7 +84,7 @@ function AdminReservas() {
 	const [editOtroOrigen, setEditOtroOrigen] = useState("");
 	const [editOtroDestino, setEditOtroDestino] = useState("");
 
-	// Estados para asignación de vehículo/conductor
+	// Estados para asignaciÃ³n de vehÃ­culo/conductor
 	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
 	const [regPagoMonto, setRegPagoMonto] = useState("");
@@ -124,7 +124,7 @@ function AdminReservas() {
 	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
 	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
-	// Estados para pre-cargar y validar contra asignación actual
+	// Estados para pre-cargar y validar contra asignaciÃ³n actual
 	const [assignedPatente, setAssignedPatente] = useState("");
 	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
 	const [assignedVehiculoId, setAssignedVehiculoId] = useState(null);
@@ -159,20 +159,20 @@ function AdminReservas() {
 		}
 	};
 
-	// Filtros y búsqueda
+	// Filtros y bÃºsqueda
 	const [searchTerm, setSearchTerm] = useState("");
 	const [estadoFiltro, setEstadoFiltro] = useState("todos");
 	const [estadoPagoFiltro, setEstadoPagoFiltro] = useState("todos");
 	const [fechaDesde, setFechaDesde] = useState("");
 	const [fechaHasta, setFechaHasta] = useState("");
 
-	// Paginación
+	// PaginaciÃ³n
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalReservas, setTotalReservas] = useState(0);
 	const itemsPerPage = 20;
 
-	// Estadísticas
+	// EstadÃ­sticas
 	const [estadisticas, setEstadisticas] = useState({
 		totalReservas: 0,
 		reservasPendientes: 0,
@@ -181,7 +181,7 @@ function AdminReservas() {
 		totalIngresos: 0,
 	});
 
-	// Formulario de edición
+	// Formulario de ediciÃ³n
 	const [formData, setFormData] = useState({
 		estado: "",
 		estadoPago: "",
@@ -222,14 +222,14 @@ function AdminReservas() {
 		saldoPendiente: 0,
 		totalConDescuento: 0,
 		mensaje: "",
-		// Estado inicial debe ser pendiente, solo se confirma si el pago está realizado
+		// Estado inicial debe ser pendiente, solo se confirma si el pago estÃ¡ realizado
 		estado: "pendiente",
 		estadoPago: "pendiente",
 		metodoPago: "",
 		observaciones: "",
 	});
 
-	// Catálogo de destinos (para selects)
+	// CatÃ¡logo de destinos (para selects)
 	const [destinosCatalog, setDestinosCatalog] = useState([]);
 	const [origenEsOtro, setOrigenEsOtro] = useState(false);
 	const [destinoEsOtro, setDestinoEsOtro] = useState(false);
@@ -286,7 +286,7 @@ function AdminReservas() {
 		"adminReservas_columnasVisibles_v1",
 	];
 
-	// Inicialización perezosa desde storage para evitar reseteos al montar
+	// InicializaciÃ³n perezosa desde storage para evitar reseteos al montar
 	const [columnasVisibles, setColumnasVisibles] = useState(() => {
 		try {
 			let parsed = null;
@@ -312,7 +312,7 @@ function AdminReservas() {
 		}
 	});
 
-	// Guardar configuración de columnas cuando cambie
+	// Guardar configuraciÃ³n de columnas cuando cambie
 	useEffect(() => {
 		try {
 			localStorage.setItem(
@@ -338,7 +338,7 @@ function AdminReservas() {
 	const apiUrl =
 		getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
-	// Cargar estadísticas
+	// Cargar estadÃ­sticas
 	const fetchEstadisticas = async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`);
@@ -347,9 +347,9 @@ function AdminReservas() {
 				setEstadisticas(data);
 			} else {
 				console.warn(
-					`Error cargando estadísticas: ${response.status} ${response.statusText}`
+					`Error cargando estadÃ­sticas: ${response.status} ${response.statusText}`
 				);
-				// Establecer estadísticas por defecto en caso de error
+				// Establecer estadÃ­sticas por defecto en caso de error
 				setEstadisticas({
 					totalReservas: 0,
 					reservasPendientes: 0,
@@ -359,8 +359,8 @@ function AdminReservas() {
 				});
 			}
 		} catch (error) {
-			console.error("Error cargando estadísticas:", error);
-			// Establecer estadísticas por defecto en caso de error
+			console.error("Error cargando estadÃ­sticas:", error);
+			// Establecer estadÃ­sticas por defecto en caso de error
 			setEstadisticas({
 				totalReservas: 0,
 				reservasPendientes: 0,
@@ -371,7 +371,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Cargar vehículos disponibles
+	// Cargar vehÃ­culos disponibles
 	const fetchVehiculos = async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/vehiculos`);
@@ -380,7 +380,7 @@ function AdminReservas() {
 				setVehiculos(data.vehiculos || []);
 			}
 		} catch (error) {
-			console.error("Error cargando vehículos:", error);
+			console.error("Error cargando vehÃ­culos:", error);
 		}
 	};
 
@@ -397,7 +397,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Abrir diálogo de asignación
+	// Abrir diÃ¡logo de asignaciÃ³n
 	const handleAsignar = (reserva) => {
 		setSelectedReserva(reserva);
 		// Derivar patente del label "TIPO PATENTE"
@@ -408,7 +408,7 @@ function AdminReservas() {
 		const m = obs.match(/Conductor asignado:\s*([^(|\n]+?)(?:\s*\(|$)/i);
 		const nombreCon = m ? m[1].trim() : "";
 		setAssignedConductorNombre(nombreCon);
-		// Intentar preseleccionar si los catálogos ya existen
+		// Intentar preseleccionar si los catÃ¡logos ya existen
 		let preVeh = "";
 		if (vehiculos.length > 0 && pat) {
 			const found = vehiculos.find(
@@ -433,12 +433,12 @@ function AdminReservas() {
 		setConductorSeleccionado(preCon);
 		setEnviarNotificacion(true);
 		setShowAsignarDialog(true);
-		// Cargar vehículos y conductores si aún no se han cargado
+		// Cargar vehÃ­culos y conductores si aÃºn no se han cargado
 		if (vehiculos.length === 0) fetchVehiculos();
 		if (conductores.length === 0) fetchConductores();
 	};
 
-	// Pre-cargar selección cuando se abren catálogos
+	// Pre-cargar selecciÃ³n cuando se abren catÃ¡logos
 	useEffect(() => {
 		if (!showAsignarDialog) return;
 		if (!vehiculoSeleccionado && assignedPatente && vehiculos.length > 0) {
@@ -469,7 +469,7 @@ function AdminReservas() {
 		assignedConductorNombre,
 	]);
 
-	// Guardar asignación de vehículo/conductor
+	// Guardar asignaciÃ³n de vehÃ­culo/conductor
 	const handleGuardarAsignacion = async () => {
 		if (!vehiculoSeleccionado) {
 			alert("Debe seleccionar al menos un vehículo");
@@ -601,11 +601,11 @@ function AdminReservas() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta]);
 
-	// Filtrar reservas localmente por búsqueda
+	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
 		let filtered = reservas;
 
-		// Filtro de búsqueda
+		// Filtro de bÃºsqueda
 		if (searchTerm) {
 			const term = searchTerm.toLowerCase();
 			filtered = filtered.filter(
@@ -625,7 +625,7 @@ function AdminReservas() {
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
 
-	// Abrir modal de edición
+	// Abrir modal de ediciÃ³n
 	const handleEdit = (reserva) => {
 		setSelectedReserva(reserva);
 		setFormData({
@@ -655,12 +655,12 @@ function AdminReservas() {
 			idaVuelta: Boolean(reserva.idaVuelta),
 			fechaRegreso: (reserva.fechaRegreso || "").toString().substring(0, 10),
 		});
-		// Reset edición de ruta
+		// Reset ediciÃ³n de ruta
 		setEditOrigenEsOtro(false);
 		setEditDestinoEsOtro(false);
 		setEditOtroOrigen("");
 		setEditOtroDestino("");
-		// Cargar catálogo de destinos para selects
+		// Cargar catÃ¡logo de destinos para selects
 		fetchDestinosCatalog();
 		setShowEditDialog(true);
 	};
@@ -739,11 +739,11 @@ function AdminReservas() {
 				}
 			} catch (e) {
 				console.warn(
-					"Error actualizando datos generales (no crítico):",
+					"Error actualizando datos generales (no crÃ­tico):",
 					e.message
 				);
 			}
-			// Actualizar ruta si cambió
+			// Actualizar ruta si cambiÃ³
 			const origenFinalEdit = editOrigenEsOtro
 				? editOtroOrigen || formData.origen
 				: formData.origen;
@@ -778,7 +778,7 @@ function AdminReservas() {
 						});
 					} catch {}
 				}
-				// También registrar origen si es 'otro' y no existe
+				// TambiÃ©n registrar origen si es 'otro' y no existe
 				if (
 					editOrigenEsOtro &&
 					origenFinalEdit &&
@@ -841,12 +841,12 @@ function AdminReservas() {
 				throw new Error("Error al actualizar el estado");
 			}
 
-			// Determinar monto a enviar para la actualización de pago.
+			// Determinar monto a enviar para la actualizaciÃ³n de pago.
 			// Reglas:
-			// - Si el admin ingresó manualmente un monto, usarlo.
-			// - Si no ingresó monto y seleccionó tipo 'abono', calcular el 40% (o abonoSugerido si es mayor)
+			// - Si el admin ingresÃ³ manualmente un monto, usarlo.
+			// - Si no ingresÃ³ monto y seleccionÃ³ tipo 'abono', calcular el 40% (o abonoSugerido si es mayor)
 			//   restando lo ya pagado previamente para enviar solo el nuevo abono necesario.
-			// - Si seleccionó 'total' o 'saldo' y no indicó monto, completar el pago restante.
+			// - Si seleccionÃ³ 'total' o 'saldo' y no indicÃ³ monto, completar el pago restante.
 			let montoPagadoValue = null;
 			const tipo = formData.tipoPago;
 			const totalReserva =
@@ -909,7 +909,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Función para obtener el badge del estado
+	// FunciÃ³n para obtener el badge del estado
 	const getEstadoBadge = (estado) => {
 		const estados = {
 			pendiente: { variant: "secondary", label: "Pendiente", icon: Clock },
@@ -942,7 +942,7 @@ function AdminReservas() {
 		);
 	};
 
-	// Función para obtener el badge del estado de pago
+	// FunciÃ³n para obtener el badge del estado de pago
 	// Ahora acepta el objeto `reserva` completo para derivar el estado
 	// a partir de campos reales (monto pagado, total, saldoPendiente, estadoPago)
 	const getEstadoPagoBadge = (reservaOrEstado) => {
@@ -952,11 +952,11 @@ function AdminReservas() {
 				? { estadoPago: reservaOrEstado }
 				: reservaOrEstado || {};
 
-		// Extraer valores numéricos seguros
+		// Extraer valores numÃ©ricos seguros
 		const montoTotal =
 			Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
 		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
-		// Derivamos saldo cuando sea necesario, pero no lo requerimos explícitamente aquí
+		// Derivamos saldo cuando sea necesario, pero no lo requerimos explÃ­citamente aquÃ­
 
 		// Normalizar estado comunicado por backend
 		const estadoPagoRaw = (reserva.estadoPago || "").toString().toLowerCase();
@@ -992,7 +992,7 @@ function AdminReservas() {
 			variant = "secondary";
 		}
 
-		// Mostrar badge con etiqueta y, opcionalmente, info de montos en texto pequeño
+		// Mostrar badge con etiqueta y, opcionalmente, info de montos en texto pequeÃ±o
 		const montoInfo =
 			montoPagado > 0
 				? ` (${new Intl.NumberFormat("es-CL", {
@@ -1013,12 +1013,25 @@ function AdminReservas() {
 		);
 	};
 
-	// Helper para saber si la reserva está 100% pagada según montos
+	// Helper para saber si la reserva estÃ¡ 100% pagada segÃºn montos
 	const isPagoCompleto = (reserva) => {
 		const montoTotal =
 			Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
 		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
 		return montoTotal > 0 && montoPagado >= montoTotal;
+	};
+
+	// Helper para detectar si ya fue asignado un vehÃ­culo previamente
+	// Consideramos "asignada" si el campo `vehiculo` incluye tipo + patente
+	// por ejemplo: "SUV ABCD12"; en cambio valores como "sedan" o "suv"
+	// (sin patente) indican que aÃºn no se ha asignado uno real.
+	const isAsignada = (reserva) => {
+		const v = (reserva?.vehiculo || "").trim();
+		if (!v) return false;
+		const parts = v.split(" ");
+		if (parts.length < 2) return false;
+		const last = parts[parts.length - 1];
+		return /[A-Z0-9]{4,}/i.test(last);
 	};
 
 	// Formatear moneda
@@ -1031,7 +1044,7 @@ function AdminReservas() {
 
 	// Formatear fecha
 	// Evitar que una fecha almacenada como 'YYYY-MM-DD' o 'YYYY-MM-DDT00:00:00Z'
-	// sea interpretada como UTC y muestre el día anterior en zonas horarias negativas.
+	// sea interpretada como UTC y muestre el dÃ­a anterior en zonas horarias negativas.
 	const formatDate = (date) => {
 		if (!date) return "-";
 
@@ -1055,7 +1068,7 @@ function AdminReservas() {
 		try {
 			return new Date(date).toLocaleDateString("es-CL");
 		} catch (err) {
-			// Log en español y fallback: mostrar la cadena original truncada (fecha parte)
+			// Log en espaÃ±ol y fallback: mostrar la cadena original truncada (fecha parte)
 			console.warn("Error formateando fecha:", err);
 			const m = date.match(/^(\d{4}-\d{2}-\d{2})/);
 			return m ? m[1] : String(date);
@@ -1185,7 +1198,7 @@ function AdminReservas() {
 
 	// Guardar nueva reserva
 	const handleSaveNewReserva = async () => {
-		// Validaciones básicas
+		// Validaciones bÃ¡sicas
 		if (
 			!newReservaForm.nombre ||
 			!newReservaForm.email ||
@@ -1238,7 +1251,7 @@ function AdminReservas() {
 				}
 			}
 
-			// Calcular saldo pendiente si no está establecido
+			// Calcular saldo pendiente si no estÃ¡ establecido
 			const total =
 				parseFloat(newReservaForm.totalConDescuento) ||
 				parseFloat(newReservaForm.precio) ||
@@ -1270,7 +1283,7 @@ function AdminReservas() {
 					});
 				} catch (e) {
 					console.warn(
-						"No se pudo registrar destino nuevo (no crítico)",
+						"No se pudo registrar destino nuevo (no crÃ­tico)",
 						e.message
 					);
 				}
@@ -1439,7 +1452,7 @@ function AdminReservas() {
 
 	return (
 		<div className="space-y-6">
-			{/* Encabezado y Estadísticas */}
+			{/* Encabezado y EstadÃ­sticas */}
 			<div>
 				<div className="flex justify-between items-center mb-4">
 					<h2 className="text-3xl font-bold">Gestión de Reservas</h2>
@@ -1531,7 +1544,7 @@ function AdminReservas() {
 				</div>
 			</div>
 
-			{/* Filtros y Búsqueda */}
+			{/* Filtros y BÃºsqueda */}
 			<Card>
 				<CardHeader>
 					<CardTitle>Filtros de Búsqueda</CardTitle>
@@ -1681,7 +1694,7 @@ function AdminReservas() {
 												JSON.stringify(DEFAULT_COLUMNAS_VISIBLES)
 											);
 										} catch (e) {
-											// Log en español para facilitar debugging
+											// Log en espaÃ±ol para facilitar debugging
 											console.warn(
 												"No se pudo restablecer columnas en localStorage:",
 												e
@@ -1700,7 +1713,7 @@ function AdminReservas() {
 											);
 											alert("Columnas guardadas");
 										} catch {
-											alert("No se pudo guardar la configuración");
+											alert("No se pudo guardar la configuraciÃ³n");
 										}
 									}}
 								>
@@ -1808,44 +1821,6 @@ function AdminReservas() {
 						</DialogContent>
 					</Dialog>
 
-					{/* Panel de historial de pagos */}
-					<div className="mt-4">
-						<h4 className="font-semibold mb-2">Historial de pagos</h4>
-						<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
-							{pagoHistorial && pagoHistorial.length > 0 ? (
-								pagoHistorial.map((p) => (
-									<div
-										key={p.id}
-										className="flex justify-between items-center py-2 border-b"
-									>
-										<div>
-											<div className="font-medium">
-												{p.source === "web" ? "Pago web" : "Pago manual"}
-											</div>
-											<div className="text-sm text-muted-foreground">
-												{p.metodo || "-"} • {p.referencia || "-"}
-											</div>
-										</div>
-										<div className="text-right text-sm">
-											<div>
-												{new Intl.NumberFormat("es-CL", {
-													style: "currency",
-													currency: "CLP",
-												}).format(p.amount)}
-											</div>
-											<div className="text-xs text-muted-foreground">
-												{new Date(p.createdAt).toLocaleString()}
-											</div>
-										</div>
-									</div>
-								))
-							) : (
-								<p className="text-sm text-muted-foreground">
-									No hay pagos registrados.
-								</p>
-							)}
-						</div>
-					</div>
 				</CardHeader>
 				<CardContent>
 					{error && (
@@ -2146,15 +2121,15 @@ function AdminReservas() {
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
-														{/* Solo mostrar botón de asignar si el pago está completo */}
-														{isPagoCompleto(reserva) && !reserva.vehiculo && (
+										{/* Mostrar botÃ³n solo si estÃ¡ confirmada y aÃºn no tiene asignaciÃ³n */}
+										{reserva?.estado === "confirmada" && !isAsignada(reserva) && (
 															<Button
 																variant="secondary"
 																size="sm"
 																onClick={() => handleAsignar(reserva)}
 																title="Asignar vehículo y conductor"
 															>
-																🚗
+																ðŸš—
 															</Button>
 														)}
 													</div>
@@ -2167,7 +2142,7 @@ function AdminReservas() {
 						</Table>
 					</div>
 
-					{/* Paginación */}
+					{/* PaginaciÃ³n */}
 					<div className="flex items-center justify-between mt-4">
 						<p className="text-sm text-muted-foreground">
 							Página {currentPage} de {totalPages}
@@ -2357,7 +2332,7 @@ function AdminReservas() {
 									</p>
 								) : historialAsignaciones.length === 0 ? (
 									<p className="text-sm text-muted-foreground">
-										Sin cambios de asignación
+										Sin cambios de asignaciÃ³n
 									</p>
 								) : (
 									<div className="space-y-2">
@@ -2369,7 +2344,7 @@ function AdminReservas() {
 														{h.conductor && (
 															<>
 																{" "}
-																• Conductor: <strong>{h.conductor}</strong>
+																- Conductor: <strong>{h.conductor}</strong>
 															</>
 														)}
 													</span>
@@ -2391,7 +2366,7 @@ function AdminReservas() {
 								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">
-											Número de Vuelo
+									Número de Vuelo
 										</Label>
 										<p className="font-medium">
 											{selectedReserva.numeroVuelo || "-"}
@@ -2638,7 +2613,7 @@ function AdminReservas() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Modal de Edición */}
+			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
 				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
@@ -2650,7 +2625,7 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-4">
-							{/* Información del Cliente (editable) */}
+							{/* InformaciÃ³n del Cliente (editable) */}
 							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
 									<Label>Nombre</Label>
@@ -2797,7 +2772,7 @@ function AdminReservas() {
 							{/* Tipo de pago registrado */}
 							<div className="space-y-2">
 								<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
-								{/* Determinar si ya se registró el abono del 40% */}
+								{/* Determinar si ya se registrÃ³ el abono del 40% */}
 								{(() => {
 									const montoPagadoNum =
 										parseFloat(formData.montoPagado || 0) || 0;
@@ -2828,7 +2803,7 @@ function AdminReservas() {
 											</SelectTrigger>
 											<SelectContent>
 												{yaAbono40 ? (
-													// Si ya se pagó el abono del 40%, solo permitir completar el pago
+													// Si ya se pagÃ³ el abono del 40%, solo permitir completar el pago
 													<SelectItem value="saldo">Completar pago</SelectItem>
 												) : (
 													// Opciones por defecto: Abono 40% y Abono total
@@ -2864,7 +2839,38 @@ function AdminReservas() {
 								/>
 							</div>
 
-							{/* Botón y modal para registrar pago manual */}
+							{/* Historial de pagos de esta reserva */}
+							<div className="space-y-2">
+								<Label>Historial de pagos</Label>
+								<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
+									{pagoHistorial && pagoHistorial.length > 0 &&
+										pagoHistorial.map((p) => (
+											<div key={p.id} className="flex justify-between items-center py-2 border-b">
+												<div>
+												<div className="font-medium">
+													{p.source === "web" ? "Pago web" : "Pago manual"}
+												</div>
+												<div className="text-sm text-muted-foreground">
+													{p.metodo || "-"} - {p.referencia || "-"}
+												</div>
+											</div>
+											<div className="text-right text-sm">
+												<div>
+													{new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(p.amount)}
+												</div>
+												<div className="text-xs text-muted-foreground">
+													{new Date(p.createdAt).toLocaleString()}
+												</div>
+											</div>
+										</div>
+									))}
+									{(!pagoHistorial || pagoHistorial.length === 0) && (
+										<p className="text-sm text-muted-foreground">No hay pagos registrados.</p>
+									)}
+								</div>
+							</div>
+
+							{/* BotÃ³n y modal para registrar pago manual */}
 							<div className="space-y-2">
 								<Label>Registrar pago manual</Label>
 								<div className="flex gap-2">
@@ -3015,7 +3021,7 @@ function AdminReservas() {
 							{clienteSeleccionado && (
 								<div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
 									<p className="font-medium">
-										✓ Cliente existente seleccionado
+										âœ“ Cliente existente seleccionado
 									</p>
 									<p className="text-sm">
 										{clienteSeleccionado.esCliente && (
@@ -3044,7 +3050,7 @@ function AdminReservas() {
 									</Label>
 									<Input
 										id="new-nombre"
-										placeholder="Juan Pérez (escribe para buscar)"
+									placeholder="Juan Pérez (escribe para buscar)"
 										value={newReservaForm.nombre}
 										onChange={(e) => {
 											setNewReservaForm({
@@ -3076,12 +3082,12 @@ function AdminReservas() {
 												>
 													<div className="font-medium">{cliente.nombre}</div>
 													<div className="text-sm text-gray-600">
-														{cliente.email} • {cliente.telefono}
-														{cliente.rut && ` • RUT: ${cliente.rut}`}
+														{cliente.email} - {cliente.telefono}
+														{cliente.rut && ` - RUT: ${cliente.rut}`}
 													</div>
 													{cliente.esCliente && (
 														<Badge variant="default" className="text-xs mt-1">
-															Cliente • {cliente.totalReservas} reservas
+															Cliente - {cliente.totalReservas} reservas
 														</Badge>
 													)}
 												</div>
@@ -3166,8 +3172,8 @@ function AdminReservas() {
 											}
 										>
 											<option value="">Seleccionar origen</option>
-											<option value="Aeropuerto La Araucanía">
-												Aeropuerto La Araucanía
+										<option value="Aeropuerto La Araucanía">
+											Aeropuerto La Araucanía
 											</option>
 											{destinosCatalog.map((n) => (
 												<option key={n} value={n}>
@@ -3190,7 +3196,7 @@ function AdminReservas() {
 												checked={origenEsOtro}
 												onChange={(e) => setOrigenEsOtro(e.target.checked)}
 											/>
-											Origen no está en la lista
+										Origen no está en la lista
 										</label>
 									</div>
 								</div>
@@ -3232,7 +3238,7 @@ function AdminReservas() {
 												checked={destinoEsOtro}
 												onChange={(e) => setDestinoEsOtro(e.target.checked)}
 											/>
-											Destino no está en la lista (se agregará a la base de
+										Destino no está en la lista (se agregará a la base de
 											datos como inactivo)
 										</label>
 									</div>
@@ -3377,7 +3383,7 @@ function AdminReservas() {
 									<Label htmlFor="new-hotel">Hotel</Label>
 									<Input
 										id="new-hotel"
-										placeholder="Hotel Gran Pucón"
+									placeholder="Hotel Gran Pucón"
 										value={newReservaForm.hotel}
 										onChange={(e) =>
 											setNewReservaForm({
@@ -3391,7 +3397,7 @@ function AdminReservas() {
 									<Label htmlFor="new-equipaje">Equipaje Especial</Label>
 									<Input
 										id="new-equipaje"
-										placeholder="Esquíes, bicicletas, etc."
+									placeholder="Esquíes, bicicletas, etc."
 										value={newReservaForm.equipajeEspecial}
 										onChange={(e) =>
 											setNewReservaForm({
@@ -3516,7 +3522,7 @@ function AdminReservas() {
 								</div>
 								{newReservaForm.estadoPago === "pagado" && (
 									<div className="space-y-2">
-										<Label htmlFor="new-metodopago">Método de Pago</Label>
+									<Label htmlFor="new-metodopago">Método de Pago</Label>
 										<Select
 											value={newReservaForm.metodoPago}
 											onValueChange={(value) =>
@@ -3527,7 +3533,7 @@ function AdminReservas() {
 											}
 										>
 											<SelectTrigger id="new-metodopago">
-												<SelectValue placeholder="Seleccionar método" />
+										<SelectValue placeholder="Seleccionar método" />
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="efectivo">Efectivo</SelectItem>
@@ -3724,11 +3730,11 @@ function AdminReservas() {
 													<div className="text-sm text-muted-foreground">
 														<div className="flex items-center gap-2">
 															<MapPin className="w-3 h-3" />
-															{reserva.origen} → {reserva.destino}
+															{reserva.origen} -> {reserva.destino}
 														</div>
 														<div className="flex items-center gap-2 mt-1">
 															<Calendar className="w-3 h-3" />
-															{formatDate(reserva.fecha)} •{" "}
+															{formatDate(reserva.fecha)} -{" "}
 															{reserva.hora || "-"}
 														</div>
 													</div>
@@ -3753,7 +3759,7 @@ function AdminReservas() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Dialog de confirmación para eliminar masivamente */}
+			{/* Dialog de confirmaciÃ³n para eliminar masivamente */}
 			<AlertDialog
 				open={showBulkDeleteDialog}
 				onOpenChange={setShowBulkDeleteDialog}
@@ -3761,7 +3767,7 @@ function AdminReservas() {
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
-							¿Eliminar reservas seleccionadas?
+							Â¿Eliminar reservas seleccionadas?
 						</AlertDialogTitle>
 						<AlertDialogDescription>
 							Esta acción eliminará permanentemente {selectedReservas.length}{" "}
@@ -3842,7 +3848,7 @@ function AdminReservas() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Dialog para asignar vehículo y conductor */}
+			{/* Dialog para asignar vehÃ­culo y conductor */}
 			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
 				<DialogContent className="max-w-lg">
 					<DialogHeader>
@@ -3856,14 +3862,14 @@ function AdminReservas() {
 					</DialogHeader>
 
 					<div className="space-y-4 py-4">
-						{/* Información de la reserva */}
+						{/* InformaciÃ³n de la reserva */}
 						<div className="bg-muted p-3 rounded-lg space-y-1 text-sm">
 							<p>
 								<strong>Cliente:</strong> {selectedReserva?.nombre}
 							</p>
 							<div className="flex items-center justify-between gap-3">
 								<p className="m-0">
-									<strong>Ruta:</strong> {selectedReserva?.origen} →{" "}
+									<strong>Ruta:</strong> {selectedReserva?.origen} ->{" "}
 									{selectedReserva?.destino}
 								</p>
 								<Button
@@ -3888,7 +3894,7 @@ function AdminReservas() {
 							</p>
 						</div>
 
-						{/* Selector de vehículo */}
+						{/* Selector de vehÃ­culo */}
 						<div className="space-y-2">
 							<Label htmlFor="vehiculo">
 								Vehículo <span className="text-red-500">*</span>
@@ -3946,9 +3952,9 @@ function AdminReservas() {
 							</Select>
 						</div>
 
-						{/* Sin edición de ruta en reasignación */}
+						{/* Sin ediciÃ³n de ruta en reasignaciÃ³n */}
 
-						{/* Enviar notificación */}
+						{/* Enviar notificaciÃ³n */}
 						<div className="flex items-center gap-2 pt-2">
 							<Checkbox
 								id="enviar-notificacion"
@@ -3976,7 +3982,7 @@ function AdminReservas() {
 								)}
 								{selectedReserva.conductor_asignado && (
 									<p>
-										👤 Conductor: {selectedReserva.conductor_asignado.nombre}
+										ðŸ‘¤ Conductor: {selectedReserva.conductor_asignado.nombre}
 									</p>
 								)}
 							</div>

@@ -1128,9 +1128,9 @@ function Hero({
 																	Promo activa:{" "}
 																	{activePromotion.descripcion ||
 																		`Descuento ${activePromotion.descuentoPorcentaje}%`}
-																	{promotionDetails
-																		? ` Â· ${promotionDetails}`
-																		: ""}
+																{promotionDetails
+																	? ` - ${promotionDetails}`
+																	: ""}
 																</p>
 															)}
 														</div>

@@ -326,7 +326,7 @@ Tipo: Flete Nacional`,
 								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm">
 									<p className="text-3xl font-bold text-primary">+1.200</p>
 									<p className="text-sm text-muted-foreground">
-										Viajes y fletes coordinados en los Ãºltimos 18 meses para
+										Viajes y fletes coordinados en los últimos 18 meses para
 										pymes y grandes cuentas.
 									</p>
 								</div>
