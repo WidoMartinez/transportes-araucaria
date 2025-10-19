@@ -167,12 +167,12 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 	};
 
 	const getEstadoPagoBadge = (estadoPago) => {
-		const estados = {
-			pendiente: { color: "bg-orange-500", text: "Pago Pendiente" },
-			pagado: { color: "bg-green-500", text: "Pagado" },
-			parcial: { color: "bg-yellow-500", text: "Pago Parcial" },
-			reembolsado: { color: "bg-purple-500", text: "Reembolsado" },
-		};
+                const estados = {
+                        pendiente: { color: "bg-orange-500", text: "Pago pendiente" },
+                        pagado: { color: "bg-green-500", text: "Pago completado" },
+                        parcial: { color: "bg-yellow-500", text: "Pago parcial" },
+                        reembolsado: { color: "bg-purple-500", text: "Reembolsado" },
+                };
 		const info = estados[estadoPago?.toLowerCase()] || {
 			color: "bg-gray-500",
 			text: estadoPago || "Sin info",

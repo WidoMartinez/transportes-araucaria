@@ -23,12 +23,12 @@ import {
 	DialogTrigger,
 } from "./ui/dialog";
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
+        Table,
+        TableBody,
+        TableCell,
+        TableHead,
+        TableHeader,
+        TableRow,
 } from "./ui/table";
 import {
 	Search,
@@ -59,15 +59,123 @@ import {
 	Square,
 } from "lucide-react";
 import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
+        AlertDialog,
+        AlertDialogAction,
+        AlertDialogCancel,
+        AlertDialogContent,
+        AlertDialogDescription,
+        AlertDialogFooter,
+        AlertDialogHeader,
+        AlertDialogTitle,
 } from "./ui/alert-dialog";
+
+// Función auxiliar para convertir cualquier valor numérico en un número seguro
+const obtenerNumeroSeguro = (valor) => {
+        if (valor === null || valor === undefined || valor === "") {
+                return 0;
+        }
+        const numero = Number.parseFloat(valor);
+        return Number.isFinite(numero) ? numero : 0;
+};
+
+// Calcula el estado final esperado de la reserva y del pago considerando el nuevo abono
+const calcularTransicionPago = ({
+        reservaBase = {},
+        estadoFormulario,
+        estadoPagoFormulario,
+        montoActual,
+}) => {
+        const total = obtenerNumeroSeguro(
+                reservaBase.totalConDescuento ?? reservaBase.total ?? 0
+        );
+        const pagoPrevio = obtenerNumeroSeguro(reservaBase.pagoMonto);
+        const abonoSugerido = obtenerNumeroSeguro(reservaBase.abonoSugerido);
+        const montoNuevo = obtenerNumeroSeguro(montoActual);
+        const pagoAcumulado = pagoPrevio + (montoNuevo > 0 ? montoNuevo : 0);
+        const saldoCalculado =
+                total > 0 ? Math.max(total - pagoAcumulado, 0) : Math.max(obtenerNumeroSeguro(reservaBase.saldoPendiente), 0);
+        const umbralBase = Math.max(Math.round(total * 0.4) || 0, abonoSugerido);
+
+        const normalizarEstado = (valor, defecto) =>
+                (valor ? valor.toString().toLowerCase() : defecto);
+
+        const estadoInicial = normalizarEstado(
+                estadoFormulario ?? reservaBase.estado,
+                "pendiente"
+        );
+        const estadoPagoInicialNormalizado = normalizarEstado(
+                estadoPagoFormulario ?? reservaBase.estadoPago,
+                "pendiente"
+        );
+        const estadoPagoInicial =
+                estadoPagoInicialNormalizado === "aprobado"
+                        ? "parcial"
+                        : estadoPagoInicialNormalizado;
+
+        const estadoProtegido = ["cancelada"].includes(estadoInicial);
+        const pagoBloqueado = ["reembolsado", "fallido"].includes(
+                estadoPagoInicial
+        );
+
+        let estadoResultado = estadoInicial;
+        let estadoPagoResultado = estadoPagoInicial;
+        const hayMontoNuevo = montoNuevo > 0;
+        const estadosPendientes = ["pendiente", "pendiente_detalles"];
+
+        const puedeAplicarReglas = !estadoProtegido && !pagoBloqueado;
+
+        if (puedeAplicarReglas) {
+                if (hayMontoNuevo) {
+                        if (total > 0 && pagoAcumulado >= total) {
+                                estadoResultado = "completada";
+                                estadoPagoResultado = "pagado";
+                        } else if (pagoAcumulado > 0) {
+                                estadoPagoResultado = "parcial";
+                                if (
+                                        pagoAcumulado >= umbralBase &&
+                                        estadosPendientes.includes(estadoResultado)
+                                ) {
+                                        estadoResultado = "confirmada";
+                                }
+                        }
+                } else {
+                        if (estadoPagoResultado === "pagado") {
+                                estadoResultado = "completada";
+                        } else if (
+                                estadoPagoResultado === "parcial" &&
+                                estadosPendientes.includes(estadoResultado)
+                        ) {
+                                estadoResultado = "confirmada";
+                        }
+                }
+        }
+
+        return {
+                total,
+                pagoPrevio,
+                montoNuevo: hayMontoNuevo ? montoNuevo : 0,
+                pagoAcumulado,
+                saldoEstimado: total > 0 ? saldoCalculado : Math.max(obtenerNumeroSeguro(reservaBase.saldoPendiente), 0),
+                umbralAbono: umbralBase,
+                estadoResultado,
+                estadoPagoResultado,
+                aplicoReglaAutomatica: puedeAplicarReglas && hayMontoNuevo,
+        };
+};
+
+// Convierte valores de estado a etiquetas legibles en español
+const formatearEstadoLabel = (valor) => {
+        if (!valor) return "-";
+        return valor
+                .toString()
+                .split("_")
+                .map((segmento) =>
+                        segmento.length > 0
+                                ? segmento.charAt(0).toUpperCase() + segmento.slice(1)
+                                : segmento
+                )
+                .join(" ");
+};
 
 function AdminReservas() {
 	const [reservas, setReservas] = useState([]);
@@ -790,9 +898,13 @@ function AdminReservas() {
 					throw new Error("Error al actualizar la ruta");
 				}
 			}
-			// Determinar estado final: si el pago fue marcado como 'pagado', marcar como 'confirmada'
-			const estadoFinal =
-				formData.estadoPago === "pagado" ? "confirmada" : formData.estado;
+                        const transicionPago = calcularTransicionPago({
+                                reservaBase: selectedReserva,
+                                estadoFormulario: formData.estado,
+                                estadoPagoFormulario: formData.estadoPago,
+                                montoActual: formData.montoPagado,
+                        });
+                        const estadoFinal = transicionPago.estadoResultado;
 			const estadoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
 				{
@@ -809,10 +921,18 @@ function AdminReservas() {
 				throw new Error("Error al actualizar el estado");
 			}
 
-			const montoPagadoValue =
-				formData.montoPagado !== ""
-					? Number.parseFloat(formData.montoPagado)
-					: null;
+                        const montoPagadoValue =
+                                formData.montoPagado !== ""
+                                        ? Number.parseFloat(formData.montoPagado)
+                                        : null;
+                        const estadoPagoFinal = transicionPago.estadoPagoResultado;
+                        const tipoPagoFinal =
+                                formData.tipoPago ||
+                                (montoPagadoValue !== null && !Number.isNaN(montoPagadoValue)
+                                        ? estadoPagoFinal === "pagado"
+                                                ? "total"
+                                                : "abono"
+                                        : null);
 
 			// Actualizar pago
 			const pagoResponse = await fetch(
@@ -821,13 +941,13 @@ function AdminReservas() {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						estadoPago: formData.estadoPago,
-						metodoPago: formData.metodoPago,
-						referenciaPago: formData.referenciaPago,
-						tipoPago: formData.tipoPago || null,
-						montoPagado:
-							montoPagadoValue !== null && !Number.isNaN(montoPagadoValue)
-								? montoPagadoValue
+                                                estadoPago: estadoPagoFinal,
+                                                metodoPago: formData.metodoPago,
+                                                referenciaPago: formData.referenciaPago,
+                                                tipoPago: tipoPagoFinal,
+                                                montoPagado:
+                                                        montoPagadoValue !== null && !Number.isNaN(montoPagadoValue)
+                                                                ? montoPagadoValue
 								: null,
 					}),
 				}
@@ -886,73 +1006,73 @@ function AdminReservas() {
 	// Función para obtener el badge del estado de pago
 	// Ahora acepta el objeto `reserva` completo para derivar el estado
 	// a partir de campos reales (monto pagado, total, saldoPendiente, estadoPago)
-	const getEstadoPagoBadge = (reservaOrEstado) => {
-		// Compatibilidad: si pasan solo el estado como string
-		const reserva =
-			typeof reservaOrEstado === "string"
-				? { estadoPago: reservaOrEstado }
-				: reservaOrEstado || {};
+        const getEstadoPagoBadge = (reservaOrEstado) => {
+                const reserva =
+                        typeof reservaOrEstado === "string"
+                                ? { estadoPago: reservaOrEstado }
+                                : reservaOrEstado || {};
 
-		// Extraer valores numéricos seguros
-		const montoTotal =
-			Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
-		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
-		// Derivamos saldo cuando sea necesario, pero no lo requerimos explícitamente aquí
+                const montoTotal =
+                        Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
+                const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
+                const saldoPendiente =
+                        reserva.saldoPendiente !== undefined && reserva.saldoPendiente !== null
+                                ? Number(reserva.saldoPendiente)
+                                : montoTotal > 0
+                                ? Math.max(montoTotal - montoPagado, 0)
+                                : 0;
 
-		// Normalizar estado comunicado por backend
-		const estadoPagoRaw = (reserva.estadoPago || "").toString().toLowerCase();
+                const estadoPagoRaw = (reserva.estadoPago || "")
+                        .toString()
+                        .toLowerCase();
 
-		// Determinar estado derivado con reglas claras:
-		// - reembolsado y fallido mantienen prioridad
-		// - si montoPagado >= montoTotal && montoTotal > 0 => 'pagado'
-		// - si montoPagado > 0 && montoPagado < montoTotal => 'parcial'
-		// - si montoPagado == 0 => 'pendiente'
-		// - si backend indica status destructivo (fallido) o similar, respetarlo
+                let label = "Pendiente";
+                let variant = "secondary";
 
-		let label = "Pendiente";
-		let variant = "secondary";
+                if (estadoPagoRaw === "reembolsado") {
+                        label = "Reembolsado";
+                        variant = "outline";
+                } else if (estadoPagoRaw === "fallido" || estadoPagoRaw === "rechazado") {
+                        label = "Fallido";
+                        variant = "destructive";
+                } else if (montoTotal > 0 && montoPagado >= montoTotal) {
+                        label = "Pago completado";
+                        variant = "default";
+                } else if (
+                        estadoPagoRaw === "pagado" &&
+                        (montoTotal === 0 || montoPagado >= montoTotal)
+                ) {
+                        label = "Pago completado";
+                        variant = "default";
+                } else if (estadoPagoRaw === "parcial" || montoPagado > 0) {
+                        label = "Pago parcial";
+                        variant = "outline";
+                }
 
-		if (estadoPagoRaw === "reembolsado") {
-			label = "Reembolsado";
-			variant = "outline";
-		} else if (estadoPagoRaw === "fallido" || estadoPagoRaw === "rechazado") {
-			label = "Fallido";
-			variant = "destructive";
-		} else if (montoTotal > 0 && montoPagado >= montoTotal) {
-			label = "Pagado";
-			variant = "default";
-		} else if (montoPagado > 0 && montoPagado < montoTotal) {
-			label = "Pago parcial";
-			variant = "outline";
-		} else if (estadoPagoRaw === "pagado") {
-			// respaldo por si backend marca 'pagado' pero montos no coinciden
-			label = "Pagado";
-			variant = "default";
-		} else {
-			label = "Pendiente";
-			variant = "secondary";
-		}
+                const formatter = new Intl.NumberFormat("es-CL", {
+                        style: "currency",
+                        currency: "CLP",
+                });
 
-		// Mostrar badge con etiqueta y, opcionalmente, info de montos en texto pequeño
-		const montoInfo =
-			montoPagado > 0
-				? ` (${new Intl.NumberFormat("es-CL", {
-						style: "currency",
-						currency: "CLP",
-				  }).format(montoPagado)})`
-				: "";
+                const detalles = [];
+                if (montoPagado > 0) {
+                        detalles.push(`Pagado: ${formatter.format(montoPagado)}`);
+                }
+                if (saldoPendiente > 0) {
+                        detalles.push(`Saldo: ${formatter.format(saldoPendiente)}`);
+                }
 
-		return (
-			<div className="flex flex-col text-sm">
-				<Badge variant={variant}>{label}</Badge>
-				{montoInfo ? (
-					<span className="text-xs text-muted-foreground mt-1">
-						Pagó: {montoInfo}
-					</span>
-				) : null}
-			</div>
-		);
-	};
+                return (
+                        <div className="flex flex-col text-sm">
+                                <Badge variant={variant}>{label}</Badge>
+                                {detalles.length > 0 ? (
+                                        <span className="text-xs text-muted-foreground mt-1">
+                                                {detalles.join(" • ")}
+                                        </span>
+                                ) : null}
+                        </div>
+                );
+        };
 
 	// Helper para saber si la reserva está 100% pagada según montos
 	const isPagoCompleto = (reserva) => {
@@ -963,18 +1083,28 @@ function AdminReservas() {
 	};
 
 	// Formatear moneda
-	const formatCurrency = (amount) => {
-		return new Intl.NumberFormat("es-CL", {
-			style: "currency",
-			currency: "CLP",
-		}).format(amount || 0);
-	};
+        const formatCurrency = (amount) => {
+                return new Intl.NumberFormat("es-CL", {
+                        style: "currency",
+                        currency: "CLP",
+                }).format(amount || 0);
+        };
 
-	// Formatear fecha
-	// Evitar que una fecha almacenada como 'YYYY-MM-DD' o 'YYYY-MM-DDT00:00:00Z'
-	// sea interpretada como UTC y muestre el día anterior en zonas horarias negativas.
-	const formatDate = (date) => {
-		if (!date) return "-";
+        const pagoResumen = useMemo(() => {
+                if (!selectedReserva) return null;
+                return calcularTransicionPago({
+                        reservaBase: selectedReserva,
+                        estadoFormulario: formData.estado,
+                        estadoPagoFormulario: formData.estadoPago,
+                        montoActual: formData.montoPagado,
+                });
+        }, [selectedReserva, formData.estado, formData.estadoPago, formData.montoPagado]);
+
+        // Formatear fecha
+        // Evitar que una fecha almacenada como 'YYYY-MM-DD' o 'YYYY-MM-DDT00:00:00Z'
+        // sea interpretada como UTC y muestre el día anterior en zonas horarias negativas.
+        const formatDate = (date) => {
+                if (!date) return "-";
 
 		// Si el valor es una fecha solo 'YYYY-MM-DD', construir una fecha local
 		if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -1115,8 +1245,8 @@ function AdminReservas() {
 			saldoPendiente: 0,
 			totalConDescuento: 0,
 			mensaje: "",
-			estado: "confirmada",
-			estadoPago: "pendiente",
+                        estado: "pendiente",
+                        estadoPago: "pendiente",
 			metodoPago: "",
 			observaciones: "",
 		});
@@ -1218,10 +1348,15 @@ function AdminReservas() {
 			}
 
 			// Si el estado de pago es 'pagado', la reserva se marca como 'confirmada'
-			let estadoFinal = newReservaForm.estado;
-			if (newReservaForm.estadoPago === "pagado") {
-				estadoFinal = "confirmada";
-			}
+                        let estadoFinal = newReservaForm.estado;
+                        if (newReservaForm.estadoPago === "pagado") {
+                                estadoFinal = "completada";
+                        } else if (
+                                newReservaForm.estadoPago === "parcial" &&
+                                ["pendiente", "pendiente_detalles"].includes(estadoFinal)
+                        ) {
+                                estadoFinal = "confirmada";
+                        }
 			const reservaData = {
 				...newReservaForm,
 				estado: estadoFinal,
@@ -1520,13 +1655,14 @@ function AdminReservas() {
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="pendiente">Pendiente</SelectItem>
-									<SelectItem value="pagado">Pagado</SelectItem>
-									<SelectItem value="fallido">Fallido</SelectItem>
-									<SelectItem value="reembolsado">Reembolsado</SelectItem>
-								</SelectContent>
+                                                                <SelectContent>
+                                                                        <SelectItem value="todos">Todos</SelectItem>
+                                                                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                                                                        <SelectItem value="parcial">Pago parcial</SelectItem>
+                                                                        <SelectItem value="pagado">Pago completado</SelectItem>
+                                                                        <SelectItem value="fallido">Fallido</SelectItem>
+                                                                        <SelectItem value="reembolsado">Reembolsado</SelectItem>
+                                                                </SelectContent>
 							</Select>
 						</div>
 
@@ -2553,12 +2689,13 @@ function AdminReservas() {
 									<SelectTrigger id="estadoPago">
 										<SelectValue />
 									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="pendiente">Pendiente</SelectItem>
-										<SelectItem value="pagado">Pagado</SelectItem>
-										<SelectItem value="fallido">Fallido</SelectItem>
-										<SelectItem value="reembolsado">Reembolsado</SelectItem>
-									</SelectContent>
+                                                                        <SelectContent>
+                                                                                <SelectItem value="pendiente">Pendiente</SelectItem>
+                                                                                <SelectItem value="parcial">Pago parcial</SelectItem>
+                                                                                <SelectItem value="pagado">Pago completado</SelectItem>
+                                                                                <SelectItem value="fallido">Fallido</SelectItem>
+                                                                                <SelectItem value="reembolsado">Reembolsado</SelectItem>
+                                                                        </SelectContent>
 								</Select>
 							</div>
 
@@ -2619,11 +2756,11 @@ function AdminReservas() {
 							</div>
 
 							{/* Monto del pago */}
-							<div className="space-y-2">
-								<Label htmlFor="montoPagado">Monto Registrado (CLP)</Label>
-								<Input
-									id="montoPagado"
-									type="number"
+                                                                <div className="space-y-2">
+                                                                        <Label htmlFor="montoPagado">Monto Registrado (CLP)</Label>
+                                                                        <Input
+                                                                                id="montoPagado"
+                                                                                type="number"
 									min="0"
 									step="1000"
 									placeholder="Ej: 40000"
@@ -2632,7 +2769,48 @@ function AdminReservas() {
 										setFormData({ ...formData, montoPagado: e.target.value })
 									}
 								/>
-							</div>
+                                                                </div>
+
+                                                                {selectedReserva && pagoResumen && (
+                                                                        <div className="rounded-lg border border-blue-200 bg-blue-50/80 px-3 py-3 text-xs sm:text-sm text-blue-900 space-y-1">
+                                                                                <p className="font-semibold text-sm">
+                                                                                        Resumen del pago estimado
+                                                                                </p>
+                                                                                <div className="grid gap-1 sm:grid-cols-2">
+                                                                                        <span>
+                                                                                                Total: {formatCurrency(pagoResumen.total)}
+                                                                                        </span>
+                                                                                        <span>
+                                                                                                Pagado antes: {formatCurrency(pagoResumen.pagoPrevio)}
+                                                                                        </span>
+                                                                                        <span>
+                                                                                                Nuevo registro: {formatCurrency(pagoResumen.montoNuevo)}
+                                                                                        </span>
+                                                                                        <span>
+                                                                                                Pagado acumulado: {formatCurrency(pagoResumen.pagoAcumulado)}
+                                                                                        </span>
+                                                                                        <span>
+                                                                                                Umbral 40%: {formatCurrency(pagoResumen.umbralAbono)}
+                                                                                        </span>
+                                                                                        <span>
+                                                                                                Saldo estimado: {formatCurrency(pagoResumen.saldoEstimado)}
+                                                                                        </span>
+                                                                                </div>
+                                                                                <div className="pt-1 text-xs">
+                                                                                        <p>
+                                                                                                Estado final previsto: {formatearEstadoLabel(pagoResumen.estadoResultado)}
+                                                                                        </p>
+                                                                                        <p>
+                                                                                                Estado de pago previsto: {formatearEstadoLabel(pagoResumen.estadoPagoResultado)}
+                                                                                        </p>
+                                                                                </div>
+                                                                                {pagoResumen.aplicoReglaAutomatica ? (
+                                                                                        <p className="text-[11px] text-blue-700">
+                                                                                                Se aplicarán las reglas automáticas según el monto ingresado para mantener la coherencia entre pago y estado.
+                                                                                        </p>
+                                                                                ) : null}
+                                                                        </div>
+                                                                )}
 
 							{/* Observaciones */}
 							<div className="space-y-2">
@@ -3240,11 +3418,13 @@ function AdminReservas() {
 										<SelectTrigger id="new-estado">
 											<SelectValue />
 										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="pendiente">Pendiente</SelectItem>
-											<SelectItem value="confirmada">Confirmada</SelectItem>
-											<SelectItem value="completada">Completada</SelectItem>
-										</SelectContent>
+                                                                                <SelectContent>
+                                                                                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                                                                                        <SelectItem value="pendiente_detalles">Pendiente Detalles</SelectItem>
+                                                                                        <SelectItem value="confirmada">Confirmada</SelectItem>
+                                                                                        <SelectItem value="cancelada">Cancelada</SelectItem>
+                                                                                        <SelectItem value="completada">Completada</SelectItem>
+                                                                                </SelectContent>
 									</Select>
 								</div>
 								<div className="space-y-2">
@@ -3261,17 +3441,23 @@ function AdminReservas() {
 										<SelectTrigger id="new-estadopago">
 											<SelectValue />
 										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="pendiente">Pendiente</SelectItem>
-											<SelectItem value="pagado">Pagado</SelectItem>
-										</SelectContent>
+                                                                                <SelectContent>
+                                                                                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                                                                                        <SelectItem value="parcial">Pago parcial</SelectItem>
+                                                                                        <SelectItem value="pagado">Pago completado</SelectItem>
+                                                                                        <SelectItem value="fallido">Fallido</SelectItem>
+                                                                                        <SelectItem value="reembolsado">Reembolsado</SelectItem>
+                                                                                </SelectContent>
 									</Select>
 								</div>
-								{newReservaForm.estadoPago === "pagado" && (
-									<div className="space-y-2">
-										<Label htmlFor="new-metodopago">Método de Pago</Label>
-										<Select
-											value={newReservaForm.metodoPago}
+                                                                {[
+                                                                        "parcial",
+                                                                        "pagado",
+                                                                ].includes(newReservaForm.estadoPago) && (
+                                                                        <div className="space-y-2">
+                                                                                <Label htmlFor="new-metodopago">Método de Pago</Label>
+                                                                                <Select
+                                                                                        value={newReservaForm.metodoPago}
 											onValueChange={(value) =>
 												setNewReservaForm({
 													...newReservaForm,
@@ -3544,10 +3730,10 @@ function AdminReservas() {
 			</AlertDialog>
 
 			{/* Dialog para cambio masivo de estado */}
-			<AlertDialog
-				open={showBulkStatusDialog}
-				onOpenChange={setShowBulkStatusDialog}
-			>
+                        <AlertDialog
+                                open={showBulkStatusDialog}
+                                onOpenChange={setShowBulkStatusDialog}
+                        >
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
@@ -3591,13 +3777,66 @@ function AdminReservas() {
 								"Actualizar Estado"
 							)}
 						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+                                        </AlertDialogFooter>
+                                </AlertDialogContent>
+                        </AlertDialog>
 
-			{/* Dialog para asignar vehículo y conductor */}
-			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
-				<DialogContent className="max-w-lg">
+                        {/* Dialog para cambio masivo de estado de pago */}
+                        <AlertDialog
+                                open={showBulkPaymentDialog}
+                                onOpenChange={setShowBulkPaymentDialog}
+                        >
+                                <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                                <AlertDialogTitle>
+                                                        Cambiar estado de pago de reservas seleccionadas
+                                                </AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                        Define el estado de pago que se aplicará a {selectedReservas.length}{" "}
+                                                        reserva(s). Recuerda registrar los montos correspondientes en cada caso.
+                                                </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <div className="py-4">
+                                                <Select
+                                                        value={bulkEstadoPago}
+                                                        onValueChange={setBulkEstadoPago}
+                                                >
+                                                        <SelectTrigger>
+                                                                <SelectValue placeholder="Selecciona un estado de pago" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                                <SelectItem value="pendiente">Pendiente</SelectItem>
+                                                                <SelectItem value="parcial">Pago parcial</SelectItem>
+                                                                <SelectItem value="pagado">Pago completado</SelectItem>
+                                                                <SelectItem value="fallido">Fallido</SelectItem>
+                                                                <SelectItem value="reembolsado">Reembolsado</SelectItem>
+                                                        </SelectContent>
+                                                </Select>
+                                        </div>
+                                        <AlertDialogFooter>
+                                                <AlertDialogCancel disabled={processingBulk}>
+                                                        Cancelar
+                                                </AlertDialogCancel>
+                                                <AlertDialogAction
+                                                        onClick={handleBulkChangePayment}
+                                                        disabled={processingBulk || !bulkEstadoPago}
+                                                >
+                                                        {processingBulk ? (
+                                                                <>
+                                                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                                                        Actualizando...
+                                                                </>
+                                                        ) : (
+                                                                "Actualizar estado de pago"
+                                                        )}
+                                                </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* Dialog para asignar vehículo y conductor */}
+                        <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+                                <DialogContent className="max-w-lg">
 					<DialogHeader>
 						<DialogTitle>
 							Asignar Vehículo y Conductor - Reserva #{selectedReserva?.id}

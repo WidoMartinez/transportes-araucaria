@@ -1288,12 +1288,12 @@ function App() {
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
-		const dataToSend = {
-			nombre: formData.nombre,
-			email: formData.email,
-			telefono: formData.telefono,
-			origen: formData.origen,
-			destino: destinoFinal,
+                const dataToSend = {
+                        nombre: formData.nombre,
+                        email: formData.email,
+                        telefono: formData.telefono,
+                        origen: formData.origen,
+                        destino: destinoFinal,
 			fecha: formData.fecha,
 			pasajeros: formData.pasajeros,
 			idaVuelta: formData.idaVuelta,
@@ -1311,11 +1311,11 @@ function App() {
 			descuentoOnline: pricing.descuentoOnline,
 			totalConDescuento: pricing.totalConDescuento,
 			codigoDescuento: codigoAplicado?.codigo || "",
-			// Estado inicial: marcar como pendiente hasta confirmar pago
-			estado: "pendiente",
-			estadoPago: "pendiente",
-			pagoMonto: 0,
-		};
+                        // Estado inicial: marcar como pendiente de detalles hasta confirmar pago
+                        estado: "pendiente_detalles",
+                        estadoPago: "pendiente",
+                        pagoMonto: 0,
+                };
 
 		// Enviar hora solo si el usuario la proporcionó (evita que el backend asuma 08:00)
 		if (formData.hora) {
