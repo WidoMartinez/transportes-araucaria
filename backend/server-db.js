@@ -137,6 +137,7 @@ const parsePromotionMetadata = (record) => {
 			? parsed
 			: null;
 	} catch (error) {
+		console.error('Error parsePromotionMetadata:', error);
 		return null;
 	}
 };
@@ -199,11 +200,27 @@ const parseJsonArray = (raw) => {
 		try {
 			value = JSON.parse(trimmed);
 		} catch (error) {
+			console.error('Error parseJsonArray:', error);
 			return [];
 		}
 	}
 
 	return Array.isArray(value) ? value : [];
+};
+
+// Normalizar horas aceptando 'HH:MM' o 'HH:MM:SS' y devolviendo 'HH:MM:SS' o null
+const normalizeTimeGlobal = (hora) => {
+	if (!hora && hora !== 0) return null;
+	const str = String(hora).trim();
+	if (str.length === 0) return null;
+	const parts = str.split(":").map((p) => p.padStart(2, "0"));
+	if (parts.length === 2) {
+		return `${parts[0].slice(-2)}:${parts[1].slice(-2)}:00`;
+	}
+	if (parts.length >= 3) {
+		return `${parts[0].slice(-2)}:${parts[1].slice(-2)}:${parts[2].slice(-2)}`;
+	}
+	return null;
 };
 
 // Determinar la clasificación del cliente según reservas completadas
@@ -1713,6 +1730,8 @@ app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 
+		// Se usa normalizeTimeGlobal definida en scope superior
+
 		// Formatear RUT si se proporciona
 		const rutFormateado = datosReserva.rut
 			? formatearRUT(datosReserva.rut)
@@ -1928,7 +1947,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				origen: datosReserva.origen,
 				destino: datosReserva.destino,
 				fecha: datosReserva.fecha,
-				hora: datosReserva.hora || reservaExistente.hora,
+				hora: normalizeTimeGlobal(datosReserva.hora) || reservaExistente.hora,
 				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
 				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 				vehiculo: datosReserva.vehiculo || "",
@@ -2000,7 +2019,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				origen: datosReserva.origen,
 				destino: datosReserva.destino,
 				fecha: datosReserva.fecha,
-				hora: "08:00:00", // Hora por defecto - se actualiza después
+				// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
+				hora: normalizeTimeGlobal(datosReserva.hora),
 				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
 				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 				vehiculo: datosReserva.vehiculo || "",

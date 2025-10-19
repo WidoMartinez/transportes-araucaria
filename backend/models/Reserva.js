@@ -54,7 +54,6 @@ const Reserva = sequelize.define(
 		hora: {
 			type: DataTypes.TIME,
 			allowNull: true,
-			defaultValue: "08:00",
 		},
 		pasajeros: {
 			type: DataTypes.INTEGER,

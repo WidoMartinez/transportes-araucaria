@@ -181,15 +181,15 @@ const resolveIsConsultaView = () => {
 
 // Resolver si la URL es para pagar con código
 const resolveIsPayCodeView = () => {
-    const hash = window.location.hash.toLowerCase();
-    return hash === "#pagar-con-codigo" || hash === "#pago-codigo";
+	const hash = window.location.hash.toLowerCase();
+	return hash === "#pagar-con-codigo" || hash === "#pago-codigo";
 };
 
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
-    const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
+	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -257,16 +257,16 @@ function App() {
 		};
 	}, []);
 
-    // Sincronizar vista de pago con código
-    useEffect(() => {
-        const syncPayCode = () => setIsPayCodeView(resolveIsPayCodeView());
-        window.addEventListener("hashchange", syncPayCode);
-        window.addEventListener("popstate", syncPayCode);
-        return () => {
-            window.removeEventListener("hashchange", syncPayCode);
-            window.removeEventListener("popstate", syncPayCode);
-        };
-    }, []);
+	// Sincronizar vista de pago con código
+	useEffect(() => {
+		const syncPayCode = () => setIsPayCodeView(resolveIsPayCodeView());
+		window.addEventListener("hashchange", syncPayCode);
+		window.addEventListener("popstate", syncPayCode);
+		return () => {
+			window.removeEventListener("hashchange", syncPayCode);
+			window.removeEventListener("popstate", syncPayCode);
+		};
+	}, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
@@ -339,7 +339,8 @@ function App() {
 				let data = payload;
 
 				if (!data) {
-					const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+					const apiUrl =
+						getBackendUrl() || "https://transportes-araucaria.onrender.com";
 					console.log("?? Fetching desde:", `${apiUrl}/pricing`);
 
 					const response = await fetch(`${apiUrl}/pricing`, {
@@ -402,7 +403,8 @@ function App() {
 		setCodigoError(null);
 
 		try {
-			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const apiUrl =
+				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const usuarioId = generarUsuarioId();
 
 			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
@@ -1099,7 +1101,8 @@ function App() {
 						vehiculo || "A confirmar"
 				  })`;
 
-		const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+		const apiUrl =
+			getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 		try {
 			const response = await fetch(`${apiUrl}/create-payment`, {
@@ -1323,7 +1326,7 @@ function App() {
 
 		// Ya NO llamamos al PHP aquí, el backend de Node.js lo hará automáticamente
 		// después de guardar la reserva y generar el código
-		
+
 		/* COMENTADO - Ahora el backend llama al PHP automáticamente
 		try {
 			const emailResponse = await fetch(
@@ -1358,7 +1361,8 @@ function App() {
 		FIN DEL COMENTARIO */
 
 		try {
-			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const apiUrl =
+				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(`${apiUrl}/enviar-reserva-express`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -1453,9 +1457,9 @@ function App() {
 		return <ConsultarReserva />;
 	}
 
-    if (isPayCodeView) {
-        return <PagarConCodigo />;
-    }
+	if (isPayCodeView) {
+		return <PagarConCodigo />;
+	}
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -1493,7 +1497,8 @@ function App() {
 							</div>
 						)}
 						<p className="text-sm text-muted-foreground">
-							Te enviaremos una confirmación por correo electrónico con todos los detalles de tu viaje.
+							Te enviaremos una confirmación por correo electrónico con todos
+							los detalles de tu viaje.
 						</p>
 						<p className="text-sm text-muted-foreground">
 							Nuestro equipo revisará tu solicitud y te contactará pronto.
@@ -1503,15 +1508,13 @@ function App() {
 						{codigoReservaCreada && (
 							<Button
 								variant="outline"
-								onClick={() => window.location.href = `#consultar-reserva`}
+								onClick={() => (window.location.href = `#consultar-reserva`)}
 							>
 								Consultar Reserva
 							</Button>
 						)}
 						<DialogClose asChild>
-							<Button type="button">
-								Entendido
-							</Button>
+							<Button type="button">Entendido</Button>
 						</DialogClose>
 					</DialogFooter>
 				</DialogContent>
@@ -1522,29 +1525,29 @@ function App() {
 			<main>
 				{/* Solo flujo express disponible */}
 				<HeroExpress
-						formData={formData}
-						handleInputChange={handleInputChange}
-						origenes={todosLosTramos}
-						destinos={destinosDisponibles}
-						maxPasajeros={maxPasajeros}
-						minDateTime={minDateTime}
-						phoneError={phoneError}
-						setPhoneError={setPhoneError}
-						isSubmitting={isSubmitting}
-						cotizacion={cotizacion}
-						pricing={pricing}
-						baseDiscountRate={onlineDiscountRate}
-						promotionDiscountRate={promotionDiscountRate}
-						handlePayment={handlePayment}
-						loadingGateway={loadingGateway}
-						onSubmitWizard={handleWizardSubmit}
-						validarTelefono={validarTelefono}
-						codigoAplicado={codigoAplicado}
-						codigoError={codigoError}
-						validandoCodigo={validandoCodigo}
-						onAplicarCodigo={validarCodigo}
-						onRemoverCodigo={removerCodigo}
-					/>
+					formData={formData}
+					handleInputChange={handleInputChange}
+					origenes={todosLosTramos}
+					destinos={destinosDisponibles}
+					maxPasajeros={maxPasajeros}
+					minDateTime={minDateTime}
+					phoneError={phoneError}
+					setPhoneError={setPhoneError}
+					isSubmitting={isSubmitting}
+					cotizacion={cotizacion}
+					pricing={pricing}
+					baseDiscountRate={onlineDiscountRate}
+					promotionDiscountRate={promotionDiscountRate}
+					handlePayment={handlePayment}
+					loadingGateway={loadingGateway}
+					onSubmitWizard={handleWizardSubmit}
+					validarTelefono={validarTelefono}
+					codigoAplicado={codigoAplicado}
+					codigoError={codigoError}
+					validandoCodigo={validandoCodigo}
+					onAplicarCodigo={validarCodigo}
+					onRemoverCodigo={removerCodigo}
+				/>
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />
