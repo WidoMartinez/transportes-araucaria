@@ -2073,9 +2073,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				),
 				mensaje: datosReserva.mensaje || "",
 
-				// Metadata del sistema
-				source: datosReserva.source || "express_web",
-				estado: "pendiente_detalles", // Estado específico para reservas express
+					// Metadata del sistema
+					source: datosReserva.source || "express_web",
+					// Respetar el estado enviado por el frontend si existe.
+					// Si la reserva se crea desde un pago con código (source === 'codigo_pago')
+					// queremos mantenerla en 'pendiente' hasta la confirmación del pago
+					// (webhook). Por compatibilidad con el flujo express por defecto,
+					// usamos 'pendiente_detalles' sólo si no se indica lo contrario.
+					estado:
+						datosReserva.estado ||
+						(datosReserva.source === "codigo_pago" ? "pendiente" : "pendiente_detalles"),
 				ipAddress: req.ip || req.connection.remoteAddress || "",
 				userAgent: req.get("User-Agent") || "",
 				codigoDescuento: datosReserva.codigoDescuento || "",
