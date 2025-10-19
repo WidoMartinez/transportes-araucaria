@@ -134,9 +134,9 @@ function PagarConCodigo() {
 				telefono: formData.telefono,
 				origen: codigoValidado.origen,
 				destino: codigoValidado.destino,
-				// Usar fecha y hora proporcionadas por el cliente
-				fecha: formData.fecha || new Date().toISOString().split("T")[0],
-				hora: formData.hora || "",
+				// Usar fecha y hora proporcionadas por el cliente (enviar solo si existen)
+				fecha: formData.fecha,
+				// hora se añade condicionalmente más abajo
 				pasajeros: codigoValidado.pasajeros || 1,
 				precio: codigoValidado.monto,
 				totalConDescuento: codigoValidado.monto,
@@ -148,6 +148,11 @@ function PagarConCodigo() {
 				referenciaPago: codigoValidado.codigo,
 				source: "codigo_pago",
 			};
+
+			// Añadir hora solo si el usuario la proporcionó
+			if (formData.hora && formData.hora.trim()) {
+				reservaPayload.hora = formData.hora;
+			}
 
 			const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
 				method: "POST",
@@ -165,9 +170,9 @@ function PagarConCodigo() {
 				const reservaId = rj.reservaId || rj.reserva?.id || null;
 				if (reservaId) {
 					const detallesPayload = {
-						hora: formData.hora || "",
-						// Incluir fecha para que el backend la persista (evita discrepancias por conversiones)
-						fecha: formData.fecha || "",
+						// Incluir fecha/hora solo si fueron entregadas por el cliente
+						...(formData.fecha ? { fecha: formData.fecha } : {}),
+						...(formData.hora ? { hora: formData.hora } : {}),
 						numeroVuelo: formData.numeroVuelo || "",
 						hotel: formData.hotel || "",
 						equipajeEspecial: formData.mensaje || "",
