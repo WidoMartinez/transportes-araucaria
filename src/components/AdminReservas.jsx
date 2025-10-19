@@ -2023,7 +2023,7 @@ function AdminReservas() {
 														>
 															{reserva.esCliente ? (
 																<>
-																	<Star className="w-3 h-3 mr-1" />
+																																		<Star className="w-3 h-3 mr-1" />
 																	Cliente
 																</>
 															) : (
@@ -2151,7 +2151,7 @@ function AdminReservas() {
 														{isPagoCompleto(reserva) && !reserva.vehiculo && (
 															<Button
 																variant="secondary"
-																size="sm"
+															size="sm"
 																onClick={() => handleAsignar(reserva)}
 																title="Asignar vehículo y conductor"
 															>
@@ -2313,7 +2313,7 @@ function AdminReservas() {
 											{selectedReserva.estadoPago === "pagado" && (
 												<Button
 													variant="outline"
-													size="xs"
+													size="sm"
 													onClick={() => handleAsignar(selectedReserva)}
 												>
 													Reasignar
