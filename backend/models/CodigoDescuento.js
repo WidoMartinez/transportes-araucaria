@@ -9,11 +9,12 @@ const CodigoDescuento = sequelize.define(
 			primaryKey: true,
 			allowNull: false,
 		},
-		codigo: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			unique: true,
-		},
+    codigo: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        // No forzamos UNIQUE a nivel de modelo para evitar ALTER en entornos con límite de índices.
+        // La unicidad se asegura en inicialización si hay capacidad de índices.
+    },
 		descripcion: {
 			type: DataTypes.STRING,
 			allowNull: false,
@@ -77,7 +78,7 @@ const CodigoDescuento = sequelize.define(
 	},
 	{
 		tableName: "codigos_descuento",
-		timestamps: true,
+    timestamps: true,
 	}
 );
 

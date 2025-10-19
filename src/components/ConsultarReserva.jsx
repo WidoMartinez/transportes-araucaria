@@ -90,6 +90,8 @@ function ConsultarReserva() {
 			const description =
 				tipo === "total"
 					? `Pago total reserva ${reserva.codigoReserva} (${reserva.destino})`
+					: tipo === "saldo"
+					? `Pago saldo pendiente reserva ${reserva.codigoReserva} (${reserva.destino})`
 					: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
 
 			const resp = await fetch(`${apiBase}/create-payment`, {
@@ -185,6 +187,12 @@ function ConsultarReserva() {
 
 		return <Badge variant={config.variant}>{config.label}</Badge>;
 	};
+
+	// Mostrar solo el botón de saldo cuando la reserva está confirmada/completada y hay saldo pendiente
+	const shouldShowOnlySaldo =
+		reserva &&
+		(reserva.estado === "confirmada" || reserva.estado === "completada") &&
+		Number(reserva.saldoPendiente) > 0;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
@@ -444,6 +452,7 @@ function ConsultarReserva() {
 											</div>
 										)}
 										<div className="flex flex-wrap gap-3">
+											{!shouldShowOnlySaldo && (
 											<Button
 												onClick={() => continuarPago("abono")}
 												disabled={paying || !reserva.abonoSugerido}
@@ -461,6 +470,8 @@ function ConsultarReserva() {
 													</>
 												)}
 											</Button>
+											)}
+											{!shouldShowOnlySaldo && (
 											<Button
 												variant="outline"
 												onClick={() => continuarPago("total")}
@@ -470,6 +481,7 @@ function ConsultarReserva() {
 												<CreditCard className="w-4 h-4" />
 												Pagar el 100%
 											</Button>
+											)}
 
 											{/* Botón para pagar saldo pendiente si existe */}
 											{reserva.saldoPendiente > 0 && (
