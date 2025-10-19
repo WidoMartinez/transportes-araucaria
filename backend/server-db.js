@@ -465,18 +465,50 @@ const ejecutarMigracionCodigoReserva = async () => {
 };
 
 const initializeDatabase = async () => {
-	try {
-		const connected = await testConnection();
-		if (!connected) {
-			throw new Error("No se pudo conectar a la base de datos");
-		}
-		await syncDatabase(false); // false = no forzar recreación
+    try {
+        const connected = await testConnection();
+        if (!connected) {
+            throw new Error("No se pudo conectar a la base de datos");
+        }
+        await syncDatabase(false); // false = no forzar recreación
 
-		// Ejecutar migraciones automáticas
-		await ejecutarMigracionCodigoReserva();
-		await addPaymentFields();
-		await addAbonoFlags();
-		await addCodigosPagoTable();
+        // Ejecutar migraciones automáticas
+        await ejecutarMigracionCodigoReserva();
+        await addPaymentFields();
+        await addAbonoFlags();
+        await addCodigosPagoTable();
+
+        // Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
+        try {
+            const [idxRows] = await sequelize.query(
+                "SHOW INDEX FROM codigos_descuento WHERE Column_name = 'codigo'"
+            );
+            const hasUnique = Array.isArray(idxRows)
+                ? idxRows.some((r) => String(r.Non_unique) === '0')
+                : false;
+
+            if (!hasUnique) {
+                // Contar índices actuales de la tabla para evitar ER_TOO_MANY_KEYS (max 64)
+                const [countRows] = await sequelize.query(
+                    "SHOW INDEX FROM codigos_descuento"
+                );
+                const indexNames = new Set(
+                    (Array.isArray(countRows) ? countRows : []).map((r) => r.Key_name)
+                );
+                if (indexNames.size >= 64) {
+                    console.warn(
+                        'La tabla codigos_descuento ya tiene 64 índices. No se puede crear índice único para codigo. Se continuará sin UNIQUE.'
+                    );
+                } else {
+                    await sequelize.query(
+                        "CREATE UNIQUE INDEX idx_codigos_descuento_codigo ON codigos_descuento(codigo)"
+                    );
+                    console.log('✅ Índice único idx_codigos_descuento_codigo creado');
+                }
+            }
+        } catch (idxErr) {
+            console.warn('⚠️ No se pudo asegurar índice único en codigos_descuento.codigo:', idxErr.message);
+        }
 
 		// Asegurar tabla de historial de asignaciones (para uso interno)
 		await sequelize.query(`
@@ -490,11 +522,11 @@ const initializeDatabase = async () => {
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 			`);
 
-		console.log("✅ Base de datos inicializada correctamente");
-	} catch (error) {
-		console.error("❌ Error inicializando base de datos:", error);
-		process.exit(1);
-	}
+        console.log("✅ Base de datos inicializada correctamente");
+    } catch (error) {
+        console.error("❌ Error inicializando base de datos:", error);
+        process.exit(1);
+    }
 };
 
 // --- ENDPOINTS PARA CONFIGURACION DE PRECIOS ---
