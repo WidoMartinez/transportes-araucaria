@@ -73,7 +73,9 @@ export const syncDatabase = async (force = false, models = []) => {
 					// Intentar sin alter si falla (por ejemplo, por límite de índices)
 					try {
 						await model.sync({ force: false, alter: false });
-						console.log(`✅ Modelo ${model.name} creado/sincronizado sin alter`);
+						console.log(
+							`✅ Modelo ${model.name} creado/sincronizado sin alter`
+						);
 					} catch (retryError) {
 						console.error(
 							`❌ Error crítico en ${model.name}:`,

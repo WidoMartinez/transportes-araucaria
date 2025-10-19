@@ -465,11 +465,11 @@ const ejecutarMigracionCodigoReserva = async () => {
 };
 
 const initializeDatabase = async () => {
-    try {
-        const connected = await testConnection();
-        if (!connected) {
-            throw new Error("No se pudo conectar a la base de datos");
-        }
+	try {
+		const connected = await testConnection();
+		if (!connected) {
+			throw new Error("No se pudo conectar a la base de datos");
+		}
 		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
 		await syncDatabase(false, [
 			Destino,
@@ -483,43 +483,46 @@ const initializeDatabase = async () => {
 			DescuentoGlobal,
 		]); // false = no forzar recreación
 
-        // Ejecutar migraciones automáticas
-        await ejecutarMigracionCodigoReserva();
-        await addPaymentFields();
-        await addAbonoFlags();
-        await addCodigosPagoTable();
+		// Ejecutar migraciones automáticas
+		await ejecutarMigracionCodigoReserva();
+		await addPaymentFields();
+		await addAbonoFlags();
+		await addCodigosPagoTable();
 
-        // Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
-        try {
-            const [idxRows] = await sequelize.query(
-                "SHOW INDEX FROM codigos_descuento WHERE Column_name = 'codigo'"
-            );
-            const hasUnique = Array.isArray(idxRows)
-                ? idxRows.some((r) => String(r.Non_unique) === '0')
-                : false;
+		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
+		try {
+			const [idxRows] = await sequelize.query(
+				"SHOW INDEX FROM codigos_descuento WHERE Column_name = 'codigo'"
+			);
+			const hasUnique = Array.isArray(idxRows)
+				? idxRows.some((r) => String(r.Non_unique) === "0")
+				: false;
 
-            if (!hasUnique) {
-                // Contar índices actuales de la tabla para evitar ER_TOO_MANY_KEYS (max 64)
-                const [countRows] = await sequelize.query(
-                    "SHOW INDEX FROM codigos_descuento"
-                );
-                const indexNames = new Set(
-                    (Array.isArray(countRows) ? countRows : []).map((r) => r.Key_name)
-                );
-                if (indexNames.size >= 64) {
-                    console.warn(
-                        'La tabla codigos_descuento ya tiene 64 índices. No se puede crear índice único para codigo. Se continuará sin UNIQUE.'
-                    );
-                } else {
-                    await sequelize.query(
-                        "CREATE UNIQUE INDEX idx_codigos_descuento_codigo ON codigos_descuento(codigo)"
-                    );
-                    console.log('✅ Índice único idx_codigos_descuento_codigo creado');
-                }
-            }
-        } catch (idxErr) {
-            console.warn('⚠️ No se pudo asegurar índice único en codigos_descuento.codigo:', idxErr.message);
-        }
+			if (!hasUnique) {
+				// Contar índices actuales de la tabla para evitar ER_TOO_MANY_KEYS (max 64)
+				const [countRows] = await sequelize.query(
+					"SHOW INDEX FROM codigos_descuento"
+				);
+				const indexNames = new Set(
+					(Array.isArray(countRows) ? countRows : []).map((r) => r.Key_name)
+				);
+				if (indexNames.size >= 64) {
+					console.warn(
+						"La tabla codigos_descuento ya tiene 64 índices. No se puede crear índice único para codigo. Se continuará sin UNIQUE."
+					);
+				} else {
+					await sequelize.query(
+						"CREATE UNIQUE INDEX idx_codigos_descuento_codigo ON codigos_descuento(codigo)"
+					);
+					console.log("✅ Índice único idx_codigos_descuento_codigo creado");
+				}
+			}
+		} catch (idxErr) {
+			console.warn(
+				"⚠️ No se pudo asegurar índice único en codigos_descuento.codigo:",
+				idxErr.message
+			);
+		}
 
 		// Asegurar tabla de historial de asignaciones (para uso interno)
 		await sequelize.query(`
@@ -533,11 +536,11 @@ const initializeDatabase = async () => {
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 			`);
 
-        console.log("✅ Base de datos inicializada correctamente");
-    } catch (error) {
-        console.error("❌ Error inicializando base de datos:", error);
-        process.exit(1);
-    }
+		console.log("✅ Base de datos inicializada correctamente");
+	} catch (error) {
+		console.error("❌ Error inicializando base de datos:", error);
+		process.exit(1);
+	}
 };
 
 // --- ENDPOINTS PARA CONFIGURACION DE PRECIOS ---
@@ -2462,20 +2465,21 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		}
 
 		// Actualizar con los detalles proporcionados
-        const datosActualizados = {
-            hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
-            // Permitir actualizar la fecha explicitamente si la envía el cliente
-            fecha: detalles.fecha || reserva.fecha,
-            numeroVuelo: detalles.numeroVuelo || "",
-            hotel: detalles.hotel || "",
-            equipajeEspecial: detalles.equipajeEspecial || "",
-            sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
-            idaVuelta: Boolean(detalles.idaVuelta),
-            fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
-            horaRegreso: normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
-            // No escribir campos virtuales; solo estado
-            estado: reserva.estado === "completada" ? "completada" : "confirmada",
-        };
+		const datosActualizados = {
+			hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
+			// Permitir actualizar la fecha explicitamente si la envía el cliente
+			fecha: detalles.fecha || reserva.fecha,
+			numeroVuelo: detalles.numeroVuelo || "",
+			hotel: detalles.hotel || "",
+			equipajeEspecial: detalles.equipajeEspecial || "",
+			sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
+			idaVuelta: Boolean(detalles.idaVuelta),
+			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
+			horaRegreso:
+				normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
+			// No escribir campos virtuales; solo estado
+			estado: reserva.estado === "completada" ? "completada" : "confirmada",
+		};
 
 		await reserva.update(datosActualizados);
 
@@ -2653,68 +2657,92 @@ app.get("/api/reservas/:id", async (req, res) => {
 
 // Buscar reserva por código de reserva (público)
 app.get("/api/reservas/codigo/:codigo", async (req, res) => {
-    try {
-        const { codigo } = req.params;
+	try {
+		const { codigo } = req.params;
 
-        console.log(`🔍 Buscando reserva con código: ${codigo}`);
+		console.log(`🔍 Buscando reserva con código: ${codigo}`);
 
-        const codigoUpper = (codigo || "").toUpperCase();
-        let reserva = null;
+		const codigoUpper = (codigo || "").toUpperCase();
+		let reserva = null;
 
-        // 1) Intentar por código de reserva estándar (AR-YYYYMMDD-XXXX)
-        reserva = await Reserva.findOne({
-            where: { codigoReserva: codigoUpper },
-            include: [
-                {
-                    model: Cliente,
-                    as: "cliente",
-                    attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion", "totalReservas"],
-                },
-            ],
-        });
+		// 1) Intentar por código de reserva estándar (AR-YYYYMMDD-XXXX)
+		reserva = await Reserva.findOne({
+			where: { codigoReserva: codigoUpper },
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
 
-        // 2) Si no existe y parece un código de pago u otro identificador, intentar por referenciaPago
-        if (!reserva) {
-            reserva = await Reserva.findOne({
-                where: { referenciaPago: codigoUpper },
-                include: [
-                    {
-                        model: Cliente,
-                        as: "cliente",
-                        attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion", "totalReservas"],
-                    },
-                ],
-                order: [["created_at", "DESC"]],
-            });
-        }
+		// 2) Si no existe y parece un código de pago u otro identificador, intentar por referenciaPago
+		if (!reserva) {
+			reserva = await Reserva.findOne({
+				where: { referenciaPago: codigoUpper },
+				include: [
+					{
+						model: Cliente,
+						as: "cliente",
+						attributes: [
+							"id",
+							"nombre",
+							"email",
+							"telefono",
+							"esCliente",
+							"clasificacion",
+							"totalReservas",
+						],
+					},
+				],
+				order: [["created_at", "DESC"]],
+			});
+		}
 
-        // 3) Fallback: si existe un registro en codigos_pago con ese código y tiene reservaId, cargar la reserva
-        if (!reserva) {
-            try {
-                const cp = await CodigoPago.findOne({ where: { codigo: codigoUpper } });
-                if (cp && cp.reservaId) {
-                    reserva = await Reserva.findByPk(cp.reservaId, {
-                        include: [
-                            {
-                                model: Cliente,
-                                as: "cliente",
-                                attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion", "totalReservas"],
-                            },
-                        ],
-                    });
-                }
+		// 3) Fallback: si existe un registro en codigos_pago con ese código y tiene reservaId, cargar la reserva
+		if (!reserva) {
+			try {
+				const cp = await CodigoPago.findOne({ where: { codigo: codigoUpper } });
+				if (cp && cp.reservaId) {
+					reserva = await Reserva.findByPk(cp.reservaId, {
+						include: [
+							{
+								model: Cliente,
+								as: "cliente",
+								attributes: [
+									"id",
+									"nombre",
+									"email",
+									"telefono",
+									"esCliente",
+									"clasificacion",
+									"totalReservas",
+								],
+							},
+						],
+					});
+				}
 			} catch (err) {
 				// Ignorar errores no críticos intencionalmente
 				// `void err;` evita la advertencia de variable no usada y permite
 				// habilitar un registro rápido si es necesario en el futuro.
 				void err;
 			}
-        }
+		}
 
-        if (!reserva) {
-            console.log(`❌ No se encontró reserva con código: ${codigo}`);
-            return res.status(404).json({ error: "Reserva no encontrada" });
-        }
+		if (!reserva) {
+			console.log(`❌ No se encontró reserva con código: ${codigo}`);
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
 
 		console.log(`✅ Reserva encontrada: ID ${reserva.id}`);
 		res.json(reserva);
@@ -2809,8 +2837,13 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 
 	try {
 		const { id } = req.params;
-	const { estadoPago, metodoPago, referenciaPago, montoPagado, tipoPago: _tipoPago } =
-			req.body;
+		const {
+			estadoPago,
+			metodoPago,
+			referenciaPago,
+			montoPagado,
+			tipoPago: _tipoPago,
+		} = req.body;
 
 		const reserva = await Reserva.findByPk(id, { transaction });
 		if (!reserva) {
@@ -2818,17 +2851,17 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-        const totalReserva = parseFloat(reserva.totalConDescuento || 0);
-        const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
 		const saldoPendienteActual = parseFloat(
 			reserva.saldoPendiente != null
 				? reserva.saldoPendiente
 				: Math.max(totalReserva - abonoSugerido, 0)
 		);
-        const montoPago =
-            montoPagado !== undefined && montoPagado !== null
-                ? parsePositiveDecimal(montoPagado, "montoPagado", 0)
-                : null;
+		const montoPago =
+			montoPagado !== undefined && montoPagado !== null
+				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
+				: null;
 
 		// monto ya pagado previamente (si existe) y nuevo acumulado
 		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
@@ -2837,47 +2870,54 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			pagoTotalNuevo = pagoPrevio + montoPago;
 		}
 
-        let nuevoEstadoPago = estadoPago || reserva.estadoPago;
-        let nuevoEstadoReserva = reserva.estado;
-        let nuevoSaldoPendiente = saldoPendienteActual;
-        let abonoPagado = reserva.abonoPagado;
-        let saldoPagado = reserva.saldoPagado;
-        const fechaPago = new Date();
+		let nuevoEstadoPago = estadoPago || reserva.estadoPago;
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = saldoPendienteActual;
+		let abonoPagado = reserva.abonoPagado;
+		let saldoPagado = reserva.saldoPagado;
+		const fechaPago = new Date();
 
-        // Umbral de confirmación: 40% del total (o el abono sugerido, si es mayor)
-        const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
+		// Umbral de confirmación: 40% del total (o el abono sugerido, si es mayor)
+		const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
 
-        if (montoPago && montoPago > 0) {
-            // Recalcular saldo en base al nuevo acumulado
-            nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
-        }
+		if (montoPago && montoPago > 0) {
+			// Recalcular saldo en base al nuevo acumulado
+			nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+		}
 
-        // Evaluar estados según acumulado
-        if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
-            // Pago completo
-            nuevoEstadoPago = "pagado";
-            nuevoEstadoReserva = "completada";
-            nuevoSaldoPendiente = 0;
-            abonoPagado = true;
-            saldoPagado = true;
-        } else if (pagoTotalNuevo > 0) {
-            // Pago parcial
-            if (pagoTotalNuevo >= umbralAbono && ["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
-                nuevoEstadoReserva = "confirmada";
-            }
-            nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migración
-            if (pagoTotalNuevo >= umbralAbono) {
-                abonoPagado = true;
-            }
-        }
+		// Evaluar estados según acumulado
+		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+			// Pago completo
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
+			nuevoSaldoPendiente = 0;
+			abonoPagado = true;
+			saldoPagado = true;
+		} else if (pagoTotalNuevo > 0) {
+			// Pago parcial
+			if (
+				pagoTotalNuevo >= umbralAbono &&
+				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+			) {
+				nuevoEstadoReserva = "confirmada";
+			}
+			nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migración
+			if (pagoTotalNuevo >= umbralAbono) {
+				abonoPagado = true;
+			}
+		}
 
-        // Si se especificó explícitamente tipoPago 'saldo' y saldo queda 0 por el acumulado, asegurar flags
-        if (nuevoSaldoPendiente <= 0 && pagoTotalNuevo >= totalReserva && totalReserva > 0) {
-            saldoPagado = true;
-            abonoPagado = true;
-            nuevoEstadoPago = "pagado";
-            nuevoEstadoReserva = "completada";
-        }
+		// Si se especificó explícitamente tipoPago 'saldo' y saldo queda 0 por el acumulado, asegurar flags
+		if (
+			nuevoSaldoPendiente <= 0 &&
+			pagoTotalNuevo >= totalReserva &&
+			totalReserva > 0
+		) {
+			saldoPagado = true;
+			abonoPagado = true;
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
+		}
 
 		const payloadActualizacion = {
 			estadoPago: nuevoEstadoPago,
@@ -4131,14 +4171,14 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			return;
 		}
 
-        // Buscar reserva por email (más reciente)
-        let reserva;
-        if (email) {
-            reserva = await Reserva.findOne({
-                where: { email: email },
-                order: [["created_at", "DESC"]],
-            });
-        }
+		// Buscar reserva por email (más reciente)
+		let reserva;
+		if (email) {
+			reserva = await Reserva.findOne({
+				where: { email: email },
+				order: [["created_at", "DESC"]],
+			});
+		}
 
 		if (!reserva) {
 			console.log("⚠️  Reserva no encontrada en la base de datos");
@@ -4149,47 +4189,53 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`
 		);
 
-        // Reglas: parcial (>= 40% del total) => confirmada, total => completada
-        const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
-        const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
-        const montoActual = Number(payment.amount) || 0;
-        const pagoAcumulado = pagoPrevio + montoActual;
-        const umbralAbono = Math.max(totalReserva * 0.4, parseFloat(reserva.abonoSugerido || 0) || 0);
+		// Reglas: parcial (>= 40% del total) => confirmada, total => completada
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
+		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+		const montoActual = Number(payment.amount) || 0;
+		const pagoAcumulado = pagoPrevio + montoActual;
+		const umbralAbono = Math.max(
+			totalReserva * 0.4,
+			parseFloat(reserva.abonoSugerido || 0) || 0
+		);
 
-        let nuevoEstadoPago = reserva.estadoPago;
-        let nuevoEstadoReserva = reserva.estado;
-        let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
-        let abonoPagado = reserva.abonoPagado;
-        let saldoPagado = reserva.saldoPagado;
+		let nuevoEstadoPago = reserva.estadoPago;
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
+		let abonoPagado = reserva.abonoPagado;
+		let saldoPagado = reserva.saldoPagado;
 
-        if (pagoAcumulado >= totalReserva && totalReserva > 0) {
-            nuevoEstadoPago = "pagado";
-            nuevoEstadoReserva = "completada";
-            nuevoSaldoPendiente = 0;
-            abonoPagado = true;
-            saldoPagado = true;
-        } else if (pagoAcumulado > 0) {
-            nuevoEstadoPago = "parcial";
-            if (pagoAcumulado >= umbralAbono && ["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
-                nuevoEstadoReserva = "confirmada";
-            }
-            if (pagoAcumulado >= umbralAbono) {
-                abonoPagado = true;
-            }
-        }
+		if (pagoAcumulado >= totalReserva && totalReserva > 0) {
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
+			nuevoSaldoPendiente = 0;
+			abonoPagado = true;
+			saldoPagado = true;
+		} else if (pagoAcumulado > 0) {
+			nuevoEstadoPago = "parcial";
+			if (
+				pagoAcumulado >= umbralAbono &&
+				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+			) {
+				nuevoEstadoReserva = "confirmada";
+			}
+			if (pagoAcumulado >= umbralAbono) {
+				abonoPagado = true;
+			}
+		}
 
-        // Actualizar estado de pago en la reserva (acumulando pagoMonto)
-        await reserva.update({
-            estadoPago: nuevoEstadoPago,
-            pagoId: payment.flowOrder.toString(),
-            pagoGateway: "flow",
-            pagoMonto: pagoAcumulado,
-            pagoFecha: new Date(payment.paymentDate || new Date()),
-            estado: nuevoEstadoReserva,
-            saldoPendiente: nuevoSaldoPendiente,
-            abonoPagado,
-            saldoPagado,
-        });
+		// Actualizar estado de pago en la reserva (acumulando pagoMonto)
+		await reserva.update({
+			estadoPago: nuevoEstadoPago,
+			pagoId: payment.flowOrder.toString(),
+			pagoGateway: "flow",
+			pagoMonto: pagoAcumulado,
+			pagoFecha: new Date(payment.paymentDate || new Date()),
+			estado: nuevoEstadoReserva,
+			saldoPendiente: nuevoSaldoPendiente,
+			abonoPagado,
+			saldoPagado,
+		});
 
 		console.log("💾 Reserva actualizada con información de pago Flow");
 
