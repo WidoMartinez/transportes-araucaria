@@ -2743,7 +2743,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+	const totalReserva = parseFloat(reserva.totalConDescuento || 0);
 		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
 		const saldoPendienteActual = parseFloat(
 			reserva.saldoPendiente != null
@@ -2755,7 +2755,14 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
 				: null;
 
-		let nuevoEstadoPago = estadoPago || reserva.estadoPago;
+		// monto ya pagado previamente (si existe) y nuevo acumulado
+		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+		let pagoTotalNuevo = pagoPrevio;
+		if (montoPago && montoPago > 0) {
+			pagoTotalNuevo = pagoPrevio + montoPago;
+		}
+
+	let nuevoEstadoPago = estadoPago || reserva.estadoPago;
 		let nuevoEstadoReserva = reserva.estado;
 		let nuevoSaldoPendiente = saldoPendienteActual;
 		let abonoPagado = reserva.abonoPagado;
@@ -2790,6 +2797,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			nuevoSaldoPendiente = 0;
 		}
 
+		// Si se pagó al menos el abono sugerido o se registró abono, confirmar la reserva
 		if (
 			abonoPagado &&
 			["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
@@ -2797,6 +2805,20 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			nuevoEstadoReserva = "confirmada";
 		}
 
+		// Determinar si el pago acumulado alcanza estado parcial o pagado
+		// - si se pagó el total => 'pagado'
+		// - si se pagó >= 40% pero < total => 'parcial'
+		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+			nuevoEstadoPago = "pagado";
+		} else if (pagoTotalNuevo > 0 && pagoTotalNuevo < totalReserva) {
+			// marca parcial cuando se ha pagado al menos 40% del total
+			const porcentaje = totalReserva > 0 ? pagoTotalNuevo / totalReserva : 0;
+			if (porcentaje >= 0.4) {
+				nuevoEstadoPago = "parcial";
+			}
+		}
+
+		// Si se pagó el saldo por completo, marcar como completada y pagado
 		if (saldoPagado || nuevoSaldoPendiente <= 0) {
 			saldoPagado = true;
 			nuevoSaldoPendiente = 0;
@@ -2815,7 +2837,8 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		};
 
 		if (montoPago && montoPago > 0) {
-			payloadActualizacion.pagoMonto = montoPago;
+			// Guardar el acumulado total pagado
+			payloadActualizacion.pagoMonto = pagoTotalNuevo;
 			payloadActualizacion.pagoFecha = fechaPago;
 		} else if (saldoPagado && !reserva.saldoPagado) {
 			payloadActualizacion.pagoFecha = fechaPago;

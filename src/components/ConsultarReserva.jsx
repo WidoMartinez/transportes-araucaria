@@ -79,7 +79,9 @@ function ConsultarReserva() {
 			const amount =
 				tipo === "total"
 					? Number(reserva.totalConDescuento || 0)
-					: Number(reserva.abonoSugerido || 0);
+						: tipo === "saldo"
+						? Number(reserva.saldoPendiente || 0)
+						: Number(reserva.abonoSugerido || 0);
 			if (!amount || amount <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
@@ -428,7 +430,7 @@ function ConsultarReserva() {
 								</div>
 
 								{/* Acciones de pago si está pendiente */}
-								{reserva.estadoPago !== "pagado" && (
+									{reserva.estadoPago !== "pagado" && (
 									<div className="mt-6 space-y-3">
 										{payError && (
 											<div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded p-3 text-sm">
@@ -463,6 +465,19 @@ function ConsultarReserva() {
 												<CreditCard className="w-4 h-4" />
 												Pagar el 100%
 											</Button>
+
+											{/* Botón para pagar saldo pendiente si existe */}
+											{reserva.saldoPendiente > 0 && (
+												<Button
+													variant="secondary"
+													onClick={() => continuarPago("saldo")}
+													disabled={paying}
+													className="gap-2"
+												>
+													<CreditCard className="w-4 h-4" />
+													Pagar saldo pendiente ({formatCurrency(reserva.saldoPendiente)})
+												</Button>
+											)}
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
