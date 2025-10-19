@@ -173,12 +173,15 @@ function ConsultarReserva() {
 	const getEstadoPagoBadge = (estadoPago) => {
 		const estados = {
 			pendiente: { variant: "secondary", label: "Pendiente" },
-			pagado: { variant: "default", label: "Pagado" },
+			aprobado: { variant: "outline", label: "Aprobado" },
+			parcial: { variant: "outline", label: "Pago parcial" },
+			pagado: { variant: "default", label: "Pago completado" },
 			fallido: { variant: "destructive", label: "Fallido" },
 			reembolsado: { variant: "outline", label: "Reembolsado" },
 		};
 
-		const config = estados[estadoPago] || estados.pendiente;
+		const key = (estadoPago || "").toLowerCase();
+		const config = estados[key] || estados.pendiente;
 
 		return <Badge variant={config.variant}>{config.label}</Badge>;
 	};

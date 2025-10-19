@@ -2610,36 +2610,63 @@ app.get("/api/reservas/:id", async (req, res) => {
 
 // Buscar reserva por código de reserva (público)
 app.get("/api/reservas/codigo/:codigo", async (req, res) => {
-	try {
-		const { codigo } = req.params;
+    try {
+        const { codigo } = req.params;
 
-		console.log(`🔍 Buscando reserva con código: ${codigo}`);
+        console.log(`🔍 Buscando reserva con código: ${codigo}`);
 
-		const reserva = await Reserva.findOne({
-			where: {
-				codigoReserva: codigo.toUpperCase(),
-			},
-			include: [
-				{
-					model: Cliente,
-					as: "cliente",
-					attributes: [
-						"id",
-						"nombre",
-						"email",
-						"telefono",
-						"esCliente",
-						"clasificacion",
-						"totalReservas",
-					],
-				},
-			],
-		});
+        const codigoUpper = (codigo || "").toUpperCase();
+        let reserva = null;
 
-		if (!reserva) {
-			console.log(`❌ No se encontró reserva con código: ${codigo}`);
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
+        // 1) Intentar por código de reserva estándar (AR-YYYYMMDD-XXXX)
+        reserva = await Reserva.findOne({
+            where: { codigoReserva: codigoUpper },
+            include: [
+                {
+                    model: Cliente,
+                    as: "cliente",
+                    attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion", "totalReservas"],
+                },
+            ],
+        });
+
+        // 2) Si no existe y parece un código de pago u otro identificador, intentar por referenciaPago
+        if (!reserva) {
+            reserva = await Reserva.findOne({
+                where: { referenciaPago: codigoUpper },
+                include: [
+                    {
+                        model: Cliente,
+                        as: "cliente",
+                        attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion", "totalReservas"],
+                    },
+                ],
+                order: [["created_at", "DESC"]],
+            });
+        }
+
+        // 3) Fallback: si existe un registro en codigos_pago con ese código y tiene reservaId, cargar la reserva
+        if (!reserva) {
+            try {
+                const cp = await CodigoPago.findOne({ where: { codigo: codigoUpper } });
+                if (cp && cp.reservaId) {
+                    reserva = await Reserva.findByPk(cp.reservaId, {
+                        include: [
+                            {
+                                model: Cliente,
+                                as: "cliente",
+                                attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion", "totalReservas"],
+                            },
+                        ],
+                    });
+                }
+            } catch {}
+        }
+
+        if (!reserva) {
+            console.log(`❌ No se encontró reserva con código: ${codigo}`);
+            return res.status(404).json({ error: "Reserva no encontrada" });
+        }
 
 		console.log(`✅ Reserva encontrada: ID ${reserva.id}`);
 		res.json(reserva);
