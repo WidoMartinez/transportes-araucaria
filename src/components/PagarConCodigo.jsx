@@ -134,6 +134,9 @@ function PagarConCodigo() {
 				telefono: formData.telefono,
 				origen: codigoValidado.origen,
 				destino: codigoValidado.destino,
+				// Estado inicial: pendiente hasta confirmar el pago
+				estado: "pendiente",
+				estadoPago: "pendiente",
 				// Usar fecha y hora proporcionadas por el cliente (enviar solo si existen)
 				fecha: formData.fecha,
 				// hora se añade condicionalmente más abajo
