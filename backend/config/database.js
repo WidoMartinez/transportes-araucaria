@@ -18,8 +18,11 @@ const sequelize = new Sequelize({
 		acquire: 60000, // Aumentado a 60 segundos
 		idle: 10000,
 	},
+	// Evitar conversiones automáticas de zona horaria que pueden desplazar DATE/DATEONLY
+	timezone: process.env.DB_TIMEZONE || "-04:00",
 	dialectOptions: {
 		connectTimeout: 60000, // Timeout de conexión: 60 segundos
+		timezone: process.env.DB_TIMEZONE || "-04:00",
 	},
 	retry: {
 		max: 3, // Número máximo de reintentos
