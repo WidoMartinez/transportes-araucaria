@@ -871,9 +871,32 @@ function AdminReservas() {
 	};
 
 	// Formatear fecha
+	// Evitar que una fecha almacenada como 'YYYY-MM-DD' o 'YYYY-MM-DDT00:00:00Z'
+	// sea interpretada como UTC y muestre el día anterior en zonas horarias negativas.
 	const formatDate = (date) => {
 		if (!date) return "-";
-		return new Date(date).toLocaleDateString("es-CL");
+
+		// Si el valor es una fecha solo 'YYYY-MM-DD', construir una fecha local
+		if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+			return new Date(date + "T00:00:00").toLocaleDateString("es-CL");
+		}
+
+		// Si viene en formato ISO con tiempo y termina en Z o corresponde a medianoche UTC,
+		// extraer la parte de fecha para evitar conversiones indeseadas.
+		const isoMidnightZ = date.match(/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.000)?Z?$/);
+		if (isoMidnightZ) {
+			return new Date(isoMidnightZ[1] + "T00:00:00").toLocaleDateString("es-CL");
+		}
+
+		// En otros casos, confiar en el Date constructor (cuando hay hora significativa)
+		try {
+			return new Date(date).toLocaleDateString("es-CL");
+		} catch (err) {
+			// Log en español y fallback: mostrar la cadena original truncada (fecha parte)
+			console.warn("Error formateando fecha:", err);
+			const m = date.match(/^(\d{4}-\d{2}-\d{2})/);
+			return m ? m[1] : String(date);
+		}
 	};
 
 	// Buscar clientes para autocompletar
