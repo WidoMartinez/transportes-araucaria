@@ -183,9 +183,9 @@ const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
 };
 
 const parseJsonArray = (raw) => {
-        if (!raw) return [];
-        let value = raw;
-        const seen = new Set();
+	if (!raw) return [];
+	let value = raw;
+	const seen = new Set();
 
 	while (typeof value === "string") {
 		const trimmed = value.trim();
@@ -203,79 +203,80 @@ const parseJsonArray = (raw) => {
 		}
 	}
 
-        return Array.isArray(value) ? value : [];
+	return Array.isArray(value) ? value : [];
 };
 
 // Determinar la clasificación del cliente según reservas completadas
 const obtenerClasificacionCliente = (reservasCompletadas) => {
-        if (!reservasCompletadas || reservasCompletadas <= 0) {
-                return null;
-        }
-        if (reservasCompletadas >= 10) {
-                return "Cliente Élite";
-        }
-        if (reservasCompletadas >= 5) {
-                return "Cliente Premium";
-        }
-        if (reservasCompletadas >= 3) {
-                return "Cliente Frecuente";
-        }
-        return "Cliente Activo";
+	if (!reservasCompletadas || reservasCompletadas <= 0) {
+		return null;
+	}
+	if (reservasCompletadas >= 10) {
+		return "Cliente Élite";
+	}
+	if (reservasCompletadas >= 5) {
+		return "Cliente Premium";
+	}
+	if (reservasCompletadas >= 3) {
+		return "Cliente Frecuente";
+	}
+	return "Cliente Activo";
 };
 
 // Actualizar métricas y clasificación del cliente después de modificar una reserva
 const actualizarResumenCliente = async (clienteId, transaction) => {
-        if (!clienteId) {
-                return null;
-        }
+	if (!clienteId) {
+		return null;
+	}
 
-        const reservasCliente = await Reserva.findAll({
-                where: { clienteId },
-                order: [["created_at", "DESC"]],
-                transaction,
-        });
+	const reservasCliente = await Reserva.findAll({
+		where: { clienteId },
+		order: [["created_at", "DESC"]],
+		transaction,
+	});
 
-        if (!reservasCliente || reservasCliente.length === 0) {
-                return null;
-        }
+	if (!reservasCliente || reservasCliente.length === 0) {
+		return null;
+	}
 
-        const totalReservasCliente = reservasCliente.length;
-        const reservasCompletadas = reservasCliente.filter(
-                (reserva) => reserva.estado === "completada"
-        ).length;
-        const reservasPagadas = reservasCliente.filter(
-                (reserva) => reserva.estadoPago === "pagado"
-        ).length;
-        const totalGastado = reservasCliente
-                .filter((reserva) => reserva.estadoPago === "pagado")
-                .reduce((suma, reserva) => suma + parseFloat(reserva.totalConDescuento || 0), 0);
+	const totalReservasCliente = reservasCliente.length;
+	const reservasCompletadas = reservasCliente.filter(
+		(reserva) => reserva.estado === "completada"
+	).length;
+	const reservasPagadas = reservasCliente.filter(
+		(reserva) => reserva.estadoPago === "pagado"
+	).length;
+	const totalGastado = reservasCliente
+		.filter((reserva) => reserva.estadoPago === "pagado")
+		.reduce(
+			(suma, reserva) => suma + parseFloat(reserva.totalConDescuento || 0),
+			0
+		);
 
-        const clasificacion = obtenerClasificacionCliente(reservasCompletadas);
+	const clasificacion = obtenerClasificacionCliente(reservasCompletadas);
 
-        const cliente = await Cliente.findByPk(clienteId, { transaction });
-        if (!cliente) {
-                return null;
-        }
+	const cliente = await Cliente.findByPk(clienteId, { transaction });
+	if (!cliente) {
+		return null;
+	}
 
-        await cliente.update(
-                {
-                        esCliente:
-                                reservasPagadas > 0 ||
-                                reservasCompletadas > 0 ||
-                                cliente.esCliente,
-                        totalReservas: totalReservasCliente,
-                        totalPagos: reservasPagadas,
-                        totalGastado,
-                        clasificacion,
-                        ultimaReserva: reservasCliente[0]?.fecha || cliente.ultimaReserva,
-                        primeraReserva:
-                                reservasCliente[totalReservasCliente - 1]?.fecha ||
-                                cliente.primeraReserva,
-                },
-                { transaction }
-        );
+	await cliente.update(
+		{
+			esCliente:
+				reservasPagadas > 0 || reservasCompletadas > 0 || cliente.esCliente,
+			totalReservas: totalReservasCliente,
+			totalPagos: reservasPagadas,
+			totalGastado,
+			clasificacion,
+			ultimaReserva: reservasCliente[0]?.fecha || cliente.ultimaReserva,
+			primeraReserva:
+				reservasCliente[totalReservasCliente - 1]?.fecha ||
+				cliente.primeraReserva,
+		},
+		{ transaction }
+	);
 
-        return cliente;
+	return cliente;
 };
 
 // Función para generar código único de reserva
@@ -284,17 +285,17 @@ const generarCodigoReserva = async () => {
 		// Obtener fecha actual
 		const fecha = new Date();
 		const año = fecha.getFullYear();
-		const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-		const dia = String(fecha.getDate()).padStart(2, '0');
+		const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+		const dia = String(fecha.getDate()).padStart(2, "0");
 		const fechaStr = `${año}${mes}${dia}`;
-		
+
 		// Calcular inicio y fin del día actual
 		const inicioDelDia = new Date(fecha);
 		inicioDelDia.setHours(0, 0, 0, 0);
-		
+
 		const finDelDia = new Date(fecha);
 		finDelDia.setHours(23, 59, 59, 999);
-		
+
 		// Contar reservas creadas hoy
 		const reservasDelDia = await Reserva.count({
 			where: {
@@ -304,15 +305,15 @@ const generarCodigoReserva = async () => {
 				},
 			},
 		});
-		
+
 		// Generar consecutivo (siguiente número del día)
-		const consecutivo = String(reservasDelDia + 1).padStart(4, '0');
-		
+		const consecutivo = String(reservasDelDia + 1).padStart(4, "0");
+
 		// Formato: AR-YYYYMMDD-XXXX
 		const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
-		
+
 		console.log(`📋 Código de reserva generado: ${codigoReserva}`);
-		
+
 		return codigoReserva;
 	} catch (error) {
 		console.error("Error generando código de reserva:", error);
@@ -370,7 +371,7 @@ const ejecutarMigracionCodigoReserva = async () => {
 
 		if (columns.length === 0) {
 			console.log("📋 Agregando columna codigo_reserva...");
-			
+
 			// Agregar la columna
 			await sequelize.query(`
 				ALTER TABLE reservas 
@@ -398,15 +399,17 @@ const ejecutarMigracionCodigoReserva = async () => {
 		`);
 
 		if (reservasSinCodigo.length > 0) {
-			console.log(`📋 Generando códigos para ${reservasSinCodigo.length} reservas existentes...`);
+			console.log(
+				`📋 Generando códigos para ${reservasSinCodigo.length} reservas existentes...`
+			);
 
 			const reservasPorFecha = {};
-			
+
 			for (const reserva of reservasSinCodigo) {
 				const fecha = new Date(reserva.created_at);
 				const año = fecha.getFullYear();
-				const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-				const dia = String(fecha.getDate()).padStart(2, '0');
+				const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+				const dia = String(fecha.getDate()).padStart(2, "0");
 				const fechaStr = `${año}${mes}${dia}`;
 
 				if (!reservasPorFecha[fechaStr]) {
@@ -414,25 +417,33 @@ const ejecutarMigracionCodigoReserva = async () => {
 				}
 
 				reservasPorFecha[fechaStr]++;
-				const consecutivo = String(reservasPorFecha[fechaStr]).padStart(4, '0');
+				const consecutivo = String(reservasPorFecha[fechaStr]).padStart(4, "0");
 				const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
 
-				await sequelize.query(`
+				await sequelize.query(
+					`
 					UPDATE reservas 
 					SET codigo_reserva = :codigoReserva 
 					WHERE id = :id;
-				`, {
-					replacements: { codigoReserva, id: reserva.id }
-				});
+				`,
+					{
+						replacements: { codigoReserva, id: reserva.id },
+					}
+				);
 			}
 
-			console.log(`✅ Códigos generados para ${reservasSinCodigo.length} reservas`);
+			console.log(
+				`✅ Códigos generados para ${reservasSinCodigo.length} reservas`
+			);
 		}
 
 		console.log("✅ Migración de codigo_reserva completada");
 	} catch (error) {
 		// Si hay error pero no es crítico, solo advertir
-		console.warn("⚠️ Advertencia en migración de codigo_reserva:", error.message);
+		console.warn(
+			"⚠️ Advertencia en migración de codigo_reserva:",
+			error.message
+		);
 	}
 };
 
@@ -444,14 +455,14 @@ const initializeDatabase = async () => {
 		}
 		await syncDatabase(false); // false = no forzar recreación
 
-                // Ejecutar migraciones automáticas
-                await ejecutarMigracionCodigoReserva();
-                await addPaymentFields();
-                await addAbonoFlags();
-                await addCodigosPagoTable();
+		// Ejecutar migraciones automáticas
+		await ejecutarMigracionCodigoReserva();
+		await addPaymentFields();
+		await addAbonoFlags();
+		await addCodigosPagoTable();
 
-			// Asegurar tabla de historial de asignaciones (para uso interno)
-			await sequelize.query(`
+		// Asegurar tabla de historial de asignaciones (para uso interno)
+		await sequelize.query(`
 				CREATE TABLE IF NOT EXISTS reserva_asignaciones (
 					id INT AUTO_INCREMENT PRIMARY KEY,
 					reserva_id INT NOT NULL,
@@ -462,7 +473,7 @@ const initializeDatabase = async () => {
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 			`);
 
-                console.log("✅ Base de datos inicializada correctamente");
+		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
 		process.exit(1);
@@ -1801,8 +1812,10 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		// Enviar email de confirmación llamando al PHP en Hostinger
 		try {
-			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_completo.php";
-			
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+
 			const emailData = {
 				...datosReserva,
 				codigoReserva: reservaGuardada.codigoReserva,
@@ -1810,7 +1823,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			};
 
 			console.log("📧 Enviando email de confirmación al PHP...");
-			
+
 			const emailResponse = await axios.post(phpUrl, emailData, {
 				headers: { "Content-Type": "application/json" },
 				timeout: 30000, // 30 segundos timeout
@@ -1902,7 +1915,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		if (reservaExistente) {
 			// MODIFICAR reserva existente sin pagar
-			console.log(`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`);
+			console.log(
+				`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`
+			);
 			esModificacion = true;
 
 			// Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
@@ -1919,99 +1934,132 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				vehiculo: datosReserva.vehiculo || "",
 				idaVuelta: Boolean(datosReserva.idaVuelta),
 				fechaRegreso: datosReserva.fechaRegreso || null,
-				abonoSugerido: parsePositiveDecimal(datosReserva.abonoSugerido, "abonoSugerido", 0),
-				saldoPendiente: parsePositiveDecimal(datosReserva.saldoPendiente, "saldoPendiente", 0),
-				descuentoBase: parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0),
-				descuentoPromocion: parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0),
-				descuentoRoundTrip: parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0),
-				descuentoOnline: parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0),
-				totalConDescuento: parsePositiveDecimal(datosReserva.totalConDescuento, "totalConDescuento", 0),
+				abonoSugerido: parsePositiveDecimal(
+					datosReserva.abonoSugerido,
+					"abonoSugerido",
+					0
+				),
+				saldoPendiente: parsePositiveDecimal(
+					datosReserva.saldoPendiente,
+					"saldoPendiente",
+					0
+				),
+				descuentoBase: parsePositiveDecimal(
+					datosReserva.descuentoBase,
+					"descuentoBase",
+					0
+				),
+				descuentoPromocion: parsePositiveDecimal(
+					datosReserva.descuentoPromocion,
+					"descuentoPromocion",
+					0
+				),
+				descuentoRoundTrip: parsePositiveDecimal(
+					datosReserva.descuentoRoundTrip,
+					"descuentoRoundTrip",
+					0
+				),
+				descuentoOnline: parsePositiveDecimal(
+					datosReserva.descuentoOnline,
+					"descuentoOnline",
+					0
+				),
+				totalConDescuento: parsePositiveDecimal(
+					datosReserva.totalConDescuento,
+					"totalConDescuento",
+					0
+				),
 				mensaje: datosReserva.mensaje || reservaExistente.mensaje,
-				codigoDescuento: datosReserva.codigoDescuento || reservaExistente.codigoDescuento,
+				codigoDescuento:
+					datosReserva.codigoDescuento || reservaExistente.codigoDescuento,
 				// Mantener el código de reserva original
 				// Actualizar metadata
-				ipAddress: req.ip || req.connection.remoteAddress || reservaExistente.ipAddress,
+				ipAddress:
+					req.ip || req.connection.remoteAddress || reservaExistente.ipAddress,
 				userAgent: req.get("User-Agent") || reservaExistente.userAgent,
-				referenciaPago: datosReserva.referenciaPago || reservaExistente.referenciaPago,
+				referenciaPago:
+					datosReserva.referenciaPago || reservaExistente.referenciaPago,
 			});
 
 			reservaExpress = reservaExistente;
-			console.log(`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`);
+			console.log(
+				`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`
+			);
 		} else {
 			// CREAR nueva reserva
 			const codigoReserva = await generarCodigoReserva();
 			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
 
 			reservaExpress = await Reserva.create({
-			codigoReserva: codigoReserva,
-			nombre: datosReserva.nombre,
-			email: datosReserva.email,
-			telefono: datosReserva.telefono,
-			clienteId: datosReserva.clienteId || null,
-			rut: rutFormateado,
-			origen: datosReserva.origen,
-			destino: datosReserva.destino,
-			fecha: datosReserva.fecha,
-			hora: "08:00:00", // Hora por defecto - se actualiza después
-			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
-			precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
-			vehiculo: datosReserva.vehiculo || "",
-			referenciaPago: datosReserva.referenciaPago || null,
+				codigoReserva: codigoReserva,
+				nombre: datosReserva.nombre,
+				email: datosReserva.email,
+				telefono: datosReserva.telefono,
+				clienteId: datosReserva.clienteId || null,
+				rut: rutFormateado,
+				origen: datosReserva.origen,
+				destino: datosReserva.destino,
+				fecha: datosReserva.fecha,
+				hora: "08:00:00", // Hora por defecto - se actualiza después
+				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+				vehiculo: datosReserva.vehiculo || "",
+				referenciaPago: datosReserva.referenciaPago || null,
 
-			// Campos que se completarán después del pago (opcionales por ahora)
-			numeroVuelo: "",
-			hotel: "",
-			equipajeEspecial: "",
-			sillaInfantil: false,
-			idaVuelta: Boolean(datosReserva.idaVuelta),
-			fechaRegreso: datosReserva.fechaRegreso || null,
-			horaRegreso: null,
+				// Campos que se completarán después del pago (opcionales por ahora)
+				numeroVuelo: "",
+				hotel: "",
+				equipajeEspecial: "",
+				sillaInfantil: false,
+				idaVuelta: Boolean(datosReserva.idaVuelta),
+				fechaRegreso: datosReserva.fechaRegreso || null,
+				horaRegreso: null,
 
-			// Campos financieros con validación
-			abonoSugerido: parsePositiveDecimal(
-				datosReserva.abonoSugerido,
-				"abonoSugerido",
-				0
-			),
-			saldoPendiente: parsePositiveDecimal(
-				datosReserva.saldoPendiente,
-				"saldoPendiente",
-				0
-			),
-			descuentoBase: parsePositiveDecimal(
-				datosReserva.descuentoBase,
-				"descuentoBase",
-				0
-			),
-			descuentoPromocion: parsePositiveDecimal(
-				datosReserva.descuentoPromocion,
-				"descuentoPromocion",
-				0
-			),
-			descuentoRoundTrip: parsePositiveDecimal(
-				datosReserva.descuentoRoundTrip,
-				"descuentoRoundTrip",
-				0
-			),
-			descuentoOnline: parsePositiveDecimal(
-				datosReserva.descuentoOnline,
-				"descuentoOnline",
-				0
-			),
-			totalConDescuento: parsePositiveDecimal(
-				datosReserva.totalConDescuento,
-				"totalConDescuento",
-				0
-			),
-			mensaje: datosReserva.mensaje || "",
+				// Campos financieros con validación
+				abonoSugerido: parsePositiveDecimal(
+					datosReserva.abonoSugerido,
+					"abonoSugerido",
+					0
+				),
+				saldoPendiente: parsePositiveDecimal(
+					datosReserva.saldoPendiente,
+					"saldoPendiente",
+					0
+				),
+				descuentoBase: parsePositiveDecimal(
+					datosReserva.descuentoBase,
+					"descuentoBase",
+					0
+				),
+				descuentoPromocion: parsePositiveDecimal(
+					datosReserva.descuentoPromocion,
+					"descuentoPromocion",
+					0
+				),
+				descuentoRoundTrip: parsePositiveDecimal(
+					datosReserva.descuentoRoundTrip,
+					"descuentoRoundTrip",
+					0
+				),
+				descuentoOnline: parsePositiveDecimal(
+					datosReserva.descuentoOnline,
+					"descuentoOnline",
+					0
+				),
+				totalConDescuento: parsePositiveDecimal(
+					datosReserva.totalConDescuento,
+					"totalConDescuento",
+					0
+				),
+				mensaje: datosReserva.mensaje || "",
 
-			// Metadata del sistema
-			source: datosReserva.source || "express_web",
-			estado: "pendiente_detalles", // Estado específico para reservas express
-			ipAddress: req.ip || req.connection.remoteAddress || "",
-			userAgent: req.get("User-Agent") || "",
-			codigoDescuento: datosReserva.codigoDescuento || "",
-			estadoPago: "pendiente",
+				// Metadata del sistema
+				source: datosReserva.source || "express_web",
+				estado: "pendiente_detalles", // Estado específico para reservas express
+				ipAddress: req.ip || req.connection.remoteAddress || "",
+				userAgent: req.get("User-Agent") || "",
+				codigoDescuento: datosReserva.codigoDescuento || "",
+				estadoPago: "pendiente",
 			});
 
 			console.log(
@@ -2052,8 +2100,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		return res.json({
 			success: true,
-			message: esModificacion 
-				? "Reserva modificada correctamente" 
+			message: esModificacion
+				? "Reserva modificada correctamente"
 				: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
 			codigoReserva: reservaExpress.codigoReserva,
@@ -2072,179 +2120,242 @@ app.post("/enviar-reserva-express", async (req, res) => {
 // --- ENDPOINTS PARA CODIGOS DE PAGO ---
 // Crear código de pago (Admin)
 app.post("/api/codigos-pago", authAdmin, async (req, res) => {
-    try {
-        const body = req.body || {};
-        const codigo = String(body.codigo || "").trim().toUpperCase();
-        const origen = String(body.origen || "Aeropuerto Temuco").trim();
-        const destino = String(body.destino || "").trim();
-        const monto = parsePositiveDecimal(body.monto, "monto", 0);
-        const descripcion = body.descripcion || "";
-        const vehiculo = body.vehiculo || "";
-        const pasajeros = parsePositiveInteger(body.pasajeros, "pasajeros", 1);
-        const idaVuelta = Boolean(body.idaVuelta);
-        const fechaVencimiento = body.fechaVencimiento
-            ? new Date(body.fechaVencimiento)
-            : null;
-        const usosMaximos = parsePositiveInteger(body.usosMaximos, "usosMaximos", 1);
-        const observaciones = body.observaciones || "";
+	try {
+		const body = req.body || {};
+		const codigo = String(body.codigo || "")
+			.trim()
+			.toUpperCase();
+		const origen = String(body.origen || "Aeropuerto Temuco").trim();
+		const destino = String(body.destino || "").trim();
+		const monto = parsePositiveDecimal(body.monto, "monto", 0);
+		const descripcion = body.descripcion || "";
+		const vehiculo = body.vehiculo || "";
+		const pasajeros = parsePositiveInteger(body.pasajeros, "pasajeros", 1);
+		const idaVuelta = Boolean(body.idaVuelta);
+		const fechaVencimiento = body.fechaVencimiento
+			? new Date(body.fechaVencimiento)
+			: null;
+		const usosMaximos = parsePositiveInteger(
+			body.usosMaximos,
+			"usosMaximos",
+			1
+		);
+		const observaciones = body.observaciones || "";
 
-        if (!codigo) {
-            return res.status(400).json({ success: false, message: "El código es requerido" });
-        }
-        if (!destino) {
-            return res.status(400).json({ success: false, message: "El destino es requerido" });
-        }
-        if (!Number.isFinite(monto) || monto <= 0) {
-            return res.status(400).json({ success: false, message: "El monto debe ser mayor a 0" });
-        }
+		if (!codigo) {
+			return res
+				.status(400)
+				.json({ success: false, message: "El código es requerido" });
+		}
+		if (!destino) {
+			return res
+				.status(400)
+				.json({ success: false, message: "El destino es requerido" });
+		}
+		if (!Number.isFinite(monto) || monto <= 0) {
+			return res
+				.status(400)
+				.json({ success: false, message: "El monto debe ser mayor a 0" });
+		}
 
-        const existente = await CodigoPago.findOne({ where: { codigo } });
-        if (existente) {
-            return res.status(409).json({ success: false, message: "El código ya existe" });
-        }
+		const existente = await CodigoPago.findOne({ where: { codigo } });
+		if (existente) {
+			return res
+				.status(409)
+				.json({ success: false, message: "El código ya existe" });
+		}
 
-        const created = await CodigoPago.create({
-            codigo,
-            origen,
-            destino,
-            monto,
-            descripcion,
-            vehiculo,
-            pasajeros,
-            idaVuelta,
-            fechaVencimiento,
-            usosMaximos,
-            usosActuales: 0,
-            observaciones,
-            estado: "activo",
-        });
+		const created = await CodigoPago.create({
+			codigo,
+			origen,
+			destino,
+			monto,
+			descripcion,
+			vehiculo,
+			pasajeros,
+			idaVuelta,
+			fechaVencimiento,
+			usosMaximos,
+			usosActuales: 0,
+			observaciones,
+			estado: "activo",
+		});
 
-        return res.json({ success: true, codigoPago: created });
-    } catch (error) {
-        console.error("Error creando código de pago:", error);
-        return res.status(500).json({ success: false, message: "Error interno del servidor" });
-    }
+		return res.json({ success: true, codigoPago: created });
+	} catch (error) {
+		console.error("Error creando código de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
 });
 
 // Listar códigos de pago (Admin)
 app.get("/api/codigos-pago", authAdmin, async (req, res) => {
-    try {
-        const { estado, page = 1, limit = 50 } = req.query;
-        const where = {};
-        if (estado) where.estado = estado;
-        const pageNum = Math.max(1, parseInt(page, 10) || 1);
-        const limitNum = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
-        const offset = (pageNum - 1) * limitNum;
+	try {
+		const { estado, page = 1, limit = 50 } = req.query;
+		const where = {};
+		if (estado) where.estado = estado;
+		const pageNum = Math.max(1, parseInt(page, 10) || 1);
+		const limitNum = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+		const offset = (pageNum - 1) * limitNum;
 
-        const { count, rows } = await CodigoPago.findAndCountAll({
-            where,
-            order: [["created_at", "DESC"]],
-            limit: limitNum,
-            offset,
-        });
+		const { count, rows } = await CodigoPago.findAndCountAll({
+			where,
+			order: [["created_at", "DESC"]],
+			limit: limitNum,
+			offset,
+		});
 
-        return res.json({
-            success: true,
-            codigosPago: rows,
-            pagination: {
-                total: count,
-                page: pageNum,
-                limit: limitNum,
-                totalPages: Math.ceil(count / limitNum),
-            },
-        });
-    } catch (error) {
-        console.error("Error listando códigos de pago:", error);
-        return res.status(500).json({ success: false, message: "Error interno del servidor" });
-    }
+		return res.json({
+			success: true,
+			codigosPago: rows,
+			pagination: {
+				total: count,
+				page: pageNum,
+				limit: limitNum,
+				totalPages: Math.ceil(count / limitNum),
+			},
+		});
+	} catch (error) {
+		console.error("Error listando códigos de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
 });
 
 // Obtener/validar un código de pago (Público)
 app.get("/api/codigos-pago/:codigo", async (req, res) => {
-    try {
-        const codigo = String(req.params.codigo || "").trim().toUpperCase();
-        if (!codigo) {
-            return res.status(400).json({ success: false, message: "Código inválido" });
-        }
+	try {
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
+		if (!codigo) {
+			return res
+				.status(400)
+				.json({ success: false, message: "Código inválido" });
+		}
 
-        const registro = await CodigoPago.findOne({ where: { codigo } });
-        if (!registro) {
-            return res.json({ success: false, message: "Código de pago no encontrado" });
-        }
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res.json({
+				success: false,
+				message: "Código de pago no encontrado",
+			});
+		}
 
-        // Verificar vencimiento
-        if (registro.fechaVencimiento) {
-            const now = new Date();
-            if (new Date(registro.fechaVencimiento) < now && registro.estado === "activo") {
-                // Marcar como vencido si está activo y ya pasó la fecha
-                await registro.update({ estado: "vencido" }).catch(() => {});
-            }
-        }
+		// Verificar vencimiento
+		if (registro.fechaVencimiento) {
+			const now = new Date();
+			if (
+				new Date(registro.fechaVencimiento) < now &&
+				registro.estado === "activo"
+			) {
+				// Marcar como vencido si está activo y ya pasó la fecha
+				await registro.update({ estado: "vencido" }).catch(() => {});
+			}
+		}
 
-        // Verificar usos
-        if (registro.usosActuales >= registro.usosMaximos) {
-            if (registro.estado !== "usado") {
-                await registro.update({ estado: "usado" }).catch(() => {});
-            }
-            return res.json({ success: false, message: "El código está usado", estado: "usado" });
-        }
+		// Verificar usos
+		if (registro.usosActuales >= registro.usosMaximos) {
+			if (registro.estado !== "usado") {
+				await registro.update({ estado: "usado" }).catch(() => {});
+			}
+			return res.json({
+				success: false,
+				message: "El código está usado",
+				estado: "usado",
+			});
+		}
 
-        if (registro.estado === "cancelado" || registro.estado === "vencido") {
-            return res.json({ success: false, message: `El código está ${registro.estado}`, estado: registro.estado });
-        }
+		if (registro.estado === "cancelado" || registro.estado === "vencido") {
+			return res.json({
+				success: false,
+				message: `El código está ${registro.estado}`,
+				estado: registro.estado,
+			});
+		}
 
-        return res.json({ success: true, codigoPago: registro });
-    } catch (error) {
-        console.error("Error validando código de pago:", error);
-        return res.status(500).json({ success: false, message: "Error interno del servidor" });
-    }
+		return res.json({ success: true, codigoPago: registro });
+	} catch (error) {
+		console.error("Error validando código de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
 });
 
 // Marcar un código de pago como usado (Interno)
 app.put("/api/codigos-pago/:codigo/usar", async (req, res) => {
-    try {
-        const codigo = String(req.params.codigo || "").trim().toUpperCase();
-        const { reservaId, emailCliente } = req.body || {};
-        const registro = await CodigoPago.findOne({ where: { codigo } });
-        if (!registro) {
-            return res.status(404).json({ success: false, message: "Código de pago no encontrado" });
-        }
+	try {
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
+		const { reservaId, emailCliente } = req.body || {};
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res
+				.status(404)
+				.json({ success: false, message: "Código de pago no encontrado" });
+		}
 
-        const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
-        const estado = nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+		const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+		const estado =
+			nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
 
-        await registro.update({
-            usosActuales: nuevosUsos,
-            reservaId: reservaId ?? registro.reservaId,
-            emailCliente: emailCliente ?? registro.emailCliente,
-            fechaUso: new Date(),
-            estado,
-        });
+		await registro.update({
+			usosActuales: nuevosUsos,
+			reservaId: reservaId ?? registro.reservaId,
+			emailCliente: emailCliente ?? registro.emailCliente,
+			fechaUso: new Date(),
+			estado,
+		});
 
-        return res.json({ success: true, message: "Código marcado como usado", codigoPago: registro });
-    } catch (error) {
-        console.error("Error marcando código de pago como usado:", error);
-        return res.status(500).json({ success: false, message: "Error interno del servidor" });
-    }
+		return res.json({
+			success: true,
+			message: "Código marcado como usado",
+			codigoPago: registro,
+		});
+	} catch (error) {
+		console.error("Error marcando código de pago como usado:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
 });
 
 // Eliminar un código de pago (Admin)
 app.delete("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
-    try {
-        const codigo = String(req.params.codigo || "").trim().toUpperCase();
-        const registro = await CodigoPago.findOne({ where: { codigo } });
-        if (!registro) {
-            return res.status(404).json({ success: false, message: "Código de pago no encontrado" });
-        }
-        if (registro.estado === "usado") {
-            return res.status(400).json({ success: false, message: "No se puede eliminar un código usado" });
-        }
-        await CodigoPago.destroy({ where: { codigo } });
-        return res.json({ success: true, message: "Código de pago eliminado correctamente" });
-    } catch (error) {
-        console.error("Error eliminando código de pago:", error);
-        return res.status(500).json({ success: false, message: "Error interno del servidor" });
-    }
+	try {
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res
+				.status(404)
+				.json({ success: false, message: "Código de pago no encontrado" });
+		}
+		if (registro.estado === "usado") {
+			return res
+				.status(400)
+				.json({
+					success: false,
+					message: "No se puede eliminar un código usado",
+				});
+		}
+		await CodigoPago.destroy({ where: { codigo } });
+		return res.json({
+			success: true,
+			message: "Código de pago eliminado correctamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando código de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
 });
 
 // Endpoint para completar detalles después del pago
@@ -2256,23 +2367,23 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		console.log(`Completando detalles para reserva ${id}:`, detalles);
 
 		// Buscar la reserva
-                const reserva = await Reserva.findByPk(id, {
-                        include: [
-                                {
-                                        model: Cliente,
-                                        as: "cliente",
-                                        attributes: [
-                                                "id",
-                                                "nombre",
-                                                "email",
-                                                "telefono",
-                                                "esCliente",
-                                                "clasificacion",
-                                                "totalReservas",
-                                        ],
-                                },
-                        ],
-                });
+		const reserva = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
 		if (!reserva) {
 			return res.status(404).json({
 				success: false,
@@ -2336,27 +2447,27 @@ app.get("/api/reservas", async (req, res) => {
 			if (fecha_hasta) whereClause.fecha[Op.lte] = fecha_hasta;
 		}
 
-                const { count, rows: reservas } = await Reserva.findAndCountAll({
-                        where: whereClause,
-                        order: [["created_at", "DESC"]],
-                        limit: parseInt(limit),
-                        offset: parseInt(offset),
-                        include: [
-                                {
-                                        model: Cliente,
-                                        as: "cliente",
-                                        attributes: [
-                                                "id",
-                                                "nombre",
-                                                "email",
-                                                "telefono",
-                                                "esCliente",
-                                                "clasificacion",
-                                                "totalReservas",
-                                        ],
-                                },
-                        ],
-                });
+		const { count, rows: reservas } = await Reserva.findAndCountAll({
+			where: whereClause,
+			order: [["created_at", "DESC"]],
+			limit: parseInt(limit),
+			offset: parseInt(offset),
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
 
 		res.json({
 			reservas,
@@ -2474,29 +2585,29 @@ app.get("/api/reservas/:id", async (req, res) => {
 app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 	try {
 		const { codigo } = req.params;
-		
+
 		console.log(`🔍 Buscando reserva con código: ${codigo}`);
-		
-                const reserva = await Reserva.findOne({
-                        where: {
-                                codigoReserva: codigo.toUpperCase(),
-                        },
-                        include: [
-                                {
-                                        model: Cliente,
-                                        as: "cliente",
-                                        attributes: [
-                                                "id",
-                                                "nombre",
-                                                "email",
-                                                "telefono",
-                                                "esCliente",
-                                                "clasificacion",
-                                                "totalReservas",
-                                        ],
-                                },
-                        ],
-                });
+
+		const reserva = await Reserva.findOne({
+			where: {
+				codigoReserva: codigo.toUpperCase(),
+			},
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
 
 		if (!reserva) {
 			console.log(`❌ No se encontró reserva con código: ${codigo}`);
@@ -2515,9 +2626,9 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 	try {
 		const { email } = req.params;
-		
+
 		console.log(`🔍 Verificando reserva activa para email: ${email}`);
-		
+
 		// Buscar reservas activas (pendiente o pendiente_detalles) sin pagar
 		const reservaActiva = await Reserva.findOne({
 			where: {
@@ -2532,14 +2643,16 @@ app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 
 		if (!reservaActiva) {
 			console.log(`✅ No hay reserva activa sin pagar para: ${email}`);
-			return res.json({ 
+			return res.json({
 				tieneReservaActiva: false,
-				mensaje: "No hay reservas activas sin pagar"
+				mensaje: "No hay reservas activas sin pagar",
 			});
 		}
 
-		console.log(`⚠️ Se encontró reserva activa sin pagar: ID ${reservaActiva.id}, Código: ${reservaActiva.codigoReserva}`);
-		res.json({ 
+		console.log(
+			`⚠️ Se encontró reserva activa sin pagar: ID ${reservaActiva.id}, Código: ${reservaActiva.codigoReserva}`
+		);
+		res.json({
 			tieneReservaActiva: true,
 			reserva: {
 				id: reservaActiva.id,
@@ -2552,7 +2665,8 @@ app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 				totalConDescuento: reservaActiva.totalConDescuento,
 				createdAt: reservaActiva.createdAt,
 			},
-			mensaje: "Se encontró una reserva activa sin pagar. Se modificará en lugar de crear una nueva."
+			mensaje:
+				"Se encontró una reserva activa sin pagar. Se modificará en lugar de crear una nueva.",
 		});
 	} catch (error) {
 		console.error("Error verificando reserva activa:", error);
@@ -2589,336 +2703,366 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 // Actualizar estado de pago de una reserva (con transacciones para garantizar consistencia)
 app.put("/api/reservas/:id/pago", async (req, res) => {
-        const transaction = await sequelize.transaction();
+	const transaction = await sequelize.transaction();
 
-        try {
-                const { id } = req.params;
-                const { estadoPago, metodoPago, referenciaPago, montoPagado, tipoPago } = req.body;
+	try {
+		const { id } = req.params;
+		const { estadoPago, metodoPago, referenciaPago, montoPagado, tipoPago } =
+			req.body;
 
-                const reserva = await Reserva.findByPk(id, { transaction });
-                if (!reserva) {
-                        await transaction.rollback();
-                        return res.status(404).json({ error: "Reserva no encontrada" });
-                }
+		const reserva = await Reserva.findByPk(id, { transaction });
+		if (!reserva) {
+			await transaction.rollback();
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
 
-                const totalReserva = parseFloat(reserva.totalConDescuento || 0);
-                const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
-                const saldoPendienteActual = parseFloat(
-                        reserva.saldoPendiente != null
-                                ? reserva.saldoPendiente
-                                : Math.max(totalReserva - abonoSugerido, 0)
-                );
-                const montoPago =
-                        montoPagado !== undefined && montoPagado !== null
-                                ? parsePositiveDecimal(montoPagado, "montoPagado", 0)
-                                : null;
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+		const saldoPendienteActual = parseFloat(
+			reserva.saldoPendiente != null
+				? reserva.saldoPendiente
+				: Math.max(totalReserva - abonoSugerido, 0)
+		);
+		const montoPago =
+			montoPagado !== undefined && montoPagado !== null
+				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
+				: null;
 
-                let nuevoEstadoPago = estadoPago || reserva.estadoPago;
-                let nuevoEstadoReserva = reserva.estado;
-                let nuevoSaldoPendiente = saldoPendienteActual;
-                let abonoPagado = reserva.abonoPagado;
-                let saldoPagado = reserva.saldoPagado;
-                const fechaPago = new Date();
+		let nuevoEstadoPago = estadoPago || reserva.estadoPago;
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = saldoPendienteActual;
+		let abonoPagado = reserva.abonoPagado;
+		let saldoPagado = reserva.saldoPagado;
+		const fechaPago = new Date();
 
-                if (montoPago && montoPago > 0) {
-                        if (tipoPago === "abono") {
-                                abonoPagado = true;
-                                nuevoSaldoPendiente = Math.max(totalReserva - montoPago, 0);
-                        } else if (tipoPago === "saldo") {
-                                saldoPagado = true;
-                                nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
-                        } else if (tipoPago === "total") {
-                                abonoPagado = true;
-                                saldoPagado = true;
-                                nuevoSaldoPendiente = 0;
-                        } else {
-                                nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
-                                if (!abonoPagado && montoPago >= abonoSugerido) {
-                                        abonoPagado = true;
-                                }
-                        }
-                } else if (tipoPago === "abono" && !abonoPagado) {
-                        abonoPagado = true;
-                } else if (tipoPago === "saldo") {
-                        saldoPagado = true;
-                        nuevoSaldoPendiente = 0;
-                } else if (tipoPago === "total") {
-                        abonoPagado = true;
-                        saldoPagado = true;
-                        nuevoSaldoPendiente = 0;
-                }
+		if (montoPago && montoPago > 0) {
+			if (tipoPago === "abono") {
+				abonoPagado = true;
+				nuevoSaldoPendiente = Math.max(totalReserva - montoPago, 0);
+			} else if (tipoPago === "saldo") {
+				saldoPagado = true;
+				nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
+			} else if (tipoPago === "total") {
+				abonoPagado = true;
+				saldoPagado = true;
+				nuevoSaldoPendiente = 0;
+			} else {
+				nuevoSaldoPendiente = Math.max(saldoPendienteActual - montoPago, 0);
+				if (!abonoPagado && montoPago >= abonoSugerido) {
+					abonoPagado = true;
+				}
+			}
+		} else if (tipoPago === "abono" && !abonoPagado) {
+			abonoPagado = true;
+		} else if (tipoPago === "saldo") {
+			saldoPagado = true;
+			nuevoSaldoPendiente = 0;
+		} else if (tipoPago === "total") {
+			abonoPagado = true;
+			saldoPagado = true;
+			nuevoSaldoPendiente = 0;
+		}
 
-                if (abonoPagado && ["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
-                        nuevoEstadoReserva = "confirmada";
-                }
+		if (
+			abonoPagado &&
+			["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+		) {
+			nuevoEstadoReserva = "confirmada";
+		}
 
-                if (saldoPagado || nuevoSaldoPendiente <= 0) {
-                        saldoPagado = true;
-                        nuevoSaldoPendiente = 0;
-                        nuevoEstadoReserva = "completada";
-                        nuevoEstadoPago = "pagado";
-                }
+		if (saldoPagado || nuevoSaldoPendiente <= 0) {
+			saldoPagado = true;
+			nuevoSaldoPendiente = 0;
+			nuevoEstadoReserva = "completada";
+			nuevoEstadoPago = "pagado";
+		}
 
-                const payloadActualizacion = {
-                        estadoPago: nuevoEstadoPago,
-                        metodoPago: metodoPago || reserva.metodoPago,
-                        referenciaPago: referenciaPago || reserva.referenciaPago,
-                        saldoPendiente: nuevoSaldoPendiente,
-                        abonoPagado,
-                        saldoPagado,
-                        estado: nuevoEstadoReserva,
-                };
+		const payloadActualizacion = {
+			estadoPago: nuevoEstadoPago,
+			metodoPago: metodoPago || reserva.metodoPago,
+			referenciaPago: referenciaPago || reserva.referenciaPago,
+			saldoPendiente: nuevoSaldoPendiente,
+			abonoPagado,
+			saldoPagado,
+			estado: nuevoEstadoReserva,
+		};
 
-                if (montoPago && montoPago > 0) {
-                        payloadActualizacion.pagoMonto = montoPago;
-                        payloadActualizacion.pagoFecha = fechaPago;
-                } else if (saldoPagado && !reserva.saldoPagado) {
-                        payloadActualizacion.pagoFecha = fechaPago;
-                }
+		if (montoPago && montoPago > 0) {
+			payloadActualizacion.pagoMonto = montoPago;
+			payloadActualizacion.pagoFecha = fechaPago;
+		} else if (saldoPagado && !reserva.saldoPagado) {
+			payloadActualizacion.pagoFecha = fechaPago;
+		}
 
-                await reserva.update(payloadActualizacion, { transaction });
+		await reserva.update(payloadActualizacion, { transaction });
 
-                let clienteActualizado = null;
-                if (reserva.clienteId) {
-                        clienteActualizado = await actualizarResumenCliente(
-                                reserva.clienteId,
-                                transaction
-                        );
-                }
+		let clienteActualizado = null;
+		if (reserva.clienteId) {
+			clienteActualizado = await actualizarResumenCliente(
+				reserva.clienteId,
+				transaction
+			);
+		}
 
-                await transaction.commit();
+		await transaction.commit();
 
-                const reservaActualizada = await Reserva.findByPk(id, {
-                        include: [
-                                {
-                                        model: Cliente,
-                                        as: "cliente",
-                                        attributes: [
-                                                "id",
-                                                "nombre",
-                                                "email",
-                                                "telefono",
-                                                "esCliente",
-                                                "clasificacion",
-                                                "totalReservas",
-                                        ],
-                                },
-                        ],
-                });
+		const reservaActualizada = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
 
-                res.json({
-                        success: true,
-                        message: "Estado de pago actualizado",
-                        reserva: reservaActualizada,
-                        cliente: clienteActualizado,
-                });
-        } catch (error) {
-                await transaction.rollback();
-                console.error("Error actualizando estado de pago:", error);
-                res.status(500).json({ error: "Error interno del servidor" });
-        }
+		res.json({
+			success: true,
+			message: "Estado de pago actualizado",
+			reserva: reservaActualizada,
+			cliente: clienteActualizado,
+		});
+	} catch (error) {
+		await transaction.rollback();
+		console.error("Error actualizando estado de pago:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Actualizar campos generales de una reserva (admin)
 app.put("/api/reservas/:id", authAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const reserva = await Reserva.findByPk(id);
-        if (!reserva) {
-            return res.status(404).json({ error: "Reserva no encontrada" });
-        }
+	try {
+		const { id } = req.params;
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
 
-        const {
-            nombre,
-            email,
-            telefono,
-            fecha,
-            hora,
-            pasajeros,
-            numeroVuelo,
-            hotel,
-            equipajeEspecial,
-            sillaInfantil,
-            idaVuelta,
-            fechaRegreso,
-            horaRegreso,
-            mensaje,
-        } = req.body || {};
+		const {
+			nombre,
+			email,
+			telefono,
+			fecha,
+			hora,
+			pasajeros,
+			numeroVuelo,
+			hotel,
+			equipajeEspecial,
+			sillaInfantil,
+			idaVuelta,
+			fechaRegreso,
+			horaRegreso,
+			mensaje,
+		} = req.body || {};
 
-        await reserva.update({
-            nombre: nombre !== undefined ? nombre : reserva.nombre,
-            email: email !== undefined ? email : reserva.email,
-            telefono: telefono !== undefined ? telefono : reserva.telefono,
-            fecha: fecha !== undefined ? fecha : reserva.fecha,
-            hora: hora !== undefined ? hora : reserva.hora,
-            pasajeros: pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
-            numeroVuelo: numeroVuelo !== undefined ? numeroVuelo : reserva.numeroVuelo,
-            hotel: hotel !== undefined ? hotel : reserva.hotel,
-            equipajeEspecial: equipajeEspecial !== undefined ? equipajeEspecial : reserva.equipajeEspecial,
-            sillaInfantil: sillaInfantil !== undefined ? Boolean(sillaInfantil) : reserva.sillaInfantil,
-            idaVuelta: idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
-            fechaRegreso: fechaRegreso !== undefined ? fechaRegreso : reserva.fechaRegreso,
-            horaRegreso: horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
-            mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
-        });
+		await reserva.update({
+			nombre: nombre !== undefined ? nombre : reserva.nombre,
+			email: email !== undefined ? email : reserva.email,
+			telefono: telefono !== undefined ? telefono : reserva.telefono,
+			fecha: fecha !== undefined ? fecha : reserva.fecha,
+			hora: hora !== undefined ? hora : reserva.hora,
+			pasajeros:
+				pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
+			numeroVuelo:
+				numeroVuelo !== undefined ? numeroVuelo : reserva.numeroVuelo,
+			hotel: hotel !== undefined ? hotel : reserva.hotel,
+			equipajeEspecial:
+				equipajeEspecial !== undefined
+					? equipajeEspecial
+					: reserva.equipajeEspecial,
+			sillaInfantil:
+				sillaInfantil !== undefined
+					? Boolean(sillaInfantil)
+					: reserva.sillaInfantil,
+			idaVuelta:
+				idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
+			fechaRegreso:
+				fechaRegreso !== undefined ? fechaRegreso : reserva.fechaRegreso,
+			horaRegreso:
+				horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
+			mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
+		});
 
-        res.json({ success: true, message: "Reserva actualizada", reserva });
-    } catch (error) {
-        console.error("Error actualizando reserva:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+		res.json({ success: true, message: "Reserva actualizada", reserva });
+	} catch (error) {
+		console.error("Error actualizando reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Actualizar ruta (origen/destino) de una reserva
 app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { origen, destino } = req.body || {};
-        if (!origen || !destino) {
-            return res.status(400).json({ error: "Origen y Destino son requeridos" });
-        }
-        const reserva = await Reserva.findByPk(id);
-        if (!reserva) {
-            return res.status(404).json({ error: "Reserva no encontrada" });
-        }
-        await reserva.update({ origen, destino });
-        res.json({ success: true, message: "Ruta actualizada", reserva });
-    } catch (error) {
-        console.error("Error actualizando ruta de reserva:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+	try {
+		const { id } = req.params;
+		const { origen, destino } = req.body || {};
+		if (!origen || !destino) {
+			return res.status(400).json({ error: "Origen y Destino son requeridos" });
+		}
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+		await reserva.update({ origen, destino });
+		res.json({ success: true, message: "Ruta actualizada", reserva });
+	} catch (error) {
+		console.error("Error actualizando ruta de reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Asignar vehículo y (opcional) conductor a una reserva
 app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { vehiculoId, conductorId, sendEmail } = req.body || {};
-        const shouldSend = sendEmail !== false;
+	try {
+		const { id } = req.params;
+		const { vehiculoId, conductorId, sendEmail } = req.body || {};
+		const shouldSend = sendEmail !== false;
 
-        if (!vehiculoId || !Number.isFinite(Number(vehiculoId))) {
-            return res.status(400).json({ error: "vehiculoId es requerido y debe ser numérico" });
-        }
+		if (!vehiculoId || !Number.isFinite(Number(vehiculoId))) {
+			return res
+				.status(400)
+				.json({ error: "vehiculoId es requerido y debe ser numérico" });
+		}
 
-        const reserva = await Reserva.findByPk(id);
-        if (!reserva) {
-            return res.status(404).json({ error: "Reserva no encontrada" });
-        }
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
 
-        const vehiculo = await Vehiculo.findByPk(Number(vehiculoId));
-        if (!vehiculo) {
-            return res.status(404).json({ error: "Vehículo no encontrado" });
-        }
+		const vehiculo = await Vehiculo.findByPk(Number(vehiculoId));
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
 
-        let conductor = null;
-        if (conductorId) {
-            conductor = await Conductor.findByPk(Number(conductorId));
-            if (!conductor) {
-                return res.status(404).json({ error: "Conductor no encontrado" });
-            }
-        }
+		let conductor = null;
+		if (conductorId) {
+			conductor = await Conductor.findByPk(Number(conductorId));
+			if (!conductor) {
+				return res.status(404).json({ error: "Conductor no encontrado" });
+			}
+		}
 
-        // Actualizar la reserva con datos legibles
-        const vehiculoTipo = (vehiculo.tipo?.toUpperCase?.() || vehiculo.tipo || "Vehículo").toString();
-        const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
-        const patenteLast4 = (vehiculo.patente || "").toString().slice(-4);
+		// Actualizar la reserva con datos legibles
+		const vehiculoTipo = (
+			vehiculo.tipo?.toUpperCase?.() ||
+			vehiculo.tipo ||
+			"Vehículo"
+		).toString();
+		const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
+		const patenteLast4 = (vehiculo.patente || "").toString().slice(-4);
 
-        // Actualizar solo el campo 'vehiculo'.
-        // Ya no modificamos 'observaciones' aquí para evitar contaminar
-        // las notas internas con historial de asignaciones. Ese historial
-        // se registra en la tabla reserva_asignaciones.
-        await reserva.update({
-            vehiculo: vehiculoLabel,
-        });
+		// Actualizar solo el campo 'vehiculo'.
+		// Ya no modificamos 'observaciones' aquí para evitar contaminar
+		// las notas internas con historial de asignaciones. Ese historial
+		// se registra en la tabla reserva_asignaciones.
+		await reserva.update({
+			vehiculo: vehiculoLabel,
+		});
 
-        // Registrar en historial solo si hubo cambio
-        try {
-            const [rows] = await sequelize.query(
-                `SELECT vehiculo, conductor FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC LIMIT 1`,
-                { replacements: { id } }
-            );
+		// Registrar en historial solo si hubo cambio
+		try {
+			const [rows] = await sequelize.query(
+				`SELECT vehiculo, conductor FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC LIMIT 1`,
+				{ replacements: { id } }
+			);
 
-            const ultimo = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
-            const nuevoVehiculo = vehiculoTipo;
-            const nuevoConductor = conductor ? conductor.nombre : null;
-            const cambio = !ultimo || ultimo.vehiculo !== nuevoVehiculo || (ultimo.conductor || null) !== (nuevoConductor || null);
+			const ultimo = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+			const nuevoVehiculo = vehiculoTipo;
+			const nuevoConductor = conductor ? conductor.nombre : null;
+			const cambio =
+				!ultimo ||
+				ultimo.vehiculo !== nuevoVehiculo ||
+				(ultimo.conductor || null) !== (nuevoConductor || null);
 
-            if (cambio) {
-                await sequelize.query(
-                    `INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor) VALUES (:reservaId, :vehiculo, :conductor)`,
-                    {
-                        replacements: {
-                            reservaId: id,
-                            vehiculo: nuevoVehiculo,
-                            conductor: nuevoConductor,
-                        },
-                    }
-                );
-            }
-        } catch (histErr) {
-            console.warn("⚠️ No se pudo registrar historial de asignación:", histErr.message);
-        }
+			if (cambio) {
+				await sequelize.query(
+					`INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor) VALUES (:reservaId, :vehiculo, :conductor)`,
+					{
+						replacements: {
+							reservaId: id,
+							vehiculo: nuevoVehiculo,
+							conductor: nuevoConductor,
+						},
+					}
+				);
+			}
+		} catch (histErr) {
+			console.warn(
+				"⚠️ No se pudo registrar historial de asignación:",
+				histErr.message
+			);
+		}
 
-        // Intentar enviar notificación por email al pasajero
-        try {
-            const phpUrl =
-                process.env.PHP_ASIGNACION_URL ||
-                "https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
+		// Intentar enviar notificación por email al pasajero
+		try {
+			const phpUrl =
+				process.env.PHP_ASIGNACION_URL ||
+				"https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
 
-            const payload = {
-                email: reserva.email,
-                nombre: reserva.nombre,
-                codigoReserva: reserva.codigoReserva,
-                origen: reserva.origen,
-                destino: reserva.destino,
-                fecha: reserva.fecha,
-                hora: reserva.hora,
-                pasajeros: reserva.pasajeros,
-                // En el correo solo mostraremos el tipo, no la patente completa
-                vehiculo: vehiculoTipo,
-                vehiculoTipo: vehiculoTipo,
-                vehiculoPatenteLast4: patenteLast4 || null,
-                conductorNombre: conductor?.nombre || null,
-                // No enviar RUT del conductor por privacidad
-            };
+			const payload = {
+				email: reserva.email,
+				nombre: reserva.nombre,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				pasajeros: reserva.pasajeros,
+				// En el correo solo mostraremos el tipo, no la patente completa
+				vehiculo: vehiculoTipo,
+				vehiculoTipo: vehiculoTipo,
+				vehiculoPatenteLast4: patenteLast4 || null,
+				conductorNombre: conductor?.nombre || null,
+				// No enviar RUT del conductor por privacidad
+			};
 
-            if (shouldSend) {
-                await axios.post(phpUrl, payload, {
-                    headers: { "Content-Type": "application/json" },
-                    timeout: 30000,
-                });
-                console.log("📧 Email de asignación enviado");
-            } else {
-                console.log("ℹ️ Email de asignación no enviado (sendEmail=false)");
-            }
-        } catch (emailErr) {
-            console.warn("⚠️ No se pudo enviar email de asignación:", emailErr.message);
-        }
+			if (shouldSend) {
+				await axios.post(phpUrl, payload, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 30000,
+				});
+				console.log("📧 Email de asignación enviado");
+			} else {
+				console.log("ℹ️ Email de asignación no enviado (sendEmail=false)");
+			}
+		} catch (emailErr) {
+			console.warn(
+				"⚠️ No se pudo enviar email de asignación:",
+				emailErr.message
+			);
+		}
 
-        return res.json({
-            success: true,
-            message: "Asignación actualizada",
-            reserva,
-        });
-    } catch (error) {
-        console.error("Error asignando vehículo/conductor:", error);
-        return res.status(500).json({ error: "Error interno del servidor" });
-    }
+		return res.json({
+			success: true,
+			message: "Asignación actualizada",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error asignando vehículo/conductor:", error);
+		return res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Obtener historial de asignaciones de una reserva (uso interno)
 app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const [rows] = await sequelize.query(
-            `SELECT id, vehiculo, conductor, created_at FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC`,
-            { replacements: { id } }
-        );
-        res.json({ historial: rows || [] });
-    } catch (error) {
-        console.error("Error obteniendo historial de asignaciones:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+	try {
+		const { id } = req.params;
+		const [rows] = await sequelize.query(
+			`SELECT id, vehiculo, conductor, created_at FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC`,
+			{ replacements: { id } }
+		);
+		res.json({ historial: rows || [] });
+	} catch (error) {
+		console.error("Error obteniendo historial de asignaciones:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // --- ENDPOINTS PARA GESTIONAR CLIENTES ---
@@ -3120,91 +3264,119 @@ app.get("/api/vehiculos", async (req, res) => {
 // ==================== RUTAS DE DESTINOS (ADMIN) ====================
 // Listar destinos (opcionalmente solo activos)
 app.get("/api/destinos", async (req, res) => {
-    try {
-        const { activos } = req.query;
-        const where = {};
-        if (activos === "true") where.activo = true;
-        if (activos === "false") where.activo = false;
-        const destinos = await Destino.findAll({ where, order: [["orden", "ASC"], ["nombre", "ASC"]] });
-        res.json({ destinos });
-    } catch (error) {
-        console.error("Error obteniendo destinos:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+	try {
+		const { activos } = req.query;
+		const where = {};
+		if (activos === "true") where.activo = true;
+		if (activos === "false") where.activo = false;
+		const destinos = await Destino.findAll({
+			where,
+			order: [
+				["orden", "ASC"],
+				["nombre", "ASC"],
+			],
+		});
+		res.json({ destinos });
+	} catch (error) {
+		console.error("Error obteniendo destinos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Crear destino rápido (sin activarlo por defecto)
 app.post("/api/destinos", authAdmin, async (req, res) => {
-    try {
-        const { nombre, precioIda = 0, precioVuelta = 0, precioIdaVuelta = 0, descripcion = "" } = req.body || {};
-        if (!nombre || !nombre.trim()) {
-            return res.status(400).json({ error: "Nombre de destino es requerido" });
-        }
-        const existing = await Destino.findOne({ where: { nombre: nombre.trim() } });
-        if (existing) {
-            return res.json({ success: true, destino: existing, existed: true });
-        }
-        const destino = await Destino.create({
-            nombre: nombre.trim(),
-            precioIda: Number(precioIda) || 0,
-            precioVuelta: Number(precioVuelta) || 0,
-            precioIdaVuelta: Number(precioIdaVuelta) || 0,
-            activo: false,
-            descripcion,
-            tiempo: "",
-            imagen: "",
-            maxPasajeros: 4,
-            minHorasAnticipacion: 5,
-            orden: 9999,
-        });
-        res.status(201).json({ success: true, destino, existed: false });
-    } catch (error) {
-        console.error("Error creando destino:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+	try {
+		const {
+			nombre,
+			precioIda = 0,
+			precioVuelta = 0,
+			precioIdaVuelta = 0,
+			descripcion = "",
+		} = req.body || {};
+		if (!nombre || !nombre.trim()) {
+			return res.status(400).json({ error: "Nombre de destino es requerido" });
+		}
+		const existing = await Destino.findOne({
+			where: { nombre: nombre.trim() },
+		});
+		if (existing) {
+			return res.json({ success: true, destino: existing, existed: true });
+		}
+		const destino = await Destino.create({
+			nombre: nombre.trim(),
+			precioIda: Number(precioIda) || 0,
+			precioVuelta: Number(precioVuelta) || 0,
+			precioIdaVuelta: Number(precioIdaVuelta) || 0,
+			activo: false,
+			descripcion,
+			tiempo: "",
+			imagen: "",
+			maxPasajeros: 4,
+			minHorasAnticipacion: 5,
+			orden: 9999,
+		});
+		res.status(201).json({ success: true, destino, existed: false });
+	} catch (error) {
+		console.error("Error creando destino:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Actualizar destino (activar, precios, nombre, etc.)
 app.put("/api/destinos/:id", authAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const destino = await Destino.findByPk(id);
-        if (!destino) {
-            return res.status(404).json({ error: "Destino no encontrado" });
-        }
-        const {
-            nombre,
-            precioIda,
-            precioVuelta,
-            precioIdaVuelta,
-            activo,
-            descripcion,
-            tiempo,
-            imagen,
-            maxPasajeros,
-            minHorasAnticipacion,
-            orden,
-        } = req.body || {};
+	try {
+		const { id } = req.params;
+		const destino = await Destino.findByPk(id);
+		if (!destino) {
+			return res.status(404).json({ error: "Destino no encontrado" });
+		}
+		const {
+			nombre,
+			precioIda,
+			precioVuelta,
+			precioIdaVuelta,
+			activo,
+			descripcion,
+			tiempo,
+			imagen,
+			maxPasajeros,
+			minHorasAnticipacion,
+			orden,
+		} = req.body || {};
 
-        await destino.update({
-            nombre: nombre !== undefined ? nombre : destino.nombre,
-            precioIda: precioIda !== undefined ? Number(precioIda) : destino.precioIda,
-            precioVuelta: precioVuelta !== undefined ? Number(precioVuelta) : destino.precioVuelta,
-            precioIdaVuelta: precioIdaVuelta !== undefined ? Number(precioIdaVuelta) : destino.precioIdaVuelta,
-            activo: activo !== undefined ? Boolean(activo) : destino.activo,
-            descripcion: descripcion !== undefined ? descripcion : destino.descripcion,
-            tiempo: tiempo !== undefined ? tiempo : destino.tiempo,
-            imagen: imagen !== undefined ? imagen : destino.imagen,
-            maxPasajeros: maxPasajeros !== undefined ? Number(maxPasajeros) : destino.maxPasajeros,
-            minHorasAnticipacion: minHorasAnticipacion !== undefined ? Number(minHorasAnticipacion) : destino.minHorasAnticipacion,
-            orden: orden !== undefined ? Number(orden) : destino.orden,
-        });
+		await destino.update({
+			nombre: nombre !== undefined ? nombre : destino.nombre,
+			precioIda:
+				precioIda !== undefined ? Number(precioIda) : destino.precioIda,
+			precioVuelta:
+				precioVuelta !== undefined
+					? Number(precioVuelta)
+					: destino.precioVuelta,
+			precioIdaVuelta:
+				precioIdaVuelta !== undefined
+					? Number(precioIdaVuelta)
+					: destino.precioIdaVuelta,
+			activo: activo !== undefined ? Boolean(activo) : destino.activo,
+			descripcion:
+				descripcion !== undefined ? descripcion : destino.descripcion,
+			tiempo: tiempo !== undefined ? tiempo : destino.tiempo,
+			imagen: imagen !== undefined ? imagen : destino.imagen,
+			maxPasajeros:
+				maxPasajeros !== undefined
+					? Number(maxPasajeros)
+					: destino.maxPasajeros,
+			minHorasAnticipacion:
+				minHorasAnticipacion !== undefined
+					? Number(minHorasAnticipacion)
+					: destino.minHorasAnticipacion,
+			orden: orden !== undefined ? Number(orden) : destino.orden,
+		});
 
-        res.json({ success: true, destino });
-    } catch (error) {
-        console.error("Error actualizando destino:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+		res.json({ success: true, destino });
+	} catch (error) {
+		console.error("Error actualizando destino:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Obtener un vehículo por ID
@@ -3670,35 +3842,37 @@ app.delete("/api/reservas/:id", async (req, res) => {
 
 // Cambiar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { estado, observaciones } = req.body || {};
+	try {
+		const { id } = req.params;
+		const { estado, observaciones } = req.body || {};
 
-        const reserva = await Reserva.findByPk(id);
-        if (!reserva) {
-            return res.status(404).json({ error: "Reserva no encontrada" });
-        }
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
 
-        // Permitir dejar observaciones vacías: si viene "" lo convertimos a NULL
-        const obsValue =
-            observaciones !== undefined
-                ? (typeof observaciones === "string" && observaciones.trim() === "" ? null : observaciones)
-                : reserva.observaciones;
+		// Permitir dejar observaciones vacías: si viene "" lo convertimos a NULL
+		const obsValue =
+			observaciones !== undefined
+				? typeof observaciones === "string" && observaciones.trim() === ""
+					? null
+					: observaciones
+				: reserva.observaciones;
 
-        await reserva.update({
-            estado,
-            observaciones: obsValue,
-        });
+		await reserva.update({
+			estado,
+			observaciones: obsValue,
+		});
 
-        res.json({
-            success: true,
-            message: "Estado actualizado",
-            reserva,
-        });
-    } catch (error) {
-        console.error("Error actualizando estado:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
+		res.json({
+			success: true,
+			message: "Estado actualizado",
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error actualizando estado:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
 });
 
 // Endpoint para generar pagos desde el frontend
@@ -3868,7 +4042,9 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			return;
 		}
 
-		console.log(`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`);
+		console.log(
+			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`
+		);
 
 		// Actualizar estado de pago en la reserva
 		await reserva.update({
@@ -3877,7 +4053,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			pagoGateway: "flow",
 			pagoMonto: payment.amount,
 			pagoFecha: new Date(payment.paymentDate || new Date()),
-			estado: reserva.estado === "pendiente_detalles" ? reserva.estado : "confirmada",
+			estado:
+				reserva.estado === "pendiente_detalles" ? reserva.estado : "confirmada",
 		});
 
 		console.log("💾 Reserva actualizada con información de pago Flow");
@@ -3885,12 +4062,17 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		// Si la reserva proviene de un código de pago, marcarlo como usado
 		try {
 			const codigoDePago = reserva.referenciaPago;
-			if (codigoDePago && typeof codigoDePago === "string" && codigoDePago.trim().length > 0) {
+			if (
+				codigoDePago &&
+				typeof codigoDePago === "string" &&
+				codigoDePago.trim().length > 0
+			) {
 				const codigo = codigoDePago.trim().toUpperCase();
 				const registro = await CodigoPago.findOne({ where: { codigo } });
 				if (registro) {
 					const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
-					const estado = nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+					const estado =
+						nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
 					await registro.update({
 						usosActuales: nuevosUsos,
 						reservaId: reserva.id,
@@ -3900,11 +4082,17 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					});
 					console.log("✅ Código de pago marcado como usado:", codigo);
 				} else {
-					console.log("ℹ️ Código de pago no encontrado para marcar uso:", codigo);
+					console.log(
+						"ℹ️ Código de pago no encontrado para marcar uso:",
+						codigo
+					);
 				}
 			}
 		} catch (cpError) {
-			console.warn("⚠️ No se pudo marcar el código de pago como usado:", cpError.message);
+			console.warn(
+				"⚠️ No se pudo marcar el código de pago como usado:",
+				cpError.message
+			);
 		}
 
 		// Enviar correo de confirmación de pago
@@ -3936,7 +4124,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				timeout: 30000,
 			});
 
-			console.log("✅ Email de confirmación de pago Flow enviado:", emailResponse.data);
+			console.log(
+				"✅ Email de confirmación de pago Flow enviado:",
+				emailResponse.data
+			);
 		} catch (emailError) {
 			console.error(
 				"❌ Error al enviar email de confirmación (no crítico):",

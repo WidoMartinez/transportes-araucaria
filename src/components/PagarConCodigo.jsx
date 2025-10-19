@@ -84,7 +84,7 @@ function PagarConCodigo() {
 	};
 
 	// Validar datos del formulario
-  const validarDatos = () => {
+	const validarDatos = () => {
 		if (!formData.nombre.trim()) {
 			setError("Por favor ingresa tu nombre completo");
 			return false;
@@ -119,45 +119,45 @@ function PagarConCodigo() {
 
 		setError("");
 		return true;
-  };
+	};
 
-  // Pago con código: crea reserva express y genera link de Flow
-  const procesarPagoConCodigoFlow = async () => {
-    if (!validarDatos() || !codigoValidado) return;
-    setProcesando(true);
-    setLoadingGateway("flow");
-    setError("");
-    try {
-      const reservaPayload = {
-        nombre: formData.nombre,
-        email: formData.email,
-        telefono: formData.telefono,
-        origen: codigoValidado.origen,
-        destino: codigoValidado.destino,
+	// Pago con código: crea reserva express y genera link de Flow
+	const procesarPagoConCodigoFlow = async () => {
+		if (!validarDatos() || !codigoValidado) return;
+		setProcesando(true);
+		setLoadingGateway("flow");
+		setError("");
+		try {
+			const reservaPayload = {
+				nombre: formData.nombre,
+				email: formData.email,
+				telefono: formData.telefono,
+				origen: codigoValidado.origen,
+				destino: codigoValidado.destino,
 				// Usar fecha y hora proporcionadas por el cliente
 				fecha: formData.fecha || new Date().toISOString().split("T")[0],
 				hora: formData.hora || "",
-        pasajeros: codigoValidado.pasajeros || 1,
-        precio: codigoValidado.monto,
-        totalConDescuento: codigoValidado.monto,
-        vehiculo: codigoValidado.vehiculo || "Por asignar",
-        numeroVuelo: formData.numeroVuelo,
-        hotel: formData.hotel,
-        mensaje: formData.mensaje,
-        idaVuelta: !!codigoValidado.idaVuelta,
-        referenciaPago: codigoValidado.codigo,
-        source: "codigo_pago",
-      };
+				pasajeros: codigoValidado.pasajeros || 1,
+				precio: codigoValidado.monto,
+				totalConDescuento: codigoValidado.monto,
+				vehiculo: codigoValidado.vehiculo || "Por asignar",
+				numeroVuelo: formData.numeroVuelo,
+				hotel: formData.hotel,
+				mensaje: formData.mensaje,
+				idaVuelta: !!codigoValidado.idaVuelta,
+				referenciaPago: codigoValidado.codigo,
+				source: "codigo_pago",
+			};
 
-      const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reservaPayload),
-      });
-      const rj = await r.json();
-      if (!r.ok || rj.success === false) {
-        throw new Error(rj.message || "No se pudo crear la reserva");
-      }
+			const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(reservaPayload),
+			});
+			const rj = await r.json();
+			if (!r.ok || rj.success === false) {
+				throw new Error(rj.message || "No se pudo crear la reserva");
+			}
 
 			// Si la reserva se creó o modificó, intentar actualizar detalles adicionales
 			// en caso de que exista una reserva previa que no haya guardado hora/otros campos.
@@ -177,48 +177,59 @@ function PagarConCodigo() {
 						horaRegreso: codigoValidado.horaRegreso || null,
 					};
 
-					const upd = await fetch(`${backendUrl}/completar-reserva-detalles/${reservaId}`, {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(detallesPayload),
-					});
+					const upd = await fetch(
+						`${backendUrl}/completar-reserva-detalles/${reservaId}`,
+						{
+							method: "PUT",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify(detallesPayload),
+						}
+					);
 
 					if (!upd.ok) {
 						// No bloquear el flujo de pago si la actualización de detalles falla
-						console.warn("No se pudo actualizar detalles de la reserva:", await upd.text().catch(() => ""));
+						console.warn(
+							"No se pudo actualizar detalles de la reserva:",
+							await upd.text().catch(() => "")
+						);
 					} else {
-						console.log("Detalles de reserva actualizados correctamente para ID:", reservaId);
+						console.log(
+							"Detalles de reserva actualizados correctamente para ID:",
+							reservaId
+						);
 					}
 				}
 			} catch (err) {
-				console.error("Error actualizando detalles de reserva (no crítico):", err);
+				console.error(
+					"Error actualizando detalles de reserva (no crítico):",
+					err
+				);
 			}
 
-      const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`;
-      const p = await fetch(`${backendUrl}/create-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          gateway: "flow",
-          amount: parseFloat(codigoValidado.monto),
-          description,
-          email: formData.email,
-        }),
-      });
-      const pj = await p.json();
-      if (p.ok && pj.url) {
-        window.location.href = pj.url;
-      } else {
-        throw new Error(pj.message || "No se pudo generar el enlace de pago");
-      }
-    } catch (e) {
-      setError(e.message || "Error al procesar el pago.");
-    } finally {
-      setProcesando(false);
-      setLoadingGateway(null);
-    }
-  };
-
+			const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`;
+			const p = await fetch(`${backendUrl}/create-payment`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					gateway: "flow",
+					amount: parseFloat(codigoValidado.monto),
+					description,
+					email: formData.email,
+				}),
+			});
+			const pj = await p.json();
+			if (p.ok && pj.url) {
+				window.location.href = pj.url;
+			} else {
+				throw new Error(pj.message || "No se pudo generar el enlace de pago");
+			}
+		} catch (e) {
+			setError(e.message || "Error al procesar el pago.");
+		} finally {
+			setProcesando(false);
+			setLoadingGateway(null);
+		}
+	};
 
 	return (
 		<section className="py-16 bg-gradient-to-b from-gray-50 to-white">
@@ -380,7 +391,8 @@ function PagarConCodigo() {
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 											<div className="space-y-2">
 												<Label htmlFor="nombre">
-													Nombre completo <span className="text-red-500">*</span>
+													Nombre completo{" "}
+													<span className="text-red-500">*</span>
 												</Label>
 												<Input
 													id="nombre"
@@ -424,7 +436,10 @@ function PagarConCodigo() {
 
 											{/* Fecha y hora del servicio */}
 											<div className="space-y-2">
-												<Label htmlFor="fecha">Fecha del servicio <span className="text-red-500">*</span></Label>
+												<Label htmlFor="fecha">
+													Fecha del servicio{" "}
+													<span className="text-red-500">*</span>
+												</Label>
 												<Input
 													id="fecha"
 													name="fecha"
@@ -437,7 +452,10 @@ function PagarConCodigo() {
 											</div>
 
 											<div className="space-y-2">
-												<Label htmlFor="hora">Hora del servicio <span className="text-red-500">*</span></Label>
+												<Label htmlFor="hora">
+													Hora del servicio{" "}
+													<span className="text-red-500">*</span>
+												</Label>
 												<Input
 													id="hora"
 													name="hora"
@@ -462,7 +480,9 @@ function PagarConCodigo() {
 											</div>
 
 											<div className="space-y-2 md:col-span-2">
-												<Label htmlFor="hotel">Hotel o alojamiento (opcional)</Label>
+												<Label htmlFor="hotel">
+													Hotel o alojamiento (opcional)
+												</Label>
 												<Input
 													id="hotel"
 													name="hotel"
@@ -473,7 +493,9 @@ function PagarConCodigo() {
 											</div>
 
 											<div className="space-y-2 md:col-span-2">
-												<Label htmlFor="mensaje">Mensaje adicional (opcional)</Label>
+												<Label htmlFor="mensaje">
+													Mensaje adicional (opcional)
+												</Label>
 												<textarea
 													id="mensaje"
 													name="mensaje"
@@ -497,27 +519,27 @@ function PagarConCodigo() {
 									<div className="space-y-4">
 										<h4 className="font-semibold text-lg">Método de pago</h4>
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<Button
-					  type="button"
-					  variant="outline"
-					  onClick={procesarPagoConCodigoFlow}
-					  disabled={procesando}
-					  className="h-auto p-6 flex flex-col items-center gap-3 w-full"
-					>
-						{loadingGateway === "flow" ? (
-							<LoaderCircle className="h-8 w-8 animate-spin" />
-						) : (
-							<img
-								src={flow}
-								alt="Flow"
-								className="h-8 w-auto object-contain"
-							/>
-						)}
-						<span className="text-sm font-medium">Flow</span>
-						<span className="text-xs text-muted-foreground">
-							Webpay • Tarjetas • Transferencia
-						</span>
-					</Button>
+											<Button
+												type="button"
+												variant="outline"
+												onClick={procesarPagoConCodigoFlow}
+												disabled={procesando}
+												className="h-auto p-6 flex flex-col items-center gap-3 w-full"
+											>
+												{loadingGateway === "flow" ? (
+													<LoaderCircle className="h-8 w-8 animate-spin" />
+												) : (
+													<img
+														src={flow}
+														alt="Flow"
+														className="h-8 w-auto object-contain"
+													/>
+												)}
+												<span className="text-sm font-medium">Flow</span>
+												<span className="text-xs text-muted-foreground">
+													Webpay • Tarjetas • Transferencia
+												</span>
+											</Button>
 										</div>
 									</div>
 

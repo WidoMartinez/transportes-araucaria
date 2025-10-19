@@ -59,13 +59,19 @@ export const syncDatabase = async (force = false, models = []) => {
 					await model.sync({ force, alter: !force });
 					console.log(`✅ Modelo ${model.name} sincronizado`);
 				} catch (modelError) {
-					console.error(`❌ Error sincronizando modelo ${model.name}:`, modelError.message);
+					console.error(
+						`❌ Error sincronizando modelo ${model.name}:`,
+						modelError.message
+					);
 					// Intentar sin alter si falla (para tablas nuevas)
 					try {
 						await model.sync({ force: false, alter: false });
 						console.log(`✅ Modelo ${model.name} creado sin alter`);
 					} catch (retryError) {
-						console.error(`❌ Error crítico en ${model.name}:`, retryError.message);
+						console.error(
+							`❌ Error crítico en ${model.name}:`,
+							retryError.message
+						);
 					}
 				}
 			}
