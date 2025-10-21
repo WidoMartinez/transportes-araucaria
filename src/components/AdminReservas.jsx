@@ -567,30 +567,34 @@ function AdminReservas() {
 			}
 
 			const data = await response.json();
-			const reservasNormalizadas = (data.reservas || []).map((reserva) => {
-				const cliente = reserva.cliente || {};
-				return {
-					...reserva,
-					esCliente:
-						reserva.esCliente !== undefined
-							? reserva.esCliente
-							: cliente.esCliente || false,
-					clasificacionCliente: cliente.clasificacion || null,
-					totalReservas:
-						reserva.totalReservas !== undefined
-							? reserva.totalReservas
-							: cliente.totalReservas || 0,
-					abonoPagado: Boolean(reserva.abonoPagado),
-					saldoPagado: Boolean(reserva.saldoPagado),
-				};
-			});
-			setReservas(reservasNormalizadas);
-			setTotalPages(data.pagination?.totalPages || 1);
-			setTotalReservas(data.pagination?.total || 0);
-		} catch (error) {
-			console.error("Error cargando reservas:", error);
-			setError(error.message || "Error al cargar las reservas");
-		} finally {
+                        const reservasNormalizadas = (data.reservas || []).map((reserva) => {
+                                const cliente = reserva.cliente || {};
+                                return {
+                                        ...reserva,
+                                        esCliente:
+                                                reserva.esCliente !== undefined
+                                                        ? reserva.esCliente
+                                                        : cliente.esCliente || false,
+                                        clasificacionCliente: cliente.clasificacion || null,
+                                        totalReservas:
+                                                reserva.totalReservas !== undefined
+                                                        ? reserva.totalReservas
+                                                        : cliente.totalReservas || 0,
+                                        abonoPagado: Boolean(reserva.abonoPagado),
+                                        saldoPagado: Boolean(reserva.saldoPagado),
+                                };
+                        });
+                        setReservas(reservasNormalizadas);
+                        const nuevasTotalPages = data.pagination?.totalPages || 1;
+                        setTotalPages(nuevasTotalPages);
+                        if (currentPage > nuevasTotalPages) {
+                                setCurrentPage(Math.max(1, nuevasTotalPages));
+                        }
+                        setTotalReservas(data.pagination?.total || 0);
+                } catch (error) {
+                        console.error("Error cargando reservas:", error);
+                        setError(error.message || "Error al cargar las reservas");
+                } finally {
 			setLoading(false);
 		}
 	};
