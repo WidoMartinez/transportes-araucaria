@@ -225,21 +225,21 @@ const normalizeTimeGlobal = (hora) => {
 
 // Determinar la clasificación del cliente según reservas completadas
 const obtenerClasificacionCliente = (reservasCompletadas) => {
-    if (!reservasCompletadas || reservasCompletadas <= 0) {
-        return null;
-    }
-    if (reservasCompletadas >= 10) {
-        return "Cliente Élite";
-    }
-    if (reservasCompletadas >= 5) {
-        return "Cliente Premium";
-    }
-    if (reservasCompletadas >= 3) {
-        return "Cliente Frecuente";
-    }
-    // Para 1-2 reservas completadas ya se muestra la etiqueta general "Cliente".
-    // No devolver una clasificación adicional para evitar duplicidad con "Cliente Activo".
-    return null;
+	if (!reservasCompletadas || reservasCompletadas <= 0) {
+		return null;
+	}
+	if (reservasCompletadas >= 10) {
+		return "Cliente Élite";
+	}
+	if (reservasCompletadas >= 5) {
+		return "Cliente Premium";
+	}
+	if (reservasCompletadas >= 3) {
+		return "Cliente Frecuente";
+	}
+	// Para 1-2 reservas completadas ya se muestra la etiqueta general "Cliente".
+	// No devolver una clasificación adicional para evitar duplicidad con "Cliente Activo".
+	return null;
 };
 
 // Actualizar métricas y clasificación del cliente después de modificar una reserva
@@ -300,62 +300,62 @@ const actualizarResumenCliente = async (clienteId, transaction) => {
 
 // Función auxiliar para obtener o crear un cliente asociado a la reserva express
 const obtenerClienteParaReservaExpress = async ({
-        clienteId,
-        rutFormateado,
-        emailNormalizado,
-        nombre,
-        telefono,
+	clienteId,
+	rutFormateado,
+	emailNormalizado,
+	nombre,
+	telefono,
 }) => {
-        let cliente = null;
+	let cliente = null;
 
-        if (clienteId) {
-                cliente = await Cliente.findByPk(clienteId);
-        }
+	if (clienteId) {
+		cliente = await Cliente.findByPk(clienteId);
+	}
 
-        if (!cliente && rutFormateado) {
-                cliente = await Cliente.findOne({ where: { rut: rutFormateado } });
-        }
+	if (!cliente && rutFormateado) {
+		cliente = await Cliente.findOne({ where: { rut: rutFormateado } });
+	}
 
-        if (!cliente && emailNormalizado) {
-                cliente = await Cliente.findOne({ where: { email: emailNormalizado } });
-        }
+	if (!cliente && emailNormalizado) {
+		cliente = await Cliente.findOne({ where: { email: emailNormalizado } });
+	}
 
-        if (cliente) {
-                const cambios = {};
+	if (cliente) {
+		const cambios = {};
 
-                if (rutFormateado && cliente.rut !== rutFormateado) {
-                        cambios.rut = rutFormateado;
-                }
+		if (rutFormateado && cliente.rut !== rutFormateado) {
+			cambios.rut = rutFormateado;
+		}
 
-                if (emailNormalizado && cliente.email !== emailNormalizado) {
-                        cambios.email = emailNormalizado;
-                }
+		if (emailNormalizado && cliente.email !== emailNormalizado) {
+			cambios.email = emailNormalizado;
+		}
 
-                if (telefono && cliente.telefono !== telefono) {
-                        cambios.telefono = telefono;
-                }
+		if (telefono && cliente.telefono !== telefono) {
+			cambios.telefono = telefono;
+		}
 
-                if (nombre && cliente.nombre !== nombre) {
-                        cambios.nombre = nombre;
-                }
+		if (nombre && cliente.nombre !== nombre) {
+			cambios.nombre = nombre;
+		}
 
-                if (Object.keys(cambios).length > 0) {
-                        await cliente.update(cambios);
-                }
-        } else if (emailNormalizado) {
-                cliente = await Cliente.create({
-                        rut: rutFormateado,
-                        nombre: nombre || "Sin nombre",
-                        email: emailNormalizado,
-                        telefono: telefono || "",
-                        esCliente: false,
-                        totalReservas: 0,
-                        totalPagos: 0,
-                        totalGastado: 0,
-                });
-        }
+		if (Object.keys(cambios).length > 0) {
+			await cliente.update(cambios);
+		}
+	} else if (emailNormalizado) {
+		cliente = await Cliente.create({
+			rut: rutFormateado,
+			nombre: nombre || "Sin nombre",
+			email: emailNormalizado,
+			telefono: telefono || "",
+			esCliente: false,
+			totalReservas: 0,
+			totalPagos: 0,
+			totalGastado: 0,
+		});
+	}
 
-        return cliente;
+	return cliente;
 };
 
 // Función para generar código único de reserva
@@ -1986,17 +1986,17 @@ app.post("/enviar-reserva-express", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 
-                // Formatear RUT si se proporciona
-                const rutFormateado = datosReserva.rut
-                        ? formatearRUT(datosReserva.rut)
-                        : null;
-                const emailNormalizado = datosReserva.email
-                        ? datosReserva.email.toLowerCase().trim()
-                        : "";
+		// Formatear RUT si se proporciona
+		const rutFormateado = datosReserva.rut
+			? formatearRUT(datosReserva.rut)
+			: null;
+		const emailNormalizado = datosReserva.email
+			? datosReserva.email.toLowerCase().trim()
+			: "";
 
-                console.log("Reserva express recibida:", {
-                        nombre: datosReserva.nombre,
-                        email: emailNormalizado,
+		console.log("Reserva express recibida:", {
+			nombre: datosReserva.nombre,
+			email: emailNormalizado,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
 			rut: rutFormateado,
@@ -2017,44 +2017,44 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			"destino",
 			"fecha",
 		];
-                const camposFaltantes = camposRequeridos.filter(
-                        (campo) => !datosReserva[campo]
-                );
+		const camposFaltantes = camposRequeridos.filter(
+			(campo) => !datosReserva[campo]
+		);
 
-                if (camposFaltantes.length > 0) {
-                        return res.status(400).json({
-                                success: false,
-                                message: `Faltan campos requeridos: ${camposFaltantes.join(", ")}`,
-                        });
-                }
+		if (camposFaltantes.length > 0) {
+			return res.status(400).json({
+				success: false,
+				message: `Faltan campos requeridos: ${camposFaltantes.join(", ")}`,
+			});
+		}
 
-                if (!emailNormalizado) {
-                        return res.status(400).json({
-                                success: false,
-                                message: "El email es obligatorio",
-                        });
-                }
+		if (!emailNormalizado) {
+			return res.status(400).json({
+				success: false,
+				message: "El email es obligatorio",
+			});
+		}
 
-                datosReserva.email = emailNormalizado;
+		datosReserva.email = emailNormalizado;
 
-                const clienteAsociado = await obtenerClienteParaReservaExpress({
-                        clienteId: datosReserva.clienteId,
-                        rutFormateado,
-                        emailNormalizado,
-                        nombre: datosReserva.nombre,
-                        telefono: datosReserva.telefono,
-                });
-                const clienteIdAsociado = clienteAsociado ? clienteAsociado.id : null;
+		const clienteAsociado = await obtenerClienteParaReservaExpress({
+			clienteId: datosReserva.clienteId,
+			rutFormateado,
+			emailNormalizado,
+			nombre: datosReserva.nombre,
+			telefono: datosReserva.telefono,
+		});
+		const clienteIdAsociado = clienteAsociado ? clienteAsociado.id : null;
 
-                // Verificar si existe una reserva activa sin pagar para este email
-                const reservaExistente = await Reserva.findOne({
-                        where: {
-                                email: emailNormalizado,
-                                estado: {
-                                        [Op.in]: ["pendiente", "pendiente_detalles"],
-                                },
-                                estadoPago: "pendiente",
-                        },
+		// Verificar si existe una reserva activa sin pagar para este email
+		const reservaExistente = await Reserva.findOne({
+			where: {
+				email: emailNormalizado,
+				estado: {
+					[Op.in]: ["pendiente", "pendiente_detalles"],
+				},
+				estadoPago: "pendiente",
+			},
 			order: [["createdAt", "DESC"]],
 		});
 
@@ -2068,16 +2068,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			);
 			esModificacion = true;
 
-                        // Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
-                        await reservaExistente.update({
-                                nombre: datosReserva.nombre,
-                                email: emailNormalizado || reservaExistente.email,
-                                telefono: datosReserva.telefono,
-                                clienteId: clienteIdAsociado || reservaExistente.clienteId || null,
-                                rut: rutFormateado,
-                                origen: datosReserva.origen,
-                                destino: datosReserva.destino,
-                                fecha: datosReserva.fecha,
+			// Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
+			await reservaExistente.update({
+				nombre: datosReserva.nombre,
+				email: emailNormalizado || reservaExistente.email,
+				telefono: datosReserva.telefono,
+				clienteId: clienteIdAsociado || reservaExistente.clienteId || null,
+				rut: rutFormateado,
+				origen: datosReserva.origen,
+				destino: datosReserva.destino,
+				fecha: datosReserva.fecha,
 				hora: normalizeTimeGlobal(datosReserva.hora) || reservaExistente.hora,
 				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
 				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
@@ -2140,15 +2140,15 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			const codigoReserva = await generarCodigoReserva();
 			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
 
-                        reservaExpress = await Reserva.create({
-                                codigoReserva: codigoReserva,
-                                nombre: datosReserva.nombre,
-                                email: emailNormalizado,
-                                telefono: datosReserva.telefono,
-                                clienteId: clienteIdAsociado,
-                                rut: rutFormateado,
-                                origen: datosReserva.origen,
-                                destino: datosReserva.destino,
+			reservaExpress = await Reserva.create({
+				codigoReserva: codigoReserva,
+				nombre: datosReserva.nombre,
+				email: emailNormalizado,
+				telefono: datosReserva.telefono,
+				clienteId: clienteIdAsociado,
+				rut: rutFormateado,
+				origen: datosReserva.origen,
+				destino: datosReserva.destino,
 				fecha: datosReserva.fecha,
 				// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
 				hora: normalizeTimeGlobal(datosReserva.hora),
@@ -2228,24 +2228,24 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				"Código:",
 				reservaExpress.codigoReserva
 			);
-                }
+		}
 
-                if (clienteIdAsociado) {
-                        try {
-                                await actualizarResumenCliente(clienteIdAsociado);
-                        } catch (resumenError) {
-                                console.error(
-                                        "Error al actualizar el resumen del cliente en reserva express:",
-                                        resumenError
-                                );
-                        }
-                }
+		if (clienteIdAsociado) {
+			try {
+				await actualizarResumenCliente(clienteIdAsociado);
+			} catch (resumenError) {
+				console.error(
+					"Error al actualizar el resumen del cliente en reserva express:",
+					resumenError
+				);
+			}
+		}
 
-                // Enviar notificación por email usando el PHP de Hostinger
-                try {
-                        console.log("📧 Enviando email de notificación express...");
-                        const emailDataExpress = {
-                                ...datosReserva,
+		// Enviar notificación por email usando el PHP de Hostinger
+		try {
+			console.log("📧 Enviando email de notificación express...");
+			const emailDataExpress = {
+				...datosReserva,
 				codigoReserva: reservaExpress.codigoReserva,
 				precio: reservaExpress.precio,
 				totalConDescuento: reservaExpress.totalConDescuento,
@@ -4504,93 +4504,93 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			}
 		}
 
-                // Actualizar estado de pago en la reserva (acumulando pagoMonto)
-                await reserva.update({
-                        estadoPago: nuevoEstadoPago,
-                        pagoId: payment.flowOrder.toString(),
-                        pagoGateway: "flow",
-                        pagoMonto: pagoAcumulado,
-                        pagoFecha: new Date(payment.paymentDate || new Date()),
-                        estado: nuevoEstadoReserva,
-                        saldoPendiente: nuevoSaldoPendiente,
-                        abonoPagado,
-                        saldoPagado,
-                });
+		// Actualizar estado de pago en la reserva (acumulando pagoMonto)
+		await reserva.update({
+			estadoPago: nuevoEstadoPago,
+			pagoId: payment.flowOrder.toString(),
+			pagoGateway: "flow",
+			pagoMonto: pagoAcumulado,
+			pagoFecha: new Date(payment.paymentDate || new Date()),
+			estado: nuevoEstadoReserva,
+			saldoPendiente: nuevoSaldoPendiente,
+			abonoPagado,
+			saldoPagado,
+		});
 
-                // Intentar vincular la reserva con un cliente existente o crearlo si es necesario
-                let clienteActualizado = null;
-                try {
-                        let clienteId = reserva.clienteId;
-                        let clienteAsociado = null;
+		// Intentar vincular la reserva con un cliente existente o crearlo si es necesario
+		let clienteActualizado = null;
+		try {
+			let clienteId = reserva.clienteId;
+			let clienteAsociado = null;
 
-                        if (clienteId) {
-                                clienteAsociado = await Cliente.findByPk(clienteId);
-                        } else {
-                                const emailNormalizado = (reserva.email || "").trim().toLowerCase();
-                                const telefonoNormalizado = (reserva.telefono || "").trim();
+			if (clienteId) {
+				clienteAsociado = await Cliente.findByPk(clienteId);
+			} else {
+				const emailNormalizado = (reserva.email || "").trim().toLowerCase();
+				const telefonoNormalizado = (reserva.telefono || "").trim();
 
-                                if (emailNormalizado) {
-                                        clienteAsociado = await Cliente.findOne({
-                                                where: sequelize.where(
-                                                        sequelize.fn("LOWER", sequelize.col("email")),
-                                                        emailNormalizado
-                                                ),
-                                        });
-                                }
+				if (emailNormalizado) {
+					clienteAsociado = await Cliente.findOne({
+						where: sequelize.where(
+							sequelize.fn("LOWER", sequelize.col("email")),
+							emailNormalizado
+						),
+					});
+				}
 
-                                if (!clienteAsociado && telefonoNormalizado) {
-                                        clienteAsociado = await Cliente.findOne({
-                                                where: { telefono: telefonoNormalizado },
-                                        });
-                                }
+				if (!clienteAsociado && telefonoNormalizado) {
+					clienteAsociado = await Cliente.findOne({
+						where: { telefono: telefonoNormalizado },
+					});
+				}
 
-                                if (!clienteAsociado) {
-                                        clienteAsociado = await Cliente.create({
-                                                nombre: reserva.nombre || "Cliente sin nombre",
-                                                email: reserva.email || email || "",
-                                                telefono: telefonoNormalizado || "",
-                                                rut: reserva.rut || null,
-                                                notas: null,
-                                                esCliente: false,
-                                                marcadoManualmente: false,
-                                                totalReservas: 0,
-                                                totalPagos: 0,
-                                                totalGastado: 0,
-                                        });
-                                }
+				if (!clienteAsociado) {
+					clienteAsociado = await Cliente.create({
+						nombre: reserva.nombre || "Cliente sin nombre",
+						email: reserva.email || email || "",
+						telefono: telefonoNormalizado || "",
+						rut: reserva.rut || null,
+						notas: null,
+						esCliente: false,
+						marcadoManualmente: false,
+						totalReservas: 0,
+						totalPagos: 0,
+						totalGastado: 0,
+					});
+				}
 
-                                if (clienteAsociado && reserva.clienteId !== clienteAsociado.id) {
-                                        await reserva.update({ clienteId: clienteAsociado.id });
-                                        clienteId = clienteAsociado.id;
-                                } else if (clienteAsociado) {
-                                        clienteId = clienteAsociado.id;
-                                }
-                        }
+				if (clienteAsociado && reserva.clienteId !== clienteAsociado.id) {
+					await reserva.update({ clienteId: clienteAsociado.id });
+					clienteId = clienteAsociado.id;
+				} else if (clienteAsociado) {
+					clienteId = clienteAsociado.id;
+				}
+			}
 
-                        if (!clienteAsociado && clienteId) {
-                                clienteAsociado = await Cliente.findByPk(clienteId);
-                        }
+			if (!clienteAsociado && clienteId) {
+				clienteAsociado = await Cliente.findByPk(clienteId);
+			}
 
-                        if (clienteAsociado) {
-                                clienteActualizado = await actualizarResumenCliente(clienteAsociado.id);
-                        }
-                } catch (clienteError) {
-                        console.error(
-                                "⚠️ No se pudo sincronizar el cliente tras pago Flow:",
-                                clienteError.message
-                        );
-                }
+			if (clienteAsociado) {
+				clienteActualizado = await actualizarResumenCliente(clienteAsociado.id);
+			}
+		} catch (clienteError) {
+			console.error(
+				"⚠️ No se pudo sincronizar el cliente tras pago Flow:",
+				clienteError.message
+			);
+		}
 
-                if (clienteActualizado) {
-                        console.log(
-                                `👤 Cliente sincronizado tras pago Flow: ${clienteActualizado.id}`
-                        );
-                }
+		if (clienteActualizado) {
+			console.log(
+				`👤 Cliente sincronizado tras pago Flow: ${clienteActualizado.id}`
+			);
+		}
 
-                console.log("💾 Reserva actualizada con información de pago Flow");
+		console.log("💾 Reserva actualizada con información de pago Flow");
 
-                // Si la reserva proviene de un código de pago, marcarlo como usado
-                try {
+		// Si la reserva proviene de un código de pago, marcarlo como usado
+		try {
 			const codigoDePago = reserva.referenciaPago;
 			if (
 				codigoDePago &&
