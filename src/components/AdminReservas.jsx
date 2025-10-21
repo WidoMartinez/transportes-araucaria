@@ -1163,8 +1163,8 @@ function AdminReservas() {
 		setClienteSeleccionado(null);
 		setClienteSugerencias([]);
 		setMostrandoSugerencias(false);
-		setNewReservaForm({
-			nombre: "",
+                setNewReservaForm({
+                        nombre: "",
 			rut: "",
 			email: "",
 			telefono: "",
@@ -1187,7 +1187,7 @@ function AdminReservas() {
 			saldoPendiente: 0,
 			totalConDescuento: 0,
 			mensaje: "",
-			estado: "confirmada",
+                        estado: "pendiente",
 			estadoPago: "pendiente",
 			metodoPago: "",
 			observaciones: "",
