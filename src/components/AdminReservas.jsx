@@ -74,7 +74,11 @@ function AdminReservas() {
 	const [bulkEstadoPago, setBulkEstadoPago] = useState("");
 	const [showBulkPaymentDialog, setShowBulkPaymentDialog] = useState(false);
 	// Token de administrador
-	const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || (typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "");
+	const ADMIN_TOKEN =
+		import.meta.env.VITE_ADMIN_TOKEN ||
+		(typeof window !== "undefined"
+			? localStorage.getItem("adminToken") || ""
+			: "");
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -992,11 +996,11 @@ function AdminReservas() {
 
 	// Helper para saber si la reserva estÃ¡ 100% pagada segÃºn montos
 	const isPagoCompleto = (reserva) => {
-			const montoTotal =
-				Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
-			const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
-			return montoTotal > 0 && montoPagado >= montoTotal;
-		};
+		const montoTotal =
+			Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
+		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
+		return montoTotal > 0 && montoPagado >= montoTotal;
+	};
 
 	// Helper para detectar si ya fue asignado un vehÃ­culo previamente
 	// Consideramos "asignada" si el campo `vehiculo` incluye tipo + patente
@@ -1389,39 +1393,39 @@ function AdminReservas() {
 
 	// Cambiar estado de pago de reservas seleccionadas
 	const handleBulkChangePayment = async () => {
-			if (!bulkEstadoPago) {
-				alert("Por favor selecciona un estado de pago");
-				return;
-			}
+		if (!bulkEstadoPago) {
+			alert("Por favor selecciona un estado de pago");
+			return;
+		}
 
-			setProcessingBulk(true);
-			try {
-				const promises = selectedReservas.map((id) =>
-					fetch(`${apiUrl}/api/reservas/${id}/pago`, {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ estadoPago: bulkEstadoPago }),
-					})
-				);
+		setProcessingBulk(true);
+		try {
+			const promises = selectedReservas.map((id) =>
+				fetch(`${apiUrl}/api/reservas/${id}/pago`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ estadoPago: bulkEstadoPago }),
+				})
+			);
 
-				await Promise.all(promises);
+			await Promise.all(promises);
 
-				await fetchReservas();
-				await fetchEstadisticas();
-				setSelectedReservas([]);
-				setShowBulkPaymentDialog(false);
-				setBulkEstadoPago("");
-				alert(
-					`Estado de pago actualizado para ${selectedReservas.length} reserva(s)`
-				);
-			} catch (error) {
-				console.error("Error actualizando estado de pago:", error);
-				alert("Error al actualizar el estado de pago de algunas reservas");
-			} finally {
-				setProcessingBulk(false);
-			}
-	// Los bloques catch estaban fuera de contexto, se eliminan para evitar errores de sintaxis
-};
+			await fetchReservas();
+			await fetchEstadisticas();
+			setSelectedReservas([]);
+			setShowBulkPaymentDialog(false);
+			setBulkEstadoPago("");
+			alert(
+				`Estado de pago actualizado para ${selectedReservas.length} reserva(s)`
+			);
+		} catch (error) {
+			console.error("Error actualizando estado de pago:", error);
+			alert("Error al actualizar el estado de pago de algunas reservas");
+		} finally {
+			setProcessingBulk(false);
+		}
+		// Los bloques catch estaban fuera de contexto, se eliminan para evitar errores de sintaxis
+	};
 
 	if (loading && reservas.length === 0) {
 		return (
@@ -1996,7 +2000,6 @@ function AdminReservas() {
 																	0) ? (
 															"Cliente con código"
 														) : (
-
 															"Cotizador"
 														)}
 													</Badge>
@@ -4034,6 +4037,5 @@ function AdminReservas() {
 		</div>
 	);
 }
-
 
 export default AdminReservas;
