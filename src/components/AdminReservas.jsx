@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { getBackendUrl } from "../lib/backend";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -567,30 +567,34 @@ function AdminReservas() {
 			}
 
 			const data = await response.json();
-			const reservasNormalizadas = (data.reservas || []).map((reserva) => {
-				const cliente = reserva.cliente || {};
-				return {
-					...reserva,
-					esCliente:
-						reserva.esCliente !== undefined
-							? reserva.esCliente
-							: cliente.esCliente || false,
-					clasificacionCliente: cliente.clasificacion || null,
-					totalReservas:
-						reserva.totalReservas !== undefined
-							? reserva.totalReservas
-							: cliente.totalReservas || 0,
-					abonoPagado: Boolean(reserva.abonoPagado),
-					saldoPagado: Boolean(reserva.saldoPagado),
-				};
-			});
-			setReservas(reservasNormalizadas);
-			setTotalPages(data.pagination?.totalPages || 1);
-			setTotalReservas(data.pagination?.total || 0);
-		} catch (error) {
-			console.error("Error cargando reservas:", error);
-			setError(error.message || "Error al cargar las reservas");
-		} finally {
+                        const reservasNormalizadas = (data.reservas || []).map((reserva) => {
+                                const cliente = reserva.cliente || {};
+                                return {
+                                        ...reserva,
+                                        esCliente:
+                                                reserva.esCliente !== undefined
+                                                        ? reserva.esCliente
+                                                        : cliente.esCliente || false,
+                                        clasificacionCliente: cliente.clasificacion || null,
+                                        totalReservas:
+                                                reserva.totalReservas !== undefined
+                                                        ? reserva.totalReservas
+                                                        : cliente.totalReservas || 0,
+                                        abonoPagado: Boolean(reserva.abonoPagado),
+                                        saldoPagado: Boolean(reserva.saldoPagado),
+                                };
+                        });
+                        setReservas(reservasNormalizadas);
+                        const nuevasTotalPages = data.pagination?.totalPages || 1;
+                        setTotalPages(nuevasTotalPages);
+                        if (currentPage > nuevasTotalPages) {
+                                setCurrentPage(Math.max(1, nuevasTotalPages));
+                        }
+                        setTotalReservas(data.pagination?.total || 0);
+                } catch (error) {
+                        console.error("Error cargando reservas:", error);
+                        setError(error.message || "Error al cargar las reservas");
+                } finally {
 			setLoading(false);
 		}
 	};
@@ -1159,12 +1163,12 @@ function AdminReservas() {
 	};
 
 	// Abrir modal de nueva reserva
-	const handleNewReserva = () => {
-		setClienteSeleccionado(null);
-		setClienteSugerencias([]);
-		setMostrandoSugerencias(false);
+        const handleNewReserva = () => {
+                setClienteSeleccionado(null);
+                setClienteSugerencias([]);
+                setMostrandoSugerencias(false);
                 setNewReservaForm({
-                        nombre: "",
+			nombre: "",
 			rut: "",
 			email: "",
 			telefono: "",
@@ -1187,14 +1191,18 @@ function AdminReservas() {
 			saldoPendiente: 0,
 			totalConDescuento: 0,
 			mensaje: "",
-                        estado: "pendiente",
+			estado: "confirmada",
 			estadoPago: "pendiente",
-			metodoPago: "",
-			observaciones: "",
-		});
-		setShowNewDialog(true);
-		fetchDestinosCatalog();
-	};
+                        metodoPago: "",
+                        observaciones: "",
+                });
+                setOrigenEsOtro(false);
+                setDestinoEsOtro(false);
+                setOtroOrigen("");
+                setOtroDestino("");
+                setShowNewDialog(true);
+                fetchDestinosCatalog();
+        };
 
 	// Guardar nueva reserva
 	const handleSaveNewReserva = async () => {

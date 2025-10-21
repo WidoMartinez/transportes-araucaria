@@ -4398,23 +4398,93 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			}
 		}
 
-		// Actualizar estado de pago en la reserva (acumulando pagoMonto)
-		await reserva.update({
-			estadoPago: nuevoEstadoPago,
-			pagoId: payment.flowOrder.toString(),
-			pagoGateway: "flow",
-			pagoMonto: pagoAcumulado,
-			pagoFecha: new Date(payment.paymentDate || new Date()),
-			estado: nuevoEstadoReserva,
-			saldoPendiente: nuevoSaldoPendiente,
-			abonoPagado,
-			saldoPagado,
-		});
+                // Actualizar estado de pago en la reserva (acumulando pagoMonto)
+                await reserva.update({
+                        estadoPago: nuevoEstadoPago,
+                        pagoId: payment.flowOrder.toString(),
+                        pagoGateway: "flow",
+                        pagoMonto: pagoAcumulado,
+                        pagoFecha: new Date(payment.paymentDate || new Date()),
+                        estado: nuevoEstadoReserva,
+                        saldoPendiente: nuevoSaldoPendiente,
+                        abonoPagado,
+                        saldoPagado,
+                });
 
-		console.log("💾 Reserva actualizada con información de pago Flow");
+                // Intentar vincular la reserva con un cliente existente o crearlo si es necesario
+                let clienteActualizado = null;
+                try {
+                        let clienteId = reserva.clienteId;
+                        let clienteAsociado = null;
 
-		// Si la reserva proviene de un código de pago, marcarlo como usado
-		try {
+                        if (clienteId) {
+                                clienteAsociado = await Cliente.findByPk(clienteId);
+                        } else {
+                                const emailNormalizado = (reserva.email || "").trim().toLowerCase();
+                                const telefonoNormalizado = (reserva.telefono || "").trim();
+
+                                if (emailNormalizado) {
+                                        clienteAsociado = await Cliente.findOne({
+                                                where: sequelize.where(
+                                                        sequelize.fn("LOWER", sequelize.col("email")),
+                                                        emailNormalizado
+                                                ),
+                                        });
+                                }
+
+                                if (!clienteAsociado && telefonoNormalizado) {
+                                        clienteAsociado = await Cliente.findOne({
+                                                where: { telefono: telefonoNormalizado },
+                                        });
+                                }
+
+                                if (!clienteAsociado) {
+                                        clienteAsociado = await Cliente.create({
+                                                nombre: reserva.nombre || "Cliente sin nombre",
+                                                email: reserva.email || email || "",
+                                                telefono: telefonoNormalizado || "",
+                                                rut: reserva.rut || null,
+                                                notas: null,
+                                                esCliente: false,
+                                                marcadoManualmente: false,
+                                                totalReservas: 0,
+                                                totalPagos: 0,
+                                                totalGastado: 0,
+                                        });
+                                }
+
+                                if (clienteAsociado && reserva.clienteId !== clienteAsociado.id) {
+                                        await reserva.update({ clienteId: clienteAsociado.id });
+                                        clienteId = clienteAsociado.id;
+                                } else if (clienteAsociado) {
+                                        clienteId = clienteAsociado.id;
+                                }
+                        }
+
+                        if (!clienteAsociado && clienteId) {
+                                clienteAsociado = await Cliente.findByPk(clienteId);
+                        }
+
+                        if (clienteAsociado) {
+                                clienteActualizado = await actualizarResumenCliente(clienteAsociado.id);
+                        }
+                } catch (clienteError) {
+                        console.error(
+                                "⚠️ No se pudo sincronizar el cliente tras pago Flow:",
+                                clienteError.message
+                        );
+                }
+
+                if (clienteActualizado) {
+                        console.log(
+                                `👤 Cliente sincronizado tras pago Flow: ${clienteActualizado.id}`
+                        );
+                }
+
+                console.log("💾 Reserva actualizada con información de pago Flow");
+
+                // Si la reserva proviene de un código de pago, marcarlo como usado
+                try {
 			const codigoDePago = reserva.referenciaPago;
 			if (
 				codigoDePago &&
