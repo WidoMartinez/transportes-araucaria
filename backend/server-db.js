@@ -4386,14 +4386,26 @@ app.post("/api/create-flow-payment", async (req, res) => {
 });
 
 // Webhook para Flow - Maneja confirmaciones de pago
+
+// Importar express para usar urlencoded (en módulos ES)
+
+app.use("/api/flow-confirmation", express.urlencoded({ extended: true }));
+
 app.post("/api/flow-confirmation", async (req, res) => {
 	try {
+		// Log completo del body y headers para depuración
 		console.log("🔔 Confirmación Flow recibida:", req.body);
+		console.log("🔎 Headers recibidos:", req.headers);
 
-		const { token } = req.body;
+		// Soporte para diferentes formatos de envío (JSON o x-www-form-urlencoded)
+		let token = req.body.token;
+		// Si viene como 'Token' (mayúscula)
+		if (!token && req.body.Token) token = req.body.Token;
+		// Si viene como query param (por compatibilidad)
+		if (!token && req.query && req.query.token) token = req.query.token;
 
 		if (!token) {
-			console.log("⚠️  No se recibió token de Flow");
+			console.log("⚠️  No se recibió token de Flow (body recibido):", req.body);
 			return res.status(400).send("Missing token");
 		}
 
