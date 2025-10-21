@@ -70,6 +70,11 @@ import {
 } from "./ui/alert-dialog";
 
 function AdminReservas() {
+	// Estado para cambio masivo de estado de pago
+	const [bulkEstadoPago, setBulkEstadoPago] = useState("");
+	const [showBulkPaymentDialog, setShowBulkPaymentDialog] = useState(false);
+	// Token de administrador
+	const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || (typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "");
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
