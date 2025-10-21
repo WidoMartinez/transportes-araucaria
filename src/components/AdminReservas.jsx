@@ -1187,7 +1187,7 @@ function AdminReservas() {
 			saldoPendiente: 0,
 			totalConDescuento: 0,
 			mensaje: "",
-			estado: "confirmada",
+			estado: "pendiente",
 			estadoPago: "pendiente",
 			metodoPago: "",
 			observaciones: "",
@@ -1982,19 +1982,25 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.esCliente && (
 												<TableCell>
-													{reserva.clienteId ? (
-														<Badge
-															variant={
-																reserva.esCliente ? "default" : "secondary"
-															}
-															className="cursor-pointer"
-															onClick={() =>
-																toggleClienteManual(
-																	reserva.clienteId,
-																	reserva.esCliente
-																)
-															}
-														>
+                                        <Badge
+                                                variant={
+                                                        reserva.esCliente ? "default" : "secondary"
+                                                }
+                                                className={
+                                                        reserva.clienteId
+                                                                ? "cursor-pointer"
+                                                                : "opacity-80"
+                                                }
+                                                onClick={
+                                                        reserva.clienteId
+                                                                ? () =>
+                                                                          toggleClienteManual(
+                                                                                  reserva.clienteId,
+                                                                                  reserva.esCliente
+                                                                          )
+                                                                : undefined
+                                                }
+                                        >
                                             {reserva.esCliente ? (
                                                 <>
                                                     <Star className="w-3 h-3 mr-1" />
@@ -2007,13 +2013,8 @@ function AdminReservas() {
                                                     ? "Cliente con código"
                                                     : "Cotizador"
                                             )}
-														</Badge>
-													) : (
-														<span className="text-xs text-muted-foreground">
-															-
-														</span>
-													)}
-                                            {reserva.clasificacionCliente && reserva.clasificacionCliente !== "Cliente Activo" && (
+                                        </Badge>
+                                        {reserva.clasificacionCliente && reserva.clasificacionCliente !== "Cliente Activo" && (
                                                 <div className="mt-1">
                                                     <Badge variant="outline">
                                                         {reserva.clasificacionCliente}
