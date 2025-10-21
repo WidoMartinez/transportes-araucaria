@@ -1163,11 +1163,11 @@ function AdminReservas() {
 	};
 
 	// Abrir modal de nueva reserva
-	const handleNewReserva = () => {
-		setClienteSeleccionado(null);
-		setClienteSugerencias([]);
-		setMostrandoSugerencias(false);
-		setNewReservaForm({
+        const handleNewReserva = () => {
+                setClienteSeleccionado(null);
+                setClienteSugerencias([]);
+                setMostrandoSugerencias(false);
+                setNewReservaForm({
 			nombre: "",
 			rut: "",
 			email: "",
@@ -1193,12 +1193,16 @@ function AdminReservas() {
 			mensaje: "",
 			estado: "confirmada",
 			estadoPago: "pendiente",
-			metodoPago: "",
-			observaciones: "",
-		});
-		setShowNewDialog(true);
-		fetchDestinosCatalog();
-	};
+                        metodoPago: "",
+                        observaciones: "",
+                });
+                setOrigenEsOtro(false);
+                setDestinoEsOtro(false);
+                setOtroOrigen("");
+                setOtroDestino("");
+                setShowNewDialog(true);
+                fetchDestinosCatalog();
+        };
 
 	// Guardar nueva reserva
 	const handleSaveNewReserva = async () => {
