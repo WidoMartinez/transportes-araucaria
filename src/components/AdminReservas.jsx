@@ -1191,7 +1191,7 @@ function AdminReservas() {
 			saldoPendiente: 0,
 			totalConDescuento: 0,
 			mensaje: "",
-			estado: "confirmada",
+			estado: "pendiente",
 			estadoPago: "pendiente",
                         metodoPago: "",
                         observaciones: "",
