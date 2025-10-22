@@ -2697,7 +2697,10 @@ function AdminReservas() {
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="pendiente" disabled={(selectedReserva?.pagoMonto || 0) > 0}>
+										<SelectItem
+											value="pendiente"
+											disabled={(selectedReserva?.pagoMonto || 0) > 0}
+										>
 											Pendiente
 										</SelectItem>
 										<SelectItem value="pendiente_detalles">
