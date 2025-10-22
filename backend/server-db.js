@@ -1917,7 +1917,8 @@ app.post("/enviar-reserva", async (req, res) => {
 		const pagoMontoProvided =
 			datosReserva.pagoMonto !== undefined &&
 			datosReserva.pagoMonto !== null &&
-			datosReserva.pagoMonto !== "";
+			datosReserva.pagoMonto !== "" &&
+			parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
 
 		if (
 			hasSaldoProvided &&
@@ -1966,11 +1967,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		// `saldoPendiente` son valores informativos en el frontend y no
 		// significan que se haya realizado un pago real.
 		let montoPagadoCalculado = 0;
-		if (
-			datosReserva.pagoMonto !== undefined &&
-			datosReserva.pagoMonto !== null &&
-			datosReserva.pagoMonto !== ""
-		) {
+		if (pagoMontoProvided) {
 			montoPagadoCalculado = parsePositiveDecimal(
 				datosReserva.pagoMonto,
 				"pagoMonto",
@@ -2248,7 +2245,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			const pagoMontoProvidedExistente =
 				datosReserva.pagoMonto !== undefined &&
 				datosReserva.pagoMonto !== null &&
-				datosReserva.pagoMonto !== "";
+				datosReserva.pagoMonto !== "" &&
+				parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
 
 			let saldoParaActualizarExistente;
 			if (
@@ -2356,7 +2354,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			const pagoMontoProvidedExpress =
 				datosReserva.pagoMonto !== undefined &&
 				datosReserva.pagoMonto !== null &&
-				datosReserva.pagoMonto !== "";
+				datosReserva.pagoMonto !== "" &&
+				parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
 
 			let saldoPendienteParaGuardar;
 			if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
