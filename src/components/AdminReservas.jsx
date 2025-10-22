@@ -738,42 +738,51 @@ function AdminReservas() {
 
 	// Abrir modal de detalles
 	const handleViewDetails = async (reserva) => {
-			// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
-			try {
-				const respReserva = await fetch(`${apiUrl}/api/reservas/${reserva.id}`);
-				if (respReserva.ok) {
-					const latest = await respReserva.json();
-					setSelectedReserva(latest);
-				} else {
-					// fallback a la reserva recibida si el GET falla
-					setSelectedReserva(reserva);
-				}
-			} catch (e) {
-				console.warn("No se pudo recargar reserva (usar local):", e.message);
+		// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
+		try {
+			const respReserva = await fetch(`${apiUrl}/api/reservas/${reserva.id}`);
+			if (respReserva.ok) {
+				const latest = await respReserva.json();
+				setSelectedReserva(latest);
+			} else {
+				// fallback a la reserva recibida si el GET falla
 				setSelectedReserva(reserva);
 			}
+		} catch (e) {
+			console.warn("No se pudo recargar reserva (usar local):", e.message);
+			setSelectedReserva(reserva);
+		}
 
-			setShowDetailDialog(true);
+		setShowDetailDialog(true);
 
-			// Cargar historial de asignaciones (uso interno) usando token dinámico si existe
-			try {
-				const dynamicToken =
-					typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
-				const resp = await fetch(`${apiUrl}/api/reservas/${reserva.id}/asignaciones`, {
-					headers: dynamicToken ? { Authorization: `Bearer ${dynamicToken}` } : {},
-				});
-				if (resp.ok) {
-					const data = await resp.json();
-					setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
-				} else {
-					setHistorialAsignaciones([]);
+		// Cargar historial de asignaciones (uso interno) usando token dinámico si existe
+		try {
+			const dynamicToken =
+				typeof window !== "undefined"
+					? localStorage.getItem("adminToken")
+					: null;
+			const resp = await fetch(
+				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
+				{
+					headers: dynamicToken
+						? { Authorization: `Bearer ${dynamicToken}` }
+						: {},
 				}
-			} catch (err) {
-				console.error("Error cargando historial de asignaciones:", err);
+			);
+			if (resp.ok) {
+				const data = await resp.json();
+				setHistorialAsignaciones(
+					Array.isArray(data.historial) ? data.historial : []
+				);
+			} else {
 				setHistorialAsignaciones([]);
-			} finally {
-				setLoadingHistorial(false);
 			}
+		} catch (err) {
+			console.error("Error cargando historial de asignaciones:", err);
+			setHistorialAsignaciones([]);
+		} finally {
+			setLoadingHistorial(false);
+		}
 	};
 
 	// Guardar cambios
@@ -961,7 +970,8 @@ function AdminReservas() {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						estadoPago: estadoPagoSolicitado,
-						metodoPago: formData.metodoPago || selectedReserva.metodoPago || null,
+						metodoPago:
+							formData.metodoPago || selectedReserva.metodoPago || null,
 						referenciaPago:
 							formData.referenciaPago || selectedReserva.referenciaPago || null,
 						tipoPago: formData.tipoPago || null,
@@ -2217,21 +2227,23 @@ function AdminReservas() {
 														</Button>
 														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
 														{reserva?.estado === "confirmada" && (
-																<Button
-																	variant={isAsignada(reserva) ? "outline" : "secondary"}
-																	size="sm"
-																	onClick={() => handleAsignar(reserva)}
-																	title={
-																		isAsignada(reserva)
-																			? "Reasignar vehículo y conductor"
-																			: "Asignar vehículo y conductor"
-																	}
-																>
-																	<span role="img" aria-label="auto">
-																		🚗
-																	</span>
-																</Button>
-															)}
+															<Button
+																variant={
+																	isAsignada(reserva) ? "outline" : "secondary"
+																}
+																size="sm"
+																onClick={() => handleAsignar(reserva)}
+																title={
+																	isAsignada(reserva)
+																		? "Reasignar vehículo y conductor"
+																		: "Asignar vehículo y conductor"
+																}
+															>
+																<span role="img" aria-label="auto">
+																	🚗
+																</span>
+															</Button>
+														)}
 													</div>
 												</TableCell>
 											)}
@@ -4094,36 +4106,43 @@ function AdminReservas() {
 						</div>
 
 						{/* Mostrar info de asignación solo si la reserva confirmada ya tiene vehículo */}
-						{selectedReserva?.estado === "confirmada" && hasVehiculoAsignado && (
-							<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
-								<p className="font-semibold">Asignación actual:</p>
-								{selectedReserva.vehiculo_asignado ? (
-									<p>
-										🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} ({selectedReserva.vehiculo_asignado.patente})
-									</p>
-								) : selectedReserva?.vehiculo ? (
-									<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
-								) : null}
-								{hasConductorAsignado ? (
-									selectedReserva.conductor_asignado ? (
-										<p>👤 Conductor: {selectedReserva.conductor_asignado.nombre}</p>
-									) : selectedReserva?.conductor ? (
-										<p>👤 Conductor: {selectedReserva.conductor}</p>
-									) : null
-								) : (
-									<p className="text-muted-foreground">No hay conductor asignado actualmente.</p>
-								)}
-								<div className="mt-2">
-									<Button
-										size="sm"
-										variant="outline"
-										onClick={() => handleAsignar(selectedReserva)}
-									>
-										Reasignar vehículo / conductor
-									</Button>
+						{selectedReserva?.estado === "confirmada" &&
+							hasVehiculoAsignado && (
+								<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+									<p className="font-semibold">Asignación actual:</p>
+									{selectedReserva.vehiculo_asignado ? (
+										<p>
+											🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} (
+											{selectedReserva.vehiculo_asignado.patente})
+										</p>
+									) : selectedReserva?.vehiculo ? (
+										<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
+									) : null}
+									{hasConductorAsignado ? (
+										selectedReserva.conductor_asignado ? (
+											<p>
+												👤 Conductor:{" "}
+												{selectedReserva.conductor_asignado.nombre}
+											</p>
+										) : selectedReserva?.conductor ? (
+											<p>👤 Conductor: {selectedReserva.conductor}</p>
+										) : null
+									) : (
+										<p className="text-muted-foreground">
+											No hay conductor asignado actualmente.
+										</p>
+									)}
+									<div className="mt-2">
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => handleAsignar(selectedReserva)}
+										>
+											Reasignar vehículo / conductor
+										</Button>
+									</div>
 								</div>
-							</div>
-						)}
+							)}
 
 						<div className="flex justify-end gap-2">
 							<Button
@@ -4144,7 +4163,9 @@ function AdminReservas() {
 									<Button
 										onClick={handleGuardarAsignacion}
 										disabled={
-											loadingAsignacion || !vehiculoSeleccionado || sameAssignment
+											loadingAsignacion ||
+											!vehiculoSeleccionado ||
+											sameAssignment
 										}
 									>
 										{loadingAsignacion ? (
