@@ -2228,6 +2228,46 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			esModificacion = true;
 
 			// Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
+			// Calcular totales y abono para la modificación: no aceptar saldo enviado
+			// por el cliente si no existe evidencia de pago.
+			const totalCalculadoExistente = parsePositiveDecimal(
+				datosReserva.totalConDescuento,
+				"totalConDescuento",
+				reservaExistente.totalConDescuento || parsePositiveDecimal(datosReserva.precio, "precio", 0)
+			);
+			const abonoCalculadoExistente = parsePositiveDecimal(
+				datosReserva.abonoSugerido,
+				"abonoSugerido",
+				reservaExistente.abonoSugerido || 0
+			);
+			const hasSaldoProvidedExistente = Object.prototype.hasOwnProperty.call(datosReserva, "saldoPendiente");
+			const pagoMontoProvidedExistente =
+				datosReserva.pagoMonto !== undefined &&
+				datosReserva.pagoMonto !== null &&
+				datosReserva.pagoMonto !== "";
+
+			let saldoParaActualizarExistente;
+			if (hasSaldoProvidedExistente && (pagoMontoProvidedExistente || datosReserva.estadoPago === "pagado")) {
+				saldoParaActualizarExistente = parsePositiveDecimal(
+					datosReserva.saldoPendiente,
+					"saldoPendiente",
+					Math.max(totalCalculadoExistente - abonoCalculadoExistente, 0)
+				);
+			} else {
+				// No hay evidencia de pago: mantenemos saldo igual al total (no asumir abono)
+				saldoParaActualizarExistente = totalCalculadoExistente;
+			}
+
+			console.log("[DEBUG] /enviar-reserva-express - modificación: cálculos financieros:", {
+				reservaId: reservaExistente.id,
+				totalCalculadoExistente,
+				abonoCalculadoExistente,
+				hasSaldoProvidedExistente,
+				pagoMontoProvidedExistente,
+				saldoParaActualizarExistente,
+				estadoPago: datosReserva.estadoPago,
+			});
+
 			await reservaExistente.update({
 				nombre: datosReserva.nombre,
 				email: emailNormalizado || reservaExistente.email,
@@ -2243,16 +2283,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				vehiculo: datosReserva.vehiculo || "",
 				idaVuelta: Boolean(datosReserva.idaVuelta),
 				fechaRegreso: datosReserva.fechaRegreso || null,
-				abonoSugerido: parsePositiveDecimal(
-					datosReserva.abonoSugerido,
-					"abonoSugerido",
-					0
-				),
-				saldoPendiente: parsePositiveDecimal(
-					datosReserva.saldoPendiente,
-					"saldoPendiente",
-					0
-				),
+				abonoSugerido: abonoCalculadoExistente,
+				saldoPendiente: saldoParaActualizarExistente,
 				descuentoBase: parsePositiveDecimal(
 					datosReserva.descuentoBase,
 					"descuentoBase",
