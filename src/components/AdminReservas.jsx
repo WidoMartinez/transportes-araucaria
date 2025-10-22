@@ -967,7 +967,15 @@ function AdminReservas() {
 			// - Si no ingresÃ³ monto y seleccionÃ³ tipo 'abono', calcular el 40% (o abonoSugerido si es mayor)
 			//   restando lo ya pagado previamente para enviar solo el nuevo abono necesario.
 			// - Si seleccionÃ³ 'total' o 'saldo' y no indicÃ³ monto, completar el pago restante.
+			// Priorizar monto manual ingresado por el admin (si proporciona un valor > 0)
 			let montoPagadoValue = null;
+			const montoManual =
+				formData.montoPagado !== undefined && formData.montoPagado !== null
+					? Number(formData.montoPagado)
+					: NaN;
+			if (!Number.isNaN(montoManual) && montoManual > 0) {
+				montoPagadoValue = montoManual;
+			}
 			const tipo = formData.tipoPago;
 			const totalReserva =
 				Number(
@@ -1002,11 +1010,19 @@ function AdminReservas() {
 				}
 			}
 
+			// Enviar actualización de pago al backend (incluir token admin si existe)
+			const ADMIN_TOKEN =
+				typeof window !== "undefined"
+					? localStorage.getItem("adminToken")
+					: null;
 			const pagoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
 				{
 					method: "PUT",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						"Content-Type": "application/json",
+						...(ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {}),
+					},
 					body: JSON.stringify({
 						estadoPago: estadoPagoSolicitado,
 						metodoPago:
@@ -3021,7 +3037,48 @@ function AdminReservas() {
 										<Select
 											value={formData.tipoPago}
 											onValueChange={(value) =>
-												setFormData({ ...formData, tipoPago: value })
+												setFormData((prev) => {
+													// Recalcular montos para prefill
+													const totalReservaNum =
+														parseFloat(
+															selectedReserva?.totalConDescuento ||
+																selectedReserva?.precio ||
+																0
+														) || 0;
+													const abonoSugeridoNum =
+														parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+													const pagoPrevioNum =
+														parseFloat(selectedReserva?.pagoMonto || 0) || 0;
+													const umbralAbono = Math.max(
+														totalReservaNum * 0.4,
+														abonoSugeridoNum || 0
+													);
+
+													let computedMonto = null;
+													if (value === "saldo" || value === "total") {
+														const restante = Math.max(
+															totalReservaNum - pagoPrevioNum,
+															0
+														);
+														computedMonto = restante > 0 ? restante : null;
+													} else if (value === "abono") {
+														const necesario = Math.max(
+															umbralAbono - pagoPrevioNum,
+															0
+														);
+														computedMonto = necesario > 0 ? necesario : null;
+													}
+
+													return {
+														...prev,
+														tipoPago: value,
+														// Escritura segura: guardar número o cadena vacía
+														montoPagado:
+															computedMonto !== null
+																? computedMonto
+																: prev.montoPagado,
+													};
+												})
 											}
 										>
 											<SelectTrigger id="tipoPago">
@@ -3047,22 +3104,24 @@ function AdminReservas() {
 							{/* Monto del pago */}
 							<div className="space-y-2">
 								{/* Mostrar monto registrado actual (solo informativo). Los pagos manuales se registran en el apartado 'Registrar pago'. */}
-								<Label htmlFor="montoPagado">Monto Registrado (CLP)</Label>
+								<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
 								<Input
 									id="montoPagado"
-									type="text"
-									readOnly
+									type="number"
+									step="1"
+									min="0"
 									value={
-										selectedReserva
-											? selectedReserva.pagoMonto
-												? new Intl.NumberFormat("es-CL", {
-														style: "currency",
-														currency: "CLP",
-												  }).format(selectedReserva.pagoMonto)
-												: ""
+										formData.montoPagado !== undefined && formData.montoPagado !== null
+											? formData.montoPagado
 											: ""
 									}
+									onChange={(e) =>
+										setFormData({ ...formData, montoPagado: e.target.value })
+									}
 								/>
+								<div className="text-xs text-muted-foreground mt-1">
+									<div>Registrado en sistema: {selectedReserva.pagoMonto ? new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(selectedReserva.pagoMonto) : "-"}</div>
+								</div>
 							</div>
 
 							{/* Historial de pagos de esta reserva */}

@@ -3207,6 +3207,21 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			estadoReserva: estadoReservaRaw,
 		} = req.body;
 
+		// Log de depuración: registrar intento de actualización de pago
+		try {
+			const hasAuth = !!req.headers.authorization;
+			console.log(`DEBUG [PUT /api/reservas/${id}/pago] payload:`, {
+				id,
+				estadoPago,
+				metodoPago,
+				referenciaPago,
+				montoPagado,
+				hasAuth,
+			});
+		} catch (lerr) {
+			console.warn("DEBUG: no se pudo loggear payload de actualización de pago", lerr);
+		}
+
 		const normalizarEstado = (valor) =>
 			typeof valor === "string" ? valor.trim().toLowerCase() : null;
 		const estadoPagoSolicitado = normalizarEstado(estadoPago);
@@ -3516,6 +3531,20 @@ app.post("/api/reservas/:id/pagos", async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { amount, metodo, referencia, source } = req.body;
+		// Log de depuración: registrar intento de pago manual
+		try {
+			const hasAuth = !!req.headers.authorization;
+			console.log(`DEBUG [POST /api/reservas/${id}/pagos] payload:`, {
+				id,
+				amount,
+				metodo,
+				referencia,
+				source,
+				hasAuth,
+			});
+		} catch (lerr) {
+			console.warn("DEBUG: no se pudo loggear payload de pago manual", lerr);
+		}
 
 		const monto = parseFloat(amount || 0) || 0;
 		if (monto <= 0) {
@@ -3723,6 +3752,8 @@ app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 		await reserva.update({ origen, destino });
+
+		// DEBUG accidental eliminado: no corresponde a este endpoint
 		res.json({ success: true, message: "Ruta actualizada", reserva });
 	} catch (error) {
 		console.error("Error actualizando ruta de reserva:", error);
