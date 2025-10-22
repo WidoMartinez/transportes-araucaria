@@ -348,8 +348,10 @@ function AdminReservas() {
 		const filas = [];
 		if (selectedReservas && selectedReservas.length > 0) {
 			// selectedReservas guarda ids (string o number). Mapear a objetos completos.
-			const seleccionObjs = reservas.filter((r) =>
-				selectedReservas.includes(r.id) || selectedReservas.includes(String(r.id))
+			const seleccionObjs = reservas.filter(
+				(r) =>
+					selectedReservas.includes(r.id) ||
+					selectedReservas.includes(String(r.id))
 			);
 			seleccionObjs.forEach((reserva) => {
 				const fila = columnasExportar.map((col) => {
@@ -360,7 +362,8 @@ function AdminReservas() {
 						if (val.nombre) return String(val.nombre);
 						if (val.name) return String(val.name);
 						if (val.email) return String(val.email);
-						if (val.telefono) return String(val.telefono || val.phone || val.tel || "");
+						if (val.telefono)
+							return String(val.telefono || val.phone || val.tel || "");
 						// Si es un objeto más complejo, serializar de forma compacta
 						try {
 							return JSON.stringify(val);
@@ -632,22 +635,22 @@ function AdminReservas() {
 			}
 
 			const data = await response.json();
-			   const reservasNormalizadas = (data.reservas || []).map((reserva) => {
-				   const cliente = reserva.cliente || {};
-				   return {
-					   ...reserva,
-					   esCliente: cliente.esCliente || false, // Respetar bandera de cliente existente
-					   nombre: cliente.nombre || reserva.nombre || "",
-					   rut: cliente.rut || reserva.rut || "",
-					   email: cliente.email || reserva.email || "",
-					   telefono: cliente.telefono || reserva.telefono || "",
-					   clienteId: cliente.id || reserva.clienteId || null,
-					   clasificacionCliente: cliente.clasificacion || null,
-					   totalReservas: cliente.totalReservas || 0,
-					   abonoPagado: Boolean(reserva.abonoPagado),
-					   saldoPagado: Boolean(reserva.saldoPagado),
-				   };
-			   });
+			const reservasNormalizadas = (data.reservas || []).map((reserva) => {
+				const cliente = reserva.cliente || {};
+				return {
+					...reserva,
+					esCliente: cliente.esCliente || false, // Respetar bandera de cliente existente
+					nombre: cliente.nombre || reserva.nombre || "",
+					rut: cliente.rut || reserva.rut || "",
+					email: cliente.email || reserva.email || "",
+					telefono: cliente.telefono || reserva.telefono || "",
+					clienteId: cliente.id || reserva.clienteId || null,
+					clasificacionCliente: cliente.clasificacion || null,
+					totalReservas: cliente.totalReservas || 0,
+					abonoPagado: Boolean(reserva.abonoPagado),
+					saldoPagado: Boolean(reserva.saldoPagado),
+				};
+			});
 			setReservas(reservasNormalizadas);
 			const nuevasTotalPages = data.pagination?.totalPages || 1;
 			setTotalPages(nuevasTotalPages);
@@ -1887,7 +1890,7 @@ function AdminReservas() {
 									>
 										Cambiar Estado
 									</Button>
-									   {/* Botón Cambiar Estado Pago eliminado por limpieza de código */}
+									{/* Botón Cambiar Estado Pago eliminado por limpieza de código */}
 									<Button
 										variant="destructive"
 										size="sm"
