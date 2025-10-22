@@ -236,9 +236,7 @@ function AdminReservas() {
 				const data = await resp.json();
 				const names = Array.isArray(data.destinos)
 					? data.destinos
-							.map((d) =>
-								d && d.nombre ? String(d.nombre).trim() : ""
-							)
+							.map((d) => (d && d.nombre ? String(d.nombre).trim() : ""))
 							.filter(Boolean)
 					: [];
 				const uniqueNames = [...new Set(names)];
@@ -1416,76 +1414,73 @@ function AdminReservas() {
 				}
 			}
 
-		// Calcular saldo pendiente según el estado seleccionado
-		// Nota: el campo `abonoSugerido` es solo una sugerencia y NO debe
-		// asumirse como pago realizado al crear la reserva. Solo cuando el
-		// estado de pago sea 'pagado' o se entregue un monto explícito
-		// consideramos que existe un pago registrado.
-		const total =
-			parseFloat(newReservaForm.totalConDescuento) ||
-			parseFloat(newReservaForm.precio) ||
-			0;
-	// Nota: abonoSugerido se mantiene en los datos pero no se asume como pago.
+			// Calcular saldo pendiente según el estado seleccionado
+			// Nota: el campo `abonoSugerido` es solo una sugerencia y NO debe
+			// asumirse como pago realizado al crear la reserva. Solo cuando el
+			// estado de pago sea 'pagado' o se entregue un monto explícito
+			// consideramos que existe un pago registrado.
+			const total =
+				parseFloat(newReservaForm.totalConDescuento) ||
+				parseFloat(newReservaForm.precio) ||
+				0;
+			// Nota: abonoSugerido se mantiene en los datos pero no se asume como pago.
 
-		let estadoSeleccionado = newReservaForm.estado || "pendiente";
-		const estadoPagoSeleccionado = newReservaForm.estadoPago || "pendiente";
+			let estadoSeleccionado = newReservaForm.estado || "pendiente";
+			const estadoPagoSeleccionado = newReservaForm.estadoPago || "pendiente";
 
-		// Determinar montoPagado y saldo de forma explícita
-		let montoPagado = 0;
-		let saldo = total;
+			// Determinar montoPagado y saldo de forma explícita
+			let montoPagado = 0;
+			let saldo = total;
 
-		// Si el admin indicó explícitamente un monto pagado en el formulario
-		// (campo opcional), respetarlo. Este proyecto no expone ese campo
-		// en el formulario nuevo por defecto, pero mantenemos la verificación
-		// por compatibilidad con futuras integraciones.
-		const montoPagadoFormulario =
-			newReservaForm.montoPagado !== undefined && newReservaForm.montoPagado !== ""
-				? parseFloat(newReservaForm.montoPagado) || 0
-				: null;
+			// Si el admin indicó explícitamente un monto pagado en el formulario
+			// (campo opcional), respetarlo. Este proyecto no expone ese campo
+			// en el formulario nuevo por defecto, pero mantenemos la verificación
+			// por compatibilidad con futuras integraciones.
+			const montoPagadoFormulario =
+				newReservaForm.montoPagado !== undefined &&
+				newReservaForm.montoPagado !== ""
+					? parseFloat(newReservaForm.montoPagado) || 0
+					: null;
 
-		if (montoPagadoFormulario !== null) {
-			montoPagado = Math.max(montoPagadoFormulario, 0);
-			saldo = Math.max(total - montoPagado, 0);
-		} else if (estadoPagoSeleccionado === "pagado") {
-			// Si el estado indica pagado, asumimos pago total
-			montoPagado = total;
-			saldo = 0;
-		} else if (estadoPagoSeleccionado === "reembolsado") {
-			// Reembolsado -> sin saldo y sin pago activo
-			montoPagado = 0;
-			saldo = 0;
-		} else if (estadoPagoSeleccionado === "fallido") {
-			// Fallido -> no hay pago
-			montoPagado = 0;
-			saldo = total;
-		} else {
-			// Estado pendiente (por defecto): no considerar el abono sugerido
-			// como pago realizado. Guardamos el abono sugerido por separado
-			// y dejamos saldo = total.
-			montoPagado = 0;
-			saldo = total;
-		}
+			if (montoPagadoFormulario !== null) {
+				montoPagado = Math.max(montoPagadoFormulario, 0);
+				saldo = Math.max(total - montoPagado, 0);
+			} else if (estadoPagoSeleccionado === "pagado") {
+				// Si el estado indica pagado, asumimos pago total
+				montoPagado = total;
+				saldo = 0;
+			} else if (estadoPagoSeleccionado === "reembolsado") {
+				// Reembolsado -> sin saldo y sin pago activo
+				montoPagado = 0;
+				saldo = 0;
+			} else if (estadoPagoSeleccionado === "fallido") {
+				// Fallido -> no hay pago
+				montoPagado = 0;
+				saldo = total;
+			} else {
+				// Estado pendiente (por defecto): no considerar el abono sugerido
+				// como pago realizado. Guardamos el abono sugerido por separado
+				// y dejamos saldo = total.
+				montoPagado = 0;
+				saldo = total;
+			}
 
-		if (saldo < 0) saldo = 0;
+			if (saldo < 0) saldo = 0;
 
-		if (
-			estadoPagoSeleccionado === "pagado" &&
-			estadoSeleccionado === "pendiente"
-		) {
-			estadoSeleccionado = "confirmada";
-		} else if (
-			estadoPagoSeleccionado === "reembolsado" &&
-			estadoSeleccionado === "pendiente"
-		) {
-			estadoSeleccionado = "cancelada";
-		}
-
-		// Crear destino si es 'otro' y no existe
 			if (
-				destinoEsOtro &&
-				destinoFinal &&
-				!destinoExiste(destinoFinal)
+				estadoPagoSeleccionado === "pagado" &&
+				estadoSeleccionado === "pendiente"
 			) {
+				estadoSeleccionado = "confirmada";
+			} else if (
+				estadoPagoSeleccionado === "reembolsado" &&
+				estadoSeleccionado === "pendiente"
+			) {
+				estadoSeleccionado = "cancelada";
+			}
+
+			// Crear destino si es 'otro' y no existe
+			if (destinoEsOtro && destinoFinal && !destinoExiste(destinoFinal)) {
 				try {
 					const ADMIN_TOKEN = localStorage.getItem("adminToken");
 					await fetch(`${apiUrl}/api/destinos`, {

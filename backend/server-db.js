@@ -1922,10 +1922,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			: "pendiente";
 
 		let saldoCalculado = saldoEntrada;
-		if (
-			estadoPagoInicial === "pagado" ||
-			estadoPagoInicial === "reembolsado"
-		) {
+		if (estadoPagoInicial === "pagado" || estadoPagoInicial === "reembolsado") {
 			saldoCalculado = 0;
 		} else if (estadoPagoInicial === "fallido") {
 			saldoCalculado = totalCalculado;
@@ -2008,7 +2005,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			equipajeEspecial: datosReserva.equipajeEspecial || "",
 			sillaInfantil: Boolean(
 				datosReserva.sillaInfantil === "si" ||
-				datosReserva.sillaInfantil === true
+					datosReserva.sillaInfantil === true
 			),
 			idaVuelta: Boolean(datosReserva.idaVuelta),
 			fechaRegreso: datosReserva.fechaRegreso || null,
@@ -2082,7 +2079,10 @@ app.post("/enviar-reserva", async (req, res) => {
 				if (emailResponse.data.success) {
 					console.log("✅ Email enviado correctamente");
 				} else {
-					console.warn("⚠️ Email no se pudo enviar:", emailResponse.data.message);
+					console.warn(
+						"⚠️ Email no se pudo enviar:",
+						emailResponse.data.message
+					);
 				}
 			} catch (emailError) {
 				console.error("❌ Error enviando email:", emailError.message);
@@ -2389,7 +2389,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					timeout: 30000,
 				});
 
-				console.log("✅ Email express enviado exitosamente:", emailResponse.data);
+				console.log(
+					"✅ Email express enviado exitosamente:",
+					emailResponse.data
+				);
 			} catch (emailError) {
 				console.error(
 					"❌ Error al enviar email express (no afecta la reserva):",
@@ -3126,11 +3129,12 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 
 		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
 		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0) || 0;
-		const saldoPendienteActual = parseFloat(
-			reserva.saldoPendiente != null
-				? reserva.saldoPendiente
-				: Math.max(totalReserva - abonoSugerido, 0)
-		) || 0;
+		const saldoPendienteActual =
+			parseFloat(
+				reserva.saldoPendiente != null
+					? reserva.saldoPendiente
+					: Math.max(totalReserva - abonoSugerido, 0)
+			) || 0;
 		const montoPago =
 			montoPagado !== undefined && montoPagado !== null
 				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
