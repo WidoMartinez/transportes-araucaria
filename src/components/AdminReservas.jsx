@@ -751,7 +751,7 @@ function AdminReservas() {
 			estadoPago: reserva.estadoPago || "",
 			metodoPago: reserva.metodoPago || "",
 			referenciaPago: reserva.referenciaPago || "",
-			tipoPago: "",
+			tipoPago: reserva.tipoPago || "",
 			montoPagado:
 				reserva.pagoMonto !== undefined && reserva.pagoMonto !== null
 					? String(reserva.pagoMonto)

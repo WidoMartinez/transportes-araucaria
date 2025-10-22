@@ -21,6 +21,7 @@ import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
+import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
 import setupAssociations from "./models/associations.js";
 
 dotenv.config();
@@ -548,6 +549,7 @@ const initializeDatabase = async () => {
 		// Ejecutar migraciones automáticas
 		await ejecutarMigracionCodigoReserva();
 		await addPaymentFields();
+		await addTipoPagoColumn();
 		await addAbonoFlags();
 		await addCodigosPagoTable();
 
@@ -3216,6 +3218,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 				metodoPago,
 				referenciaPago,
 				montoPagado,
+				tipoPago: _tipoPago,
 				hasAuth,
 			});
 		} catch (lerr) {
@@ -3229,6 +3232,19 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			typeof valor === "string" ? valor.trim().toLowerCase() : null;
 		const estadoPagoSolicitado = normalizarEstado(estadoPago);
 		const estadoReservaSolicitado = normalizarEstado(estadoReservaRaw);
+		const normalizarTipoPago = (valor) => {
+			if (typeof valor !== "string") {
+				return null;
+			}
+			const normalizado = valor.trim().toLowerCase();
+			return ["abono", "saldo", "total"].includes(normalizado)
+				? normalizado
+				: null;
+		};
+		const limpiarTipoPago =
+			_tipoPago === null ||
+			(typeof _tipoPago === "string" && _tipoPago.trim().length === 0);
+		const tipoPagoSolicitado = normalizarTipoPago(_tipoPago);
 		const estadosReservaPermitidos = [
 			"pendiente",
 			"pendiente_detalles",
@@ -3247,6 +3263,12 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		if (!reserva) {
 			await transaction.rollback();
 			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+		let nuevoTipoPago = reserva.tipoPago || null;
+		if (limpiarTipoPago) {
+			nuevoTipoPago = null;
+		} else if (tipoPagoSolicitado) {
+			nuevoTipoPago = tipoPagoSolicitado;
 		}
 
 		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
@@ -3298,6 +3320,9 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 				nuevoSaldoPendiente = 0;
 				abonoPagado = true;
 				saldoPagado = true;
+				if (!tipoPagoSolicitado) {
+					nuevoTipoPago = "total";
+				}
 			} else if (pagoTotalNuevo > 0) {
 				// Pago parcial
 				if (
@@ -3309,6 +3334,9 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 				nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migracion
 				if (pagoTotalNuevo >= umbralAbono) {
 					abonoPagado = true;
+					if (!tipoPagoSolicitado) {
+						nuevoTipoPago = "abono";
+					}
 				}
 			}
 
@@ -3346,6 +3374,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 					pagoTotalNuevo = 0;
 					debeActualizarPagoMonto = true;
 					pagoFechaFinal = null;
+					nuevoTipoPago = null;
 					break;
 				}
 				case "fallido": {
@@ -3363,6 +3392,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 					pagoTotalNuevo = 0;
 					debeActualizarPagoMonto = true;
 					pagoFechaFinal = null;
+					nuevoTipoPago = null;
 					break;
 				}
 				case "pendiente": {
@@ -3378,6 +3408,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 					pagoTotalNuevo = 0;
 					debeActualizarPagoMonto = true;
 					pagoFechaFinal = null;
+					nuevoTipoPago = null;
 					break;
 				}
 				case "pagado": {
@@ -3403,6 +3434,9 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 					if (!pagoFechaFinal) {
 						pagoFechaFinal = fechaPago;
 					}
+					if (!tipoPagoSolicitado) {
+						nuevoTipoPago = "total";
+					}
 					break;
 				}
 				case "parcial":
@@ -3419,6 +3453,15 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 					if (estadoPagoSolicitado === "parcial" && pagoTotalNuevo <= 0) {
 						abonoPagado = false;
 						saldoPagado = false;
+						if (!tipoPagoSolicitado) {
+							nuevoTipoPago = null;
+						}
+					} else if (
+						estadoPagoSolicitado === "parcial" &&
+						!tipoPagoSolicitado &&
+						pagoTotalNuevo >= umbralAbono
+					) {
+						nuevoTipoPago = "abono";
 					}
 					break;
 				}
@@ -3439,6 +3482,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			estadoPago: nuevoEstadoPago,
 			metodoPago: metodoPago || reserva.metodoPago,
 			referenciaPago: referenciaPago || reserva.referenciaPago,
+			tipoPago: nuevoTipoPago,
 			saldoPendiente: nuevoSaldoPendiente,
 			abonoPagado,
 			saldoPagado,

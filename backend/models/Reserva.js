@@ -200,6 +200,12 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(50),
 			allowNull: true,
 		},
+		tipoPago: {
+			type: DataTypes.STRING(20),
+			allowNull: true,
+			field: "tipo_pago",
+			comment: "Tipo de pago registrado (abono, saldo, total)",
+		},
 		estadoPago: {
 			type: DataTypes.ENUM(
 				"pendiente",
