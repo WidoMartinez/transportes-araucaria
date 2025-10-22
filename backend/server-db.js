@@ -2911,6 +2911,11 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
+		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
+		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			return res.status(400).json({ error: "No se puede cambiar a pendiente una reserva que ya tiene pagos realizados" });
+		}
+
 		await reserva.update({
 			estado,
 			observaciones: observaciones || reserva.observaciones,
@@ -4260,6 +4265,11 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
 			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
+		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			return res.status(400).json({ error: "No se puede cambiar a pendiente una reserva que ya tiene pagos realizados" });
 		}
 
 		// Permitir dejar observaciones vacías: si viene "" lo convertimos a NULL

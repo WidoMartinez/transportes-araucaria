@@ -2697,7 +2697,9 @@ function AdminReservas() {
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="pendiente">Pendiente</SelectItem>
+										<SelectItem value="pendiente" disabled={(selectedReserva?.pagoMonto || 0) > 0}>
+											Pendiente
+										</SelectItem>
 										<SelectItem value="pendiente_detalles">
 											Pendiente Detalles
 										</SelectItem>
