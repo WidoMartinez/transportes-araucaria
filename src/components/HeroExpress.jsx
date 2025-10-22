@@ -360,13 +360,12 @@ function HeroExpress({
 							</span>
 						</h1>
 						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
-							Conectamos el aeropuerto con Pucón, Villarrica, Malalcahuello y
-							todos los destinos turísticos de La Araucanía.
+							Descubre La Araucanía con nuestros traslados privados: conectamos el aeropuerto directamente con Pucón, Villarrica, Malalcahuello y todos los destinos turísticos de la región.
 							<br />
 							<span className="text-accent font-bold">
-								Descuento web del {baseDiscountPercentage}% garantizado
+								¡Aprovecha nuestro descuento web del {baseDiscountPercentage}% garantizado
 								{promoDiscountPercentage > 0 &&
-									` + ${promoDiscountPercentage}% extra`}
+									` + ${promoDiscountPercentage}% extra`}!
 							</span>
 						</p>
 					</>
@@ -380,9 +379,6 @@ function HeroExpress({
 						>
 							🚀 Reservar ahora
 						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso súper rápido • Solo 2 pasos • Pago seguro
-						</p>
 						<Button
 							variant="outline"
 							className="bg-transparent border-white text-white hover:bg-white/10"
@@ -390,6 +386,9 @@ function HeroExpress({
 						>
 							<a href="#consultar-reserva">Continuar con código</a>
 						</Button>
+						<p className="text-lg text-white/95 drop-shadow-md font-medium">
+							Proceso súper rápido • Solo 2 pasos • Pago seguro
+						</p>
 					</div>
 				)}
 
