@@ -3622,21 +3622,21 @@ function AdminReservas() {
 							{/* Información del Cliente */}
 							<div className="bg-muted p-4 rounded-lg">
 								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-									   <div>
-										   <Label className="text-muted-foreground">Email</Label>
-										   <p
-											   className="font-medium truncate max-w-[180px]"
-											   title={historialCliente.cliente.email}
-											   style={{
-												   overflow: "hidden",
-												   textOverflow: "ellipsis",
-												   whiteSpace: "nowrap",
-												   maxWidth: "180px",
-											   }}
-										   >
-											   {historialCliente.cliente.email}
-										   </p>
-									   </div>
+									<div>
+										<Label className="text-muted-foreground">Email</Label>
+										<p
+											className="font-medium truncate max-w-[180px]"
+											title={historialCliente.cliente.email}
+											style={{
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+												maxWidth: "180px",
+											}}
+										>
+											{historialCliente.cliente.email}
+										</p>
+									</div>
 									<div>
 										<Label className="text-muted-foreground">Teléfono</Label>
 										<p className="font-medium">
