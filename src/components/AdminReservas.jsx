@@ -803,9 +803,8 @@ function AdminReservas() {
 					throw new Error("Error al actualizar la ruta");
 				}
 			}
-			// Determinar estado final: si el pago fue marcado como 'pagado', marcar como 'confirmada'
-			const estadoFinal =
-				formData.estadoPago === "pagado" ? "confirmada" : formData.estado;
+			// Determinar estado final: respetar la selección del usuario
+			const estadoFinal = formData.estado;
 			const estadoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
 				{
