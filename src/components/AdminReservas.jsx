@@ -2833,7 +2833,30 @@ function AdminReservas() {
 								<Select
 									value={formData.estadoPago}
 									onValueChange={(value) =>
-										setFormData({ ...formData, estadoPago: value })
+										setFormData((prev) => {
+											let nextEstado = prev.estado;
+											if (value === "reembolsado") {
+												nextEstado = "cancelada";
+											} else if (value === "fallido") {
+												nextEstado =
+													prev.estado === "pendiente_detalles"
+														? "pendiente_detalles"
+														: "pendiente";
+											} else if (value === "pendiente") {
+												if (
+													["confirmada", "completada", "cancelada"].includes(
+														prev.estado
+													)
+												) {
+													nextEstado = "pendiente";
+												}
+											}
+											return {
+												...prev,
+												estadoPago: value,
+												estado: nextEstado,
+											};
+										})
 									}
 								>
 									<SelectTrigger id="estadoPago">

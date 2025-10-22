@@ -2979,15 +2979,23 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			estadoReserva: estadoReservaRaw,
 		} = req.body;
 
-		const estadoReservaSolicitado =
-			typeof estadoReservaRaw === "string"
-				? estadoReservaRaw.toLowerCase()
-				: null;
-		const estadoReservaValido =
-			estadoReservaSolicitado === "completada"
-				? "completada"
-				: null;
-		const deseaCompletada = estadoReservaValido === "completada";
+		const normalizarEstado = (valor) =>
+			typeof valor === "string" ? valor.trim().toLowerCase() : null;
+		const estadoPagoSolicitado = normalizarEstado(estadoPago);
+		const estadoReservaSolicitado = normalizarEstado(estadoReservaRaw);
+		const estadosReservaPermitidos = [
+			"pendiente",
+			"pendiente_detalles",
+			"confirmada",
+			"cancelada",
+			"completada",
+		];
+		const estadoReservaValido = estadosReservaPermitidos.includes(
+			estadoReservaSolicitado
+		)
+			? estadoReservaSolicitado
+			: null;
+		const deseaCompletada = estadoReservaSolicitado === "completada";
 
 		const reserva = await Reserva.findByPk(id, { transaction });
 		if (!reserva) {
@@ -2995,13 +3003,13 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
-		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
+		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0) || 0;
 		const saldoPendienteActual = parseFloat(
 			reserva.saldoPendiente != null
 				? reserva.saldoPendiente
 				: Math.max(totalReserva - abonoSugerido, 0)
-		);
+		) || 0;
 		const montoPago =
 			montoPagado !== undefined && montoPagado !== null
 				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
@@ -3010,69 +3018,174 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		// monto ya pagado previamente (si existe) y nuevo acumulado
 		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
 		let pagoTotalNuevo = pagoPrevio;
-		if (montoPago && montoPago > 0) {
-			pagoTotalNuevo = pagoPrevio + montoPago;
-		}
+		let debeActualizarPagoMonto = false;
+		let pagoFechaFinal = reserva.pagoFecha || null;
 
-		let nuevoEstadoPago = estadoPago || reserva.estadoPago;
+		let nuevoEstadoPago = estadoPagoSolicitado || reserva.estadoPago;
 		let nuevoEstadoReserva = estadoReservaValido || reserva.estado;
 		let nuevoSaldoPendiente = saldoPendienteActual;
-		let abonoPagado = reserva.abonoPagado;
-		let saldoPagado = reserva.saldoPagado;
+		let abonoPagado = Boolean(reserva.abonoPagado);
+		let saldoPagado = Boolean(reserva.saldoPagado);
 		const fechaPago = new Date();
 
-		// Umbral de confirmación: 40% del total (o el abono sugerido, si es mayor)
+		// Umbral de confirmacion: 40% del total (o el abono sugerido, si es mayor)
 		const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
 
-		if (montoPago && montoPago > 0) {
+		const seRegistraPago = montoPago !== null && montoPago > 0;
+
+		if (seRegistraPago) {
+			pagoTotalNuevo = pagoPrevio + montoPago;
 			// Recalcular saldo en base al nuevo acumulado
 			nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
-		}
+			debeActualizarPagoMonto = true;
+			pagoFechaFinal = fechaPago;
 
-		// Evaluar estados según acumulado
-		if (pagoTotalNuevo >= totalReserva) {
-			// Pago completo
-			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva =
-				deseaCompletada || reserva.estado === "completada"
-					? "completada"
-					: "confirmada";
-			nuevoSaldoPendiente = 0;
-			abonoPagado = true;
-			saldoPagado = true;
-		} else if (pagoTotalNuevo > 0) {
-			// Pago parcial
-			if (
-				pagoTotalNuevo >= umbralAbono &&
-				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
-			) {
-				nuevoEstadoReserva = "confirmada";
-			}
-			nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migración
-			if (pagoTotalNuevo >= umbralAbono) {
+			// Evaluar estados segun acumulado
+			if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+				// Pago completo
+				nuevoEstadoPago = "pagado";
+				nuevoEstadoReserva =
+					deseaCompletada || reserva.estado === "completada"
+						? "completada"
+						: "confirmada";
+				nuevoSaldoPendiente = 0;
 				abonoPagado = true;
+				saldoPagado = true;
+			} else if (pagoTotalNuevo > 0) {
+				// Pago parcial
+				if (
+					pagoTotalNuevo >= umbralAbono &&
+					["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+				) {
+					nuevoEstadoReserva = "confirmada";
+				}
+				nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migracion
+				if (pagoTotalNuevo >= umbralAbono) {
+					abonoPagado = true;
+				}
+			}
+
+			// Si se especifico explicitamente tipoPago 'saldo' y saldo queda 0 por el acumulado, asegurar flags
+			if (
+				nuevoSaldoPendiente <= 0 &&
+				pagoTotalNuevo >= totalReserva &&
+				totalReserva > 0
+			) {
+				saldoPagado = true;
+				abonoPagado = true;
+				nuevoEstadoPago = "pagado";
+				nuevoEstadoReserva =
+					deseaCompletada || reserva.estado === "completada"
+						? "completada"
+						: "confirmada";
+				nuevoSaldoPendiente = 0;
+			}
+
+			// Si se solicito explicitamente marcar como completada y el pago quedo pagado,
+			// aseguramos que el estado final respete esa eleccion incluso con total 0.
+			if (deseaCompletada && nuevoEstadoPago === "pagado") {
+				nuevoEstadoReserva = "completada";
 			}
 		}
 
-		// Si se especificó explícitamente tipoPago 'saldo' y saldo queda 0 por el acumulado, asegurar flags
-		if (
-			nuevoSaldoPendiente <= 0 &&
-			pagoTotalNuevo >= totalReserva &&
-			totalReserva > 0
-		) {
-			saldoPagado = true;
-			abonoPagado = true;
-			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva =
-				deseaCompletada || reserva.estado === "completada"
-					? "completada"
-					: "confirmada";
+		if (estadoPagoSolicitado) {
+			switch (estadoPagoSolicitado) {
+				case "reembolsado": {
+					nuevoEstadoPago = "reembolsado";
+					nuevoEstadoReserva = "cancelada";
+					nuevoSaldoPendiente = 0;
+					abonoPagado = false;
+					saldoPagado = false;
+					pagoTotalNuevo = 0;
+					debeActualizarPagoMonto = true;
+					pagoFechaFinal = null;
+					break;
+				}
+				case "fallido": {
+					nuevoEstadoPago = "fallido";
+					nuevoEstadoReserva =
+						estadoReservaValido ||
+						(["completada", "cancelada"].includes(reserva.estado)
+							? "cancelada"
+							: reserva.estado === "pendiente_detalles"
+							? "pendiente_detalles"
+							: "pendiente");
+					nuevoSaldoPendiente = totalReserva;
+					abonoPagado = false;
+					saldoPagado = false;
+					pagoTotalNuevo = 0;
+					debeActualizarPagoMonto = true;
+					pagoFechaFinal = null;
+					break;
+				}
+				case "pendiente": {
+					nuevoEstadoPago = "pendiente";
+					nuevoEstadoReserva =
+						estadoReservaValido ||
+						(reserva.estado === "pendiente_detalles"
+							? "pendiente_detalles"
+							: "pendiente");
+					nuevoSaldoPendiente = totalReserva;
+					abonoPagado = false;
+					saldoPagado = false;
+					pagoTotalNuevo = 0;
+					debeActualizarPagoMonto = true;
+					pagoFechaFinal = null;
+					break;
+				}
+				case "pagado": {
+					nuevoEstadoPago = "pagado";
+					abonoPagado = true;
+					saldoPagado = true;
+					if (totalReserva > 0 && pagoTotalNuevo < totalReserva) {
+						pagoTotalNuevo = totalReserva;
+						debeActualizarPagoMonto = true;
+					}
+					nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+					if (
+						deseaCompletada ||
+						estadoReservaValido === "completada" ||
+						reserva.estado === "completada"
+					) {
+						nuevoEstadoReserva = "completada";
+					} else if (
+						["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+					) {
+						nuevoEstadoReserva = "confirmada";
+					}
+					if (!pagoFechaFinal) {
+						pagoFechaFinal = fechaPago;
+					}
+					break;
+				}
+				case "parcial":
+				case "aprobado": {
+					nuevoEstadoPago = estadoPagoSolicitado;
+					nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+					if (
+						estadoPagoSolicitado === "parcial" &&
+						["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva) &&
+						(pagoTotalNuevo >= umbralAbono || reserva.abonoPagado)
+					) {
+						nuevoEstadoReserva = "confirmada";
+					}
+					if (estadoPagoSolicitado === "parcial" && pagoTotalNuevo <= 0) {
+						abonoPagado = false;
+						saldoPagado = false;
+					}
+					break;
+				}
+				default:
+					break;
+			}
 		}
 
-		// Si se solicitó explícitamente marcar como completada y el pago quedó pagado,
-		// aseguramos que el estado final respete esa elección incluso con total 0.
-		if (deseaCompletada && nuevoEstadoPago === "pagado") {
-			nuevoEstadoReserva = "completada";
+		// Evitar valores negativos por ajustes manuales
+		if (nuevoSaldoPendiente < 0) {
+			nuevoSaldoPendiente = 0;
+		}
+		if (pagoTotalNuevo < 0) {
+			pagoTotalNuevo = 0;
 		}
 
 		const payloadActualizacion = {
@@ -3085,12 +3198,11 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			estado: nuevoEstadoReserva,
 		};
 
-		if (montoPago && montoPago > 0) {
-			// Guardar el acumulado total pagado
+		if (debeActualizarPagoMonto) {
 			payloadActualizacion.pagoMonto = pagoTotalNuevo;
-			payloadActualizacion.pagoFecha = fechaPago;
+			payloadActualizacion.pagoFecha = pagoFechaFinal;
 		} else if (saldoPagado && !reserva.saldoPagado) {
-			payloadActualizacion.pagoFecha = fechaPago;
+			payloadActualizacion.pagoFecha = pagoFechaFinal || fechaPago;
 		}
 
 		await reserva.update(payloadActualizacion, { transaction });
