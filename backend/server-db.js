@@ -2902,7 +2902,12 @@ app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 
 // Actualizar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
-	console.log("PUT /api/reservas/:id/estado (primer endpoint) llamado con id:", req.params.id, "estado:", req.body.estado);
+	console.log(
+		"PUT /api/reservas/:id/estado (primer endpoint) llamado con id:",
+		req.params.id,
+		"estado:",
+		req.body.estado
+	);
 	try {
 		const { id } = req.params;
 		const { estado, observaciones } = req.body;
@@ -2915,13 +2920,14 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
 		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
-			console.log("Intento de cambiar a pendiente con pagos:", reserva.pagoMonto);
-			return res
-				.status(400)
-				.json({
-					error:
-						"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
-				});
+			console.log(
+				"Intento de cambiar a pendiente con pagos:",
+				reserva.pagoMonto
+			);
+			return res.status(400).json({
+				error:
+					"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
+			});
 		}
 
 		await reserva.update({
@@ -2929,7 +2935,12 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			observaciones: observaciones || reserva.observaciones,
 		});
 
-		console.log("Estado actualizado exitosamente para reserva:", id, "a:", estado);
+		console.log(
+			"Estado actualizado exitosamente para reserva:",
+			id,
+			"a:",
+			estado
+		);
 		res.json({
 			success: true,
 			message: "Estado de reserva actualizado",
@@ -4267,7 +4278,12 @@ app.delete("/api/reservas/:id", async (req, res) => {
 
 // Cambiar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
-	console.log("PUT /api/reservas/:id/estado llamado con id:", req.params.id, "estado:", req.body?.estado);
+	console.log(
+		"PUT /api/reservas/:id/estado llamado con id:",
+		req.params.id,
+		"estado:",
+		req.body?.estado
+	);
 	try {
 		const { id } = req.params;
 		const { estado, observaciones } = req.body || {};
@@ -4280,13 +4296,14 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
 		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
-			console.log("Intento de cambiar a pendiente con pagos:", reserva.pagoMonto);
-			return res
-				.status(400)
-				.json({
-					error:
-						"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
-				});
+			console.log(
+				"Intento de cambiar a pendiente con pagos:",
+				reserva.pagoMonto
+			);
+			return res.status(400).json({
+				error:
+					"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
+			});
 		}
 
 		// Permitir dejar observaciones vacías: si viene "" lo convertimos a NULL
@@ -4302,7 +4319,12 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			observaciones: obsValue,
 		});
 
-		console.log("Estado actualizado exitosamente para reserva:", id, "a:", estado);
+		console.log(
+			"Estado actualizado exitosamente para reserva:",
+			id,
+			"a:",
+			estado
+		);
 		res.json({
 			success: true,
 			message: "Estado actualizado",
