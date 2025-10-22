@@ -69,6 +69,12 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(100),
 			allowNull: true,
 		},
+		vehiculoId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "vehiculo_id",
+			comment: "ID del vehículo asignado (FK)",
+		},
 		numeroVuelo: {
 			type: DataTypes.STRING(50),
 			allowNull: true,
@@ -236,6 +242,12 @@ const Reserva = sequelize.define(
 		observaciones: {
 			type: DataTypes.TEXT,
 			allowNull: true,
+		},
+		conductorId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "conductor_id",
+			comment: "ID del conductor asignado (FK)",
 		},
 	},
 	{

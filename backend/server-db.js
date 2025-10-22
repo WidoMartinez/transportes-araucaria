@@ -3385,7 +3385,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 			}
 		}
 
-		// Actualizar la reserva con datos legibles
+		// Actualizar la reserva con datos legibles y persistir los IDs
 		const vehiculoTipo = (
 			vehiculo.tipo?.toUpperCase?.() ||
 			vehiculo.tipo ||
@@ -3394,12 +3394,12 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 		const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
 		const patenteLast4 = (vehiculo.patente || "").toString().slice(-4);
 
-		// Actualizar solo el campo 'vehiculo'.
-		// Ya no modificamos 'observaciones' aquí para evitar contaminar
-		// las notas internas con historial de asignaciones. Ese historial
-		// se registra en la tabla reserva_asignaciones.
+		// Actualizar campo 'vehiculo' y persistir vehiculoId/conductorId en la reserva
+		// para que la UI pueda detectar la asignación por ids.
 		await reserva.update({
 			vehiculo: vehiculoLabel,
+			vehiculoId: Number(vehiculo.id) || null,
+			conductorId: conductor ? Number(conductor.id) : null,
 		});
 
 		// Registrar en historial solo si hubo cambio
@@ -3474,6 +3474,9 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 				emailErr.message
 			);
 		}
+
+		// Recargar la reserva para devolver los valores actualizados
+		await reserva.reload();
 
 		return res.json({
 			success: true,

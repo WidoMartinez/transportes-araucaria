@@ -738,27 +738,29 @@ function AdminReservas() {
 
 	// Abrir modal de detalles
 	const handleViewDetails = async (reserva) => {
+		// Log para depuración: inspeccionar la reserva que se abre en el modal
+		console.log("[DEBUG] handleViewDetails - reserva recibida:", reserva);
+		// Log token admin para verificar si se está enviando al backend (no loguear tokens en producción)
+		console.log("[DEBUG] ADMIN_TOKEN (localStorage):", localStorage.getItem("adminToken"));
 		setSelectedReserva(reserva);
 		setShowDetailDialog(true);
 		// Cargar historial de asignaciones (uso interno)
 		try {
-			const resp = await fetch(
-				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
-				{
-					headers: ADMIN_TOKEN
-						? { Authorization: `Bearer ${ADMIN_TOKEN}` }
-						: {},
-				}
-			);
+			// Log adicional: mostrar la constante ADMIN_TOKEN y el valor actual en localStorage
+			console.log("[DEBUG] ADMIN_TOKEN (constante):", ADMIN_TOKEN);
+			const dynamicToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+			console.log("[DEBUG] admin token dinámico (localStorage):", dynamicToken ? "(presente)" : "(ausente)");
+			const resp = await fetch(`${apiUrl}/api/reservas/${reserva.id}/asignaciones`, {
+				headers: dynamicToken ? { Authorization: `Bearer ${dynamicToken}` } : {},
+			});
 			if (resp.ok) {
 				const data = await resp.json();
-				setHistorialAsignaciones(
-					Array.isArray(data.historial) ? data.historial : []
-				);
+				setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
 			} else {
 				setHistorialAsignaciones([]);
 			}
-		} catch {
+		} catch (err) {
+			console.error("Error cargando historial de asignaciones:", err);
 			setHistorialAsignaciones([]);
 		} finally {
 			setLoadingHistorial(false);
@@ -1982,6 +1984,11 @@ function AdminReservas() {
 																{reserva.codigoReserva}
 															</div>
 														)}
+
+														{/* El botón de reasignar se muestra en el modal de detalle sólo si la reserva
+															está confirmada y ya tiene vehículo y conductor asignados. Se movió
+															aquí originalmente por error; la lógica real de visibilidad se
+															maneja en el modal de 'Ver' (selectedReserva). */}
 													</div>
 												</TableCell>
 											)}
@@ -4042,24 +4049,36 @@ function AdminReservas() {
 							</label>
 						</div>
 
-						{/* Mostrar asignaciones actuales si existen */}
-						{(selectedReserva?.vehiculo_asignado ||
-							selectedReserva?.conductor_asignado) && (
-							<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
-								<p className="font-semibold">Asignación actual:</p>
-								{selectedReserva.vehiculo_asignado && (
-									<p>
-										🚗 Vehículo: {selectedReserva.vehiculo_asignado.patente} (
-										{selectedReserva.vehiculo_asignado.tipo})
-									</p>
-								)}
-								{selectedReserva.conductor_asignado && (
-									<p>
-										ðŸ‘¤ Conductor: {selectedReserva.conductor_asignado.nombre}
-									</p>
-								)}
-							</div>
-						)}
+												{/*
+													Regla estricta de visibilidad para reasignar:
+													Mostrar esta sección (y el botón 'Reasignar') únicamente cuando
+													la reserva esté en estado 'confirmada' y tanto el vehículo como
+													el conductor estén asignados. Se consideran asignados si existen
+													los objetos `vehiculo_asignado` / `conductor_asignado` o si
+													existen campos/ids equivalentes en `selectedReserva`.
+												*/}
+												{selectedReserva?.estado === "confirmada" &&
+													( (selectedReserva?.vehiculo_asignado || selectedReserva?.vehiculoId || selectedReserva?.vehiculo) &&
+														(selectedReserva?.conductor_asignado || selectedReserva?.conductorId || selectedReserva?.conductor)
+													) && (
+														<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+															<p className="font-semibold">Asignación actual:</p>
+															{selectedReserva.vehiculo_asignado && (
+																<p>
+																	🚗 Vehículo: {selectedReserva.vehiculo_asignado.patente} ({selectedReserva.vehiculo_asignado.tipo})
+																</p>
+															)}
+															{selectedReserva.conductor_asignado && (
+																<p>🧑‍✈️ Conductor: {selectedReserva.conductor_asignado.nombre}</p>
+															)}
+
+															<div className="mt-2">
+																<Button size="sm" variant="outline" onClick={() => handleAsignar(selectedReserva)}>
+																	Reasignar vehículo / conductor
+																</Button>
+															</div>
+														</div>
+												)}
 					</div>
 
 					<div className="flex justify-end gap-2">
