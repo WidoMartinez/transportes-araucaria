@@ -1915,10 +1915,14 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		let saldoEntrada;
 		const pagoMontoProvided =
-			datosReserva.pagoMonto !== undefined && datosReserva.pagoMonto !== null &&
+			datosReserva.pagoMonto !== undefined &&
+			datosReserva.pagoMonto !== null &&
 			datosReserva.pagoMonto !== "";
 
-		if (hasSaldoProvided && (pagoMontoProvided || estadoPagoSolicitado === "pagado")) {
+		if (
+			hasSaldoProvided &&
+			(pagoMontoProvided || estadoPagoSolicitado === "pagado")
+		) {
 			saldoEntrada = parsePositiveDecimal(
 				datosReserva.saldoPendiente,
 				"saldoPendiente",
@@ -2292,49 +2296,49 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			);
 		} else {
 			// CREAR nueva reserva
-				const codigoReserva = await generarCodigoReserva();
-				console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
+			const codigoReserva = await generarCodigoReserva();
+			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
 
-				// Calcular totales y abono para decidir saldo guardado.
-				const totalCalculadoExpress = parsePositiveDecimal(
-					datosReserva.totalConDescuento,
-					"totalConDescuento",
-					parsePositiveDecimal(datosReserva.precio, "precio", 0)
+			// Calcular totales y abono para decidir saldo guardado.
+			const totalCalculadoExpress = parsePositiveDecimal(
+				datosReserva.totalConDescuento,
+				"totalConDescuento",
+				parsePositiveDecimal(datosReserva.precio, "precio", 0)
+			);
+			const abonoCalculadoExpress = parsePositiveDecimal(
+				datosReserva.abonoSugerido,
+				"abonoSugerido",
+				0
+			);
+
+			const pagoMontoProvidedExpress =
+				datosReserva.pagoMonto !== undefined &&
+				datosReserva.pagoMonto !== null &&
+				datosReserva.pagoMonto !== "";
+
+			let saldoPendienteParaGuardar;
+			if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
+				// Si frontend informó un saldo explícito y hay pago indicado, respetarlo
+				saldoPendienteParaGuardar = parsePositiveDecimal(
+					datosReserva.saldoPendiente,
+					"saldoPendiente",
+					Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
 				);
-				const abonoCalculadoExpress = parsePositiveDecimal(
-					datosReserva.abonoSugerido,
-					"abonoSugerido",
-					0
-				);
+			} else {
+				// No hay evidencia de pago: saldo = total
+				saldoPendienteParaGuardar = totalCalculadoExpress;
+			}
 
-				const pagoMontoProvidedExpress =
-					datosReserva.pagoMonto !== undefined &&
-					datosReserva.pagoMonto !== null &&
-					datosReserva.pagoMonto !== "";
+			// Log temporal para depuración del flujo express
+			console.log("[DEBUG] /enviar-reserva-express - cálculos financieros:", {
+				totalCalculadoExpress,
+				abonoCalculadoExpress,
+				pagoMontoProvidedExpress,
+				saldoPendienteParaGuardar,
+				estadoPago: datosReserva.estadoPago,
+			});
 
-				let saldoPendienteParaGuardar;
-				if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
-					// Si frontend informó un saldo explícito y hay pago indicado, respetarlo
-					saldoPendienteParaGuardar = parsePositiveDecimal(
-						datosReserva.saldoPendiente,
-						"saldoPendiente",
-						Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
-					);
-				} else {
-					// No hay evidencia de pago: saldo = total
-					saldoPendienteParaGuardar = totalCalculadoExpress;
-				}
-
-				// Log temporal para depuración del flujo express
-				console.log("[DEBUG] /enviar-reserva-express - cálculos financieros:", {
-					totalCalculadoExpress,
-					abonoCalculadoExpress,
-					pagoMontoProvidedExpress,
-					saldoPendienteParaGuardar,
-					estadoPago: datosReserva.estadoPago,
-				});
-
-				reservaExpress = await Reserva.create({
+			reservaExpress = await Reserva.create({
 				codigoReserva: codigoReserva,
 				nombre: datosReserva.nombre,
 				email: emailNormalizado,
