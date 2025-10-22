@@ -112,9 +112,14 @@ function HeroExpress({
 
 		setVerificandoReserva(true);
 		try {
-			const apiUrl = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
-			const response = await fetch(`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(email.trim())}`);
-			
+			const apiUrl =
+				getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
+			const response = await fetch(
+				`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(
+					email.trim()
+				)}`
+			);
+
 			if (response.ok) {
 				const data = await response.json();
 				if (data.tieneReservaActiva) {
@@ -240,7 +245,9 @@ function HeroExpress({
 		}
 
 		// Mostrar mensaje de éxito
-		alert("✅ Reserva guardada exitosamente. Te hemos enviado la confirmación por email. Podrás completar el pago más tarde usando el enlace que te enviamos.");
+		alert(
+			"✅ Reserva guardada exitosamente. Te hemos enviado la confirmación por email. Podrás completar el pago más tarde usando el enlace que te enviamos."
+		);
 	};
 
 	// Procesar pago (guarda reserva primero y luego redirige a pago)
@@ -365,26 +372,26 @@ function HeroExpress({
 					</>
 				)}
 
-					{!showBookingModule && (
-						<div className="flex flex-col items-center justify-center space-y-6">
-							<Button
-								onClick={() => setShowBookingModule(true)}
-								className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
-							>
-								🚀 Reservar ahora
-							</Button>
-							<p className="text-lg text-white/95 drop-shadow-md font-medium">
-								Proceso súper rápido • Solo 2 pasos • Pago seguro
-							</p>
-							<Button
-								variant="outline"
-								className="bg-transparent border-white text-white hover:bg-white/10"
-								asChild
-							>
-								<a href="#consultar-reserva">Continuar con código</a>
-							</Button>
-						</div>
-					)}
+				{!showBookingModule && (
+					<div className="flex flex-col items-center justify-center space-y-6">
+						<Button
+							onClick={() => setShowBookingModule(true)}
+							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
+						>
+							🚀 Reservar ahora
+						</Button>
+						<p className="text-lg text-white/95 drop-shadow-md font-medium">
+							Proceso súper rápido • Solo 2 pasos • Pago seguro
+						</p>
+						<Button
+							variant="outline"
+							className="bg-transparent border-white text-white hover:bg-white/10"
+							asChild
+						>
+							<a href="#consultar-reserva">Continuar con código</a>
+						</Button>
+					</div>
+				)}
 
 				{showBookingModule && (
 					<div className="w-full">
@@ -849,9 +856,13 @@ function HeroExpress({
 															⚠️ Tienes una reserva sin pagar
 														</p>
 														<p className="text-amber-700 text-xs">
-															Código: <span className="font-mono font-semibold">{reservaActiva.codigoReserva}</span>
+															Código:{" "}
+															<span className="font-mono font-semibold">
+																{reservaActiva.codigoReserva}
+															</span>
 															<br />
-															Al continuar, se modificará tu reserva existente en lugar de crear una nueva.
+															Al continuar, se modificará tu reserva existente
+															en lugar de crear una nueva.
 														</p>
 													</div>
 												)}
@@ -1085,11 +1096,7 @@ function HeroExpress({
 											</div>
 
 											{requiereCotizacionManual ? (
-												<Button
-													asChild
-													className="w-full"
-													variant="secondary"
-												>
+												<Button asChild className="w-full" variant="secondary">
 													<a href="#contacto">
 														Solicitar cotización personalizada
 													</a>
@@ -1104,14 +1111,17 @@ function HeroExpress({
 																	💾 Guardar y continuar después
 																</h5>
 																<p className="text-sm text-blue-700">
-																	Guarda tu reserva ahora y recibe un enlace por email para pagar más tarde
+																	Guarda tu reserva ahora y recibe un enlace por
+																	email para pagar más tarde
 																</p>
 															</div>
 														</div>
 														<Button
 															type="button"
 															onClick={handleGuardarReserva}
-															disabled={isSubmitting || !todosLosCamposCompletos}
+															disabled={
+																isSubmitting || !todosLosCamposCompletos
+															}
 															variant="outline"
 															className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
 														>
@@ -1130,10 +1140,13 @@ function HeroExpress({
 													{todosLosCamposCompletos && (
 														<div className="bg-green-50 border border-green-200 rounded-lg p-4">
 															<p className="text-sm text-green-800 font-medium mb-2">
-																✅ ¿Listo para pagar? Selecciona el monto y método de pago arriba
+																✅ ¿Listo para pagar? Selecciona el monto y
+																método de pago arriba
 															</p>
 															<p className="text-xs text-green-700">
-																Al elegir una opción de pago arriba, tu reserva se guardará automáticamente y serás redirigido al proceso de pago seguro
+																Al elegir una opción de pago arriba, tu reserva
+																se guardará automáticamente y serás redirigido
+																al proceso de pago seguro
 															</p>
 														</div>
 													)}
