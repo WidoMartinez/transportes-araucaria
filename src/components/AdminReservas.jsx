@@ -3046,7 +3046,8 @@ function AdminReservas() {
 																0
 														) || 0;
 													const abonoSugeridoNum =
-														parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+														parseFloat(selectedReserva?.abonoSugerido || 0) ||
+														0;
 													const pagoPrevioNum =
 														parseFloat(selectedReserva?.pagoMonto || 0) || 0;
 													const umbralAbono = Math.max(
@@ -3111,7 +3112,8 @@ function AdminReservas() {
 									step="1"
 									min="0"
 									value={
-										formData.montoPagado !== undefined && formData.montoPagado !== null
+										formData.montoPagado !== undefined &&
+										formData.montoPagado !== null
 											? formData.montoPagado
 											: ""
 									}
@@ -3120,7 +3122,15 @@ function AdminReservas() {
 									}
 								/>
 								<div className="text-xs text-muted-foreground mt-1">
-									<div>Registrado en sistema: {selectedReserva.pagoMonto ? new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(selectedReserva.pagoMonto) : "-"}</div>
+									<div>
+										Registrado en sistema:{" "}
+										{selectedReserva.pagoMonto
+											? new Intl.NumberFormat("es-CL", {
+													style: "currency",
+													currency: "CLP",
+											  }).format(selectedReserva.pagoMonto)
+											: "-"}
+									</div>
 								</div>
 							</div>
 

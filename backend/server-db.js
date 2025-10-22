@@ -3219,7 +3219,10 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 				hasAuth,
 			});
 		} catch (lerr) {
-			console.warn("DEBUG: no se pudo loggear payload de actualización de pago", lerr);
+			console.warn(
+				"DEBUG: no se pudo loggear payload de actualización de pago",
+				lerr
+			);
 		}
 
 		const normalizarEstado = (valor) =>
