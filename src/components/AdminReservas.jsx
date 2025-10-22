@@ -1004,15 +1004,16 @@ function AdminReservas() {
 
 	// Helper para detectar si ya fue asignado un vehÃ­culo previamente
 	// Consideramos "asignada" si el campo `vehiculo` incluye tipo + patente
-	// por ejemplo: "SUV ABCD12"; en cambio valores como "sedan" o "suv"
-	// (sin patente) indican que aÃºn no se ha asignado uno real.
+	// por ejemplo: "SUV ABCD12"; en cambio valores como "sedan", "Por asignar", "Auto Privado"
+	// (sin patente real) indican que aÃºn no se ha asignado uno real.
 	const isAsignada = (reserva) => {
-		const v = (reserva?.vehiculo || "").trim();
-		if (!v) return false;
+		const v = (reserva?.vehiculo || "").trim().toLowerCase();
+		if (!v || v === "por asignar" || v === "auto privado") return false;
 		const parts = v.split(" ");
 		if (parts.length < 2) return false;
 		const last = parts[parts.length - 1];
-		return /[A-Z0-9]{4,}/i.test(last);
+		// Verificar si la Ãºltima parte parece una patente chilena (ej: ABCD12, abcd12)
+		return /^[a-z]{2,4}\d{2,3}$/i.test(last) || /[A-Z0-9]{6,}/i.test(last);
 	};
 
 	// Formatear moneda
