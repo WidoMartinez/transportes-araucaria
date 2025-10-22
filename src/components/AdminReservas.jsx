@@ -215,6 +215,7 @@ function AdminReservas() {
 		estadoPago: "pendiente",
 		metodoPago: "",
 		observaciones: "",
+		enviarCorreo: true,
 	});
 
 	// CatÃ¡logo de destinos (para selects)
@@ -1310,6 +1311,7 @@ function AdminReservas() {
 			estadoPago: "pendiente",
 			metodoPago: "",
 			observaciones: "",
+			enviarCorreo: true,
 		});
 		setOrigenEsOtro(false);
 		setDestinoEsOtro(false);
@@ -3670,6 +3672,34 @@ function AdminReservas() {
 									</div>
 								)}
 							</div>
+						</div>
+
+						{/* Notificaciones */}
+						<div className="space-y-2">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Notificaciones
+							</h3>
+							<div className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="new-enviarcorreo"
+									checked={Boolean(newReservaForm.enviarCorreo)}
+									onChange={(e) =>
+										setNewReservaForm({
+											...newReservaForm,
+											enviarCorreo: e.target.checked,
+										})
+									}
+									className="w-4 h-4"
+								/>
+								<Label htmlFor="new-enviarcorreo">
+									Enviar correo de confirmación al cliente
+								</Label>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								Desmarca esta opción si no deseas notificar por email en este
+								momento.
+							</p>
 						</div>
 
 						{/* Observaciones */}

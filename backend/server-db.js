@@ -1837,6 +1837,7 @@ app.get("/api/codigos/historial", async (req, res) => {
 app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
+		const enviarCorreo = datosReserva.enviarCorreo !== false;
 
 		// Se usa normalizeTimeGlobal definida en scope superior
 
@@ -1937,33 +1938,37 @@ app.post("/enviar-reserva", async (req, res) => {
 			reservaGuardada.codigoReserva
 		);
 
-		// Enviar email de confirmación llamando al PHP en Hostinger
-		try {
-			const phpUrl =
-				process.env.PHP_EMAIL_URL ||
-				"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+		// Enviar email de confirmación llamando al PHP en Hostinger si corresponde
+		if (enviarCorreo) {
+			try {
+				const phpUrl =
+					process.env.PHP_EMAIL_URL ||
+					"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
 
-			const emailData = {
-				...datosReserva,
-				codigoReserva: reservaGuardada.codigoReserva,
-				rut: rutFormateado,
-			};
+				const emailData = {
+					...datosReserva,
+					codigoReserva: reservaGuardada.codigoReserva,
+					rut: rutFormateado,
+				};
 
-			console.log("📧 Enviando email de confirmación al PHP...");
+				console.log("📧 Enviando email de confirmación al PHP...");
 
-			const emailResponse = await axios.post(phpUrl, emailData, {
-				headers: { "Content-Type": "application/json" },
-				timeout: 30000, // 30 segundos timeout
-			});
+				const emailResponse = await axios.post(phpUrl, emailData, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 30000, // 30 segundos timeout
+				});
 
-			if (emailResponse.data.success) {
-				console.log("✅ Email enviado correctamente");
-			} else {
-				console.warn("⚠️ Email no se pudo enviar:", emailResponse.data.message);
+				if (emailResponse.data.success) {
+					console.log("✅ Email enviado correctamente");
+				} else {
+					console.warn("⚠️ Email no se pudo enviar:", emailResponse.data.message);
+				}
+			} catch (emailError) {
+				console.error("❌ Error enviando email:", emailError.message);
+				// No fallar la respuesta si el email falla
 			}
-		} catch (emailError) {
-			console.error("❌ Error enviando email:", emailError.message);
-			// No fallar la respuesta si el email falla
+		} else {
+			console.log("ℹ️ Email de confirmación omitido (enviarCorreo = false)");
 		}
 
 		return res.json({
@@ -1985,6 +1990,7 @@ app.post("/enviar-reserva", async (req, res) => {
 app.post("/enviar-reserva-express", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
+		const enviarCorreo = datosReserva.enviarCorreo !== false;
 
 		// Formatear RUT si se proporciona
 		const rutFormateado = datosReserva.rut
@@ -2242,30 +2248,36 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		}
 
 		// Enviar notificación por email usando el PHP de Hostinger
-		try {
-			console.log("📧 Enviando email de notificación express...");
-			const emailDataExpress = {
-				...datosReserva,
-				codigoReserva: reservaExpress.codigoReserva,
-				precio: reservaExpress.precio,
-				totalConDescuento: reservaExpress.totalConDescuento,
-				source: reservaExpress.source || "express_web",
-			};
+		if (enviarCorreo) {
+			try {
+				console.log("📧 Enviando email de notificación express...");
+				const emailDataExpress = {
+					...datosReserva,
+					codigoReserva: reservaExpress.codigoReserva,
+					precio: reservaExpress.precio,
+					totalConDescuento: reservaExpress.totalConDescuento,
+					source: reservaExpress.source || "express_web",
+				};
 
-			const phpUrl =
-				process.env.PHP_EMAIL_URL ||
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+				const phpUrl =
+					process.env.PHP_EMAIL_URL ||
+					"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 
-			const emailResponse = await axios.post(phpUrl, emailDataExpress, {
-				headers: { "Content-Type": "application/json" },
-				timeout: 30000,
-			});
+				const emailResponse = await axios.post(phpUrl, emailDataExpress, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 30000,
+				});
 
-			console.log("✅ Email express enviado exitosamente:", emailResponse.data);
-		} catch (emailError) {
-			console.error(
-				"❌ Error al enviar email express (no afecta la reserva):",
-				emailError.message
+				console.log("✅ Email express enviado exitosamente:", emailResponse.data);
+			} catch (emailError) {
+				console.error(
+					"❌ Error al enviar email express (no afecta la reserva):",
+					emailError.message
+				);
+			}
+		} else {
+			console.log(
+				"ℹ️ Email de notificación express omitido (enviarCorreo = false)"
 			);
 		}
 
