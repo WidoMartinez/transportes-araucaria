@@ -954,11 +954,11 @@ function AdminReservas() {
 				}
 			}
 			// Determinar estado final: respetar la selección del usuario
-			const estadoFinal =
+			let estadoFinal =
 				formData.estado || selectedReserva.estado || "pendiente";
 			const estadoPagoActual =
 				formData.estadoPago || selectedReserva.estadoPago || "pendiente";
-			const estadoPagoSolicitado =
+			let estadoPagoSolicitado =
 				estadoFinal === "completada" ? "pagado" : estadoPagoActual;
 
 			// Determinar monto a enviar para la actualizaciÃ³n de pago.
@@ -996,6 +996,12 @@ function AdminReservas() {
 				if (tipo === "abono") {
 					const necesario = Math.max(umbralAbono - pagoPrevio, 0);
 					montoPagadoValue = necesario > 0 ? necesario : null;
+					if (estadoFinal === "pendiente" || estadoFinal === "pendiente_detalles") {
+						estadoFinal = "confirmada";
+					}
+					if (estadoPagoSolicitado === "pendiente") {
+						estadoPagoSolicitado = "parcial";
+					}
 				} else {
 					montoPagadoValue = null;
 				}
@@ -1042,6 +1048,13 @@ function AdminReservas() {
 			if (!pagoResponse.ok) {
 				throw new Error("Error al actualizar el pago");
 			}
+			let pagoData = null;
+			try {
+				pagoData = await pagoResponse.json();
+			} catch (parseError) {
+				pagoData = null;
+			}
+			const estadoAplicadoBackend = pagoData?.reserva?.estado || null;
 
 			// Aplicar finalmente el estado seleccionado por el usuario (incluye completada)
 			const estadoResponse = await fetch(
@@ -1050,7 +1063,7 @@ function AdminReservas() {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						estado: estadoFinal,
+						estado: estadoAplicadoBackend || estadoFinal,
 						observaciones: formData.observaciones,
 					}),
 				}
