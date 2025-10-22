@@ -1941,10 +1941,28 @@ app.post("/enviar-reserva", async (req, res) => {
 			estadoInicial = "cancelada";
 		}
 
-		const montoPagadoCalculado = Math.max(
-			totalCalculado - saldoCalculado,
-			0
-		);
+		// Determinar monto pagado reportado: solo usar pago explícito o cuando
+		// el estado enviado indique 'pagado'. No inferir pago a partir del
+		// saldo pendiente calculado por defecto, ya que `abonoSugerido` y
+		// `saldoPendiente` son valores informativos en el frontend y no
+		// significan que se haya realizado un pago real.
+		let montoPagadoCalculado = 0;
+		if (
+			datosReserva.pagoMonto !== undefined &&
+			datosReserva.pagoMonto !== null &&
+			datosReserva.pagoMonto !== ""
+		) {
+			montoPagadoCalculado = parsePositiveDecimal(
+				datosReserva.pagoMonto,
+				"pagoMonto",
+				0
+			);
+		} else if (estadoPagoInicial === "pagado") {
+			// Si el cliente/servicio explícitamente indicó 'pagado', asumir pago total
+			montoPagadoCalculado = totalCalculado;
+		} else {
+			montoPagadoCalculado = 0; // No se asume pago alguno
+		}
 		const umbralAbono = Math.max(totalCalculado * 0.4, abonoCalculado || 0);
 
 		let abonoPagado = false;

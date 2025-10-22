@@ -1416,26 +1416,56 @@ function AdminReservas() {
 				}
 			}
 
-		// Calcular saldo pendiente segun el estado seleccionado
+		// Calcular saldo pendiente según el estado seleccionado
+		// Nota: el campo `abonoSugerido` es solo una sugerencia y NO debe
+		// asumirse como pago realizado al crear la reserva. Solo cuando el
+		// estado de pago sea 'pagado' o se entregue un monto explícito
+		// consideramos que existe un pago registrado.
 		const total =
 			parseFloat(newReservaForm.totalConDescuento) ||
 			parseFloat(newReservaForm.precio) ||
 			0;
-		const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
+	// Nota: abonoSugerido se mantiene en los datos pero no se asume como pago.
 
 		let estadoSeleccionado = newReservaForm.estado || "pendiente";
-		const estadoPagoSeleccionado =
-			newReservaForm.estadoPago || "pendiente";
+		const estadoPagoSeleccionado = newReservaForm.estadoPago || "pendiente";
 
-		let saldo = total - abono;
-		if (
-			estadoPagoSeleccionado === "pagado" ||
-			estadoPagoSeleccionado === "reembolsado"
-		) {
+		// Determinar montoPagado y saldo de forma explícita
+		let montoPagado = 0;
+		let saldo = total;
+
+		// Si el admin indicó explícitamente un monto pagado en el formulario
+		// (campo opcional), respetarlo. Este proyecto no expone ese campo
+		// en el formulario nuevo por defecto, pero mantenemos la verificación
+		// por compatibilidad con futuras integraciones.
+		const montoPagadoFormulario =
+			newReservaForm.montoPagado !== undefined && newReservaForm.montoPagado !== ""
+				? parseFloat(newReservaForm.montoPagado) || 0
+				: null;
+
+		if (montoPagadoFormulario !== null) {
+			montoPagado = Math.max(montoPagadoFormulario, 0);
+			saldo = Math.max(total - montoPagado, 0);
+		} else if (estadoPagoSeleccionado === "pagado") {
+			// Si el estado indica pagado, asumimos pago total
+			montoPagado = total;
+			saldo = 0;
+		} else if (estadoPagoSeleccionado === "reembolsado") {
+			// Reembolsado -> sin saldo y sin pago activo
+			montoPagado = 0;
 			saldo = 0;
 		} else if (estadoPagoSeleccionado === "fallido") {
+			// Fallido -> no hay pago
+			montoPagado = 0;
+			saldo = total;
+		} else {
+			// Estado pendiente (por defecto): no considerar el abono sugerido
+			// como pago realizado. Guardamos el abono sugerido por separado
+			// y dejamos saldo = total.
+			montoPagado = 0;
 			saldo = total;
 		}
+
 		if (saldo < 0) saldo = 0;
 
 		if (
@@ -1449,8 +1479,6 @@ function AdminReservas() {
 		) {
 			estadoSeleccionado = "cancelada";
 		}
-
-		const montoPagado = Math.max(total - saldo, 0);
 
 		// Crear destino si es 'otro' y no existe
 			if (
