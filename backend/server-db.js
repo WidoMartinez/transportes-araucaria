@@ -3010,7 +3010,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
 			// Pago completo
 			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "completada";
+			nuevoEstadoReserva = "confirmada"; // Cambiar a confirmada en lugar de completada
 			nuevoSaldoPendiente = 0;
 			abonoPagado = true;
 			saldoPagado = true;
@@ -3037,7 +3037,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			saldoPagado = true;
 			abonoPagado = true;
 			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "completada";
+			nuevoEstadoReserva = "confirmada"; // Cambiar a confirmada
 		}
 
 		const payloadActualizacion = {
