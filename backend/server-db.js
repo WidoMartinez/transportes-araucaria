@@ -1905,11 +1905,29 @@ app.post("/enviar-reserva", async (req, res) => {
 			0
 		);
 
-		const saldoEntrada = parsePositiveDecimal(
-			datosReserva.saldoPendiente,
-			"saldoPendiente",
-			Math.max(totalCalculado - abonoCalculado, 0)
+		// No confiar en saldoPendiente enviado por el cliente cuando no hay
+		// evidencia de pago (pagoMonto o estadoPago 'pagado'). Si no hay
+		// evidencia, forzamos saldo = totalCalculado (es decir, pago 0).
+		const hasSaldoProvided = Object.prototype.hasOwnProperty.call(
+			datosReserva,
+			"saldoPendiente"
 		);
+
+		let saldoEntrada;
+		const pagoMontoProvided =
+			datosReserva.pagoMonto !== undefined && datosReserva.pagoMonto !== null &&
+			datosReserva.pagoMonto !== "";
+
+		if (hasSaldoProvided && (pagoMontoProvided || estadoPagoSolicitado === "pagado")) {
+			saldoEntrada = parsePositiveDecimal(
+				datosReserva.saldoPendiente,
+				"saldoPendiente",
+				Math.max(totalCalculado - abonoCalculado, 0)
+			);
+		} else {
+			// No se asume ningún pago: saldo = total
+			saldoEntrada = totalCalculado;
+		}
 
 		const estadoSolicitado = normalizeEstado(datosReserva.estado);
 		const estadoPagoSolicitado = normalizeEstado(datosReserva.estadoPago);
@@ -1961,6 +1979,16 @@ app.post("/enviar-reserva", async (req, res) => {
 			montoPagadoCalculado = 0; // No se asume pago alguno
 		}
 		const umbralAbono = Math.max(totalCalculado * 0.4, abonoCalculado || 0);
+
+		// Log temporal para depuración: mostrar los valores que se usarán para guardar
+		console.log("[DEBUG] /enviar-reserva - cálculos financieros:", {
+			totalCalculado,
+			abonoCalculado,
+			saldoEntrada,
+			montoPagadoCalculado,
+			umbralAbono,
+			estadoPagoInicial,
+		});
 
 		let abonoPagado = false;
 		let saldoPagado = false;
@@ -2264,10 +2292,49 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			);
 		} else {
 			// CREAR nueva reserva
-			const codigoReserva = await generarCodigoReserva();
-			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
+				const codigoReserva = await generarCodigoReserva();
+				console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
 
-			reservaExpress = await Reserva.create({
+				// Calcular totales y abono para decidir saldo guardado.
+				const totalCalculadoExpress = parsePositiveDecimal(
+					datosReserva.totalConDescuento,
+					"totalConDescuento",
+					parsePositiveDecimal(datosReserva.precio, "precio", 0)
+				);
+				const abonoCalculadoExpress = parsePositiveDecimal(
+					datosReserva.abonoSugerido,
+					"abonoSugerido",
+					0
+				);
+
+				const pagoMontoProvidedExpress =
+					datosReserva.pagoMonto !== undefined &&
+					datosReserva.pagoMonto !== null &&
+					datosReserva.pagoMonto !== "";
+
+				let saldoPendienteParaGuardar;
+				if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
+					// Si frontend informó un saldo explícito y hay pago indicado, respetarlo
+					saldoPendienteParaGuardar = parsePositiveDecimal(
+						datosReserva.saldoPendiente,
+						"saldoPendiente",
+						Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
+					);
+				} else {
+					// No hay evidencia de pago: saldo = total
+					saldoPendienteParaGuardar = totalCalculadoExpress;
+				}
+
+				// Log temporal para depuración del flujo express
+				console.log("[DEBUG] /enviar-reserva-express - cálculos financieros:", {
+					totalCalculadoExpress,
+					abonoCalculadoExpress,
+					pagoMontoProvidedExpress,
+					saldoPendienteParaGuardar,
+					estadoPago: datosReserva.estadoPago,
+				});
+
+				reservaExpress = await Reserva.create({
 				codigoReserva: codigoReserva,
 				nombre: datosReserva.nombre,
 				email: emailNormalizado,
@@ -2294,16 +2361,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				horaRegreso: null,
 
 				// Campos financieros con validación
-				abonoSugerido: parsePositiveDecimal(
-					datosReserva.abonoSugerido,
-					"abonoSugerido",
-					0
-				),
-				saldoPendiente: parsePositiveDecimal(
-					datosReserva.saldoPendiente,
-					"saldoPendiente",
-					0
-				),
+				abonoSugerido: abonoCalculadoExpress,
+				saldoPendiente: saldoPendienteParaGuardar,
 				descuentoBase: parsePositiveDecimal(
 					datosReserva.descuentoBase,
 					"descuentoBase",
