@@ -738,49 +738,42 @@ function AdminReservas() {
 
 	// Abrir modal de detalles
 	const handleViewDetails = async (reserva) => {
-		// Log para depuración: inspeccionar la reserva que se abre en el modal
-		console.log("[DEBUG] handleViewDetails - reserva recibida:", reserva);
-		// Log token admin para verificar si se está enviando al backend (no loguear tokens en producción)
-		console.log(
-			"[DEBUG] ADMIN_TOKEN (localStorage):",
-			localStorage.getItem("adminToken")
-		);
-		setSelectedReserva(reserva);
-		setShowDetailDialog(true);
-		// Cargar historial de asignaciones (uso interno)
-		try {
-			// Log adicional: mostrar la constante ADMIN_TOKEN y el valor actual en localStorage
-			console.log("[DEBUG] ADMIN_TOKEN (constante):", ADMIN_TOKEN);
-			const dynamicToken =
-				typeof window !== "undefined"
-					? localStorage.getItem("adminToken")
-					: null;
-			console.log(
-				"[DEBUG] admin token dinámico (localStorage):",
-				dynamicToken ? "(presente)" : "(ausente)"
-			);
-			const resp = await fetch(
-				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
-				{
-					headers: dynamicToken
-						? { Authorization: `Bearer ${dynamicToken}` }
-						: {},
+			// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
+			try {
+				const respReserva = await fetch(`${apiUrl}/api/reservas/${reserva.id}`);
+				if (respReserva.ok) {
+					const latest = await respReserva.json();
+					setSelectedReserva(latest);
+				} else {
+					// fallback a la reserva recibida si el GET falla
+					setSelectedReserva(reserva);
 				}
-			);
-			if (resp.ok) {
-				const data = await resp.json();
-				setHistorialAsignaciones(
-					Array.isArray(data.historial) ? data.historial : []
-				);
-			} else {
-				setHistorialAsignaciones([]);
+			} catch (e) {
+				console.warn("No se pudo recargar reserva (usar local):", e.message);
+				setSelectedReserva(reserva);
 			}
-		} catch (err) {
-			console.error("Error cargando historial de asignaciones:", err);
-			setHistorialAsignaciones([]);
-		} finally {
-			setLoadingHistorial(false);
-		}
+
+			setShowDetailDialog(true);
+
+			// Cargar historial de asignaciones (uso interno) usando token dinámico si existe
+			try {
+				const dynamicToken =
+					typeof window !== "undefined" ? localStorage.getItem("adminToken") : null;
+				const resp = await fetch(`${apiUrl}/api/reservas/${reserva.id}/asignaciones`, {
+					headers: dynamicToken ? { Authorization: `Bearer ${dynamicToken}` } : {},
+				});
+				if (resp.ok) {
+					const data = await resp.json();
+					setHistorialAsignaciones(Array.isArray(data.historial) ? data.historial : []);
+				} else {
+					setHistorialAsignaciones([]);
+				}
+			} catch (err) {
+				console.error("Error cargando historial de asignaciones:", err);
+				setHistorialAsignaciones([]);
+			} finally {
+				setLoadingHistorial(false);
+			}
 	};
 
 	// Guardar cambios
@@ -840,7 +833,7 @@ function AdminReservas() {
 				(origenFinalEdit && origenFinalEdit !== selectedReserva.origen) ||
 				(destinoFinalEdit && destinoFinalEdit !== selectedReserva.destino)
 			) {
-				// Crear destino si es 'otro' y no existe
+				// Si el destino es 'otro' y no existe en el catálogo, crear registro inactivo
 				if (
 					editDestinoEsOtro &&
 					destinoFinalEdit &&
@@ -913,22 +906,12 @@ function AdminReservas() {
 				}
 			}
 			// Determinar estado final: respetar la selección del usuario
-			const estadoFinal = formData.estado;
-			const estadoResponse = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						estado: estadoFinal,
-						observaciones: formData.observaciones,
-					}),
-				}
-			);
-
-			if (!estadoResponse.ok) {
-				throw new Error("Error al actualizar el estado");
-			}
+			const estadoFinal =
+				formData.estado || selectedReserva.estado || "pendiente";
+			const estadoPagoActual =
+				formData.estadoPago || selectedReserva.estadoPago || "pendiente";
+			const estadoPagoSolicitado =
+				estadoFinal === "completada" ? "pagado" : estadoPagoActual;
 
 			// Determinar monto a enviar para la actualizaciÃ³n de pago.
 			// Reglas:
@@ -963,16 +946,26 @@ function AdminReservas() {
 			}
 
 			// Actualizar pago
+			// Si el estado pasa a completada, aseguramos cancelar cualquier saldo restante
+			if (estadoFinal === "completada") {
+				const restante = Math.max(totalReserva - pagoPrevio, 0);
+				if (restante > 0) {
+					montoPagadoValue = restante;
+				}
+			}
+
 			const pagoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
 				{
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						estadoPago: formData.estadoPago,
-						metodoPago: formData.metodoPago,
-						referenciaPago: formData.referenciaPago,
+						estadoPago: estadoPagoSolicitado,
+						metodoPago: formData.metodoPago || selectedReserva.metodoPago || null,
+						referenciaPago:
+							formData.referenciaPago || selectedReserva.referenciaPago || null,
 						tipoPago: formData.tipoPago || null,
+						estadoReserva: estadoFinal,
 						montoPagado:
 							montoPagadoValue !== null && !Number.isNaN(montoPagadoValue)
 								? montoPagadoValue
@@ -983,6 +976,23 @@ function AdminReservas() {
 
 			if (!pagoResponse.ok) {
 				throw new Error("Error al actualizar el pago");
+			}
+
+			// Aplicar finalmente el estado seleccionado por el usuario (incluye completada)
+			const estadoResponse = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						estado: estadoFinal,
+						observaciones: formData.observaciones,
+					}),
+				}
+			);
+
+			if (!estadoResponse.ok) {
+				throw new Error("Error al actualizar el estado");
 			}
 
 			// Recargar datos
@@ -1115,6 +1125,21 @@ function AdminReservas() {
 		// Verificar si la Ãºltima parte parece una patente chilena (ej: ABCD12, abcd12)
 		return /^[a-z]{2,4}\d{2,3}$/i.test(last) || /[A-Z0-9]{6,}/i.test(last);
 	};
+
+	const hasVehiculoAsignado = Boolean(
+		selectedReserva &&
+			(selectedReserva.vehiculo_asignado ||
+				selectedReserva.vehiculoId ||
+				isAsignada(selectedReserva))
+	);
+
+	const hasConductorAsignado = Boolean(
+		selectedReserva &&
+			(selectedReserva.conductor_asignado ||
+				selectedReserva.conductorId ||
+				(selectedReserva.conductor &&
+					selectedReserva.conductor !== "Por asignar"))
+	);
 
 	// Formatear moneda
 	const formatCurrency = (amount) => {
@@ -2190,14 +2215,17 @@ function AdminReservas() {
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
-														{/* Mostrar botón solo si la reserva está confirmada y aún no tiene asignación */}
-														{reserva?.estado === "confirmada" &&
-															!isAsignada(reserva) && (
+														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
+														{reserva?.estado === "confirmada" && (
 																<Button
-																	variant="secondary"
+																	variant={isAsignada(reserva) ? "outline" : "secondary"}
 																	size="sm"
 																	onClick={() => handleAsignar(reserva)}
-																	title="Asignar vehículo y conductor"
+																	title={
+																		isAsignada(reserva)
+																			? "Reasignar vehículo y conductor"
+																			: "Asignar vehículo y conductor"
+																	}
 																>
 																	<span role="img" aria-label="auto">
 																		🚗
@@ -4065,83 +4093,74 @@ function AdminReservas() {
 							</label>
 						</div>
 
-						{/*
-													Regla estricta de visibilidad para reasignar:
-													Mostrar esta sección (y el botón 'Reasignar') únicamente cuando
-													la reserva esté en estado 'confirmada' y tanto el vehículo como
-													el conductor estén asignados. Se consideran asignados si existen
-													los objetos `vehiculo_asignado` / `conductor_asignado` o si
-													existen campos/ids equivalentes en `selectedReserva`.
-												*/}
-						{selectedReserva?.estado === "confirmada" &&
-							(selectedReserva?.vehiculo_asignado ||
-								selectedReserva?.vehiculoId ||
-								selectedReserva?.vehiculo) &&
-							(selectedReserva?.conductor_asignado ||
-								selectedReserva?.conductorId ||
-								selectedReserva?.conductor) && (
-								<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
-									<p className="font-semibold">Asignación actual:</p>
-									{selectedReserva.vehiculo_asignado && (
-										<p>
-											🚗 Vehículo: {selectedReserva.vehiculo_asignado.patente} (
-											{selectedReserva.vehiculo_asignado.tipo})
-										</p>
-									)}
-									{selectedReserva.conductor_asignado && (
-										<p>
-											🧑‍✈️ Conductor: {selectedReserva.conductor_asignado.nombre}
-										</p>
-									)}
-
-									<div className="mt-2">
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() => handleAsignar(selectedReserva)}
-										>
-											Reasignar vehículo / conductor
-										</Button>
-									</div>
+						{/* Mostrar info de asignación solo si la reserva confirmada ya tiene vehículo */}
+						{selectedReserva?.estado === "confirmada" && hasVehiculoAsignado && (
+							<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+								<p className="font-semibold">Asignación actual:</p>
+								{selectedReserva.vehiculo_asignado ? (
+									<p>
+										🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} ({selectedReserva.vehiculo_asignado.patente})
+									</p>
+								) : selectedReserva?.vehiculo ? (
+									<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
+								) : null}
+								{hasConductorAsignado ? (
+									selectedReserva.conductor_asignado ? (
+										<p>👤 Conductor: {selectedReserva.conductor_asignado.nombre}</p>
+									) : selectedReserva?.conductor ? (
+										<p>👤 Conductor: {selectedReserva.conductor}</p>
+									) : null
+								) : (
+									<p className="text-muted-foreground">No hay conductor asignado actualmente.</p>
+								)}
+								<div className="mt-2">
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => handleAsignar(selectedReserva)}
+									>
+										Reasignar vehículo / conductor
+									</Button>
 								</div>
-							)}
-					</div>
+							</div>
+						)}
 
-					<div className="flex justify-end gap-2">
-						<Button
-							variant="outline"
-							onClick={() => setShowAsignarDialog(false)}
-							disabled={loadingAsignacion}
-						>
-							Cancelar
-						</Button>
-						{(() => {
-							const sameAssignment =
-								assignedVehiculoId !== null &&
-								vehiculoSeleccionado &&
-								Number(vehiculoSeleccionado) === Number(assignedVehiculoId) &&
-								String(assignedConductorId ?? "none") ===
-									String(conductorSeleccionado || "none");
-							return (
-								<Button
-									onClick={handleGuardarAsignacion}
-									disabled={
-										loadingAsignacion || !vehiculoSeleccionado || sameAssignment
-									}
-								>
-									{loadingAsignacion ? (
-										<>
-											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-											Guardando...
-										</>
-									) : sameAssignment ? (
-										"Sin cambios"
-									) : (
-										"Asignar"
-									)}
-								</Button>
-							);
-						})()}
+						<div className="flex justify-end gap-2">
+							<Button
+								variant="outline"
+								onClick={() => setShowAsignarDialog(false)}
+								disabled={loadingAsignacion}
+							>
+								Cancelar
+							</Button>
+							{(() => {
+								const sameAssignment =
+									assignedVehiculoId !== null &&
+									vehiculoSeleccionado &&
+									Number(vehiculoSeleccionado) === Number(assignedVehiculoId) &&
+									String(assignedConductorId ?? "none") ===
+										String(conductorSeleccionado || "none");
+								return (
+									<Button
+										onClick={handleGuardarAsignacion}
+										disabled={
+											loadingAsignacion || !vehiculoSeleccionado || sameAssignment
+										}
+									>
+										{loadingAsignacion ? (
+											<>
+												<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+												Guardando...
+											</>
+										) : sameAssignment ? (
+											"Sin cambios"
+										) : (
+											"Asignar"
+										)}
+									</Button>
+								);
+							})()}
+						</div>
 					</div>
 				</DialogContent>
 			</Dialog>

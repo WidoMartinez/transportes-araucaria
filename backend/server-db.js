@@ -2964,7 +2964,18 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			referenciaPago,
 			montoPagado,
 			tipoPago: _tipoPago,
+			estadoReserva: estadoReservaRaw,
 		} = req.body;
+
+		const estadoReservaSolicitado =
+			typeof estadoReservaRaw === "string"
+				? estadoReservaRaw.toLowerCase()
+				: null;
+		const estadoReservaValido =
+			estadoReservaSolicitado === "completada"
+				? "completada"
+				: null;
+		const deseaCompletada = estadoReservaValido === "completada";
 
 		const reserva = await Reserva.findByPk(id, { transaction });
 		if (!reserva) {
@@ -2992,7 +3003,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		}
 
 		let nuevoEstadoPago = estadoPago || reserva.estadoPago;
-		let nuevoEstadoReserva = reserva.estado;
+		let nuevoEstadoReserva = estadoReservaValido || reserva.estado;
 		let nuevoSaldoPendiente = saldoPendienteActual;
 		let abonoPagado = reserva.abonoPagado;
 		let saldoPagado = reserva.saldoPagado;
@@ -3007,10 +3018,13 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		}
 
 		// Evaluar estados según acumulado
-		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+		if (pagoTotalNuevo >= totalReserva) {
 			// Pago completo
 			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "confirmada"; // Cambiar a confirmada en lugar de completada
+			nuevoEstadoReserva =
+				deseaCompletada || reserva.estado === "completada"
+					? "completada"
+					: "confirmada";
 			nuevoSaldoPendiente = 0;
 			abonoPagado = true;
 			saldoPagado = true;
@@ -3037,7 +3051,16 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			saldoPagado = true;
 			abonoPagado = true;
 			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "confirmada"; // Cambiar a confirmada
+			nuevoEstadoReserva =
+				deseaCompletada || reserva.estado === "completada"
+					? "completada"
+					: "confirmada";
+		}
+
+		// Si se solicitó explícitamente marcar como completada y el pago quedó pagado,
+		// aseguramos que el estado final respete esa elección incluso con total 0.
+		if (deseaCompletada && nuevoEstadoPago === "pagado") {
+			nuevoEstadoReserva = "completada";
 		}
 
 		const payloadActualizacion = {
