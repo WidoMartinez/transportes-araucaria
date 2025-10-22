@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -71,8 +72,8 @@ import {
 
 function AdminReservas() {
 	// Estado para cambio masivo de estado de pago
-	const [bulkEstadoPago, setBulkEstadoPago] = useState("");
-	const [showBulkPaymentDialog, setShowBulkPaymentDialog] = useState(false);
+	// Eliminado bulkEstadoPago y setBulkEstadoPago por no usarse
+	// Eliminado showBulkPaymentDialog por no usarse
 	// Token de administrador
 	const ADMIN_TOKEN =
 		import.meta.env.VITE_ADMIN_TOKEN ||
@@ -233,7 +234,7 @@ function AdminReservas() {
 					: [];
 				setDestinosCatalog(names);
 			}
-		} catch (e) {
+		} catch {
 			setDestinosCatalog([]);
 		}
 	};
@@ -286,7 +287,9 @@ function AdminReservas() {
 						parsed = obj;
 						break;
 					}
-				} catch {}
+				} catch {
+					// Ignorar errores de parseo de localStorage
+				}
 			}
 			if (!parsed) return { ...DEFAULT_COLUMNAS_VISIBLES };
 			const merged = { ...DEFAULT_COLUMNAS_VISIBLES };
@@ -306,7 +309,9 @@ function AdminReservas() {
 				COLUMNAS_STORAGE_KEY,
 				JSON.stringify(columnasVisibles)
 			);
-		} catch {}
+		} catch {
+			// Ignorar errores de localStorage
+		}
 	}, [columnasVisibles]);
 
 	// Estado para modal de historial de cliente
@@ -315,6 +320,80 @@ function AdminReservas() {
 
 	// Estados para acciones masivas
 	const [selectedReservas, setSelectedReservas] = useState([]);
+
+	// Función para exportar reservas seleccionadas a XLS
+	const exportarSeleccionadosXLS = () => {
+		// Definir las columnas a exportar (etiquetas visibles en el Excel)
+		const columnasExportar = [
+			{ key: "id", label: "ID Reserva" },
+			{ key: "clienteId", label: "ID Cliente" },
+			{ key: "cliente", label: "Nombre" },
+			{ key: "email", label: "Correo" },
+			{ key: "telefono", label: "Teléfono" },
+			{ key: "rut", label: "RUT" },
+			{ key: "fecha", label: "Fecha" },
+			{ key: "hora", label: "Hora" },
+			{ key: "origen", label: "Origen" },
+			{ key: "destino", label: "Destino" },
+			{ key: "totalConDescuento", label: "Total" },
+			{ key: "estado", label: "Estado" },
+			{ key: "pagoMonto", label: "Monto Pagado" },
+			{ key: "saldoPendiente", label: "Saldo Pendiente" },
+		];
+
+		// Cabeceras (primera fila)
+		const headers = columnasExportar.map((c) => c.label);
+
+		// Si hay reservas seleccionadas, obtener los objetos desde el estado `reservas`
+		const filas = [];
+		if (selectedReservas && selectedReservas.length > 0) {
+			// selectedReservas guarda ids (string o number). Mapear a objetos completos.
+			const seleccionObjs = reservas.filter((r) =>
+				selectedReservas.includes(r.id) || selectedReservas.includes(String(r.id))
+			);
+			seleccionObjs.forEach((reserva) => {
+				const fila = columnasExportar.map((col) => {
+					let val = reserva[col.key];
+					if (val === undefined || val === null) return "";
+					// Si el valor es un objeto, intentar extraer campos comunes
+					if (typeof val === "object") {
+						if (val.nombre) return String(val.nombre);
+						if (val.name) return String(val.name);
+						if (val.email) return String(val.email);
+						if (val.telefono) return String(val.telefono || val.phone || val.tel || "");
+						// Si es un objeto más complejo, serializar de forma compacta
+						try {
+							return JSON.stringify(val);
+						} catch {
+							return String(val);
+						}
+					}
+					// Formatear fechas simples
+					if (col.key === "fecha") {
+						try {
+							const d = new Date(val);
+							if (!isNaN(d)) return d.toLocaleString("es-CL");
+						} catch {
+							// ignore
+						}
+					}
+					return String(val);
+				});
+				filas.push(fila);
+			});
+		}
+
+		// Construir matriz de datos: primera fila = headers, luego filas (si existen)
+		const aoa = [headers, ...filas];
+
+		// Crear hoja y libro
+		const ws = XLSX.utils.aoa_to_sheet(aoa);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Reservas");
+
+		// Descargar archivo (si no hay filas, el archivo tendrá solo la cabecera)
+		XLSX.writeFile(wb, "reservas_seleccionadas.xlsx");
+	};
 	const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 	const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
 	const [bulkEstado, setBulkEstado] = useState("");
@@ -507,7 +586,7 @@ function AdminReservas() {
 								Array.isArray(data.historial) ? data.historial : []
 							);
 						}
-					} catch (e) {
+					} catch {
 						// noop
 					}
 					setLoadingHistorial(false);
@@ -553,17 +632,22 @@ function AdminReservas() {
 			}
 
 			const data = await response.json();
-			const reservasNormalizadas = (data.reservas || []).map((reserva) => {
-				const cliente = reserva.cliente || {};
-				return {
-					...reserva,
-					esCliente: cliente.esCliente || false, // Respetar bandera de cliente existente
-					clasificacionCliente: cliente.clasificacion || null,
-					totalReservas: cliente.totalReservas || 0,
-					abonoPagado: Boolean(reserva.abonoPagado),
-					saldoPagado: Boolean(reserva.saldoPagado),
-				};
-			});
+			   const reservasNormalizadas = (data.reservas || []).map((reserva) => {
+				   const cliente = reserva.cliente || {};
+				   return {
+					   ...reserva,
+					   esCliente: cliente.esCliente || false, // Respetar bandera de cliente existente
+					   nombre: cliente.nombre || reserva.nombre || "",
+					   rut: cliente.rut || reserva.rut || "",
+					   email: cliente.email || reserva.email || "",
+					   telefono: cliente.telefono || reserva.telefono || "",
+					   clienteId: cliente.id || reserva.clienteId || null,
+					   clasificacionCliente: cliente.clasificacion || null,
+					   totalReservas: cliente.totalReservas || 0,
+					   abonoPagado: Boolean(reserva.abonoPagado),
+					   saldoPagado: Boolean(reserva.saldoPagado),
+				   };
+			   });
 			setReservas(reservasNormalizadas);
 			const nuevasTotalPages = data.pagination?.totalPages || 1;
 			setTotalPages(nuevasTotalPages);
@@ -671,7 +755,7 @@ function AdminReservas() {
 			} else {
 				setHistorialAsignaciones([]);
 			}
-		} catch (e) {
+		} catch {
 			setHistorialAsignaciones([]);
 		} finally {
 			setLoadingHistorial(false);
@@ -757,7 +841,9 @@ function AdminReservas() {
 								precioIdaVuelta: 0,
 							}),
 						});
-					} catch {}
+					} catch {
+						// Ignorar errores al guardar destino
+					}
 				}
 				// TambiÃ©n registrar origen si es 'otro' y no existe
 				if (
@@ -781,7 +867,9 @@ function AdminReservas() {
 								precioIdaVuelta: 0,
 							}),
 						});
-					} catch {}
+					} catch {
+						// Ignorar errores al guardar origen
+					}
 				}
 				// Actualizar ruta
 				const ADMIN_TOKEN = localStorage.getItem("adminToken");
@@ -991,14 +1079,6 @@ function AdminReservas() {
 				) : null}
 			</div>
 		);
-	};
-
-	// Helper para saber si la reserva estÃ¡ 100% pagada segÃºn montos
-	const isPagoCompleto = (reserva) => {
-		const montoTotal =
-			Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
-		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
-		return montoTotal > 0 && montoPagado >= montoTotal;
 	};
 
 	// Helper para detectar si ya fue asignado un vehÃ­culo previamente
@@ -1391,41 +1471,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Cambiar estado de pago de reservas seleccionadas
-	const handleBulkChangePayment = async () => {
-		if (!bulkEstadoPago) {
-			alert("Por favor selecciona un estado de pago");
-			return;
-		}
-
-		setProcessingBulk(true);
-		try {
-			const promises = selectedReservas.map((id) =>
-				fetch(`${apiUrl}/api/reservas/${id}/pago`, {
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ estadoPago: bulkEstadoPago }),
-				})
-			);
-
-			await Promise.all(promises);
-
-			await fetchReservas();
-			await fetchEstadisticas();
-			setSelectedReservas([]);
-			setShowBulkPaymentDialog(false);
-			setBulkEstadoPago("");
-			alert(
-				`Estado de pago actualizado para ${selectedReservas.length} reserva(s)`
-			);
-		} catch (error) {
-			console.error("Error actualizando estado de pago:", error);
-			alert("Error al actualizar el estado de pago de algunas reservas");
-		} finally {
-			setProcessingBulk(false);
-		}
-		// Los bloques catch estaban fuera de contexto, se eliminan para evitar errores de sintaxis
-	};
+	// Eliminada función handleBulkChangePayment por no usarse
 
 	if (loading && reservas.length === 0) {
 		return (
@@ -1830,17 +1876,18 @@ function AdminReservas() {
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setShowBulkStatusDialog(true)}
+										onClick={exportarSeleccionadosXLS}
 									>
-										Cambiar Estado
+										Exportar a Excel
 									</Button>
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setShowBulkPaymentDialog(true)}
+										onClick={() => setShowBulkStatusDialog(true)}
 									>
-										Cambiar Estado Pago
+										Cambiar Estado
 									</Button>
+									   {/* Botón Cambiar Estado Pago eliminado por limpieza de código */}
 									<Button
 										variant="destructive"
 										size="sm"
