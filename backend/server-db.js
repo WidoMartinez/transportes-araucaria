@@ -2902,17 +2902,20 @@ app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 
 // Actualizar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
+	console.log("PUT /api/reservas/:id/estado (primer endpoint) llamado con id:", req.params.id, "estado:", req.body.estado);
 	try {
 		const { id } = req.params;
 		const { estado, observaciones } = req.body;
 
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
+			console.log("Reserva no encontrada:", id);
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
 		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
 		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			console.log("Intento de cambiar a pendiente con pagos:", reserva.pagoMonto);
 			return res
 				.status(400)
 				.json({
@@ -2926,6 +2929,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			observaciones: observaciones || reserva.observaciones,
 		});
 
+		console.log("Estado actualizado exitosamente para reserva:", id, "a:", estado);
 		res.json({
 			success: true,
 			message: "Estado de reserva actualizado",
@@ -4263,17 +4267,20 @@ app.delete("/api/reservas/:id", async (req, res) => {
 
 // Cambiar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
+	console.log("PUT /api/reservas/:id/estado llamado con id:", req.params.id, "estado:", req.body?.estado);
 	try {
 		const { id } = req.params;
 		const { estado, observaciones } = req.body || {};
 
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
+			console.log("Reserva no encontrada:", id);
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
 		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
 		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			console.log("Intento de cambiar a pendiente con pagos:", reserva.pagoMonto);
 			return res
 				.status(400)
 				.json({
@@ -4295,6 +4302,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			observaciones: obsValue,
 		});
 
+		console.log("Estado actualizado exitosamente para reserva:", id, "a:", estado);
 		res.json({
 			success: true,
 			message: "Estado actualizado",
