@@ -2117,7 +2117,7 @@ function AdminReservas() {
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
-														{/* Mostrar botÃ³n solo si estÃ¡ confirmada y aÃºn no tiene asignaciÃ³n */}
+														{/* Mostrar botón solo si la reserva está confirmada y aún no tiene asignación */}
 														{reserva?.estado === "confirmada" &&
 															!isAsignada(reserva) && (
 																<Button
@@ -2126,7 +2126,9 @@ function AdminReservas() {
 																	onClick={() => handleAsignar(reserva)}
 																	title="Asignar vehículo y conductor"
 																>
-																	ðŸš—
+																	<span role="img" aria-label="auto">
+																		🚗
+																	</span>
 																</Button>
 															)}
 													</div>
