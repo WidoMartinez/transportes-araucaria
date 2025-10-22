@@ -1862,8 +1862,113 @@ app.post("/enviar-reserva", async (req, res) => {
 			hora: datosReserva.hora,
 			pasajeros: datosReserva.pasajeros,
 			totalConDescuento: datosReserva.totalConDescuento,
+			estado: datosReserva.estado,
+			estadoPago: datosReserva.estadoPago,
 			source: datosReserva.source || "web",
 		});
+
+		const normalizeEstado = (valor) =>
+			typeof valor === "string" ? valor.trim().toLowerCase() : "";
+
+		const estadosReservaValidos = new Set([
+			"pendiente",
+			"pendiente_detalles",
+			"confirmada",
+			"cancelada",
+			"completada",
+		]);
+
+		const estadosPagoValidos = new Set([
+			"pendiente",
+			"aprobado",
+			"parcial",
+			"pagado",
+			"fallido",
+			"reembolsado",
+		]);
+
+		const precioCalculado = parsePositiveDecimal(
+			datosReserva.precio,
+			"precio",
+			0
+		);
+
+		const totalCalculado = parsePositiveDecimal(
+			datosReserva.totalConDescuento,
+			"totalConDescuento",
+			precioCalculado
+		);
+
+		const abonoCalculado = parsePositiveDecimal(
+			datosReserva.abonoSugerido,
+			"abonoSugerido",
+			0
+		);
+
+		const saldoEntrada = parsePositiveDecimal(
+			datosReserva.saldoPendiente,
+			"saldoPendiente",
+			Math.max(totalCalculado - abonoCalculado, 0)
+		);
+
+		const estadoSolicitado = normalizeEstado(datosReserva.estado);
+		const estadoPagoSolicitado = normalizeEstado(datosReserva.estadoPago);
+
+		let estadoInicial = estadosReservaValidos.has(estadoSolicitado)
+			? estadoSolicitado
+			: "pendiente";
+		let estadoPagoInicial = estadosPagoValidos.has(estadoPagoSolicitado)
+			? estadoPagoSolicitado
+			: "pendiente";
+
+		let saldoCalculado = saldoEntrada;
+		if (
+			estadoPagoInicial === "pagado" ||
+			estadoPagoInicial === "reembolsado"
+		) {
+			saldoCalculado = 0;
+		} else if (estadoPagoInicial === "fallido") {
+			saldoCalculado = totalCalculado;
+		}
+		if (saldoCalculado < 0) saldoCalculado = 0;
+
+		if (estadoPagoInicial === "pagado" && estadoInicial === "pendiente") {
+			estadoInicial = "confirmada";
+		} else if (
+			estadoPagoInicial === "reembolsado" &&
+			estadoInicial === "pendiente"
+		) {
+			estadoInicial = "cancelada";
+		}
+
+		const montoPagadoCalculado = Math.max(
+			totalCalculado - saldoCalculado,
+			0
+		);
+		const umbralAbono = Math.max(totalCalculado * 0.4, abonoCalculado || 0);
+
+		let abonoPagado = false;
+		let saldoPagado = false;
+
+		if (estadoPagoInicial === "pagado") {
+			abonoPagado = true;
+			if (totalCalculado > 0) {
+				saldoPagado = true;
+			}
+		} else if (estadoPagoInicial === "reembolsado") {
+			abonoPagado = false;
+			saldoPagado = false;
+		} else if (montoPagadoCalculado >= umbralAbono && totalCalculado > 0) {
+			abonoPagado = true;
+		}
+
+		if (
+			estadoPagoInicial === "pagado" &&
+			totalCalculado > 0 &&
+			saldoCalculado <= 0
+		) {
+			saldoPagado = true;
+		}
 
 		// Guardar reserva en la base de datos con validaciones robustas
 		const reservaGuardada = await Reserva.create({
@@ -1878,25 +1983,20 @@ app.post("/enviar-reserva", async (req, res) => {
 			fecha: datosReserva.fecha || new Date(),
 			hora: datosReserva.hora || "00:00:00",
 			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
-			precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+			precio: precioCalculado,
 			vehiculo: datosReserva.vehiculo || "",
 			numeroVuelo: datosReserva.numeroVuelo || "",
 			hotel: datosReserva.hotel || "",
 			equipajeEspecial: datosReserva.equipajeEspecial || "",
-			sillaInfantil: datosReserva.sillaInfantil === "si" || false,
+			sillaInfantil: Boolean(
+				datosReserva.sillaInfantil === "si" ||
+				datosReserva.sillaInfantil === true
+			),
 			idaVuelta: Boolean(datosReserva.idaVuelta),
 			fechaRegreso: datosReserva.fechaRegreso || null,
 			horaRegreso: datosReserva.horaRegreso || null,
-			abonoSugerido: parsePositiveDecimal(
-				datosReserva.abonoSugerido,
-				"abonoSugerido",
-				0
-			),
-			saldoPendiente: parsePositiveDecimal(
-				datosReserva.saldoPendiente,
-				"saldoPendiente",
-				0
-			),
+			abonoSugerido: abonoCalculado,
+			saldoPendiente: saldoCalculado,
 			descuentoBase: parsePositiveDecimal(
 				datosReserva.descuentoBase,
 				"descuentoBase",
@@ -1917,18 +2017,21 @@ app.post("/enviar-reserva", async (req, res) => {
 				"descuentoOnline",
 				0
 			),
-			totalConDescuento: parsePositiveDecimal(
-				datosReserva.totalConDescuento,
-				"totalConDescuento",
-				0
-			),
+			totalConDescuento: totalCalculado,
 			mensaje: datosReserva.mensaje || "",
 			source: datosReserva.source || "web",
-			estado: "pendiente",
+			estado: estadoInicial,
 			ipAddress: req.ip || req.connection.remoteAddress || "",
 			userAgent: req.get("User-Agent") || "",
 			codigoDescuento: datosReserva.codigoDescuento || "",
-			estadoPago: "pendiente",
+			estadoPago: estadoPagoInicial,
+			metodoPago: datosReserva.metodoPago || "",
+			referenciaPago: datosReserva.referenciaPago || "",
+			pagoGateway: datosReserva.metodoPago || null,
+			pagoMonto: montoPagadoCalculado > 0 ? montoPagadoCalculado : null,
+			pagoFecha: montoPagadoCalculado > 0 ? new Date() : null,
+			abonoPagado,
+			saldoPagado,
 		});
 
 		console.log(

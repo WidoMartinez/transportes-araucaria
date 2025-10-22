@@ -70,6 +70,10 @@ import {
 	AlertDialogTitle,
 } from "./ui/alert-dialog";
 
+const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
+const normalizeDestino = (value) =>
+	(value || "").toString().trim().toLowerCase();
+
 function AdminReservas() {
 	// Estado para cambio masivo de estado de pago
 	// Eliminado bulkEstadoPago y setBulkEstadoPago por no usarse
@@ -231,14 +235,50 @@ function AdminReservas() {
 			if (resp.ok) {
 				const data = await resp.json();
 				const names = Array.isArray(data.destinos)
-					? data.destinos.map((d) => d.nombre).filter(Boolean)
+					? data.destinos
+							.map((d) =>
+								d && d.nombre ? String(d.nombre).trim() : ""
+							)
+							.filter(Boolean)
 					: [];
-				setDestinosCatalog(names);
+				const uniqueNames = [...new Set(names)];
+				const includesAeropuerto = uniqueNames.some(
+					(n) => normalizeDestino(n) === normalizeDestino(AEROPUERTO_LABEL)
+				);
+				const merged = includesAeropuerto
+					? uniqueNames
+					: [AEROPUERTO_LABEL, ...uniqueNames];
+				setDestinosCatalog(merged);
 			}
 		} catch {
-			setDestinosCatalog([]);
+			setDestinosCatalog([AEROPUERTO_LABEL]);
 		}
 	};
+
+	const destinosOptions = useMemo(() => {
+		const seen = new Set();
+		const result = [];
+		const pushValue = (value) => {
+			const normalized = normalizeDestino(value);
+			if (!normalized || seen.has(normalized)) return;
+			seen.add(normalized);
+			result.push(value.toString().trim());
+		};
+		pushValue(AEROPUERTO_LABEL);
+		destinosCatalog.forEach(pushValue);
+		return result;
+	}, [destinosCatalog]);
+
+	const destinosSet = useMemo(() => {
+		const set = new Set();
+		destinosOptions.forEach((value) => set.add(normalizeDestino(value)));
+		return set;
+	}, [destinosOptions]);
+
+	const destinoExiste = useCallback(
+		(valor) => destinosSet.has(normalizeDestino(valor)),
+		[destinosSet]
+	);
 
 	// Estados para autocompletado de clientes
 	const [clienteSugerencias, setClienteSugerencias] = useState([]);
@@ -847,7 +887,7 @@ function AdminReservas() {
 				if (
 					editDestinoEsOtro &&
 					destinoFinalEdit &&
-					!destinosCatalog.includes(destinoFinalEdit)
+					!destinoExiste(destinoFinalEdit)
 				) {
 					try {
 						const ADMIN_TOKEN = localStorage.getItem("adminToken");
@@ -873,7 +913,7 @@ function AdminReservas() {
 				if (
 					editOrigenEsOtro &&
 					origenFinalEdit &&
-					!destinosCatalog.includes(origenFinalEdit)
+					!destinoExiste(origenFinalEdit)
 				) {
 					try {
 						const ADMIN_TOKEN = localStorage.getItem("adminToken");
@@ -1376,19 +1416,47 @@ function AdminReservas() {
 				}
 			}
 
-			// Calcular saldo pendiente si no estÃ¡ establecido
-			const total =
-				parseFloat(newReservaForm.totalConDescuento) ||
-				parseFloat(newReservaForm.precio) ||
-				0;
-			const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
-			const saldo = total - abono;
+		// Calcular saldo pendiente segun el estado seleccionado
+		const total =
+			parseFloat(newReservaForm.totalConDescuento) ||
+			parseFloat(newReservaForm.precio) ||
+			0;
+		const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
 
-			// Crear destino si es 'otro' y no existe
+		let estadoSeleccionado = newReservaForm.estado || "pendiente";
+		const estadoPagoSeleccionado =
+			newReservaForm.estadoPago || "pendiente";
+
+		let saldo = total - abono;
+		if (
+			estadoPagoSeleccionado === "pagado" ||
+			estadoPagoSeleccionado === "reembolsado"
+		) {
+			saldo = 0;
+		} else if (estadoPagoSeleccionado === "fallido") {
+			saldo = total;
+		}
+		if (saldo < 0) saldo = 0;
+
+		if (
+			estadoPagoSeleccionado === "pagado" &&
+			estadoSeleccionado === "pendiente"
+		) {
+			estadoSeleccionado = "confirmada";
+		} else if (
+			estadoPagoSeleccionado === "reembolsado" &&
+			estadoSeleccionado === "pendiente"
+		) {
+			estadoSeleccionado = "cancelada";
+		}
+
+		const montoPagado = Math.max(total - saldo, 0);
+
+		// Crear destino si es 'otro' y no existe
 			if (
 				destinoEsOtro &&
 				destinoFinal &&
-				!destinosCatalog.includes(destinoFinal)
+				!destinoExiste(destinoFinal)
 			) {
 				try {
 					const ADMIN_TOKEN = localStorage.getItem("adminToken");
@@ -1414,19 +1482,16 @@ function AdminReservas() {
 				}
 			}
 
-			// Si el estado de pago es 'pagado', la reserva se marca como 'confirmada'
-			let estadoFinal = newReservaForm.estado;
-			if (newReservaForm.estadoPago === "pagado") {
-				estadoFinal = "confirmada";
-			}
 			const reservaData = {
 				...newReservaForm,
-				estado: estadoFinal,
+				estado: estadoSeleccionado,
+				estadoPago: estadoPagoSeleccionado,
 				clienteId: clienteId,
 				origen: origenFinal,
 				destino: destinoFinal,
 				totalConDescuento: total,
 				saldoPendiente: saldo,
+				pagoMonto: montoPagado > 0 ? montoPagado : undefined,
 				source: "manual",
 			};
 
@@ -3321,10 +3386,7 @@ function AdminReservas() {
 											}
 										>
 											<option value="">Seleccionar origen</option>
-											<option value="Aeropuerto La Araucanía">
-												Aeropuerto La Araucanía
-											</option>
-											{destinosCatalog.map((n) => (
+											{destinosOptions.map((n) => (
 												<option key={n} value={n}>
 													{n}
 												</option>
@@ -3366,7 +3428,7 @@ function AdminReservas() {
 											}
 										>
 											<option value="">Seleccionar destino</option>
-											{destinosCatalog.map((n) => (
+											{destinosOptions.map((n) => (
 												<option key={n} value={n}>
 													{n}
 												</option>
