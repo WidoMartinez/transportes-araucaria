@@ -378,7 +378,7 @@ function HeroExpress({
 							</p>
 							<Button
 								variant="outline"
-								className="border-white text-white hover:bg-white/10"
+								className="bg-transparent border-white text-white hover:bg-white/10"
 								asChild
 							>
 								<a href="#consultar-reserva">Continuar con código</a>
