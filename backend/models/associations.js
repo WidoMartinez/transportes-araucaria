@@ -5,6 +5,7 @@ import Reserva from "./Reserva.js";
 import Cliente from "./Cliente.js";
 import Vehiculo from "./Vehiculo.js";
 import Conductor from "./Conductor.js";
+import Gasto from "./Gasto.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -39,6 +40,39 @@ export const setupAssociations = () => {
 	Reserva.belongsTo(Conductor, {
 		foreignKey: "conductorId",
 		as: "conductor_asignado",
+	});
+
+	// Relación: Reserva -> Gastos (Una reserva puede tener muchos gastos)
+	Reserva.hasMany(Gasto, {
+		foreignKey: "reservaId",
+		as: "gastos",
+	});
+	
+	Gasto.belongsTo(Reserva, {
+		foreignKey: "reservaId",
+		as: "reserva",
+	});
+
+	// Relación: Conductor -> Gastos (Un conductor puede tener muchos gastos)
+	Conductor.hasMany(Gasto, {
+		foreignKey: "conductorId",
+		as: "gastos",
+	});
+	
+	Gasto.belongsTo(Conductor, {
+		foreignKey: "conductorId",
+		as: "conductor",
+	});
+
+	// Relación: Vehiculo -> Gastos (Un vehículo puede tener muchos gastos)
+	Vehiculo.hasMany(Gasto, {
+		foreignKey: "vehiculoId",
+		as: "gastos",
+	});
+	
+	Gasto.belongsTo(Vehiculo, {
+		foreignKey: "vehiculoId",
+		as: "vehiculo",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");

@@ -17,6 +17,7 @@ import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
+import Gasto from "./models/Gasto.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
@@ -5174,6 +5175,497 @@ app.post("/api/flow-confirmation", async (req, res) => {
 	} catch (error) {
 		console.error("❌ Error procesando confirmación Flow:", error.message);
 		res.status(500).send("Error");
+	}
+});
+
+// --- RUTAS DE GASTOS ---
+//
+// Nota: Se asume que existe un modelo Gasto en ./models/Gasto.js exportado
+// y que las asociaciones con Reserva, Conductor y Vehiculo están definidas en models/associations.js
+//
+// Las rutas requieren autenticación admin (authAdmin) para operaciones de creación/edición/eliminación
+//
+
+// Obtener todos los gastos de una reserva
+app.get("/api/reservas/:id/gastos", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const gastos = await Gasto.findAll({
+			where: { reservaId: id },
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre", "apellido"],
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculo",
+					attributes: ["id", "patente", "marca", "modelo"],
+				},
+			],
+			order: [["fecha", "DESC"]],
+		});
+
+		const totalGastos = gastos.reduce(
+			(sum, gasto) => sum + parseFloat(gasto.monto || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			gastos,
+			totalGastos,
+		});
+	} catch (error) {
+		console.error("Error al obtener gastos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener gastos",
+		});
+	}
+});
+
+// Crear un nuevo gasto
+app.post("/api/gastos", authAdmin, async (req, res) => {
+	try {
+		const {
+			reservaId,
+			tipoGasto,
+			monto,
+			porcentaje,
+			descripcion,
+			fecha,
+			comprobante,
+			conductorId,
+			vehiculoId,
+			observaciones,
+		} = req.body;
+
+		// Validaciones
+		if (!reservaId || !tipoGasto || !monto) {
+			return res.status(400).json({
+				success: false,
+				error: "Faltan campos requeridos: reservaId, tipoGasto, monto",
+			});
+		}
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(reservaId);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Calcular monto automáticamente si es comisión Flow
+		let montoFinal = parseFloat(monto);
+		if (tipoGasto === "comision_flow" && porcentaje) {
+			montoFinal =
+				(parseFloat(reserva.totalConDescuento) * parseFloat(porcentaje)) / 100;
+		}
+
+		const gasto = await Gasto.create({
+			reservaId,
+			tipoGasto,
+			monto: montoFinal,
+			porcentaje: porcentaje || null,
+			descripcion: descripcion || null,
+			fecha: fecha || new Date(),
+			comprobante: comprobante || null,
+			conductorId: conductorId || null,
+			vehiculoId: vehiculoId || null,
+			observaciones: observaciones || null,
+		});
+
+		// Cargar relaciones para la respuesta
+		const gastoCompleto = await Gasto.findByPk(gasto.id, {
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre", "apellido"],
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculo",
+					attributes: ["id", "patente", "marca", "modelo"],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			gasto: gastoCompleto,
+		});
+	} catch (error) {
+		console.error("Error al crear gasto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al crear gasto",
+		});
+	}
+});
+
+// Actualizar un gasto
+app.put("/api/gastos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			tipoGasto,
+			monto,
+			porcentaje,
+			descripcion,
+			fecha,
+			comprobante,
+			conductorId,
+			vehiculoId,
+			observaciones,
+		} = req.body;
+
+		const gasto = await Gasto.findByPk(id);
+		if (!gasto) {
+			return res.status(404).json({
+				success: false,
+				error: "Gasto no encontrado",
+			});
+		}
+
+		await gasto.update({
+			tipoGasto: tipoGasto || gasto.tipoGasto,
+			monto: monto !== undefined ? monto : gasto.monto,
+			porcentaje: porcentaje !== undefined ? porcentaje : gasto.porcentaje,
+			descripcion: descripcion !== undefined ? descripcion : gasto.descripcion,
+			fecha: fecha || gasto.fecha,
+			comprobante: comprobante !== undefined ? comprobante : gasto.comprobante,
+			conductorId: conductorId !== undefined ? conductorId : gasto.conductorId,
+			vehiculoId: vehiculoId !== undefined ? vehiculoId : gasto.vehiculoId,
+			observaciones:
+				observaciones !== undefined ? observaciones : gasto.observaciones,
+		});
+
+		// Cargar relaciones para la respuesta
+		const gastoActualizado = await Gasto.findByPk(id, {
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre", "apellido"],
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculo",
+					attributes: ["id", "patente", "marca", "modelo"],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			gasto: gastoActualizado,
+		});
+	} catch (error) {
+		console.error("Error al actualizar gasto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al actualizar gasto",
+		});
+	}
+});
+
+// Eliminar un gasto
+app.delete("/api/gastos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const gasto = await Gasto.findByPk(id);
+		if (!gasto) {
+			return res.status(404).json({
+				success: false,
+				error: "Gasto no encontrado",
+			});
+		}
+
+		await gasto.destroy();
+
+		res.json({
+			success: true,
+			message: "Gasto eliminado correctamente",
+		});
+	} catch (error) {
+		console.error("Error al eliminar gasto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al eliminar gasto",
+		});
+	}
+});
+
+// Obtener estadísticas por conductor
+app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
+	try {
+		const conductores = await Conductor.findAll({
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					attributes: ["id", "monto", "tipoGasto", "fecha"],
+				},
+			],
+		});
+
+		const estadisticas = conductores.map((conductor) => {
+			const reservas = conductor.reservas || [];
+			const gastos = conductor.gastos || [];
+
+			const totalReservas = reservas.length;
+			const reservasCompletadas = reservas.filter(
+				(r) => r.estado === "completada"
+			).length;
+			const totalIngresos = reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			);
+			const totalGastos = gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			);
+			const pagosConductor = gastos
+				.filter((g) => g.tipoGasto === "pago_conductor")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+
+			return {
+				id: conductor.id,
+				nombre: `${conductor.nombre} ${conductor.apellido}`,
+				rut: conductor.rut,
+				telefono: conductor.telefono,
+				email: conductor.email,
+				totalReservas,
+				reservasCompletadas,
+				totalIngresos,
+				totalGastos,
+				pagosConductor,
+				utilidad: totalIngresos - totalGastos,
+			};
+		});
+
+		res.json({
+			success: true,
+			estadisticas,
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas de conductores:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas de conductores",
+		});
+	}
+});
+
+// Obtener estadísticas por vehículo
+app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
+	try {
+		const vehiculos = await Vehiculo.findAll({
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					attributes: ["id", "monto", "tipoGasto", "fecha"],
+				},
+			],
+		});
+
+		const estadisticas = vehiculos.map((vehiculo) => {
+			const reservas = vehiculo.reservas || [];
+			const gastos = vehiculo.gastos || [];
+
+			const totalReservas = reservas.length;
+			const reservasCompletadas = reservas.filter(
+				(r) => r.estado === "completada"
+			).length;
+			const totalIngresos = reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			);
+			const totalGastos = gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			);
+			const gastoCombustible = gastos
+				.filter((g) => g.tipoGasto === "combustible")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+			const gastoMantenimiento = gastos
+				.filter((g) => g.tipoGasto === "mantenimiento")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+
+			return {
+				id: vehiculo.id,
+				patente: vehiculo.patente,
+				marca: vehiculo.marca,
+				modelo: vehiculo.modelo,
+				tipo: vehiculo.tipo,
+				capacidad: vehiculo.capacidad,
+				totalReservas,
+				reservasCompletadas,
+				totalIngresos,
+				totalGastos,
+				gastoCombustible,
+				gastoMantenimiento,
+				utilidad: totalIngresos - totalGastos,
+			};
+		});
+
+		res.json({
+			success: true,
+			estadisticas,
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas de vehículos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas de vehículos",
+		});
+	}
+});
+
+// Obtener estadísticas detalladas de un conductor
+app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id, {
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					include: [
+						{
+							model: Vehiculo,
+							as: "vehiculo_asignado",
+							attributes: ["id", "patente", "marca", "modelo"],
+						},
+					],
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					include: [
+						{
+							model: Reserva,
+							as: "reserva",
+							attributes: ["id", "codigoReserva", "fecha"],
+						},
+					],
+				},
+			],
+		});
+
+		if (!conductor) {
+			return res.status(404).json({
+				success: false,
+				error: "Conductor no encontrado",
+			});
+		}
+
+		const reservas = conductor.reservas || [];
+		const gastos = conductor.gastos || [];
+
+		// Agrupar gastos por tipo
+		const gastosPorTipo = gastos.reduce((acc, gasto) => {
+			const tipo = gasto.tipoGasto;
+			if (!acc[tipo]) {
+				acc[tipo] = { total: 0, cantidad: 0 };
+			}
+			acc[tipo].total += parseFloat(gasto.monto || 0);
+			acc[tipo].cantidad += 1;
+			return acc;
+		}, {});
+
+		// Vehículos asociados
+		const vehiculosSet = new Set();
+		reservas.forEach((r) => {
+			if (r.vehiculo_asignado) {
+				vehiculosSet.add(
+					JSON.stringify({
+						id: r.vehiculo_asignado.id,
+						patente: r.vehiculo_asignado.patente,
+						marca: r.vehiculo_asignado.marca,
+						modelo: r.vehiculo_asignado.modelo,
+					})
+				);
+			}
+		});
+		const vehiculosAsociados = Array.from(vehiculosSet).map((v) => JSON.parse(v));
+
+		res.json({
+			success: true,
+			conductor: {
+				id: conductor.id,
+				nombre: `${conductor.nombre} ${conductor.apellido}`,
+				rut: conductor.rut,
+				telefono: conductor.telefono,
+				email: conductor.email,
+			},
+			reservas: reservas.map((r) => ({
+				id: r.id,
+				codigoReserva: r.codigoReserva,
+				fecha: r.fecha,
+				origen: r.origen,
+				destino: r.destino,
+				estado: r.estado,
+				totalConDescuento: r.totalConDescuento,
+				vehiculo: r.vehiculo_asignado
+					? {
+							id: r.vehiculo_asignado.id,
+							patente: r.vehiculo_asignado.patente,
+							marca: r.vehiculo_asignado.marca,
+							modelo: r.vehiculo_asignado.modelo,
+					  }
+					: null,
+			})),
+			gastos: gastos.map((g) => ({
+				id: g.id,
+				tipoGasto: g.tipoGasto,
+				monto: g.monto,
+				fecha: g.fecha,
+				descripcion: g.descripcion,
+				reserva: g.reserva
+					? {
+							id: g.reserva.id,
+							codigoReserva: g.reserva.codigoReserva,
+							fecha: g.reserva.fecha,
+					  }
+					: null,
+			})),
+			gastosPorTipo,
+			vehiculosAsociados,
+			totalReservas: reservas.length,
+			totalIngresos: reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			),
+			totalGastos: gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			),
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas del conductor:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas del conductor",
+		});
 	}
 });
 
