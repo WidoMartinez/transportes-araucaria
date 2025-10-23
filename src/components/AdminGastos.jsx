@@ -457,19 +457,23 @@ function AdminGastos() {
 												</div>
 											</div>
 
+											{/* Ajuste: usar "none" como valor para evitar el error de Radix UI cuando el valor es vacío */}
 											<div>
 												<Label>Conductor</Label>
 												<Select
-													value={formData.conductorId}
+													/* Si formData.conductorId es vacío, mostramos "none" para Radix */
+													value={formData.conductorId || "none"}
 													onValueChange={(value) =>
-														setFormData({ ...formData, conductorId: value })
+														// Mantener vacío en el estado si el usuario elige "none"
+														setFormData({ ...formData, conductorId: value === "none" ? "" : value })
 													}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Selecciona un conductor (opcional)" />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value="">Ninguno</SelectItem>
+														{/* Valor "none" evita problemas con valores vacíos en Radix */}
+														<SelectItem value="none">Ninguno</SelectItem>
 														{conductores.map((conductor) => (
 															<SelectItem
 																key={conductor.id}
@@ -482,19 +486,23 @@ function AdminGastos() {
 												</Select>
 											</div>
 
+											{/* Ajuste similar para Vehículo */}
 											<div>
 												<Label>Vehículo</Label>
 												<Select
-													value={formData.vehiculoId}
+													/* Si formData.vehiculoId es vacío, mostramos "none" para Radix */
+													value={formData.vehiculoId || "none"}
 													onValueChange={(value) =>
-														setFormData({ ...formData, vehiculoId: value })
+														// Mantener vacío en el estado si el usuario elige "none"
+														setFormData({ ...formData, vehiculoId: value === "none" ? "" : value })
 													}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Selecciona un vehículo (opcional)" />
 													</SelectTrigger>
 													<SelectContent>
-														<SelectItem value="">Ninguno</SelectItem>
+														{/* Valor "none" evita problemas con valores vacíos en Radix */}
+														<SelectItem value="none">Ninguno</SelectItem>
 														{vehiculos.map((vehiculo) => (
 															<SelectItem
 																key={vehiculo.id}
@@ -508,6 +516,7 @@ function AdminGastos() {
 											</div>
 
 											<div>
+											{/* Sugerencia: ¿Deseas hacer un commit? Recomiendo hacerlo después de este cambio. */}
 												<Label>Descripción</Label>
 												<Textarea
 													value={formData.descripcion}

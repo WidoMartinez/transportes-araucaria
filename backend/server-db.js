@@ -23,7 +23,9 @@ import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
+import addGastosTable from "./migrations/add-gastos-table.js";
 import setupAssociations from "./models/associations.js";
+// ¿Desea que haga un commit con este cambio? Se sugiere hacerlo después de agregar la migración de gastos.
 
 dotenv.config();
 
@@ -553,6 +555,8 @@ const initializeDatabase = async () => {
 		await addTipoPagoColumn();
 		await addAbonoFlags();
 		await addCodigosPagoTable();
+		await addGastosTable(); // Agrega ejecución de la migración para la tabla de gastos
+		// Sugerencia: realizar un commit después de implementar esta migración
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {

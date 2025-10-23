@@ -4,6 +4,15 @@ Este directorio contiene scripts de migración para actualizar el esquema de la 
 
 ## 📋 Migraciones Disponibles
 
+### `add-gastos-table.js` ⭐ **NUEVO**
+Crea la tabla `gastos` para registrar gastos asociados a reservas.
+
+**Cambios incluidos:**
+- Crea tabla `gastos` con todos sus campos e índices
+- Relaciones con reservas, conductores y vehículos
+- Índices para optimizar búsquedas
+- Tipos de gasto: comisión Flow, peajes, combustible, conductor, etc.
+
 ### `add-cliente-fields.js`
 Agrega la tabla `clientes` y campos relacionados a la tabla `reservas`.
 
@@ -13,7 +22,7 @@ Agrega la tabla `clientes` y campos relacionados a la tabla `reservas`.
 - Agrega campo `rut` a tabla `reservas`
 - Crea índices para optimizar búsquedas
 
-### `add-codigo-reserva-column.js` ⭐ **NUEVO**
+### `add-codigo-reserva-column.js`
 Agrega el campo `codigo_reserva` único a cada reserva.
 
 **Cambios incluidos:**
