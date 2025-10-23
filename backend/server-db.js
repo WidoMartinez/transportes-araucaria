@@ -5200,7 +5200,7 @@ app.get("/api/reservas/:id/gastos", authAdmin, async (req, res) => {
 				{
 					model: Conductor,
 					as: "conductor",
-					attributes: ["id", "nombre", "apellido"],
+					attributes: ["id", "nombre"],
 				},
 				{
 					model: Vehiculo,
@@ -5289,7 +5289,7 @@ app.post("/api/gastos", authAdmin, async (req, res) => {
 				{
 					model: Conductor,
 					as: "conductor",
-					attributes: ["id", "nombre", "apellido"],
+					attributes: ["id", "nombre"],
 				},
 				{
 					model: Vehiculo,
@@ -5355,7 +5355,7 @@ app.put("/api/gastos/:id", authAdmin, async (req, res) => {
 				{
 					model: Conductor,
 					as: "conductor",
-					attributes: ["id", "nombre", "apellido"],
+					attributes: ["id", "nombre"],
 				},
 				{
 					model: Vehiculo,
@@ -5446,7 +5446,7 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 
 			return {
 				id: conductor.id,
-				nombre: `${conductor.nombre} ${conductor.apellido}`,
+				nombre: conductor.nombre,
 				rut: conductor.rut,
 				telefono: conductor.telefono,
 				email: conductor.email,
@@ -5616,7 +5616,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 			success: true,
 			conductor: {
 				id: conductor.id,
-				nombre: `${conductor.nombre} ${conductor.apellido}`,
+				nombre: conductor.nombre,
 				rut: conductor.rut,
 				telefono: conductor.telefono,
 				email: conductor.email,
