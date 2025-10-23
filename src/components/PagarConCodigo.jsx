@@ -16,6 +16,7 @@ function PagarConCodigo() {
 	const [codigoValidado, setCodigoValidado] = useState(null);
 	const [error, setError] = useState("");
 	const [step, setStep] = useState(1); // 1: Validar código, 2: Completar datos, 3: Pagar
+	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' | 'abono'
 
 	// Datos del cliente
 	const [formData, setFormData] = useState({
@@ -41,6 +42,14 @@ function PagarConCodigo() {
 		}).format(value || 0);
 	};
 
+	const montoTotal = codigoValidado ? Number(codigoValidado.monto) || 0 : 0;
+	const abonoSugerido = codigoValidado
+		? Math.max(Math.round(montoTotal * 0.4), 0)
+		: 0;
+	const saldoPendiente = Math.max(montoTotal - abonoSugerido, 0);
+	const montoSeleccionado =
+		selectedPaymentType === "abono" ? abonoSugerido : montoTotal;
+
 	// Validar el código de pago
 	const validarCodigo = async () => {
 		if (!codigo.trim()) {
@@ -65,6 +74,7 @@ function PagarConCodigo() {
 			}
 
 			setCodigoValidado(data.codigoPago);
+			setSelectedPaymentType("total");
 			setStep(2);
 		} catch (error) {
 			console.error("Error validando código:", error);
@@ -129,6 +139,21 @@ function PagarConCodigo() {
 		setProcesando(true);
 		setLoadingGateway("flow");
 		setError("");
+
+		if (!montoSeleccionado || montoSeleccionado <= 0) {
+			setError(
+				"El monto a pagar no es válido. Contacta a soporte para obtener ayuda."
+			);
+			setProcesando(false);
+			setLoadingGateway(null);
+			return;
+		}
+
+		const descripcionPago =
+			selectedPaymentType === "abono"
+				? `Abono 40% - Código ${codigoValidado.codigo}`
+				: `Pago total - Código ${codigoValidado.codigo}`;
+
 		try {
 			const reservaPayload = {
 				nombre: formData.nombre,
@@ -143,8 +168,8 @@ function PagarConCodigo() {
 				fecha: formData.fecha,
 				// hora se añade condicionalmente más abajo
 				pasajeros: codigoValidado.pasajeros || 1,
-				precio: codigoValidado.monto,
-				totalConDescuento: codigoValidado.monto,
+				precio: montoTotal,
+				totalConDescuento: montoTotal,
 				vehiculo: codigoValidado.vehiculo || "Por asignar",
 				numeroVuelo: formData.numeroVuelo,
 				hotel: formData.hotel,
@@ -152,6 +177,10 @@ function PagarConCodigo() {
 				idaVuelta: !!codigoValidado.idaVuelta,
 				referenciaPago: codigoValidado.codigo,
 				source: "codigo_pago",
+				abonoSugerido: selectedPaymentType === "abono" ? abonoSugerido : 0,
+				saldoPendiente:
+					selectedPaymentType === "abono" ? saldoPendiente : montoTotal,
+				tipoPago: selectedPaymentType,
 			};
 
 			// Añadir hora solo si el usuario la proporcionó
@@ -189,8 +218,8 @@ function PagarConCodigo() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					gateway: "flow",
-					amount: parseFloat(codigoValidado.monto),
-					description,
+					amount: parseFloat(montoSeleccionado),
+					description: `${description} • ${descripcionPago}`,
 					email: formData.email,
 				}),
 			});
@@ -492,6 +521,67 @@ function PagarConCodigo() {
 										</Alert>
 									)}
 
+									{/* Selección del monto a pagar */}
+									<div className="space-y-3">
+										<h4 className="font-semibold text-lg">Monto a pagar</h4>
+										<p className="text-sm text-muted-foreground">
+											Elige si deseas pagar la totalidad o abonar el 40% para
+											reservar tu traslado.
+										</p>
+										<div className="grid gap-3 md:grid-cols-2">
+											<Button
+												type="button"
+												variant="outline"
+												onClick={() => setSelectedPaymentType("abono")}
+												disabled={procesando || abonoSugerido <= 0}
+												className={`h-auto p-4 flex flex-col items-start gap-1 text-left transition-all ${
+													selectedPaymentType === "abono"
+														? "border-primary bg-primary/5 shadow-md"
+														: "border-gray-200"
+												}`}
+											>
+												<span className="text-sm font-semibold">Abonar 40%</span>
+												<span className="text-xl font-bold text-primary">
+													{formatCurrency(abonoSugerido)}
+												</span>
+												<span className="text-xs text-muted-foreground">
+													Reserva tu viaje pagando una parte ahora
+												</span>
+											</Button>
+											<Button
+												type="button"
+												variant="outline"
+												onClick={() => setSelectedPaymentType("total")}
+												disabled={procesando || montoTotal <= 0}
+												className={`h-auto p-4 flex flex-col items-start gap-1 text-left transition-all ${
+													selectedPaymentType === "total"
+														? "border-primary bg-primary/5 shadow-md"
+														: "border-gray-200"
+												}`}
+											>
+												<span className="text-sm font-semibold">Pagar 100%</span>
+												<span className="text-xl font-bold text-primary">
+													{formatCurrency(montoTotal)}
+												</span>
+												<span className="text-xs text-muted-foreground">
+													Completa el pago total del servicio
+												</span>
+											</Button>
+										</div>
+										<p className="text-sm text-muted-foreground">
+											Pagarás ahora:{" "}
+											<span className="font-semibold text-gray-900">
+												{formatCurrency(montoSeleccionado)}
+											</span>
+										</p>
+										{selectedPaymentType === "abono" && (
+											<p className="text-xs text-amber-600">
+												Saldo pendiente al momento del servicio:{" "}
+												{formatCurrency(saldoPendiente)}
+											</p>
+										)}
+									</div>
+
 									{/* Métodos de pago */}
 									<div className="space-y-4">
 										<h4 className="font-semibold text-lg">Método de pago</h4>
@@ -500,7 +590,9 @@ function PagarConCodigo() {
 												type="button"
 												variant="outline"
 												onClick={procesarPagoConCodigoFlow}
-												disabled={procesando}
+												disabled={
+													procesando || !montoSeleccionado || montoSeleccionado <= 0
+												}
 												className="h-auto p-6 flex flex-col items-center gap-3 w-full"
 											>
 												{loadingGateway === "flow" ? (
@@ -516,6 +608,9 @@ function PagarConCodigo() {
 												<span className="text-xs text-muted-foreground">
 													Webpay • Tarjetas • Transferencia
 												</span>
+												<span className="text-xs text-gray-600 font-semibold">
+													Monto: {formatCurrency(montoSeleccionado)}
+												</span>
 											</Button>
 										</div>
 									</div>
@@ -528,6 +623,7 @@ function PagarConCodigo() {
 												setStep(1);
 												setCodigoValidado(null);
 												setError("");
+												setSelectedPaymentType("total");
 											}}
 											disabled={procesando}
 										>
