@@ -483,17 +483,27 @@ function PagarConCodigo() {
 
 											<div className="space-y-2">
 												<Label htmlFor="hora">
-													Hora del servicio{" "}
-													<span className="text-red-500">*</span>
+													Hora del servicio <span className="text-red-500">*</span>
 												</Label>
-												<Input
+												<select
 													id="hora"
 													name="hora"
-													type="time"
 													value={formData.hora}
 													onChange={handleInputChange}
 													required
-												/>
+													className="h-10 border rounded px-3 w-full"
+												>
+													<option value="">Selecciona la hora</option>
+													{Array.from({ length: ((21 - 8) * 4) + 1 }, (_, i) => {
+														const totalMinutes = 8 * 60 + i * 15;
+														const horas = Math.floor(totalMinutes / 60);
+														const minutos = totalMinutes % 60;
+														const horaStr = `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
+														return (
+															<option key={horaStr} value={horaStr}>{horaStr}</option>
+														);
+													})}
+												</select>
 											</div>
 
 											<div className="space-y-2">
