@@ -2823,7 +2823,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			horaRegreso:
 				normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
 			// No escribir campos virtuales; solo estado
-			estado: reserva.estado === "completada" ? "completada" : "confirmada",
+				estado: "confirmada",
 		};
 
 		await reserva.update(datosActualizados);
