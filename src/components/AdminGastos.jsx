@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { getBackendUrl } from "../lib/backend";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -112,11 +112,6 @@ function AdminGastos() {
 		}
 	}, [reservaSeleccionada]);
 
-	useEffect(() => {
-		setDraftGastos([]);
-		setShowBulkDialog(false);
-	}, [reservaSeleccionada?.id]);
-
 	const fetchReservas = async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/reservas`, {
@@ -185,37 +180,66 @@ function AdminGastos() {
 		}
 	};
 
-	const createDraftGasto = () => {
-		const defaultConductorId =
-			reservaSeleccionada?.conductorId != null
-				? reservaSeleccionada.conductorId.toString()
-				: "";
-		const defaultVehiculoId =
-			reservaSeleccionada?.vehiculoId != null
-				? reservaSeleccionada.vehiculoId.toString()
-				: "";
+	const createDraftGasto = useCallback(
+		(initialTipoGasto = "") => {
+			const defaultConductorId =
+				reservaSeleccionada?.conductorId != null
+					? reservaSeleccionada.conductorId.toString()
+					: "";
+			const defaultVehiculoId =
+				reservaSeleccionada?.vehiculoId != null
+					? reservaSeleccionada.vehiculoId.toString()
+					: "";
 
-		return {
-			id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-			tipoGasto: "",
-			monto: "",
-			porcentaje: "",
-			descripcion: "",
-			fecha: new Date().toISOString().split("T")[0],
-			comprobante: "",
-			conductorId: defaultConductorId,
-			vehiculoId: defaultVehiculoId,
-			observaciones: "",
-		};
-	};
+			const fechaPorDefecto =
+				reservaSeleccionada?.fecha ??
+				new Date().toISOString().split("T")[0];
+
+			const draft = {
+				id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+				tipoGasto: initialTipoGasto,
+				monto: "",
+				porcentaje: "",
+				descripcion: "",
+				fecha: fechaPorDefecto,
+				comprobante: "",
+				conductorId: defaultConductorId,
+				vehiculoId: defaultVehiculoId,
+				observaciones: "",
+			};
+
+			if (
+				initialTipoGasto === "comision_flow" &&
+				reservaSeleccionada?.totalConDescuento
+			) {
+				const porcentaje = 3.19;
+				const base = parseFloat(reservaSeleccionada.totalConDescuento) || 0;
+				draft.porcentaje = porcentaje.toString();
+				draft.monto = base > 0 ? ((base * porcentaje) / 100).toFixed(2) : "";
+			}
+
+			return draft;
+		},
+		[reservaSeleccionada]
+	);
+
+	useEffect(() => {
+		if (!reservaSeleccionada?.id) {
+			setDraftGastos([]);
+			setShowBulkDialog(false);
+			return;
+		}
+
+		const initialDrafts = TIPOS_GASTO.map((tipo) => createDraftGasto(tipo.value));
+		setDraftGastos(initialDrafts);
+		setShowBulkDialog(true);
+	}, [reservaSeleccionada?.id, createDraftGasto]);
 
 	const handleBulkDialogChange = (open) => {
 		if (open) {
 			setDraftGastos((prev) =>
 				prev.length > 0 ? prev : [createDraftGasto()]
 			);
-		} else {
-			setDraftGastos([]);
 		}
 		setShowBulkDialog(open);
 	};
@@ -232,6 +256,15 @@ function AdminGastos() {
 		setDraftGastos((prev) =>
 			prev.map((draft) => (draft.id === id ? { ...draft, ...changes } : draft))
 		);
+	};
+
+	const isDraftWithData = (draft) => {
+		if (!draft) return false;
+		const montoVal = draft.monto != null && String(draft.monto).trim() !== "";
+		const textFields = [draft.descripcion, draft.comprobante, draft.observaciones]
+			.map((campo) => (campo != null ? String(campo).trim() : ""))
+			.filter(Boolean);
+		return montoVal || textFields.length > 0;
 	};
 
 	const handleDraftTipoChange = (id, value) => {
@@ -276,20 +309,34 @@ function AdminGastos() {
 			return;
 		}
 
-		const hasIncompleteDraft = draftGastos.some(
-			(draft) =>
-				(draft.tipoGasto && (!draft.monto || !draft.fecha)) ||
-				(draft.monto && !draft.tipoGasto)
-		);
+		const hasIncompleteDraft = draftGastos.some((draft) => {
+			if (!isDraftWithData(draft)) {
+				return false;
+			}
+
+			const hasTipo = Boolean(draft.tipoGasto);
+			const hasMonto =
+				draft.monto != null && String(draft.monto).trim() !== "";
+			const hasFecha =
+				draft.fecha != null && String(draft.fecha).trim() !== "";
+
+			return !(hasTipo && hasMonto && hasFecha);
+		});
 
 		if (hasIncompleteDraft) {
 			alert("Completa tipo, monto y fecha para todos los gastos antes de guardar");
 			return;
 		}
 
-		const validDrafts = draftGastos.filter(
-			(draft) => draft.tipoGasto && draft.monto && draft.fecha
-		);
+		const validDrafts = draftGastos.filter((draft) => {
+			if (!isDraftWithData(draft)) return false;
+			const hasTipo = Boolean(draft.tipoGasto);
+			const hasMonto =
+				draft.monto != null && String(draft.monto).trim() !== "";
+			const hasFecha =
+				draft.fecha != null && String(draft.fecha).trim() !== "";
+			return hasTipo && hasMonto && hasFecha;
+		});
 
 		if (validDrafts.length === 0) {
 			alert("Agrega al menos un gasto con tipo, monto y fecha");
@@ -326,7 +373,10 @@ function AdminGastos() {
 			}
 
 			await fetchGastos(reservaSeleccionada.id);
-			setDraftGastos([]);
+			const refreshedDrafts = TIPOS_GASTO.map((tipo) =>
+				createDraftGasto(tipo.value)
+			);
+			setDraftGastos(refreshedDrafts);
 			setShowBulkDialog(false);
 		} catch (error) {
 			console.error("Error al guardar gastos:", error);
@@ -456,7 +506,28 @@ function AdminGastos() {
 
 	const getNombreConductor = (conductor) => {
 		if (!conductor) return "";
-		const partes = [conductor.nombre, conductor.apellido].filter(Boolean);
+
+		const limpiarParte = (valor) => {
+			if (valor == null) return null;
+			const texto = String(valor).trim();
+			if (
+				texto === "" ||
+				texto.toLowerCase() === "undefined" ||
+				texto.toLowerCase() === "null"
+			) {
+				return null;
+			}
+			return texto;
+		};
+
+		if (typeof conductor === "string") {
+			return limpiarParte(conductor) ?? "";
+		}
+
+		const partes = [conductor.nombre, conductor.apellido]
+			.map(limpiarParte)
+			.filter(Boolean);
+
 		return partes.join(" ");
 	};
 
@@ -487,6 +558,21 @@ function AdminGastos() {
 		const value = parseFloat(draft.monto);
 		return acc + (Number.isNaN(value) ? 0 : value);
 	}, 0);
+
+	const totalPagoConductor = useMemo(() => {
+		return gastos.reduce((acc, gasto) => {
+			if (gasto.tipoGasto !== "pago_conductor") return acc;
+			const monto = parseFloat(gasto.monto);
+			return acc + (Number.isNaN(monto) ? 0 : monto);
+		}, 0);
+	}, [gastos]);
+
+	const totalReservaNeta = useMemo(() => {
+		const valor = reservaSeleccionada?.totalConDescuento ?? 0;
+		return parseFloat(valor) || 0;
+	}, [reservaSeleccionada?.totalConDescuento]);
+
+	const utilidadNegocio = totalReservaNeta - totalGastos;
 
 	return (
 		<div className="space-y-6">
@@ -657,20 +743,6 @@ function AdminGastos() {
 													/>
 												</div>
 												<div>
-													<Label>Fecha *</Label>
-													<Input
-														type="date"
-														value={draft.fecha}
-														onChange={(e) => {
-															handleDraftFieldChange(
-																draft.id,
-																"fecha",
-																e.target.value
-															);
-														}}
-													/>
-												</div>
-												<div>
 													<Label>Comprobante</Label>
 													<Input
 														value={draft.comprobante}
@@ -684,55 +756,47 @@ function AdminGastos() {
 														placeholder="Numero de comprobante o referencia"
 													/>
 												</div>
-												<div>
-													<Label>Conductor</Label>
-													<Select
-														value={draft.conductorId || "none"}
-														onValueChange={(value) => {
-															handleDraftFieldChange(
-																draft.id,
-																value === "none" ? "" : value
-															);
-														}}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Selecciona un conductor" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="none">Ninguno</SelectItem>
-															{conductores.map((conductor) => (
-																<SelectItem key={conductor.id} value={conductor.id.toString()}>
-																	{getNombreConductor(conductor)}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-												<div>
-													<Label>Vehiculo</Label>
-													<Select
-														value={draft.vehiculoId || "none"}
-														onValueChange={(value) => {
-															handleDraftFieldChange(
-																draft.id,
-																value === "none" ? "" : value
-															);
-														}}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Selecciona un vehiculo" />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="none">Ninguno</SelectItem>
-															{vehiculos.map((vehiculo) => (
-																<SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
-																	{getDetalleVehiculo(vehiculo)}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
 											</div>
+
+											{(() => {
+												const conductorSeleccionado =
+													conductorAsignadoReserva ||
+													conductores.find(
+														(c) => c.id.toString() === (draft.conductorId || "")
+													);
+												const vehiculoSeleccionado =
+													vehiculoAsignadoReserva ||
+													vehiculos.find(
+														(v) => v.id.toString() === (draft.vehiculoId || "")
+													);
+
+												return (
+													<div className="grid gap-4 md:grid-cols-2">
+														<div>
+															<Label>Fecha del servicio</Label>
+															<Input value={draft.fecha} readOnly disabled />
+															<p className="text-xs text-muted-foreground mt-1">
+																Se toma desde la reserva seleccionada.
+															</p>
+														</div>
+														<div className="space-y-1">
+															<Label>Asignación logística</Label>
+															<p className="text-sm text-muted-foreground">
+																<span className="font-medium">Conductor:</span>{" "}
+																{conductorSeleccionado
+																	? getNombreConductor(conductorSeleccionado)
+																	: "Sin asignar"}
+															</p>
+															<p className="text-sm text-muted-foreground">
+																<span className="font-medium">Vehículo:</span>{" "}
+																{vehiculoSeleccionado
+																	? getDetalleVehiculo(vehiculoSeleccionado)
+																	: "Sin asignar"}
+															</p>
+														</div>
+													</div>
+												);
+											})()}
 
 											{draft.tipoGasto === "comision_flow" && (
 												<div className="rounded-md bg-blue-50 p-3 text-xs text-blue-800">
@@ -855,7 +919,7 @@ function AdminGastos() {
 												</TableCell>
 												<TableCell>
 													{gasto.conductor
-														? `${gasto.conductor.nombre} ${gasto.conductor.apellido}`
+														? getNombreConductor(gasto.conductor)
 														: "-"}
 												</TableCell>
 												<TableCell>
@@ -900,11 +964,11 @@ function AdminGastos() {
 							<CardTitle>Resumen Financiero</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<div className="grid grid-cols-3 gap-4">
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 								<div className="p-4 bg-green-50 rounded-lg">
 									<p className="text-sm text-green-800 font-medium">Total Reserva</p>
 									<p className="text-2xl font-bold text-green-600">
-										${parseFloat(reservaSeleccionada.totalConDescuento).toLocaleString("es-CL")}
+										${totalReservaNeta.toLocaleString("es-CL")}
 									</p>
 								</div>
 								<div className="p-4 bg-red-50 rounded-lg">
@@ -914,9 +978,21 @@ function AdminGastos() {
 									</p>
 								</div>
 								<div className="p-4 bg-blue-50 rounded-lg">
-									<p className="text-sm text-blue-800 font-medium">Utilidad Neta</p>
+									<p className="text-sm text-blue-800 font-medium">Utilidad del Negocio</p>
 									<p className="text-2xl font-bold text-blue-600">
-										${(parseFloat(reservaSeleccionada.totalConDescuento) - totalGastos).toLocaleString("es-CL")}
+										${utilidadNegocio.toLocaleString("es-CL")}
+									</p>
+									<p className="text-xs text-blue-700 mt-1">
+										Ingresos menos todos los gastos asociados a la reserva.
+									</p>
+								</div>
+								<div className="p-4 bg-amber-50 rounded-lg">
+									<p className="text-sm text-amber-800 font-medium">Pago al Conductor</p>
+									<p className="text-2xl font-bold text-amber-600">
+										${totalPagoConductor.toLocaleString("es-CL")}
+									</p>
+									<p className="text-xs text-amber-700 mt-1">
+										Suma de los gastos registrados como pago al conductor.
 									</p>
 								</div>
 							</div>
