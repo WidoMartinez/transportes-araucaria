@@ -5409,17 +5409,62 @@ app.delete("/api/gastos/:id", authAdmin, async (req, res) => {
 // Obtener estadísticas por conductor
 app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 	try {
+		const { from, to } = req.query;
+		const fechaInicio = from ? new Date(from) : null;
+		const fechaFin = to ? new Date(to) : null;
+
+		if (
+			(from && Number.isNaN(fechaInicio?.getTime())) ||
+			(to && Number.isNaN(fechaFin?.getTime()))
+		) {
+			return res.status(400).json({
+				success: false,
+				error: "Parámetros de fecha inválidos.",
+			});
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			return res.status(400).json({
+				success: false,
+				error: "El rango de fechas es inválido.",
+			});
+		}
+
+		const filtroReservas = {};
+		if (fechaInicio) {
+			filtroReservas[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroReservas[Op.lte] = fechaFin;
+		}
+		const whereReservas =
+			Object.keys(filtroReservas).length > 0 ? { fecha: filtroReservas } : undefined;
+
+		const filtroGastos = {};
+		if (fechaInicio) {
+			filtroGastos[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroGastos[Op.lte] = fechaFin;
+		}
+		const whereGastos =
+			Object.keys(filtroGastos).length > 0 ? { fecha: filtroGastos } : undefined;
+
 		const conductores = await Conductor.findAll({
 			include: [
 				{
 					model: Reserva,
 					as: "reservas",
 					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+					where: whereReservas,
+					required: false,
 				},
 				{
 					model: Gasto,
 					as: "gastos",
 					attributes: ["id", "monto", "tipoGasto", "fecha"],
+					where: whereGastos,
+					required: false,
 				},
 			],
 		});
@@ -5462,6 +5507,10 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 		res.json({
 			success: true,
 			estadisticas,
+			filtro: {
+				from: fechaInicio ? fechaInicio.toISOString() : null,
+				to: fechaFin ? fechaFin.toISOString() : null,
+			},
 		});
 	} catch (error) {
 		console.error("Error al obtener estadísticas de conductores:", error);
@@ -5475,17 +5524,62 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 // Obtener estadísticas por vehículo
 app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 	try {
+		const { from, to } = req.query;
+		const fechaInicio = from ? new Date(from) : null;
+		const fechaFin = to ? new Date(to) : null;
+
+		if (
+			(from && Number.isNaN(fechaInicio?.getTime())) ||
+			(to && Number.isNaN(fechaFin?.getTime()))
+		) {
+			return res.status(400).json({
+				success: false,
+				error: "Parámetros de fecha inválidos.",
+			});
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			return res.status(400).json({
+				success: false,
+				error: "El rango de fechas es inválido.",
+			});
+		}
+
+		const filtroReservas = {};
+		if (fechaInicio) {
+			filtroReservas[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroReservas[Op.lte] = fechaFin;
+		}
+		const whereReservas =
+			Object.keys(filtroReservas).length > 0 ? { fecha: filtroReservas } : undefined;
+
+		const filtroGastos = {};
+		if (fechaInicio) {
+			filtroGastos[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroGastos[Op.lte] = fechaFin;
+		}
+		const whereGastos =
+			Object.keys(filtroGastos).length > 0 ? { fecha: filtroGastos } : undefined;
+
 		const vehiculos = await Vehiculo.findAll({
 			include: [
 				{
 					model: Reserva,
 					as: "reservas",
 					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+					where: whereReservas,
+					required: false,
 				},
 				{
 					model: Gasto,
 					as: "gastos",
 					attributes: ["id", "monto", "tipoGasto", "fecha"],
+					where: whereGastos,
+					required: false,
 				},
 			],
 		});
@@ -5533,6 +5627,10 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 		res.json({
 			success: true,
 			estadisticas,
+			filtro: {
+				from: fechaInicio ? fechaInicio.toISOString() : null,
+				to: fechaFin ? fechaFin.toISOString() : null,
+			},
 		});
 	} catch (error) {
 		console.error("Error al obtener estadísticas de vehículos:", error);

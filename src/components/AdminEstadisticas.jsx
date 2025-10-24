@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "../lib/backend";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import {
 	Select,
 	SelectContent,
@@ -31,11 +32,19 @@ import {
 	DollarSign,
 	TrendingUp,
 	TrendingDown,
-	Calendar,
+	Calendar as CalendarIcon,
 	Receipt,
 	Eye,
 	BarChart3,
 } from "lucide-react";
+import {
+	endOfDay,
+	startOfDay,
+	startOfMonth,
+	endOfMonth,
+	subDays,
+	subMonths,
+} from "date-fns";
 
 function AdminEstadisticas() {
 	const ADMIN_TOKEN =
@@ -49,9 +58,147 @@ function AdminEstadisticas() {
 	const [vistaActual, setVistaActual] = useState("conductores");
 	const [estadisticasConductores, setEstadisticasConductores] = useState([]);
 	const [estadisticasVehiculos, setEstadisticasVehiculos] = useState([]);
+	const [filtroFechas, setFiltroFechas] = useState("ultimos-30");
+	const [rangoPersonalizado, setRangoPersonalizado] = useState({
+		desde: "",
+		hasta: "",
+	});
+	const construirRango = useCallback((tipo, personalizado = {}) => {
+		const hoy = new Date();
+
+		const formatearEtiqueta = (fechaInicio, fechaFin, fallback) => {
+			if (!fechaInicio || !fechaFin) {
+				return fallback;
+			}
+			return `Del ${fechaInicio.toLocaleDateString("es-CL")} al ${fechaFin.toLocaleDateString("es-CL")}`;
+		};
+
+		switch (tipo) {
+			case "todos":
+				return {
+					tipo,
+					fechaInicio: null,
+					fechaFin: null,
+					etiqueta: "Todo el historial",
+				};
+			case "ultimos-15": {
+				const fechaFin = endOfDay(hoy);
+				const fechaInicio = startOfDay(subDays(hoy, 14));
+				return {
+					tipo,
+					fechaInicio,
+					fechaFin,
+					etiqueta: "Últimos 15 días",
+				};
+			}
+			case "ultimos-30": {
+				const fechaFin = endOfDay(hoy);
+				const fechaInicio = startOfDay(subDays(hoy, 29));
+				return {
+					tipo,
+					fechaInicio,
+					fechaFin,
+					etiqueta: "Últimos 30 días",
+				};
+			}
+			case "mes-actual": {
+				const fechaFin = endOfDay(endOfMonth(hoy));
+				const fechaInicio = startOfDay(startOfMonth(hoy));
+				return {
+					tipo,
+					fechaInicio,
+					fechaFin,
+					etiqueta: "Este mes",
+				};
+			}
+			case "mes-pasado": {
+				const mesAnterior = subMonths(hoy, 1);
+				const fechaInicio = startOfDay(startOfMonth(mesAnterior));
+				const fechaFin = endOfDay(endOfMonth(mesAnterior));
+				return {
+					tipo,
+					fechaInicio,
+					fechaFin,
+					etiqueta: "Mes pasado",
+				};
+			}
+			case "personalizado": {
+				const { fechaInicio, fechaFin } = personalizado;
+				return {
+					tipo,
+					fechaInicio: fechaInicio ? startOfDay(fechaInicio) : null,
+					fechaFin: fechaFin ? endOfDay(fechaFin) : null,
+					etiqueta: formatearEtiqueta(fechaInicio, fechaFin, "Rango personalizado"),
+				};
+			}
+			default:
+				return {
+					tipo,
+					fechaInicio: null,
+					fechaFin: null,
+					etiqueta: "Todo el historial",
+				};
+		}
+	}, []);
+	const [rangoAplicado, setRangoAplicado] = useState(() =>
+		construirRango("ultimos-30")
+	);
 	const [loading, setLoading] = useState(false);
 	const [conductorDetalle, setConductorDetalle] = useState(null);
 	const [showDetalleDialog, setShowDetalleDialog] = useState(false);
+	const [errorRango, setErrorRango] = useState("");
+
+	const construirQueryFechas = () => {
+		const params = new URLSearchParams();
+		if (rangoAplicado.fechaInicio) {
+			params.append("from", rangoAplicado.fechaInicio.toISOString());
+		}
+		if (rangoAplicado.fechaFin) {
+			params.append("to", rangoAplicado.fechaFin.toISOString());
+		}
+		const query = params.toString();
+		return query ? `?${query}` : "";
+	};
+
+	const manejarCambioFiltroFechas = (valor) => {
+		setFiltroFechas(valor);
+		setErrorRango("");
+		if (valor !== "personalizado") {
+			setRangoAplicado(construirRango(valor));
+		}
+	};
+
+	const actualizarFechaPersonalizada = (campo, valor) => {
+		setRangoPersonalizado((prev) => ({
+			...prev,
+			[campo]: valor,
+		}));
+	};
+
+	const aplicarRangoPersonalizado = () => {
+		if (!rangoPersonalizado.desde || !rangoPersonalizado.hasta) {
+			setErrorRango("Selecciona ambas fechas antes de aplicar.");
+			return;
+		}
+
+		const fechaInicio = new Date(rangoPersonalizado.desde);
+		const fechaFin = new Date(rangoPersonalizado.hasta);
+
+		if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+			setErrorRango("Las fechas seleccionadas no son válidas.");
+			return;
+		}
+
+		if (fechaFin < fechaInicio) {
+			setErrorRango("La fecha final debe ser posterior o igual a la fecha inicial.");
+			return;
+		}
+
+		setErrorRango("");
+		setRangoAplicado(
+			construirRango("personalizado", { fechaInicio, fechaFin })
+		);
+	};
 
 	useEffect(() => {
 		if (vistaActual === "conductores") {
@@ -59,16 +206,21 @@ function AdminEstadisticas() {
 		} else {
 			fetchEstadisticasVehiculos();
 		}
-	}, [vistaActual]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [vistaActual, rangoAplicado]);
 
 	const fetchEstadisticasConductores = async () => {
 		setLoading(true);
 		try {
-			const response = await fetch(`${apiUrl}/api/estadisticas/conductores`, {
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
-			});
+			const query = construirQueryFechas();
+			const response = await fetch(
+				`${apiUrl}/api/estadisticas/conductores${query}`,
+				{
+					headers: {
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+				}
+			);
 			if (response.ok) {
 				const data = await response.json();
 				setEstadisticasConductores(data.estadisticas || []);
@@ -83,11 +235,15 @@ function AdminEstadisticas() {
 	const fetchEstadisticasVehiculos = async () => {
 		setLoading(true);
 		try {
-			const response = await fetch(`${apiUrl}/api/estadisticas/vehiculos`, {
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
-			});
+			const query = construirQueryFechas();
+			const response = await fetch(
+				`${apiUrl}/api/estadisticas/vehiculos${query}`,
+				{
+					headers: {
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+				}
+			);
 			if (response.ok) {
 				const data = await response.json();
 				setEstadisticasVehiculos(data.estadisticas || []);
@@ -98,6 +254,7 @@ function AdminEstadisticas() {
 			setLoading(false);
 		}
 	};
+
 
 	const fetchDetalleConductor = async (conductorId) => {
 		setLoading(true);
@@ -139,11 +296,15 @@ function AdminEstadisticas() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex justify-between items-center">
+			<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+			<div className="flex flex-wrap items-center gap-3">
 				<h2 className="text-2xl font-bold">Estadísticas</h2>
+				<Badge variant="outline">{rangoAplicado.etiqueta}</Badge>
+			</div>
+			<div className="flex flex-wrap items-center gap-3">
 				<Select value={vistaActual} onValueChange={setVistaActual}>
 					<SelectTrigger className="w-[200px]">
-						<SelectValue />
+						<SelectValue placeholder="Selecciona vista" />
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="conductores">
@@ -160,7 +321,60 @@ function AdminEstadisticas() {
 						</SelectItem>
 					</SelectContent>
 				</Select>
+				<Select value={filtroFechas} onValueChange={manejarCambioFiltroFechas}>
+					<SelectTrigger className="w-[220px]">
+						<SelectValue placeholder="Selecciona rango" />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="ultimos-15">Últimos 15 días</SelectItem>
+						<SelectItem value="ultimos-30">Últimos 30 días</SelectItem>
+						<SelectItem value="mes-actual">Este mes</SelectItem>
+						<SelectItem value="mes-pasado">Mes pasado</SelectItem>
+						<SelectItem value="todos">Todo el historial</SelectItem>
+						<SelectItem value="personalizado">Personalizado</SelectItem>
+					</SelectContent>
+				</Select>
 			</div>
+		</div>
+
+		{filtroFechas === "personalizado" && (
+			<div className="flex flex-col gap-2">
+				<div className="flex flex-wrap items-end gap-3">
+					<div className="flex flex-col gap-1">
+						<label className="text-sm font-medium text-muted-foreground">
+							Desde
+						</label>
+						<Input
+							type="date"
+							value={rangoPersonalizado.desde}
+							onChange={(event) =>
+								actualizarFechaPersonalizada("desde", event.target.value)
+							}
+							max={rangoPersonalizado.hasta || undefined}
+						/>
+					</div>
+					<div className="flex flex-col gap-1">
+						<label className="text-sm font-medium text-muted-foreground">
+							Hasta
+						</label>
+						<Input
+							type="date"
+							value={rangoPersonalizado.hasta}
+							onChange={(event) =>
+								actualizarFechaPersonalizada("hasta", event.target.value)
+							}
+							min={rangoPersonalizado.desde || undefined}
+						/>
+					</div>
+					<Button onClick={aplicarRangoPersonalizado}>
+						Aplicar rango
+					</Button>
+				</div>
+				{errorRango && (
+					<p className="text-sm text-red-600">{errorRango}</p>
+				)}
+			</div>
+		)}
 
 			{vistaActual === "conductores" && (
 				<>
@@ -173,7 +387,7 @@ function AdminEstadisticas() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex items-center gap-2">
-									<Calendar className="w-5 h-5 text-blue-600" />
+									<CalendarIcon className="w-5 h-5 text-blue-600" />
 									<span className="text-2xl font-bold">
 										{totalesConductores.totalReservas}
 									</span>
@@ -311,7 +525,7 @@ function AdminEstadisticas() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex items-center gap-2">
-									<Calendar className="w-5 h-5 text-blue-600" />
+									<CalendarIcon className="w-5 h-5 text-blue-600" />
 									<span className="text-2xl font-bold">
 										{totalesVehiculos.totalReservas}
 									</span>
