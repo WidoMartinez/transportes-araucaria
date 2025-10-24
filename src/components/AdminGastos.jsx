@@ -20,6 +20,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
+	DialogFooter,
 } from "./ui/dialog";
 import {
 	Table,
@@ -76,7 +77,9 @@ function AdminGastos() {
 	const [gastos, setGastos] = useState([]);
 	const [totalGastos, setTotalGastos] = useState(0);
 	const [loading, setLoading] = useState(false);
-	const [showNewDialog, setShowNewDialog] = useState(false);
+	const [showBulkDialog, setShowBulkDialog] = useState(false);
+	const [draftGastos, setDraftGastos] = useState([]);
+	const [savingBulk, setSavingBulk] = useState(false);
 	const [showEditDialog, setShowEditDialog] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [gastoToDelete, setGastoToDelete] = useState(null);
@@ -108,6 +111,11 @@ function AdminGastos() {
 			fetchGastos(reservaSeleccionada.id);
 		}
 	}, [reservaSeleccionada]);
+
+	useEffect(() => {
+		setDraftGastos([]);
+		setShowBulkDialog(false);
+	}, [reservaSeleccionada?.id]);
 
 	const fetchReservas = async () => {
 		try {
@@ -177,46 +185,154 @@ function AdminGastos() {
 		}
 	};
 
-	const handleCreateGasto = async () => {
+	const createDraftGasto = () => {
+		const defaultConductorId =
+			reservaSeleccionada?.conductorId != null
+				? reservaSeleccionada.conductorId.toString()
+				: "";
+		const defaultVehiculoId =
+			reservaSeleccionada?.vehiculoId != null
+				? reservaSeleccionada.vehiculoId.toString()
+				: "";
+
+		return {
+			id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+			tipoGasto: "",
+			monto: "",
+			porcentaje: "",
+			descripcion: "",
+			fecha: new Date().toISOString().split("T")[0],
+			comprobante: "",
+			conductorId: defaultConductorId,
+			vehiculoId: defaultVehiculoId,
+			observaciones: "",
+		};
+	};
+
+	const handleBulkDialogChange = (open) => {
+		if (open) {
+			setDraftGastos((prev) =>
+				prev.length > 0 ? prev : [createDraftGasto()]
+			);
+		} else {
+			setDraftGastos([]);
+		}
+		setShowBulkDialog(open);
+	};
+
+	const handleAddDraftGasto = () => {
+		setDraftGastos((prev) => [...prev, createDraftGasto()]);
+	};
+
+	const handleRemoveDraftGasto = (id) => {
+		setDraftGastos((prev) => prev.filter((draft) => draft.id !== id));
+	};
+
+	const updateDraftGasto = (id, changes) => {
+		setDraftGastos((prev) =>
+			prev.map((draft) => (draft.id === id ? { ...draft, ...changes } : draft))
+		);
+	};
+
+	const handleDraftTipoChange = (id, value) => {
+		const draftActual = draftGastos.find((draft) => draft.id === id);
+
+		if (value === "comision_flow" && reservaSeleccionada) {
+			const porcentaje = 3.19;
+			const base = parseFloat(reservaSeleccionada.totalConDescuento || 0);
+			const montoCalc = Number.isFinite(base)
+				? ((base * porcentaje) / 100).toFixed(2)
+				: "";
+			updateDraftGasto(id, {
+				tipoGasto: value,
+				porcentaje: porcentaje.toString(),
+				monto: montoCalc,
+			});
+			return;
+		}
+
+		updateDraftGasto(id, {
+			tipoGasto: value,
+			porcentaje: "",
+			monto:
+				draftActual && draftActual.tipoGasto === "comision_flow"
+					? ""
+					: draftActual?.monto || "",
+		});
+	};
+
+	const handleDraftFieldChange = (id, field, value) => {
+		updateDraftGasto(id, { [field]: value });
+	};
+
+	const handleSaveBulkGastos = async () => {
 		if (!reservaSeleccionada) {
 			alert("Selecciona una reserva primero");
 			return;
 		}
 
-		if (!formData.tipoGasto || !formData.monto) {
-			alert("Completa los campos requeridos");
+		if (draftGastos.length === 0) {
+			alert("Agrega al menos un gasto");
 			return;
 		}
 
-		setLoading(true);
-		try {
-			const response = await fetch(`${apiUrl}/api/gastos`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
-				body: JSON.stringify({
-					reservaId: reservaSeleccionada.id,
-					...formData,
-					conductorId: formData.conductorId || null,
-					vehiculoId: formData.vehiculoId || null,
-				}),
-			});
+		const hasIncompleteDraft = draftGastos.some(
+			(draft) =>
+				(draft.tipoGasto && (!draft.monto || !draft.fecha)) ||
+				(draft.monto && !draft.tipoGasto)
+		);
 
-			if (response.ok) {
-				await fetchGastos(reservaSeleccionada.id);
-				setShowNewDialog(false);
-				resetForm();
-			} else {
-				const error = await response.json();
-				alert(`Error: ${error.error}`);
+		if (hasIncompleteDraft) {
+			alert("Completa tipo, monto y fecha para todos los gastos antes de guardar");
+			return;
+		}
+
+		const validDrafts = draftGastos.filter(
+			(draft) => draft.tipoGasto && draft.monto && draft.fecha
+		);
+
+		if (validDrafts.length === 0) {
+			alert("Agrega al menos un gasto con tipo, monto y fecha");
+			return;
+		}
+
+		setSavingBulk(true);
+		try {
+			for (const draft of validDrafts) {
+				const response = await fetch(`${apiUrl}/api/gastos`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+					body: JSON.stringify({
+						reservaId: reservaSeleccionada.id,
+						tipoGasto: draft.tipoGasto,
+						monto: draft.monto,
+						porcentaje: draft.porcentaje || null,
+						descripcion: draft.descripcion || null,
+						fecha: draft.fecha,
+						comprobante: draft.comprobante || null,
+						conductorId: draft.conductorId || null,
+						vehiculoId: draft.vehiculoId || null,
+						observaciones: draft.observaciones || null,
+					}),
+				});
+
+				if (!response.ok) {
+					const error = await response.json();
+					throw new Error(error.error || "Error al guardar gasto");
+				}
 			}
+
+			await fetchGastos(reservaSeleccionada.id);
+			setDraftGastos([]);
+			setShowBulkDialog(false);
 		} catch (error) {
-			console.error("Error al crear gasto:", error);
-			alert("Error al crear gasto");
+			console.error("Error al guardar gastos:", error);
+			alert(error.message || "Error al guardar gastos");
 		} finally {
-			setLoading(false);
+			setSavingBulk(false);
 		}
 	};
 
@@ -338,6 +454,40 @@ function AdminGastos() {
 		return <Icon className="w-4 h-4" />;
 	};
 
+	const getNombreConductor = (conductor) => {
+		if (!conductor) return "";
+		const partes = [conductor.nombre, conductor.apellido].filter(Boolean);
+		return partes.join(" ");
+	};
+
+	const getDetalleVehiculo = (vehiculo) => {
+		if (!vehiculo) return "";
+		const partes = [
+			vehiculo.patente,
+			[vehiculo.marca, vehiculo.modelo].filter(Boolean).join(" "),
+		].filter(Boolean);
+		return partes.join(" · ");
+	};
+
+	const conductorAsignadoReserva =
+		reservaSeleccionada?.conductorId != null
+			? conductores.find(
+					(conductor) => conductor.id === Number(reservaSeleccionada.conductorId)
+			  )
+			: null;
+
+	const vehiculoAsignadoReserva =
+		reservaSeleccionada?.vehiculoId != null
+			? vehiculos.find(
+					(vehiculo) => vehiculo.id === Number(reservaSeleccionada.vehiculoId)
+			  )
+			: null;
+
+	const totalDraftMonto = draftGastos.reduce((acc, draft) => {
+		const value = parseFloat(draft.monto);
+		return acc + (Number.isNaN(value) ? 0 : value);
+	}, 0);
+
 	return (
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
@@ -387,185 +537,285 @@ function AdminGastos() {
 										${totalGastos.toLocaleString("es-CL")}
 									</p>
 								</div>
-								<Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-									<DialogTrigger asChild>
-										<Button onClick={resetForm}>
-											<Plus className="w-4 h-4 mr-2" />
-											Nuevo Gasto
-										</Button>
-									</DialogTrigger>
-									<DialogContent className="max-w-2xl">
-										<DialogHeader>
-											<DialogTitle>Registrar Nuevo Gasto</DialogTitle>
-											<DialogDescription>
-												Registra un gasto asociado a esta reserva
-											</DialogDescription>
-										</DialogHeader>
-										<div className="space-y-4">
-											<div>
-												<Label>Tipo de Gasto *</Label>
-												<Select
-													value={formData.tipoGasto}
-													onValueChange={(value) =>
-														setFormData({ ...formData, tipoGasto: value })
-													}
+				
+				<Dialog open={showBulkDialog} onOpenChange={handleBulkDialogChange}>
+					<DialogTrigger asChild>
+						<Button>
+							<Plus className="w-4 h-4 mr-2" />
+							Registrar gastos
+						</Button>
+					</DialogTrigger>
+					<DialogContent className="max-w-4xl">
+						<DialogHeader>
+							<DialogTitle>Registrar gastos de la reserva</DialogTitle>
+							<DialogDescription>
+								Agrega varios gastos y guardalos en un solo paso.
+							</DialogDescription>
+						</DialogHeader>
+						<div className="space-y-4">
+							<div className="rounded-lg border bg-muted/20 p-4 text-sm">
+								<p className="font-medium">
+									{reservaSeleccionada.codigoReserva} - {reservaSeleccionada.nombre}
+								</p>
+								<div className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground">
+									<span>Conductor:</span>
+									{conductorAsignadoReserva ? (
+										<Badge variant="secondary">
+											{getNombreConductor(conductorAsignadoReserva)}
+										</Badge>
+									) : (
+										<Badge variant="outline">Sin asignar</Badge>
+									)}
+									<span>Vehiculo:</span>
+									{vehiculoAsignadoReserva ? (
+										<Badge variant="secondary">
+											{getDetalleVehiculo(vehiculoAsignadoReserva)}
+										</Badge>
+									) : (
+										<Badge variant="outline">Sin asignar</Badge>
+									)}
+								</div>
+							</div>
+
+							{draftGastos.length === 0 ? (
+								<div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+									No hay gastos en preparacion. Usa "Agregar gasto" para comenzar.
+								</div>
+							) : (
+								<div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+									{draftGastos.map((draft, index) => (
+										<div
+											key={draft.id}
+											className="space-y-4 rounded-lg border bg-background p-4 shadow-sm"
+										>
+											<div className="flex items-center justify-between">
+												<div className="flex items-center gap-2">
+													<div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+														{index + 1}
+													</div>
+													<div className="flex items-center gap-2 text-sm font-semibold">
+														{getTipoGastoIcon(draft.tipoGasto)}
+														<span>
+															{draft.tipoGasto
+																? getTipoGastoLabel(draft.tipoGasto)
+																: "Selecciona un tipo"}
+														</span>
+													</div>
+												</div>
+												<Button
+													variant="ghost"
+													size="icon"
+													onClick={() => handleRemoveDraftGasto(draft.id)}
+													disabled={savingBulk}
+													title="Eliminar gasto"
 												>
-													<SelectTrigger>
-														<SelectValue placeholder="Selecciona el tipo" />
-													</SelectTrigger>
-													<SelectContent>
-														{TIPOS_GASTO.map((tipo) => (
-															<SelectItem key={tipo.value} value={tipo.value}>
-																{tipo.label}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
+													<Trash2 className="h-4 w-4" />
+												</Button>
 											</div>
 
-											{formData.tipoGasto === "comision_flow" && (
-												<div className="bg-blue-50 p-3 rounded-md">
-													<p className="text-sm text-blue-800">
-														<AlertCircle className="w-4 h-4 inline mr-2" />
-														El monto se calculará automáticamente como el 3.19% del total de la reserva
-													</p>
+											<div className="grid gap-4 md:grid-cols-2">
+												<div>
+													<Label>Tipo de gasto *</Label>
+													<Select
+														value={draft.tipoGasto || "none"}
+														onValueChange={(value) => {
+															handleDraftTipoChange(
+																draft.id,
+																value === "none" ? "" : value
+															);
+														}}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Selecciona el tipo" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="none">Selecciona el tipo</SelectItem>
+														{TIPOS_GASTO.map((tipo) => {
+															return (
+																<SelectItem key={tipo.value} value={tipo.value}>
+																	{tipo.label}
+																</SelectItem>
+															);
+														})}
+														</SelectContent>
+													</Select>
 												</div>
-											)}
-
-											<div className="grid grid-cols-2 gap-4">
 												<div>
 													<Label>Monto *</Label>
 													<Input
 														type="number"
 														step="0.01"
-														value={formData.monto}
-														onChange={(e) =>
-															setFormData({ ...formData, monto: e.target.value })
-														}
-														disabled={formData.tipoGasto === "comision_flow"}
+														value={draft.monto}
+														onChange={(e) => {
+															handleDraftFieldChange(
+																draft.id,
+																"monto",
+																e.target.value
+															);
+														}}
+														disabled={draft.tipoGasto === "comision_flow"}
 													/>
 												</div>
 												<div>
 													<Label>Fecha *</Label>
 													<Input
 														type="date"
-														value={formData.fecha}
-														onChange={(e) =>
-															setFormData({ ...formData, fecha: e.target.value })
-														}
+														value={draft.fecha}
+														onChange={(e) => {
+															handleDraftFieldChange(
+																draft.id,
+																"fecha",
+																e.target.value
+															);
+														}}
 													/>
+												</div>
+												<div>
+													<Label>Comprobante</Label>
+													<Input
+														value={draft.comprobante}
+														onChange={(e) => {
+															handleDraftFieldChange(
+																draft.id,
+																"comprobante",
+																e.target.value
+															);
+														}}
+														placeholder="Numero de comprobante o referencia"
+													/>
+												</div>
+												<div>
+													<Label>Conductor</Label>
+													<Select
+														value={draft.conductorId || "none"}
+														onValueChange={(value) => {
+															handleDraftFieldChange(
+																draft.id,
+																value === "none" ? "" : value
+															);
+														}}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Selecciona un conductor" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="none">Ninguno</SelectItem>
+															{conductores.map((conductor) => (
+																<SelectItem key={conductor.id} value={conductor.id.toString()}>
+																	{getNombreConductor(conductor)}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<div>
+													<Label>Vehiculo</Label>
+													<Select
+														value={draft.vehiculoId || "none"}
+														onValueChange={(value) => {
+															handleDraftFieldChange(
+																draft.id,
+																value === "none" ? "" : value
+															);
+														}}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="Selecciona un vehiculo" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="none">Ninguno</SelectItem>
+															{vehiculos.map((vehiculo) => (
+																<SelectItem key={vehiculo.id} value={vehiculo.id.toString()}>
+																	{getDetalleVehiculo(vehiculo)}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
 												</div>
 											</div>
 
-											{/* Ajuste: usar "none" como valor para evitar el error de Radix UI cuando el valor es vacío */}
-											<div>
-												<Label>Conductor</Label>
-												<Select
-													/* Si formData.conductorId es vacío, mostramos "none" para Radix */
-													value={formData.conductorId || "none"}
-													onValueChange={(value) =>
-														// Mantener vacío en el estado si el usuario elige "none"
-														setFormData({ ...formData, conductorId: value === "none" ? "" : value })
-													}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Selecciona un conductor (opcional)" />
-													</SelectTrigger>
-													<SelectContent>
-														{/* Valor "none" evita problemas con valores vacíos en Radix */}
-														<SelectItem value="none">Ninguno</SelectItem>
-														{conductores.map((conductor) => (
-															<SelectItem
-																key={conductor.id}
-																value={conductor.id.toString()}
-															>
-																{conductor.nombre} {conductor.apellido}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
+											{draft.tipoGasto === "comision_flow" && (
+												<div className="rounded-md bg-blue-50 p-3 text-xs text-blue-800">
+													<AlertCircle className="mr-2 inline h-4 w-4" />
+													El monto se calcula automaticamente como el 3.19% del total de la reserva.
+												</div>
+											)}
 
-											{/* Ajuste similar para Vehículo */}
-											<div>
-												<Label>Vehículo</Label>
-												<Select
-													/* Si formData.vehiculoId es vacío, mostramos "none" para Radix */
-													value={formData.vehiculoId || "none"}
-													onValueChange={(value) =>
-														// Mantener vacío en el estado si el usuario elige "none"
-														setFormData({ ...formData, vehiculoId: value === "none" ? "" : value })
-													}
-												>
-													<SelectTrigger>
-														<SelectValue placeholder="Selecciona un vehículo (opcional)" />
-													</SelectTrigger>
-													<SelectContent>
-														{/* Valor "none" evita problemas con valores vacíos en Radix */}
-														<SelectItem value="none">Ninguno</SelectItem>
-														{vehiculos.map((vehiculo) => (
-															<SelectItem
-																key={vehiculo.id}
-																value={vehiculo.id.toString()}
-															>
-																{vehiculo.patente} - {vehiculo.marca} {vehiculo.modelo}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
+											<div className="grid gap-4 md:grid-cols-2">
+												<div>
+													<Label>Descripcion</Label>
+													<Textarea
+														value={draft.descripcion}
+														onChange={(e) => {
+															handleDraftFieldChange(
+																draft.id,
+																"descripcion",
+																e.target.value
+															);
+														}}
+														placeholder="Detalle del gasto"
+													/>
+												</div>
+												<div>
+													<Label>Observaciones</Label>
+													<Textarea
+														value={draft.observaciones}
+														onChange={(e) => {
+															handleDraftFieldChange(
+																draft.id,
+																"observaciones",
+																e.target.value
+															);
+														}}
+														placeholder="Notas internas"
+													/>
+												</div>
 											</div>
+									</div>
+								))}
+							</div>
+							)}
 
-											<div>
-											{/* Sugerencia: ¿Deseas hacer un commit? Recomiendo hacerlo después de este cambio. */}
-												<Label>Descripción</Label>
-												<Textarea
-													value={formData.descripcion}
-													onChange={(e) =>
-														setFormData({ ...formData, descripcion: e.target.value })
-													}
-													placeholder="Descripción del gasto"
-												/>
-											</div>
-
-											<div>
-												<Label>Comprobante</Label>
-												<Input
-													value={formData.comprobante}
-													onChange={(e) =>
-														setFormData({ ...formData, comprobante: e.target.value })
-													}
-													placeholder="Número de comprobante o referencia"
-												/>
-											</div>
-
-											<div>
-												<Label>Observaciones</Label>
-												<Textarea
-													value={formData.observaciones}
-													onChange={(e) =>
-														setFormData({ ...formData, observaciones: e.target.value })
-													}
-													placeholder="Observaciones adicionales"
-												/>
-											</div>
-
-											<div className="flex justify-end gap-2">
-												<Button
-													variant="outline"
-													onClick={() => {
-														setShowNewDialog(false);
-														resetForm();
-													}}
-												>
-													Cancelar
-												</Button>
-												<Button onClick={handleCreateGasto} disabled={loading}>
-													{loading ? "Guardando..." : "Guardar Gasto"}
-												</Button>
-											</div>
-										</div>
-									</DialogContent>
-								</Dialog>
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleAddDraftGasto}
+									disabled={savingBulk}
+								>
+									<Plus className="mr-2 h-4 w-4" />
+									Agregar gasto
+								</Button>
+								<div className="text-right text-sm">
+									<p>
+										Nuevos gastos:{" "}
+										<strong>
+											${totalDraftMonto.toLocaleString("es-CL")}
+										</strong>
+									</p>
+									<p className="text-muted-foreground">
+										Se sumara al total actual de ${totalGastos.toLocaleString("es-CL")}.
+									</p>
+								</div>
+							</div>
+						</div>
+						<DialogFooter>
+							<Button
+								variant="outline"
+								onClick={() => handleBulkDialogChange(false)}
+								disabled={savingBulk}
+							>
+								Cancelar
+							</Button>
+							<Button
+								onClick={handleSaveBulkGastos}
+								disabled={savingBulk || draftGastos.length === 0}
+							>
+								{savingBulk ? "Guardando..." : "Guardar gastos"}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
 							</div>
 						</CardHeader>
 						<CardContent>
