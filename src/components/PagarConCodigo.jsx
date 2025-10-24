@@ -124,11 +124,17 @@ function PagarConCodigo() {
 		}
 		// Validar dirección obligatoria según sentido del viaje
 		if (codigoValidado) {
-			if (codigoValidado.origen === "Aeropuerto La Araucanía" && !formData.direccionDestino.trim()) {
+			if (
+				codigoValidado.origen === "Aeropuerto La Araucanía" &&
+				!formData.direccionDestino.trim()
+			) {
 				setError("Por favor ingresa la dirección de destino");
 				return false;
 			}
-			if (codigoValidado.destino === "Aeropuerto La Araucanía" && !formData.direccionOrigen.trim()) {
+			if (
+				codigoValidado.destino === "Aeropuerto La Araucanía" &&
+				!formData.direccionOrigen.trim()
+			) {
 				setError("Por favor ingresa la dirección de origen");
 				return false;
 			}
@@ -210,8 +216,14 @@ function PagarConCodigo() {
 			// Simplemente registramos el ID de reserva si existe y seguimos con el flujo
 			// de pago (no bloquear el proceso).
 			const reservaId = rj.reservaId || rj.reserva?.id || null;
-			const codigoReservaGenerado = rj.codigoReserva || rj.codigo_reserva || rj.reserva?.codigoReserva || null;
-			const codigoPagoNormalizado = (codigoValidado.codigo || '').toString().toUpperCase();
+			const codigoReservaGenerado =
+				rj.codigoReserva ||
+				rj.codigo_reserva ||
+				rj.reserva?.codigoReserva ||
+				null;
+			const codigoPagoNormalizado = (codigoValidado.codigo || "")
+				.toString()
+				.toUpperCase();
 			if (reservaId) {
 				console.log(
 					"Reserva creada (detalles pendientes) ID:",
@@ -501,7 +513,8 @@ function PagarConCodigo() {
 											{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
 												<div className="space-y-2 md:col-span-2">
 													<Label htmlFor="direccionDestino">
-														Dirección de destino <span className="text-red-500">*</span>
+														Dirección de destino{" "}
+														<span className="text-red-500">*</span>
 													</Label>
 													<Input
 														id="direccionDestino"
@@ -513,10 +526,12 @@ function PagarConCodigo() {
 													/>
 												</div>
 											)}
-											{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
+											{codigoValidado?.destino ===
+												"Aeropuerto La Araucanía" && (
 												<div className="space-y-2 md:col-span-2">
 													<Label htmlFor="direccionOrigen">
-														Dirección de origen <span className="text-red-500">*</span>
+														Dirección de origen{" "}
+														<span className="text-red-500">*</span>
 													</Label>
 													<Input
 														id="direccionOrigen"
@@ -583,7 +598,9 @@ function PagarConCodigo() {
 														: "border-gray-200"
 												}`}
 											>
-												<span className="text-sm font-semibold">Abonar 40%</span>
+												<span className="text-sm font-semibold">
+													Abonar 40%
+												</span>
 												<span className="text-xl font-bold text-primary">
 													{formatCurrency(abonoSugerido)}
 												</span>
@@ -602,7 +619,9 @@ function PagarConCodigo() {
 														: "border-gray-200"
 												}`}
 											>
-												<span className="text-sm font-semibold">Pagar 100%</span>
+												<span className="text-sm font-semibold">
+													Pagar 100%
+												</span>
 												<span className="text-xl font-bold text-primary">
 													{formatCurrency(montoTotal)}
 												</span>
@@ -634,7 +653,9 @@ function PagarConCodigo() {
 												variant="outline"
 												onClick={procesarPagoConCodigoFlow}
 												disabled={
-													procesando || !montoSeleccionado || montoSeleccionado <= 0
+													procesando ||
+													!montoSeleccionado ||
+													montoSeleccionado <= 0
 												}
 												className="h-auto p-6 flex flex-col items-center gap-3 w-full"
 											>
