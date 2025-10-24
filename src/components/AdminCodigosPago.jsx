@@ -24,6 +24,10 @@ import { LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { destinosBase } from "../data/destinos";
 import { getBackendUrl } from "../lib/backend";
 
+const AEROPUERTO = "Aeropuerto La Araucanía";
+const OPCION_OTRO = "Otro";
+const DESTINO_BASE_POR_DEFECTO = destinosBase[0]?.nombre || "";
+
 function AdminCodigosPago() {
 	const [codigosPago, setCodigosPago] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -88,7 +92,9 @@ function AdminCodigosPago() {
 		[destinosOpciones]
 	);
 	const destinosFiltrados = useMemo(() => {
-		return destinos.filter((d) => d !== formData.origen);
+		return destinos.filter(
+			(d) => d === "Aeropuerto La Araucanía" || d !== formData.origen
+		);
 	}, [destinos, formData.origen]);
 	const formatCurrency = (value) =>
 		new Intl.NumberFormat("es-CL", {
@@ -155,6 +161,10 @@ function AdminCodigosPago() {
 				: formData.destino;
 		if (!destinoResuelto) {
 			setError("El destino es requerido");
+			return;
+		}
+		if (origenResuelto === destinoResuelto) {
+			setError("El origen y el destino no pueden ser iguales");
 			return;
 		}
 		if (!formData.monto || parseFloat(formData.monto) <= 0) {
