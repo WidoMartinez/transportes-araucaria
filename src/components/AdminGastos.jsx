@@ -114,7 +114,7 @@ function AdminGastos() {
 
 	const fetchReservas = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/reservas`, {
+			const response = await fetch(`${apiUrl}/api/reservas?estado=completada`, {
 				headers: {
 					Authorization: `Bearer ${ADMIN_TOKEN}`,
 				},
