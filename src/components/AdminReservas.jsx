@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import * as XLSX from "xlsx";
+import { getBackendUrl } from "../lib/backend";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -12,6 +14,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import { Checkbox } from "./ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -67,7 +70,20 @@ import {
 	AlertDialogTitle,
 } from "./ui/alert-dialog";
 
+const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
+const normalizeDestino = (value) =>
+	(value || "").toString().trim().toLowerCase();
+
 function AdminReservas() {
+	// Estado para cambio masivo de estado de pago
+	// Eliminado bulkEstadoPago y setBulkEstadoPago por no usarse
+	// Eliminado showBulkPaymentDialog por no usarse
+	// Token de administrador
+	const ADMIN_TOKEN =
+		import.meta.env.VITE_ADMIN_TOKEN ||
+		(typeof window !== "undefined"
+			? localStorage.getItem("adminToken") || ""
+			: "");
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -76,21 +92,79 @@ function AdminReservas() {
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
 	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [saving, setSaving] = useState(false);
+	// Estados para editar ruta con 'otro'
+	const [editOrigenEsOtro, setEditOrigenEsOtro] = useState(false);
+	const [editDestinoEsOtro, setEditDestinoEsOtro] = useState(false);
+	const [editOtroOrigen, setEditOtroOrigen] = useState("");
+	const [editOtroDestino, setEditOtroDestino] = useState("");
 
-	// Filtros y búsqueda
+	// Estados para asignaciÃ³n de vehÃ­culo/conductor
+	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+	const [regPagoMonto, setRegPagoMonto] = useState("");
+	const [regPagoMetodo, setRegPagoMetodo] = useState("");
+	const [regPagoReferencia, setRegPagoReferencia] = useState("");
+	const [pagoHistorial, setPagoHistorial] = useState([]);
+
+	const apiUrl =
+		getBackendUrl() || "https://transportes-araucaria.onrender.com";
+
+	// Limpieza final para resolver errores persistentes
+
+	// Corrección de dependencias en useEffect
+	// Línea 94: Envolvemos fetchPagoHistorial en useCallback para evitar cambios en cada render
+	const fetchPagoHistorial = useCallback(async () => {
+		if (!selectedReserva) return;
+		try {
+			const resp = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`
+			);
+			if (resp.ok) {
+				const data = await resp.json();
+				setPagoHistorial(Array.isArray(data.pagos) ? data.pagos : []);
+			} else {
+				setPagoHistorial([]);
+			}
+		} catch (e) {
+			console.error("Error al cargar historial de pagos:", e);
+		}
+	}, [selectedReserva, apiUrl]);
+
+	// Recargar historial de pagos cuando cambie la reserva seleccionada o se cierre el modal de registro
+	useEffect(() => {
+		if (selectedReserva) {
+			fetchPagoHistorial();
+		} else {
+			setPagoHistorial([]);
+		}
+	}, [selectedReserva, fetchPagoHistorial]);
+	const [vehiculos, setVehiculos] = useState([]);
+	const [conductores, setConductores] = useState([]);
+	const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
+	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
+	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
+	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
+	// Estados para pre-cargar y validar contra asignaciÃ³n actual
+	const [assignedPatente, setAssignedPatente] = useState("");
+	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
+	const [assignedVehiculoId, setAssignedVehiculoId] = useState(null);
+	const [assignedConductorId, setAssignedConductorId] = useState(null);
+	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
+	const [loadingHistorial, setLoadingHistorial] = useState(false);
+
+	// Filtros y bÃºsqueda
 	const [searchTerm, setSearchTerm] = useState("");
 	const [estadoFiltro, setEstadoFiltro] = useState("todos");
 	const [estadoPagoFiltro, setEstadoPagoFiltro] = useState("todos");
 	const [fechaDesde, setFechaDesde] = useState("");
 	const [fechaHasta, setFechaHasta] = useState("");
 
-	// Paginación
+	// PaginaciÃ³n
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalReservas, setTotalReservas] = useState(0);
 	const itemsPerPage = 20;
 
-	// Estadísticas
+	// EstadÃ­sticas
 	const [estadisticas, setEstadisticas] = useState({
 		totalReservas: 0,
 		reservasPendientes: 0,
@@ -99,12 +173,14 @@ function AdminReservas() {
 		totalIngresos: 0,
 	});
 
-	// Formulario de edición
+	// Formulario de ediciÃ³n
 	const [formData, setFormData] = useState({
 		estado: "",
 		estadoPago: "",
 		metodoPago: "",
 		referenciaPago: "",
+		tipoPago: "",
+		montoPagado: "",
 		observaciones: "",
 		numeroVuelo: "",
 		hotel: "",
@@ -138,34 +214,144 @@ function AdminReservas() {
 		saldoPendiente: 0,
 		totalConDescuento: 0,
 		mensaje: "",
-		estado: "confirmada",
+		// Estado inicial debe ser pendiente, solo se confirma si el pago estÃ¡ realizado
+		estado: "pendiente",
 		estadoPago: "pendiente",
 		metodoPago: "",
 		observaciones: "",
+		enviarCorreo: true,
 	});
+
+	// CatÃ¡logo de destinos (para selects)
+	const [destinosCatalog, setDestinosCatalog] = useState([]);
+	const [origenEsOtro, setOrigenEsOtro] = useState(false);
+	const [destinoEsOtro, setDestinoEsOtro] = useState(false);
+	const [otroOrigen, setOtroOrigen] = useState("");
+	const [otroDestino, setOtroDestino] = useState("");
+
+	const fetchDestinosCatalog = async () => {
+		try {
+			const resp = await fetch(`${apiUrl}/pricing`);
+			if (resp.ok) {
+				const data = await resp.json();
+				const names = Array.isArray(data.destinos)
+					? data.destinos
+							.map((d) => (d && d.nombre ? String(d.nombre).trim() : ""))
+							.filter(Boolean)
+					: [];
+				const uniqueNames = [...new Set(names)];
+				const includesAeropuerto = uniqueNames.some(
+					(n) => normalizeDestino(n) === normalizeDestino(AEROPUERTO_LABEL)
+				);
+				const merged = includesAeropuerto
+					? uniqueNames
+					: [AEROPUERTO_LABEL, ...uniqueNames];
+				setDestinosCatalog(merged);
+			}
+		} catch {
+			setDestinosCatalog([AEROPUERTO_LABEL]);
+		}
+	};
+
+	const destinosOptions = useMemo(() => {
+		const seen = new Set();
+		const result = [];
+		const pushValue = (value) => {
+			const normalized = normalizeDestino(value);
+			if (!normalized || seen.has(normalized)) return;
+			seen.add(normalized);
+			result.push(value.toString().trim());
+		};
+		pushValue(AEROPUERTO_LABEL);
+		destinosCatalog.forEach(pushValue);
+		return result;
+	}, [destinosCatalog]);
+
+	const destinosSet = useMemo(() => {
+		const set = new Set();
+		destinosOptions.forEach((value) => set.add(normalizeDestino(value)));
+		return set;
+	}, [destinosOptions]);
+
+	const destinoExiste = useCallback(
+		(valor) => destinosSet.has(normalizeDestino(valor)),
+		[destinosSet]
+	);
 
 	// Estados para autocompletado de clientes
 	const [clienteSugerencias, setClienteSugerencias] = useState([]);
 	const [mostrandoSugerencias, setMostrandoSugerencias] = useState(false);
 	const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
-	// Estados para columnas visibles
-	const [columnasVisibles, setColumnasVisibles] = useState({
-		id: true,
-		cliente: true,
-		contacto: true,
-		rut: false,
-		ruta: true,
-		fechaHora: true,
-		pasajeros: true,
-		total: true,
-		estado: true,
-		pago: true,
-		saldo: true,
-		esCliente: false,
-		numViajes: false,
-		acciones: true,
+	// Columnas (config centralizada + persistencia)
+	const COLUMN_DEFINITIONS = [
+		{ key: "id", label: "ID", defaultVisible: true },
+		{ key: "cliente", label: "Cliente", defaultVisible: true },
+		{ key: "contacto", label: "Contacto", defaultVisible: true },
+		{ key: "rut", label: "RUT", defaultVisible: false },
+		{ key: "ruta", label: "Ruta", defaultVisible: true },
+		{ key: "fechaHora", label: "Fecha/Hora", defaultVisible: true },
+		{ key: "pasajeros", label: "Pasajeros", defaultVisible: true },
+		{ key: "total", label: "Total", defaultVisible: true },
+		{ key: "estado", label: "Estado", defaultVisible: true },
+		{ key: "pago", label: "Pago", defaultVisible: true },
+		{ key: "saldo", label: "Saldo", defaultVisible: true },
+		{ key: "esCliente", label: "Es Cliente", defaultVisible: false },
+		{ key: "numViajes", label: "Núm. Viajes", defaultVisible: false },
+		{ key: "acciones", label: "Acciones", defaultVisible: true },
+	];
+
+	const DEFAULT_COLUMNAS_VISIBLES = COLUMN_DEFINITIONS.reduce((acc, d) => {
+		acc[d.key] = Boolean(d.defaultVisible);
+		return acc;
+	}, {});
+
+	// Claves storage (v2 con fallback a v1)
+	const COLUMNAS_STORAGE_KEY = "adminReservas_columnasVisibles_v2";
+	const COLUMNAS_STORAGE_FALLBACK_KEYS = [
+		"adminReservas_columnasVisibles_v2",
+		"adminReservas_columnasVisibles_v1",
+	];
+
+	// InicializaciÃ³n perezosa desde storage para evitar reseteos al montar
+	const [columnasVisibles, setColumnasVisibles] = useState(() => {
+		try {
+			let parsed = null;
+			for (const k of COLUMNAS_STORAGE_FALLBACK_KEYS) {
+				const raw = localStorage.getItem(k);
+				if (!raw) continue;
+				try {
+					const obj = JSON.parse(raw);
+					if (obj && typeof obj === "object") {
+						parsed = obj;
+						break;
+					}
+				} catch {
+					// Ignorar errores de parseo de localStorage
+				}
+			}
+			if (!parsed) return { ...DEFAULT_COLUMNAS_VISIBLES };
+			const merged = { ...DEFAULT_COLUMNAS_VISIBLES };
+			for (const k of Object.keys(DEFAULT_COLUMNAS_VISIBLES)) {
+				if (typeof parsed[k] === "boolean") merged[k] = parsed[k];
+			}
+			return merged;
+		} catch {
+			return { ...DEFAULT_COLUMNAS_VISIBLES };
+		}
 	});
+
+	// Guardar configuraciÃ³n de columnas cuando cambie
+	useEffect(() => {
+		try {
+			localStorage.setItem(
+				COLUMNAS_STORAGE_KEY,
+				JSON.stringify(columnasVisibles)
+			);
+		} catch {
+			// Ignorar errores de localStorage
+		}
+	}, [columnasVisibles]);
 
 	// Estado para modal de historial de cliente
 	const [showHistorialDialog, setShowHistorialDialog] = useState(false);
@@ -173,18 +359,92 @@ function AdminReservas() {
 
 	// Estados para acciones masivas
 	const [selectedReservas, setSelectedReservas] = useState([]);
+
+	// Función para exportar reservas seleccionadas a XLS
+	const exportarSeleccionadosXLS = () => {
+		// Definir las columnas a exportar (etiquetas visibles en el Excel)
+		const columnasExportar = [
+			{ key: "id", label: "ID Reserva" },
+			{ key: "clienteId", label: "ID Cliente" },
+			{ key: "cliente", label: "Nombre" },
+			{ key: "email", label: "Correo" },
+			{ key: "telefono", label: "Teléfono" },
+			{ key: "rut", label: "RUT" },
+			{ key: "fecha", label: "Fecha" },
+			{ key: "hora", label: "Hora" },
+			{ key: "origen", label: "Origen" },
+			{ key: "destino", label: "Destino" },
+			{ key: "totalConDescuento", label: "Total" },
+			{ key: "estado", label: "Estado" },
+			{ key: "pagoMonto", label: "Monto Pagado" },
+			{ key: "saldoPendiente", label: "Saldo Pendiente" },
+		];
+
+		// Cabeceras (primera fila)
+		const headers = columnasExportar.map((c) => c.label);
+
+		// Si hay reservas seleccionadas, obtener los objetos desde el estado `reservas`
+		const filas = [];
+		if (selectedReservas && selectedReservas.length > 0) {
+			// selectedReservas guarda ids (string o number). Mapear a objetos completos.
+			const seleccionObjs = reservas.filter(
+				(r) =>
+					selectedReservas.includes(r.id) ||
+					selectedReservas.includes(String(r.id))
+			);
+			seleccionObjs.forEach((reserva) => {
+				const fila = columnasExportar.map((col) => {
+					let val = reserva[col.key];
+					if (val === undefined || val === null) return "";
+					// Si el valor es un objeto, intentar extraer campos comunes
+					if (typeof val === "object") {
+						if (val.nombre) return String(val.nombre);
+						if (val.name) return String(val.name);
+						if (val.email) return String(val.email);
+						if (val.telefono)
+							return String(val.telefono || val.phone || val.tel || "");
+						// Si es un objeto más complejo, serializar de forma compacta
+						try {
+							return JSON.stringify(val);
+						} catch {
+							return String(val);
+						}
+					}
+					// Formatear fechas simples
+					if (col.key === "fecha") {
+						try {
+							const d = new Date(val);
+							if (!isNaN(d)) return d.toLocaleString("es-CL");
+						} catch {
+							// ignore
+						}
+					}
+					return String(val);
+				});
+				filas.push(fila);
+			});
+		}
+
+		// Construir matriz de datos: primera fila = headers, luego filas (si existen)
+		const aoa = [headers, ...filas];
+
+		// Crear hoja y libro
+		const ws = XLSX.utils.aoa_to_sheet(aoa);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Reservas");
+
+		// Descargar archivo (si no hay filas, el archivo tendrá solo la cabecera)
+		XLSX.writeFile(wb, "reservas_seleccionadas.xlsx");
+	};
 	const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 	const [showBulkStatusDialog, setShowBulkStatusDialog] = useState(false);
-	const [showBulkPaymentDialog, setShowBulkPaymentDialog] = useState(false);
 	const [bulkEstado, setBulkEstado] = useState("");
-	const [bulkEstadoPago, setBulkEstadoPago] = useState("");
 	const [processingBulk, setProcessingBulk] = useState(false);
 
-	const apiUrl =
-		import.meta.env.VITE_API_URL ||
-		"https://transportes-araucaria.onrender.com";
+	// Estado para mostrar el modal de registro de pago manual
+	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
 
-	// Cargar estadísticas
+	// Cargar estadÃ­sticas
 	const fetchEstadisticas = async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`);
@@ -193,9 +453,9 @@ function AdminReservas() {
 				setEstadisticas(data);
 			} else {
 				console.warn(
-					`Error cargando estadísticas: ${response.status} ${response.statusText}`
+					`Error cargando estadÃ­sticas: ${response.status} ${response.statusText}`
 				);
-				// Establecer estadísticas por defecto en caso de error
+				// Establecer estadÃ­sticas por defecto en caso de error
 				setEstadisticas({
 					totalReservas: 0,
 					reservasPendientes: 0,
@@ -205,8 +465,8 @@ function AdminReservas() {
 				});
 			}
 		} catch (error) {
-			console.error("Error cargando estadísticas:", error);
-			// Establecer estadísticas por defecto en caso de error
+			console.error("Error cargando estadÃ­sticas:", error);
+			// Establecer estadÃ­sticas por defecto en caso de error
 			setEstadisticas({
 				totalReservas: 0,
 				reservasPendientes: 0,
@@ -214,6 +474,174 @@ function AdminReservas() {
 				reservasPagadas: 0,
 				totalIngresos: 0,
 			});
+		}
+	};
+
+	// Cargar vehÃ­culos disponibles
+	const fetchVehiculos = async () => {
+		try {
+			const response = await fetch(`${apiUrl}/api/vehiculos`);
+			if (response.ok) {
+				const data = await response.json();
+				setVehiculos(data.vehiculos || []);
+			}
+		} catch (error) {
+			console.error("Error cargando vehÃ­culos:", error);
+		}
+	};
+
+	// Cargar conductores disponibles
+	const fetchConductores = async () => {
+		try {
+			const response = await fetch(`${apiUrl}/api/conductores`);
+			if (response.ok) {
+				const data = await response.json();
+				setConductores(data.conductores || []);
+			}
+		} catch (error) {
+			console.error("Error cargando conductores:", error);
+		}
+	};
+
+	// Abrir diÃ¡logo de asignaciÃ³n
+	const handleAsignar = (reserva) => {
+		setSelectedReserva(reserva);
+		// Derivar patente del label "TIPO PATENTE"
+		const pat = (reserva.vehiculo || "").trim().split(" ").pop().toUpperCase();
+		setAssignedPatente(pat || "");
+		// Intentar extraer nombre de conductor desde observaciones
+		const obs = (reserva.observaciones || "").toString();
+		const m = obs.match(/Conductor asignado:\s*([^(|\n]+?)(?:\s*\(|$)/i);
+		const nombreCon = m ? m[1].trim() : "";
+		setAssignedConductorNombre(nombreCon);
+		// Intentar preseleccionar si los catÃ¡logos ya existen
+		let preVeh = "";
+		if (vehiculos.length > 0 && pat) {
+			const found = vehiculos.find(
+				(v) => (v.patente || "").toUpperCase() === pat
+			);
+			if (found) {
+				preVeh = found.id.toString();
+				setAssignedVehiculoId(found.id);
+			}
+		}
+		let preCon = "none";
+		if (conductores.length > 0 && nombreCon) {
+			const foundC = conductores.find(
+				(c) => (c.nombre || "").toLowerCase() === nombreCon.toLowerCase()
+			);
+			if (foundC) {
+				preCon = foundC.id.toString();
+				setAssignedConductorId(foundC.id);
+			}
+		}
+		setVehiculoSeleccionado(preVeh);
+		setConductorSeleccionado(preCon);
+		setEnviarNotificacion(true);
+		setShowAsignarDialog(true);
+		// Cargar vehÃ­culos y conductores si aÃºn no se han cargado
+		if (vehiculos.length === 0) fetchVehiculos();
+		if (conductores.length === 0) fetchConductores();
+	};
+
+	// Pre-cargar selecciÃ³n cuando se abren catÃ¡logos
+	useEffect(() => {
+		if (!showAsignarDialog) return;
+		if (!vehiculoSeleccionado && assignedPatente && vehiculos.length > 0) {
+			const found = vehiculos.find(
+				(v) => (v.patente || "").toUpperCase() === assignedPatente
+			);
+			if (found) {
+				setVehiculoSeleccionado(found.id.toString());
+				setAssignedVehiculoId(found.id);
+			}
+		}
+		if (assignedConductorNombre && conductores.length > 0) {
+			const foundC = conductores.find(
+				(c) =>
+					(c.nombre || "").toLowerCase() ===
+					assignedConductorNombre.toLowerCase()
+			);
+			if (foundC) {
+				setConductorSeleccionado(foundC.id.toString());
+				setAssignedConductorId(foundC.id);
+			}
+		}
+	}, [
+		showAsignarDialog,
+		vehiculos,
+		conductores,
+		assignedPatente,
+		assignedConductorNombre,
+		vehiculoSeleccionado,
+	]);
+
+	// Guardar asignaciÃ³n de vehÃ­culo/conductor
+	const handleGuardarAsignacion = async () => {
+		if (!vehiculoSeleccionado) {
+			alert("Debe seleccionar al menos un vehículo");
+			return;
+		}
+
+		setLoadingAsignacion(true);
+		try {
+			const ADMIN_TOKEN = localStorage.getItem("adminToken");
+			const response = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+					body: JSON.stringify({
+						vehiculoId: parseInt(vehiculoSeleccionado),
+						conductorId:
+							conductorSeleccionado && conductorSeleccionado !== "none"
+								? parseInt(conductorSeleccionado)
+								: null,
+						sendEmail: Boolean(enviarNotificacion),
+					}),
+				}
+			);
+
+			if (response.ok) {
+				await fetchReservas(); // Recargar reservas
+				setShowAsignarDialog(false);
+				alert("Vehículo y conductor asignados correctamente");
+				// Refrescar historial si estamos viendo detalles
+				if (showDetailDialog && selectedReserva?.id) {
+					setLoadingHistorial(true);
+					try {
+						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						const resp = await fetch(
+							`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`,
+							{
+								headers: ADMIN_TOKEN
+									? { Authorization: `Bearer ${ADMIN_TOKEN}` }
+									: {},
+							}
+						);
+						if (resp.ok) {
+							const data = await resp.json();
+							setHistorialAsignaciones(
+								Array.isArray(data.historial) ? data.historial : []
+							);
+						}
+					} catch {
+						// noop
+					}
+					setLoadingHistorial(false);
+				}
+			} else {
+				const data = await response.json();
+				alert(data.error || "Error al asignar vehículo/conductor");
+			}
+		} catch (error) {
+			console.error("Error asignando vehículo/conductor:", error);
+			alert("Error al asignar vehículo/conductor");
+		} finally {
+			setLoadingAsignacion(false);
 		}
 	};
 
@@ -246,8 +674,28 @@ function AdminReservas() {
 			}
 
 			const data = await response.json();
-			setReservas(data.reservas || []);
-			setTotalPages(data.pagination?.totalPages || 1);
+			const reservasNormalizadas = (data.reservas || []).map((reserva) => {
+				const cliente = reserva.cliente || {};
+				return {
+					...reserva,
+					esCliente: cliente.esCliente || false, // Respetar bandera de cliente existente
+					nombre: cliente.nombre || reserva.nombre || "",
+					rut: cliente.rut || reserva.rut || "",
+					email: cliente.email || reserva.email || "",
+					telefono: cliente.telefono || reserva.telefono || "",
+					clienteId: cliente.id || reserva.clienteId || null,
+					clasificacionCliente: cliente.clasificacion || null,
+					totalReservas: cliente.totalReservas || 0,
+					abonoPagado: Boolean(reserva.abonoPagado),
+					saldoPagado: Boolean(reserva.saldoPagado),
+				};
+			});
+			setReservas(reservasNormalizadas);
+			const nuevasTotalPages = data.pagination?.totalPages || 1;
+			setTotalPages(nuevasTotalPages);
+			if (currentPage > nuevasTotalPages) {
+				setCurrentPage(Math.max(1, nuevasTotalPages));
+			}
 			setTotalReservas(data.pagination?.total || 0);
 		} catch (error) {
 			console.error("Error cargando reservas:", error);
@@ -263,11 +711,11 @@ function AdminReservas() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta]);
 
-	// Filtrar reservas localmente por búsqueda
+	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
 		let filtered = reservas;
 
-		// Filtro de búsqueda
+		// Filtro de bÃºsqueda
 		if (searchTerm) {
 			const term = searchTerm.toLowerCase();
 			filtered = filtered.filter(
@@ -287,28 +735,93 @@ function AdminReservas() {
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
 
-	// Abrir modal de edición
+	// Abrir modal de ediciÃ³n
 	const handleEdit = (reserva) => {
 		setSelectedReserva(reserva);
 		setFormData({
+			nombre: reserva.nombre || "",
+			email: reserva.email || "",
+			telefono: reserva.telefono || "",
+			origen: reserva.origen || "",
+			destino: reserva.destino || "",
+			fecha: (reserva.fecha || "").toString().substring(0, 10),
+			hora: reserva.hora || "",
+			pasajeros: String(reserva.pasajeros || ""),
 			estado: reserva.estado || "",
 			estadoPago: reserva.estadoPago || "",
 			metodoPago: reserva.metodoPago || "",
 			referenciaPago: reserva.referenciaPago || "",
+			tipoPago: reserva.tipoPago || "",
+			montoPagado:
+				reserva.pagoMonto !== undefined && reserva.pagoMonto !== null
+					? String(reserva.pagoMonto)
+					: "",
 			observaciones: reserva.observaciones || "",
 			numeroVuelo: reserva.numeroVuelo || "",
 			hotel: reserva.hotel || "",
 			equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
 			horaRegreso: reserva.horaRegreso || "",
+			idaVuelta: Boolean(reserva.idaVuelta),
+			fechaRegreso: (reserva.fechaRegreso || "").toString().substring(0, 10),
 		});
+		// Reset ediciÃ³n de ruta
+		setEditOrigenEsOtro(false);
+		setEditDestinoEsOtro(false);
+		setEditOtroOrigen("");
+		setEditOtroDestino("");
+		// Cargar catÃ¡logo de destinos para selects
+		fetchDestinosCatalog();
 		setShowEditDialog(true);
 	};
 
 	// Abrir modal de detalles
-	const handleViewDetails = (reserva) => {
-		setSelectedReserva(reserva);
+	const handleViewDetails = async (reserva) => {
+		// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
+		try {
+			const respReserva = await fetch(`${apiUrl}/api/reservas/${reserva.id}`);
+			if (respReserva.ok) {
+				const latest = await respReserva.json();
+				setSelectedReserva(latest);
+			} else {
+				// fallback a la reserva recibida si el GET falla
+				setSelectedReserva(reserva);
+			}
+		} catch (e) {
+			console.warn("No se pudo recargar reserva (usar local):", e.message);
+			setSelectedReserva(reserva);
+		}
+
 		setShowDetailDialog(true);
+
+		// Cargar historial de asignaciones (uso interno) usando token dinámico si existe
+		try {
+			const dynamicToken =
+				typeof window !== "undefined"
+					? localStorage.getItem("adminToken")
+					: null;
+			const resp = await fetch(
+				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
+				{
+					headers: dynamicToken
+						? { Authorization: `Bearer ${dynamicToken}` }
+						: {},
+				}
+			);
+			if (resp.ok) {
+				const data = await resp.json();
+				setHistorialAsignaciones(
+					Array.isArray(data.historial) ? data.historial : []
+				);
+			} else {
+				setHistorialAsignaciones([]);
+			}
+		} catch (err) {
+			console.error("Error cargando historial de asignaciones:", err);
+			setHistorialAsignaciones([]);
+		} finally {
+			setLoadingHistorial(false);
+		}
 	};
 
 	// Guardar cambios
@@ -317,14 +830,240 @@ function AdminReservas() {
 
 		setSaving(true);
 		try {
-			// Actualizar estado
+			// Actualizar datos generales de la reserva
+			try {
+				const ADMIN_TOKEN = localStorage.getItem("adminToken");
+				const generalResp = await fetch(
+					`${apiUrl}/api/reservas/${selectedReserva.id}`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${ADMIN_TOKEN}`,
+						},
+						body: JSON.stringify({
+							nombre: formData.nombre,
+							email: formData.email,
+							telefono: formData.telefono,
+							fecha: formData.fecha,
+							hora: formData.hora,
+							pasajeros:
+								Number(formData.pasajeros) || selectedReserva.pasajeros,
+							numeroVuelo: formData.numeroVuelo,
+							hotel: formData.hotel,
+							equipajeEspecial: formData.equipajeEspecial,
+							sillaInfantil: Boolean(formData.sillaInfantil),
+							idaVuelta: Boolean(formData.idaVuelta),
+							fechaRegreso: formData.fechaRegreso || null,
+							horaRegreso: formData.horaRegreso || null,
+							mensaje: selectedReserva.mensaje,
+						}),
+					}
+				);
+				if (!generalResp.ok) {
+					const t = await generalResp.text();
+					console.warn("No se pudo actualizar datos generales:", t);
+				}
+			} catch (e) {
+				console.warn(
+					"Error actualizando datos generales (no crÃ­tico):",
+					e.message
+				);
+			}
+			// Actualizar ruta si cambiÃ³
+			const origenFinalEdit = editOrigenEsOtro
+				? editOtroOrigen || formData.origen
+				: formData.origen;
+			const destinoFinalEdit = editDestinoEsOtro
+				? editOtroDestino || formData.destino
+				: formData.destino;
+			if (
+				(origenFinalEdit && origenFinalEdit !== selectedReserva.origen) ||
+				(destinoFinalEdit && destinoFinalEdit !== selectedReserva.destino)
+			) {
+				// Si el destino es 'otro' y no existe en el catálogo, crear registro inactivo
+				if (
+					editDestinoEsOtro &&
+					destinoFinalEdit &&
+					!destinoExiste(destinoFinalEdit)
+				) {
+					try {
+						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						await fetch(`${apiUrl}/api/destinos`, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: `Bearer ${ADMIN_TOKEN}`,
+							},
+							body: JSON.stringify({
+								nombre: destinoFinalEdit,
+								activo: false,
+								precioIda: 0,
+								precioVuelta: 0,
+								precioIdaVuelta: 0,
+							}),
+						});
+					} catch {
+						// Ignorar errores al guardar destino
+					}
+				}
+				// TambiÃ©n registrar origen si es 'otro' y no existe
+				if (
+					editOrigenEsOtro &&
+					origenFinalEdit &&
+					!destinoExiste(origenFinalEdit)
+				) {
+					try {
+						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						await fetch(`${apiUrl}/api/destinos`, {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: `Bearer ${ADMIN_TOKEN}`,
+							},
+							body: JSON.stringify({
+								nombre: origenFinalEdit,
+								activo: false,
+								precioIda: 0,
+								precioVuelta: 0,
+								precioIdaVuelta: 0,
+							}),
+						});
+					} catch {
+						// Ignorar errores al guardar origen
+					}
+				}
+				// Actualizar ruta
+				const ADMIN_TOKEN = localStorage.getItem("adminToken");
+				const rutaResp = await fetch(
+					`${apiUrl}/api/reservas/${selectedReserva.id}/ruta`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${ADMIN_TOKEN}`,
+						},
+						body: JSON.stringify({
+							origen: origenFinalEdit,
+							destino: destinoFinalEdit,
+						}),
+					}
+				);
+				if (!rutaResp.ok) {
+					throw new Error("Error al actualizar la ruta");
+				}
+			}
+			// Determinar estado final: respetar la selección del usuario
+			let estadoFinal =
+				formData.estado || selectedReserva.estado || "pendiente";
+			const estadoPagoActual =
+				formData.estadoPago || selectedReserva.estadoPago || "pendiente";
+			let estadoPagoSolicitado =
+				estadoFinal === "completada" ? "pagado" : estadoPagoActual;
+
+			// Determinar monto a enviar para la actualizaciÃ³n de pago.
+			// Reglas:
+			// - Si el admin ingresÃ³ manualmente un monto, usarlo.
+			// - Si no ingresÃ³ monto y seleccionÃ³ tipo 'abono', calcular el 40% (o abonoSugerido si es mayor)
+			//   restando lo ya pagado previamente para enviar solo el nuevo abono necesario.
+			// - Si seleccionÃ³ 'total' o 'saldo' y no indicÃ³ monto, completar el pago restante.
+			// Priorizar monto manual ingresado por el admin (si proporciona un valor > 0)
+			let montoPagadoValue = null;
+			const montoManual =
+				formData.montoPagado !== undefined && formData.montoPagado !== null
+					? Number(formData.montoPagado)
+					: NaN;
+			if (!Number.isNaN(montoManual) && montoManual > 0) {
+				montoPagadoValue = montoManual;
+			}
+			const tipo = formData.tipoPago;
+			const totalReserva =
+				Number(
+					selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0
+				) || 0;
+			const abonoSugerido = Number(selectedReserva?.abonoSugerido || 0) || 0;
+			const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
+			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
+
+			// Si se selecciona 'saldo' o 'total' (Completar pago), siempre enviar el restante
+			if (tipo === "saldo" || tipo === "total") {
+				const restante = Math.max(totalReserva - pagoPrevio, 0);
+				montoPagadoValue = restante > 0 ? restante : null;
+			} else {
+				// Para otros tipos (ej. 'abono'), calcular solo el nuevo abono necesario.
+				// Nota: el campo 'Monto Registrado' es solo informativo y refleja el acumulado,
+				// no debe reutilizarse como nuevo monto a sumar para evitar duplicar pagos.
+				if (tipo === "abono") {
+					const necesario = Math.max(umbralAbono - pagoPrevio, 0);
+					montoPagadoValue = necesario > 0 ? necesario : null;
+					if (estadoFinal === "pendiente" || estadoFinal === "pendiente_detalles") {
+						estadoFinal = "confirmada";
+					}
+					if (estadoPagoSolicitado === "pendiente") {
+						estadoPagoSolicitado = "parcial";
+					}
+				} else {
+					montoPagadoValue = null;
+				}
+			}
+
+			// Actualizar pago
+			// Si el estado pasa a completada, aseguramos cancelar cualquier saldo restante
+			if (estadoFinal === "completada") {
+				const restante = Math.max(totalReserva - pagoPrevio, 0);
+				if (restante > 0) {
+					montoPagadoValue = restante;
+				}
+			}
+
+			// Enviar actualización de pago al backend (incluir token admin si existe)
+			const ADMIN_TOKEN =
+				typeof window !== "undefined"
+					? localStorage.getItem("adminToken")
+					: null;
+			const pagoResponse = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						...(ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {}),
+					},
+					body: JSON.stringify({
+						estadoPago: estadoPagoSolicitado,
+						metodoPago:
+							formData.metodoPago || selectedReserva.metodoPago || null,
+						referenciaPago:
+							formData.referenciaPago || selectedReserva.referenciaPago || null,
+						tipoPago: formData.tipoPago || null,
+						estadoReserva: estadoFinal,
+						montoPagado:
+							montoPagadoValue !== null && !Number.isNaN(montoPagadoValue)
+								? montoPagadoValue
+								: null,
+					}),
+				}
+			);
+
+			if (!pagoResponse.ok) {
+				throw new Error("Error al actualizar el pago");
+			}
+			let pagoData = null;
+			try {
+				pagoData = await pagoResponse.json();
+			} catch (parseError) {
+				pagoData = null;
+			}
+			const estadoAplicadoBackend = pagoData?.reserva?.estado || null;
+
+			// Aplicar finalmente el estado seleccionado por el usuario (incluye completada)
 			const estadoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
 				{
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						estado: formData.estado,
+						estado: estadoAplicadoBackend || estadoFinal,
 						observaciones: formData.observaciones,
 					}),
 				}
@@ -332,24 +1071,6 @@ function AdminReservas() {
 
 			if (!estadoResponse.ok) {
 				throw new Error("Error al actualizar el estado");
-			}
-
-			// Actualizar pago
-			const pagoResponse = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						estadoPago: formData.estadoPago,
-						metodoPago: formData.metodoPago,
-						referenciaPago: formData.referenciaPago,
-					}),
-				}
-			);
-
-			if (!pagoResponse.ok) {
-				throw new Error("Error al actualizar el pago");
 			}
 
 			// Recargar datos
@@ -365,7 +1086,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Función para obtener el badge del estado
+	// FunciÃ³n para obtener el badge del estado
 	const getEstadoBadge = (estado) => {
 		const estados = {
 			pendiente: { variant: "secondary", label: "Pendiente", icon: Clock },
@@ -398,19 +1119,105 @@ function AdminReservas() {
 		);
 	};
 
-	// Función para obtener el badge del estado de pago
-	const getEstadoPagoBadge = (estadoPago) => {
-		const estados = {
-			pendiente: { variant: "secondary", label: "Pendiente" },
-			pagado: { variant: "default", label: "Pagado" },
-			fallido: { variant: "destructive", label: "Fallido" },
-			reembolsado: { variant: "outline", label: "Reembolsado" },
-		};
+	// FunciÃ³n para obtener el badge del estado de pago
+	// Ahora acepta el objeto `reserva` completo para derivar el estado
+	// a partir de campos reales (monto pagado, total, saldoPendiente, estadoPago)
+	const getEstadoPagoBadge = (reservaOrEstado) => {
+		// Compatibilidad: si pasan solo el estado como string
+		const reserva =
+			typeof reservaOrEstado === "string"
+				? { estadoPago: reservaOrEstado }
+				: reservaOrEstado || {};
 
-		const config = estados[estadoPago] || estados.pendiente;
+		// Extraer valores numÃ©ricos seguros
+		const montoTotal =
+			Number(reserva.totalConDescuento ?? reserva.total ?? 0) || 0;
+		const montoPagado = Number(reserva.pagoMonto ?? 0) || 0;
+		// Derivamos saldo cuando sea necesario, pero no lo requerimos explÃ­citamente aquÃ­
 
-		return <Badge variant={config.variant}>{config.label}</Badge>;
+		// Normalizar estado comunicado por backend
+		const estadoPagoRaw = (reserva.estadoPago || "").toString().toLowerCase();
+
+		// Determinar estado derivado con reglas claras:
+		// - reembolsado y fallido mantienen prioridad
+		// - si montoPagado >= montoTotal && montoTotal > 0 => 'pagado'
+		// - si montoPagado > 0 && montoPagado < montoTotal => 'parcial'
+		// - si montoPagado == 0 => 'pendiente'
+		// - si backend indica status destructivo (fallido) o similar, respetarlo
+
+		let label = "Pendiente";
+		let variant = "secondary";
+
+		if (estadoPagoRaw === "reembolsado") {
+			label = "Reembolsado";
+			variant = "outline";
+		} else if (estadoPagoRaw === "fallido" || estadoPagoRaw === "rechazado") {
+			label = "Fallido";
+			variant = "destructive";
+		} else if (montoTotal > 0 && montoPagado >= montoTotal) {
+			label = "Pagado";
+			variant = "default";
+		} else if (montoPagado > 0 && montoPagado < montoTotal) {
+			label = "Pago parcial";
+			variant = "outline";
+		} else if (estadoPagoRaw === "pagado") {
+			// respaldo por si backend marca 'pagado' pero montos no coinciden
+			label = "Pagado";
+			variant = "default";
+		} else {
+			label = "Pendiente";
+			variant = "secondary";
+		}
+
+		// Mostrar badge con etiqueta y, opcionalmente, info de montos en texto pequeÃ±o
+		const montoInfo =
+			montoPagado > 0
+				? ` (${new Intl.NumberFormat("es-CL", {
+						style: "currency",
+						currency: "CLP",
+				  }).format(montoPagado)})`
+				: "";
+
+		return (
+			<div className="flex flex-col text-sm">
+				<Badge variant={variant}>{label}</Badge>
+				{montoInfo ? (
+					<span className="text-xs text-muted-foreground mt-1">
+						Pagó: {montoInfo}
+					</span>
+				) : null}
+			</div>
+		);
 	};
+
+	// Helper para detectar si ya fue asignado un vehÃ­culo previamente
+	// Consideramos "asignada" si el campo `vehiculo` incluye tipo + patente
+	// por ejemplo: "SUV ABCD12"; en cambio valores como "sedan", "Por asignar", "Auto Privado"
+	// (sin patente real) indican que aÃºn no se ha asignado uno real.
+	const isAsignada = (reserva) => {
+		const v = (reserva?.vehiculo || "").trim().toLowerCase();
+		if (!v || v === "por asignar" || v === "auto privado") return false;
+		const parts = v.split(" ");
+		if (parts.length < 2) return false;
+		const last = parts[parts.length - 1];
+		// Verificar si la Ãºltima parte parece una patente chilena (ej: ABCD12, abcd12)
+		return /^[a-z]{2,4}\d{2,3}$/i.test(last) || /[A-Z0-9]{6,}/i.test(last);
+	};
+
+	const hasVehiculoAsignado = Boolean(
+		selectedReserva &&
+			(selectedReserva.vehiculo_asignado ||
+				selectedReserva.vehiculoId ||
+				isAsignada(selectedReserva))
+	);
+
+	const hasConductorAsignado = Boolean(
+		selectedReserva &&
+			(selectedReserva.conductor_asignado ||
+				selectedReserva.conductorId ||
+				(selectedReserva.conductor &&
+					selectedReserva.conductor !== "Por asignar"))
+	);
 
 	// Formatear moneda
 	const formatCurrency = (amount) => {
@@ -421,9 +1228,36 @@ function AdminReservas() {
 	};
 
 	// Formatear fecha
+	// Evitar que una fecha almacenada como 'YYYY-MM-DD' o 'YYYY-MM-DDT00:00:00Z'
+	// sea interpretada como UTC y muestre el dÃ­a anterior en zonas horarias negativas.
 	const formatDate = (date) => {
 		if (!date) return "-";
-		return new Date(date).toLocaleDateString("es-CL");
+
+		// Si el valor es una fecha solo 'YYYY-MM-DD', construir una fecha local
+		if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+			return new Date(date + "T00:00:00").toLocaleDateString("es-CL");
+		}
+
+		// Si viene en formato ISO con tiempo y termina en Z o corresponde a medianoche UTC,
+		// extraer la parte de fecha para evitar conversiones indeseadas.
+		const isoMidnightZ = date.match(
+			/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.000)?Z?$/
+		);
+		if (isoMidnightZ) {
+			return new Date(isoMidnightZ[1] + "T00:00:00").toLocaleDateString(
+				"es-CL"
+			);
+		}
+
+		// En otros casos, confiar en el Date constructor (cuando hay hora significativa)
+		try {
+			return new Date(date).toLocaleDateString("es-CL");
+		} catch (err) {
+			// Log en espaÃ±ol y fallback: mostrar la cadena original truncada (fecha parte)
+			console.warn("Error formateando fecha:", err);
+			const m = date.match(/^(\d{4}-\d{2}-\d{2})/);
+			return m ? m[1] : String(date);
+		}
 	};
 
 	// Buscar clientes para autocompletar
@@ -458,6 +1292,8 @@ function AdminReservas() {
 			email: cliente.email,
 			telefono: cliente.telefono,
 			clienteId: cliente.id,
+			// Aseguramos que se respete la bandera de cliente existente
+			esCliente: cliente.esCliente || false,
 		});
 		setMostrandoSugerencias(false);
 		setClienteSugerencias([]);
@@ -538,17 +1374,23 @@ function AdminReservas() {
 			saldoPendiente: 0,
 			totalConDescuento: 0,
 			mensaje: "",
-			estado: "confirmada",
+			estado: "pendiente",
 			estadoPago: "pendiente",
 			metodoPago: "",
 			observaciones: "",
+			enviarCorreo: true,
 		});
+		setOrigenEsOtro(false);
+		setDestinoEsOtro(false);
+		setOtroOrigen("");
+		setOtroDestino("");
 		setShowNewDialog(true);
+		fetchDestinosCatalog();
 	};
 
 	// Guardar nueva reserva
 	const handleSaveNewReserva = async () => {
-		// Validaciones básicas
+		// Validaciones bÃ¡sicas
 		if (
 			!newReservaForm.nombre ||
 			!newReservaForm.email ||
@@ -559,7 +1401,14 @@ function AdminReservas() {
 			);
 			return;
 		}
-		if (!newReservaForm.origen || !newReservaForm.destino) {
+		const origenFinal = origenEsOtro
+			? otroOrigen || newReservaForm.origen
+			: newReservaForm.origen;
+		const destinoFinal = destinoEsOtro
+			? otroDestino || newReservaForm.destino
+			: newReservaForm.destino;
+
+		if (!origenFinal || !destinoFinal) {
 			alert("Por favor completa los campos obligatorios: Origen y Destino");
 			return;
 		}
@@ -594,19 +1443,107 @@ function AdminReservas() {
 				}
 			}
 
-			// Calcular saldo pendiente si no está establecido
+			// Calcular saldo pendiente según el estado seleccionado
+			// Nota: el campo `abonoSugerido` es solo una sugerencia y NO debe
+			// asumirse como pago realizado al crear la reserva. Solo cuando el
+			// estado de pago sea 'pagado' o se entregue un monto explícito
+			// consideramos que existe un pago registrado.
 			const total =
 				parseFloat(newReservaForm.totalConDescuento) ||
 				parseFloat(newReservaForm.precio) ||
 				0;
-			const abono = parseFloat(newReservaForm.abonoSugerido) || 0;
-			const saldo = total - abono;
+			// Nota: abonoSugerido se mantiene en los datos pero no se asume como pago.
+
+			let estadoSeleccionado = newReservaForm.estado || "pendiente";
+			const estadoPagoSeleccionado = newReservaForm.estadoPago || "pendiente";
+
+			// Determinar montoPagado y saldo de forma explícita
+			let montoPagado = 0;
+			let saldo = total;
+
+			// Si el admin indicó explícitamente un monto pagado en el formulario
+			// (campo opcional), respetarlo. Este proyecto no expone ese campo
+			// en el formulario nuevo por defecto, pero mantenemos la verificación
+			// por compatibilidad con futuras integraciones.
+			const montoPagadoFormulario =
+				newReservaForm.montoPagado !== undefined &&
+				newReservaForm.montoPagado !== ""
+					? parseFloat(newReservaForm.montoPagado) || 0
+					: null;
+
+			if (montoPagadoFormulario !== null) {
+				montoPagado = Math.max(montoPagadoFormulario, 0);
+				saldo = Math.max(total - montoPagado, 0);
+			} else if (estadoPagoSeleccionado === "pagado") {
+				// Si el estado indica pagado, asumimos pago total
+				montoPagado = total;
+				saldo = 0;
+			} else if (estadoPagoSeleccionado === "reembolsado") {
+				// Reembolsado -> sin saldo y sin pago activo
+				montoPagado = 0;
+				saldo = 0;
+			} else if (estadoPagoSeleccionado === "fallido") {
+				// Fallido -> no hay pago
+				montoPagado = 0;
+				saldo = total;
+			} else {
+				// Estado pendiente (por defecto): no considerar el abono sugerido
+				// como pago realizado. Guardamos el abono sugerido por separado
+				// y dejamos saldo = total.
+				montoPagado = 0;
+				saldo = total;
+			}
+
+			if (saldo < 0) saldo = 0;
+
+			if (
+				estadoPagoSeleccionado === "pagado" &&
+				estadoSeleccionado === "pendiente"
+			) {
+				estadoSeleccionado = "confirmada";
+			} else if (
+				estadoPagoSeleccionado === "reembolsado" &&
+				estadoSeleccionado === "pendiente"
+			) {
+				estadoSeleccionado = "cancelada";
+			}
+
+			// Crear destino si es 'otro' y no existe
+			if (destinoEsOtro && destinoFinal && !destinoExiste(destinoFinal)) {
+				try {
+					const ADMIN_TOKEN = localStorage.getItem("adminToken");
+					await fetch(`${apiUrl}/api/destinos`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${ADMIN_TOKEN}`,
+						},
+						body: JSON.stringify({
+							nombre: destinoFinal,
+							activo: false,
+							precioIda: 0,
+							precioVuelta: 0,
+							precioIdaVuelta: 0,
+						}),
+					});
+				} catch (e) {
+					console.warn(
+						"No se pudo registrar destino nuevo (no crÃ­tico)",
+						e.message
+					);
+				}
+			}
 
 			const reservaData = {
 				...newReservaForm,
+				estado: estadoSeleccionado,
+				estadoPago: estadoPagoSeleccionado,
 				clienteId: clienteId,
+				origen: origenFinal,
+				destino: destinoFinal,
 				totalConDescuento: total,
 				saldoPendiente: saldo,
+				pagoMonto: montoPagado > 0 ? montoPagado : undefined,
 				source: "manual",
 			};
 
@@ -709,40 +1646,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Cambiar estado de pago de reservas seleccionadas
-	const handleBulkChangePayment = async () => {
-		if (!bulkEstadoPago) {
-			alert("Por favor selecciona un estado de pago");
-			return;
-		}
-
-		setProcessingBulk(true);
-		try {
-			const promises = selectedReservas.map((id) =>
-				fetch(`${apiUrl}/api/reservas/${id}/pago`, {
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ estadoPago: bulkEstadoPago }),
-				})
-			);
-
-			await Promise.all(promises);
-
-			await fetchReservas();
-			await fetchEstadisticas();
-			setSelectedReservas([]);
-			setShowBulkPaymentDialog(false);
-			setBulkEstadoPago("");
-			alert(
-				`Estado de pago actualizado para ${selectedReservas.length} reserva(s)`
-			);
-		} catch (error) {
-			console.error("Error actualizando estado de pago:", error);
-			alert("Error al actualizar el estado de pago de algunas reservas");
-		} finally {
-			setProcessingBulk(false);
-		}
-	};
+	// Eliminada función handleBulkChangePayment por no usarse
 
 	if (loading && reservas.length === 0) {
 		return (
@@ -757,7 +1661,7 @@ function AdminReservas() {
 
 	return (
 		<div className="space-y-6">
-			{/* Encabezado y Estadísticas */}
+			{/* Encabezado y EstadÃ­sticas */}
 			<div>
 				<div className="flex justify-between items-center mb-4">
 					<h2 className="text-3xl font-bold">Gestión de Reservas</h2>
@@ -849,7 +1753,7 @@ function AdminReservas() {
 				</div>
 			</div>
 
-			{/* Filtros y Búsqueda */}
+			{/* Filtros y BÃºsqueda */}
 			<Card>
 				<CardHeader>
 					<CardTitle>Filtros de Búsqueda</CardTitle>
@@ -968,12 +1872,12 @@ function AdminReservas() {
 								</DialogDescription>
 							</DialogHeader>
 							<div className="space-y-2">
-								{Object.entries(columnasVisibles).map(([key, value]) => (
+								{COLUMN_DEFINITIONS.map(({ key, label }) => (
 									<div key={key} className="flex items-center space-x-2">
 										<input
 											type="checkbox"
 											id={`col-${key}`}
-											checked={value}
+											checked={Boolean(columnasVisibles[key])}
 											onChange={(e) =>
 												setColumnasVisibles({
 													...columnasVisibles,
@@ -982,27 +1886,145 @@ function AdminReservas() {
 											}
 											className="w-4 h-4"
 										/>
-										<Label
-											htmlFor={`col-${key}`}
-											className="cursor-pointer capitalize"
-										>
-											{key === "id" && "ID"}
-											{key === "cliente" && "Cliente"}
-											{key === "contacto" && "Contacto"}
-											{key === "rut" && "RUT"}
-											{key === "ruta" && "Ruta"}
-											{key === "fechaHora" && "Fecha/Hora"}
-											{key === "pasajeros" && "Pasajeros"}
-											{key === "total" && "Total"}
-											{key === "estado" && "Estado"}
-											{key === "pago" && "Pago"}
-											{key === "saldo" && "Saldo"}
-											{key === "esCliente" && "Es Cliente"}
-											{key === "numViajes" && "Núm. Viajes"}
-											{key === "acciones" && "Acciones"}
+										<Label htmlFor={`col-${key}`} className="cursor-pointer">
+											{label}
 										</Label>
 									</div>
 								))}
+							</div>
+							<div className="flex justify-end gap-2 mt-4">
+								<Button
+									variant="outline"
+									onClick={() => {
+										setColumnasVisibles(DEFAULT_COLUMNAS_VISIBLES);
+										try {
+											localStorage.setItem(
+												COLUMNAS_STORAGE_KEY,
+												JSON.stringify(DEFAULT_COLUMNAS_VISIBLES)
+											);
+										} catch (e) {
+											// Log en espaÃ±ol para facilitar debugging
+											console.warn(
+												"No se pudo restablecer columnas en localStorage:",
+												e
+											);
+										}
+									}}
+								>
+									Restablecer columnas
+								</Button>
+								<Button
+									onClick={() => {
+										try {
+											localStorage.setItem(
+												COLUMNAS_STORAGE_KEY,
+												JSON.stringify(columnasVisibles)
+											);
+											alert("Columnas guardadas");
+										} catch {
+											alert("No se pudo guardar la configuraciÃ³n");
+										}
+									}}
+								>
+									Guardar columnas
+								</Button>
+							</div>
+						</DialogContent>
+					</Dialog>
+
+					{/* Modal para registrar pago manual */}
+					<Dialog
+						open={showRegisterPayment}
+						onOpenChange={setShowRegisterPayment}
+					>
+						<DialogContent className="max-w-md">
+							<DialogHeader>
+								<DialogTitle>Registrar pago manual</DialogTitle>
+								<DialogDescription>
+									Registra un pago y guarda un historial con origen manual/web.
+								</DialogDescription>
+							</DialogHeader>
+							<div className="space-y-4 mt-2">
+								<div className="space-y-2">
+									<Label>Monto (CLP)</Label>
+									<Input
+										type="number"
+										value={regPagoMonto}
+										onChange={(e) => setRegPagoMonto(e.target.value)}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label>Método</Label>
+									<Select
+										value={regPagoMetodo}
+										onValueChange={(v) => setRegPagoMetodo(v)}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="efectivo">Efectivo</SelectItem>
+											<SelectItem value="transferencia">
+												Transferencia
+											</SelectItem>
+											<SelectItem value="flow">Flow</SelectItem>
+											<SelectItem value="otro">Otro</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-2">
+									<Label>Referencia</Label>
+									<Input
+										value={regPagoReferencia}
+										onChange={(e) => setRegPagoReferencia(e.target.value)}
+									/>
+								</div>
+								<div className="flex justify-end gap-2 pt-4 border-t">
+									<Button
+										variant="outline"
+										onClick={() => setShowRegisterPayment(false)}
+									>
+										Cancelar
+									</Button>
+									<Button
+										onClick={async () => {
+											if (!selectedReserva) return;
+											try {
+												const ADMIN_TOKEN = localStorage.getItem("adminToken");
+												const resp = await fetch(
+													`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,
+													{
+														method: "POST",
+														headers: {
+															"Content-Type": "application/json",
+															...(ADMIN_TOKEN
+																? { Authorization: `Bearer ${ADMIN_TOKEN}` }
+																: {}),
+														},
+														body: JSON.stringify({
+															amount: Number(regPagoMonto) || 0,
+															metodo: regPagoMetodo,
+															referencia: regPagoReferencia,
+														}),
+													}
+												);
+												if (!resp.ok) throw new Error("Error registrando pago");
+												setShowRegisterPayment(false);
+												setRegPagoMonto("");
+												setRegPagoMetodo("");
+												setRegPagoReferencia("");
+												// recargar reserva y pagos
+												await fetchReservas();
+												await fetchPagoHistorial();
+											} catch (e) {
+												console.error(e);
+												alert("Error registrando pago: " + e.message);
+											}
+										}}
+									>
+										Registrar
+									</Button>
+								</div>
 							</div>
 						</DialogContent>
 					</Dialog>
@@ -1029,17 +2051,18 @@ function AdminReservas() {
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setShowBulkStatusDialog(true)}
+										onClick={exportarSeleccionadosXLS}
 									>
-										Cambiar Estado
+										Exportar a Excel
 									</Button>
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setShowBulkPaymentDialog(true)}
+										onClick={() => setShowBulkStatusDialog(true)}
 									>
-										Cambiar Estado Pago
+										Cambiar Estado
 									</Button>
+									{/* Botón Cambiar Estado Pago eliminado por limpieza de código */}
 									<Button
 										variant="destructive"
 										size="sm"
@@ -1124,7 +2147,19 @@ function AdminReservas() {
 											</TableCell>
 											{columnasVisibles.id && (
 												<TableCell className="font-medium">
-													#{reserva.id}
+													<div className="space-y-1">
+														<div>#{reserva.id}</div>
+														{reserva.codigoReserva && (
+															<div className="text-xs text-blue-600 font-mono">
+																{reserva.codigoReserva}
+															</div>
+														)}
+
+														{/* El botón de reasignar se muestra en el modal de detalle sólo si la reserva
+															está confirmada y ya tiene vehículo y conductor asignados. Se movió
+															aquí originalmente por error; la lógica real de visibilidad se
+															maneja en el modal de 'Ver' (selectedReserva). */}
+													</div>
 												</TableCell>
 											)}
 											{columnasVisibles.cliente && (
@@ -1160,33 +2195,50 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.esCliente && (
 												<TableCell>
-													{reserva.clienteId ? (
-														<Badge
-															variant={
-																reserva.esCliente ? "default" : "secondary"
-															}
-															className="cursor-pointer"
-															onClick={() =>
-																toggleClienteManual(
-																	reserva.clienteId,
-																	reserva.esCliente
-																)
-															}
-														>
-															{reserva.esCliente ? (
-																<>
-																	<Star className="w-3 h-3 mr-1" />
-																	Cliente
-																</>
-															) : (
-																"Cotizador"
-															)}
-														</Badge>
-													) : (
-														<span className="text-xs text-muted-foreground">
-															-
-														</span>
-													)}
+													<Badge
+														variant={
+															reserva.esCliente ? "default" : "secondary"
+														}
+														className={
+															reserva.clienteId
+																? "cursor-pointer"
+																: "opacity-80"
+														}
+														onClick={
+															reserva.clienteId
+																? () =>
+																		toggleClienteManual(
+																			reserva.clienteId,
+																			reserva.esCliente
+																		)
+																: undefined
+														}
+													>
+														{reserva.esCliente ? (
+															<>
+																<Star className="w-3 h-3 mr-1" />
+																Cliente
+															</>
+														) : // Para reservas provenientes del sistema de pago con código,
+														// etiquetar como "Cliente con código" en vez de "Cotizador".
+														reserva?.source === "codigo_pago" ||
+														  (reserva?.referenciaPago &&
+																String(reserva.referenciaPago).trim().length >
+																	0) ? (
+															"Cliente con código"
+														) : (
+															"Cotizador"
+														)}
+													</Badge>
+													{reserva.clasificacionCliente &&
+														reserva.clasificacionCliente !==
+															"Cliente Activo" && (
+															<div className="mt-1">
+																<Badge variant="outline">
+																	{reserva.clasificacionCliente}
+																</Badge>
+															</div>
+														)}
 												</TableCell>
 											)}
 											{columnasVisibles.numViajes && (
@@ -1260,9 +2312,7 @@ function AdminReservas() {
 												<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
 											)}
 											{columnasVisibles.pago && (
-												<TableCell>
-													{getEstadoPagoBadge(reserva.estadoPago)}
-												</TableCell>
+												<TableCell>{getEstadoPagoBadge(reserva)}</TableCell>
 											)}
 											{columnasVisibles.saldo && (
 												<TableCell>
@@ -1294,6 +2344,25 @@ function AdminReservas() {
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
+														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
+														{reserva?.estado === "confirmada" && (
+															<Button
+																variant={
+																	isAsignada(reserva) ? "outline" : "secondary"
+																}
+																size="sm"
+																onClick={() => handleAsignar(reserva)}
+																title={
+																	isAsignada(reserva)
+																		? "Reasignar vehículo y conductor"
+																		: "Asignar vehículo y conductor"
+																}
+															>
+																<span role="img" aria-label="auto">
+																	🚗
+																</span>
+															</Button>
+														)}
 													</div>
 												</TableCell>
 											)}
@@ -1304,7 +2373,7 @@ function AdminReservas() {
 						</Table>
 					</div>
 
-					{/* Paginación */}
+					{/* PaginaciÃ³n */}
 					<div className="flex items-center justify-between mt-4">
 						<p className="text-sm text-muted-foreground">
 							Página {currentPage} de {totalPages}
@@ -1349,6 +2418,37 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-6">
+							{/* Código de Reserva */}
+							{selectedReserva.codigoReserva && (
+								<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+									<div className="flex items-center justify-between">
+										<div>
+											<Label className="text-blue-700 text-sm font-medium">
+												Código de Reserva
+											</Label>
+											<p className="text-2xl font-bold text-blue-900 tracking-wider">
+												{selectedReserva.codigoReserva}
+											</p>
+										</div>
+										<div className="bg-blue-100 p-2 rounded">
+											<svg
+												className="w-6 h-6 text-blue-700"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+												/>
+											</svg>
+										</div>
+									</div>
+								</div>
+							)}
+
 							{/* Información del Cliente */}
 							<div>
 								<h3 className="font-semibold text-lg mb-3">
@@ -1367,6 +2467,27 @@ function AdminReservas() {
 										<Label className="text-muted-foreground">Teléfono</Label>
 										<p className="font-medium">{selectedReserva.telefono}</p>
 									</div>
+									{((selectedReserva.cliente?.clasificacion &&
+										selectedReserva.cliente?.clasificacion !==
+											"Cliente Activo") ||
+										(selectedReserva.clasificacionCliente &&
+											selectedReserva.clasificacionCliente !==
+												"Cliente Activo")) && (
+										<div>
+											<Label className="text-muted-foreground">
+												Clasificación
+											</Label>
+											<div className="mt-1">
+												<Badge variant="outline">
+													{selectedReserva.cliente?.clasificacion !==
+														"Cliente Activo" &&
+													selectedReserva.cliente?.clasificacion
+														? selectedReserva.cliente.clasificacion
+														: selectedReserva.clasificacionCliente}
+												</Badge>
+											</div>
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -1425,6 +2546,43 @@ function AdminReservas() {
 										</>
 									)}
 								</div>
+							</div>
+
+							{/* Historial de Asignaciones (interno) */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Historial de Asignaciones
+								</h3>
+								{loadingHistorial ? (
+									<p className="text-sm text-muted-foreground">
+										Cargando historial...
+									</p>
+								) : historialAsignaciones.length === 0 ? (
+									<p className="text-sm text-muted-foreground">
+										Sin cambios de asignaciÃ³n
+									</p>
+								) : (
+									<div className="space-y-2">
+										{historialAsignaciones.map((h) => (
+											<div key={h.id} className="p-2 border rounded-md text-sm">
+												<div className="flex justify-between">
+													<span>
+														Vehículo: <strong>{h.vehiculo || "-"}</strong>
+														{h.conductor && (
+															<>
+																{" "}
+																- Conductor: <strong>{h.conductor}</strong>
+															</>
+														)}
+													</span>
+													<span className="text-muted-foreground">
+														{new Date(h.created_at).toLocaleString("es-CL")}
+													</span>
+												</div>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 
 							{/* Información Adicional */}
@@ -1542,6 +2700,38 @@ function AdminReservas() {
 									</div>
 									<div>
 										<Label className="text-muted-foreground">
+											Estado del Abono
+										</Label>
+										<div className="mt-1">
+											<Badge
+												variant={
+													selectedReserva.abonoPagado ? "default" : "secondary"
+												}
+											>
+												{selectedReserva.abonoPagado
+													? "Abono pagado"
+													: "Pendiente"}
+											</Badge>
+										</div>
+									</div>
+									<div>
+										<Label className="text-muted-foreground">
+											Estado del Saldo
+										</Label>
+										<div className="mt-1">
+											<Badge
+												variant={
+													selectedReserva.saldoPagado ? "default" : "secondary"
+												}
+											>
+												{selectedReserva.saldoPagado
+													? "Saldo pagado"
+													: "Pendiente"}
+											</Badge>
+										</div>
+									</div>
+									<div>
+										<Label className="text-muted-foreground">
 											Código de Descuento
 										</Label>
 										<p className="font-medium">
@@ -1566,7 +2756,7 @@ function AdminReservas() {
 											Estado de Pago
 										</Label>
 										<div className="mt-1">
-											{getEstadoPagoBadge(selectedReserva.estadoPago)}
+											{getEstadoPagoBadge(selectedReserva)}
 										</div>
 									</div>
 									<div>
@@ -1650,7 +2840,7 @@ function AdminReservas() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Modal de Edición */}
+			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
 				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
@@ -1662,26 +2852,67 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-4">
-							{/* Información del Cliente (solo lectura) */}
-							<div className="bg-muted p-4 rounded-lg">
-								<h4 className="font-semibold mb-2">Cliente</h4>
-								<p className="text-sm">
-									<strong>Nombre:</strong> {selectedReserva.nombre}
-								</p>
-								<p className="text-sm">
-									<strong>Email:</strong> {selectedReserva.email}
-								</p>
-								<p className="text-sm">
-									<strong>Teléfono:</strong> {selectedReserva.telefono}
-								</p>
-								<p className="text-sm">
-									<strong>Ruta:</strong> {selectedReserva.origen} →{" "}
-									{selectedReserva.destino}
-								</p>
-								<p className="text-sm">
-									<strong>Fecha:</strong> {formatDate(selectedReserva.fecha)} a
-									las {selectedReserva.hora}
-								</p>
+							{/* InformaciÃ³n del Cliente (editable) */}
+							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-1">
+									<Label>Nombre</Label>
+									<Input
+										value={formData.nombre || ""}
+										onChange={(e) =>
+											setFormData({ ...formData, nombre: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-1">
+									<Label>Email</Label>
+									<Input
+										type="email"
+										value={formData.email || ""}
+										onChange={(e) =>
+											setFormData({ ...formData, email: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-1">
+									<Label>Teléfono</Label>
+									<Input
+										value={formData.telefono || ""}
+										onChange={(e) =>
+											setFormData({ ...formData, telefono: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-1">
+									<Label>Fecha</Label>
+									<Input
+										type="date"
+										value={formData.fecha || ""}
+										onChange={(e) =>
+											setFormData({ ...formData, fecha: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-1">
+									<Label>Hora</Label>
+									<Input
+										type="time"
+										value={formData.hora || ""}
+										onChange={(e) =>
+											setFormData({ ...formData, hora: e.target.value })
+										}
+									/>
+								</div>
+								<div className="space-y-1">
+									<Label>Pasajeros</Label>
+									<Input
+										type="number"
+										min="1"
+										value={formData.pasajeros || ""}
+										onChange={(e) =>
+											setFormData({ ...formData, pasajeros: e.target.value })
+										}
+									/>
+								</div>
 							</div>
 
 							{/* Estado */}
@@ -1697,7 +2928,12 @@ function AdminReservas() {
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="pendiente">Pendiente</SelectItem>
+										<SelectItem
+											value="pendiente"
+											disabled={(selectedReserva?.pagoMonto || 0) > 0}
+										>
+											Pendiente
+										</SelectItem>
 										<SelectItem value="pendiente_detalles">
 											Pendiente Detalles
 										</SelectItem>
@@ -1714,7 +2950,30 @@ function AdminReservas() {
 								<Select
 									value={formData.estadoPago}
 									onValueChange={(value) =>
-										setFormData({ ...formData, estadoPago: value })
+										setFormData((prev) => {
+											let nextEstado = prev.estado;
+											if (value === "reembolsado") {
+												nextEstado = "cancelada";
+											} else if (value === "fallido") {
+												nextEstado =
+													prev.estado === "pendiente_detalles"
+														? "pendiente_detalles"
+														: "pendiente";
+											} else if (value === "pendiente") {
+												if (
+													["confirmada", "completada", "cancelada"].includes(
+														prev.estado
+													)
+												) {
+													nextEstado = "pendiente";
+												}
+											}
+											return {
+												...prev,
+												estadoPago: value,
+												estado: nextEstado,
+											};
+										})
 									}
 								>
 									<SelectTrigger id="estadoPago">
@@ -1742,7 +3001,6 @@ function AdminReservas() {
 										<SelectValue placeholder="Seleccionar método" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="mercadopago">MercadoPago</SelectItem>
 										<SelectItem value="flow">Flow</SelectItem>
 										<SelectItem value="transferencia">Transferencia</SelectItem>
 										<SelectItem value="efectivo">Efectivo</SelectItem>
@@ -1766,9 +3024,205 @@ function AdminReservas() {
 								/>
 							</div>
 
+							{/* Tipo de pago registrado */}
+							<div className="space-y-2">
+								<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
+								{/* Determinar si ya se registrÃ³ el abono del 40% */}
+								{(() => {
+									const montoPagadoNum =
+										parseFloat(formData.montoPagado || 0) || 0;
+									const totalReservaNum =
+										parseFloat(
+											selectedReserva?.totalConDescuento ||
+												selectedReserva?.precio ||
+												0
+										) || 0;
+									const abonoSugeridoNum =
+										parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+									const umbralAbono = Math.max(
+										totalReservaNum * 0.4,
+										abonoSugeridoNum || 0
+									);
+									const yaAbono40 =
+										Boolean(selectedReserva?.abonoPagado) ||
+										montoPagadoNum >= umbralAbono;
+									return (
+										<Select
+											value={formData.tipoPago}
+											onValueChange={(value) =>
+												setFormData((prev) => {
+													// Recalcular montos para prefill
+													const totalReservaNum =
+														parseFloat(
+															selectedReserva?.totalConDescuento ||
+																selectedReserva?.precio ||
+																0
+														) || 0;
+													const abonoSugeridoNum =
+														parseFloat(selectedReserva?.abonoSugerido || 0) ||
+														0;
+													const pagoPrevioNum =
+														parseFloat(selectedReserva?.pagoMonto || 0) || 0;
+													const umbralAbono = Math.max(
+														totalReservaNum * 0.4,
+														abonoSugeridoNum || 0
+													);
+
+													let computedMonto = null;
+													if (value === "saldo" || value === "total") {
+														const restante = Math.max(
+															totalReservaNum - pagoPrevioNum,
+															0
+														);
+														computedMonto = restante > 0 ? restante : null;
+													} else if (value === "abono") {
+														const necesario = Math.max(
+															umbralAbono - pagoPrevioNum,
+															0
+														);
+														computedMonto = necesario > 0 ? necesario : null;
+													}
+
+													return {
+														...prev,
+														tipoPago: value,
+														// Escritura segura: guardar número o cadena vacía
+														montoPagado:
+															computedMonto !== null
+																? computedMonto
+																: prev.montoPagado,
+													};
+												})
+											}
+										>
+											<SelectTrigger id="tipoPago">
+												<SelectValue placeholder="Selecciona el tipo de pago" />
+											</SelectTrigger>
+											<SelectContent>
+												{yaAbono40 ? (
+													// Si ya se pagÃ³ el abono del 40%, solo permitir completar el pago
+													<SelectItem value="saldo">Completar pago</SelectItem>
+												) : (
+													// Opciones por defecto: Abono 40% y Abono total
+													<>
+														<SelectItem value="abono">Abono 40%</SelectItem>
+														<SelectItem value="total">Abono total</SelectItem>
+													</>
+												)}
+											</SelectContent>
+										</Select>
+									);
+								})()}
+							</div>
+
+							{/* Monto del pago */}
+							<div className="space-y-2">
+								{/* Mostrar monto registrado actual (solo informativo). Los pagos manuales se registran en el apartado 'Registrar pago'. */}
+								<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
+								<Input
+									id="montoPagado"
+									type="number"
+									step="1"
+									min="0"
+									value={
+										formData.montoPagado !== undefined &&
+										formData.montoPagado !== null
+											? formData.montoPagado
+											: ""
+									}
+									onChange={(e) =>
+										setFormData({ ...formData, montoPagado: e.target.value })
+									}
+								/>
+								<div className="text-xs text-muted-foreground mt-1">
+									<div>
+										Registrado en sistema:{" "}
+										{selectedReserva.pagoMonto
+											? new Intl.NumberFormat("es-CL", {
+													style: "currency",
+													currency: "CLP",
+											  }).format(selectedReserva.pagoMonto)
+											: "-"}
+									</div>
+								</div>
+							</div>
+
+							{/* Historial de pagos de esta reserva */}
+							<div className="space-y-2">
+								<Label>Historial de pagos</Label>
+								<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
+									{pagoHistorial &&
+										pagoHistorial.length > 0 &&
+										pagoHistorial.map((p) => (
+											<div
+												key={p.id}
+												className="flex justify-between items-center py-2 border-b"
+											>
+												<div>
+													<div className="font-medium">
+														{p.source === "web" ? "Pago web" : "Pago manual"}
+													</div>
+													<div className="text-sm text-muted-foreground">
+														{p.metodo || "-"} - {p.referencia || "-"}
+													</div>
+												</div>
+												<div className="text-right text-sm">
+													<div>
+														{new Intl.NumberFormat("es-CL", {
+															style: "currency",
+															currency: "CLP",
+														}).format(p.amount)}
+													</div>
+													<div className="text-xs text-muted-foreground">
+														{new Date(p.createdAt).toLocaleString()}
+													</div>
+												</div>
+											</div>
+										))}
+									{(!pagoHistorial || pagoHistorial.length === 0) && (
+										<p className="text-sm text-muted-foreground">
+											No hay pagos registrados.
+										</p>
+									)}
+								</div>
+							</div>
+
+							{/* BotÃ³n y modal para registrar pago manual */}
+							<div className="space-y-2">
+								<Label>Registrar pago manual</Label>
+								<div className="flex gap-2">
+									<Button
+										type="button"
+										onClick={() => setShowRegisterPayment(true)}
+									>
+										Registrar pago
+									</Button>
+									<span className="text-sm text-muted-foreground self-center">
+										Registra pagos manuales y guarda un historial (manual /
+										web).
+									</span>
+								</div>
+							</div>
+
 							{/* Observaciones */}
 							<div className="space-y-2">
-								<Label htmlFor="observaciones">Observaciones Internas</Label>
+								<div className="flex items-center justify-between">
+									<Label htmlFor="observaciones">Observaciones Internas</Label>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() =>
+											setFormData({ ...formData, observaciones: "" })
+										}
+										disabled={
+											!formData.observaciones ||
+											formData.observaciones.length === 0
+										}
+									>
+										Borrar todo
+									</Button>
+								</div>
 								<Textarea
 									id="observaciones"
 									placeholder="Notas internas sobre la reserva..."
@@ -1809,6 +3263,30 @@ function AdminReservas() {
 										>
 											{formatCurrency(selectedReserva.saldoPendiente)}
 										</span>
+									</div>
+									<div className="flex justify-between pt-1">
+										<span>Estado del Abono:</span>
+										<Badge
+											variant={
+												selectedReserva.abonoPagado ? "default" : "secondary"
+											}
+										>
+											{selectedReserva.abonoPagado
+												? "Abono pagado"
+												: "Pendiente"}
+										</Badge>
+									</div>
+									<div className="flex justify-between">
+										<span>Estado del Saldo:</span>
+										<Badge
+											variant={
+												selectedReserva.saldoPagado ? "default" : "secondary"
+											}
+										>
+											{selectedReserva.saldoPagado
+												? "Saldo pagado"
+												: "Pendiente"}
+										</Badge>
 									</div>
 								</div>
 							</div>
@@ -1860,7 +3338,7 @@ function AdminReservas() {
 							{clienteSeleccionado && (
 								<div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
 									<p className="font-medium">
-										✓ Cliente existente seleccionado
+										âœ“ Cliente existente seleccionado
 									</p>
 									<p className="text-sm">
 										{clienteSeleccionado.esCliente && (
@@ -1868,6 +3346,13 @@ function AdminReservas() {
 												Cliente
 											</Badge>
 										)}
+										{clienteSeleccionado.clasificacion &&
+											clienteSeleccionado.clasificacion !==
+												"Cliente Activo" && (
+												<Badge variant="outline" className="mr-2">
+													{clienteSeleccionado.clasificacion}
+												</Badge>
+											)}
 										{clienteSeleccionado.totalReservas > 0 && (
 											<span className="text-xs">
 												{clienteSeleccionado.totalReservas} reserva(s) previa(s)
@@ -1916,12 +3401,12 @@ function AdminReservas() {
 												>
 													<div className="font-medium">{cliente.nombre}</div>
 													<div className="text-sm text-gray-600">
-														{cliente.email} • {cliente.telefono}
-														{cliente.rut && ` • RUT: ${cliente.rut}`}
+														{cliente.email} - {cliente.telefono}
+														{cliente.rut && ` - RUT: ${cliente.rut}`}
 													</div>
 													{cliente.esCliente && (
 														<Badge variant="default" className="text-xs mt-1">
-															Cliente • {cliente.totalReservas} reservas
+															Cliente - {cliente.totalReservas} reservas
 														</Badge>
 													)}
 												</div>
@@ -1993,33 +3478,86 @@ function AdminReservas() {
 									<Label htmlFor="new-origen">
 										Origen <span className="text-red-500">*</span>
 									</Label>
-									<Input
-										id="new-origen"
-										placeholder="Aeropuerto Temuco"
-										value={newReservaForm.origen}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												origen: e.target.value,
-											})
-										}
-									/>
+									{!origenEsOtro ? (
+										<select
+											id="new-origen"
+											className="border rounded-md h-10 px-3 w-full"
+											value={newReservaForm.origen}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													origen: e.target.value,
+												})
+											}
+										>
+											<option value="">Seleccionar origen</option>
+											{destinosOptions.map((n) => (
+												<option key={n} value={n}>
+													{n}
+												</option>
+											))}
+										</select>
+									) : (
+										<Input
+											id="new-origen-otro"
+											placeholder="Especificar origen"
+											value={otroOrigen}
+											onChange={(e) => setOtroOrigen(e.target.value)}
+										/>
+									)}
+									<div className="text-xs text-muted-foreground">
+										<label className="inline-flex items-center gap-2 cursor-pointer">
+											<input
+												type="checkbox"
+												checked={origenEsOtro}
+												onChange={(e) => setOrigenEsOtro(e.target.checked)}
+											/>
+											Origen no está en la lista
+										</label>
+									</div>
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="new-destino">
 										Destino <span className="text-red-500">*</span>
 									</Label>
-									<Input
-										id="new-destino"
-										placeholder="Pucón"
-										value={newReservaForm.destino}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												destino: e.target.value,
-											})
-										}
-									/>
+									{!destinoEsOtro ? (
+										<select
+											id="new-destino"
+											className="border rounded-md h-10 px-3 w-full"
+											value={newReservaForm.destino}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													destino: e.target.value,
+												})
+											}
+										>
+											<option value="">Seleccionar destino</option>
+											{destinosOptions.map((n) => (
+												<option key={n} value={n}>
+													{n}
+												</option>
+											))}
+										</select>
+									) : (
+										<Input
+											id="new-destino-otro"
+											placeholder="Especificar destino"
+											value={otroDestino}
+											onChange={(e) => setOtroDestino(e.target.value)}
+										/>
+									)}
+									<div className="text-xs text-muted-foreground">
+										<label className="inline-flex items-center gap-2 cursor-pointer">
+											<input
+												type="checkbox"
+												checked={destinoEsOtro}
+												onChange={(e) => setDestinoEsOtro(e.target.checked)}
+											/>
+											Destino no está en la lista (se agregará a la base de
+											datos como inactivo)
+										</label>
+									</div>
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="new-fecha">
@@ -2318,13 +3856,40 @@ function AdminReservas() {
 												<SelectItem value="transferencia">
 													Transferencia
 												</SelectItem>
-												<SelectItem value="mercadopago">MercadoPago</SelectItem>
 												<SelectItem value="flow">Flow</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
 								)}
 							</div>
+						</div>
+
+						{/* Notificaciones */}
+						<div className="space-y-2">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Notificaciones
+							</h3>
+							<div className="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="new-enviarcorreo"
+									checked={Boolean(newReservaForm.enviarCorreo)}
+									onChange={(e) =>
+										setNewReservaForm({
+											...newReservaForm,
+											enviarCorreo: e.target.checked,
+										})
+									}
+									className="w-4 h-4"
+								/>
+								<Label htmlFor="new-enviarcorreo">
+									Enviar correo de confirmación al cliente
+								</Label>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								Desmarca esta opción si no deseas notificar por email en este
+								momento.
+							</p>
 						</div>
 
 						{/* Observaciones */}
@@ -2392,7 +3957,16 @@ function AdminReservas() {
 								<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Email</Label>
-										<p className="font-medium">
+										<p
+											className="font-medium truncate max-w-[180px]"
+											title={historialCliente.cliente.email}
+											style={{
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												whiteSpace: "nowrap",
+												maxWidth: "180px",
+											}}
+										>
 											{historialCliente.cliente.email}
 										</p>
 									</div>
@@ -2423,6 +3997,20 @@ function AdminReservas() {
 											)}
 										</div>
 									</div>
+									{historialCliente.cliente.clasificacion &&
+										historialCliente.cliente.clasificacion !==
+											"Cliente Activo" && (
+											<div>
+												<Label className="text-muted-foreground">
+													Clasificación
+												</Label>
+												<div>
+													<Badge variant="outline">
+														{historialCliente.cliente.clasificacion}
+													</Badge>
+												</div>
+											</div>
+										)}
 								</div>
 							</div>
 
@@ -2475,7 +4063,8 @@ function AdminReservas() {
 							{/* Lista de Reservas */}
 							<div>
 								<h3 className="font-semibold text-lg mb-3">
-									Historial de Reservas ({historialCliente.reservas.length})
+									Historial de Reservas ({">"}{" "}
+									{historialCliente.reservas.length})
 								</h3>
 								<div className="space-y-2 max-h-96 overflow-y-auto">
 									{historialCliente.reservas.map((reserva) => (
@@ -2492,16 +4081,16 @@ function AdminReservas() {
 													<div className="flex items-center gap-2 mb-1">
 														<span className="font-medium">#{reserva.id}</span>
 														{getEstadoBadge(reserva.estado)}
-														{getEstadoPagoBadge(reserva.estadoPago)}
+														{getEstadoPagoBadge(reserva)}
 													</div>
 													<div className="text-sm text-muted-foreground">
 														<div className="flex items-center gap-2">
 															<MapPin className="w-3 h-3" />
-															{reserva.origen} → {reserva.destino}
+															{reserva.origen} {"->"} {reserva.destino}
 														</div>
 														<div className="flex items-center gap-2 mt-1">
 															<Calendar className="w-3 h-3" />
-															{formatDate(reserva.fecha)} •{" "}
+															{formatDate(reserva.fecha)} -{" "}
 															{reserva.hora || "-"}
 														</div>
 													</div>
@@ -2526,7 +4115,7 @@ function AdminReservas() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Dialog de confirmación para eliminar masivamente */}
+			{/* Dialog de confirmaciÃ³n para eliminar masivamente */}
 			<AlertDialog
 				open={showBulkDeleteDialog}
 				onOpenChange={setShowBulkDeleteDialog}
@@ -2534,7 +4123,7 @@ function AdminReservas() {
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
-							¿Eliminar reservas seleccionadas?
+							Â¿Eliminar reservas seleccionadas?
 						</AlertDialogTitle>
 						<AlertDialogDescription>
 							Esta acción eliminará permanentemente {selectedReservas.length}{" "}
@@ -2615,54 +4204,207 @@ function AdminReservas() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Dialog para cambio masivo de estado de pago */}
-			<AlertDialog
-				open={showBulkPaymentDialog}
-				onOpenChange={setShowBulkPaymentDialog}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>
-							Cambiar estado de pago de reservas seleccionadas
-						</AlertDialogTitle>
-						<AlertDialogDescription>
-							Selecciona el nuevo estado de pago para {selectedReservas.length}{" "}
-							reserva(s):
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<div className="py-4">
-						<Select value={bulkEstadoPago} onValueChange={setBulkEstadoPago}>
-							<SelectTrigger>
-								<SelectValue placeholder="Selecciona un estado de pago" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="pendiente">Pendiente</SelectItem>
-								<SelectItem value="pagado">Pagado</SelectItem>
-								<SelectItem value="fallido">Fallido</SelectItem>
-								<SelectItem value="reembolsado">Reembolsado</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-					<AlertDialogFooter>
-						<AlertDialogCancel disabled={processingBulk}>
-							Cancelar
-						</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleBulkChangePayment}
-							disabled={processingBulk || !bulkEstadoPago}
-						>
-							{processingBulk ? (
-								<>
-									<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-									Actualizando...
-								</>
-							) : (
-								"Actualizar Estado de Pago"
+			{/* Dialog para asignar vehÃ­culo y conductor */}
+			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>
+							Asignar Vehículo y Conductor - Reserva #{selectedReserva?.id}
+						</DialogTitle>
+						<DialogDescription>
+							Asigna un vehículo y opcionalmente un conductor a esta reserva
+							pagada
+						</DialogDescription>
+					</DialogHeader>
+
+					<div className="space-y-4 py-4">
+						{/* InformaciÃ³n de la reserva */}
+						<div className="bg-muted p-3 rounded-lg space-y-1 text-sm">
+							<p>
+								<strong>Cliente:</strong> {selectedReserva?.nombre}
+							</p>
+							<div className="flex items-center justify-between gap-3">
+								<p className="m-0">
+									<strong>Ruta:</strong> {selectedReserva?.origen} {"->"}{" "}
+									{selectedReserva?.destino}
+								</p>
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => {
+										setShowAsignarDialog(false);
+										handleEdit(selectedReserva);
+									}}
+								>
+									Editar ruta
+								</Button>
+							</div>
+							<p>
+								<strong>Fecha:</strong>{" "}
+								{selectedReserva?.fecha
+									? new Date(selectedReserva.fecha).toLocaleDateString("es-CL")
+									: ""}
+							</p>
+							<p>
+								<strong>Pasajeros:</strong> {selectedReserva?.pasajeros}
+							</p>
+						</div>
+
+						{/* Selector de vehÃ­culo */}
+						<div className="space-y-2">
+							<Label htmlFor="vehiculo">
+								Vehículo <span className="text-red-500">*</span>
+							</Label>
+							<Select
+								value={vehiculoSeleccionado}
+								onValueChange={setVehiculoSeleccionado}
+							>
+								<SelectTrigger id="vehiculo">
+									<SelectValue placeholder="Selecciona un vehículo" />
+								</SelectTrigger>
+								<SelectContent>
+									{vehiculos.map((v) => (
+										<SelectItem
+											key={v.id}
+											value={v.id.toString()}
+											disabled={
+												assignedVehiculoId !== null &&
+												assignedVehiculoId === v.id
+											}
+										>
+											{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
+											{v.capacidad} pasajeros
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						{/* Selector de conductor (opcional) */}
+						<div className="space-y-2">
+							<Label htmlFor="conductor">Conductor (opcional)</Label>
+							<Select
+								value={conductorSeleccionado}
+								onValueChange={setConductorSeleccionado}
+							>
+								<SelectTrigger id="conductor">
+									<SelectValue placeholder="Selecciona un conductor (opcional)" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">Sin asignar</SelectItem>
+									{conductores.map((c) => (
+										<SelectItem
+											key={c.id}
+											value={c.id.toString()}
+											disabled={
+												assignedConductorId !== null &&
+												assignedConductorId === c.id
+											}
+										>
+											{c.nombre} - {c.rut}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						{/* Sin ediciÃ³n de ruta en reasignaciÃ³n */}
+
+						{/* Enviar notificaciÃ³n */}
+						<div className="flex items-center gap-2 pt-2">
+							<Checkbox
+								id="enviar-notificacion"
+								checked={enviarNotificacion}
+								onCheckedChange={(v) => setEnviarNotificacion(Boolean(v))}
+							/>
+							<label
+								htmlFor="enviar-notificacion"
+								className="text-sm text-muted-foreground cursor-pointer"
+							>
+								Enviar notificación por correo al cliente
+							</label>
+						</div>
+
+						{/* Mostrar info de asignación solo si la reserva confirmada ya tiene vehículo */}
+						{selectedReserva?.estado === "confirmada" &&
+							hasVehiculoAsignado && (
+								<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+									<p className="font-semibold">Asignación actual:</p>
+									{selectedReserva.vehiculo_asignado ? (
+										<p>
+											🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} (
+											{selectedReserva.vehiculo_asignado.patente})
+										</p>
+									) : selectedReserva?.vehiculo ? (
+										<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
+									) : null}
+									{hasConductorAsignado ? (
+										selectedReserva.conductor_asignado ? (
+											<p>
+												👤 Conductor:{" "}
+												{selectedReserva.conductor_asignado.nombre}
+											</p>
+										) : selectedReserva?.conductor ? (
+											<p>👤 Conductor: {selectedReserva.conductor}</p>
+										) : null
+									) : (
+										<p className="text-muted-foreground">
+											No hay conductor asignado actualmente.
+										</p>
+									)}
+									<div className="mt-2">
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => handleAsignar(selectedReserva)}
+										>
+											Reasignar vehículo / conductor
+										</Button>
+									</div>
+								</div>
 							)}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+
+						<div className="flex justify-end gap-2">
+							<Button
+								variant="outline"
+								onClick={() => setShowAsignarDialog(false)}
+								disabled={loadingAsignacion}
+							>
+								Cancelar
+							</Button>
+							{(() => {
+								const sameAssignment =
+									assignedVehiculoId !== null &&
+									vehiculoSeleccionado &&
+									Number(vehiculoSeleccionado) === Number(assignedVehiculoId) &&
+									String(assignedConductorId ?? "none") ===
+										String(conductorSeleccionado || "none");
+								return (
+									<Button
+										onClick={handleGuardarAsignacion}
+										disabled={
+											loadingAsignacion ||
+											!vehiculoSeleccionado ||
+											sameAssignment
+										}
+									>
+										{loadingAsignacion ? (
+											<>
+												<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+												Guardando...
+											</>
+										) : sameAssignment ? (
+											"Sin cambios"
+										) : (
+											"Asignar"
+										)}
+									</Button>
+								);
+							})()}
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

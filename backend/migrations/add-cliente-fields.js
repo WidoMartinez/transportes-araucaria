@@ -27,7 +27,6 @@ async function addClienteFields() {
 				},
 				rut: {
 					type: sequelize.Sequelize.STRING(20),
-					unique: true,
 					allowNull: true,
 				},
 				nombre: {
@@ -37,7 +36,6 @@ async function addClienteFields() {
 				email: {
 					type: sequelize.Sequelize.STRING(255),
 					allowNull: false,
-					unique: true,
 				},
 				telefono: {
 					type: sequelize.Sequelize.STRING(50),
