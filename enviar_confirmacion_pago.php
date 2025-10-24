@@ -108,10 +108,10 @@ try {
 
     // Remitente
     $mail->setFrom($emailConfig['username'], $emailConfig['from_name']);
-    
+
     // Destinatario principal (cliente)
     $mail->addAddress($email, $nombre);
-    
+
     // Copia oculta al admin
     if (!empty($emailConfig['to'])) {
         $mail->addBCC($emailConfig['to'], 'Admin');
@@ -333,7 +333,7 @@ try {
     
     ¿Necesitas ayuda?
     Email: contacto@transportesaraucaria.cl
-    Teléfono: +569 1234 5678
+    Teléfono: +569 3664 3540
     
     © 2025 Transportes Araucaria
     ";
@@ -346,7 +346,6 @@ try {
         'message' => 'Email de confirmación de pago enviado exitosamente',
         'codigoReserva' => $codigoReserva
     ]);
-
 } catch (Exception $e) {
     error_log("Error al enviar email de confirmación de pago: " . $mail->ErrorInfo);
     http_response_code(500);
@@ -355,4 +354,3 @@ try {
         'message' => 'Error al enviar el correo: ' . $mail->ErrorInfo
     ]);
 }
-?>
