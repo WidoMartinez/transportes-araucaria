@@ -5641,6 +5641,129 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 	}
 });
 
+app.get("/api/estadisticas/gastos", authAdmin, async (req, res) => {
+	try {
+		const { from, to, tipo } = req.query;
+		const fechaInicio = from ? new Date(from) : null;
+		const fechaFin = to ? new Date(to) : null;
+		const tipoFiltrado = tipo && tipo !== "todos" ? tipo : null;
+
+		const tiposValidos = [
+			"combustible",
+			"comision_flow",
+			"pago_conductor",
+			"peaje",
+			"mantenimiento",
+			"estacionamiento",
+			"otro",
+		];
+
+		if (
+			(from && Number.isNaN(fechaInicio?.getTime())) ||
+			(to && Number.isNaN(fechaFin?.getTime()))
+		) {
+			return res.status(400).json({
+				success: false,
+				error: "Parámetros de fecha inválidos.",
+			});
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			return res.status(400).json({
+				success: false,
+				error: "El rango de fechas es inválido.",
+			});
+		}
+
+		if (tipoFiltrado && !tiposValidos.includes(tipoFiltrado)) {
+			return res.status(400).json({
+				success: false,
+				error: "Tipo de gasto inválido.",
+			});
+		}
+
+		const where = {};
+		if (fechaInicio || fechaFin) {
+			where.fecha = {};
+			if (fechaInicio) {
+				where.fecha[Op.gte] = fechaInicio;
+			}
+			if (fechaFin) {
+				where.fecha[Op.lte] = fechaFin;
+			}
+		}
+		if (tipoFiltrado) {
+			where.tipoGasto = tipoFiltrado;
+		}
+
+		const gastos = await Gasto.findAll({
+			where,
+			attributes: ["fecha", "monto", "tipoGasto"],
+			raw: true,
+		});
+
+		const resumenPorFechaMap = {};
+		const totalesPorTipo = {};
+		let totalGeneral = 0;
+
+		gastos.forEach((gasto) => {
+			const fechaClave = new Date(gasto.fecha).toISOString().slice(0, 10);
+			const monto = Number.parseFloat(gasto.monto || 0);
+			const tipoGasto = gasto.tipoGasto;
+
+			if (!Number.isFinite(monto)) {
+				return;
+			}
+
+			totalGeneral += monto;
+
+			if (!totalesPorTipo[tipoGasto]) {
+				totalesPorTipo[tipoGasto] = 0;
+			}
+			totalesPorTipo[tipoGasto] += monto;
+
+			if (!resumenPorFechaMap[fechaClave]) {
+				resumenPorFechaMap[fechaClave] = {
+					fecha: fechaClave,
+					total: 0,
+					porTipo: {},
+					registros: 0,
+				};
+			}
+
+			resumenPorFechaMap[fechaClave].total += monto;
+			resumenPorFechaMap[fechaClave].registros += 1;
+			if (!resumenPorFechaMap[fechaClave].porTipo[tipoGasto]) {
+				resumenPorFechaMap[fechaClave].porTipo[tipoGasto] = 0;
+			}
+			resumenPorFechaMap[fechaClave].porTipo[tipoGasto] += monto;
+		});
+
+		const resumenPorFecha = Object.values(resumenPorFechaMap).sort(
+			(a, b) => new Date(a.fecha) - new Date(b.fecha)
+		);
+
+		res.json({
+			success: true,
+			totalGeneral,
+			totalRegistros: gastos.length,
+			totalesPorTipo,
+			resumenPorFecha,
+			filtro: {
+				from: fechaInicio ? fechaInicio.toISOString() : null,
+				to: fechaFin ? fechaFin.toISOString() : null,
+				tipo: tipoFiltrado || "todos",
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener resumen de gastos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener resumen de gastos",
+		});
+	}
+});
+
 // Obtener estadísticas detalladas de un conductor
 app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 	try {

@@ -46,6 +46,17 @@ import {
 	subMonths,
 } from "date-fns";
 
+const TIPOS_GASTO = [
+	{ value: "todos", label: "Todos los tipos" },
+	{ value: "combustible", label: "Combustible (Petróleo)" },
+	{ value: "peaje", label: "Peajes" },
+	{ value: "pago_conductor", label: "Pago a conductor" },
+	{ value: "mantenimiento", label: "Mantenimiento" },
+	{ value: "comision_flow", label: "Comisión Flow" },
+	{ value: "estacionamiento", label: "Estacionamiento" },
+	{ value: "otro", label: "Otros" },
+];
+
 function AdminEstadisticas() {
 	const ADMIN_TOKEN =
 		import.meta.env.VITE_ADMIN_TOKEN ||
@@ -58,7 +69,14 @@ function AdminEstadisticas() {
 	const [vistaActual, setVistaActual] = useState("conductores");
 	const [estadisticasConductores, setEstadisticasConductores] = useState([]);
 	const [estadisticasVehiculos, setEstadisticasVehiculos] = useState([]);
+	const [estadisticasGastos, setEstadisticasGastos] = useState({
+		totalGeneral: 0,
+		totalRegistros: 0,
+		totalesPorTipo: {},
+		resumenPorFecha: [],
+	});
 	const [filtroFechas, setFiltroFechas] = useState("ultimos-30");
+	const [tipoGasto, setTipoGasto] = useState("todos");
 	const [rangoPersonalizado, setRangoPersonalizado] = useState({
 		desde: "",
 		hasta: "",
@@ -148,7 +166,7 @@ function AdminEstadisticas() {
 	const [showDetalleDialog, setShowDetalleDialog] = useState(false);
 	const [errorRango, setErrorRango] = useState("");
 
-	const construirQueryFechas = () => {
+	const construirQueryFechas = (parametrosAdicionales = {}) => {
 		const params = new URLSearchParams();
 		if (rangoAplicado.fechaInicio) {
 			params.append("from", rangoAplicado.fechaInicio.toISOString());
@@ -156,6 +174,11 @@ function AdminEstadisticas() {
 		if (rangoAplicado.fechaFin) {
 			params.append("to", rangoAplicado.fechaFin.toISOString());
 		}
+		Object.entries(parametrosAdicionales).forEach(([clave, valor]) => {
+			if (valor !== undefined && valor !== null && valor !== "") {
+				params.append(clave, valor);
+			}
+		});
 		const query = params.toString();
 		return query ? `?${query}` : "";
 	};
@@ -200,14 +223,43 @@ function AdminEstadisticas() {
 		);
 	};
 
+	const formatearMonto = (valor) => {
+		const numero = Number(valor || 0);
+		return `$${numero.toLocaleString("es-CL")}`;
+	};
+
+	const obtenerEtiquetaTipo = (valor) => {
+		return (
+			TIPOS_GASTO.find((tipo) => tipo.value === valor)?.label || valor
+		);
+	};
+
+	const formatearFecha = (valor) => {
+		if (!valor) {
+			return "-";
+		}
+		const fecha = new Date(`${valor}T00:00:00`);
+		if (Number.isNaN(fecha.getTime())) {
+			return valor;
+		}
+		return fecha.toLocaleDateString("es-CL");
+	};
+
 	useEffect(() => {
 		if (vistaActual === "conductores") {
 			fetchEstadisticasConductores();
-		} else {
+		} else if (vistaActual === "vehiculos") {
 			fetchEstadisticasVehiculos();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [vistaActual, rangoAplicado]);
+
+	useEffect(() => {
+		if (vistaActual === "gastos") {
+			fetchEstadisticasGastos();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [vistaActual, rangoAplicado, tipoGasto]);
 
 	const fetchEstadisticasConductores = async () => {
 		setLoading(true);
@@ -255,6 +307,37 @@ function AdminEstadisticas() {
 		}
 	};
 
+	const fetchEstadisticasGastos = async () => {
+		setLoading(true);
+		try {
+			const parametros = tipoGasto !== "todos" ? { tipo: tipoGasto } : {};
+			const query = construirQueryFechas(parametros);
+			const response = await fetch(
+				`${apiUrl}/api/estadisticas/gastos${query}`,
+				{
+					headers: {
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+				}
+			);
+			if (response.ok) {
+				const data = await response.json();
+				setEstadisticasGastos({
+					totalGeneral: parseFloat(data.totalGeneral || 0),
+					totalRegistros: data.totalRegistros || 0,
+					totalesPorTipo: data.totalesPorTipo || {},
+					resumenPorFecha: Array.isArray(data.resumenPorFecha)
+						? data.resumenPorFecha
+						: [],
+				});
+			}
+		} catch (error) {
+			console.error("Error al cargar resumen de gastos:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 
 	const fetchDetalleConductor = async (conductorId) => {
 		setLoading(true);
@@ -296,7 +379,7 @@ function AdminEstadisticas() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+					<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 			<div className="flex flex-wrap items-center gap-3">
 				<h2 className="text-2xl font-bold">Estadísticas</h2>
 				<Badge variant="outline">{rangoAplicado.etiqueta}</Badge>
@@ -319,6 +402,12 @@ function AdminEstadisticas() {
 								<span>Vehículos</span>
 							</div>
 						</SelectItem>
+						<SelectItem value="gastos">
+							<div className="flex items-center gap-2">
+								<Receipt className="w-4 h-4" />
+								<span>Gastos</span>
+							</div>
+						</SelectItem>
 					</SelectContent>
 				</Select>
 				<Select value={filtroFechas} onValueChange={manejarCambioFiltroFechas}>
@@ -334,10 +423,24 @@ function AdminEstadisticas() {
 						<SelectItem value="personalizado">Personalizado</SelectItem>
 					</SelectContent>
 				</Select>
+				{vistaActual === "gastos" && (
+					<Select value={tipoGasto} onValueChange={setTipoGasto}>
+						<SelectTrigger className="w-[240px]">
+							<SelectValue placeholder="Selecciona tipo de gasto" />
+						</SelectTrigger>
+						<SelectContent>
+							{TIPOS_GASTO.map((tipo) => (
+								<SelectItem key={tipo.value} value={tipo.value}>
+									{tipo.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				)}
 			</div>
 		</div>
 
-		{filtroFechas === "personalizado" && (
+{filtroFechas === "personalizado" && (
 			<div className="flex flex-col gap-2">
 				<div className="flex flex-wrap items-end gap-3">
 					<div className="flex flex-col gap-1">
@@ -376,8 +479,130 @@ function AdminEstadisticas() {
 			</div>
 		)}
 
-			{vistaActual === "conductores" && (
-				<>
+		{vistaActual === "gastos" && (
+			<>
+				<div className="grid gap-4 md:grid-cols-3">
+					<Card>
+						<CardHeader className="pb-2">
+							<CardTitle className="text-sm font-medium text-muted-foreground">
+								Total del periodo
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="flex items-center gap-2">
+								<DollarSign className="w-5 h-5 text-green-600" />
+								<span className="text-2xl font-bold text-green-600">
+									{loading
+										? "..."
+										: formatearMonto(estadisticasGastos.totalGeneral)}
+								</span>
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader className="pb-2">
+							<CardTitle className="text-sm font-medium text-muted-foreground">
+								Registros contabilizados
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<div className="flex items-center gap-2">
+								<Receipt className="w-5 h-5 text-blue-600" />
+								<span className="text-2xl font-bold">
+									{loading ? "..." : estadisticasGastos.totalRegistros}
+								</span>
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader className="pb-2">
+							<CardTitle className="text-sm font-medium text-muted-foreground">
+								Totales por tipo
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							{Object.keys(estadisticasGastos.totalesPorTipo || {}).length === 0 ? (
+								<p className="text-sm text-muted-foreground">
+									Sin datos en el periodo.
+								</p>
+							) : (
+								<div className="flex flex-wrap gap-2">
+									{Object.entries(estadisticasGastos.totalesPorTipo || {})
+										.sort(([, montoA], [, montoB]) => Number(montoB) - Number(montoA))
+										.map(([tipoClave, montoTipo]) => (
+											<Badge key={tipoClave} variant="secondary">
+												{obtenerEtiquetaTipo(tipoClave)}:{" "}
+												{formatearMonto(montoTipo)}
+											</Badge>
+										))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				</div>
+				<Card>
+					<CardHeader>
+						<div className="flex items-center justify-between">
+							<CardTitle>Total por fecha</CardTitle>
+							<Badge variant="outline">{obtenerEtiquetaTipo(tipoGasto)}</Badge>
+						</div>
+					</CardHeader>
+					<CardContent>
+						{loading ? (
+							<p className="text-sm text-muted-foreground">
+								Cargando resumen de gastos...
+							</p>
+						) : estadisticasGastos.resumenPorFecha.length === 0 ? (
+							<p className="text-sm text-muted-foreground">
+								No se registran gastos en el periodo seleccionado.
+							</p>
+						) : (
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Fecha</TableHead>
+										<TableHead>Registros</TableHead>
+										<TableHead>Total</TableHead>
+										<TableHead>Detalle por tipo</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{estadisticasGastos.resumenPorFecha.map((item) => (
+										<TableRow key={item.fecha}>
+											<TableCell className="font-medium">
+												{formatearFecha(item.fecha)}
+											</TableCell>
+											<TableCell>{item.registros || 0}</TableCell>
+											<TableCell className="font-semibold">
+												{formatearMonto(item.total)}
+											</TableCell>
+											<TableCell>
+												<div className="flex flex-wrap gap-2">
+													{Object.entries(item.porTipo || {}).map(
+														([tipoClave, montoTipo]) => (
+															<Badge
+																key={`${item.fecha}-${tipoClave}`}
+																variant="outline"
+															>
+																{obtenerEtiquetaTipo(tipoClave)}:{" "}
+																{formatearMonto(montoTipo)}
+															</Badge>
+														)
+													)}
+												</div>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						)}
+					</CardContent>
+				</Card>
+			</>
+		)}
+
+		{vistaActual === "conductores" && (
+			<>
 					<div className="grid grid-cols-4 gap-4">
 						<Card>
 							<CardHeader className="pb-2">
