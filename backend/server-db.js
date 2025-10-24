@@ -2335,6 +2335,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				userAgent: req.get("User-Agent") || reservaExistente.userAgent,
 				referenciaPago:
 					datosReserva.referenciaPago || reservaExistente.referenciaPago,
+				tipoPago: datosReserva.tipoPago || reservaExistente.tipoPago,
 			});
 
 			reservaExpress = reservaExistente;
@@ -2457,7 +2458,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				ipAddress: req.ip || req.connection.remoteAddress || "",
 				userAgent: req.get("User-Agent") || "",
 				codigoDescuento: datosReserva.codigoDescuento || "",
-				estadoPago: "pendiente",
+				tipoPago: datosReserva.tipoPago || null,
+				estadoPago: datosReserva.estadoPago || "pendiente",
 			});
 
 			console.log(
@@ -4800,7 +4802,16 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 // Endpoint para generar pagos desde el frontend
 app.post("/create-payment", async (req, res) => {
-	const { gateway, amount, description, email } = req.body || {};
+	const {
+		gateway,
+		amount,
+		description,
+		email,
+		reservaId,
+		codigoReserva,
+		tipoPago,
+		referenciaPago,
+	} = req.body || {};
 
 	if (!gateway || !amount || !description || !email) {
 		return res.status(400).json({
@@ -4816,9 +4827,25 @@ app.post("/create-payment", async (req, res) => {
 
 	if (gateway === "flow") {
 		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+		const codigoReservaNormalizado =
+			typeof codigoReserva === "string" && codigoReserva.trim().length > 0
+				? codigoReserva.trim().toUpperCase()
+				: null;
+		const comercioBase = codigoReservaNormalizado || "ORDEN";
+		const commerceOrder = `${comercioBase}-${Date.now()}`;
+
+		// Incluir datos auxiliares para que el webhook identifique la reserva sin depender del correo
+		const optionalPayload = {};
+		if (email) optionalPayload.email = email;
+		if (reservaId) optionalPayload.reservaId = reservaId;
+		if (codigoReservaNormalizado)
+			optionalPayload.codigoReserva = codigoReservaNormalizado;
+		if (tipoPago) optionalPayload.tipoPago = tipoPago;
+		if (referenciaPago) optionalPayload.referenciaPago = referenciaPago;
+
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
-			commerceOrder: `ORDEN-${Date.now()}`,
+			commerceOrder,
 			subject: description,
 			currency: "CLP",
 			amount: Number(amount),
@@ -4826,6 +4853,19 @@ app.post("/create-payment", async (req, res) => {
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			urlReturn: `${frontendBase}/flow-return`,
 		};
+
+		if (Object.keys(optionalPayload).length > 0) {
+			optionalPayload.commerceOrder = commerceOrder;
+			try {
+				params.optional = JSON.stringify(optionalPayload);
+			} catch (optionalError) {
+				console.warn(
+					"No se pudo serializar la metadata optional para Flow:",
+					optionalError.message
+				);
+			}
+		}
+
 		params.s = signParams(params);
 
 		try {
@@ -4951,23 +4991,93 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			return;
 		}
 
-		// Extraer email del optional
-		const optional = payment.optional ? JSON.parse(payment.optional) : {};
-		const email = payment.payer?.email || optional.email;
+		// Extraer metadata auxiliar enviada en el optional de Flow
+		let optionalMetadata = {};
+		if (payment.optional && typeof payment.optional === "string") {
+			try {
+				optionalMetadata =
+					payment.optional.trim().length > 0
+						? JSON.parse(payment.optional)
+						: {};
+			} catch (optionalParseError) {
+				console.warn(
+					"⚠️  No se pudo interpretar la metadata optional de Flow:",
+					optionalParseError.message
+				);
+				optionalMetadata = {};
+			}
+		}
+		const emailOptional = optionalMetadata.email;
+		const email = payment.payer?.email || emailOptional;
 		const commerceOrder = payment.commerceOrder;
+		const optionalReservaId =
+			optionalMetadata.reservaId !== undefined &&
+			optionalMetadata.reservaId !== null &&
+			optionalMetadata.reservaId !== ""
+				? Number(optionalMetadata.reservaId)
+				: null;
+		const optionalCodigoReserva =
+			typeof optionalMetadata.codigoReserva === "string" &&
+			optionalMetadata.codigoReserva.trim().length > 0
+				? optionalMetadata.codigoReserva.trim().toUpperCase()
+				: null;
+		const optionalTipoPago =
+			typeof optionalMetadata.tipoPago === "string" &&
+			optionalMetadata.tipoPago.trim().length > 0
+				? optionalMetadata.tipoPago.trim().toLowerCase()
+				: null;
+		const optionalReferenciaPago =
+			typeof optionalMetadata.referenciaPago === "string" &&
+			optionalMetadata.referenciaPago.trim().length > 0
+				? optionalMetadata.referenciaPago.trim().toUpperCase()
+				: null;
 
-		if (!commerceOrder && !email) {
+		if (
+			!commerceOrder &&
+			!optionalReservaId &&
+			!optionalCodigoReserva &&
+			!email
+		) {
 			console.log(
-				"⚠️  No se puede identificar la reserva (falta commerceOrder o email)"
+				"⚠️  No se puede identificar la reserva (falta metadata suficiente)"
 			);
 			return;
 		}
 
-		// Buscar reserva por email (más reciente)
-		let reserva;
-		if (email) {
+		let reserva = null;
+
+		if (optionalReservaId && !Number.isNaN(optionalReservaId)) {
+			reserva = await Reserva.findByPk(optionalReservaId);
+		}
+
+		if (!reserva && optionalCodigoReserva) {
+			reserva = await Reserva.findOne({
+				where: { codigoReserva: optionalCodigoReserva },
+			});
+		}
+
+		if (!reserva && commerceOrder) {
+			const partesCommerce = commerceOrder.split("-");
+			if (partesCommerce.length > 2) {
+				const posibleCodigo = partesCommerce.slice(0, -1).join("-");
+				if (posibleCodigo) {
+					reserva = await Reserva.findOne({
+						where: { codigoReserva: posibleCodigo },
+					});
+				}
+			}
+		}
+
+		if (!reserva && email) {
 			reserva = await Reserva.findOne({
 				where: { email: email },
+				order: [["created_at", "DESC"]],
+			});
+		}
+
+		if (!reserva && emailOptional && emailOptional !== email) {
+			reserva = await Reserva.findOne({
+				where: { email: emailOptional },
 				order: [["created_at", "DESC"]],
 			});
 		}
@@ -4996,6 +5106,17 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
 		let abonoPagado = reserva.abonoPagado;
 		let saldoPagado = reserva.saldoPagado;
+		const referenciaPagoFinal =
+			optionalReferenciaPago || reserva.referenciaPago || null;
+
+		let tipoPagoFinal = optionalTipoPago || reserva.tipoPago;
+		if (!tipoPagoFinal) {
+			if (pagoAcumulado >= totalReserva && totalReserva > 0) {
+				tipoPagoFinal = "total";
+			} else if (pagoAcumulado > 0) {
+				tipoPagoFinal = "abono";
+			}
+		}
 
 		if (pagoAcumulado >= totalReserva && totalReserva > 0) {
 			nuevoEstadoPago = "pagado";
@@ -5025,6 +5146,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			pagoFecha: new Date(payment.paymentDate || new Date()),
 			estado: nuevoEstadoReserva,
 			saldoPendiente: nuevoSaldoPendiente,
+			referenciaPago: referenciaPagoFinal,
+			tipoPago: tipoPagoFinal,
 			abonoPagado,
 			saldoPagado,
 		});

@@ -204,6 +204,8 @@ function PagarConCodigo() {
 			// Simplemente registramos el ID de reserva si existe y seguimos con el flujo
 			// de pago (no bloquear el proceso).
 			const reservaId = rj.reservaId || rj.reserva?.id || null;
+			const codigoReservaGenerado = rj.codigoReserva || rj.codigo_reserva || rj.reserva?.codigoReserva || null;
+			const codigoPagoNormalizado = (codigoValidado.codigo || '').toString().toUpperCase();
 			if (reservaId) {
 				console.log(
 					"Reserva creada (detalles pendientes) ID:",
@@ -221,6 +223,10 @@ function PagarConCodigo() {
 					amount: parseFloat(montoSeleccionado),
 					description: `${description} • ${descripcionPago}`,
 					email: formData.email,
+					reservaId,
+					codigoReserva: codigoReservaGenerado,
+					tipoPago: selectedPaymentType,
+					referenciaPago: codigoPagoNormalizado,
 				}),
 			});
 			const pj = await p.json();
