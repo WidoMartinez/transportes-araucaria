@@ -2823,7 +2823,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			horaRegreso:
 				normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
 			// No escribir campos virtuales; solo estado
-				estado: "confirmada",
+			estado: "confirmada",
 		};
 
 		await reserva.update(datosActualizados);
@@ -5561,7 +5561,9 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			Object.keys(filtroReservas).length > 0 ? { fecha: filtroReservas } : undefined;
+			Object.keys(filtroReservas).length > 0
+				? { fecha: filtroReservas }
+				: undefined;
 
 		const filtroGastos = {};
 		if (fechaInicio) {
@@ -5571,7 +5573,9 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 			filtroGastos[Op.lte] = fechaFin;
 		}
 		const whereGastos =
-			Object.keys(filtroGastos).length > 0 ? { fecha: filtroGastos } : undefined;
+			Object.keys(filtroGastos).length > 0
+				? { fecha: filtroGastos }
+				: undefined;
 
 		const conductores = await Conductor.findAll({
 			include: [
@@ -5676,7 +5680,9 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			Object.keys(filtroReservas).length > 0 ? { fecha: filtroReservas } : undefined;
+			Object.keys(filtroReservas).length > 0
+				? { fecha: filtroReservas }
+				: undefined;
 
 		const filtroGastos = {};
 		if (fechaInicio) {
@@ -5686,7 +5692,9 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 			filtroGastos[Op.lte] = fechaFin;
 		}
 		const whereGastos =
-			Object.keys(filtroGastos).length > 0 ? { fecha: filtroGastos } : undefined;
+			Object.keys(filtroGastos).length > 0
+				? { fecha: filtroGastos }
+				: undefined;
 
 		const vehiculos = await Vehiculo.findAll({
 			include: [
@@ -5954,7 +5962,9 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 				);
 			}
 		});
-		const vehiculosAsociados = Array.from(vehiculosSet).map((v) => JSON.parse(v));
+		const vehiculosAsociados = Array.from(vehiculosSet).map((v) =>
+			JSON.parse(v)
+		);
 
 		res.json({
 			success: true,
@@ -6003,10 +6013,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
 				0
 			),
-			totalGastos: gastos.reduce(
-				(sum, g) => sum + parseFloat(g.monto || 0),
-				0
-			),
+			totalGastos: gastos.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0),
 		});
 	} catch (error) {
 		console.error("Error al obtener estadísticas del conductor:", error);
