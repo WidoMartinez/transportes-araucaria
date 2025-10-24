@@ -28,6 +28,8 @@ function PagarConCodigo() {
 		numeroVuelo: "",
 		hotel: "",
 		mensaje: "",
+		direccionDestino: "",
+		direccionOrigen: "",
 	});
 
 	const [procesando, setProcesando] = useState(false);
@@ -99,34 +101,38 @@ function PagarConCodigo() {
 			setError("Por favor ingresa tu nombre completo");
 			return false;
 		}
-
 		if (!formData.email.trim()) {
 			setError("Por favor ingresa tu correo electrónico");
 			return false;
 		}
-
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) {
 			setError("El correo electrónico no es válido");
 			return false;
 		}
-
 		if (!formData.telefono.trim()) {
 			setError("Por favor ingresa tu teléfono");
 			return false;
 		}
-
-		// Validar fecha y hora del viaje para poder coordinar la recogida
 		if (!formData.fecha) {
 			setError("Por favor selecciona la fecha del servicio");
 			return false;
 		}
-
 		if (!formData.hora) {
 			setError("Por favor selecciona la hora del servicio");
 			return false;
 		}
-
+		// Validar dirección obligatoria según sentido del viaje
+		if (codigoValidado) {
+			if (codigoValidado.origen === "Aeropuerto La Araucanía" && !formData.direccionDestino.trim()) {
+				setError("Por favor ingresa la dirección de destino");
+				return false;
+			}
+			if (codigoValidado.destino === "Aeropuerto La Araucanía" && !formData.direccionOrigen.trim()) {
+				setError("Por favor ingresa la dirección de origen");
+				return false;
+			}
+		}
 		setError("");
 		return true;
 	};
@@ -491,6 +497,37 @@ function PagarConCodigo() {
 												/>
 											</div>
 
+											{/* Dirección obligatoria según sentido del viaje */}
+											{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
+												<div className="space-y-2 md:col-span-2">
+													<Label htmlFor="direccionDestino">
+														Dirección de destino <span className="text-red-500">*</span>
+													</Label>
+													<Input
+														id="direccionDestino"
+														name="direccionDestino"
+														value={formData.direccionDestino}
+														onChange={handleInputChange}
+														placeholder="Ej: Av. Alemania 1234, Temuco"
+														required
+													/>
+												</div>
+											)}
+											{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
+												<div className="space-y-2 md:col-span-2">
+													<Label htmlFor="direccionOrigen">
+														Dirección de origen <span className="text-red-500">*</span>
+													</Label>
+													<Input
+														id="direccionOrigen"
+														name="direccionOrigen"
+														value={formData.direccionOrigen}
+														onChange={handleInputChange}
+														placeholder="Ej: Av. O'Higgins 567, Temuco"
+														required
+													/>
+												</div>
+											)}
 											<div className="space-y-2 md:col-span-2">
 												<Label htmlFor="hotel">
 													Hotel o alojamiento (opcional)

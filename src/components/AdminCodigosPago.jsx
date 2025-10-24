@@ -134,12 +134,32 @@ function AdminCodigosPago() {
 		cargarCodigos();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+	// Maneja cambios en los campos del formulario, sincronizando origen/destino para todos los destinos
 	const handleInputChange = (e) => {
 		const { name, value, type, checked } = e.target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: type === "checkbox" ? checked : value,
-		}));
+		let nuevoForm = { ...formData };
+		if (name === "origen") {
+			nuevoForm.origen = type === "checkbox" ? checked : value;
+			// Si el origen es Aeropuerto, destino se fuerza a cualquier destino distinto de Aeropuerto
+			if (value === "Aeropuerto La Araucanía") {
+				nuevoForm.destino = "";
+			} else {
+				// Si el origen es cualquier destino, destino se fuerza a Aeropuerto
+				nuevoForm.destino = "Aeropuerto La Araucanía";
+			}
+		} else if (name === "destino") {
+			nuevoForm.destino = type === "checkbox" ? checked : value;
+			// Si el destino es Aeropuerto, origen se fuerza a cualquier destino distinto de Aeropuerto
+			if (value === "Aeropuerto La Araucanía") {
+				nuevoForm.origen = "";
+			} else {
+				// Si el destino es cualquier destino, origen se fuerza a Aeropuerto
+				nuevoForm.origen = "Aeropuerto La Araucanía";
+			}
+		} else {
+			nuevoForm[name] = type === "checkbox" ? checked : value;
+		}
+		setFormData(nuevoForm);
 	};
 	const generarCodigoLocal = () => {
 		const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/1/O/I
@@ -163,8 +183,9 @@ function AdminCodigosPago() {
 			setError("El destino es requerido");
 			return;
 		}
+		// Validación: no permitir origen y destino iguales
 		if (origenResuelto === destinoResuelto) {
-			setError("El origen y el destino no pueden ser iguales");
+			setError("No se permite un viaje con origen y destino iguales");
 			return;
 		}
 		if (!formData.monto || parseFloat(formData.monto) <= 0) {
