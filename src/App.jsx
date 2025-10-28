@@ -15,12 +15,10 @@ import {
 	DialogTitle,
 } from "./components/ui/dialog";
 import { Button } from "./components/ui/button";
-import { Checkbox } from "./components/ui/checkbox";
 import { LoaderCircle } from "lucide-react";
 
 // --- Componentes de Sección ---
 import Header from "./components/Header";
-// Hero eliminado - solo flujo express disponible
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
@@ -32,7 +30,6 @@ import FletesLanding from "./components/FletesLanding";
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
-import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
 import { getBackendUrl } from "./lib/backend";
@@ -40,9 +37,7 @@ import { getBackendUrl } from "./lib/backend";
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
 
-// Descuentos ahora se cargan dinámicamente desde descuentosGlobales
-const ROUND_TRIP_DISCOUNT = 0.05;
-
+// ... (El resto de las funciones de ayuda como parsePromotionMetadata, normalizePromotions, etc., se mantienen igual)
 const parsePromotionMetadata = (promo) => {
 	if (!promo || typeof promo.descripcion !== "string") return null;
 	try {
@@ -50,7 +45,7 @@ const parsePromotionMetadata = (promo) => {
 		return parsed && typeof parsed === "object" && !Array.isArray(parsed)
 			? parsed
 			: null;
-	} catch (error) {
+	} catch {
 		return null;
 	}
 };
@@ -77,7 +72,6 @@ const normalizePromotions = (promotions = []) => {
 		const porcentaje = Number(
 			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
 		);
-		const aplicaTipoViajeMetadata = metadata?.aplicaTipoViaje || {};
 
 		return {
 			id,
@@ -184,8 +178,8 @@ const resolveIsPayCodeView = () => {
 	const hash = window.location.hash.toLowerCase();
 	return hash === "#pagar-con-codigo" || hash === "#pago-codigo";
 };
-
 function App() {
+	// ... (Estados se mantienen igual)
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
@@ -199,9 +193,7 @@ function App() {
 	});
 
 	// Estados para códigos de descuento
-	const [codigoAplicado, setCodigoAplicado] = useState(null);
-	const [codigoError, setCodigoError] = useState(null);
-	const [validandoCodigo, setValidandoCodigo] = useState(false);
+	const [codigoAplicado] = useState(null);
 	const [loadingPrecios, setLoadingPrecios] = useState(false);
 
 	// --- ESTADO Y LÓGICA DEL FORMULARIO ---
@@ -229,10 +221,6 @@ function App() {
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [codigoReservaCreada, setCodigoReservaCreada] = useState("");
 	const [phoneError, setPhoneError] = useState("");
-	const [reviewChecklist, setReviewChecklist] = useState({
-		viaje: false,
-		contacto: false,
-	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
 	// Sincronizar vista de Fletes cuando cambia el hash o el historial
@@ -269,10 +257,6 @@ function App() {
 	}, []);
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
-
-	// Solo flujo express disponible - flujo normal eliminado
-
-	// --- FUNCION PARA APLICAR DATOS DE PRECIOS ---
 	const applyPricingPayload = useCallback((data, { signal } = {}) => {
 		if (!data || signal?.aborted) {
 			return false;
@@ -398,48 +382,6 @@ function App() {
 		return usuarioId;
 	};
 
-	const validarCodigo = async (codigo) => {
-		setValidandoCodigo(true);
-		setCodigoError(null);
-
-		try {
-			const apiUrl =
-				getBackendUrl() || "https://transportes-araucaria.onrender.com";
-			const usuarioId = generarUsuarioId();
-
-			const response = await fetch(`${apiUrl}/api/codigos/validar`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					codigo,
-					destino: formData.destino,
-					monto: cotizacion.precio || 0,
-					usuarioId,
-				}),
-			});
-
-			const result = await response.json();
-
-			if (result.valido) {
-				setCodigoAplicado(result.codigo);
-				setCodigoError(null);
-			} else {
-				setCodigoError(result.error);
-				setCodigoAplicado(null);
-			}
-		} catch (error) {
-			setCodigoError("Error validando código");
-			setCodigoAplicado(null);
-		} finally {
-			setValidandoCodigo(false);
-		}
-	};
-
-	const removerCodigo = () => {
-		setCodigoAplicado(null);
-		setCodigoError(null);
-	};
-
 	// --- CARGA DE DATOS DINAMICA ---
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -561,7 +503,7 @@ function App() {
 			window.removeEventListener("pricing_updated", handlePricingUpdate);
 			clearInterval(pollingInterval);
 		};
-	}, []);
+	}, [recargarDatosPrecios]);
 
 	// Hacer la función de recarga disponible globalmente para el panel admin
 	useEffect(() => {
@@ -583,10 +525,6 @@ function App() {
 			document.removeEventListener("keydown", handleKeyDown);
 		};
 	}, [recargarDatosPrecios]);
-
-	// Código duplicado removido - ya está en recargarDatosPrecios
-
-	// --- LÓGICA DE RUTAS Y PASAJEROS DINÁMICOS ---
 	const todosLosTramos = useMemo(
 		() => ["Aeropuerto La Araucanía", ...destinosData.map((d) => d.nombre)],
 		[destinosData]
@@ -604,10 +542,6 @@ function App() {
 		],
 		[destinosData]
 	);
-
-	// ==================================================================
-	// LÓGICA CORREGIDA PARA ACTUALIZACIÓN DINÁMICA DE PASAJEROS
-	// ==================================================================
 	const destinoSeleccionado = useMemo(() => {
 		const tramo = [formData.origen, formData.destino].find(
 			(lugar) =>
@@ -635,23 +569,7 @@ function App() {
 		const esViajeIda = aeropuertoEnDestino;
 		const esViajeVuelta = aeropuertoEnOrigen;
 
-		// console.log("🔍 DEBUG FILTRO PROMOCIONES:", {
-		// 	tramo,
-		// 	isRoundTrip,
-		// 	esViajeIda,
-		// 	esViajeVuelta,
-		// 	promotions: safePromotions.length,
-		// });
-
 		return safePromotions.filter((promo) => {
-			// console.log("🔍 Evaluando promoción:", {
-			// 	promo: promo.nombre,
-			// 	destino: promo.destino,
-			// 	tramo,
-			// 	coincide: promo.destino === tramo,
-			// 	descuento: promo.descuentoPorcentaje,
-			// });
-
 			if (!promo.destino || promo.destino !== tramo) return false;
 			if (promo.descuentoPorcentaje <= 0) return false;
 
@@ -659,10 +577,6 @@ function App() {
 			const tipoViaje = promo.aplicaTipoViaje;
 			if (tipoViaje) {
 				if (isRoundTrip) {
-					// Para viajes de ida y vuelta, puede aplicar si:
-					// 1. Está habilitado "ambos" (aplica a ambos tramos)
-					// 2. Está habilitado "ida" y es viaje de ida (primer tramo)
-					// 3. Está habilitado "vuelta" y es viaje de vuelta (segundo tramo)
 					const aplicaAmbos = tipoViaje.ambos;
 					const aplicaIda = tipoViaje.ida && esViajeIda;
 					const aplicaVuelta = tipoViaje.vuelta && esViajeVuelta;
@@ -671,10 +585,8 @@ function App() {
 				} else {
 					// Para viajes de una sola dirección
 					if (esViajeIda) {
-						// Viaje de ida (ciudad → aeropuerto): debe permitir "ida" o "ambos"
 						if (!tipoViaje.ida && !tipoViaje.ambos) return false;
 					} else if (esViajeVuelta) {
-						// Viaje de vuelta (aeropuerto → ciudad): debe permitir "vuelta" o "ambos"
 						if (!tipoViaje.vuelta && !tipoViaje.ambos) return false;
 					}
 				}
@@ -726,37 +638,11 @@ function App() {
 	const promotionDiscountRate = activePromotion
 		? activePromotion.descuentoPorcentaje / 100
 		: 0;
-
-	// Debug específico para promociones (comentado para reducir ruido)
-	// console.log("🎯 DEBUG PROMOCIONES:", {
-	// 	applicablePromotions,
-	// 	activePromotion,
-	// 	promotionDiscountRate,
-	// 	destinoSeleccionado: destinoSeleccionado?.nombre,
-	// 	origen: formData.origen,
-	// 	destino: formData.destino,
-	// 	idaVuelta: formData.idaVuelta,
-	// });
-	// Calcular descuentos dinámicos desde descuentosGlobales
 	const onlineDiscountRate =
 		descuentosGlobales?.descuentoOnline?.activo &&
 		descuentosGlobales?.descuentoOnline?.valor
 			? descuentosGlobales.descuentoOnline.valor / 100
 			: 0;
-
-	// Debug: mostrar descuentos actuales cuando cambien (comentado para reducir ruido)
-	// useEffect(() => {
-	// 	console.log("💰 DESCUENTOS ACTUALES:", {
-	// 		descuentosGlobales,
-	// 		onlineDiscountRate,
-	// 		roundTripDiscountRate:
-	// 			formData.idaVuelta &&
-	// 			descuentosGlobales?.descuentoRoundTrip?.activo &&
-	// 			descuentosGlobales?.descuentoRoundTrip?.valor
-	// 				? descuentosGlobales.descuentoRoundTrip.valor / 100
-	// 				: 0,
-	// 	});
-	// }, [descuentosGlobales, formData.idaVuelta]);
 
 	const roundTripDiscountRate =
 		formData.idaVuelta &&
@@ -765,19 +651,10 @@ function App() {
 			? descuentosGlobales.descuentoRoundTrip.valor / 100
 			: 0;
 
-	// Calcular descuentos personalizados activos
 	const personalizedDiscountRate =
 		descuentosGlobales?.descuentosPersonalizados
 			?.filter((desc) => desc.activo && desc.valor > 0)
 			.reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
-
-	const effectiveDiscountRate = Math.min(
-		onlineDiscountRate +
-			promotionDiscountRate +
-			roundTripDiscountRate +
-			personalizedDiscountRate,
-		0.75
-	);
 
 	useEffect(() => {
 		if (!destinoSeleccionado) return;
@@ -876,26 +753,6 @@ function App() {
 	const validarTelefono = (telefono) =>
 		/^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/.test(telefono);
 
-	const validarHorarioReserva = () => {
-		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
-			return {
-				esValido: false,
-				mensaje: "Por favor, completa la fecha y hora.",
-			};
-		}
-		const ahora = new Date();
-		const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
-		const horasDeDiferencia = (fechaReserva - ahora) / 3600000;
-		const { minHorasAnticipacion } = destinoSeleccionado;
-		if (horasDeDiferencia < minHorasAnticipacion) {
-			return {
-				esValido: false,
-				mensaje: `Para ${destinoSeleccionado.nombre}, reserva con al menos ${minHorasAnticipacion} horas de anticipación.`,
-			};
-		}
-		return { esValido: true, mensaje: "" };
-	};
-
 	const handleInputChange = (e) => {
 		const { name, value } = e.target;
 		setFormData((prev) => {
@@ -909,47 +766,15 @@ function App() {
 		if (name === "telefono") setPhoneError("");
 	};
 
-	const resetForm = () => {
-		setFormData({
-			nombre: "",
-			telefono: "",
-			email: "",
-			origen: "Aeropuerto La Araucanía",
-			otroOrigen: "",
-			destino: "",
-			otroDestino: "",
-			fecha: "",
-			hora: "",
-			pasajeros: "1",
-			numeroVuelo: "",
-			hotel: "",
-			equipajeEspecial: "",
-			sillaInfantil: "no",
-			mensaje: "",
-			idaVuelta: false,
-			fechaRegreso: "",
-			horaRegreso: "",
-		});
-	};
-
-	const handleCloseAlert = () => {
-		setShowConfirmationAlert(false);
-		setReviewChecklist({ viaje: false, contacto: false });
-		resetForm();
-	};
-
 	const pricing = useMemo(() => {
 		const precioIda = cotizacion.precio || 0;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
 
-		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
-		// Descuento online por reservar (se aplica a cada tramo)
 		const descuentoOnlinePorTramo = Math.round(precioIda * onlineDiscountRate);
 		const descuentoOnline = formData.idaVuelta
 			? descuentoOnlinePorTramo * 2
 			: descuentoOnlinePorTramo;
 
-		// Descuentos personalizados (se aplican a cada tramo)
 		const descuentosPersonalizadosPorTramo = Math.round(
 			precioIda * personalizedDiscountRate
 		);
@@ -957,8 +782,6 @@ function App() {
 			? descuentosPersonalizadosPorTramo * 2
 			: descuentosPersonalizadosPorTramo;
 
-		// 2. PROMOCIONES POR TRAMO (se aplican según configuración específica)
-		// Estas se calculan por tramo individual, no sobre el total
 		const descuentoPromocionPorTramo = Math.round(
 			precioIda * (promotionDiscountRate || 0)
 		);
@@ -966,12 +789,15 @@ function App() {
 			? descuentoPromocionPorTramo * 2
 			: descuentoPromocionPorTramo;
 
-		// 3. DESCUENTO IDA Y VUELTA (solo cuando se selecciona ida y vuelta)
 		const descuentoRoundTrip = formData.idaVuelta
 			? Math.round(precioBase * (roundTripDiscountRate || 0))
 			: 0;
-
-		// 4. DESCUENTO POR CÓDIGO
+		const isSameDayTrip =
+			formData.idaVuelta && formData.fecha === formData.fechaRegreso;
+		const sameDayDiscountRate = isSameDayTrip ? 0.25 : 0; // 25% de descuento para viajes el mismo día
+		const descuentoSameDay = isSameDayTrip
+			? Math.round(precioBase * sameDayDiscountRate)
+			: 0;
 		let descuentoCodigo = 0;
 		if (codigoAplicado) {
 			if (codigoAplicado.tipo === "porcentaje") {
@@ -979,78 +805,34 @@ function App() {
 			} else {
 				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
 			}
-			// console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
-			// 	codigoAplicado,
-			// 	precioBase,
-			// 	descuentoCodigo,
-			// 	tipo: codigoAplicado.tipo,
-			// 	valor: codigoAplicado.valor,
-			// });
 		}
 
-		// Calcular descuento total
 		const descuentoTotalSinLimite =
 			descuentoOnline +
 			descuentoPromocion +
-			descuentoRoundTrip +
+			(descuentoSameDay > 0 ? descuentoSameDay : descuentoRoundTrip) +
 			descuentosPersonalizados +
 			descuentoCodigo;
 
-		// Aplicar límite del 75% al precio base
 		const descuentoMaximo = Math.round(precioBase * 0.75);
-		const descuentoOnlineTotal = Math.min(
+		const totalAhorrado = Math.min(
 			descuentoTotalSinLimite,
 			descuentoMaximo
 		);
 
-		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0);
+		const totalConDescuento = Math.max(precioBase - totalAhorrado, 0);
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
-		// Debug específico para verificar el total final (comentado para reducir ruido)
-		// console.log("💰 TOTAL FINAL CALCULADO:", {
-		// 	precioBase,
-		// 	descuentoOnlineTotal,
-		// 	totalConDescuento,
-		// 	abono,
-		// 	saldoPendiente,
-		// 	descuentoCodigo,
-		// 	codigoAplicado: codigoAplicado?.codigo,
-		// });
-
-		// Debug: mostrar información de descuentos (comentado para reducir ruido)
-		// console.log("💰 DEBUG PRICING CORREGIDO:", {
-		// 	precioIda,
-		// 	precioBase,
-		// 	idaVuelta: formData.idaVuelta,
-		// 	onlineDiscountRate,
-		// 	promotionDiscountRate,
-		// 	roundTripDiscountRate,
-		// 	personalizedDiscountRate,
-		// 	descuentoOnlinePorTramo,
-		// 	descuentoOnline,
-		// 	descuentoPromocionPorTramo,
-		// 	descuentoPromocion,
-		// 	descuentoRoundTrip,
-		// 	descuentosPersonalizados,
-		// 	descuentoCodigo,
-		// 	descuentoTotalSinLimite,
-		// 	descuentoMaximo,
-		// 	descuentoOnlineTotal,
-		// 	effectiveDiscountRate,
-		// 	activePromotion,
-		// 	applicablePromotions,
-		// 	codigoAplicado,
-		// });
-
 		return {
 			precioBase,
-			descuentoBase: descuentoOnline, // Para mantener compatibilidad
+			descuentoBase: descuentoOnline,
 			descuentoPromocion,
 			descuentoRoundTrip,
+			descuentoSameDay,
 			descuentosPersonalizados,
 			descuentoCodigo,
-			descuentoOnline: descuentoOnlineTotal,
+			totalAhorrado,
 			totalConDescuento,
 			abono,
 			saldoPendiente,
@@ -1065,42 +847,24 @@ function App() {
 		codigoAplicado,
 	]);
 
-	const {
-		precioBase,
-		descuentoOnline,
-		totalConDescuento,
-		abono,
-		saldoPendiente,
-	} = pricing;
+	const { totalConDescuento } = pricing;
 
-	const handlePayment = async (gateway, type = "abono") => {
-		// Prevenir múltiples peticiones
-		if (loadingGateway) {
-			console.log("Ya hay una petición de pago en proceso");
-			return;
-		}
+	const handlePayment = useCallback(async () => {
+		if (loadingGateway) return;
+		setLoadingGateway("flow-total");
 
-		setLoadingGateway(`${gateway}-${type}`);
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
-		const amount = type === "total" ? totalConDescuento : abono;
+		const amount = totalConDescuento;
 
 		if (!amount) {
-			alert("Aún no tenemos un valor para generar el enlace de pago.");
+			alert("No hay un monto válido para el pago.");
 			setLoadingGateway(null);
 			return;
 		}
 
-		const description =
-			type === "total"
-				? `Pago total con descuento para ${destinoFinal} (${
-						vehiculo || "A confirmar"
-				  })`
-				: `Abono reserva (40%) para ${destinoFinal} (${
-						vehiculo || "A confirmar"
-				  })`;
-
+		const description = `Pago total con descuento para ${formData.destino} (${
+			vehiculo || "A confirmar"
+		})`;
 		const apiUrl =
 			getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
@@ -1109,170 +873,36 @@ function App() {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					gateway,
+					gateway: "flow", // Hardcoded a Flow
 					amount,
 					description,
 					email: formData.email,
-					reservationId: reservationId || null,
+					reservationId,
 				}),
 			});
 
-			if (!response.ok) {
-				throw new Error(`Error del servidor: ${response.status}`);
-			}
-
+			if (!response.ok) throw new Error(`Error: ${response.status}`);
 			const data = await response.json();
 			if (data.url) {
 				window.open(data.url, "_blank");
 			} else {
-				throw new Error(
-					data.message || "No se pudo generar el enlace de pago."
-				);
+				throw new Error(data.message || "No se pudo generar el enlace de pago.");
 			}
 		} catch (error) {
 			console.error("Error al crear el pago:", error);
 			alert(`Hubo un problema: ${error.message}`);
 		} finally {
-			// Asegurar que siempre se resetee el estado de carga
 			setLoadingGateway(null);
 		}
-	};
+	}, [
+		loadingGateway,
+		totalConDescuento,
+		cotizacion,
+		formData.destino,
+		formData.email,
+		reservationId,
+	]);
 
-	// ELIMINADO - Solo flujo express disponible
-	/* 
-	const enviarReserva = async (source) => {
-		if (!validarTelefono(formData.telefono)) {
-			setPhoneError(
-				"Introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
-			);
-			return { success: false, error: "telefono" };
-		}
-		setPhoneError("");
-		const validacion = validarHorarioReserva();
-		if (!validacion.esValido && formData.destino !== "Otro") {
-			return { success: false, error: "horario", message: validacion.mensaje };
-		}
-		if (isSubmitting) return { success: false, error: "procesando" };
-		setIsSubmitting(true);
-		const destinoFinal =
-			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-		const origenFinal =
-			formData.origen === "Otro" ? formData.otroOrigen : formData.origen;
-		const dataToSend = {
-			...formData,
-			origen: origenFinal,
-			destino: destinoFinal,
-			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
-			descuentoBase: pricing.descuentoBase,
-			descuentoPromocion: pricing.descuentoPromocion,
-			descuentoRoundTrip: pricing.descuentoRoundTrip,
-			descuentosPersonalizados: pricing.descuentosPersonalizados,
-			descuentoOnline,
-			totalConDescuento,
-			abonoSugerido: abono,
-			saldoPendiente,
-			source,
-		};
-		if (!dataToSend.nombre?.trim()) {
-			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
-		}
-
-		// Enviar notificación por correo usando el archivo PHP de Hostinger
-		try {
-			// Usar endpoint absoluto para evitar problemas de CORS y ejecución PHP
-			const emailResponse = await fetch(
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(dataToSend),
-				}
-			);
-
-			if (emailResponse.ok) {
-				const emailResult = await emailResponse.json();
-				console.log("✅ Correo enviado exitosamente:", emailResult);
-				// Guardar el ID de la reserva para asociar pagos posteriores
-				if (emailResult && emailResult.id_reserva) {
-					setReservationId(emailResult.id_reserva);
-				}
-			} else {
-				console.warn("⚠️ Error al enviar correo:", await emailResponse.text());
-			}
-		} catch (emailError) {
-			console.error("❌ Error al enviar notificación por correo:", emailError);
-			// No interrumpimos el flujo si falla el correo
-		}
-
-		// Usar el servidor backend de Render para todas las peticiones
-		const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
-		const emailApiUrl = `${apiUrl}/enviar-reserva`;
-		const headers = { "Content-Type": "application/json" };
-
-		try {
-			const response = await fetch(emailApiUrl, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(dataToSend),
-			});
-			const result = await response.json();
-			if (!response.ok)
-				throw new Error(result.message || "Error en el servidor.");
-			
-			// Guardar el código de reserva si existe en la respuesta
-			if (result.codigoReserva) {
-				setCodigoReservaCreada(result.codigoReserva);
-			}
-			
-			setReviewChecklist({ viaje: false, contacto: false });
-			setShowConfirmationAlert(true);
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-				});
-			}
-
-			// Registrar el uso del código si hay uno aplicado
-			if (codigoAplicado) {
-				try {
-					const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
-					const usuarioId = generarUsuarioId();
-
-					await fetch(`${apiUrl}/api/codigos/usar`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							codigo: codigoAplicado.codigo,
-							usuarioId,
-						}),
-					});
-
-					console.log("✅ Uso del código registrado exitosamente");
-				} catch (error) {
-					console.error("Error registrando uso del código:", error);
-					// No mostramos error al usuario ya que la reserva ya se procesó
-				}
-			}
-
-			return { success: true };
-		} catch (error) {
-			console.error("Error al enviar el formulario a PHP:", error);
-			return { success: false, error: "server", message: error.message };
-		} finally {
-			setIsSubmitting(false);
-		}
-	};
-	*/
-
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		// Cambio: ahora solo usa flujo express
-		const result = await enviarReservaExpress("Formulario de Contacto Express");
-		if (!result.success && result.message) alert(result.message);
-	};
-
-	// Función para enviar reserva express (flujo simplificado)
 	const enviarReservaExpress = async (source) => {
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError(
@@ -1287,20 +917,10 @@ function App() {
 
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-
 		const dataToSend = {
-			nombre: formData.nombre,
-			email: formData.email,
-			telefono: formData.telefono,
-			origen: formData.origen,
+			...formData,
 			destino: destinoFinal,
-			fecha: formData.fecha,
-			pasajeros: formData.pasajeros,
-			idaVuelta: formData.idaVuelta,
-			fechaRegreso: formData.fechaRegreso,
 			source,
-
-			// Datos de pricing calculados
 			precio: cotizacion.precio,
 			vehiculo: cotizacion.vehiculo,
 			abonoSugerido: pricing.abono,
@@ -1308,57 +928,14 @@ function App() {
 			descuentoBase: pricing.descuentoBase,
 			descuentoPromocion: pricing.descuentoPromocion,
 			descuentoRoundTrip: pricing.descuentoRoundTrip,
-			descuentoOnline: pricing.descuentoOnline,
+			descuentoOnline: pricing.totalAhorrado,
 			totalConDescuento: pricing.totalConDescuento,
 			codigoDescuento: codigoAplicado?.codigo || "",
-			// Estado inicial: marcar como pendiente hasta confirmar pago
 			estado: "pendiente",
 			estadoPago: "pendiente",
 			pagoMonto: 0,
 		};
-
-		// Enviar hora solo si el usuario la proporcionó (evita que el backend asuma 08:00)
-		if (formData.hora) {
-			dataToSend.hora = formData.hora;
-		}
-
-		console.log("📦 Enviando reserva express:", dataToSend);
-
-		// Ya NO llamamos al PHP aquí, el backend de Node.js lo hará automáticamente
-		// después de guardar la reserva y generar el código
-
-		/* COMENTADO - Ahora el backend llama al PHP automáticamente
-		try {
-			const emailResponse = await fetch(
-				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php",
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(dataToSend),
-				}
-			);
-
-			if (emailResponse.ok) {
-				const emailResult = await emailResponse.json();
-				console.log(
-					"✅ Correo de notificación enviado exitosamente:",
-					emailResult
-				);
-				// Guardar el ID de la reserva del PHP si está disponible
-				if (emailResult && emailResult.id_reserva) {
-					setReservationId(emailResult.id_reserva);
-				}
-			} else {
-				console.warn(
-					"⚠️ Error al enviar correo de notificación:",
-					await emailResponse.text()
-				);
-			}
-		} catch (emailError) {
-			console.error("❌ Error al enviar notificación por correo:", emailError);
-			// No interrumpimos el flujo si falla el correo
-		}
-		FIN DEL COMENTARIO */
+		if (formData.hora) dataToSend.hora = formData.hora;
 
 		try {
 			const apiUrl =
@@ -1368,34 +945,18 @@ function App() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(dataToSend),
 			});
-
 			const result = await response.json();
-
-			if (!response.ok) {
+			if (!response.ok)
 				throw new Error(result.message || "Error en el servidor.");
-			}
 
-			console.log("✅ Reserva express creada:", result);
-
-			// Guardar ID de reserva para asociar pagos
-			if (result.reservaId) {
-				setReservationId(result.reservaId);
-			}
-
-			// Guardar código de reserva para mostrarlo al usuario
-			if (result.codigoReserva) {
-				setCodigoReservaCreada(result.codigoReserva);
-				console.log("📋 Código de reserva generado:", result.codigoReserva);
-			}
-
-			// Registrar conversión
+			if (result.reservaId) setReservationId(result.reservaId);
+			if (result.codigoReserva) setCodigoReservaCreada(result.codigoReserva);
 			if (typeof gtag === "function") {
 				gtag("event", "conversion", {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
 				});
 			}
 
-			// Registrar uso del código si hay uno aplicado
 			if (codigoAplicado) {
 				try {
 					const usuarioId = generarUsuarioId();
@@ -1407,12 +968,10 @@ function App() {
 							usuarioId,
 						}),
 					});
-					console.log("✅ Uso del código registrado exitosamente");
 				} catch (error) {
 					console.error("Error registrando uso del código:", error);
 				}
 			}
-
 			return { success: true, reservaId: result.reservaId };
 		} catch (error) {
 			console.error("Error al enviar reserva express:", error);
@@ -1422,9 +981,15 @@ function App() {
 		}
 	};
 
-	const handleWizardSubmit = () => {
-		// Solo flujo express disponible
-		return enviarReservaExpress("Reserva Express Web");
+	const handleWizardSubmit = async () => {
+		const result = await enviarReservaExpress("Reserva Express Web");
+		if (result.success) {
+			// Si la reserva se creó, iniciar el pago
+			await handlePayment();
+			setShowConfirmationAlert(true); // Mostrar confirmación después de intentar el pago
+		} else if (result.message) {
+			alert(result.message);
+		}
 	};
 
 	const minDateTime = useMemo(() => {
@@ -1434,32 +999,10 @@ function App() {
 		return fechaMinima.toISOString().split("T")[0];
 	}, [destinoSeleccionado]);
 
-	const currencyFormatter = useMemo(
-		() =>
-			new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }),
-		[]
-	);
-	const formatCurrency = (value) => currencyFormatter.format(value || 0);
-
-	const canPay = reviewChecklist.viaje && reviewChecklist.contacto;
-	const destinoFinal =
-		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
-
-	if (isFreightView) {
-		return <FletesLanding />;
-	}
-
-	if (isAdminView) {
-		return <AdminDashboard />;
-	}
-
-	if (isConsultaView) {
-		return <ConsultarReserva />;
-	}
-
-	if (isPayCodeView) {
-		return <PagarConCodigo />;
-	}
+	if (isFreightView) return <FletesLanding />;
+	if (isAdminView) return <AdminDashboard />;
+	if (isConsultaView) return <ConsultarReserva />;
+	if (isPayCodeView) return <PagarConCodigo />;
 
 	return (
 		<div className="min-h-screen bg-background text-foreground">
@@ -1473,46 +1016,33 @@ function App() {
 				open={showConfirmationAlert}
 				onOpenChange={setShowConfirmationAlert}
 			>
-				<DialogContent className="sm:max-w-md">
+				<DialogContent>
 					<DialogHeader>
 						<DialogTitle className="text-2xl text-green-600">
-							✅ ¡Reserva Enviada Correctamente!
+							✅ ¡Reserva Creada!
 						</DialogTitle>
 						<DialogDescription>
-							Tu solicitud de reserva ha sido recibida con éxito.
+							Tu reserva ha sido guardada. Serás redirigido para completar el
+							pago.
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-4">
 						{codigoReservaCreada && (
 							<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-								<p className="text-sm font-medium text-blue-700 mb-1">
-									Código de Reserva
-								</p>
-								<p className="text-2xl font-bold text-blue-900 tracking-wider font-mono">
-									{codigoReservaCreada}
-								</p>
-								<p className="text-xs text-blue-600 mt-2">
-									Guarda este código para consultar tu reserva
+								<p className="font-medium text-blue-800">
+									Tu código de reserva es:{" "}
+									<span className="font-mono font-bold">
+										{codigoReservaCreada}
+									</span>
 								</p>
 							</div>
 						)}
 						<p className="text-sm text-muted-foreground">
-							Te enviaremos una confirmación por correo electrónico con todos
-							los detalles de tu viaje.
-						</p>
-						<p className="text-sm text-muted-foreground">
-							Nuestro equipo revisará tu solicitud y te contactará pronto.
+							Si no eres redirigido, haz clic en el enlace que te enviamos a
+							tu correo.
 						</p>
 					</div>
-					<DialogFooter className="sm:justify-between gap-2">
-						{codigoReservaCreada && (
-							<Button
-								variant="outline"
-								onClick={() => (window.location.href = `#consultar-reserva`)}
-							>
-								Consultar Reserva
-							</Button>
-						)}
+					<DialogFooter>
 						<DialogClose asChild>
 							<Button type="button">Entendido</Button>
 						</DialogClose>
@@ -1523,7 +1053,6 @@ function App() {
 			<Header />
 
 			<main>
-				{/* Solo flujo express disponible */}
 				<HeroExpress
 					formData={formData}
 					handleInputChange={handleInputChange}
@@ -1532,21 +1061,10 @@ function App() {
 					maxPasajeros={maxPasajeros}
 					minDateTime={minDateTime}
 					phoneError={phoneError}
-					setPhoneError={setPhoneError}
 					isSubmitting={isSubmitting}
 					cotizacion={cotizacion}
 					pricing={pricing}
-					baseDiscountRate={onlineDiscountRate}
-					promotionDiscountRate={promotionDiscountRate}
-					handlePayment={handlePayment}
-					loadingGateway={loadingGateway}
 					onSubmitWizard={handleWizardSubmit}
-					validarTelefono={validarTelefono}
-					codigoAplicado={codigoAplicado}
-					codigoError={codigoError}
-					validandoCodigo={validandoCodigo}
-					onAplicarCodigo={validarCodigo}
-					onRemoverCodigo={removerCodigo}
 				/>
 				<Servicios />
 				<Destinos />
@@ -1557,7 +1075,9 @@ function App() {
 				<Contacto
 					formData={formData}
 					handleInputChange={handleInputChange}
-					handleSubmit={handleSubmit}
+					handleSubmit={() => {
+						/* No hacer nada, el formulario de contacto se maneja por separado */
+					}}
 					origenes={origenesContacto}
 					maxPasajeros={maxPasajeros}
 					minDateTime={minDateTime}
