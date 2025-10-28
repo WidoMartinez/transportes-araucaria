@@ -5091,7 +5091,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`
 		);
 
-		// Reglas: parcial (>= 40% del total) => confirmada, total => completada
+		// Reglas: parcial (>= 40% del total) => confirmada, total => confirmada (estado completada se gestiona manualmente)
 		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
 		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
 		const montoActual = Number(payment.amount) || 0;
@@ -5120,10 +5120,16 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 		if (pagoAcumulado >= totalReserva && totalReserva > 0) {
 			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "completada";
 			nuevoSaldoPendiente = 0;
 			abonoPagado = true;
 			saldoPagado = true;
+			if (
+				["pendiente", "pendiente_detalles", "confirmada"].includes(
+					nuevoEstadoReserva
+				)
+			) {
+				nuevoEstadoReserva = "confirmada";
+			}
 		} else if (pagoAcumulado > 0) {
 			nuevoEstadoPago = "parcial";
 			if (
