@@ -73,6 +73,12 @@ function HeroExpress({
 			<div className="absolute inset-0 bg-black/50"></div>
 
 			<div className="relative container mx-auto px-4 text-center py-16">
+				<h1 className="text-4xl md:text-6xl font-bold mb-4">
+					Viajes privados y de turismo
+				</h1>
+				<p className="text-lg md:text-2xl mb-8">
+					Cotiza y reserva en línea de forma rápida y segura.
+				</p>
 				<Card className="max-w-md mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left p-6">
 					<CardContent className="p-0">
 						<div className="space-y-4">
