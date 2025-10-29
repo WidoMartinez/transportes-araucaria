@@ -102,7 +102,10 @@ function ConsultarReserva() {
 					amount,
 					description,
 					email: reserva.email,
-					reservationId: reserva.id,
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva || null,
+					tipoPago: tipo,
+					referenciaPago: reserva.referenciaPago || null,
 				}),
 			});
 			if (!resp.ok) {

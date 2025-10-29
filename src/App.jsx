@@ -877,7 +877,9 @@ function App() {
 					amount,
 					description,
 					email: formData.email,
-					reservationId,
+					reservaId: reservationId,
+					codigoReserva: codigoReservaCreada || null,
+					tipoPago: "total",
 				}),
 			});
 
