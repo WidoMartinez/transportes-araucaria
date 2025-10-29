@@ -35,6 +35,7 @@ import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
+import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import { getBackendUrl } from "./lib/backend";
 
 // --- Datos Iniciales y Lógica ---
@@ -198,6 +199,12 @@ function App() {
 		descuentosPersonalizados: [],
 	});
 
+	// Estado para vista de completar detalles post-pago
+	const [vistaCompletarDetalles, setVistaCompletarDetalles] = useState({
+		activo: false,
+		reservaId: null,
+	});
+
 	// Estados para códigos de descuento
 	const [codigoAplicado, setCodigoAplicado] = useState(null);
 	const [codigoError, setCodigoError] = useState(null);
@@ -267,6 +274,27 @@ function App() {
 			window.removeEventListener("popstate", syncPayCode);
 		};
 	}, []);
+
+	// --- LÓGICA PARA MANEJAR RETORNO DE PAGO ---
+	useEffect(() => {
+		const url = new URL(window.location.href);
+		const flowSuccess = url.searchParams.get("flow_payment") === "success";
+		const reservaId = url.searchParams.get("reserva_id");
+
+		if (flowSuccess && reservaId) {
+			console.log(
+				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}`
+			);
+			setVistaCompletarDetalles({
+				activo: true,
+				reservaId: reservaId,
+			});
+
+			// Limpiar URL para evitar reactivación
+			window.history.replaceState(null, "", window.location.pathname);
+		}
+	}, []);
+
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
 
@@ -1113,7 +1141,8 @@ function App() {
 					amount,
 					description,
 					email: formData.email,
-					reservationId: reservationId || null,
+					reservaId: reservationId || null,
+					tipoPago: type,
 				}),
 			});
 
@@ -1459,6 +1488,26 @@ function App() {
 
 	if (isPayCodeView) {
 		return <PagarConCodigo />;
+	}
+
+	// Vista para completar detalles después del pago
+	if (vistaCompletarDetalles.activo) {
+		return (
+			<CompletarDetalles
+				reservaId={vistaCompletarDetalles.reservaId}
+				onComplete={() => {
+					console.log("✅ Detalles completados, volviendo al inicio.");
+					setVistaCompletarDetalles({ activo: false, reservaId: null });
+					// Opcional: Redirigir a una página de agradecimiento
+					window.location.href = "/";
+				}}
+				onCancel={() => {
+					console.log("🛑 Cancelado, volviendo al inicio.");
+					setVistaCompletarDetalles({ activo: false, reservaId: null });
+					window.location.href = "/";
+				}}
+			/>
+		);
 	}
 
 	return (
