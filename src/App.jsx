@@ -277,64 +277,22 @@ function App() {
 
 	// --- LÓGICA PARA MANEJAR RETORNO DE PAGO ---
 	useEffect(() => {
-		const handlePaymentReturn = async () => {
-			const url = new URL(window.location.href);
-			const flowSuccess = url.searchParams.get("flow_payment") === "success";
-			const reservaId = url.searchParams.get("reserva_id");
-			const token = url.searchParams.get("token");
+		const url = new URL(window.location.href);
+		const flowSuccess = url.searchParams.get("flow_payment") === "success";
+		const reservaId = url.searchParams.get("reserva_id");
 
-			// Flujo de retorno directo (si los parámetros están en la URL)
-			if (flowSuccess && reservaId) {
-				console.log(
-					`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}`
-				);
-				setVistaCompletarDetalles({
-					activo: true,
-					reservaId: reservaId,
-				});
-				window.history.replaceState(null, "", window.location.pathname);
-				return;
-			}
+		if (flowSuccess && reservaId) {
+			console.log(
+				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}`
+			);
+			setVistaCompletarDetalles({
+				activo: true,
+				reservaId: reservaId,
+			});
 
-			// Flujo de retorno desde /flow-return con token
-			if (window.location.pathname === "/flow-return" && token) {
-				console.log(`🔁 Procesando retorno de Flow con token: ${token}`);
-				try {
-					const apiUrl =
-						getBackendUrl() || "https://transportes-araucaria.onrender.com";
-					const response = await fetch(`${apiUrl}/api/reservas/by-token`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ token }),
-					});
-
-					if (response.ok) {
-						const data = await response.json();
-						if (data.reserva_id) {
-							console.log(
-								`✅ Token validado. Mostrando detalles para reserva ID: ${data.reserva_id}`
-							);
-							setVistaCompletarDetalles({
-								activo: true,
-								reservaId: data.reserva_id,
-							});
-							window.history.replaceState(null, "", "/"); // Redirigir a la raíz
-						} else {
-							console.error("El token no devolvió un ID de reserva válido.");
-							window.location.href = "/"; // Redirigir si no hay ID
-						}
-					} else {
-						console.error("Error al validar el token de pago.");
-						window.location.href = "/"; // Redirigir en caso de error
-					}
-				} catch (error) {
-					console.error("Error de red al validar el token:", error);
-					window.location.href = "/"; // Redirigir en caso de error
-				}
-			}
-		};
-
-		handlePaymentReturn();
+			// Limpiar URL para evitar reactivación
+			window.history.replaceState(null, "", window.location.pathname);
+		}
 	}, []);
 
 	// ID de la reserva para asociar pagos (webhook)
