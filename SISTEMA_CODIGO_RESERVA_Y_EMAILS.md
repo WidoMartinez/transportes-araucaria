@@ -36,7 +36,7 @@ Backend Node.js (Render.com) → PHP (Hostinger) → Cliente/Admin
 - ✅ Llama al PHP después de guardar la reserva
 - ✅ Envía todos los datos incluido el `codigoReserva`
 - ✅ Manejo de errores: no falla si el email falla
-- ✅ URL del PHP: `https://www.transportesaraucania.cl/enviar_correo_completo.php`
+- ✅ URL del PHP: `https://www.transportesaraucaria.cl/enviar_correo_completo.php`
 
 **PHP (`enviar_correo_completo.php`):**
 - ✅ Recibe el `codigoReserva` en los datos POST
@@ -140,7 +140,7 @@ Backend Node.js (Render.com) → PHP (Hostinger) → Cliente/Admin
 DATABASE_URL=mysql://...
 
 # PHP Email URL (Hostinger)
-PHP_EMAIL_URL=https://www.transportesaraucania.cl/enviar_correo_completo.php
+PHP_EMAIL_URL=https://www.transportesaraucaria.cl/enviar_correo_completo.php
 ```
 
 ### PHP (Hostinger)
@@ -195,7 +195,7 @@ git push origin main
 ### 4. Probar el Sistema
 
 #### Crear Nueva Reserva
-1. Ir a `https://www.transportesaraucania.cl`
+1. Ir a `https://www.transportesaraucaria.cl`
 2. Completar formulario de reserva
 3. Enviar reserva
 4. **Verificar:**

@@ -232,7 +232,7 @@ Después de los cambios, algunas variables quedaron sin usar:
 ## 🧪 Pruebas Requeridas
 
 ### Test 1: Reserva desde Home
-1. Ir a `https://www.transportesaraucania.cl`
+1. Ir a `https://www.transportesaraucaria.cl`
 2. **Verificar:** Solo se muestra HeroExpress
 3. **Verificar:** No hay botón flotante de cambio
 4. Completar formulario express
