@@ -1,7 +1,21 @@
 <?php
 /**
+ * ⚠️ IMPORTANTE: DESPLIEGUE MANUAL EN HOSTINGER ⚠️
+ * 
+ * Este archivo PHP debe ser subido manualmente al servidor de Hostinger.
+ * Los archivos PHP NO se despliegan automáticamente desde el repositorio.
+ * 
+ * Ubicación en Hostinger: https://transportesaraucaria.cl/enviar_notificacion_productos.php
+ * 
+ * Pasos para desplegar:
+ * 1. Conectar a Hostinger via FTP o File Manager
+ * 2. Subir este archivo a la raíz del dominio
+ * 3. Verificar permisos (644)
+ * 4. Verificar que config_reservas.php existe con credenciales SMTP
+ * 
+ * ═══════════════════════════════════════════════════════════════════
+ * 
  * Script para enviar notificaciones por email cuando se agregan productos a una reserva
- * Este archivo debe ser subido al servidor de Hostinger
  * 
  * USO: Se debe llamar desde el backend de Node.js vía HTTP POST
  * Endpoint: https://transportesaraucaria.cl/enviar_notificacion_productos.php

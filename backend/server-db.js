@@ -6311,21 +6311,33 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 					}
 				}
 				
+				// Obtener lista completa de productos con sus detalles
+				const productosCompletos = await ProductoReserva.findAll({
+					where: { reservaId: id },
+					include: [
+						{
+							model: Producto,
+							as: "producto",
+						},
+					],
+				});
+				
+				// Formatear productos para la notificación
+				const productosParaNotificacion = productosCompletos.map(pr => ({
+					nombre: pr.producto?.nombre || "Producto",
+					cantidad: pr.cantidad,
+					precioUnitario: parseFloat(pr.precioUnitario),
+					subtotal: parseFloat(pr.subtotal),
+					notas: pr.notas || null,
+				}));
+				
 				const notifData = {
 					reservaId: reserva.id,
 					codigoReserva: reserva.codigoReserva,
 					emailPasajero: reserva.email,
 					nombrePasajero: reserva.nombre,
-					productos: [
-						{
-							nombre: producto.nombre,
-							cantidad,
-							precioUnitario: parseFloat(precioUnitario),
-							subtotal: parseFloat(subtotal),
-							notas: notas || null,
-						}
-					],
-					totalProductos: parseFloat(subtotal), // Solo el producto recién agregado
+					productos: productosParaNotificacion, // Lista completa de productos
+					totalProductos: parseFloat(totalProductos), // Total acumulado de todos los productos
 					nuevoTotal: parseFloat(nuevoTotal),
 					emailConductor,
 					nombreConductor,

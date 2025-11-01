@@ -60,9 +60,20 @@ const addProductosTables = async () => {
 
 		console.log("✅ Tabla 'productos_reserva' creada correctamente");
 
-		// Insertar productos de ejemplo
+		// Agregar índice único en nombre para evitar duplicados
 		await sequelize.query(`
-			INSERT INTO productos (nombre, descripcion, categoria, precio, disponible, orden)
+			ALTER TABLE productos ADD UNIQUE INDEX idx_nombre_unique (nombre);
+		`).catch(() => {
+			// Ignorar si el índice ya existe
+			console.log("⚠️ Índice único en productos.nombre ya existe, continuando...");
+		});
+
+		console.log("✅ Índice único en productos.nombre verificado");
+
+		// Insertar productos de ejemplo solo si no existen
+		// Usar INSERT IGNORE para evitar duplicados si la migración se ejecuta múltiples veces
+		await sequelize.query(`
+			INSERT IGNORE INTO productos (nombre, descripcion, categoria, precio, disponible, orden)
 			VALUES 
 				('Agua Mineral 500ml', 'Agua mineral natural embotellada', 'bebidas', 1500, TRUE, 1),
 				('Jugo Natural 300ml', 'Jugo de frutas naturales', 'bebidas', 2500, TRUE, 2),
@@ -73,8 +84,7 @@ const addProductosTables = async () => {
 				('Cargador USB', 'Cargador portátil USB', 'accesorios', 8000, TRUE, 7),
 				('Almohada de viaje', 'Almohada ergonómica para cuello', 'accesorios', 12000, TRUE, 8),
 				('Manta de viaje', 'Manta suave y compacta', 'accesorios', 15000, TRUE, 9),
-				('Antiparras de sol', 'Lentes de sol polarizados', 'accesorios', 10000, TRUE, 10)
-			ON DUPLICATE KEY UPDATE id=id;
+				('Antiparras de sol', 'Lentes de sol polarizados', 'accesorios', 10000, TRUE, 10);
 		`);
 
 		console.log("✅ Productos de ejemplo insertados");
