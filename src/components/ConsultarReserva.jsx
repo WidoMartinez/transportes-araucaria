@@ -77,8 +77,8 @@ function ConsultarReserva() {
 		try {
 			setPaying(true);
 			setPayError(null);
-			const apiBase =
-				getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
+                        const apiBase =
+                                getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
 			const amount =
 				tipo === "total"
 					? Number(reserva.totalConDescuento || 0)
