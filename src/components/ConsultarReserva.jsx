@@ -31,7 +31,7 @@ import { getBackendUrl } from "../lib/backend";
 import ProductosReserva from "./ProductosReserva";
 
 const API_URL =
-	getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
+        getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
 
 function ConsultarReserva() {
 	const [codigoReserva, setCodigoReserva] = useState("");
@@ -77,8 +77,8 @@ function ConsultarReserva() {
 		try {
 			setPaying(true);
 			setPayError(null);
-			const apiBase =
-				getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
+                        const apiBase =
+                                getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
 			const amount =
 				tipo === "total"
 					? Number(reserva.totalConDescuento || 0)

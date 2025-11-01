@@ -38,7 +38,7 @@ El archivo `enviar_correo_mejorado.php` no estaba preparado para recibir el camp
 
 ```javascript
 // Después de guardar reservaExpress...
-const phpUrl = "https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
+const phpUrl = "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 
 try {
   const emailResponse = await axios.post(phpUrl, {
@@ -109,7 +109,7 @@ $reservaData = [
 /* COMENTADO - Ahora el backend llama al PHP automáticamente
 try {
   const emailResponse = await fetch(
-    "https://www.transportesaraucania.cl/enviar_correo_mejorado.php", ...
+    "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php", ...
   );
   ...
 } catch (emailError) {
@@ -182,7 +182,7 @@ if (result.codigoReserva) {
 ## 🧪 Pruebas a Realizar
 
 ### Test 1: Reserva Express con Código
-1. Ir a `https://www.transportesaraucania.cl`
+1. Ir a `https://www.transportesaraucaria.cl`
 2. Hacer clic en "Reserva Express"
 3. Completar formulario
 4. Enviar reserva

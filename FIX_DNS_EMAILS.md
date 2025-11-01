@@ -1,7 +1,7 @@
 # Fix: Error DNS en envío de emails desde backend
 
 **Fecha:** 15 de octubre de 2025  
-**Error:** `getaddrinfo ENOTFOUND www.transportesaraucania.cl`  
+**Error:** `getaddrinfo ENOTFOUND www.transportesaraucania.cl`
 **Estado:** ✅ Corregido
 
 ---
@@ -30,18 +30,18 @@ getaddrinfo ENOTFOUND www.transportesaraucania.cl
 El backend tenía configuradas las siguientes URLs:
 
 ```javascript
-// ❌ INCORRECTO (faltaba la "u" en "araucania")
+// ❌ INCORRECTO (se usó "araucania" en lugar de "araucaria")
 "https://www.transportesaraucania.cl/enviar_correo_completo.php"
 "https://www.transportesaraucania.cl/enviar_correo_mejorado.php"
 
-// ✅ CORRECTO (con "u")
-"https://www.transportesaraucania.cl/enviar_correo_completo.php"
-"https://www.transportesaraucania.cl/enviar_correo_mejorado.php"
+// ✅ CORRECTO (con "r")
+"https://www.transportesaraucaria.cl/enviar_correo_completo.php"
+"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php"
 ```
 
 ### ¿Por qué falló el DNS?
 
-El error `ENOTFOUND` significa que el DNS no pudo resolver el dominio `transportesaraucania.cl` porque **no existe**. El dominio correcto es `transportesaraucania.cl` (con "u" en "araucania").
+El error `ENOTFOUND` significa que el DNS no pudo resolver el dominio `transportesaraucania.cl` porque **no existe**. El dominio correcto es `transportesaraucaria.cl` (con "r" en "araucaria").
 
 ---
 
@@ -54,12 +54,12 @@ Se corrigieron todas las URLs que contenían el dominio incorrecto:
 #### Línea ~1715 (Reserva Normal)
 ```javascript
 // ANTES
-const phpUrl = process.env.PHP_EMAIL_URL || 
+const phpUrl = process.env.PHP_EMAIL_URL ||
   "https://www.transportesaraucania.cl/enviar_correo_completo.php";
 
 // DESPUÉS
-const phpUrl = process.env.PHP_EMAIL_URL || 
-  "https://www.transportesaraucania.cl/enviar_correo_completo.php";
+const phpUrl = process.env.PHP_EMAIL_URL ||
+  "https://www.transportesaraucaria.cl/enviar_correo_completo.php";
 ```
 
 #### Línea ~1895 (Reserva Express)
@@ -70,7 +70,7 @@ const phpUrl = process.env.PHP_EMAIL_URL ||
 
 // DESPUÉS
 const phpUrl = process.env.PHP_EMAIL_URL ||
-  "https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
+  "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 ```
 
 #### Línea ~2921 (Frontend URL)
@@ -79,13 +79,13 @@ const phpUrl = process.env.PHP_EMAIL_URL ||
 process.env.FRONTEND_URL || "https://www.transportesaraucania.cl"
 
 // DESPUÉS
-process.env.FRONTEND_URL || "https://www.transportesaraucania.cl"
+process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl"
 ```
 
 ### Comando Utilizado
 
 ```bash
-sed -i 's/transportesaraucania\.cl/transportesaraucania.cl/g' backend/server-db.js
+sed -i 's/transportesaraucania\.cl/transportesaraucaria.cl/g' backend/server-db.js
 ```
 
 Este comando reemplazó todas las ocurrencias del dominio incorrecto por el correcto.
@@ -106,8 +106,8 @@ $ nslookup www.transportesaraucania.cl
 
 ```bash
 # Test DNS del dominio correcto
-$ nslookup www.transportesaraucania.cl
-Name:    transportesaraucania.cl
+$ nslookup www.transportesaraucaria.cl
+Name:    transportesaraucaria.cl
 Address: [IP del servidor]
 ```
 
@@ -151,7 +151,7 @@ git push origin main
    ↓
 4. Backend intenta enviar email
    ↓
-5. DNS resuelve: www.transportesaraucania.cl → IP correcta ✅
+5. DNS resuelve: www.transportesaraucaria.cl → IP correcta ✅
    ↓
 6. Axios llama al PHP exitosamente ✅
    ↓
@@ -184,7 +184,7 @@ Si tienes la variable `PHP_EMAIL_URL` configurada en Render, asegúrate de que t
 
 ```env
 # ✅ CORRECTO
-PHP_EMAIL_URL=https://www.transportesaraucania.cl/enviar_correo_mejorado.php
+PHP_EMAIL_URL=https://www.transportesaraucaria.cl/enviar_correo_mejorado.php
 
 # ❌ INCORRECTO  
 PHP_EMAIL_URL=https://www.transportesaraucania.cl/enviar_correo_mejorado.php
@@ -193,8 +193,8 @@ PHP_EMAIL_URL=https://www.transportesaraucania.cl/enviar_correo_mejorado.php
 ### 2. Dominio Correcto
 
 Recuerda siempre usar:
-- ✅ `transportesaraucania.cl` (CON "u")
-- ❌ `transportesaraucania.cl` (SIN "u")
+- ✅ `transportesaraucaria.cl` (CON "r")
+- ❌ `transportesaraucania.cl` (SIN "r")
 
 ### 3. Otros Archivos
 
@@ -214,7 +214,7 @@ Considera crear una constante para el dominio:
 
 ```javascript
 // backend/server-db.js (al inicio del archivo)
-const FRONTEND_DOMAIN = "https://www.transportesaraucania.cl";
+const FRONTEND_DOMAIN = "https://www.transportesaraucaria.cl";
 const PHP_EMAIL_BASE_URL = `${FRONTEND_DOMAIN}/`;
 
 // Uso
@@ -230,7 +230,7 @@ Agregar test para verificar DNS:
 // tests/dns.test.js
 describe('DNS Resolution', () => {
   it('should resolve frontend domain', async () => {
-    const domain = 'www.transportesaraucania.cl';
+    const domain = 'www.transportesaraucaria.cl';
     const resolved = await dns.promises.resolve(domain);
     expect(resolved).toBeDefined();
   });
@@ -244,8 +244,8 @@ Agregar endpoint de health check que verifique conectividad con PHP:
 ```javascript
 app.get('/health/php-email', async (req, res) => {
   try {
-    const phpUrl = process.env.PHP_EMAIL_URL || 
-      "https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
+    const phpUrl = process.env.PHP_EMAIL_URL ||
+      "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
     
     // Solo verificar que el dominio resuelve
     const url = new URL(phpUrl);

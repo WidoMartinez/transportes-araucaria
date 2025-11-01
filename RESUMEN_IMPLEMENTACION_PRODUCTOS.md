@@ -129,7 +129,7 @@ npm run build
 ### Test 2: Verificar Endpoints API
 ```bash
 # Listar productos
-curl https://transportes-araucania-backend.onrender.com/api/productos
+curl https://transportes-araucaria-backend.onrender.com/api/productos
 
 # Debe retornar lista de 10 productos
 ```
