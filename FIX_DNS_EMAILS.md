@@ -30,7 +30,7 @@ getaddrinfo ENOTFOUND www.transportesaraucania.cl
 El backend tenía configuradas las siguientes URLs:
 
 ```javascript
-// ❌ INCORRECTO (faltaba la "r" en "araucaria")
+// ❌ INCORRECTO (se usó "araucania" en lugar de "araucaria")
 "https://www.transportesaraucania.cl/enviar_correo_completo.php"
 "https://www.transportesaraucania.cl/enviar_correo_mejorado.php"
 
