@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -206,8 +206,11 @@ function ConsultarReserva() {
     // En ese escenario, debe ser la única opción disponible
     const shouldShowOnlySaldo = canPaySaldo;
 
-	const saldoTotalGeneral =
-		(Number(reserva?.saldoPendiente) || 0) + (Number(totalProductos) || 0);
+	// Calcular el saldo total general (saldo pendiente + productos) usando useMemo
+	const saldoTotalGeneral = useMemo(() => {
+		if (!reserva) return 0;
+		return (Number(reserva.saldoPendiente) || 0) + (Number(totalProductos) || 0);
+	}, [reserva, totalProductos]);
 
 	const canPayTotalGeneral =
 		reserva &&
