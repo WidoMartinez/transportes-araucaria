@@ -8,7 +8,6 @@ import AdminConductores from "./AdminConductores";
 import AdminCodigosPago from "./AdminCodigosPago";
 import AdminGastos from "./AdminGastos";
 import AdminEstadisticas from "./AdminEstadisticas";
-import AdminProductos from "./AdminProductos";
 
 function AdminDashboard() {
   const [active, setActive] = useState(() => {
@@ -29,7 +28,7 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
+      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
         <h1 className="text-2xl font-semibold mb-4">Panel Administrativo</h1>
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
@@ -44,10 +43,6 @@ function AdminDashboard() {
             className={`px-3 py-2 rounded border ${active === "conductores" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("conductores")}
           >Conductores</button>
-          <button
-            className={`px-3 py-2 rounded border ${active === "productos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
-            onClick={() => setPanel("productos")}
-          >Productos</button>
           <button
             className={`px-3 py-2 rounded border ${active === "gastos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("gastos")}
@@ -80,8 +75,6 @@ function AdminDashboard() {
           <AdminVehiculos />
         ) : active === "conductores" ? (
           <AdminConductores />
-        ) : active === "productos" ? (
-          <AdminProductos />
         ) : active === "gastos" ? (
           <AdminGastos />
         ) : active === "estadisticas" ? (

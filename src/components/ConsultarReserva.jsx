@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 
 import { getBackendUrl } from "../lib/backend";
-import ProductosReserva from "./ProductosReserva";
 
 const API_URL =
 	getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
@@ -512,9 +511,6 @@ function ConsultarReserva() {
 								)}
 							</CardContent>
 						</Card>
-
-						{/* Productos Adicionales - Similar a Uber Eats */}
-						<ProductosReserva reservaId={reserva.id} reserva={reserva} />
 
 						{/* Servicios Adicionales */}
 						{(reserva.numeroVuelo ||
