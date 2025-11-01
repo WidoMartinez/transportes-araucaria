@@ -16,3 +16,4 @@ Permitir que las pruebas funciones desde el localhost y desde el servidor de hos
 recorda que soy free en render.com por lo tanto no tengo shell en el servidor de render
 Procura leer logs de correcciones anterior para no repetir errores
 generar alguna logs cuando se generen errores para no cometer los mismos errores
+en español tambien se debe realizar el mensaje de confirmacion en vsc

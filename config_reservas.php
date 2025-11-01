@@ -28,7 +28,7 @@ $EMAIL_CONFIG = [
     'username' => getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl',
     'password' => getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.',
     'to' => getenv('EMAIL_TO') ?: 'widomartinez@gmail.com',
-    'from_name' => 'Sistema de Reservas - Transportes Araucania'
+    'from_name' => 'Sistema de Reservas - Transportes Araucaria'
 ];
 
 // === CONFIGURACIÓN DE CAMPOS EXCEL ===

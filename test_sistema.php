@@ -6,28 +6,40 @@ header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Sistema Reservas - Transportes Araucania</title>
+    <title>Test Sistema Reservas - Transportes Araucaria</title>
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            max-width: 800px; 
-            margin: 0 auto; 
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
         }
+
         .card {
             background: white;
             padding: 20px;
             margin: 20px 0;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
-        .warning { color: #ffc107; }
+
+        .success {
+            color: #28a745;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .warning {
+            color: #ffc107;
+        }
+
         .btn {
             background: #007bff;
             color: white;
@@ -37,7 +49,11 @@ header('Content-Type: text/html; charset=utf-8');
             display: inline-block;
             margin: 5px;
         }
-        .btn:hover { background: #0056b3; }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
         pre {
             background: #f8f9fa;
             padding: 15px;
@@ -46,9 +62,10 @@ header('Content-Type: text/html; charset=utf-8');
         }
     </style>
 </head>
+
 <body>
     <h1>🔧 Test del Sistema de Reservas</h1>
-    
+
     <div class="card">
         <h2>📍 Información del Servidor</h2>
         <p><strong>Servidor:</strong> <?php echo $_SERVER['SERVER_NAME'] ?? 'Desconocido'; ?></p>
@@ -67,7 +84,7 @@ header('Content-Type: text/html; charset=utf-8');
             'config_reservas.php' => 'Archivo de configuración',
             'migrar_reservas.php' => 'Herramienta de migración'
         ];
-        
+
         foreach ($archivos_necesarios as $archivo => $descripcion) {
             if (file_exists($archivo)) {
                 echo "<p class='success'>✅ {$archivo} - {$descripcion}</p>";
@@ -88,7 +105,7 @@ header('Content-Type: text/html; charset=utf-8');
             echo "<p class='error'>❌ El directorio NO tiene permisos de escritura</p>";
             echo "<p class='warning'>⚠️ Necesitas configurar permisos 755 o 775 en este directorio</p>";
         }
-        
+
         // Test de creación de archivo
         $test_file = 'test_permisos.txt';
         if (file_put_contents($test_file, 'test') !== false) {
@@ -108,7 +125,7 @@ header('Content-Type: text/html; charset=utf-8');
             $total_reservas = is_array($reservas) ? count($reservas) : 0;
             echo "<p class='success'>✅ Archivo de reservas existe</p>";
             echo "<p><strong>Total de reservas:</strong> {$total_reservas}</p>";
-            
+
             if ($total_reservas > 0) {
                 $ultima_reserva = $reservas[0];
                 echo "<p><strong>Última reserva:</strong> " . ($ultima_reserva['fecha_registro'] ?? 'Sin fecha') . "</p>";
@@ -128,7 +145,7 @@ header('Content-Type: text/html; charset=utf-8');
             'migrar_reservas.php' => 'Herramienta de Migración',
             'enviar_correo_mejorado.php' => 'Endpoint de Reservas (POST only)'
         ];
-        
+
         foreach ($archivos_enlace as $archivo => $descripcion) {
             if (file_exists($archivo)) {
                 echo "<a href='{$base_url}/{$archivo}' class='btn' target='_blank'>{$descripcion}</a><br>";
@@ -142,11 +159,11 @@ header('Content-Type: text/html; charset=utf-8');
         <h3>1. Permisos de Archivos:</h3>
         <pre>chmod 755 *.php
 chmod 775 . (directorio actual)</pre>
-        
+
         <h3>2. Cambio en App.jsx:</h3>
         <pre>// Línea 586 en src/App.jsx
 const emailApiUrl = "<?php echo $base_url; ?>/enviar_correo_mejorado.php";</pre>
-        
+
         <h3>3. URLs del Sistema:</h3>
         <pre>Panel de Reservas: <?php echo $base_url; ?>/reservas_manager.php
 Migración: <?php echo $base_url; ?>/migrar_reservas.php</pre>
@@ -176,4 +193,5 @@ Migración: <?php echo $base_url; ?>/migrar_reservas.php</pre>
 
     <p><small>Test ejecutado el: <?php echo date('Y-m-d H:i:s'); ?></small></p>
 </body>
+
 </html>

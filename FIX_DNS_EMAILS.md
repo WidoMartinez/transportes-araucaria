@@ -1,7 +1,7 @@
 # Fix: Error DNS en envío de emails desde backend
 
 **Fecha:** 15 de octubre de 2025  
-**Error:** `getaddrinfo ENOTFOUND www.transportesaraucania.cl`
+**Error:** `getaddrinfo ENOTFOUND www.transportesaraucaria.cl`
 **Estado:** ✅ Corregido
 
 ---
@@ -11,11 +11,12 @@
 El backend de Node.js en Render estaba fallando al intentar enviar emails con el siguiente error:
 
 ```
-❌ Error al enviar email express (no afecta la reserva): 
-getaddrinfo ENOTFOUND www.transportesaraucania.cl
+❌ Error al enviar email express (no afecta la reserva):
+getaddrinfo ENOTFOUND www.transportesaraucaria.cl
 ```
 
 ### Impacto
+
 - ❌ Emails de confirmación NO se enviaban
 - ❌ Admin NO recibía notificaciones de nuevas reservas
 - ✅ Las reservas SÍ se guardaban correctamente
@@ -31,12 +32,12 @@ El backend tenía configuradas las siguientes URLs:
 
 ```javascript
 // ❌ INCORRECTO (se usó "araucania" en lugar de "araucaria")
-"https://www.transportesaraucania.cl/enviar_correo_completo.php"
-"https://www.transportesaraucania.cl/enviar_correo_mejorado.php"
+"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 
 // ✅ CORRECTO (con "r")
-"https://www.transportesaraucaria.cl/enviar_correo_completo.php"
-"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php"
+"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 ```
 
 ### ¿Por qué falló el DNS?
@@ -52,34 +53,41 @@ El error `ENOTFOUND` significa que el DNS no pudo resolver el dominio `transport
 Se corrigieron todas las URLs que contenían el dominio incorrecto:
 
 #### Línea ~1715 (Reserva Normal)
+
 ```javascript
 // ANTES
-const phpUrl = process.env.PHP_EMAIL_URL ||
-  "https://www.transportesaraucania.cl/enviar_correo_completo.php";
+const phpUrl =
+	process.env.PHP_EMAIL_URL ||
+	"https://www.transportesaraucania.cl/enviar_correo_completo.php";
 
 // DESPUÉS
-const phpUrl = process.env.PHP_EMAIL_URL ||
-  "https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+const phpUrl =
+	process.env.PHP_EMAIL_URL ||
+	"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
 ```
 
 #### Línea ~1895 (Reserva Express)
+
 ```javascript
 // ANTES
-const phpUrl = process.env.PHP_EMAIL_URL ||
-  "https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
+const phpUrl =
+	process.env.PHP_EMAIL_URL ||
+	"https://www.transportesaraucania.cl/enviar_correo_mejorado.php";
 
 // DESPUÉS
-const phpUrl = process.env.PHP_EMAIL_URL ||
-  "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+const phpUrl =
+	process.env.PHP_EMAIL_URL ||
+	"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 ```
 
 #### Línea ~2921 (Frontend URL)
+
 ```javascript
 // ANTES
-process.env.FRONTEND_URL || "https://www.transportesaraucania.cl"
+process.env.FRONTEND_URL || "https://www.transportesaraucania.cl";
 
 // DESPUÉS
-process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl"
+process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 ```
 
 ### Comando Utilizado
@@ -115,8 +123,8 @@ Address: [IP del servidor]
 
 ## 📊 Archivos Afectados
 
-| Archivo | Líneas | Cambios |
-|---------|--------|---------|
+| Archivo                | Líneas                | Cambios           |
+| ---------------------- | --------------------- | ----------------- |
 | `backend/server-db.js` | 274, 1715, 1895, 2921 | 4 URLs corregidas |
 
 ---
@@ -124,6 +132,7 @@ Address: [IP del servidor]
 ## 🚀 Despliegue
 
 ### Commit
+
 ```bash
 git add backend/server-db.js ANALISIS_PAGO_PERSONALIZADO.md
 git commit -m "Fix: Corregir dominio DNS en URLs de emails PHP"
@@ -131,6 +140,7 @@ git push origin main
 ```
 
 ### Impacto
+
 - ✅ Sin breaking changes
 - ✅ Compatible con código existente
 - ✅ Deploy automático en Render
@@ -170,6 +180,7 @@ git push origin main
 ```
 
 **❌ Ya NO aparecerá:**
+
 ```
 ❌ Error al enviar email express: getaddrinfo ENOTFOUND
 ```
@@ -186,19 +197,21 @@ Si tienes la variable `PHP_EMAIL_URL` configurada en Render, asegúrate de que t
 # ✅ CORRECTO
 PHP_EMAIL_URL=https://www.transportesaraucaria.cl/enviar_correo_mejorado.php
 
-# ❌ INCORRECTO  
+# ❌ INCORRECTO
 PHP_EMAIL_URL=https://www.transportesaraucania.cl/enviar_correo_mejorado.php
 ```
 
 ### 2. Dominio Correcto
 
 Recuerda siempre usar:
+
 - ✅ `transportesaraucaria.cl` (CON "r")
 - ❌ `transportesaraucania.cl` (SIN "r")
 
 ### 3. Otros Archivos
 
 Verifica que otros archivos también usen el dominio correcto:
+
 - ✅ `src/App.jsx` - Ya usa dominio correcto
 - ✅ `enviar_correo_mejorado.php` - Ya usa dominio correcto
 - ✅ `enviar_correo_completo.php` - Verificar
@@ -228,12 +241,12 @@ Agregar test para verificar DNS:
 
 ```javascript
 // tests/dns.test.js
-describe('DNS Resolution', () => {
-  it('should resolve frontend domain', async () => {
-    const domain = 'www.transportesaraucaria.cl';
-    const resolved = await dns.promises.resolve(domain);
-    expect(resolved).toBeDefined();
-  });
+describe("DNS Resolution", () => {
+	it("should resolve frontend domain", async () => {
+		const domain = "www.transportesaraucaria.cl";
+		const resolved = await dns.promises.resolve(domain);
+		expect(resolved).toBeDefined();
+	});
 });
 ```
 
@@ -242,23 +255,24 @@ describe('DNS Resolution', () => {
 Agregar endpoint de health check que verifique conectividad con PHP:
 
 ```javascript
-app.get('/health/php-email', async (req, res) => {
-  try {
-    const phpUrl = process.env.PHP_EMAIL_URL ||
-      "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-    
-    // Solo verificar que el dominio resuelve
-    const url = new URL(phpUrl);
-    await dns.promises.resolve(url.hostname);
-    
-    res.json({ status: 'ok', phpUrl, resolved: true });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'error', 
-      error: error.message,
-      resolved: false 
-    });
-  }
+app.get("/health/php-email", async (req, res) => {
+	try {
+		const phpUrl =
+			process.env.PHP_EMAIL_URL ||
+			"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+
+		// Solo verificar que el dominio resuelve
+		const url = new URL(phpUrl);
+		await dns.promises.resolve(url.hostname);
+
+		res.json({ status: "ok", phpUrl, resolved: true });
+	} catch (error) {
+		res.status(500).json({
+			status: "error",
+			error: error.message,
+			resolved: false,
+		});
+	}
 });
 ```
 

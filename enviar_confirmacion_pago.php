@@ -277,7 +277,7 @@ try {
                     </p>
                     <p style='margin:0;color:#111827;font-size:14px'>
                         📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#3b82f6;text-decoration:none'>contacto@transportesaraucaria.cl</a><br>
-                        📱 <a href='tel:+56912345678' style='color:#3b82f6;text-decoration:none'>+569 1234 5678</a>
+                        📱 <a href='tel:+56936643540' style='color:#3b82f6;text-decoration:none'>+569 3664 3540</a>
                     </p>
                 </div>
 
