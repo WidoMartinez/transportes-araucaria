@@ -6293,6 +6293,61 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 
 		console.log(`✅ Producto agregado a reserva ${reserva.codigoReserva}: ${producto.nombre} x${cantidad}`);
 
+		// Enviar notificación por email (PHP en Hostinger)
+		// Se ejecuta en segundo plano para no bloquear la respuesta
+		const enviarNotificacion = async () => {
+			try {
+				const frontendUrl = process.env.FRONTEND_URL || "https://transportesaraucaria.cl";
+				const notifUrl = `${frontendUrl}/enviar_notificacion_productos.php`;
+				
+				// Obtener información del conductor si está asignado
+				let emailConductor = null;
+				let nombreConductor = null;
+				if (reserva.conductorId) {
+					const conductor = await Conductor.findByPk(reserva.conductorId);
+					if (conductor) {
+						emailConductor = conductor.email;
+						nombreConductor = conductor.nombre;
+					}
+				}
+				
+				const notifData = {
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva,
+					emailPasajero: reserva.email,
+					nombrePasajero: reserva.nombre,
+					productos: [
+						{
+							nombre: producto.nombre,
+							cantidad,
+							precioUnitario: parseFloat(precioUnitario),
+							subtotal: parseFloat(subtotal),
+							notas: notas || null,
+						}
+					],
+					totalProductos: parseFloat(subtotal), // Solo el producto recién agregado
+					nuevoTotal: parseFloat(nuevoTotal),
+					emailConductor,
+					nombreConductor,
+				};
+				
+				await axios.post(notifUrl, notifData, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				});
+				
+				console.log(`📧 Notificación de productos enviada para reserva ${reserva.codigoReserva}`);
+			} catch (err) {
+				console.error("⚠️ Error enviando notificación de productos:", err.message);
+				// No fallar si la notificación falla
+			}
+		};
+		
+		// Ejecutar notificación en segundo plano
+		enviarNotificacion().catch(err => {
+			console.error("Error en enviarNotificacion:", err);
+		});
+
 		res.json({
 			success: true,
 			mensaje: "Producto agregado exitosamente",
