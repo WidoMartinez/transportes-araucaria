@@ -209,12 +209,17 @@ function ConsultarReserva() {
 	const saldoTotalGeneral =
 		(Number(reserva?.saldoPendiente) || 0) + (Number(totalProductos) || 0);
 
+	// Validación mejorada: verificar que al menos uno de los dos valores sea mayor a 0
+	const tieneSaldoPendiente = Number(reserva?.saldoPendiente) > 0;
+	const tieneProductos = Number(totalProductos) > 0;
+
 	const canPayTotalGeneral =
 		reserva &&
 		(reserva.estado === "confirmada" ||
 			reserva.estado === "completada" ||
 			reserva.estado === "pendiente_detalles" ||
 			reserva.estado === "pendiente") &&
+		(tieneSaldoPendiente || tieneProductos) &&
 		saldoTotalGeneral > 0;
 
 	return (
@@ -529,8 +534,11 @@ function ConsultarReserva() {
 													className="gap-2 bg-blue-600 hover:bg-blue-700 animate-pulse"
 												>
 													<CreditCard className="w-4 h-4" />
-													Pagar Saldo Total del Viaje (
-													{formatCurrency(saldoTotalGeneral)})
+													{tieneSaldoPendiente && tieneProductos
+														? `Pagar Saldo Total y Productos (${formatCurrency(saldoTotalGeneral)})`
+														: tieneSaldoPendiente
+														? `Pagar Saldo Pendiente (${formatCurrency(saldoTotalGeneral)})`
+														: `Pagar Productos (${formatCurrency(saldoTotalGeneral)})`}
 												</Button>
 											)}
 										</div>
