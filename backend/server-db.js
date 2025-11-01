@@ -6071,36 +6071,113 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
  * Listar todos los productos disponibles
  * Filtros opcionales: categoria, disponible
  */
+const limpiarListaTexto = (lista) =>
+        lista
+                .map((item) =>
+                        item !== undefined && item !== null
+                                ? String(item).trim()
+                                : ""
+                )
+                .filter((item) => item.length > 0);
+
+const normalizarListaFlexible = (valor) => {
+        if (valor === undefined || valor === null) {
+                return null;
+        }
+
+        if (Array.isArray(valor)) {
+                const valores = limpiarListaTexto(valor);
+                return valores.length > 0 ? valores : null;
+        }
+
+        if (typeof valor === "string") {
+                const texto = valor.trim();
+                if (!texto) {
+                        return null;
+                }
+
+                try {
+                        const posibleJson = JSON.parse(texto);
+                        if (Array.isArray(posibleJson)) {
+                                const valores = limpiarListaTexto(posibleJson);
+                                return valores.length > 0 ? valores : null;
+                        }
+                } catch {
+                        // Ignorar errores de parseo y continuar con la lógica por defecto
+                }
+
+                const valores = limpiarListaTexto(texto.split(/[,;\n]/));
+                return valores.length > 0 ? valores : null;
+        }
+
+        if (typeof valor === "object") {
+                const valores = limpiarListaTexto(Object.values(valor));
+                return valores.length > 0 ? valores : null;
+        }
+
+        return null;
+};
+
+const normalizarBooleano = (valor, predeterminado = true) => {
+        if (valor === undefined || valor === null) {
+                return predeterminado;
+        }
+
+        if (typeof valor === "boolean") {
+                return valor;
+        }
+
+        if (typeof valor === "number") {
+                return valor === 1;
+        }
+
+        if (typeof valor === "string") {
+                const texto = valor.trim().toLowerCase();
+                if (["true", "1", "si", "sí", "on"].includes(texto)) {
+                        return true;
+                }
+                if (["false", "0", "no", "off"].includes(texto)) {
+                        return false;
+                }
+        }
+
+        return predeterminado;
+};
+
 app.get("/api/productos", async (req, res) => {
-	try {
-		const { categoria, disponible } = req.query;
-		const where = {};
+        try {
+                const { categoria, disponible } = req.query;
+                const where = {};
 
-		if (categoria) {
-			where.categoria = categoria;
-		}
+                if (categoria) {
+                        where.categoria = categoria;
+                }
 
-		if (disponible !== undefined) {
-			where.disponible = disponible === "true";
-		}
+                if (disponible !== undefined) {
+                        where.disponible = normalizarBooleano(disponible);
+                }
 
-		const productos = await Producto.findAll({
-			where,
-			order: [["orden", "ASC"], ["nombre", "ASC"]],
-		});
+                const productos = await Producto.findAll({
+                        where,
+                        order: [
+                                [sequelize.literal("orden IS NULL"), "ASC"],
+                                ["orden", "ASC"],
+                                ["nombre", "ASC"],
+                        ],
+                });
 
-		res.json({
-			success: true,
-			productos,
-			total: productos.length,
-		});
-	} catch (error) {
-		console.error("Error al obtener productos:", error);
-		res.status(500).json({
-			success: false,
-			error: "Error al obtener productos",
-		});
-	}
+                res.json({
+                        success: true,
+                        productos,
+                        total: productos.length,
+                });
+        } catch (error) {
+                console.error("Error al obtener productos:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al obtener productos",
+                });
+        }
 });
 
 /**
@@ -6108,9 +6185,9 @@ app.get("/api/productos", async (req, res) => {
  * Obtener detalles de un producto específico
  */
 app.get("/api/productos/:id", async (req, res) => {
-	try {
-		const { id } = req.params;
-		const producto = await Producto.findByPk(id);
+        try {
+                const { id } = req.params;
+                const producto = await Producto.findByPk(id);
 
 		if (!producto) {
 			return res.status(404).json({
@@ -6128,8 +6205,324 @@ app.get("/api/productos/:id", async (req, res) => {
 		res.status(500).json({
 			success: false,
 			error: "Error al obtener producto",
-		});
-	}
+                });
+        }
+});
+
+/**
+ * POST /api/productos
+ * Crear un nuevo producto para el catálogo
+ */
+app.post("/api/productos", authAdmin, async (req, res) => {
+        try {
+                const {
+                        nombre,
+                        descripcion = "",
+                        categoria = "general",
+                        precio,
+                        disponible = true,
+                        stock,
+                        imagenUrl,
+                        orden,
+                        disponibleEnRuta,
+                        disponibleEnVehiculo,
+                } = req.body || {};
+
+                const nombreNormalizado = typeof nombre === "string" ? nombre.trim() : "";
+                if (!nombreNormalizado) {
+                        return res.status(400).json({
+                                success: false,
+                                error: "El nombre del producto es obligatorio",
+                        });
+                }
+
+                const existente = await Producto.findOne({
+                        where: sequelize.where(
+                                sequelize.fn("LOWER", sequelize.col("nombre")),
+                                nombreNormalizado.toLowerCase()
+                        ),
+                });
+
+                if (existente) {
+                        return res.status(409).json({
+                                success: false,
+                                error: "Ya existe un producto con este nombre",
+                        });
+                }
+
+                const precioTexto =
+                        precio === undefined || precio === null
+                                ? "0"
+                                : String(precio).toString();
+                const precioNormalizado = Number.parseFloat(precioTexto);
+                if (Number.isNaN(precioNormalizado) || precioNormalizado < 0) {
+                        return res.status(400).json({
+                                success: false,
+                                error: "El precio debe ser un número válido mayor o igual a 0",
+                        });
+                }
+
+                let stockNormalizado = null;
+                if (stock !== undefined) {
+                        if (stock === null || stock === "") {
+                                stockNormalizado = null;
+                        } else {
+                                const stockNumero = Number.parseInt(stock, 10);
+                                if (Number.isNaN(stockNumero) || stockNumero < 0) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El stock debe ser un número entero mayor o igual a 0",
+                                        });
+                                }
+                                stockNormalizado = stockNumero;
+                        }
+                }
+
+                let ordenNormalizado = null;
+                if (orden !== undefined) {
+                        if (orden === null || orden === "") {
+                                ordenNormalizado = null;
+                        } else {
+                                const ordenNumero = Number.parseInt(orden, 10);
+                                if (Number.isNaN(ordenNumero)) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El orden debe ser un número entero válido",
+                                        });
+                                }
+                                ordenNormalizado = ordenNumero;
+                        }
+                }
+
+                const producto = await Producto.create({
+                        nombre: nombreNormalizado,
+                        descripcion,
+                        categoria: typeof categoria === "string" && categoria.trim()
+                                ? categoria.trim()
+                                : "general",
+                        precio: precioNormalizado,
+                        disponible: normalizarBooleano(disponible, true),
+                        stock: stockNormalizado,
+                        imagenUrl:
+                                typeof imagenUrl === "string" && imagenUrl.trim()
+                                        ? imagenUrl.trim()
+                                        : null,
+                        orden: ordenNormalizado,
+                        disponibleEnRuta: normalizarListaFlexible(disponibleEnRuta),
+                        disponibleEnVehiculo: normalizarListaFlexible(disponibleEnVehiculo),
+                });
+
+                await producto.reload();
+
+                res.status(201).json({
+                        success: true,
+                        mensaje: "Producto creado exitosamente",
+                        producto,
+                });
+        } catch (error) {
+                console.error("Error al crear producto:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al crear el producto",
+                });
+        }
+});
+
+/**
+ * PUT /api/productos/:id
+ * Actualizar los datos de un producto existente
+ */
+app.put("/api/productos/:id", authAdmin, async (req, res) => {
+        try {
+                const { id } = req.params;
+                const producto = await Producto.findByPk(id);
+
+                if (!producto) {
+                        return res.status(404).json({
+                                success: false,
+                                error: "Producto no encontrado",
+                        });
+                }
+
+                const {
+                        nombre,
+                        descripcion,
+                        categoria,
+                        precio,
+                        disponible,
+                        stock,
+                        imagenUrl,
+                        orden,
+                        disponibleEnRuta,
+                        disponibleEnVehiculo,
+                } = req.body || {};
+
+                const cambios = {};
+
+                if (nombre !== undefined) {
+                        const nombreNormalizado = typeof nombre === "string" ? nombre.trim() : "";
+                        if (!nombreNormalizado) {
+                                return res.status(400).json({
+                                        success: false,
+                                        error: "El nombre del producto no puede quedar vacío",
+                                });
+                        }
+
+                        if (nombreNormalizado.toLowerCase() !== producto.nombre.toLowerCase()) {
+                                const existente = await Producto.findOne({
+                                        where: {
+                                                [Op.and]: [
+                                                        sequelize.where(
+                                                                sequelize.fn("LOWER", sequelize.col("nombre")),
+                                                                nombreNormalizado.toLowerCase()
+                                                        ),
+                                                        { id: { [Op.ne]: producto.id } },
+                                                ],
+                                        },
+                                });
+
+                                if (existente) {
+                                        return res.status(409).json({
+                                                success: false,
+                                                error: "Ya existe otro producto con este nombre",
+                                        });
+                                }
+                        }
+
+                        cambios.nombre = nombreNormalizado;
+                }
+
+                if (descripcion !== undefined) {
+                        cambios.descripcion = descripcion;
+                }
+
+                if (categoria !== undefined) {
+                        cambios.categoria =
+                                typeof categoria === "string" && categoria.trim()
+                                        ? categoria.trim()
+                                        : producto.categoria;
+                }
+
+                if (precio !== undefined) {
+                        const precioNumero = Number.parseFloat(String(precio));
+                        if (Number.isNaN(precioNumero) || precioNumero < 0) {
+                                return res.status(400).json({
+                                        success: false,
+                                        error: "El precio debe ser un número válido mayor o igual a 0",
+                                });
+                        }
+                        cambios.precio = precioNumero;
+                }
+
+                if (disponible !== undefined) {
+                        cambios.disponible = normalizarBooleano(disponible, producto.disponible);
+                }
+
+                if (stock !== undefined) {
+                        if (stock === null || stock === "") {
+                                cambios.stock = null;
+                        } else {
+                                const stockNumero = Number.parseInt(stock, 10);
+                                if (Number.isNaN(stockNumero) || stockNumero < 0) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El stock debe ser un número entero mayor o igual a 0",
+                                        });
+                                }
+                                cambios.stock = stockNumero;
+                        }
+                }
+
+                if (imagenUrl !== undefined) {
+                        cambios.imagenUrl =
+                                typeof imagenUrl === "string" && imagenUrl.trim()
+                                        ? imagenUrl.trim()
+                                        : null;
+                }
+
+                if (orden !== undefined) {
+                        if (orden === null || orden === "") {
+                                cambios.orden = null;
+                        } else {
+                                const ordenNumero = Number.parseInt(orden, 10);
+                                if (Number.isNaN(ordenNumero)) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El orden debe ser un número entero válido",
+                                        });
+                                }
+                                cambios.orden = ordenNumero;
+                        }
+                }
+
+                if (disponibleEnRuta !== undefined) {
+                        cambios.disponibleEnRuta = normalizarListaFlexible(disponibleEnRuta);
+                }
+
+                if (disponibleEnVehiculo !== undefined) {
+                        cambios.disponibleEnVehiculo = normalizarListaFlexible(
+                                disponibleEnVehiculo
+                        );
+                }
+
+                await producto.update(cambios);
+                await producto.reload();
+
+                res.json({
+                        success: true,
+                        mensaje: "Producto actualizado exitosamente",
+                        producto,
+                });
+        } catch (error) {
+                console.error("Error al actualizar producto:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al actualizar el producto",
+                });
+        }
+});
+
+/**
+ * DELETE /api/productos/:id
+ * Eliminar un producto del catálogo (solo si no tiene reservas asociadas)
+ */
+app.delete("/api/productos/:id", authAdmin, async (req, res) => {
+        try {
+                const { id } = req.params;
+                const producto = await Producto.findByPk(id);
+
+                if (!producto) {
+                        return res.status(404).json({
+                                success: false,
+                                error: "Producto no encontrado",
+                        });
+                }
+
+                const reservasAsociadas = await ProductoReserva.count({
+                        where: { productoId: id },
+                });
+
+                if (reservasAsociadas > 0) {
+                        return res.status(409).json({
+                                success: false,
+                                error:
+                                        "No es posible eliminar el producto porque está asociado a reservas existentes",
+                        });
+                }
+
+                await producto.destroy();
+
+                res.json({
+                        success: true,
+                        mensaje: "Producto eliminado exitosamente",
+                });
+        } catch (error) {
+                console.error("Error al eliminar producto:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al eliminar el producto",
+                });
+        }
 });
 
 /**
