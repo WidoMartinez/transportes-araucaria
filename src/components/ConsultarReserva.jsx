@@ -218,7 +218,6 @@ function ConsultarReserva() {
 		saldoTotalGeneral > 0 &&
 		totalProductos > 0 &&
 		!canPaySaldo &&
-		!(reserva.estado === "pendiente" || reserva.estado === "pendiente_detalles") &&
 		(reserva.estado === "confirmada" || reserva.estado === "completada");
 
 	return (
