@@ -1133,6 +1133,14 @@ function App() {
 			getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 		try {
+			// CORRECCIÓN: Validar que tengamos los datos necesarios antes de crear el pago
+			// Si no hay reservaId ni codigoReserva, significa que la reserva no se creó correctamente
+			if (!reservationId && !codigoReservaCreada) {
+				throw new Error(
+					"No se pudo identificar la reserva. Por favor, intenta nuevamente."
+				);
+			}
+
 			const response = await fetch(`${apiUrl}/create-payment`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -1142,6 +1150,7 @@ function App() {
 					description,
 					email: formData.email,
 					reservaId: reservationId || null,
+					codigoReserva: codigoReservaCreada || null, // CORRECCIÓN: Incluir código de reserva
 					tipoPago: type,
 				}),
 			});
@@ -1442,7 +1451,12 @@ function App() {
 				}
 			}
 
-			return { success: true, reservaId: result.reservaId };
+			// CORRECCIÓN: Incluir codigoReserva en el resultado para una mejor trazabilidad
+			return { 
+				success: true, 
+				reservaId: result.reservaId,
+				codigoReserva: result.codigoReserva 
+			};
 		} catch (error) {
 			console.error("Error al enviar reserva express:", error);
 			return { success: false, error: "server", message: error.message };
