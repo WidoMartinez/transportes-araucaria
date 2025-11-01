@@ -268,8 +268,11 @@ function HeroExpress({
 			return;
 		}
 
-		// Si la reserva se guardó exitosamente, proceder con el pago
-		handlePayment(gateway, type);
+		// Si la reserva se guardó exitosamente, proceder con el pago usando los identificadores frescos
+		handlePayment(gateway, type, {
+			reservaId: result.reservaId,
+			codigoReserva: result.codigoReserva,
+		});
 	};
 
 	const handleStepBack = () => {

@@ -1101,7 +1101,7 @@ function App() {
 		saldoPendiente,
 	} = pricing;
 
-	const handlePayment = async (gateway, type = "abono") => {
+	const handlePayment = async (gateway, type = "abono", identificadores = {}) => {
 		// Prevenir múltiples peticiones
 		if (loadingGateway) {
 			console.log("Ya hay una petición de pago en proceso");
@@ -1113,6 +1113,10 @@ function App() {
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
 		const amount = type === "total" ? totalConDescuento : abono;
+
+		const reservaIdParaPago = identificadores.reservaId ?? reservationId;
+		const codigoReservaParaPago =
+			identificadores.codigoReserva ?? codigoReservaCreada;
 
 		if (!amount) {
 			alert("Aún no tenemos un valor para generar el enlace de pago.");
@@ -1134,8 +1138,8 @@ function App() {
 
 		try {
 			// CORRECCIÓN: Validar que tengamos los datos necesarios antes de crear el pago
-			// Si no hay reservaId ni codigoReserva, significa que la reserva no se creó correctamente
-			if (!reservationId && !codigoReservaCreada) {
+			// Si no hay identificadores, significa que la reserva no se creó correctamente
+			if (!reservaIdParaPago && !codigoReservaParaPago) {
 				throw new Error(
 					"No se pudo identificar la reserva. Por favor, intenta nuevamente."
 				);
@@ -1149,8 +1153,8 @@ function App() {
 					amount,
 					description,
 					email: formData.email,
-					reservaId: reservationId || null,
-					codigoReserva: codigoReservaCreada || null, // CORRECCIÓN: Incluir código de reserva
+					reservaId: reservaIdParaPago || null,
+					codigoReserva: codigoReservaParaPago || null, // CORRECCIÓN: Incluir código de reserva
 					tipoPago: type,
 				}),
 			});
