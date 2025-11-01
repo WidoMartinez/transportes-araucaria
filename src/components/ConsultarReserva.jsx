@@ -39,7 +39,8 @@ function ConsultarReserva() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [paying, setPaying] = useState(false);
-    const [payError, setPayError] = useState(null);
+	const [payError, setPayError] = useState(null);
+	const [totalProductos, setTotalProductos] = useState(0);
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -84,6 +85,8 @@ function ConsultarReserva() {
 					? Number(reserva.totalConDescuento || 0)
 					: tipo === "saldo"
 					? Number(reserva.saldoPendiente || 0)
+					: tipo === "saldo_total"
+					? saldoTotalGeneral
 					: Number(reserva.abonoSugerido || 0);
 			if (!amount || amount <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
@@ -93,6 +96,8 @@ function ConsultarReserva() {
 					? `Pago total reserva ${reserva.codigoReserva} (${reserva.destino})`
 					: tipo === "saldo"
 					? `Pago saldo pendiente reserva ${reserva.codigoReserva} (${reserva.destino})`
+					: tipo === "saldo_total"
+					? `Pago saldo total y productos de reserva ${reserva.codigoReserva}`
 					: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
 
 			const resp = await fetch(`${apiBase}/create-payment`, {
@@ -200,6 +205,17 @@ function ConsultarReserva() {
 
     // En ese escenario, debe ser la única opción disponible
     const shouldShowOnlySaldo = canPaySaldo;
+
+	const saldoTotalGeneral =
+		(Number(reserva?.saldoPendiente) || 0) + (Number(totalProductos) || 0);
+
+	const canPayTotalGeneral =
+		reserva &&
+		(reserva.estado === "confirmada" ||
+			reserva.estado === "completada" ||
+			reserva.estado === "pendiente_detalles" ||
+			reserva.estado === "pendiente") &&
+		saldoTotalGeneral > 0;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
@@ -503,6 +519,20 @@ function ConsultarReserva() {
                                                     {formatCurrency(reserva.saldoPendiente)})
                                                 </Button>
                                             )}
+
+											{/* Botón para pagar saldo total general (reserva + productos) */}
+											{canPayTotalGeneral && (
+												<Button
+													variant="default"
+													onClick={() => continuarPago("saldo_total")}
+													disabled={paying}
+													className="gap-2 bg-blue-600 hover:bg-blue-700 animate-pulse"
+												>
+													<CreditCard className="w-4 h-4" />
+													Pagar Saldo Total del Viaje (
+													{formatCurrency(saldoTotalGeneral)})
+												</Button>
+											)}
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
@@ -514,7 +544,11 @@ function ConsultarReserva() {
 						</Card>
 
 						{/* Productos Adicionales - Similar a Uber Eats */}
-						<ProductosReserva reservaId={reserva.id} reserva={reserva} />
+						<ProductosReserva
+							reservaId={reserva.id}
+							reserva={reserva}
+							onTotalProductosChange={setTotalProductos}
+						/>
 
 						{/* Servicios Adicionales */}
 						{(reserva.numeroVuelo ||
