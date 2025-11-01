@@ -97,7 +97,7 @@ function ConsultarReserva() {
 					: tipo === "saldo"
 					? `Pago saldo pendiente reserva ${reserva.codigoReserva} (${reserva.destino})`
 					: tipo === "saldo_total"
-					? `Pago saldo total y productos de reserva ${reserva.codigoReserva}`
+					? `Pago saldo total y productos de reserva ${reserva.codigoReserva} (${reserva.destino})`
 					: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
 
 			const resp = await fetch(`${apiBase}/create-payment`, {
