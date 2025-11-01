@@ -29,6 +29,7 @@ import {
 	DollarSign,
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+import { formatCurrency } from "../lib/utils";
 
 const API_URL = getBackendUrl() || "https://transportes-araucania-backend.onrender.com";
 
@@ -174,6 +175,7 @@ function ProductosReserva({ reservaId, reserva }) {
 			cargarProductos();
 			cargarProductosReserva();
 		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [reservaId, puedeAgregarProductos]);
 
 	// Obtener icono según categoría
@@ -198,13 +200,6 @@ function ProductosReserva({ reservaId, reserva }) {
 
 	// Obtener categorías únicas
 	const categorias = ["todos", ...new Set(productos.map((p) => p.categoria))];
-
-	const formatCurrency = (amount) => {
-		return new Intl.NumberFormat("es-CL", {
-			style: "currency",
-			currency: "CLP",
-		}).format(amount || 0);
-	};
 
 	// Si la reserva no permite agregar productos, no mostrar nada
 	if (!puedeAgregarProductos) {
@@ -363,13 +358,6 @@ function ProductoCard({ producto, onAgregar, loading }) {
 		setAgregando(false);
 		setCantidad(1);
 		setNotas("");
-	};
-
-	const formatCurrency = (amount) => {
-		return new Intl.NumberFormat("es-CL", {
-			style: "currency",
-			currency: "CLP",
-		}).format(amount || 0);
 	};
 
 	const subtotal = parseFloat(producto.precio) * cantidad;
