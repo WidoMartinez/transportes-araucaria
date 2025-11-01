@@ -1101,7 +1101,7 @@ function App() {
 		saldoPendiente,
 	} = pricing;
 
-	const handlePayment = async (gateway, type = "abono") => {
+	const handlePayment = async (gateway, type = "abono", identificadores = {}) => {
 		// Prevenir múltiples peticiones
 		if (loadingGateway) {
 			console.log("Ya hay una petición de pago en proceso");
@@ -1120,6 +1120,10 @@ function App() {
 			return;
 		}
 
+		const reservaIdParaPago = identificadores.reservaId ?? reservationId;
+		const codigoReservaParaPago =
+			identificadores.codigoReserva ?? codigoReservaCreada;
+
 		const description =
 			type === "total"
 				? `Pago total con descuento para ${destinoFinal} (${
@@ -1133,6 +1137,14 @@ function App() {
 			getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 		try {
+			// Validar que tengamos los datos necesarios antes de crear el pago
+			// Si no hay identificadores, significa que la reserva no se creó correctamente
+			if (!reservaIdParaPago && !codigoReservaParaPago) {
+				throw new Error(
+					"No se pudo identificar la reserva. Por favor, intenta nuevamente."
+				);
+			}
+
 			const response = await fetch(`${apiUrl}/create-payment`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -1141,7 +1153,8 @@ function App() {
 					amount,
 					description,
 					email: formData.email,
-					reservaId: reservationId || null,
+					reservaId: reservaIdParaPago || null,
+					codigoReserva: codigoReservaParaPago || null,
 					tipoPago: type,
 				}),
 			});
@@ -1442,7 +1455,12 @@ function App() {
 				}
 			}
 
-			return { success: true, reservaId: result.reservaId };
+			// Incluir codigoReserva en el resultado para mejor trazabilidad
+			return { 
+				success: true, 
+				reservaId: result.reservaId,
+				codigoReserva: result.codigoReserva 
+			};
 		} catch (error) {
 			console.error("Error al enviar reserva express:", error);
 			return { success: false, error: "server", message: error.message };
