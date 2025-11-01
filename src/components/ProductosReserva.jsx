@@ -183,7 +183,9 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 		if (onTotalProductosChange) {
 			onTotalProductosChange(totalProductos);
 		}
-	}, [totalProductos, onTotalProductosChange]);
+		// Eliminamos onTotalProductosChange de las dependencias para evitar renders innecesarios.
+		// Si el callback puede cambiar, envolverlo con useCallback en el componente padre.
+	}, [totalProductos]);
 
 	// Obtener icono según categoría
 	const getIconoCategoria = (categoria) => {
