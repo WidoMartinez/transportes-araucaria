@@ -18,14 +18,16 @@ import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
 import Gasto from "./models/Gasto.js";
+import Producto from "./models/Producto.js";
+import ProductoReserva from "./models/ProductoReserva.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
 import addGastosTable from "./migrations/add-gastos-table.js";
+import addProductosTables from "./migrations/add-productos-tables.js";
 import setupAssociations from "./models/associations.js";
-// ¿Desea que haga un commit con este cambio? Se sugiere hacerlo después de agregar la migración de gastos.
 
 dotenv.config();
 
@@ -555,8 +557,8 @@ const initializeDatabase = async () => {
 		await addTipoPagoColumn();
 		await addAbonoFlags();
 		await addCodigosPagoTable();
-		await addGastosTable(); // Agrega ejecución de la migración para la tabla de gastos
-		// Sugerencia: realizar un commit después de implementar esta migración
+		await addGastosTable();
+		await addProductosTables(); // Migración para tablas de productos
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -3027,6 +3029,16 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 						"totalReservas",
 					],
 				},
+				{
+					model: ProductoReserva,
+					as: "productosReserva",
+					include: [
+						{
+							model: Producto,
+							as: "producto",
+						},
+					],
+				},
 			],
 		});
 
@@ -3046,6 +3058,16 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 							"esCliente",
 							"clasificacion",
 							"totalReservas",
+						],
+					},
+					{
+						model: ProductoReserva,
+						as: "productosReserva",
+						include: [
+							{
+								model: Producto,
+								as: "producto",
+							},
 						],
 					},
 				],
@@ -3071,6 +3093,16 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 									"esCliente",
 									"clasificacion",
 									"totalReservas",
+								],
+							},
+							{
+								model: ProductoReserva,
+								as: "productosReserva",
+								include: [
+									{
+										model: Producto,
+										as: "producto",
+									},
 								],
 							},
 						],
@@ -6026,6 +6058,413 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 		res.status(500).json({
 			success: false,
 			error: "Error al obtener estadísticas del conductor",
+		});
+	}
+});
+
+// ==========================================
+// ENDPOINTS DE PRODUCTOS
+// ==========================================
+
+/**
+ * GET /api/productos
+ * Listar todos los productos disponibles
+ * Filtros opcionales: categoria, disponible
+ */
+app.get("/api/productos", async (req, res) => {
+	try {
+		const { categoria, disponible } = req.query;
+		const where = {};
+
+		if (categoria) {
+			where.categoria = categoria;
+		}
+
+		if (disponible !== undefined) {
+			where.disponible = disponible === "true";
+		}
+
+		const productos = await Producto.findAll({
+			where,
+			order: [["orden", "ASC"], ["nombre", "ASC"]],
+		});
+
+		res.json({
+			success: true,
+			productos,
+			total: productos.length,
+		});
+	} catch (error) {
+		console.error("Error al obtener productos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener productos",
+		});
+	}
+});
+
+/**
+ * GET /api/productos/:id
+ * Obtener detalles de un producto específico
+ */
+app.get("/api/productos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const producto = await Producto.findByPk(id);
+
+		if (!producto) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado",
+			});
+		}
+
+		res.json({
+			success: true,
+			producto,
+		});
+	} catch (error) {
+		console.error("Error al obtener producto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener producto",
+		});
+	}
+});
+
+/**
+ * GET /api/reservas/:id/productos
+ * Obtener todos los productos agregados a una reserva
+ */
+app.get("/api/reservas/:id/productos", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Obtener productos de la reserva con toda la información
+		const productosReserva = await ProductoReserva.findAll({
+			where: { reservaId: id },
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+			order: [["createdAt", "ASC"]],
+		});
+
+		// Calcular total de productos
+		const totalProductos = productosReserva.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			productos: productosReserva,
+			total: productosReserva.length,
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error al obtener productos de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener productos de reserva",
+		});
+	}
+});
+
+/**
+ * POST /api/reservas/:id/productos
+ * Agregar un producto a una reserva activa/confirmada
+ */
+app.post("/api/reservas/:id/productos", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { productoId, cantidad = 1, notas } = req.body;
+
+		// Validaciones
+		if (!productoId) {
+			return res.status(400).json({
+				success: false,
+				error: "El ID del producto es requerido",
+			});
+		}
+
+		if (cantidad < 1) {
+			return res.status(400).json({
+				success: false,
+				error: "La cantidad debe ser mayor a 0",
+			});
+		}
+
+		// Verificar que la reserva existe y está en estado válido
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Verificar que la reserva está confirmada o activa
+		if (!["confirmada", "pendiente_detalles", "pendiente"].includes(reserva.estado)) {
+			return res.status(400).json({
+				success: false,
+				error: "Solo se pueden agregar productos a reservas activas o confirmadas",
+			});
+		}
+
+		// Verificar que el producto existe y está disponible
+		const producto = await Producto.findByPk(productoId);
+		if (!producto) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado",
+			});
+		}
+
+		if (!producto.disponible) {
+			return res.status(400).json({
+				success: false,
+				error: "El producto no está disponible actualmente",
+			});
+		}
+
+		// Verificar stock si está controlado
+		if (producto.stock !== null && producto.stock < cantidad) {
+			return res.status(400).json({
+				success: false,
+				error: `Stock insuficiente. Disponible: ${producto.stock}`,
+			});
+		}
+
+		// Calcular subtotal
+		const precioUnitario = parseFloat(producto.precio);
+		const subtotal = precioUnitario * cantidad;
+
+		// Agregar producto a la reserva
+		const productoReserva = await ProductoReserva.create({
+			reservaId: id,
+			productoId,
+			cantidad,
+			precioUnitario,
+			subtotal,
+			notas: notas || null,
+			estadoEntrega: "pendiente",
+		});
+
+		// Actualizar stock si está controlado
+		if (producto.stock !== null) {
+			await producto.update({
+				stock: producto.stock - cantidad,
+			});
+		}
+
+		// Obtener el producto agregado con sus detalles
+		const productoAgregado = await ProductoReserva.findByPk(productoReserva.id, {
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		// Calcular nuevo total de productos
+		const todosProductos = await ProductoReserva.findAll({
+			where: { reservaId: id },
+		});
+		const totalProductos = todosProductos.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		// Calcular nuevo total de la reserva (precio base + productos)
+		const nuevoTotal = parseFloat(reserva.totalConDescuento || 0) + totalProductos;
+
+		console.log(`✅ Producto agregado a reserva ${reserva.codigoReserva}: ${producto.nombre} x${cantidad}`);
+
+		res.json({
+			success: true,
+			mensaje: "Producto agregado exitosamente",
+			productoReserva: productoAgregado,
+			totalProductos,
+			nuevoTotalReserva: nuevoTotal,
+		});
+	} catch (error) {
+		console.error("Error al agregar producto a reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al agregar producto a reserva",
+		});
+	}
+});
+
+/**
+ * PUT /api/reservas/:id/productos/:productoReservaId
+ * Actualizar cantidad o notas de un producto en una reserva
+ */
+app.put("/api/reservas/:id/productos/:productoReservaId", async (req, res) => {
+	try {
+		const { id, productoReservaId } = req.params;
+		const { cantidad, notas, estadoEntrega } = req.body;
+
+		// Buscar el producto en la reserva
+		const productoReserva = await ProductoReserva.findOne({
+			where: {
+				id: productoReservaId,
+				reservaId: id,
+			},
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		if (!productoReserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado en la reserva",
+			});
+		}
+
+		// Actualizar campos
+		const updates = {};
+		
+		if (cantidad !== undefined && cantidad > 0) {
+			// Actualizar stock si es necesario
+			const producto = productoReserva.producto;
+			if (producto.stock !== null) {
+				const diferencia = cantidad - productoReserva.cantidad;
+				if (diferencia > 0 && producto.stock < diferencia) {
+					return res.status(400).json({
+						success: false,
+						error: `Stock insuficiente. Disponible: ${producto.stock}`,
+					});
+				}
+				await producto.update({
+					stock: producto.stock - diferencia,
+				});
+			}
+
+			updates.cantidad = cantidad;
+			updates.subtotal = parseFloat(productoReserva.precioUnitario) * cantidad;
+		}
+
+		if (notas !== undefined) {
+			updates.notas = notas;
+		}
+
+		if (estadoEntrega) {
+			updates.estadoEntrega = estadoEntrega;
+		}
+
+		await productoReserva.update(updates);
+
+		// Recargar con datos actualizados
+		await productoReserva.reload({
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		// Calcular nuevo total de productos
+		const todosProductos = await ProductoReserva.findAll({
+			where: { reservaId: id },
+		});
+		const totalProductos = todosProductos.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			mensaje: "Producto actualizado exitosamente",
+			productoReserva,
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error al actualizar producto de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al actualizar producto de reserva",
+		});
+	}
+});
+
+/**
+ * DELETE /api/reservas/:id/productos/:productoReservaId
+ * Eliminar un producto de una reserva
+ */
+app.delete("/api/reservas/:id/productos/:productoReservaId", async (req, res) => {
+	try {
+		const { id, productoReservaId } = req.params;
+
+		// Buscar el producto en la reserva
+		const productoReserva = await ProductoReserva.findOne({
+			where: {
+				id: productoReservaId,
+				reservaId: id,
+			},
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		if (!productoReserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado en la reserva",
+			});
+		}
+
+		// Restaurar stock si está controlado
+		const producto = productoReserva.producto;
+		if (producto && producto.stock !== null) {
+			await producto.update({
+				stock: producto.stock + productoReserva.cantidad,
+			});
+		}
+
+		// Eliminar el producto de la reserva
+		await productoReserva.destroy();
+
+		// Calcular nuevo total de productos
+		const todosProductos = await ProductoReserva.findAll({
+			where: { reservaId: id },
+		});
+		const totalProductos = todosProductos.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			mensaje: "Producto eliminado exitosamente",
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error al eliminar producto de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al eliminar producto de reserva",
 		});
 	}
 });

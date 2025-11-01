@@ -6,6 +6,8 @@ import Cliente from "./Cliente.js";
 import Vehiculo from "./Vehiculo.js";
 import Conductor from "./Conductor.js";
 import Gasto from "./Gasto.js";
+import Producto from "./Producto.js";
+import ProductoReserva from "./ProductoReserva.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -73,6 +75,42 @@ export const setupAssociations = () => {
 	Gasto.belongsTo(Vehiculo, {
 		foreignKey: "vehiculoId",
 		as: "vehiculo",
+	});
+
+	// Relación: Reserva <-> Producto (Muchos a Muchos a través de ProductoReserva)
+	Reserva.belongsToMany(Producto, {
+		through: ProductoReserva,
+		foreignKey: "reservaId",
+		otherKey: "productoId",
+		as: "productos",
+	});
+
+	Producto.belongsToMany(Reserva, {
+		through: ProductoReserva,
+		foreignKey: "productoId",
+		otherKey: "reservaId",
+		as: "reservas",
+	});
+
+	// Relación directa para acceder a la tabla intermedia
+	Reserva.hasMany(ProductoReserva, {
+		foreignKey: "reservaId",
+		as: "productosReserva",
+	});
+
+	ProductoReserva.belongsTo(Reserva, {
+		foreignKey: "reservaId",
+		as: "reserva",
+	});
+
+	ProductoReserva.belongsTo(Producto, {
+		foreignKey: "productoId",
+		as: "producto",
+	});
+
+	Producto.hasMany(ProductoReserva, {
+		foreignKey: "productoId",
+		as: "productosReserva",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
