@@ -1114,15 +1114,15 @@ function App() {
 		const { vehiculo } = cotizacion;
 		const amount = type === "total" ? totalConDescuento : abono;
 
-		const reservaIdParaPago = identificadores.reservaId ?? reservationId;
-		const codigoReservaParaPago =
-			identificadores.codigoReserva ?? codigoReservaCreada;
-
 		if (!amount) {
 			alert("Aún no tenemos un valor para generar el enlace de pago.");
 			setLoadingGateway(null);
 			return;
 		}
+
+		const reservaIdParaPago = identificadores.reservaId ?? reservationId;
+		const codigoReservaParaPago =
+			identificadores.codigoReserva ?? codigoReservaCreada;
 
 		const description =
 			type === "total"
@@ -1137,7 +1137,7 @@ function App() {
 			getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 		try {
-			// CORRECCIÓN: Validar que tengamos los datos necesarios antes de crear el pago
+			// Validar que tengamos los datos necesarios antes de crear el pago
 			// Si no hay identificadores, significa que la reserva no se creó correctamente
 			if (!reservaIdParaPago && !codigoReservaParaPago) {
 				throw new Error(
@@ -1154,7 +1154,7 @@ function App() {
 					description,
 					email: formData.email,
 					reservaId: reservaIdParaPago || null,
-					codigoReserva: codigoReservaParaPago || null, // CORRECCIÓN: Incluir código de reserva
+					codigoReserva: codigoReservaParaPago || null,
 					tipoPago: type,
 				}),
 			});
@@ -1455,7 +1455,7 @@ function App() {
 				}
 			}
 
-			// CORRECCIÓN: Incluir codigoReserva en el resultado para una mejor trazabilidad
+			// Incluir codigoReserva en el resultado para mejor trazabilidad
 			return { 
 				success: true, 
 				reservaId: result.reservaId,
