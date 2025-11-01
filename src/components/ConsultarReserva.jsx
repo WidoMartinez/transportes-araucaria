@@ -209,13 +209,16 @@ function ConsultarReserva() {
 	const saldoTotalGeneral =
 		(Number(reserva?.saldoPendiente) || 0) + (Number(totalProductos) || 0);
 
+	// El botón de "Pagar Saldo Total" debe mostrarse solo cuando:
+	// 1. Hay productos agregados Y saldo pendiente
+	// 2. NO estamos en el escenario de pago inicial (pendiente/pendiente_detalles sin pago parcial)
+	// 3. NO estamos en el escenario de pago de saldo pendiente (canPaySaldo)
 	const canPayTotalGeneral =
 		reserva &&
-		(reserva.estado === "confirmada" ||
-			reserva.estado === "completada" ||
-			reserva.estado === "pendiente_detalles" ||
-			reserva.estado === "pendiente") &&
-		saldoTotalGeneral > 0;
+		saldoTotalGeneral > 0 &&
+		totalProductos > 0 &&
+		!canPaySaldo &&
+		(reserva.estado === "confirmada" || reserva.estado === "completada");
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
