@@ -80,6 +80,9 @@ function ConsultarReserva() {
 			setPayError(null);
                         const apiBase =
                                 getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
+			// Calcular saldoTotalGeneral dentro de la función para garantizar valores actualizados
+			const saldoTotalGeneral =
+				(Number(reserva?.saldoPendiente) || 0) + (Number(totalProductos) || 0);
 			const amount =
 				tipo === "total"
 					? Number(reserva.totalConDescuento || 0)
