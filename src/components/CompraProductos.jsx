@@ -14,7 +14,7 @@ import { getBackendUrl } from "../lib/backend";
 import ProductosReserva from "./ProductosReserva";
 
 const API_URL =
-        getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
+        getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function CompraProductos() {
 	const [reserva, setReserva] = useState(null);
@@ -69,7 +69,7 @@ function CompraProductos() {
 			setPayError(null);
 			const apiBase =
 				getBackendUrl() ||
-				"https://transportes-araucaria-backend.onrender.com";
+				"https://transportes-araucaria.onrender.com";
 
 			if (!monto || monto <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");

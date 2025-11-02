@@ -113,7 +113,7 @@ function HeroExpress({
 		setVerificandoReserva(true);
 		try {
                         const apiUrl =
-                                getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
+                                getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(
 				`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(
 					email.trim()

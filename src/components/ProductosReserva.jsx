@@ -31,7 +31,7 @@ import {
 import { getBackendUrl } from "../lib/backend";
 import { formatCurrency } from "../lib/utils";
 
-const API_URL = getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
+const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 /**
  * Componente para mostrar y gestionar productos agregados a una reserva
