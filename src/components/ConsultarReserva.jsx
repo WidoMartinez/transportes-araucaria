@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -39,7 +39,8 @@ function ConsultarReserva() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [paying, setPaying] = useState(false);
-    const [payError, setPayError] = useState(null);
+	const [payError, setPayError] = useState(null);
+	const [totalProductos, setTotalProductos] = useState(0);
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -84,6 +85,8 @@ function ConsultarReserva() {
 					? Number(reserva.totalConDescuento || 0)
 					: tipo === "saldo"
 					? Number(reserva.saldoPendiente || 0)
+					: tipo === "saldo_total"
+					? saldoTotalGeneral
 					: Number(reserva.abonoSugerido || 0);
 			if (!amount || amount <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
@@ -93,6 +96,8 @@ function ConsultarReserva() {
 					? `Pago total reserva ${reserva.codigoReserva} (${reserva.destino})`
 					: tipo === "saldo"
 					? `Pago saldo pendiente reserva ${reserva.codigoReserva} (${reserva.destino})`
+					: tipo === "saldo_total"
+					? `Pago saldo total y productos de reserva ${reserva.codigoReserva}`
 					: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
 
 			const resp = await fetch(`${apiBase}/create-payment`, {
@@ -200,6 +205,23 @@ function ConsultarReserva() {
 
     // En ese escenario, debe ser la única opción disponible
     const shouldShowOnlySaldo = canPaySaldo;
+
+	// Calcular el saldo total general (saldo pendiente + productos) usando useMemo
+	const saldoTotalGeneral = useMemo(() => {
+		if (!reserva) return 0;
+		return (Number(reserva.saldoPendiente) || 0) + (Number(totalProductos) || 0);
+	}, [reserva, totalProductos]);
+
+	// El botón de "Pagar Saldo Total" debe mostrarse solo cuando:
+	// 1. Hay productos agregados Y saldo pendiente
+	// 2. NO estamos en el escenario de pago inicial (pendiente/pendiente_detalles sin pago parcial)
+	// 3. NO estamos en el escenario de pago de saldo pendiente (canPaySaldo)
+	const canPayTotalGeneral =
+		reserva &&
+		saldoTotalGeneral > 0 &&
+		totalProductos > 0 &&
+		!canPaySaldo &&
+		(reserva.estado === "confirmada" || reserva.estado === "completada");
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
@@ -503,6 +525,20 @@ function ConsultarReserva() {
                                                     {formatCurrency(reserva.saldoPendiente)})
                                                 </Button>
                                             )}
+
+											{/* Botón para pagar saldo total general (reserva + productos) */}
+											{canPayTotalGeneral && (
+												<Button
+													variant="default"
+													onClick={() => continuarPago("saldo_total")}
+													disabled={paying}
+													className="gap-2 bg-blue-600 hover:bg-blue-700 animate-pulse"
+												>
+													<CreditCard className="w-4 h-4" />
+													Pagar Saldo Total del Viaje (
+													{formatCurrency(saldoTotalGeneral)})
+												</Button>
+											)}
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
@@ -514,7 +550,11 @@ function ConsultarReserva() {
 						</Card>
 
 						{/* Productos Adicionales - Similar a Uber Eats */}
-						<ProductosReserva reservaId={reserva.id} reserva={reserva} />
+						<ProductosReserva
+							reservaId={reserva.id}
+							reserva={reserva}
+							onTotalProductosChange={setTotalProductos}
+						/>
 
 						{/* Servicios Adicionales */}
 						{(reserva.numeroVuelo ||

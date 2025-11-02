@@ -37,7 +37,7 @@ const API_URL = getBackendUrl() || "https://transportes-araucaria-backend.onrend
  * Componente para mostrar y gestionar productos agregados a una reserva
  * Similar a Uber Eats, permite agregar productos a reservas activas/confirmadas
  */
-function ProductosReserva({ reservaId, reserva }) {
+function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 	const [productos, setProductos] = useState([]);
 	const [productosReserva, setProductosReserva] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -177,6 +177,13 @@ function ProductosReserva({ reservaId, reserva }) {
 		}
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [reservaId, puedeAgregarProductos]);
+
+	// Notificar al padre cuando el total de productos cambie
+	useEffect(() => {
+		if (onTotalProductosChange) {
+			onTotalProductosChange(totalProductos);
+		}
+	}, [totalProductos, onTotalProductosChange]);
 
 	// Obtener icono según categoría
 	const getIconoCategoria = (categoria) => {
