@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ⚠️ IMPORTANTE: DESPLIEGUE MANUAL EN HOSTINGER ⚠️
  * 
@@ -62,11 +63,11 @@ if (!defined('EMAIL_FROM_NAME') && isset($EMAIL_CONFIG['from_name'])) define('EM
 try {
     // Obtener datos del POST
     $data = json_decode(file_get_contents('php://input'), true);
-    
+
     if (!$data) {
         throw new \Exception('No se recibieron datos válidos');
     }
-    
+
     // Validar datos requeridos
     $required = ['reservaId', 'codigoReserva', 'emailPasajero', 'nombrePasajero', 'productos', 'totalProductos'];
     foreach ($required as $field) {
@@ -74,7 +75,7 @@ try {
             throw new \Exception("Campo requerido faltante: $field");
         }
     }
-    
+
     $reservaId = $data['reservaId'];
     $codigoReserva = $data['codigoReserva'];
     $emailPasajero = $data['emailPasajero'];
@@ -84,12 +85,13 @@ try {
     $nuevoTotal = isset($data['nuevoTotal']) ? $data['nuevoTotal'] : null;
     $emailConductor = isset($data['emailConductor']) ? $data['emailConductor'] : null;
     $nombreConductor = isset($data['nombreConductor']) ? $data['nombreConductor'] : null;
-    
+
     // Formatear moneda CLP
-    function formatCLP($monto) {
+    function formatCLP($monto)
+    {
         return '$' . number_format($monto, 0, ',', '.');
     }
-    
+
     // Generar HTML de productos
     $productosHTML = '';
     foreach ($productos as $prod) {
@@ -108,7 +110,7 @@ try {
             </td>
         </tr>';
     }
-    
+
     // Configuración de monitoreo/admin (BCC)
     $adminEmail = $EMAIL_CONFIG['to'] ?? null; // Correo de monitoreo para copia oculta
 
@@ -118,7 +120,7 @@ try {
 
     // ========== EMAIL AL PASAJERO ==========
     $mailPasajero = new PHPMailer(true);
-    
+
     // Configuración del servidor SMTP
     $mailPasajero->isSMTP();
     $mailPasajero->Host = SMTP_HOST;
@@ -136,7 +138,7 @@ try {
             error_log($line);
         };
     }
-    
+
     // Destinatario
     $mailPasajero->setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
     $destinatarios = [];
@@ -154,11 +156,11 @@ try {
     if (filter_var($emailPasajero, FILTER_VALIDATE_EMAIL)) {
         $mailPasajero->addReplyTo($emailPasajero, $nombrePasajero);
     }
-    
+
     // Contenido del email
     $mailPasajero->isHTML(true);
     $mailPasajero->Subject = '🛍️ Productos agregados a tu reserva ' . $codigoReserva;
-    
+
     $mailPasajero->Body = '
     <!DOCTYPE html>
     <html>
@@ -225,10 +227,10 @@ try {
         </div>
     </body>
     </html>';
-    
+
     // Enviar email al pasajero (o solo BCC admin si email pasajero no es válido)
     $mailPasajero->send();
-    
+
     $respuesta = [
         'success' => true,
         'mensaje' => 'Notificación enviada',
@@ -239,11 +241,11 @@ try {
     if ($debugMode) {
         $respuesta['smtpDebug'] = $smtpLogs;
     }
-    
+
     // ========== EMAIL AL CONDUCTOR (si está asignado) ==========
     if ($emailConductor && $nombreConductor) {
-    $mailConductor = new PHPMailer(true);
-        
+        $mailConductor = new PHPMailer(true);
+
         // Configuración del servidor SMTP
         $mailConductor->isSMTP();
         $mailConductor->Host = SMTP_HOST;
@@ -261,15 +263,15 @@ try {
                 error_log($line);
             };
         }
-        
+
         // Destinatario
         $mailConductor->setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
         $mailConductor->addAddress($emailConductor, $nombreConductor);
-        
+
         // Contenido del email
         $mailConductor->isHTML(true);
         $mailConductor->Subject = '📦 Productos agregados - Reserva ' . $codigoReserva;
-        
+
         $mailConductor->Body = '
         <!DOCTYPE html>
         <html>
@@ -305,7 +307,7 @@ try {
                             </tr>
                         </thead>
                         <tbody>';
-        
+
         foreach ($productos as $prod) {
             $mailConductor->Body .= '
                             <tr>
@@ -318,7 +320,7 @@ try {
                                 </td>
                             </tr>';
         }
-        
+
         $mailConductor->Body .= '
                         </tbody>
                     </table>
@@ -336,20 +338,19 @@ try {
             </div>
         </body>
         </html>';
-        
+
         // Enviar email al conductor
         $mailConductor->send();
-        
+
         $respuesta['emailsConductor'] = 1;
         $respuesta['mensaje'] = 'Notificaciones enviadas';
         if ($debugMode) {
             $respuesta['smtpDebug'] = $smtpLogs;
         }
     }
-    
+
     // Respuesta exitosa
     echo json_encode($respuesta);
-    
 } catch (\Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -357,4 +358,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>
