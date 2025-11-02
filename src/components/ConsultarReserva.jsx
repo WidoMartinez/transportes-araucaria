@@ -204,7 +204,7 @@ function ConsultarReserva() {
         Number(reserva.saldoPendiente) > 0;
 
     // En ese escenario, debe ser la única opción disponible
-    const shouldShowOnlySaldo = canPaySaldo;
+    const shouldShowOnlySaldo = canPaySaldo && !canPayTotalGeneral;
 
 	// Calcular el saldo total general (saldo pendiente + productos) usando useMemo
 	const saldoTotalGeneral = useMemo(() => {
@@ -213,14 +213,10 @@ function ConsultarReserva() {
 	}, [reserva, totalProductos]);
 
 	// El botón de "Pagar Saldo Total" debe mostrarse solo cuando:
-	// 1. Hay productos agregados Y saldo pendiente
-	// 2. NO estamos en el escenario de pago inicial (pendiente/pendiente_detalles sin pago parcial)
-	// 3. NO estamos en el escenario de pago de saldo pendiente (canPaySaldo)
+	// 1. Hay productos agregados O un saldo pendiente en una reserva ya confirmada
 	const canPayTotalGeneral =
 		reserva &&
 		saldoTotalGeneral > 0 &&
-		totalProductos > 0 &&
-		!canPaySaldo &&
 		(reserva.estado === "confirmada" || reserva.estado === "completada");
 
 	return (
@@ -481,7 +477,7 @@ function ConsultarReserva() {
 											</div>
 										)}
 										<div className="flex flex-wrap gap-3">
-											{!shouldShowOnlySaldo && (
+											{!shouldShowOnlySaldo && !canPayTotalGeneral && (
 											<Button
 												onClick={() => continuarPago("abono")}
 												disabled={paying || !reserva.abonoSugerido}
@@ -500,7 +496,7 @@ function ConsultarReserva() {
 												)}
 											</Button>
 											)}
-											{!shouldShowOnlySaldo && (
+											{!shouldShowOnlySaldo && !canPayTotalGeneral && (
 											<Button
 												variant="outline"
 												onClick={() => continuarPago("total")}
