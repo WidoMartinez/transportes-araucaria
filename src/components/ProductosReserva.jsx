@@ -41,7 +41,7 @@ const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 /**
  * Componente para mostrar y gestionar productos agregados a una reserva
- * Similar a Uber Eats, permite agregar productos a reservas activas/confirmadas
+ * Similar a Uber Eats, permite agregar productos a reservas confirmadas
  */
 function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 	const [productos, setProductos] = useState([]);
@@ -61,7 +61,7 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 	// Verificar si la reserva permite agregar productos
 	const puedeAgregarProductos =
 		reserva &&
-		["confirmada", "pendiente_detalles", "pendiente"].includes(reserva.estado);
+		reserva.estado === "confirmada";
 
 	// Cargar productos disponibles
 	const cargarProductos = async () => {
@@ -130,7 +130,7 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 				throw new Error(errorData.error || "Error al agregar producto");
 			}
 
-			const data = await response.json();
+			await response.json();
 			setSuccess("Producto agregado exitosamente");
 
 			// Recargar productos de la reserva
