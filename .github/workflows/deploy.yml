@@ -1,0 +1,55 @@
+name: Build y Deploy a Hosting
+
+on:
+  push:
+    branches:
+      - main # Cambia esto si usas otra rama principal
+  workflow_dispatch: # Permite ejecución manual desde GitHub
+
+jobs:
+  deploy:
+    name: Build y Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout del código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18" # Ajusta según tu proyecto
+          cache: "npm"
+
+      - name: 📦 Instalar dependencias
+        run: npm ci
+
+      - name: 🔨 Ejecutar build
+        run: npm run build # Ajusta según tu comando de build
+        env:
+          CI: false # Para evitar que warnings se traten como errores
+
+      - name: 🚀 Deploy por SSH
+        uses: easingthemes/ssh-deploy@v5.0.3
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          SOURCE: "dist/" # Cambia a "build/" si es necesario
+          TARGET: ${{ secrets.SSH_TARGET_PATH }}
+          EXCLUDE: "/node_modules/, /.git/, /.github/"
+          SCRIPT_BEFORE: |
+            whoami
+            ls -la
+          SCRIPT_AFTER: |
+            echo "✅ Deploy completado exitosamente"
+            ls -la ${{ secrets.SSH_TARGET_PATH }}
+
+      - name: ✅ Notificación de éxito
+        if: success()
+        run: echo "🎉 Build y deploy completados con éxito"
+
+      - name: ❌ Notificación de error
+        if: failure()
+        run: echo "⚠️ Hubo un error en el build o deploy"
