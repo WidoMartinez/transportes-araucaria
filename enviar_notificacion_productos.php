@@ -222,7 +222,7 @@ try {
             <div class="footer">
                 <p><strong>Transportes Araucaria</strong></p>
                 <p>Transfer y Traslados de Pasajeros</p>
-                <p>📞 +56 9 1234 5678 | 📧 contacto@transportesaraucaria.cl</p>
+                <p>📞 +56 9 3664 3540 | 📧 contacto@transportesaraucaria.cl</p>
             </div>
         </div>
     </body>
