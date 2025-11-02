@@ -42,22 +42,36 @@ header('Content-Type: application/json; charset=utf-8');
 // Cargar configuración de PHPMailer
 require_once 'config_reservas.php';
 
+// Intentar cargar manualmente PHPMailer si está disponible localmente (Hostinger)
+if (file_exists(__DIR__ . '/PHPMailer/src/PHPMailer.php')) {
+    require_once __DIR__ . '/PHPMailer/src/Exception.php';
+    require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
+    require_once __DIR__ . '/PHPMailer/src/SMTP.php';
+}
+
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+
+// Definir constantes SMTP si no existen, tomando valores de $EMAIL_CONFIG
+if (!defined('SMTP_HOST') && isset($EMAIL_CONFIG['host'])) define('SMTP_HOST', $EMAIL_CONFIG['host']);
+if (!defined('SMTP_PORT') && isset($EMAIL_CONFIG['port'])) define('SMTP_PORT', $EMAIL_CONFIG['port']);
+if (!defined('SMTP_USER') && isset($EMAIL_CONFIG['username'])) define('SMTP_USER', $EMAIL_CONFIG['username']);
+if (!defined('SMTP_PASS') && isset($EMAIL_CONFIG['password'])) define('SMTP_PASS', $EMAIL_CONFIG['password']);
+if (!defined('EMAIL_FROM') && isset($EMAIL_CONFIG['username'])) define('EMAIL_FROM', $EMAIL_CONFIG['username']);
+if (!defined('EMAIL_FROM_NAME') && isset($EMAIL_CONFIG['from_name'])) define('EMAIL_FROM_NAME', $EMAIL_CONFIG['from_name']);
 
 try {
     // Obtener datos del POST
     $data = json_decode(file_get_contents('php://input'), true);
     
     if (!$data) {
-        throw new Exception('No se recibieron datos válidos');
+        throw new \Exception('No se recibieron datos válidos');
     }
     
     // Validar datos requeridos
     $required = ['reservaId', 'codigoReserva', 'emailPasajero', 'nombrePasajero', 'productos', 'totalProductos'];
     foreach ($required as $field) {
         if (!isset($data[$field])) {
-            throw new Exception("Campo requerido faltante: $field");
+            throw new \Exception("Campo requerido faltante: $field");
         }
     }
     
@@ -95,6 +109,13 @@ try {
         </tr>';
     }
     
+    // Configuración de monitoreo/admin (BCC)
+    $adminEmail = $EMAIL_CONFIG['to'] ?? null; // Correo de monitoreo para copia oculta
+
+    // Activar modo depuración opcional
+    $debugMode = (isset($_GET['debug']) && $_GET['debug'] == '1') || (isset($_SERVER['HTTP_X_DEBUG']) && $_SERVER['HTTP_X_DEBUG'] === '1');
+    $smtpLogs = [];
+
     // ========== EMAIL AL PASAJERO ==========
     $mailPasajero = new PHPMailer(true);
     
@@ -107,10 +128,32 @@ try {
     $mailPasajero->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
     $mailPasajero->Port = SMTP_PORT;
     $mailPasajero->CharSet = 'UTF-8';
+    if ($debugMode) {
+        $mailPasajero->SMTPDebug = 2; // Detallado
+        $mailPasajero->Debugoutput = function ($str, $level) use (&$smtpLogs) {
+            $line = '[SMTP DEBUG] ' . trim($str);
+            $smtpLogs[] = $line;
+            error_log($line);
+        };
+    }
     
     // Destinatario
     $mailPasajero->setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
-    $mailPasajero->addAddress($emailPasajero, $nombrePasajero);
+    $destinatarios = [];
+    $bccEnviada = false;
+    if (filter_var($emailPasajero, FILTER_VALIDATE_EMAIL)) {
+        $mailPasajero->addAddress($emailPasajero, $nombrePasajero);
+        $destinatarios[] = $emailPasajero;
+    }
+    // BCC a admin para auditoría
+    if ($adminEmail && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+        $mailPasajero->addBCC($adminEmail);
+        $bccEnviada = true;
+    }
+    // Reply-To al pasajero si es válido
+    if (filter_var($emailPasajero, FILTER_VALIDATE_EMAIL)) {
+        $mailPasajero->addReplyTo($emailPasajero, $nombrePasajero);
+    }
     
     // Contenido del email
     $mailPasajero->isHTML(true);
@@ -183,18 +226,23 @@ try {
     </body>
     </html>';
     
-    // Enviar email al pasajero
+    // Enviar email al pasajero (o solo BCC admin si email pasajero no es válido)
     $mailPasajero->send();
     
     $respuesta = [
         'success' => true,
-        'mensaje' => 'Notificación enviada al pasajero',
-        'emailsPasajero' => 1
+        'mensaje' => 'Notificación enviada',
+        'emailsPasajero' => count($destinatarios),
+        'bccAdmin' => $bccEnviada,
+        'sentTo' => $destinatarios,
     ];
+    if ($debugMode) {
+        $respuesta['smtpDebug'] = $smtpLogs;
+    }
     
     // ========== EMAIL AL CONDUCTOR (si está asignado) ==========
     if ($emailConductor && $nombreConductor) {
-        $mailConductor = new PHPMailer(true);
+    $mailConductor = new PHPMailer(true);
         
         // Configuración del servidor SMTP
         $mailConductor->isSMTP();
@@ -205,6 +253,14 @@ try {
         $mailConductor->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mailConductor->Port = SMTP_PORT;
         $mailConductor->CharSet = 'UTF-8';
+        if ($debugMode) {
+            $mailConductor->SMTPDebug = 2;
+            $mailConductor->Debugoutput = function ($str, $level) use (&$smtpLogs) {
+                $line = '[SMTP DEBUG] ' . trim($str);
+                $smtpLogs[] = $line;
+                error_log($line);
+            };
+        }
         
         // Destinatario
         $mailConductor->setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
@@ -285,13 +341,16 @@ try {
         $mailConductor->send();
         
         $respuesta['emailsConductor'] = 1;
-        $respuesta['mensaje'] = 'Notificaciones enviadas al pasajero y conductor';
+        $respuesta['mensaje'] = 'Notificaciones enviadas';
+        if ($debugMode) {
+            $respuesta['smtpDebug'] = $smtpLogs;
+        }
     }
     
     // Respuesta exitosa
     echo json_encode($respuesta);
     
-} catch (Exception $e) {
+} catch (\Exception $e) {
     http_response_code(500);
     echo json_encode([
         'success' => false,

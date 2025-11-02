@@ -5369,18 +5369,23 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 				const notifUrl = "https://www.transportesaraucaria.cl/enviar_notificacion_productos.php";
 
-				await axios.post(notifUrl, notifData, {
-					headers: { "Content-Type": "application/json" },
+				const resp = await axios.post(notifUrl, notifData, {
+					headers: { "Content-Type": "application/json", "X-Debug": process.env.NOTIF_DEBUG === "1" ? "1" : "0" },
 					timeout: 10000,
 				});
 
 				console.log(`✅ Notificación de productos enviada para reserva ${reserva.codigoReserva}`);
+				if (resp?.data) {
+					console.log("   • Respuesta PHP:", typeof resp.data === "string" ? resp.data : JSON.stringify(resp.data));
+				}
 			}
 		} catch (notifError) {
-			console.error(
-				"❌ Error al enviar notificación de productos (no crítico):",
-				notifError.message
-			);
+			// Log detallado para depurar errores provenientes del PHP en Hostinger
+			const status = notifError?.response?.status;
+			const body = notifError?.response?.data;
+			console.error("❌ Error al enviar notificación de productos (no crítico):", notifError.message);
+			if (status) console.error("   • Código HTTP:", status);
+			if (body) console.error("   • Respuesta del servidor:", typeof body === "string" ? body : JSON.stringify(body));
 		}
 
 	} catch (error) {
@@ -6782,14 +6787,22 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 					nombreConductor,
 				};
 				
-				await axios.post(notifUrl, notifData, {
-					headers: { "Content-Type": "application/json" },
+				const notifResp = await axios.post(notifUrl, notifData, {
+					headers: { "Content-Type": "application/json", "X-Debug": process.env.NOTIF_DEBUG === "1" ? "1" : "0" },
 					timeout: 10000,
 				});
 				
 				console.log(`📧 Notificación de productos enviada para reserva ${reserva.codigoReserva}`);
+				if (notifResp?.data) {
+					console.log("   • Respuesta PHP:", typeof notifResp.data === "string" ? notifResp.data : JSON.stringify(notifResp.data));
+				}
 			} catch (err) {
+				// Registro enriquecido para entender errores 500 de Hostinger
+				const status = err?.response?.status;
+				const body = err?.response?.data;
 				console.error("⚠️ Error enviando notificación de productos:", err.message);
+				if (status) console.error("   • Código HTTP:", status);
+				if (body) console.error("   • Respuesta del servidor:", typeof body === "string" ? body : JSON.stringify(body));
 				// No fallar si la notificación falla
 			}
 		};
