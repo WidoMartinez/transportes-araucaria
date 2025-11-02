@@ -15,18 +15,51 @@ jobs:
       - name: 📥 Checkout del código
         uses: actions/checkout@v4
 
+      - name: 📦 Instalar pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: 🟢 Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
+          cache: "pnpm"
+
+      - name: 📋 Verificar versiones
+        run: |
+          echo "=== Versión de Node ==="
+          node --version
+          echo "=== Versión de pnpm ==="
+          pnpm --version
+          echo "=== Contenido de package.json ==="
+          cat package.json
+
+      - name: 🧹 Limpiar caché de pnpm
+        run: pnpm store prune
 
       - name: 📦 Instalar dependencias
-        run: npm install --legacy-peer-deps
+        run: pnpm install --no-frozen-lockfile
+
+      - name: 📋 Verificar dependencias instaladas
+        run: |
+          echo "=== Versiones de React ==="
+          pnpm list react react-dom
+          echo "=== Versiones de date-fns y react-day-picker ==="
+          pnpm list date-fns react-day-picker
 
       - name: 🔨 Ejecutar build
-        run: npm run build
+        run: pnpm run build
         env:
           CI: false
+          NODE_ENV: production
+
+      - name: 📋 Verificar build
+        run: |
+          echo "=== Archivos generados ==="
+          ls -laR dist/
+          echo "=== Tamaño del build ==="
+          du -sh dist/
 
       - name: 🔑 Configurar SSH
         run: |
@@ -38,21 +71,21 @@ jobs:
         run: |
           ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: 🧪 Probar conexión SSH
-        run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'Conexión SSH exitosa'; pwd; ls -la"
-
       - name: 🗑️ Limpiar directorio remoto
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "rm -rf ${{ secrets.SSH_TARGET_PATH }}/*"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "rm -rf ${{ secrets.SSH_TARGET_PATH }}*"
 
       - name: 🚀 Deploy con SCP
         run: |
           scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -P ${{ secrets.SSH_PORT }} -r dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_TARGET_PATH }}
+
+      - name: 🔧 Configurar permisos
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "chmod -R 755 ${{ secrets.SSH_TARGET_PATH }}"
 
       - name: ✅ Verificar deploy
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "ls -la ${{ secrets.SSH_TARGET_PATH }}"
 
       - name: 🎉 Deploy completado
-        run: echo "✅ Deploy completado exitosamente"
+        run: echo "✅ Deploy completado - https://transportesaraucaria.cl"
