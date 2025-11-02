@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -83,7 +89,9 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 		if (!reservaId) return;
 
 		try {
-			const response = await fetch(`${API_URL}/api/reservas/${reservaId}/productos`);
+			const response = await fetch(
+				`${API_URL}/api/reservas/${reservaId}/productos`
+			);
 			if (!response.ok) {
 				throw new Error("Error al cargar productos de la reserva");
 			}
@@ -102,17 +110,20 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 			setError(null);
 			setSuccess(null);
 
-			const response = await fetch(`${API_URL}/api/reservas/${reservaId}/productos`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					productoId,
-					cantidad,
-					notas,
-				}),
-			});
+			const response = await fetch(
+				`${API_URL}/api/reservas/${reservaId}/productos`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						productoId,
+						cantidad,
+						notas,
+					}),
+				}
+			);
 
 			if (!response.ok) {
 				const errorData = await response.json();
@@ -121,10 +132,10 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 
 			const data = await response.json();
 			setSuccess("Producto agregado exitosamente");
-			
+
 			// Recargar productos de la reserva
 			await cargarProductosReserva();
-			
+
 			// Cerrar diálogo después de 1 segundo
 			setTimeout(() => {
 				setDialogAbierto(false);
@@ -160,7 +171,7 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 
 			setSuccess("Producto eliminado exitosamente");
 			await cargarProductosReserva();
-			
+
 			setTimeout(() => setSuccess(null), 3000);
 		} catch (err) {
 			setError(err.message);
@@ -175,7 +186,7 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 			cargarProductos();
 			cargarProductosReserva();
 		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [reservaId, puedeAgregarProductos]);
 
 	// Notificar al padre cuando el total de productos cambie
@@ -262,11 +273,10 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 								<div className="flex items-center gap-3 flex-1">
 									{getIconoCategoria(pr.producto?.categoria)}
 									<div className="flex-1">
-										<p className="font-medium text-sm">
-											{pr.producto?.nombre}
-										</p>
+										<p className="font-medium text-sm">{pr.producto?.nombre}</p>
 										<p className="text-xs text-muted-foreground">
-											Cantidad: {pr.cantidad} x {formatCurrency(pr.precioUnitario)}
+											Cantidad: {pr.cantidad} x{" "}
+											{formatCurrency(pr.precioUnitario)}
 										</p>
 										{pr.notas && (
 											<p className="text-xs text-muted-foreground italic">
@@ -318,7 +328,9 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 							{categorias.map((cat) => (
 								<Button
 									key={cat}
-									variant={categoriaSeleccionada === cat ? "default" : "outline"}
+									variant={
+										categoriaSeleccionada === cat ? "default" : "outline"
+									}
 									size="sm"
 									onClick={() => setCategoriaSeleccionada(cat)}
 								>
@@ -401,7 +413,9 @@ function ProductoCard({ producto, onAgregar, loading }) {
 								type="number"
 								min="1"
 								value={cantidad}
-								onChange={(e) => setCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+								onChange={(e) =>
+									setCantidad(Math.max(1, parseInt(e.target.value) || 1))
+								}
 								className="w-16 text-center"
 							/>
 							<Button

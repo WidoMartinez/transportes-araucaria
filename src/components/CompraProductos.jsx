@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import {
-	Card,
-	CardContent,
-} from "./ui/card";
-import {
-	AlertCircle,
-	Loader2,
-	CreditCard,
-} from "lucide-react";
+import { Card, CardContent } from "./ui/card";
+import { AlertCircle, Loader2, CreditCard } from "lucide-react";
 
 import { getBackendUrl } from "../lib/backend";
 import ProductosReserva from "./ProductosReserva";
 
-const API_URL =
-        getBackendUrl() || "https://transportes-araucaria.onrender.com";
+const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function CompraProductos() {
 	const [reserva, setReserva] = useState(null);
@@ -55,8 +47,8 @@ function CompraProductos() {
 				throw new Error("Error al buscar la reserva");
 			}
 
-            const data = await response.json();
-            setReserva(data);
+			const data = await response.json();
+			setReserva(data);
 		} catch (err) {
 			setError(err.message);
 		}
@@ -68,8 +60,7 @@ function CompraProductos() {
 			setPaying(true);
 			setPayError(null);
 			const apiBase =
-				getBackendUrl() ||
-				"https://transportes-araucaria.onrender.com";
+				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 			if (!monto || monto <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
@@ -108,7 +99,6 @@ function CompraProductos() {
 			currency: "CLP",
 		}).format(amount || 0);
 	};
-
 
 	const getPaymentOptions = () => {
 		const saldoPendiente = parseFloat(reserva?.saldo_pendiente || 0);
@@ -167,7 +157,6 @@ function CompraProductos() {
 				{/* Resultado */}
 				{reserva && (
 					<div className="space-y-6">
-
 						{/* Productos Adicionales */}
 						<ProductosReserva
 							reservaId={reserva.id}

@@ -30,8 +30,7 @@ import {
 import { getBackendUrl } from "../lib/backend";
 import ProductosReserva from "./ProductosReserva";
 
-const API_URL =
-        getBackendUrl() || "https://transportes-araucaria.onrender.com";
+const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function ConsultarReserva() {
 	const [codigoReserva, setCodigoReserva] = useState("");
@@ -50,7 +49,7 @@ function ConsultarReserva() {
 
 		setLoading(true);
 		setError(null);
-        setReserva(null);
+		setReserva(null);
 
 		try {
 			const response = await fetch(
@@ -64,8 +63,8 @@ function ConsultarReserva() {
 				throw new Error("Error al buscar la reserva");
 			}
 
-            const data = await response.json();
-            setReserva(data);
+			const data = await response.json();
+			setReserva(data);
 		} catch (err) {
 			setError(err.message);
 		} finally {
@@ -79,8 +78,7 @@ function ConsultarReserva() {
 			setPaying(true);
 			setPayError(null);
 			const apiBase =
-				getBackendUrl() ||
-				"https://transportes-araucaria.onrender.com";
+				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 			if (!monto || monto <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
@@ -188,7 +186,6 @@ function ConsultarReserva() {
 		return <Badge variant={config.variant}>{config.label}</Badge>;
 	};
 
-    
 	const getPaymentOptions = () => {
 		if (!reserva || reserva.estadoPago === "pagado") {
 			return [];
@@ -320,8 +317,8 @@ function ConsultarReserva() {
 								</Button>
 							</div>
 						</div>
-                    </CardContent>
-                </Card>
+					</CardContent>
+				</Card>
 
 				{/* Error */}
 				{error && (
