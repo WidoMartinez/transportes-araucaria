@@ -119,7 +119,7 @@ function ProductosReserva({ reservaId, reserva, onTotalProductosChange }) {
 				throw new Error(errorData.error || "Error al agregar producto");
 			}
 
-			const data = await response.json();
+			await response.json();
 			setSuccess("Producto agregado exitosamente");
 			
 			// Recargar productos de la reserva
