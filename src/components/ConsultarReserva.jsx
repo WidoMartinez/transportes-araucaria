@@ -73,22 +73,16 @@ function ConsultarReserva() {
 		}
 	};
 
-	const continuarPago = async (tipo = "abono") => {
+	const continuarPago = async (tipo, monto) => {
 		if (!reserva) return;
 		try {
 			setPaying(true);
 			setPayError(null);
-                        const apiBase =
-                                getBackendUrl() || "https://transportes-araucaria-backend.onrender.com";
-			const amount =
-				tipo === "total"
-					? Number(reserva.totalConDescuento || 0)
-					: tipo === "saldo"
-					? Number(reserva.saldoPendiente || 0)
-					: tipo === "saldo_total"
-					? saldoTotalGeneral
-					: Number(reserva.abonoSugerido || 0);
-			if (!amount || amount <= 0) {
+			const apiBase =
+				getBackendUrl() ||
+				"https://transportes-araucaria-backend.onrender.com";
+
+			if (!monto || monto <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
 			const description =
@@ -195,29 +189,79 @@ function ConsultarReserva() {
 	};
 
     
+	const getPaymentOptions = () => {
+		if (!reserva || reserva.estadoPago === "pagado") {
+			return [];
+		}
 
-    // Mostrar botón de saldo solo cuando ya existe pago parcial
-    const canPaySaldo =
-        reserva &&
-        (reserva.estado === "confirmada" || reserva.estado === "completada") &&
-        reserva.estadoPago === "parcial" &&
-        Number(reserva.saldoPendiente) > 0;
+		const saldoPendiente = Number(reserva.saldoPendiente) || 0;
+		const totalProds = Number(totalProductos) || 0;
+		const saldoTotalGeneral = saldoPendiente + totalProds;
 
-    // En ese escenario, debe ser la única opción disponible
-    const shouldShowOnlySaldo = canPaySaldo && !canPayTotalGeneral;
+		// Escenario 1: Pagar el saldo total general (reserva confirmada con saldo y/o productos)
+		if (
+			(reserva.estado === "confirmada" || reserva.estado === "completada") &&
+			saldoTotalGeneral > 0
+		) {
+			return [
+				{
+					tipo: "saldo_total",
+					monto: saldoTotalGeneral,
+					texto: `Pagar Saldo Total del Viaje (${formatCurrency(
+						saldoTotalGeneral
+					)})`,
+					variant: "default",
+					className: "bg-blue-600 hover:bg-blue-700 animate-pulse",
+				},
+			];
+		}
 
-	// Calcular el saldo total general (saldo pendiente + productos) usando useMemo
-	const saldoTotalGeneral = useMemo(() => {
-		if (!reserva) return 0;
-		return (Number(reserva.saldoPendiente) || 0) + (Number(totalProductos) || 0);
-	}, [reserva, totalProductos]);
+		// Escenario 2: Pagar solo el saldo pendiente de la reserva (sin productos)
+		if (
+			reserva.estadoPago === "parcial" &&
+			saldoPendiente > 0 &&
+			totalProds === 0
+		) {
+			return [
+				{
+					tipo: "saldo",
+					monto: saldoPendiente,
+					texto: `Pagar saldo pendiente (${formatCurrency(saldoPendiente)})`,
+					variant: "secondary",
+				},
+			];
+		}
 
-	// El botón de "Pagar Saldo Total" debe mostrarse solo cuando:
-	// 1. Hay productos agregados O un saldo pendiente en una reserva ya confirmada
-	const canPayTotalGeneral =
-		reserva &&
-		saldoTotalGeneral > 0 &&
-		(reserva.estado === "confirmada" || reserva.estado === "completada");
+		// Escenario 3: Pago inicial (reserva no confirmada)
+		if (
+			reserva.estado === "pendiente" ||
+			reserva.estado === "pendiente_detalles"
+		) {
+			const options = [];
+			if (reserva.abonoSugerido > 0) {
+				options.push({
+					tipo: "abono",
+					monto: reserva.abonoSugerido,
+					texto: "Continuar con el pago (40%)",
+					variant: "default",
+					className: "bg-green-600 hover:bg-green-700",
+				});
+			}
+			if (reserva.totalConDescuento > 0) {
+				options.push({
+					tipo: "total",
+					monto: reserva.totalConDescuento,
+					texto: "Pagar el 100%",
+					variant: "outline",
+				});
+			}
+			return options;
+		}
+
+		return [];
+	};
+
+	const paymentOptions = getPaymentOptions();
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
@@ -477,64 +521,29 @@ function ConsultarReserva() {
 											</div>
 										)}
 										<div className="flex flex-wrap gap-3">
-											{!shouldShowOnlySaldo && !canPayTotalGeneral && (
-											<Button
-												onClick={() => continuarPago("abono")}
-												disabled={paying || !reserva.abonoSugerido}
-												className="bg-green-600 hover:bg-green-700 gap-2"
-											>
-												{paying ? (
-													<>
-														<Loader2 className="w-4 h-4 animate-spin" />
-														Generando pago...
-													</>
-												) : (
-													<>
-														<CreditCard className="w-4 h-4" />
-														Continuar con el pago (40%)
-													</>
-												)}
-											</Button>
-											)}
-											{!shouldShowOnlySaldo && !canPayTotalGeneral && (
-											<Button
-												variant="outline"
-												onClick={() => continuarPago("total")}
-												disabled={paying}
-												className="gap-2"
-											>
-												<CreditCard className="w-4 h-4" />
-												Pagar el 100%
-											</Button>
-											)}
-
-                                            {/* Botón para pagar saldo pendiente solo si hay pago parcial confirmado */}
-                                            {canPaySaldo && (
-                                                <Button
-                                                    variant="secondary"
-                                                    onClick={() => continuarPago("saldo")}
-                                                    disabled={paying}
-                                                    className="gap-2"
-                                                >
-                                                    <CreditCard className="w-4 h-4" />
-                                                    Pagar saldo pendiente (
-                                                    {formatCurrency(reserva.saldoPendiente)})
-                                                </Button>
-                                            )}
-
-											{/* Botón para pagar saldo total general (reserva + productos) */}
-											{canPayTotalGeneral && (
+											{paymentOptions.map((option) => (
 												<Button
-													variant="default"
-													onClick={() => continuarPago("saldo_total")}
+													key={option.tipo}
+													onClick={() =>
+														continuarPago(option.tipo, option.monto)
+													}
 													disabled={paying}
-													className="gap-2 bg-blue-600 hover:bg-blue-700 animate-pulse"
+													variant={option.variant}
+													className={`gap-2 ${option.className || ""}`}
 												>
-													<CreditCard className="w-4 h-4" />
-													Pagar Saldo Total del Viaje (
-													{formatCurrency(saldoTotalGeneral)})
+													{paying ? (
+														<>
+															<Loader2 className="w-4 h-4 animate-spin" />
+															Generando pago...
+														</>
+													) : (
+														<>
+															<CreditCard className="w-4 h-4" />
+															{option.texto}
+														</>
+													)}
 												</Button>
-											)}
+											))}
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
