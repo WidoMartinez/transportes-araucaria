@@ -35,7 +35,6 @@ import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
-import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import { getBackendUrl } from "./lib/backend";
 
@@ -187,20 +186,11 @@ const resolveIsPayCodeView = () => {
 	return hash === "#pagar-con-codigo" || hash === "#pago-codigo";
 };
 
-// Resolver si la URL es para comprar productos
-const resolveIsCompraProductosView = () => {
-	const hash = window.location.hash;
-	return hash.startsWith("#comprar-productos/");
-};
-
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
 	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
-	const [isCompraProductosView, setIsCompraProductosView] = useState(
-		resolveIsCompraProductosView
-	);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -282,18 +272,6 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncPayCode);
 			window.removeEventListener("popstate", syncPayCode);
-		};
-	}, []);
-
-	// Sincronizar vista de compra de productos
-	useEffect(() => {
-		const syncCompraProductos = () =>
-			setIsCompraProductosView(resolveIsCompraProductosView());
-		window.addEventListener("hashchange", syncCompraProductos);
-		window.addEventListener("popstate", syncCompraProductos);
-		return () => {
-			window.removeEventListener("hashchange", syncCompraProductos);
-			window.removeEventListener("popstate", syncCompraProductos);
 		};
 	}, []);
 
@@ -1528,10 +1506,6 @@ function App() {
 
 	if (isPayCodeView) {
 		return <PagarConCodigo />;
-	}
-
-	if (isCompraProductosView) {
-		return <CompraProductos />;
 	}
 
 	// Vista para completar detalles después del pago
