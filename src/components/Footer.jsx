@@ -33,7 +33,7 @@ function Footer() {
 					<div className="space-y-4">
 						<img
 							src={logoBlanco}
-							alt="Transportes Araucanía Logo"
+                                                     alt="Transportes Araucaria Logo"
 							className="h-20"
 						/>
 						<p className="text-muted-foreground">
@@ -52,6 +52,7 @@ function Footer() {
 							<FooterLink href="#servicios">Servicios</FooterLink>
 							<FooterLink href="#destinos">Destinos</FooterLink>
 							<FooterLink href="#contacto">Contacto</FooterLink>
+							<FooterLink href="#consultar-reserva">Consultar Reserva</FooterLink>
 							<FooterLink href="#">Términos y Condiciones</FooterLink>
 						</nav>
 					</div>
@@ -97,7 +98,7 @@ function Footer() {
 			<div className="border-t border-gray-800">
 				<div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
 					<p>
-						&copy; {new Date().getFullYear()} Transportes Araucanía. Todos los
+                                            &copy; {new Date().getFullYear()} Transportes Araucaria. Todos los
 						derechos reservados.
 					</p>
 					<p className="mt-4 md:mt-0">

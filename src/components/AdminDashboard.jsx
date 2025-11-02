@@ -1,15 +1,20 @@
-import { useMemo } from "react";
+import { useState } from "react";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
 import AdminReservas from "./AdminReservas";
 import AdminVehiculos from "./AdminVehiculos";
 import AdminConductores from "./AdminConductores";
-import AdminTarifaDinamica from "./AdminTarifaDinamica";
+import AdminCodigosPago from "./AdminCodigosPago";
+import AdminGastos from "./AdminGastos";
+import AdminEstadisticas from "./AdminEstadisticas";
+import AdminProductos from "./AdminProductos";
 
 function AdminDashboard() {
-  const url = new URL(window.location.href);
-  const currentPanel = url.searchParams.get("panel") || "pricing";
+  const [active, setActive] = useState(() => {
+    const url = new URL(window.location.href);
+    return url.searchParams.get("panel") || "pricing";
+  });
 
   const setPanel = (panel) => {
     const u = new URL(window.location.href);
@@ -19,19 +24,38 @@ function AdminDashboard() {
       u.searchParams.set("panel", panel);
     }
     window.history.replaceState({}, "", u.toString());
+    setActive(panel);
   };
-
-  const active = useMemo(() => currentPanel, [currentPanel]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className={`${active === "reservas" ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
+      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
         <h1 className="text-2xl font-semibold mb-4">Panel Administrativo</h1>
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <button
             className={`px-3 py-2 rounded border ${active === "reservas" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("reservas")}
           >Reservas</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "vehiculos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("vehiculos")}
+          >Vehículos</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "conductores" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("conductores")}
+          >Conductores</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "productos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("productos")}
+          >Productos</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "gastos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("gastos")}
+          >Gastos</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "estadisticas" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("estadisticas")}
+          >Estadísticas</button>
           <button
             className={`px-3 py-2 rounded border ${active === "pricing" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("pricing")}
@@ -45,38 +69,29 @@ function AdminDashboard() {
             onClick={() => setPanel("codigos-mejorado")}
           >Códigos (Mejorado)</button>
           <button
-            className={`px-3 py-2 rounded border ${active === "vehiculos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
-            onClick={() => setPanel("vehiculos")}
-          >Vehículos</button>
-          <button
-            className={`px-3 py-2 rounded border ${active === "conductores" ? "bg-primary text-primary-foreground" : "bg-white"}`}
-            onClick={() => setPanel("conductores")}
-          >Conductores</button>
-          <button
-            className={`px-3 py-2 rounded border ${active === "tarifa-dinamica" ? "bg-primary text-primary-foreground" : "bg-white"}`}
-            onClick={() => setPanel("tarifa-dinamica")}
-          >Tarifa Dinámica</button>
+            className={`px-3 py-2 rounded border ${active === "codigos-pago" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("codigos-pago")}
+          >Códigos de Pago</button>
         </div>
 
         {active === "reservas" ? (
           <AdminReservas />
-        ) : active === "codigos" ? (
-          <AdminCodigos />
-        ) : active === "codigos-mejorado" ? (
-          <AdminCodigosMejorado />
         ) : active === "vehiculos" ? (
           <AdminVehiculos />
         ) : active === "conductores" ? (
           <AdminConductores />
-        ) : active === "tarifa-dinamica" ? (
-          <AdminTarifaDinamica />
+        ) : active === "productos" ? (
+          <AdminProductos />
+        ) : active === "gastos" ? (
+          <AdminGastos />
+        ) : active === "estadisticas" ? (
+          <AdminEstadisticas />
+        ) : active === "codigos" ? (
+          <AdminCodigos />
+        ) : active === "codigos-mejorado" ? (
+          <AdminCodigosMejorado />
+        ) : active === "codigos-pago" ? (
+          <AdminCodigosPago />
         ) : (
           <AdminPricing />
         )}
-      </div>
-    </div>
-  );
-}
-
-export default AdminDashboard;
-

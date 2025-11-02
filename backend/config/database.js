@@ -1,3 +1,4 @@
+/* global process */
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 
@@ -15,8 +16,17 @@ const sequelize = new Sequelize({
 	pool: {
 		max: 5,
 		min: 0,
-		acquire: 30000,
+		acquire: 60000, // Aumentado a 60 segundos
 		idle: 10000,
+	},
+	// Evitar conversiones automáticas de zona horaria que pueden desplazar DATE/DATEONLY
+	timezone: process.env.DB_TIMEZONE || "-04:00",
+	dialectOptions: {
+		connectTimeout: 60000, // Timeout de conexión: 60 segundos
+		timezone: process.env.DB_TIMEZONE || "-04:00",
+	},
+	retry: {
+		max: 3, // Número máximo de reintentos
 	},
 	define: {
 		timestamps: true,
@@ -38,9 +48,69 @@ export const testConnection = async () => {
 };
 
 // Función para sincronizar los modelos con la base de datos
-export const syncDatabase = async (force = false) => {
+export const syncDatabase = async (force = false, models = []) => {
 	try {
-		await sequelize.sync({ force });
+		// Decidir si permitir alter:
+		// - En producción se deshabilita por seguridad a menos que DB_ALLOW_ALTER=true
+		// - En desarrollo se permite por defecto
+		const allowAlter =
+			(process.env.DB_ALLOW_ALTER && process.env.DB_ALLOW_ALTER === "true") ||
+			process.env.NODE_ENV !== "production";
+
+		// Si se proporcionan modelos específicos, sincronizarlos en orden
+		if (models && models.length > 0) {
+			console.log(`🔄 Sincronizando ${models.length} modelos...`);
+			for (const model of models) {
+				try {
+					// alter: crea/modifica solo si está permitido y no se forza recreate
+					await model.sync({ force, alter: allowAlter && !force });
+					console.log(`✅ Modelo ${model.name} sincronizado`);
+				} catch (modelError) {
+					console.error(
+						`❌ Error sincronizando modelo ${model.name}:`,
+						modelError.message
+					);
+					// Intentar sin alter si falla (por ejemplo, por límite de índices)
+					try {
+						await model.sync({ force: false, alter: false });
+						console.log(
+							`✅ Modelo ${model.name} creado/sincronizado sin alter`
+						);
+					} catch (retryError) {
+						console.error(
+							`❌ Error crítico en ${model.name}:`,
+							retryError.message
+						);
+					}
+				}
+			}
+		} else {
+			// Sincronización general de todos los modelos registrados
+			// Intentar con alter solo si está permitido; si falla, reintentar sin alter
+			const initialAlter = allowAlter && !force;
+			try {
+				await sequelize.sync({ force, alter: initialAlter });
+			} catch (error) {
+				console.error(
+					`⚠️ Error al sincronizar con alter=${initialAlter}:`,
+					error.message
+				);
+				// Si el fallo es por demasiados índices o cualquier otro problema al aplicar cambios,
+				// reintentar sin alter para evitar ejecutar ALTER TABLE que puedan fallar en producción.
+				try {
+					await sequelize.sync({ force, alter: false });
+					console.log(
+						"✅ Sincronización completada sin usar alter (seguro para producción)."
+					);
+				} catch (retryErr) {
+					console.error(
+						"❌ Reintento de sincronización sin alter también falló:",
+						retryErr
+					);
+					throw retryErr;
+				}
+			}
+		}
 		console.log("✅ Base de datos sincronizada correctamente.");
 		return true;
 	} catch (error) {

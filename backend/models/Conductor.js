@@ -1,9 +1,7 @@
+// backend/models/Conductor.js
 import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
 
-/**
- * Modelo para gestionar conductores/choferes
- */
 const Conductor = sequelize.define(
 	"Conductor",
 	{
@@ -12,69 +10,59 @@ const Conductor = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
+		nombre: {
+			type: DataTypes.STRING(255),
+			allowNull: false,
+			validate: {
+				notEmpty: true,
+			},
+		},
 		rut: {
 			type: DataTypes.STRING(20),
 			allowNull: false,
 			unique: true,
-			comment: "RUT del conductor (formato: 12345678-9)",
-		},
-		nombre: {
-			type: DataTypes.STRING(100),
-			allowNull: false,
-			comment: "Nombre completo del conductor",
+			validate: {
+				notEmpty: true,
+			},
 		},
 		telefono: {
 			type: DataTypes.STRING(50),
 			allowNull: false,
-			comment: "Teléfono de contacto",
+			validate: {
+				notEmpty: true,
+			},
 		},
 		email: {
-			type: DataTypes.STRING(100),
+			type: DataTypes.STRING(255),
 			allowNull: true,
-			comment: "Email del conductor",
+			validate: {
+				isEmail: true,
+			},
 		},
-		licenciaConducir: {
-			type: DataTypes.STRING(20),
-			allowNull: false,
-			comment: "Número de licencia de conducir",
-		},
-		tipoLicencia: {
-			type: DataTypes.ENUM("clase_b", "clase_a1", "clase_a2", "clase_a3", "clase_a4", "clase_a5"),
-			allowNull: false,
-			defaultValue: "clase_b",
-			comment: "Tipo de licencia de conducir chilena",
+		licencia: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
 		},
 		fechaVencimientoLicencia: {
 			type: DataTypes.DATE,
+			allowNull: true,
+		},
+		estado: {
+			type: DataTypes.ENUM("disponible", "ocupado", "descanso", "inactivo"),
 			allowNull: false,
-			comment: "Fecha de vencimiento de la licencia",
-		},
-		activo: {
-			type: DataTypes.BOOLEAN,
-			defaultValue: true,
-			comment: "Si el conductor está activo para asignaciones",
-		},
-		fechaIngreso: {
-			type: DataTypes.DATE,
-			allowNull: true,
-			defaultValue: DataTypes.NOW,
-			comment: "Fecha de ingreso del conductor",
-		},
-		direccion: {
-			type: DataTypes.STRING(255),
-			allowNull: true,
-			comment: "Dirección del conductor",
-		},
-		calificacionPromedio: {
-			type: DataTypes.DECIMAL(3, 2),
-			allowNull: true,
-			defaultValue: 5.0,
-			comment: "Calificación promedio del conductor (0-5)",
+			defaultValue: "disponible",
 		},
 		observaciones: {
 			type: DataTypes.TEXT,
 			allowNull: true,
-			comment: "Notas adicionales sobre el conductor",
+		},
+		createdAt: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+		},
+		updatedAt: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
 		},
 	},
 	{
@@ -82,8 +70,7 @@ const Conductor = sequelize.define(
 		timestamps: true,
 		indexes: [
 			{ fields: ["rut"], unique: true },
-			{ fields: ["activo"] },
-			{ fields: ["licenciaConducir"] },
+			{ fields: ["estado"] },
 		],
 	}
 );

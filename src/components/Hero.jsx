@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
@@ -17,8 +17,10 @@ import {
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
-import merPago from "../assets/formasPago/mp.png";
 import CodigoDescuento from "./CodigoDescuento";
+import ContinuarReserva from "./ContinuarReserva";
+import CompletarDetalles from "./CompletarDetalles";
+import { getBackendUrl } from "../lib/backend";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -54,7 +56,7 @@ function Hero({
 	promotionDiscountRate,
 	roundTripDiscountRate,
 	personalizedDiscountRate,
-	// descuentosPersonalizados está disponible pero no se utiliza directamente
+	// descuentosPersonalizados, // No usado en este componente
 	activePromotion,
 	reviewChecklist,
 	setReviewChecklist,
@@ -78,6 +80,12 @@ function Hero({
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
 	const [discountUpdated, setDiscountUpdated] = useState(false);
+	const [showContinuarReserva, setShowContinuarReserva] = useState(false);
+	const [showCompletarDetalles, setShowCompletarDetalles] = useState(false);
+	const [reservaIdParaCompletar, setReservaIdParaCompletar] = useState(null);
+	const [codigoReserva, setCodigoReserva] = useState("");
+	const [buscandoReserva, setBuscandoReserva] = useState(false);
+	const [errorCodigoReserva, setErrorCodigoReserva] = useState("");
 
 	// Generar opciones de tiempo
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
@@ -88,6 +96,108 @@ function Hero({
 			...prev,
 			[field]: value,
 		}));
+	};
+
+	// Manejadores para continuar con reserva
+	const handleCompletarReserva = (reservaId) => {
+		setReservaIdParaCompletar(reservaId);
+		setShowContinuarReserva(false);
+		setShowCompletarDetalles(true);
+	};
+
+	const handlePayReservation = (reserva) => {
+		// Cerrar el diálogo de continuar reserva
+		setShowContinuarReserva(false);
+		
+		// Pre-llenar el formulario con los datos de la reserva
+		setFormData({
+			nombre: reserva.nombre || "",
+			telefono: reserva.telefono || "",
+			email: reserva.email || "",
+			origen: reserva.origen || "Aeropuerto La Araucanía",
+			destino: reserva.destino || "",
+			fecha: reserva.fecha || "",
+			hora: reserva.hora || "",
+			pasajeros: reserva.pasajeros?.toString() || "1",
+			numeroVuelo: reserva.numeroVuelo || "",
+			hotel: reserva.hotel || "",
+			equipajeEspecial: reserva.equipajeEspecial || "",
+			sillaInfantil: reserva.sillaInfantil ? "si" : "no",
+			mensaje: reserva.observaciones || "",
+			idaVuelta: Boolean(reserva.idaVuelta),
+			fechaRegreso: reserva.fechaRegreso || "",
+			horaRegreso: reserva.horaRegreso || "",
+			otroOrigen: "",
+			otroDestino: "",
+		});
+
+		// Abrir el módulo de reserva y avanzar al paso de pago
+		setShowBookingModule(true);
+		setCurrentStep(2); // Ir directamente al paso de confirmación/pago
+	};
+
+	const handleCancelarCompletarDetalles = () => {
+		setShowCompletarDetalles(false);
+		setReservaIdParaCompletar(null);
+		setShowContinuarReserva(false);
+	};
+
+	// Función para continuar con código de reserva desde el módulo
+	const handleContinuarConCodigo = async () => {
+		if (!codigoReserva.trim()) {
+			setErrorCodigoReserva("Por favor, ingresa un código de reserva");
+			return;
+		}
+
+		setBuscandoReserva(true);
+		setErrorCodigoReserva("");
+
+		try {
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const response = await fetch(`${apiUrl}/api/reservas/${codigoReserva.trim()}`);
+
+			if (!response.ok) {
+				if (response.status === 404) {
+					throw new Error("No se encontró una reserva con ese código");
+				}
+				throw new Error("Error al buscar la reserva");
+			}
+
+			const data = await response.json();
+			const reserva = data.reserva;
+
+			// Pre-llenar el formulario con los datos de la reserva
+			setFormData({
+				nombre: reserva.nombre || "",
+				telefono: reserva.telefono || "",
+				email: reserva.email || "",
+				origen: reserva.origen || "Aeropuerto La Araucanía",
+				destino: reserva.destino || "",
+				fecha: reserva.fecha || "",
+				hora: reserva.hora || "",
+				pasajeros: reserva.pasajeros?.toString() || "1",
+				numeroVuelo: reserva.numeroVuelo || "",
+				hotel: reserva.hotel || "",
+				equipajeEspecial: reserva.equipajeEspecial || "",
+				sillaInfantil: reserva.sillaInfantil ? "si" : "no",
+				mensaje: reserva.observaciones || "",
+				idaVuelta: Boolean(reserva.idaVuelta),
+				fechaRegreso: reserva.fechaRegreso || "",
+				horaRegreso: reserva.horaRegreso || "",
+				otroOrigen: "",
+				otroDestino: "",
+			});
+
+			// Avanzar directamente al paso 2 (pagar)
+			setCurrentStep(2);
+			setCodigoReserva("");
+			setErrorCodigoReserva("");
+		} catch (err) {
+			console.error("Error buscando reserva:", err);
+			setErrorCodigoReserva(err.message || "No se pudo cargar la información de la reserva");
+		} finally {
+			setBuscandoReserva(false);
+		}
 	};
 
 	// Mostrar indicador cuando se actualizan los descuentos
@@ -402,13 +512,6 @@ function Hero({
 				subtitle: "Webpay, tarjetas y transferencia",
 				image: flow,
 			},
-			{
-				id: "mercadopago",
-				gateway: "mercadopago",
-				title: "Mercado Pago",
-				subtitle: "Tarjetas y billetera Mercado Pago",
-				image: merPago,
-			},
 		],
 		[]
 	);
@@ -472,7 +575,7 @@ function Hero({
 			{/* Overlay que cubre toda la imagen de fondo */}
 			<div className="absolute inset-0 bg-black/50"></div>
 			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
-				{!showBookingModule && (
+				{!showBookingModule && !showContinuarReserva && !showCompletarDetalles && (
 					<>
 						<h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
 							Traslados Privados Aeropuerto La Araucanía
@@ -505,7 +608,7 @@ function Hero({
 					</>
 				)}
 
-				{!showBookingModule && (
+				{!showBookingModule && !showContinuarReserva && (
 					<div className="flex flex-col items-center justify-center space-y-6">
 						<Button
 							onClick={() => setShowBookingModule(true)}
@@ -516,6 +619,49 @@ function Hero({
 						<p className="text-lg text-white/95 drop-shadow-md font-medium">
 							Proceso rápido y seguro • Sin costos ocultos
 						</p>
+						<div className="flex items-center gap-3 text-white/90">
+							<div className="h-px flex-1 bg-white/30"></div>
+							<span className="text-sm">o</span>
+							<div className="h-px flex-1 bg-white/30"></div>
+						</div>
+						<Button
+							onClick={() => setShowContinuarReserva(true)}
+							variant="outline"
+							className="bg-white/10 hover:bg-white/20 text-white border-white/30 px-8 py-4 text-lg font-semibold backdrop-blur-sm"
+						>
+							📋 Continuar con una reserva existente
+						</Button>
+					</div>
+				)}
+
+				{/* Mostrar módulo de continuar reserva */}
+				{showContinuarReserva && !showCompletarDetalles && (
+					<div className="w-full max-w-4xl mx-auto">
+						<div className="mb-4">
+							<Button
+								variant="ghost"
+								onClick={() => setShowContinuarReserva(false)}
+								className="text-white hover:text-white/80 hover:bg-white/10"
+							>
+								← Volver
+							</Button>
+						</div>
+						<ContinuarReserva
+							onComplete={handleCompletarReserva}
+							onCancel={() => setShowContinuarReserva(false)}
+							onPayReservation={handlePayReservation}
+						/>
+					</div>
+				)}
+
+				{/* Mostrar módulo de completar detalles */}
+				{showCompletarDetalles && reservaIdParaCompletar && (
+					<div className="w-full">
+						<CompletarDetalles
+							reservaId={reservaIdParaCompletar}
+							onComplete={handleCancelarCompletarDetalles}
+							onCancel={handleCancelarCompletarDetalles}
+						/>
 					</div>
 				)}
 
@@ -648,6 +794,71 @@ function Hero({
 							<CardContent className="space-y-8">
 								{currentStep === 0 && (
 									<div className="space-y-6">
+										{/* Sección para continuar con código de reserva */}
+										<div className="rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-4">
+											<div className="flex items-center gap-2 mb-3">
+												<Badge variant="outline" className="border-primary text-primary">
+													Opción rápida
+												</Badge>
+												<p className="text-sm font-medium text-foreground">
+													¿Ya tienes una reserva? Continúa al pago
+												</p>
+											</div>
+											<div className="flex gap-3">
+												<div className="flex-1">
+													<Input
+														placeholder="Ingresa tu código de reserva (Ej: 12345)"
+														value={codigoReserva}
+														onChange={(e) => {
+															setCodigoReserva(e.target.value);
+															setErrorCodigoReserva("");
+														}}
+														disabled={buscandoReserva}
+														onKeyDown={(e) => {
+															if (e.key === "Enter" && codigoReserva.trim()) {
+																e.preventDefault();
+																handleContinuarConCodigo();
+															}
+														}}
+													/>
+												</div>
+												<Button
+													type="button"
+													onClick={handleContinuarConCodigo}
+													disabled={buscandoReserva || !codigoReserva.trim()}
+													className="whitespace-nowrap"
+												>
+													{buscandoReserva ? (
+														<>
+															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+															Buscando...
+														</>
+													) : (
+														"Ir a pagar"
+													)}
+												</Button>
+											</div>
+											{errorCodigoReserva && (
+												<p className="text-sm text-destructive mt-2">
+													{errorCodigoReserva}
+												</p>
+											)}
+											<p className="text-xs text-muted-foreground mt-2">
+												Si ya iniciaste una reserva, ingresa el código para continuar directamente al pago
+											</p>
+										</div>
+
+										<div className="relative">
+											<div className="absolute inset-0 flex items-center">
+												<span className="w-full border-t" />
+											</div>
+											<div className="relative flex justify-center text-xs uppercase">
+												<span className="bg-background px-2 text-muted-foreground">
+													o completa una nueva reserva
+												</span>
+											</div>
+										</div>
+
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 											<div className="space-y-2">
 												<Label htmlFor="origen-hero">Origen</Label>
@@ -877,33 +1088,6 @@ function Hero({
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
 														<div className="space-y-1 text-sm">
-															{/* Ajustes de tarifa dinámica */}
-															{pricing.tarifaDinamica?.ajustesAplicados && 
-															 pricing.tarifaDinamica.ajustesAplicados.length > 0 && (
-																<div className="border-l-2 border-blue-500 pl-2 mb-2">
-																	<p className="text-xs font-semibold text-blue-700 mb-1">
-																		📊 Tarifa Dinámica ({pricing.tarifaDinamica.diasAnticipacion} días anticipación)
-																	</p>
-																	{pricing.tarifaDinamica.ajustesAplicados.map((ajuste, idx) => (
-																		<p key={idx} className={`text-xs ${ajuste.porcentaje > 0 ? 'text-red-600' : 'text-green-600'}`}>
-																			{ajuste.detalle}: {ajuste.porcentaje > 0 ? '+' : ''}{ajuste.porcentaje}%
-																		</p>
-																	))}
-																	<p className="text-xs font-semibold mt-1">
-																		Ajuste total: {formatCurrency(pricing.ajusteTarifaDinamica || 0)}
-																	</p>
-																</div>
-															)}
-
-															{/* Disponibilidad de vehículos */}
-															{pricing.disponibilidad && !pricing.disponibilidad.hayDisponibilidad && (
-																<div className="border-l-2 border-red-500 pl-2 mb-2">
-																	<p className="text-xs font-semibold text-red-700">
-																		⚠️ No hay vehículos disponibles para esta fecha/hora
-																	</p>
-																</div>
-															)}
-
 															<p className="font-medium text-slate-600">
 																Descuento base ({baseDiscountPercentage}%):{" "}
 																{formatCurrency(pricing.descuentoBase)}
@@ -944,9 +1128,9 @@ function Hero({
 																	Promo activa:{" "}
 																	{activePromotion.descripcion ||
 																		`Descuento ${activePromotion.descuentoPorcentaje}%`}
-																	{promotionDetails
-																		? ` Â· ${promotionDetails}`
-																		: ""}
+																{promotionDetails
+																	? ` - ${promotionDetails}`
+																	: ""}
 																</p>
 															)}
 														</div>
@@ -1464,7 +1648,7 @@ function Hero({
 													<p className="text-sm font-medium text-foreground">
 														Selecciona tu medio de pago
 													</p>
-													<div className="grid gap-4 md:grid-cols-2">
+													<div className={`grid gap-4 ${paymentMethods.length === 1 ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
 														{paymentMethods.map((method) => {
 															const isSelected = selectedMethod === method.id;
 															const methodLoading =

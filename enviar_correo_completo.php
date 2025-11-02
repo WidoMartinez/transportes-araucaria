@@ -47,7 +47,8 @@ $reservasFile = 'reservas_data.json';
 /**
  * Función para guardar reserva en archivo JSON
  */
-function guardarReservaEnArchivo($archivo, $reserva) {
+function guardarReservaEnArchivo($archivo, $reserva)
+{
     // Leer reservas existentes
     $reservas = [];
     if (file_exists($archivo)) {
@@ -57,25 +58,25 @@ function guardarReservaEnArchivo($archivo, $reserva) {
             $reservas = $reservasExistentes;
         }
     }
-    
+
     // Agregar metadatos a la reserva
     $reserva['id'] = uniqid('RES_', true);
     $reserva['timestamp'] = date('Y-m-d H:i:s');
     $reserva['fecha_registro'] = date('Y-m-d H:i:s');
     $reserva['ip_address'] = $_SERVER['REMOTE_ADDR'] ?? 'Desconocida';
     $reserva['user_agent'] = $_SERVER['HTTP_USER_AGENT'] ?? 'Desconocido';
-    
+
     // Agregar la nueva reserva al inicio del array
     array_unshift($reservas, $reserva);
-    
+
     // Mantener solo las últimas 1000 reservas para evitar archivos muy grandes
     if (count($reservas) > 1000) {
         $reservas = array_slice($reservas, 0, 1000);
     }
-    
+
     // Guardar en archivo
     $resultado = file_put_contents($archivo, json_encode($reservas, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    
+
     return $resultado !== false;
 }
 
@@ -124,6 +125,7 @@ $totalConDescuento = $data['totalConDescuento'] ?? $precio;
 // Datos adicionales del formulario
 $otroOrigen = htmlspecialchars($data['otroOrigen'] ?? '');
 $otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
+$codigoReserva = htmlspecialchars($data['codigoReserva'] ?? '');
 
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 $formattedTotalConDescuento = $totalConDescuento ? '$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP' : 'A consultar';
@@ -176,16 +178,34 @@ $emailHtml = "
         <h1 style='margin: 0; font-size: 28px; font-weight: 700;'>🚐 Nueva Reserva de Transfer</h1>
         <p style='margin: 10px 0 5px; font-size: 16px; opacity: 0.95;'>Fuente: <strong>{$source}</strong></p>
         <p style='margin: 5px 0 0; font-size: 13px; opacity: 0.8;'>" . date('d/m/Y H:i:s') . "</p>
-        <div style='margin-top: 15px; padding: 10px; border-radius: 6px; " . 
-            ($reservaGuardada ? 
-                "background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4);'><span style='font-size: 14px;'>✅ Reserva guardada en sistema</span>" : 
-                "background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.4);'><span style='font-size: 14px;'>⚠️ Reserva NO guardada en sistema</span>"
-            ) . "
+        <div style='margin-top: 15px; padding: 10px; border-radius: 6px; " .
+    ($reservaGuardada ?
+        "background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4);'><span style='font-size: 14px;'>✅ Reserva guardada en sistema</span>" :
+        "background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.4);'><span style='font-size: 14px;'>⚠️ Reserva NO guardada en sistema</span>"
+    ) . "
         </div>
     </div>
 
     <!-- Contenido Principal -->
-    <div style='padding: 30px 25px;'>
+    <div style='padding: 30px 25px;'>";
+
+// Código de Reserva (si existe)
+if (!empty($codigoReserva)) {
+    $emailHtml .= "
+        <!-- Código de Reserva -->
+        <div style='background: #dbeafe; border: 3px solid #3b82f6; border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: center;'>
+            <div style='display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;'>
+                <svg width='24' height='24' fill='#1e40af' viewBox='0 0 24 24'>
+                    <path d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' stroke='#1e40af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'/>
+                </svg>
+                <h3 style='margin: 0; color: #1e40af; font-size: 18px; font-weight: 600;'>Código de Reserva</h3>
+            </div>
+            <p style='margin: 0; font-size: 32px; font-weight: 800; color: #1e3a8a; letter-spacing: 2px; font-family: monospace;'>{$codigoReserva}</p>
+            <p style='margin: 10px 0 0; font-size: 13px; color: #1e40af;'>Guarda este código para consultar tu reserva</p>
+        </div>";
+}
+
+$emailHtml .= "
         <!-- Resumen Financiero -->
         <div style='background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 30px;'>
             <h2 style='margin: 0 0 15px; color: #0c4a6e; font-size: 22px;'>💰 Resumen Financiero</h2>
@@ -268,7 +288,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
         <div style='background: #f0fdf4; border-radius: 10px; padding: 20px; margin-bottom: 25px; border: 1px solid #bbf7d0;'>
             <h2 style='margin: 0 0 15px; color: #14532d; font-size: 20px; border-bottom: 2px solid #bbf7d0; padding-bottom: 10px;'>🎯 Servicios Adicionales</h2>
             <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;'>";
-    
+
     if ($numeroVuelo) {
         $emailHtml .= "
                 <div>
@@ -276,7 +296,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #22c55e;'>{$numeroVuelo}</p>
                 </div>";
     }
-    
+
     if ($hotel) {
         $emailHtml .= "
                 <div>
@@ -284,7 +304,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #22c55e;'>{$hotel}</p>
                 </div>";
     }
-    
+
     if ($equipajeEspecial) {
         $emailHtml .= "
                 <div>
@@ -292,7 +312,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #22c55e;'>{$equipajeEspecial}</p>
                 </div>";
     }
-    
+
     if ($sillaInfantil === 'si') {
         $emailHtml .= "
                 <div>
@@ -300,7 +320,7 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #22c55e;'>✅ Requerida</p>
                 </div>";
     }
-    
+
     $emailHtml .= "
             </div>
         </div>";
@@ -313,7 +333,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         <div style='background: #fefce8; border-radius: 10px; padding: 20px; margin-bottom: 25px; border: 1px solid #fde047;'>
             <h2 style='margin: 0 0 15px; color: #713f12; font-size: 20px; border-bottom: 2px solid #fde047; padding-bottom: 10px;'>💳 Desglose Financiero</h2>
             <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;'>";
-    
+
     if ($precio > 0) {
         $emailHtml .= "
                 <div>
@@ -321,7 +341,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($precio, 0, ',', '.') . " CLP</p>
                 </div>";
     }
-    
+
     if ($descuentoBase > 0) {
         $emailHtml .= "
                 <div>
@@ -329,7 +349,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoBase}%</p>
                 </div>";
     }
-    
+
     if ($descuentoPromocion > 0) {
         $emailHtml .= "
                 <div>
@@ -337,7 +357,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoPromocion}%</p>
                 </div>";
     }
-    
+
     if ($descuentoRoundTrip > 0 && $idaVuelta) {
         $emailHtml .= "
                 <div>
@@ -345,7 +365,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoRoundTrip}%</p>
                 </div>";
     }
-    
+
     if ($descuentoOnline > 0) {
         $emailHtml .= "
                 <div>
@@ -353,7 +373,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoOnline}%</p>
                 </div>";
     }
-    
+
     if ($abonoSugerido > 0) {
         $emailHtml .= "
                 <div>
@@ -361,7 +381,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($abonoSugerido, 0, ',', '.') . " CLP</p>
                 </div>";
     }
-    
+
     if ($saldoPendiente > 0) {
         $emailHtml .= "
                 <div>
@@ -369,7 +389,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
                     <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($saldoPendiente, 0, ',', '.') . " CLP</p>
                 </div>";
     }
-    
+
     $emailHtml .= "
             </div>
         </div>";
@@ -416,7 +436,7 @@ try {
     $mail->CharSet    = 'UTF-8';
 
     // Destinatarios - SOLO AL ADMINISTRADOR, NO AL CLIENTE
-    $mail->setFrom($emailUser, 'Sistema de Reservas - Transportes Araucania');
+    $mail->setFrom($emailUser, 'Sistema de Reservas - Transportes Araucaria');
     $mail->addAddress($emailTo); // Solo tu correo administrativo
     $mail->addReplyTo($email, $nombre); // Para que puedas responder al cliente
 
@@ -426,7 +446,7 @@ try {
     $mail->Body    = $emailHtml;
 
     $mail->send();
-    
+
     // Respuesta exitosa
     echo json_encode([
         'message' => 'Reserva procesada y notificación enviada correctamente.',
@@ -434,7 +454,6 @@ try {
         'id_reserva' => $reservaCompleta['id'] ?? null,
         'correo_cliente' => false // Confirma que NO se envía correo al cliente
     ]);
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -444,4 +463,3 @@ try {
         'correo_cliente' => false
     ]);
 }
-?>

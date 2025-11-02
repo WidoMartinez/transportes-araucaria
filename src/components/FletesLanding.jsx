@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/logo.png";
 import camionford from "../assets/camionford.png";
+import { getBackendUrl } from "../lib/backend";
 
 const initialFormState = {
 	nombre: "",
@@ -141,9 +142,7 @@ Tipo: Flete Nacional`,
 			}
 
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				await fetch(`${apiUrl}/enviar-reserva`, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -327,7 +326,7 @@ Tipo: Flete Nacional`,
 								<div className="rounded-xl border border-border bg-white/80 p-6 shadow-sm">
 									<p className="text-3xl font-bold text-primary">+1.200</p>
 									<p className="text-sm text-muted-foreground">
-										Viajes y fletes coordinados en los Ãºltimos 18 meses para
+										Viajes y fletes coordinados en los últimos 18 meses para
 										pymes y grandes cuentas.
 									</p>
 								</div>

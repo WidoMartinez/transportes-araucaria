@@ -22,6 +22,8 @@ import {
 	Mail,
 } from "lucide-react";
 
+import { getBackendUrl } from "../lib/backend";
+
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
 	const options = [];
@@ -69,9 +71,7 @@ function CompletarDetalles({ reservaId, onComplete, onCancel }) {
 			}
 
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				const response = await fetch(`${apiUrl}/api/reservas/${reservaId}`);
 
 				if (!response.ok) {
@@ -135,9 +135,7 @@ function CompletarDetalles({ reservaId, onComplete, onCancel }) {
 		}
 
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(
 				`${apiUrl}/completar-reserva-detalles/${reservaId}`,
 				{

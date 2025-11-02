@@ -4,6 +4,15 @@ Este directorio contiene scripts de migración para actualizar el esquema de la 
 
 ## 📋 Migraciones Disponibles
 
+### `add-gastos-table.js` ⭐ **NUEVO**
+Crea la tabla `gastos` para registrar gastos asociados a reservas.
+
+**Cambios incluidos:**
+- Crea tabla `gastos` con todos sus campos e índices
+- Relaciones con reservas, conductores y vehículos
+- Índices para optimizar búsquedas
+- Tipos de gasto: comisión Flow, peajes, combustible, conductor, etc.
+
 ### `add-cliente-fields.js`
 Agrega la tabla `clientes` y campos relacionados a la tabla `reservas`.
 
@@ -12,6 +21,15 @@ Agrega la tabla `clientes` y campos relacionados a la tabla `reservas`.
 - Agrega campo `clienteId` a tabla `reservas`
 - Agrega campo `rut` a tabla `reservas`
 - Crea índices para optimizar búsquedas
+
+### `add-codigo-reserva-column.js`
+Agrega el campo `codigo_reserva` único a cada reserva.
+
+**Cambios incluidos:**
+- Agrega columna `codigo_reserva` (VARCHAR(50), UNIQUE)
+- Crea índice único para búsquedas rápidas
+- Genera códigos automáticos para reservas existentes
+- Formato: AR-YYYYMMDD-XXXX (Ej: AR-20251015-0001)
 
 ## 🚀 Cómo Ejecutar una Migración
 
@@ -80,13 +98,20 @@ DESCRIBE clientes;
 ### Verificar campos en reservas
 ```sql
 DESCRIBE reservas;
--- Debe incluir: clienteId, rut
+-- Debe incluir: clienteId, rut, codigo_reserva
+```
+
+### Verificar código de reserva
+```sql
+SELECT id, codigo_reserva, nombre, fecha FROM reservas LIMIT 10;
+-- Todas las reservas deben tener un codigo_reserva único
 ```
 
 ### Verificar índices
 ```sql
 SHOW INDEX FROM clientes;
 SHOW INDEX FROM reservas;
+-- Debe incluir idx_codigo_reserva (UNIQUE)
 ```
 
 ## 📝 Crear una Nueva Migración
@@ -143,6 +168,27 @@ miNuevaMigracion().catch((error) => {
 ### Error: "Access denied"
 - Verifica las credenciales de la base de datos
 - Asegúrate de tener permisos para crear tablas y modificar esquema
+
+## 🎯 Ejecutar Migración del Código de Reserva
+
+**IMPORTANTE:** Esta migración debe ejecutarse en el servidor de Render después de actualizar el código.
+
+```bash
+# En Render Shell o localmente
+cd backend/migrations
+node add-codigo-reserva-column.js
+```
+
+Esta migración:
+1. ✅ Agrega la columna `codigo_reserva` a la tabla `reservas`
+2. ✅ Crea un índice único para el campo
+3. ✅ Genera códigos automáticamente para todas las reservas existentes
+4. ✅ Los códigos nuevos se generarán automáticamente al crear reservas
+
+**Formato de Códigos:**
+- `AR-20251015-0001` (Araucanía - Fecha - Consecutivo del día)
+- `AR-20251015-0002`
+- etc.
 
 ## 📚 Recursos
 

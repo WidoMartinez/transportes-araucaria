@@ -26,6 +26,7 @@ import {
 	RotateCcw,
 	LoaderCircle,
 } from "lucide-react";
+import { getBackendUrl } from "../lib/backend";
 
 function AdminCodigos() {
 	const [codigos, setCodigos] = useState([]);
@@ -56,9 +57,7 @@ function AdminCodigos() {
 	const fetchCodigos = async () => {
 		setLoading(true);
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			console.log("🔍 Cargando códigos desde:", `${apiUrl}/api/codigos`);
 
 			const response = await fetch(`${apiUrl}/api/codigos`);
@@ -91,9 +90,7 @@ function AdminCodigos() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		try {
-			const apiUrl =
-				import.meta.env.VITE_API_URL ||
-				"https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const url = editingCodigo
 				? `${apiUrl}/api/codigos/${editingCodigo.id}`
 				: `${apiUrl}/api/codigos`;
@@ -140,9 +137,7 @@ function AdminCodigos() {
 	const handleDelete = async (id) => {
 		if (confirm("¿Estás seguro de eliminar este código?")) {
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				await fetch(`${apiUrl}/api/codigos/${id}`, { method: "DELETE" });
 				await fetchCodigos();
 			} catch (error) {
@@ -170,9 +165,7 @@ function AdminCodigos() {
 		) {
 			setDeleting(true);
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				const response = await fetch(`${apiUrl}/api/codigos/${deleteId}`, {
 					method: "DELETE",
 				});
@@ -226,9 +219,7 @@ function AdminCodigos() {
 		) {
 			setDeletingUser(true);
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				const url = `${apiUrl}/api/codigos/${selectedCodigo}/usuarios/${selectedUsuario}`;
 				console.log("Debug - Enviando petición a:", url);
 
@@ -276,9 +267,7 @@ function AdminCodigos() {
 		) {
 			setDeletingUser(true);
 			try {
-				const apiUrl =
-					import.meta.env.VITE_API_URL ||
-					"https://transportes-araucaria.onrender.com";
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 				const url = `${apiUrl}/api/codigos/${codigoId}/usuarios/${usuarioId}`;
 				console.log("Debug - Enviando petición directa a:", url);
 

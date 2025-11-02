@@ -4,7 +4,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { MercadoPagoConfig, Preference } from "mercadopago";
 import axios from "axios";
 import crypto from "crypto";
 import { testConnection, syncDatabase } from "./config/database.js";
@@ -18,20 +17,22 @@ import Reserva from "./models/Reserva.js";
 import Cliente from "./models/Cliente.js";
 import Vehiculo from "./models/Vehiculo.js";
 import Conductor from "./models/Conductor.js";
-import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
+import Gasto from "./models/Gasto.js";
+import Producto from "./models/Producto.js";
+import ProductoReserva from "./models/ProductoReserva.js";
+import addPaymentFields from "./migrations/add-payment-fields.js";
+import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
+import CodigoPago from "./models/CodigoPago.js";
+import addAbonoFlags from "./migrations/add-abono-flags.js";
+import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
+import addGastosTable from "./migrations/add-gastos-table.js";
+import addProductosTables from "./migrations/add-productos-tables.js";
+import setupAssociations from "./models/associations.js";
 
 dotenv.config();
 
-// --- DEFINIR RELACIONES ENTRE MODELOS ---
-Reserva.belongsTo(Vehiculo, { foreignKey: 'vehiculoId', as: 'vehiculoAsignado' });
-Reserva.belongsTo(Conductor, { foreignKey: 'conductorId', as: 'conductorAsignado' });
-Vehiculo.hasMany(Reserva, { foreignKey: 'vehiculoId' });
-Conductor.hasMany(Reserva, { foreignKey: 'conductorId' });
-
-// --- CONFIGURACIÓN DE MERCADO PAGO ---
-const client = new MercadoPagoConfig({
-	accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-});
+// Configurar asociaciones entre modelos para habilitar includes en consultas
+setupAssociations();
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -47,6 +48,35 @@ const signParams = (params) => {
 const app = express();
 app.use(express.json());
 
+// Middleware de autenticación para rutas administrativas
+const authAdmin = (req, res, next) => {
+	// TODO: Implementar validación de token/sesión real
+	// Por ahora, verificamos que exista un header de autorización
+	const authHeader = req.headers["authorization"];
+	const adminToken = process.env.ADMIN_TOKEN;
+
+	if (!adminToken) {
+		// Misconfiguration: ADMIN_TOKEN must be set
+		return res.status(500).json({
+			error: "ADMIN_TOKEN no configurado en el entorno del servidor.",
+		});
+	}
+	if (adminToken === "admin-secret-token") {
+		// Insecure default token should not be used
+		return res.status(500).json({
+			error:
+				"ADMIN_TOKEN tiene un valor inseguro por defecto. Cambie la configuración.",
+		});
+	}
+	if (!authHeader || authHeader !== `Bearer ${adminToken}`) {
+		return res.status(401).json({
+			error: "No autorizado. Se requiere autenticación de administrador.",
+		});
+	}
+
+	next();
+};
+
 app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -54,19 +84,51 @@ app.get("/health", (req, res) => {
 const generatePromotionId = () =>
 	`promo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+// Función para validar RUT chileno con dígito verificador (Módulo 11)
+const validarRUT = (rut) => {
+	if (!rut) return false;
+
+	// Eliminar puntos, guiones y espacios
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, "");
+
+	if (rutLimpio.length < 2) return false;
+
+	// Separar cuerpo y dígito verificador
+	const cuerpo = rutLimpio.slice(0, -1);
+	const dv = rutLimpio.slice(-1).toUpperCase();
+
+	// Validar que el cuerpo sea numérico
+	if (!/^\d+$/.test(cuerpo)) return false;
+
+	// Calcular dígito verificador esperado
+	let suma = 0;
+	let multiplicador = 2;
+
+	for (let i = cuerpo.length - 1; i >= 0; i--) {
+		suma += parseInt(cuerpo.charAt(i)) * multiplicador;
+		multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
+	}
+
+	const dvEsperado = 11 - (suma % 11);
+	const dvCalculado =
+		dvEsperado === 11 ? "0" : dvEsperado === 10 ? "K" : dvEsperado.toString();
+
+	return dv === dvCalculado;
+};
+
 // Función para formatear RUT chileno
 const formatearRUT = (rut) => {
 	if (!rut) return null;
-	
+
 	// Eliminar puntos, guiones y espacios
-	const rutLimpio = rut.toString().replace(/[.\-\s]/g, '');
-	
+	const rutLimpio = rut.toString().replace(/[.\-\s]/g, "");
+
 	if (rutLimpio.length < 2) return null;
-	
+
 	// Separar dígito verificador
 	const cuerpo = rutLimpio.slice(0, -1);
 	const dv = rutLimpio.slice(-1).toUpperCase();
-	
+
 	// Formatear sin puntos: XXXXXXXX-X
 	return `${cuerpo}-${dv}`;
 };
@@ -81,6 +143,7 @@ const parsePromotionMetadata = (record) => {
 			? parsed
 			: null;
 	} catch (error) {
+		console.error("Error parsePromotionMetadata:", error);
 		return null;
 	}
 };
@@ -88,6 +151,42 @@ const parsePromotionMetadata = (record) => {
 const toNumber = (value, fallback = 0) => {
 	const parsed = Number(value);
 	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+// Funciones de validación robustas para campos numéricos
+const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
+	const parsed = parseInt(value, 10);
+	if (isNaN(parsed)) {
+		console.warn(
+			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`
+		);
+		return defaultValue;
+	}
+	if (parsed < 1) {
+		console.warn(
+			`⚠️ Valor menor a 1 para ${fieldName}: ${parsed}, usando ${defaultValue}`
+		);
+		return defaultValue;
+	}
+	return parsed;
+};
+
+const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
+	const parsed = parseFloat(value);
+	if (isNaN(parsed)) {
+		console.warn(
+			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`
+		);
+		return defaultValue;
+	}
+	if (parsed < 0) {
+		const fallback = Math.max(0, defaultValue);
+		console.warn(
+			`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${fallback}`
+		);
+		return fallback;
+	}
+	return parsed;
 };
 
 const parseJsonArray = (raw) => {
@@ -107,11 +206,206 @@ const parseJsonArray = (raw) => {
 		try {
 			value = JSON.parse(trimmed);
 		} catch (error) {
+			console.error("Error parseJsonArray:", error);
 			return [];
 		}
 	}
 
 	return Array.isArray(value) ? value : [];
+};
+
+// Normalizar horas aceptando 'HH:MM' o 'HH:MM:SS' y devolviendo 'HH:MM:SS' o null
+const normalizeTimeGlobal = (hora) => {
+	if (!hora && hora !== 0) return null;
+	const str = String(hora).trim();
+	if (str.length === 0) return null;
+	const parts = str.split(":").map((p) => p.padStart(2, "0"));
+	if (parts.length === 2) {
+		return `${parts[0].slice(-2)}:${parts[1].slice(-2)}:00`;
+	}
+	if (parts.length >= 3) {
+		return `${parts[0].slice(-2)}:${parts[1].slice(-2)}:${parts[2].slice(-2)}`;
+	}
+	return null;
+};
+
+// Determinar la clasificación del cliente según reservas completadas
+const obtenerClasificacionCliente = (reservasCompletadas) => {
+	if (!reservasCompletadas || reservasCompletadas <= 0) {
+		return null;
+	}
+	if (reservasCompletadas >= 10) {
+		return "Cliente Élite";
+	}
+	if (reservasCompletadas >= 5) {
+		return "Cliente Premium";
+	}
+	if (reservasCompletadas >= 3) {
+		return "Cliente Frecuente";
+	}
+	// Para 1-2 reservas completadas ya se muestra la etiqueta general "Cliente".
+	// No devolver una clasificación adicional para evitar duplicidad con "Cliente Activo".
+	return null;
+};
+
+// Actualizar métricas y clasificación del cliente después de modificar una reserva
+const actualizarResumenCliente = async (clienteId, transaction) => {
+	if (!clienteId) {
+		return null;
+	}
+
+	const reservasCliente = await Reserva.findAll({
+		where: { clienteId },
+		order: [["created_at", "DESC"]],
+		transaction,
+	});
+
+	if (!reservasCliente || reservasCliente.length === 0) {
+		return null;
+	}
+
+	const totalReservasCliente = reservasCliente.length;
+	const reservasCompletadas = reservasCliente.filter(
+		(reserva) => reserva.estado === "completada"
+	).length;
+	const reservasPagadas = reservasCliente.filter(
+		(reserva) => reserva.estadoPago === "pagado"
+	).length;
+	const totalGastado = reservasCliente
+		.filter((reserva) => reserva.estadoPago === "pagado")
+		.reduce(
+			(suma, reserva) => suma + parseFloat(reserva.totalConDescuento || 0),
+			0
+		);
+
+	const clasificacion = obtenerClasificacionCliente(reservasCompletadas);
+
+	const cliente = await Cliente.findByPk(clienteId, { transaction });
+	if (!cliente) {
+		return null;
+	}
+
+	await cliente.update(
+		{
+			esCliente:
+				reservasPagadas > 0 || reservasCompletadas > 0 || cliente.esCliente,
+			totalReservas: totalReservasCliente,
+			totalPagos: reservasPagadas,
+			totalGastado,
+			clasificacion,
+			ultimaReserva: reservasCliente[0]?.fecha || cliente.ultimaReserva,
+			primeraReserva:
+				reservasCliente[totalReservasCliente - 1]?.fecha ||
+				cliente.primeraReserva,
+		},
+		{ transaction }
+	);
+
+	return cliente;
+};
+
+// Función auxiliar para obtener o crear un cliente asociado a la reserva express
+const obtenerClienteParaReservaExpress = async ({
+	clienteId,
+	rutFormateado,
+	emailNormalizado,
+	nombre,
+	telefono,
+}) => {
+	let cliente = null;
+
+	if (clienteId) {
+		cliente = await Cliente.findByPk(clienteId);
+	}
+
+	if (!cliente && rutFormateado) {
+		cliente = await Cliente.findOne({ where: { rut: rutFormateado } });
+	}
+
+	if (!cliente && emailNormalizado) {
+		cliente = await Cliente.findOne({ where: { email: emailNormalizado } });
+	}
+
+	if (cliente) {
+		const cambios = {};
+
+		if (rutFormateado && cliente.rut !== rutFormateado) {
+			cambios.rut = rutFormateado;
+		}
+
+		if (emailNormalizado && cliente.email !== emailNormalizado) {
+			cambios.email = emailNormalizado;
+		}
+
+		if (telefono && cliente.telefono !== telefono) {
+			cambios.telefono = telefono;
+		}
+
+		if (nombre && cliente.nombre !== nombre) {
+			cambios.nombre = nombre;
+		}
+
+		if (Object.keys(cambios).length > 0) {
+			await cliente.update(cambios);
+		}
+	} else if (emailNormalizado) {
+		cliente = await Cliente.create({
+			rut: rutFormateado,
+			nombre: nombre || "Sin nombre",
+			email: emailNormalizado,
+			telefono: telefono || "",
+			esCliente: false,
+			totalReservas: 0,
+			totalPagos: 0,
+			totalGastado: 0,
+		});
+	}
+
+	return cliente;
+};
+
+// Función para generar código único de reserva
+const generarCodigoReserva = async () => {
+	try {
+		// Obtener fecha actual
+		const fecha = new Date();
+		const año = fecha.getFullYear();
+		const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+		const dia = String(fecha.getDate()).padStart(2, "0");
+		const fechaStr = `${año}${mes}${dia}`;
+
+		// Calcular inicio y fin del día actual
+		const inicioDelDia = new Date(fecha);
+		inicioDelDia.setHours(0, 0, 0, 0);
+
+		const finDelDia = new Date(fecha);
+		finDelDia.setHours(23, 59, 59, 999);
+
+		// Contar reservas creadas hoy
+		const reservasDelDia = await Reserva.count({
+			where: {
+				createdAt: {
+					[Op.gte]: inicioDelDia,
+					[Op.lte]: finDelDia,
+				},
+			},
+		});
+
+		// Generar consecutivo (siguiente número del día)
+		const consecutivo = String(reservasDelDia + 1).padStart(4, "0");
+
+		// Formato: AR-YYYYMMDD-XXXX
+		const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
+
+		console.log(`📋 Código de reserva generado: ${codigoReserva}`);
+
+		return codigoReserva;
+	} catch (error) {
+		console.error("Error generando código de reserva:", error);
+		// Generar código de respaldo con timestamp si falla la consulta
+		const timestamp = Date.now();
+		return `AR-${timestamp}`;
+	}
 };
 
 const normalizeDestinosAplicables = (raw) => {
@@ -150,144 +444,173 @@ app.use(
 );
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
+// Función para ejecutar migración automática del código de reserva
+const ejecutarMigracionCodigoReserva = async () => {
+	try {
+		console.log("🔄 Verificando migración de codigo_reserva...");
+
+		// Verificar si la columna ya existe
+		const [columns] = await sequelize.query(`
+			SHOW COLUMNS FROM reservas LIKE 'codigo_reserva';
+		`);
+
+		if (columns.length === 0) {
+			console.log("📋 Agregando columna codigo_reserva...");
+
+			// Agregar la columna
+			await sequelize.query(`
+				ALTER TABLE reservas 
+				ADD COLUMN codigo_reserva VARCHAR(50) NULL UNIQUE
+				COMMENT 'Código único de reserva (formato: AR-YYYYMMDD-XXXX)';
+			`);
+
+			// Crear índice único
+			await sequelize.query(`
+				CREATE UNIQUE INDEX idx_codigo_reserva 
+				ON reservas(codigo_reserva);
+			`);
+
+			console.log("✅ Columna codigo_reserva agregada exitosamente");
+		} else {
+			console.log("✅ Columna codigo_reserva ya existe");
+		}
+
+		// Generar códigos para reservas sin código
+		const [reservasSinCodigo] = await sequelize.query(`
+			SELECT id, created_at 
+			FROM reservas 
+			WHERE codigo_reserva IS NULL 
+			ORDER BY created_at ASC;
+		`);
+
+		if (reservasSinCodigo.length > 0) {
+			console.log(
+				`📋 Generando códigos para ${reservasSinCodigo.length} reservas existentes...`
+			);
+
+			const reservasPorFecha = {};
+
+			for (const reserva of reservasSinCodigo) {
+				const fecha = new Date(reserva.created_at);
+				const año = fecha.getFullYear();
+				const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+				const dia = String(fecha.getDate()).padStart(2, "0");
+				const fechaStr = `${año}${mes}${dia}`;
+
+				if (!reservasPorFecha[fechaStr]) {
+					reservasPorFecha[fechaStr] = 0;
+				}
+
+				reservasPorFecha[fechaStr]++;
+				const consecutivo = String(reservasPorFecha[fechaStr]).padStart(4, "0");
+				const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
+
+				await sequelize.query(
+					`
+					UPDATE reservas 
+					SET codigo_reserva = :codigoReserva 
+					WHERE id = :id;
+				`,
+					{
+						replacements: { codigoReserva, id: reserva.id },
+					}
+				);
+			}
+
+			console.log(
+				`✅ Códigos generados para ${reservasSinCodigo.length} reservas`
+			);
+		}
+
+		console.log("✅ Migración de codigo_reserva completada");
+	} catch (error) {
+		// Si hay error pero no es crítico, solo advertir
+		console.warn(
+			"⚠️ Advertencia en migración de codigo_reserva:",
+			error.message
+		);
+	}
+};
+
 const initializeDatabase = async () => {
 	try {
 		const connected = await testConnection();
 		if (!connected) {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
-		await syncDatabase(false); // false = no forzar recreación
+		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
+		await syncDatabase(false, [
+			Destino,
+			Cliente,
+			Vehiculo,
+			Conductor,
+			Reserva,
+			CodigoDescuento,
+			CodigoPago,
+			Promocion,
+			DescuentoGlobal,
+		]); // false = no forzar recreación
 
-		// Inicializar configuraciones de tarifa dinámica por defecto
-		await initializeDynamicPricingConfig();
+		// Ejecutar migraciones automáticas
+		await ejecutarMigracionCodigoReserva();
+		await addPaymentFields();
+		await addTipoPagoColumn();
+		await addAbonoFlags();
+		await addCodigosPagoTable();
+		await addGastosTable();
+		await addProductosTables(); // Migración para tablas de productos
+
+		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
+		try {
+			const [idxRows] = await sequelize.query(
+				"SHOW INDEX FROM codigos_descuento WHERE Column_name = 'codigo'"
+			);
+			const hasUnique = Array.isArray(idxRows)
+				? idxRows.some((r) => String(r.Non_unique) === "0")
+				: false;
+
+			if (!hasUnique) {
+				// Contar índices actuales de la tabla para evitar ER_TOO_MANY_KEYS (max 64)
+				const [countRows] = await sequelize.query(
+					"SHOW INDEX FROM codigos_descuento"
+				);
+				const indexNames = new Set(
+					(Array.isArray(countRows) ? countRows : []).map((r) => r.Key_name)
+				);
+				if (indexNames.size >= 64) {
+					console.warn(
+						"La tabla codigos_descuento ya tiene 64 índices. No se puede crear índice único para codigo. Se continuará sin UNIQUE."
+					);
+				} else {
+					await sequelize.query(
+						"CREATE UNIQUE INDEX idx_codigos_descuento_codigo ON codigos_descuento(codigo)"
+					);
+					console.log("✅ Índice único idx_codigos_descuento_codigo creado");
+				}
+			}
+		} catch (idxErr) {
+			console.warn(
+				"⚠️ No se pudo asegurar índice único en codigos_descuento.codigo:",
+				idxErr.message
+			);
+		}
+
+		// Asegurar tabla de historial de asignaciones (para uso interno)
+		await sequelize.query(`
+				CREATE TABLE IF NOT EXISTS reserva_asignaciones (
+					id INT AUTO_INCREMENT PRIMARY KEY,
+					reserva_id INT NOT NULL,
+					vehiculo VARCHAR(100) NULL,
+					conductor VARCHAR(255) NULL,
+					created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+					INDEX idx_reserva_asignaciones_reserva_id (reserva_id)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			`);
 
 		console.log("✅ Base de datos inicializada correctamente");
 	} catch (error) {
 		console.error("❌ Error inicializando base de datos:", error);
 		process.exit(1);
-	}
-};
-
-// --- INICIALIZAR CONFIGURACIONES DE TARIFA DINÁMICA ---
-const initializeDynamicPricingConfig = async () => {
-	try {
-		const count = await ConfiguracionTarifaDinamica.count();
-		if (count > 0) {
-			console.log("✅ Configuraciones de tarifa dinámica ya existen");
-			return;
-		}
-
-		console.log("📝 Creando configuraciones de tarifa dinámica por defecto...");
-
-		// 1. Recargo por reserva el mismo día (+25%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Recargo mismo día",
-			tipo: "anticipacion",
-			diasMinimos: 0,
-			diasMaximos: 0,
-			porcentajeAjuste: 25.0,
-			activo: true,
-			prioridad: 10,
-			descripcion: "Recargo del 25% para reservas realizadas el mismo día del viaje",
-		});
-
-		// 2. Recargo leve 1-3 días (+10%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Recargo 1-3 días",
-			tipo: "anticipacion",
-			diasMinimos: 1,
-			diasMaximos: 3,
-			porcentajeAjuste: 10.0,
-			activo: true,
-			prioridad: 9,
-			descripcion: "Recargo del 10% para reservas con 1-3 días de anticipación",
-		});
-
-		// 3. Precio normal 4-13 días (0%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Precio estándar 4-13 días",
-			tipo: "anticipacion",
-			diasMinimos: 4,
-			diasMaximos: 13,
-			porcentajeAjuste: 0.0,
-			activo: true,
-			prioridad: 8,
-			descripcion: "Precio base para reservas con 4-13 días de anticipación",
-		});
-
-		// 4. Descuento 2 semanas (-5%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Descuento 2 semanas",
-			tipo: "anticipacion",
-			diasMinimos: 14,
-			diasMaximos: 20,
-			porcentajeAjuste: -5.0,
-			activo: true,
-			prioridad: 7,
-			descripcion: "Descuento del 5% para reservas con 2-3 semanas de anticipación",
-		});
-
-		// 5. Descuento 3 semanas (-10%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Descuento 3 semanas",
-			tipo: "anticipacion",
-			diasMinimos: 21,
-			diasMaximos: 29,
-			porcentajeAjuste: -10.0,
-			activo: true,
-			prioridad: 6,
-			descripcion: "Descuento del 10% para reservas con 3-4 semanas de anticipación",
-		});
-
-		// 6. Descuento 1 mes o más (-15%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Descuento 1+ mes",
-			tipo: "anticipacion",
-			diasMinimos: 30,
-			diasMaximos: null, // Sin límite
-			porcentajeAjuste: -15.0,
-			activo: true,
-			prioridad: 5,
-			descripcion: "Descuento del 15% para reservas con 1 mes o más de anticipación",
-		});
-
-		// 7. Alta demanda: Viernes, Sábado, Domingo (+10%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Alta demanda fin de semana",
-			tipo: "dia_semana",
-			diasSemana: [5, 6, 0], // Viernes, Sábado, Domingo
-			porcentajeAjuste: 10.0,
-			activo: true,
-			prioridad: 4,
-			descripcion: "Recargo del 10% para viajes en viernes, sábado y domingo",
-		});
-
-		// 8. Horario temprano: Antes de 9am (+15%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Horario temprano (antes 9am)",
-			tipo: "horario",
-			horaInicio: "00:00:00",
-			horaFin: "09:00:00",
-			porcentajeAjuste: 15.0,
-			activo: true,
-			prioridad: 3,
-			descripcion: "Recargo adicional del 15% para viajes antes de las 9:00 AM",
-		});
-
-		// 9. Descuento de retorno (50%)
-		await ConfiguracionTarifaDinamica.create({
-			nombre: "Descuento viaje de retorno",
-			tipo: "descuento_retorno",
-			porcentajeAjuste: -50.0,
-			tiempoEsperaMaximo: 240, // 4 horas
-			activo: true,
-			prioridad: 2,
-			descripcion: "Descuento del 50% cuando hay un vehículo disponible para retorno en menos de 4 horas",
-		});
-
-		console.log("✅ Configuraciones de tarifa dinámica creadas exitosamente");
-	} catch (error) {
-		console.error("❌ Error creando configuraciones de tarifa dinámica:", error);
 	}
 };
 
@@ -557,17 +880,11 @@ const buildPricingPayload = async () => {
 		minHorasAnticipacion: destino.minHorasAnticipacion || 5,
 	}));
 
-	// Obtener configuraciones de tarifa dinámica
-	const tarifaDinamica = await ConfiguracionTarifaDinamica.findAll({
-		order: [["prioridad", "DESC"], ["tipo", "ASC"]],
-	});
-
 	return {
 		destinos: destinosFormateados,
 		dayPromotions: dayPromotionsFormatted,
 		descuentosGlobales: descuentosFormatted,
 		codigosDescuento: codigosFormateados,
-		tarifaDinamica: tarifaDinamica || [],
 		updatedAt: new Date().toISOString(),
 	};
 };
@@ -1192,20 +1509,21 @@ app.get("/api/sync-all", async (req, res) => {
 			.default;
 
 		// Sincronizar tablas una por una para evitar conflictos
+		// NOTA: Removido alter:true para evitar modificar estructura en producción
 		console.log("Sincronizando tabla codigos_descuento...");
-		await CodigoDescuento.sync({ force: false, alter: true });
+		await CodigoDescuento.sync({ force: false });
 
 		console.log("Sincronizando tabla reservas...");
-		await Reserva.sync({ force: false, alter: true });
+		await Reserva.sync({ force: false });
 
 		console.log("Sincronizando tabla destinos...");
-		await Destino.sync({ force: false, alter: true });
+		await Destino.sync({ force: false });
 
 		console.log("Sincronizando tabla promociones...");
-		await Promocion.sync({ force: false, alter: true });
+		await Promocion.sync({ force: false });
 
 		console.log("Sincronizando tabla descuentos_globales...");
-		await DescuentoGlobal.sync({ force: false, alter: true });
+		await DescuentoGlobal.sync({ force: false });
 
 		// Verificar estructura de las tablas principales
 		const [codigosResults] = await sequelize.query(
@@ -1238,8 +1556,8 @@ app.get("/api/codigos/sync", async (req, res) => {
 		// Verificar conexión primero
 		await sequelize.authenticate();
 
-		// Forzar sincronización para actualizar la estructura de la tabla
-		await sequelize.sync({ force: false, alter: true });
+		// Sincronizar sin alterar estructura (usar migraciones para cambios de esquema)
+		await sequelize.sync({ force: false });
 
 		// Verificar que las columnas existen
 		const [results] = await sequelize.query("DESCRIBE codigos_descuento");
@@ -1295,8 +1613,8 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		// Verificar conexión primero
 		await sequelize.authenticate();
 
-		// Intentar sincronizar la tabla para asegurar que tiene todas las columnas
-		await sequelize.sync({ force: false, alter: true });
+		// Sincronizar sin alterar estructura (usar migraciones para cambios de esquema)
+		await sequelize.sync({ force: false });
 
 		const totalCodigos = await CodigoDescuento.count();
 		const codigosActivos = await CodigoDescuento.count({
@@ -1524,456 +1842,21 @@ app.get("/api/codigos/historial", async (req, res) => {
 	}
 });
 
-// ============================================
-// FUNCIONES PARA CÁLCULO DE TARIFA DINÁMICA
-// ============================================
-
-/**
- * Calcula la tarifa dinámica basada en anticipación, día de la semana y horario
- * @param {number} precioBase - Precio base del viaje
- * @param {string} destino - Nombre del destino
- * @param {string} fecha - Fecha del viaje (formato YYYY-MM-DD)
- * @param {string} hora - Hora del viaje (formato HH:MM:SS)
- * @returns {Object} Resultado con precio ajustado y detalles de ajustes aplicados
- */
-const calcularTarifaDinamica = async (precioBase, destino, fecha, hora) => {
-	try {
-		// Obtener todas las configuraciones activas ordenadas por prioridad
-		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
-			where: { activo: true },
-			order: [["prioridad", "DESC"]],
-		});
-
-		const fechaViaje = new Date(fecha + "T" + hora);
-		const hoy = new Date();
-		hoy.setHours(0, 0, 0, 0);
-		
-		const fechaViajeInicio = new Date(fecha);
-		fechaViajeInicio.setHours(0, 0, 0, 0);
-		
-		// Calcular días de anticipación
-		const diasAnticipacion = Math.floor(
-			(fechaViajeInicio - hoy) / (1000 * 60 * 60 * 24)
-		);
-		
-		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
-		const horaViaje = hora.split(":")[0] + ":" + hora.split(":")[1];
-
-		let ajusteTotal = 0;
-		const ajustesAplicados = [];
-
-		// Aplicar cada configuración según su tipo
-		for (const config of configuraciones) {
-			// Verificar si el destino está excluido
-			if (config.destinosExcluidos && Array.isArray(config.destinosExcluidos)) {
-				if (config.destinosExcluidos.includes(destino)) {
-					continue; // Saltar esta configuración
-				}
-			}
-
-			let aplicar = false;
-			let detalleAjuste = "";
-
-			switch (config.tipo) {
-				case "anticipacion":
-					// Verificar si los días de anticipación caen en el rango
-					if (
-						diasAnticipacion >= (config.diasMinimos || 0) &&
-						(config.diasMaximos === null || diasAnticipacion <= config.diasMaximos)
-					) {
-						aplicar = true;
-						detalleAjuste = `${config.nombre} (${diasAnticipacion} días anticipación)`;
-					}
-					break;
-
-				case "dia_semana":
-					// Verificar si el día de la semana está en la lista
-					if (
-						config.diasSemana &&
-						Array.isArray(config.diasSemana) &&
-						config.diasSemana.includes(diaSemana)
-					) {
-						aplicar = true;
-						const nombresDias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-						detalleAjuste = `${config.nombre} (${nombresDias[diaSemana]})`;
-					}
-					break;
-
-				case "horario":
-					// Verificar si la hora está en el rango
-					if (config.horaInicio && config.horaFin) {
-						const horaInicioConfig = config.horaInicio.substring(0, 5);
-						const horaFinConfig = config.horaFin.substring(0, 5);
-						
-						if (horaViaje >= horaInicioConfig && horaViaje < horaFinConfig) {
-							aplicar = true;
-							detalleAjuste = `${config.nombre} (${horaViaje})`;
-						}
-					}
-					break;
-
-				case "descuento_retorno":
-					// Este tipo se maneja por separado cuando se detecta un vehículo disponible
-					// No se aplica automáticamente aquí
-					break;
-			}
-
-			if (aplicar) {
-				const ajuste = parseFloat(config.porcentajeAjuste);
-				ajusteTotal += ajuste;
-				ajustesAplicados.push({
-					nombre: config.nombre,
-					tipo: config.tipo,
-					porcentaje: ajuste,
-					detalle: detalleAjuste,
-				});
-			}
-		}
-
-		// Calcular precio final
-		const ajusteMonto = Math.round(precioBase * (ajusteTotal / 100));
-		const precioFinal = Math.round(precioBase + ajusteMonto);
-
-		return {
-			precioBase,
-			ajusteTotal: ajusteTotal,
-			ajusteMonto,
-			precioFinal,
-			diasAnticipacion,
-			ajustesAplicados,
-		};
-	} catch (error) {
-		console.error("Error en calcularTarifaDinamica:", error);
-		throw error;
-	}
-};
-
-/**
- * Verificar si hay un vehículo disponible para retorno en el destino
- * @param {string} destino - Destino del viaje
- * @param {string} fecha - Fecha de llegada estimada
- * @param {string} hora - Hora de llegada estimada
- * @param {number} tiempoEsperaMaximo - Tiempo máximo de espera en minutos
- * @returns {Object} Información sobre disponibilidad de retorno
- */
-// Función disponible para uso futuro (descuento de retorno)
-// eslint-disable-next-line no-unused-vars
-const _verificarRetornoDisponible = async (destino, fecha, hora, tiempoEsperaMaximo = 240) => {
-	try {
-		const fechaHoraLlegada = new Date(fecha + "T" + hora);
-
-		// Buscar reservas que llegan al mismo destino cerca de la hora
-		const reservasCercanas = await Reserva.findAll({
-			where: {
-				destino: destino,
-				fecha: fecha,
-				vehiculoId: {
-					[Op.ne]: null,
-				},
-				estado: {
-					[Op.in]: ["confirmada", "pendiente_detalles"],
-				},
-			},
-			include: [
-				{
-					model: Vehiculo,
-					as: "vehiculoAsignado",
-					where: { activo: true },
-				},
-			],
-		});
-
-		// Verificar cuáles vehículos estarán disponibles en el tiempo requerido
-		const vehiculosDisponibles = [];
-		
-		for (const reserva of reservasCercanas) {
-			const horaLlegadaReserva = new Date(fecha + "T" + reserva.hora);
-			
-			// Si la reserva llega antes y dentro del tiempo de espera
-			if (horaLlegadaReserva <= fechaHoraLlegada && 
-			    horaLlegadaReserva >= new Date(fechaHoraLlegada.getTime() - tiempoEsperaMaximo * 60000)) {
-				vehiculosDisponibles.push({
-					vehiculoId: reserva.vehiculoId,
-					horaDisponible: reserva.hora,
-					tiempoEspera: Math.round((fechaHoraLlegada - horaLlegadaReserva) / 60000),
-				});
-			}
-		}
-
-		return {
-			disponible: vehiculosDisponibles.length > 0,
-			vehiculos: vehiculosDisponibles,
-			cantidadDisponible: vehiculosDisponibles.length,
-		};
-	} catch (error) {
-		console.error("Error verificando retorno disponible:", error);
-		return {
-			disponible: false,
-			vehiculos: [],
-			cantidadDisponible: 0,
-		};
-	}
-};
-
-// ============================================
-// ENDPOINTS PARA GESTIÓN DE VEHÍCULOS
-// ============================================
-
-// Obtener todos los vehículos
-app.get("/api/vehiculos", async (req, res) => {
-	try {
-		const vehiculos = await Vehiculo.findAll({
-			order: [["activo", "DESC"], ["tipo", "ASC"], ["placa", "ASC"]],
-		});
-		res.json(vehiculos);
-	} catch (error) {
-		console.error("Error obteniendo vehículos:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
-// Crear nuevo vehículo
-app.post("/api/vehiculos", async (req, res) => {
-	try {
-		const vehiculo = await Vehiculo.create(req.body);
-		res.status(201).json(vehiculo);
-	} catch (error) {
-		console.error("Error creando vehículo:", error);
-		res.status(500).json({ error: "Error creando vehículo" });
-	}
-});
-
-// Actualizar vehículo
-app.put("/api/vehiculos/:id", async (req, res) => {
-	try {
-		const vehiculo = await Vehiculo.findByPk(req.params.id);
-		if (!vehiculo) {
-			return res.status(404).json({ error: "Vehículo no encontrado" });
-		}
-		await vehiculo.update(req.body);
-		res.json(vehiculo);
-	} catch (error) {
-		console.error("Error actualizando vehículo:", error);
-		res.status(500).json({ error: "Error actualizando vehículo" });
-	}
-});
-
-// Eliminar vehículo
-app.delete("/api/vehiculos/:id", async (req, res) => {
-	try {
-		const vehiculo = await Vehiculo.findByPk(req.params.id);
-		if (!vehiculo) {
-			return res.status(404).json({ error: "Vehículo no encontrado" });
-		}
-		await vehiculo.destroy();
-		res.json({ message: "Vehículo eliminado correctamente" });
-	} catch (error) {
-		console.error("Error eliminando vehículo:", error);
-		res.status(500).json({ error: "Error eliminando vehículo" });
-	}
-});
-
-// Verificar disponibilidad de vehículos para una fecha/hora
-app.post("/api/vehiculos/disponibilidad", async (req, res) => {
-	try {
-		const { fecha, hora, tipo } = req.body;
-		
-		if (!fecha || !hora) {
-			return res.status(400).json({ error: "Fecha y hora son requeridos" });
-		}
-
-		// Obtener todos los vehículos del tipo solicitado (o todos si no se especifica)
-		const whereClause = {
-			activo: true,
-			enMantenimiento: false,
-		};
-		
-		if (tipo) {
-			whereClause.tipo = tipo;
-		}
-
-		const vehiculosActivos = await Vehiculo.findAll({
-			where: whereClause,
-		});
-
-		// Obtener reservas para esa fecha
-		const reservas = await Reserva.findAll({
-			where: {
-				fecha: fecha,
-				vehiculoId: {
-					[Op.ne]: null,
-				},
-				estado: {
-					[Op.in]: ["confirmada", "pendiente_detalles"],
-				},
-			},
-			attributes: ["vehiculoId", "hora"],
-		});
-
-		// Calcular vehículos disponibles
-		const vehiculosReservados = new Set(reservas.map(r => r.vehiculoId));
-		const vehiculosDisponibles = vehiculosActivos.filter(
-			v => !vehiculosReservados.has(v.id)
-		);
-
-		res.json({
-			total: vehiculosActivos.length,
-			disponibles: vehiculosDisponibles.length,
-			ocupados: vehiculosReservados.size,
-			vehiculos: vehiculosDisponibles,
-			hayDisponibilidad: vehiculosDisponibles.length > 0,
-		});
-	} catch (error) {
-		console.error("Error verificando disponibilidad:", error);
-		res.status(500).json({ error: "Error verificando disponibilidad" });
-	}
-});
-
-// ============================================
-// ENDPOINTS PARA GESTIÓN DE CONDUCTORES
-// ============================================
-
-// Obtener todos los conductores
-app.get("/api/conductores", async (req, res) => {
-	try {
-		const conductores = await Conductor.findAll({
-			order: [["activo", "DESC"], ["nombre", "ASC"]],
-		});
-		res.json(conductores);
-	} catch (error) {
-		console.error("Error obteniendo conductores:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
-// Crear nuevo conductor
-app.post("/api/conductores", async (req, res) => {
-	try {
-		const conductor = await Conductor.create(req.body);
-		res.status(201).json(conductor);
-	} catch (error) {
-		console.error("Error creando conductor:", error);
-		res.status(500).json({ error: "Error creando conductor" });
-	}
-});
-
-// Actualizar conductor
-app.put("/api/conductores/:id", async (req, res) => {
-	try {
-		const conductor = await Conductor.findByPk(req.params.id);
-		if (!conductor) {
-			return res.status(404).json({ error: "Conductor no encontrado" });
-		}
-		await conductor.update(req.body);
-		res.json(conductor);
-	} catch (error) {
-		console.error("Error actualizando conductor:", error);
-		res.status(500).json({ error: "Error actualizando conductor" });
-	}
-});
-
-// Eliminar conductor
-app.delete("/api/conductores/:id", async (req, res) => {
-	try {
-		const conductor = await Conductor.findByPk(req.params.id);
-		if (!conductor) {
-			return res.status(404).json({ error: "Conductor no encontrado" });
-		}
-		await conductor.destroy();
-		res.json({ message: "Conductor eliminado correctamente" });
-	} catch (error) {
-		console.error("Error eliminando conductor:", error);
-		res.status(500).json({ error: "Error eliminando conductor" });
-	}
-});
-
-// ============================================
-// ENDPOINTS PARA CONFIGURACIÓN DE TARIFA DINÁMICA
-// ============================================
-
-// Obtener todas las configuraciones
-app.get("/api/tarifa-dinamica", async (req, res) => {
-	try {
-		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
-			order: [["prioridad", "DESC"], ["tipo", "ASC"]],
-		});
-		res.json(configuraciones);
-	} catch (error) {
-		console.error("Error obteniendo configuraciones:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
-// Crear nueva configuración
-app.post("/api/tarifa-dinamica", async (req, res) => {
-	try {
-		const config = await ConfiguracionTarifaDinamica.create(req.body);
-		invalidatePricingCache(); // Invalidar cache de precios
-		res.status(201).json(config);
-	} catch (error) {
-		console.error("Error creando configuración:", error);
-		res.status(500).json({ error: "Error creando configuración" });
-	}
-});
-
-// Actualizar configuración
-app.put("/api/tarifa-dinamica/:id", async (req, res) => {
-	try {
-		const config = await ConfiguracionTarifaDinamica.findByPk(req.params.id);
-		if (!config) {
-			return res.status(404).json({ error: "Configuración no encontrada" });
-		}
-		await config.update(req.body);
-		invalidatePricingCache(); // Invalidar cache de precios
-		res.json(config);
-	} catch (error) {
-		console.error("Error actualizando configuración:", error);
-		res.status(500).json({ error: "Error actualizando configuración" });
-	}
-});
-
-// Eliminar configuración
-app.delete("/api/tarifa-dinamica/:id", async (req, res) => {
-	try {
-		const config = await ConfiguracionTarifaDinamica.findByPk(req.params.id);
-		if (!config) {
-			return res.status(404).json({ error: "Configuración no encontrada" });
-		}
-		await config.destroy();
-		invalidatePricingCache(); // Invalidar cache de precios
-		res.json({ message: "Configuración eliminada correctamente" });
-	} catch (error) {
-		console.error("Error eliminando configuración:", error);
-		res.status(500).json({ error: "Error eliminando configuración" });
-	}
-});
-
-// Calcular tarifa dinámica para una reserva
-app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
-	try {
-		const { precioBase, destino, fecha, hora } = req.body;
-		
-		if (!precioBase || !fecha || !hora) {
-			return res.status(400).json({ 
-				error: "Precio base, fecha y hora son requeridos" 
-			});
-		}
-
-		const result = await calcularTarifaDinamica(precioBase, destino, fecha, hora);
-		res.json(result);
-	} catch (error) {
-		console.error("Error calculando tarifa dinámica:", error);
-		res.status(500).json({ error: "Error calculando tarifa dinámica" });
-	}
-});
-
 // Endpoint para recibir reservas desde el formulario web
 app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
+		const enviarCorreo = datosReserva.enviarCorreo !== false;
+
+		// Se usa normalizeTimeGlobal definida en scope superior
 
 		// Formatear RUT si se proporciona
-		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
+		const rutFormateado = datosReserva.rut
+			? formatearRUT(datosReserva.rut)
+			: null;
+
+		// Generar código único de reserva
+		const codigoReserva = await generarCodigoReserva();
 
 		console.log("Reserva web recibida:", {
 			nombre: datosReserva.nombre,
@@ -1981,17 +1864,168 @@ app.post("/enviar-reserva", async (req, res) => {
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
 			rut: rutFormateado,
+			codigoReserva: codigoReserva,
 			origen: datosReserva.origen,
 			destino: datosReserva.destino,
 			fecha: datosReserva.fecha,
 			hora: datosReserva.hora,
 			pasajeros: datosReserva.pasajeros,
 			totalConDescuento: datosReserva.totalConDescuento,
+			estado: datosReserva.estado,
+			estadoPago: datosReserva.estadoPago,
 			source: datosReserva.source || "web",
 		});
 
-		// Guardar reserva en la base de datos
+		const normalizeEstado = (valor) =>
+			typeof valor === "string" ? valor.trim().toLowerCase() : "";
+
+		const estadosReservaValidos = new Set([
+			"pendiente",
+			"pendiente_detalles",
+			"confirmada",
+			"cancelada",
+			"completada",
+		]);
+
+		const estadosPagoValidos = new Set([
+			"pendiente",
+			"aprobado",
+			"parcial",
+			"pagado",
+			"fallido",
+			"reembolsado",
+		]);
+
+		const precioCalculado = parsePositiveDecimal(
+			datosReserva.precio,
+			"precio",
+			0
+		);
+
+		const totalCalculado = parsePositiveDecimal(
+			datosReserva.totalConDescuento,
+			"totalConDescuento",
+			precioCalculado
+		);
+
+		const abonoCalculado = parsePositiveDecimal(
+			datosReserva.abonoSugerido,
+			"abonoSugerido",
+			0
+		);
+
+		// No confiar en saldoPendiente enviado por el cliente cuando no hay
+		// evidencia de pago (pagoMonto o estadoPago 'pagado'). Si no hay
+		// evidencia, forzamos saldo = totalCalculado (es decir, pago 0).
+		const hasSaldoProvided = Object.prototype.hasOwnProperty.call(
+			datosReserva,
+			"saldoPendiente"
+		);
+
+		let saldoEntrada;
+		const pagoMontoProvided =
+			datosReserva.pagoMonto !== undefined &&
+			datosReserva.pagoMonto !== null &&
+			datosReserva.pagoMonto !== "" &&
+			parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
+
+		if (
+			hasSaldoProvided &&
+			(pagoMontoProvided || estadoPagoSolicitado === "pagado")
+		) {
+			saldoEntrada = parsePositiveDecimal(
+				datosReserva.saldoPendiente,
+				"saldoPendiente",
+				Math.max(totalCalculado - abonoCalculado, 0)
+			);
+		} else {
+			// No se asume ningún pago: saldo = total
+			saldoEntrada = totalCalculado;
+		}
+
+		const estadoSolicitado = normalizeEstado(datosReserva.estado);
+		const estadoPagoSolicitado = normalizeEstado(datosReserva.estadoPago);
+
+		let estadoInicial = estadosReservaValidos.has(estadoSolicitado)
+			? estadoSolicitado
+			: "pendiente";
+		let estadoPagoInicial = estadosPagoValidos.has(estadoPagoSolicitado)
+			? estadoPagoSolicitado
+			: "pendiente";
+
+		let saldoCalculado = saldoEntrada;
+		if (estadoPagoInicial === "pagado" || estadoPagoInicial === "reembolsado") {
+			saldoCalculado = 0;
+		} else if (estadoPagoInicial === "fallido") {
+			saldoCalculado = totalCalculado;
+		}
+		if (saldoCalculado < 0) saldoCalculado = 0;
+
+		if (estadoPagoInicial === "pagado" && estadoInicial === "pendiente") {
+			estadoInicial = "confirmada";
+		} else if (
+			estadoPagoInicial === "reembolsado" &&
+			estadoInicial === "pendiente"
+		) {
+			estadoInicial = "cancelada";
+		}
+
+		// Determinar monto pagado reportado: solo usar pago explícito o cuando
+		// el estado enviado indique 'pagado'. No inferir pago a partir del
+		// saldo pendiente calculado por defecto, ya que `abonoSugerido` y
+		// `saldoPendiente` son valores informativos en el frontend y no
+		// significan que se haya realizado un pago real.
+		let montoPagadoCalculado = 0;
+		if (pagoMontoProvided) {
+			montoPagadoCalculado = parsePositiveDecimal(
+				datosReserva.pagoMonto,
+				"pagoMonto",
+				0
+			);
+		} else if (estadoPagoInicial === "pagado") {
+			// Si el cliente/servicio explícitamente indicó 'pagado', asumir pago total
+			montoPagadoCalculado = totalCalculado;
+		} else {
+			montoPagadoCalculado = 0; // No se asume pago alguno
+		}
+		const umbralAbono = Math.max(totalCalculado * 0.4, abonoCalculado || 0);
+
+		// Log temporal para depuración: mostrar los valores que se usarán para guardar
+		console.log("[DEBUG] /enviar-reserva - cálculos financieros:", {
+			totalCalculado,
+			abonoCalculado,
+			saldoEntrada,
+			montoPagadoCalculado,
+			umbralAbono,
+			estadoPagoInicial,
+		});
+
+		let abonoPagado = false;
+		let saldoPagado = false;
+
+		if (estadoPagoInicial === "pagado") {
+			abonoPagado = true;
+			if (totalCalculado > 0) {
+				saldoPagado = true;
+			}
+		} else if (estadoPagoInicial === "reembolsado") {
+			abonoPagado = false;
+			saldoPagado = false;
+		} else if (montoPagadoCalculado >= umbralAbono && totalCalculado > 0) {
+			abonoPagado = true;
+		}
+
+		if (
+			estadoPagoInicial === "pagado" &&
+			totalCalculado > 0 &&
+			saldoCalculado <= 0
+		) {
+			saldoPagado = true;
+		}
+
+		// Guardar reserva en la base de datos con validaciones robustas
 		const reservaGuardada = await Reserva.create({
+			codigoReserva: codigoReserva,
 			nombre: datosReserva.nombre || "No especificado",
 			email: datosReserva.email || "",
 			telefono: datosReserva.telefono || "",
@@ -2001,41 +2035,106 @@ app.post("/enviar-reserva", async (req, res) => {
 			destino: datosReserva.destino || "",
 			fecha: datosReserva.fecha || new Date(),
 			hora: datosReserva.hora || "00:00:00",
-			pasajeros: parseInt(datosReserva.pasajeros) || 1,
-			precio: parseFloat(datosReserva.precio) || 0,
+			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+			precio: precioCalculado,
 			vehiculo: datosReserva.vehiculo || "",
 			numeroVuelo: datosReserva.numeroVuelo || "",
 			hotel: datosReserva.hotel || "",
 			equipajeEspecial: datosReserva.equipajeEspecial || "",
-			sillaInfantil: datosReserva.sillaInfantil === "si" || false,
+			sillaInfantil: Boolean(
+				datosReserva.sillaInfantil === "si" ||
+					datosReserva.sillaInfantil === true
+			),
 			idaVuelta: Boolean(datosReserva.idaVuelta),
 			fechaRegreso: datosReserva.fechaRegreso || null,
 			horaRegreso: datosReserva.horaRegreso || null,
-			abonoSugerido: parseFloat(datosReserva.abonoSugerido) || 0,
-			saldoPendiente: parseFloat(datosReserva.saldoPendiente) || 0,
-			descuentoBase: parseFloat(datosReserva.descuentoBase) || 0,
-			descuentoPromocion: parseFloat(datosReserva.descuentoPromocion) || 0,
-			descuentoRoundTrip: parseFloat(datosReserva.descuentoRoundTrip) || 0,
-			descuentoOnline: parseFloat(datosReserva.descuentoOnline) || 0,
-			totalConDescuento: parseFloat(datosReserva.totalConDescuento) || 0,
+			abonoSugerido: abonoCalculado,
+			saldoPendiente: saldoCalculado,
+			descuentoBase: parsePositiveDecimal(
+				datosReserva.descuentoBase,
+				"descuentoBase",
+				0
+			),
+			descuentoPromocion: parsePositiveDecimal(
+				datosReserva.descuentoPromocion,
+				"descuentoPromocion",
+				0
+			),
+			descuentoRoundTrip: parsePositiveDecimal(
+				datosReserva.descuentoRoundTrip,
+				"descuentoRoundTrip",
+				0
+			),
+			descuentoOnline: parsePositiveDecimal(
+				datosReserva.descuentoOnline,
+				"descuentoOnline",
+				0
+			),
+			totalConDescuento: totalCalculado,
 			mensaje: datosReserva.mensaje || "",
 			source: datosReserva.source || "web",
-			estado: "pendiente",
+			estado: estadoInicial,
 			ipAddress: req.ip || req.connection.remoteAddress || "",
 			userAgent: req.get("User-Agent") || "",
 			codigoDescuento: datosReserva.codigoDescuento || "",
-			estadoPago: "pendiente",
+			estadoPago: estadoPagoInicial,
+			metodoPago: datosReserva.metodoPago || "",
+			referenciaPago: datosReserva.referenciaPago || "",
+			pagoGateway: datosReserva.metodoPago || null,
+			pagoMonto: montoPagadoCalculado > 0 ? montoPagadoCalculado : null,
+			pagoFecha: montoPagadoCalculado > 0 ? new Date() : null,
+			abonoPagado,
+			saldoPagado,
 		});
 
 		console.log(
 			"✅ Reserva guardada en base de datos con ID:",
-			reservaGuardada.id
+			reservaGuardada.id,
+			"Código:",
+			reservaGuardada.codigoReserva
 		);
+
+		// Enviar email de confirmación llamando al PHP en Hostinger si corresponde
+		if (enviarCorreo) {
+			try {
+				const phpUrl =
+					process.env.PHP_EMAIL_URL ||
+					"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+
+				const emailData = {
+					...datosReserva,
+					codigoReserva: reservaGuardada.codigoReserva,
+					rut: rutFormateado,
+				};
+
+				console.log("📧 Enviando email de confirmación al PHP...");
+
+				const emailResponse = await axios.post(phpUrl, emailData, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 30000, // 30 segundos timeout
+				});
+
+				if (emailResponse.data.success) {
+					console.log("✅ Email enviado correctamente");
+				} else {
+					console.warn(
+						"⚠️ Email no se pudo enviar:",
+						emailResponse.data.message
+					);
+				}
+			} catch (emailError) {
+				console.error("❌ Error enviando email:", emailError.message);
+				// No fallar la respuesta si el email falla
+			}
+		} else {
+			console.log("ℹ️ Email de confirmación omitido (enviarCorreo = false)");
+		}
 
 		return res.json({
 			success: true,
 			message: "Reserva recibida y guardada correctamente",
 			reservaId: reservaGuardada.id,
+			codigoReserva: reservaGuardada.codigoReserva,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva:", error);
@@ -2050,13 +2149,19 @@ app.post("/enviar-reserva", async (req, res) => {
 app.post("/enviar-reserva-express", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
+		const enviarCorreo = datosReserva.enviarCorreo !== false;
 
 		// Formatear RUT si se proporciona
-		const rutFormateado = datosReserva.rut ? formatearRUT(datosReserva.rut) : null;
+		const rutFormateado = datosReserva.rut
+			? formatearRUT(datosReserva.rut)
+			: null;
+		const emailNormalizado = datosReserva.email
+			? datosReserva.email.toLowerCase().trim()
+			: "";
 
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
-			email: datosReserva.email,
+			email: emailNormalizado,
 			telefono: datosReserva.telefono,
 			clienteId: datosReserva.clienteId,
 			rut: rutFormateado,
@@ -2088,60 +2193,342 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
-		// Crear reserva express con campos mínimos
-		const reservaExpress = await Reserva.create({
+		if (!emailNormalizado) {
+			return res.status(400).json({
+				success: false,
+				message: "El email es obligatorio",
+			});
+		}
+
+		datosReserva.email = emailNormalizado;
+
+		const clienteAsociado = await obtenerClienteParaReservaExpress({
+			clienteId: datosReserva.clienteId,
+			rutFormateado,
+			emailNormalizado,
 			nombre: datosReserva.nombre,
-			email: datosReserva.email,
 			telefono: datosReserva.telefono,
-			clienteId: datosReserva.clienteId || null,
-			rut: rutFormateado,
-			origen: datosReserva.origen,
-			destino: datosReserva.destino,
-			fecha: datosReserva.fecha,
-			hora: "08:00:00", // Hora por defecto - se actualiza después
-			pasajeros: parseInt(datosReserva.pasajeros) || 1,
-			precio: parseFloat(datosReserva.precio) || 0,
-			vehiculo: datosReserva.vehiculo || "",
+		});
+		const clienteIdAsociado = clienteAsociado ? clienteAsociado.id : null;
 
-			// Campos que se completarán después del pago (opcionales por ahora)
-			numeroVuelo: "",
-			hotel: "",
-			equipajeEspecial: "",
-			sillaInfantil: false,
-			idaVuelta: Boolean(datosReserva.idaVuelta),
-			fechaRegreso: datosReserva.fechaRegreso || null,
-			horaRegreso: null,
-
-			// Campos financieros
-			abonoSugerido: parseFloat(datosReserva.abonoSugerido) || 0,
-			saldoPendiente: parseFloat(datosReserva.saldoPendiente) || 0,
-			descuentoBase: parseFloat(datosReserva.descuentoBase) || 0,
-			descuentoPromocion: parseFloat(datosReserva.descuentoPromocion) || 0,
-			descuentoRoundTrip: parseFloat(datosReserva.descuentoRoundTrip) || 0,
-			descuentoOnline: parseFloat(datosReserva.descuentoOnline) || 0,
-			totalConDescuento: parseFloat(datosReserva.totalConDescuento) || 0,
-			mensaje: datosReserva.mensaje || "",
-
-			// Metadata del sistema
-			source: datosReserva.source || "express_web",
-			estado: "pendiente_detalles", // Estado específico para reservas express
-			detallesCompletos: false, // Se marcará como true después del pago
-			ipAddress: req.ip || req.connection.remoteAddress || "",
-			userAgent: req.get("User-Agent") || "",
-			codigoDescuento: datosReserva.codigoDescuento || "",
-			estadoPago: "pendiente",
+		// Verificar si existe una reserva activa sin pagar para este email
+		const reservaExistente = await Reserva.findOne({
+			where: {
+				email: emailNormalizado,
+				estado: {
+					[Op.in]: ["pendiente", "pendiente_detalles"],
+				},
+				estadoPago: "pendiente",
+			},
+			order: [["createdAt", "DESC"]],
 		});
 
-		console.log(
-			"✅ Reserva express guardada en base de datos con ID:",
-			reservaExpress.id
-		);
+		let reservaExpress;
+		let esModificacion = false;
+
+		if (reservaExistente) {
+			// MODIFICAR reserva existente sin pagar
+			console.log(
+				`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`
+			);
+			esModificacion = true;
+
+			// Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
+			// Calcular totales y abono para la modificación: no aceptar saldo enviado
+			// por el cliente si no existe evidencia de pago.
+			const totalCalculadoExistente = parsePositiveDecimal(
+				datosReserva.totalConDescuento,
+				"totalConDescuento",
+				reservaExistente.totalConDescuento ||
+					parsePositiveDecimal(datosReserva.precio, "precio", 0)
+			);
+			const abonoCalculadoExistente = parsePositiveDecimal(
+				datosReserva.abonoSugerido,
+				"abonoSugerido",
+				reservaExistente.abonoSugerido || 0
+			);
+			const hasSaldoProvidedExistente = Object.prototype.hasOwnProperty.call(
+				datosReserva,
+				"saldoPendiente"
+			);
+			const pagoMontoProvidedExistente =
+				datosReserva.pagoMonto !== undefined &&
+				datosReserva.pagoMonto !== null &&
+				datosReserva.pagoMonto !== "" &&
+				parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
+
+			let saldoParaActualizarExistente;
+			if (
+				hasSaldoProvidedExistente &&
+				(pagoMontoProvidedExistente || datosReserva.estadoPago === "pagado")
+			) {
+				saldoParaActualizarExistente = parsePositiveDecimal(
+					datosReserva.saldoPendiente,
+					"saldoPendiente",
+					Math.max(totalCalculadoExistente - abonoCalculadoExistente, 0)
+				);
+			} else {
+				// No hay evidencia de pago: mantenemos saldo igual al total (no asumir abono)
+				saldoParaActualizarExistente = totalCalculadoExistente;
+			}
+
+			console.log(
+				"[DEBUG] /enviar-reserva-express - modificación: cálculos financieros:",
+				{
+					reservaId: reservaExistente.id,
+					totalCalculadoExistente,
+					abonoCalculadoExistente,
+					hasSaldoProvidedExistente,
+					pagoMontoProvidedExistente,
+					saldoParaActualizarExistente,
+					estadoPago: datosReserva.estadoPago,
+				}
+			);
+
+			await reservaExistente.update({
+				nombre: datosReserva.nombre,
+				email: emailNormalizado || reservaExistente.email,
+				telefono: datosReserva.telefono,
+				clienteId: clienteIdAsociado || reservaExistente.clienteId || null,
+				rut: rutFormateado,
+				origen: datosReserva.origen,
+				destino: datosReserva.destino,
+				fecha: datosReserva.fecha,
+				hora: normalizeTimeGlobal(datosReserva.hora) || reservaExistente.hora,
+				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+				vehiculo: datosReserva.vehiculo || "",
+				idaVuelta: Boolean(datosReserva.idaVuelta),
+				fechaRegreso: datosReserva.fechaRegreso || null,
+				abonoSugerido: abonoCalculadoExistente,
+				saldoPendiente: saldoParaActualizarExistente,
+				descuentoBase: parsePositiveDecimal(
+					datosReserva.descuentoBase,
+					"descuentoBase",
+					0
+				),
+				descuentoPromocion: parsePositiveDecimal(
+					datosReserva.descuentoPromocion,
+					"descuentoPromocion",
+					0
+				),
+				descuentoRoundTrip: parsePositiveDecimal(
+					datosReserva.descuentoRoundTrip,
+					"descuentoRoundTrip",
+					0
+				),
+				descuentoOnline: parsePositiveDecimal(
+					datosReserva.descuentoOnline,
+					"descuentoOnline",
+					0
+				),
+				totalConDescuento: parsePositiveDecimal(
+					datosReserva.totalConDescuento,
+					"totalConDescuento",
+					0
+				),
+				mensaje: datosReserva.mensaje || reservaExistente.mensaje,
+				codigoDescuento:
+					datosReserva.codigoDescuento || reservaExistente.codigoDescuento,
+				// Mantener el código de reserva original
+				// Actualizar metadata
+				ipAddress:
+					req.ip || req.connection.remoteAddress || reservaExistente.ipAddress,
+				userAgent: req.get("User-Agent") || reservaExistente.userAgent,
+				referenciaPago:
+					datosReserva.referenciaPago || reservaExistente.referenciaPago,
+				tipoPago: datosReserva.tipoPago || reservaExistente.tipoPago,
+			});
+
+			reservaExpress = reservaExistente;
+			console.log(
+				`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`
+			);
+		} else {
+			// CREAR nueva reserva
+			const codigoReserva = await generarCodigoReserva();
+			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
+
+			// Calcular totales y abono para decidir saldo guardado.
+			const totalCalculadoExpress = parsePositiveDecimal(
+				datosReserva.totalConDescuento,
+				"totalConDescuento",
+				parsePositiveDecimal(datosReserva.precio, "precio", 0)
+			);
+			const abonoCalculadoExpress = parsePositiveDecimal(
+				datosReserva.abonoSugerido,
+				"abonoSugerido",
+				0
+			);
+
+			const pagoMontoProvidedExpress =
+				datosReserva.pagoMonto !== undefined &&
+				datosReserva.pagoMonto !== null &&
+				datosReserva.pagoMonto !== "" &&
+				parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
+
+			let saldoPendienteParaGuardar;
+			if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
+				// Si frontend informó un saldo explícito y hay pago indicado, respetarlo
+				saldoPendienteParaGuardar = parsePositiveDecimal(
+					datosReserva.saldoPendiente,
+					"saldoPendiente",
+					Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
+				);
+			} else {
+				// No hay evidencia de pago: saldo = total
+				saldoPendienteParaGuardar = totalCalculadoExpress;
+			}
+
+			// Log temporal para depuración del flujo express
+			console.log("[DEBUG] /enviar-reserva-express - cálculos financieros:", {
+				totalCalculadoExpress,
+				abonoCalculadoExpress,
+				pagoMontoProvidedExpress,
+				saldoPendienteParaGuardar,
+				estadoPago: datosReserva.estadoPago,
+			});
+
+			reservaExpress = await Reserva.create({
+				codigoReserva: codigoReserva,
+				nombre: datosReserva.nombre,
+				email: emailNormalizado,
+				telefono: datosReserva.telefono,
+				clienteId: clienteIdAsociado,
+				rut: rutFormateado,
+				origen: datosReserva.origen,
+				destino: datosReserva.destino,
+				fecha: datosReserva.fecha,
+				// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
+				hora: normalizeTimeGlobal(datosReserva.hora),
+				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+				vehiculo: datosReserva.vehiculo || "",
+				referenciaPago: datosReserva.referenciaPago || null,
+
+				// Campos que se completarán después del pago (opcionales por ahora)
+				numeroVuelo: "",
+				hotel: "",
+				equipajeEspecial: "",
+				sillaInfantil: false,
+				idaVuelta: Boolean(datosReserva.idaVuelta),
+				fechaRegreso: datosReserva.fechaRegreso || null,
+				horaRegreso: null,
+
+				// Campos financieros con validación
+				abonoSugerido: abonoCalculadoExpress,
+				saldoPendiente: saldoPendienteParaGuardar,
+				descuentoBase: parsePositiveDecimal(
+					datosReserva.descuentoBase,
+					"descuentoBase",
+					0
+				),
+				descuentoPromocion: parsePositiveDecimal(
+					datosReserva.descuentoPromocion,
+					"descuentoPromocion",
+					0
+				),
+				descuentoRoundTrip: parsePositiveDecimal(
+					datosReserva.descuentoRoundTrip,
+					"descuentoRoundTrip",
+					0
+				),
+				descuentoOnline: parsePositiveDecimal(
+					datosReserva.descuentoOnline,
+					"descuentoOnline",
+					0
+				),
+				totalConDescuento: parsePositiveDecimal(
+					datosReserva.totalConDescuento,
+					"totalConDescuento",
+					0
+				),
+				mensaje: datosReserva.mensaje || "",
+
+				// Metadata del sistema
+				source: datosReserva.source || "express_web",
+				// Respetar el estado enviado por el frontend si existe.
+				// Si la reserva se crea desde un pago con código (source === 'codigo_pago')
+				// queremos mantenerla en 'pendiente' hasta la confirmación del pago
+				// (webhook). Por compatibilidad con el flujo express por defecto,
+				// usamos 'pendiente_detalles' sólo si no se indica lo contrario.
+				estado:
+					datosReserva.estado ||
+					(datosReserva.source === "codigo_pago"
+						? "pendiente"
+						: "pendiente_detalles"),
+				ipAddress: req.ip || req.connection.remoteAddress || "",
+				userAgent: req.get("User-Agent") || "",
+				codigoDescuento: datosReserva.codigoDescuento || "",
+				tipoPago: datosReserva.tipoPago || null,
+				estadoPago: datosReserva.estadoPago || "pendiente",
+			});
+
+			console.log(
+				"✅ Reserva express guardada en base de datos con ID:",
+				reservaExpress.id,
+				"Código:",
+				reservaExpress.codigoReserva
+			);
+		}
+
+		if (clienteIdAsociado) {
+			try {
+				await actualizarResumenCliente(clienteIdAsociado);
+			} catch (resumenError) {
+				console.error(
+					"Error al actualizar el resumen del cliente en reserva express:",
+					resumenError
+				);
+			}
+		}
+
+		// Enviar notificación por email usando el PHP de Hostinger
+		if (enviarCorreo) {
+			try {
+				console.log("📧 Enviando email de notificación express...");
+				const emailDataExpress = {
+					...datosReserva,
+					codigoReserva: reservaExpress.codigoReserva,
+					precio: reservaExpress.precio,
+					totalConDescuento: reservaExpress.totalConDescuento,
+					source: reservaExpress.source || "express_web",
+				};
+
+				const phpUrl =
+					process.env.PHP_EMAIL_URL ||
+					"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+
+				const emailResponse = await axios.post(phpUrl, emailDataExpress, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 30000,
+				});
+
+				console.log(
+					"✅ Email express enviado exitosamente:",
+					emailResponse.data
+				);
+			} catch (emailError) {
+				console.error(
+					"❌ Error al enviar email express (no afecta la reserva):",
+					emailError.message
+				);
+			}
+		} else {
+			console.log(
+				"ℹ️ Email de notificación express omitido (enviarCorreo = false)"
+			);
+		}
 
 		return res.json({
 			success: true,
-			message: "Reserva express creada correctamente",
+			message: esModificacion
+				? "Reserva modificada correctamente"
+				: "Reserva express creada correctamente",
 			reservaId: reservaExpress.id,
+			codigoReserva: reservaExpress.codigoReserva,
 			tipo: "express",
+			esModificacion: esModificacion,
 		});
 	} catch (error) {
 		console.error("Error al procesar la reserva express:", error);
@@ -2149,6 +2536,245 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			success: false,
 			message: "Error interno del servidor",
 		});
+	}
+});
+
+// --- ENDPOINTS PARA CODIGOS DE PAGO ---
+// Crear código de pago (Admin)
+app.post("/api/codigos-pago", authAdmin, async (req, res) => {
+	try {
+		const body = req.body || {};
+		const codigo = String(body.codigo || "")
+			.trim()
+			.toUpperCase();
+		const origen = String(body.origen || "Aeropuerto Temuco").trim();
+		const destino = String(body.destino || "").trim();
+		const monto = parsePositiveDecimal(body.monto, "monto", 0);
+		const descripcion = body.descripcion || "";
+		const vehiculo = body.vehiculo || "";
+		const pasajeros = parsePositiveInteger(body.pasajeros, "pasajeros", 1);
+		const idaVuelta = Boolean(body.idaVuelta);
+		const fechaVencimiento = body.fechaVencimiento
+			? new Date(body.fechaVencimiento)
+			: null;
+		const usosMaximos = parsePositiveInteger(
+			body.usosMaximos,
+			"usosMaximos",
+			1
+		);
+		const observaciones = body.observaciones || "";
+
+		if (!codigo) {
+			return res
+				.status(400)
+				.json({ success: false, message: "El código es requerido" });
+		}
+		if (!destino) {
+			return res
+				.status(400)
+				.json({ success: false, message: "El destino es requerido" });
+		}
+		if (!Number.isFinite(monto) || monto <= 0) {
+			return res
+				.status(400)
+				.json({ success: false, message: "El monto debe ser mayor a 0" });
+		}
+
+		const existente = await CodigoPago.findOne({ where: { codigo } });
+		if (existente) {
+			return res
+				.status(409)
+				.json({ success: false, message: "El código ya existe" });
+		}
+
+		const created = await CodigoPago.create({
+			codigo,
+			origen,
+			destino,
+			monto,
+			descripcion,
+			vehiculo,
+			pasajeros,
+			idaVuelta,
+			fechaVencimiento,
+			usosMaximos,
+			usosActuales: 0,
+			observaciones,
+			estado: "activo",
+		});
+
+		return res.json({ success: true, codigoPago: created });
+	} catch (error) {
+		console.error("Error creando código de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
+// Listar códigos de pago (Admin)
+app.get("/api/codigos-pago", authAdmin, async (req, res) => {
+	try {
+		const { estado, page = 1, limit = 50 } = req.query;
+		const where = {};
+		if (estado) where.estado = estado;
+		const pageNum = Math.max(1, parseInt(page, 10) || 1);
+		const limitNum = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
+		const offset = (pageNum - 1) * limitNum;
+
+		const { count, rows } = await CodigoPago.findAndCountAll({
+			where,
+			order: [["created_at", "DESC"]],
+			limit: limitNum,
+			offset,
+		});
+
+		return res.json({
+			success: true,
+			codigosPago: rows,
+			pagination: {
+				total: count,
+				page: pageNum,
+				limit: limitNum,
+				totalPages: Math.ceil(count / limitNum),
+			},
+		});
+	} catch (error) {
+		console.error("Error listando códigos de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
+// Obtener/validar un código de pago (Público)
+app.get("/api/codigos-pago/:codigo", async (req, res) => {
+	try {
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
+		if (!codigo) {
+			return res
+				.status(400)
+				.json({ success: false, message: "Código inválido" });
+		}
+
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res.json({
+				success: false,
+				message: "Código de pago no encontrado",
+			});
+		}
+
+		// Verificar vencimiento
+		if (registro.fechaVencimiento) {
+			const now = new Date();
+			if (
+				new Date(registro.fechaVencimiento) < now &&
+				registro.estado === "activo"
+			) {
+				// Marcar como vencido si está activo y ya pasó la fecha
+				await registro.update({ estado: "vencido" }).catch(() => {});
+			}
+		}
+
+		// Verificar usos
+		if (registro.usosActuales >= registro.usosMaximos) {
+			if (registro.estado !== "usado") {
+				await registro.update({ estado: "usado" }).catch(() => {});
+			}
+			return res.json({
+				success: false,
+				message: "El código está usado",
+				estado: "usado",
+			});
+		}
+
+		if (registro.estado === "cancelado" || registro.estado === "vencido") {
+			return res.json({
+				success: false,
+				message: `El código está ${registro.estado}`,
+				estado: registro.estado,
+			});
+		}
+
+		return res.json({ success: true, codigoPago: registro });
+	} catch (error) {
+		console.error("Error validando código de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
+// Marcar un código de pago como usado (Interno)
+app.put("/api/codigos-pago/:codigo/usar", async (req, res) => {
+	try {
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
+		const { reservaId, emailCliente } = req.body || {};
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res
+				.status(404)
+				.json({ success: false, message: "Código de pago no encontrado" });
+		}
+
+		const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+		const estado =
+			nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+
+		await registro.update({
+			usosActuales: nuevosUsos,
+			reservaId: reservaId ?? registro.reservaId,
+			emailCliente: emailCliente ?? registro.emailCliente,
+			fechaUso: new Date(),
+			estado,
+		});
+
+		return res.json({
+			success: true,
+			message: "Código marcado como usado",
+			codigoPago: registro,
+		});
+	} catch (error) {
+		console.error("Error marcando código de pago como usado:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un código de pago (Admin)
+app.delete("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
+	try {
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res
+				.status(404)
+				.json({ success: false, message: "Código de pago no encontrado" });
+		}
+		if (registro.estado === "usado") {
+			return res.status(400).json({
+				success: false,
+				message: "No se puede eliminar un código usado",
+			});
+		}
+		await CodigoPago.destroy({ where: { codigo } });
+		return res.json({
+			success: true,
+			message: "Código de pago eliminado correctamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando código de pago:", error);
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
@@ -2161,7 +2787,23 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		console.log(`Completando detalles para reserva ${id}:`, detalles);
 
 		// Buscar la reserva
-		const reserva = await Reserva.findByPk(id);
+		const reserva = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
 		if (!reserva) {
 			return res.status(404).json({
 				success: false,
@@ -2171,16 +2813,19 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 
 		// Actualizar con los detalles proporcionados
 		const datosActualizados = {
-			hora: detalles.hora || reserva.hora,
+			hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
+			// Permitir actualizar la fecha explicitamente si la envía el cliente
+			fecha: detalles.fecha || reserva.fecha,
 			numeroVuelo: detalles.numeroVuelo || "",
 			hotel: detalles.hotel || "",
 			equipajeEspecial: detalles.equipajeEspecial || "",
 			sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
 			idaVuelta: Boolean(detalles.idaVuelta),
 			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
-			horaRegreso: detalles.horaRegreso || reserva.horaRegreso,
-			detallesCompletos: true,
-			estado: "confirmada", // Cambiar estado a confirmada
+			horaRegreso:
+				normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
+			// No escribir campos virtuales; solo estado
+			estado: "confirmada",
 		};
 
 		await reserva.update(datosActualizados);
@@ -2228,6 +2873,21 @@ app.get("/api/reservas", async (req, res) => {
 			order: [["created_at", "DESC"]],
 			limit: parseInt(limit),
 			offset: parseInt(offset),
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
 		});
 
 		res.json({
@@ -2342,15 +3002,213 @@ app.get("/api/reservas/:id", async (req, res) => {
 	}
 });
 
+// Buscar reserva por código de reserva (público)
+app.get("/api/reservas/codigo/:codigo", async (req, res) => {
+	try {
+		const { codigo } = req.params;
+
+		console.log(`🔍 Buscando reserva con código: ${codigo}`);
+
+		const codigoUpper = (codigo || "").toUpperCase();
+		let reserva = null;
+
+		// 1) Intentar por código de reserva estándar (AR-YYYYMMDD-XXXX)
+		reserva = await Reserva.findOne({
+			where: { codigoReserva: codigoUpper },
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+				{
+					model: ProductoReserva,
+					as: "productosReserva",
+					include: [
+						{
+							model: Producto,
+							as: "producto",
+						},
+					],
+				},
+			],
+		});
+
+		// 2) Si no existe y parece un código de pago u otro identificador, intentar por referenciaPago
+		if (!reserva) {
+			reserva = await Reserva.findOne({
+				where: { referenciaPago: codigoUpper },
+				include: [
+					{
+						model: Cliente,
+						as: "cliente",
+						attributes: [
+							"id",
+							"nombre",
+							"email",
+							"telefono",
+							"esCliente",
+							"clasificacion",
+							"totalReservas",
+						],
+					},
+					{
+						model: ProductoReserva,
+						as: "productosReserva",
+						include: [
+							{
+								model: Producto,
+								as: "producto",
+							},
+						],
+					},
+				],
+				order: [["created_at", "DESC"]],
+			});
+		}
+
+		// 3) Fallback: si existe un registro en codigos_pago con ese código y tiene reservaId, cargar la reserva
+		if (!reserva) {
+			try {
+				const cp = await CodigoPago.findOne({ where: { codigo: codigoUpper } });
+				if (cp && cp.reservaId) {
+					reserva = await Reserva.findByPk(cp.reservaId, {
+						include: [
+							{
+								model: Cliente,
+								as: "cliente",
+								attributes: [
+									"id",
+									"nombre",
+									"email",
+									"telefono",
+									"esCliente",
+									"clasificacion",
+									"totalReservas",
+								],
+							},
+							{
+								model: ProductoReserva,
+								as: "productosReserva",
+								include: [
+									{
+										model: Producto,
+										as: "producto",
+									},
+								],
+							},
+						],
+					});
+				}
+			} catch (err) {
+				// Ignorar errores no críticos intencionalmente
+				// `void err;` evita la advertencia de variable no usada y permite
+				// habilitar un registro rápido si es necesario en el futuro.
+				void err;
+			}
+		}
+
+		if (!reserva) {
+			console.log(`❌ No se encontró reserva con código: ${codigo}`);
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		console.log(`✅ Reserva encontrada: ID ${reserva.id}`);
+		res.json(reserva);
+	} catch (error) {
+		console.error("Error buscando reserva por código:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Verificar si existe una reserva activa sin pagar para un email
+app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
+	try {
+		const { email } = req.params;
+
+		console.log(`🔍 Verificando reserva activa para email: ${email}`);
+
+		// Buscar reservas activas (pendiente o pendiente_detalles) sin pagar
+		const reservaActiva = await Reserva.findOne({
+			where: {
+				email: email.toLowerCase().trim(),
+				estado: {
+					[Op.in]: ["pendiente", "pendiente_detalles"],
+				},
+				estadoPago: "pendiente",
+			},
+			order: [["createdAt", "DESC"]], // La más reciente primero
+		});
+
+		if (!reservaActiva) {
+			console.log(`✅ No hay reserva activa sin pagar para: ${email}`);
+			return res.json({
+				tieneReservaActiva: false,
+				mensaje: "No hay reservas activas sin pagar",
+			});
+		}
+
+		console.log(
+			`⚠️ Se encontró reserva activa sin pagar: ID ${reservaActiva.id}, Código: ${reservaActiva.codigoReserva}`
+		);
+		res.json({
+			tieneReservaActiva: true,
+			reserva: {
+				id: reservaActiva.id,
+				codigoReserva: reservaActiva.codigoReserva,
+				origen: reservaActiva.origen,
+				destino: reservaActiva.destino,
+				fecha: reservaActiva.fecha,
+				pasajeros: reservaActiva.pasajeros,
+				precio: reservaActiva.precio,
+				totalConDescuento: reservaActiva.totalConDescuento,
+				createdAt: reservaActiva.createdAt,
+			},
+			mensaje:
+				"Se encontró una reserva activa sin pagar. Se modificará en lugar de crear una nueva.",
+		});
+	} catch (error) {
+		console.error("Error verificando reserva activa:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Actualizar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
+	console.log(
+		"PUT /api/reservas/:id/estado (primer endpoint) llamado con id:",
+		req.params.id,
+		"estado:",
+		req.body.estado
+	);
 	try {
 		const { id } = req.params;
 		const { estado, observaciones } = req.body;
 
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
+			console.log("Reserva no encontrada:", id);
 			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
+		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			console.log(
+				"Intento de cambiar a pendiente con pagos:",
+				reserva.pagoMonto
+			);
+			return res.status(400).json({
+				error:
+					"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
+			});
 		}
 
 		await reserva.update({
@@ -2358,6 +3216,12 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			observaciones: observaciones || reserva.observaciones,
 		});
 
+		console.log(
+			"Estado actualizado exitosamente para reserva:",
+			id,
+			"a:",
+			estado
+		);
 		res.json({
 			success: true,
 			message: "Estado de reserva actualizado",
@@ -2369,44 +3233,766 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 	}
 });
 
-// Actualizar estado de pago de una reserva
+// Actualizar estado de pago de una reserva (con transacciones para garantizar consistencia)
 app.put("/api/reservas/:id/pago", async (req, res) => {
+	const transaction = await sequelize.transaction();
+
 	try {
 		const { id } = req.params;
-		const { estadoPago, metodoPago, referenciaPago } = req.body;
+		const {
+			estadoPago,
+			metodoPago,
+			referenciaPago,
+			montoPagado,
+			tipoPago: _tipoPago,
+			estadoReserva: estadoReservaRaw,
+		} = req.body;
+
+		// Log de depuración: registrar intento de actualización de pago
+		try {
+			const hasAuth = !!req.headers.authorization;
+			console.log(`DEBUG [PUT /api/reservas/${id}/pago] payload:`, {
+				id,
+				estadoPago,
+				metodoPago,
+				referenciaPago,
+				montoPagado,
+				tipoPago: _tipoPago,
+				hasAuth,
+			});
+		} catch (lerr) {
+			console.warn(
+				"DEBUG: no se pudo loggear payload de actualización de pago",
+				lerr
+			);
+		}
+
+		const normalizarEstado = (valor) =>
+			typeof valor === "string" ? valor.trim().toLowerCase() : null;
+		const estadoPagoSolicitado = normalizarEstado(estadoPago);
+		const estadoReservaSolicitado = normalizarEstado(estadoReservaRaw);
+		const normalizarTipoPago = (valor) => {
+			if (typeof valor !== "string") {
+				return null;
+			}
+			const normalizado = valor.trim().toLowerCase();
+			return ["abono", "saldo", "total"].includes(normalizado)
+				? normalizado
+				: null;
+		};
+		const limpiarTipoPago =
+			_tipoPago === null ||
+			(typeof _tipoPago === "string" && _tipoPago.trim().length === 0);
+		const tipoPagoSolicitado = normalizarTipoPago(_tipoPago);
+		const estadosReservaPermitidos = [
+			"pendiente",
+			"pendiente_detalles",
+			"confirmada",
+			"cancelada",
+			"completada",
+		];
+		const estadoReservaValido = estadosReservaPermitidos.includes(
+			estadoReservaSolicitado
+		)
+			? estadoReservaSolicitado
+			: null;
+		const deseaCompletada = estadoReservaSolicitado === "completada";
+
+		const reserva = await Reserva.findByPk(id, { transaction });
+		if (!reserva) {
+			await transaction.rollback();
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+		let nuevoTipoPago = reserva.tipoPago || null;
+		if (limpiarTipoPago) {
+			nuevoTipoPago = null;
+		} else if (tipoPagoSolicitado) {
+			nuevoTipoPago = tipoPagoSolicitado;
+		}
+
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
+		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0) || 0;
+		const saldoPendienteActual =
+			parseFloat(
+				reserva.saldoPendiente != null
+					? reserva.saldoPendiente
+					: Math.max(totalReserva - abonoSugerido, 0)
+			) || 0;
+		const montoPago =
+			montoPagado !== undefined && montoPagado !== null
+				? parsePositiveDecimal(montoPagado, "montoPagado", 0)
+				: null;
+
+		// monto ya pagado previamente (si existe) y nuevo acumulado
+		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+		let pagoTotalNuevo = pagoPrevio;
+		let debeActualizarPagoMonto = false;
+		let pagoFechaFinal = reserva.pagoFecha || null;
+
+		let nuevoEstadoPago = estadoPagoSolicitado || reserva.estadoPago;
+		let nuevoEstadoReserva = estadoReservaValido || reserva.estado;
+		let nuevoSaldoPendiente = saldoPendienteActual;
+		let abonoPagado = Boolean(reserva.abonoPagado);
+		let saldoPagado = Boolean(reserva.saldoPagado);
+		const fechaPago = new Date();
+
+		// Umbral de confirmacion: 40% del total (o el abono sugerido, si es mayor)
+		const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
+
+		const seRegistraPago = montoPago !== null && montoPago > 0;
+
+		if (seRegistraPago) {
+			pagoTotalNuevo = pagoPrevio + montoPago;
+			// Recalcular saldo en base al nuevo acumulado
+			nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+			debeActualizarPagoMonto = true;
+			pagoFechaFinal = fechaPago;
+
+			// Evaluar estados segun acumulado
+			if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+				// Pago completo
+				nuevoEstadoPago = "pagado";
+				nuevoEstadoReserva =
+					deseaCompletada || reserva.estado === "completada"
+						? "completada"
+						: "confirmada";
+				nuevoSaldoPendiente = 0;
+				abonoPagado = true;
+				saldoPagado = true;
+				if (!tipoPagoSolicitado) {
+					nuevoTipoPago = "total";
+				}
+			} else if (pagoTotalNuevo > 0) {
+				// Pago parcial
+				if (
+					pagoTotalNuevo >= umbralAbono &&
+					["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+				) {
+					nuevoEstadoReserva = "confirmada";
+				}
+				nuevoEstadoPago = "parcial"; // ahora soportado por ENUM y migracion
+				if (pagoTotalNuevo >= umbralAbono) {
+					abonoPagado = true;
+					if (!tipoPagoSolicitado) {
+						nuevoTipoPago = "abono";
+					}
+				}
+			}
+
+			// Si se especifico explicitamente tipoPago 'saldo' y saldo queda 0 por el acumulado, asegurar flags
+			if (
+				nuevoSaldoPendiente <= 0 &&
+				pagoTotalNuevo >= totalReserva &&
+				totalReserva > 0
+			) {
+				saldoPagado = true;
+				abonoPagado = true;
+				nuevoEstadoPago = "pagado";
+				nuevoEstadoReserva =
+					deseaCompletada || reserva.estado === "completada"
+						? "completada"
+						: "confirmada";
+				nuevoSaldoPendiente = 0;
+			}
+
+			// Si se solicito explicitamente marcar como completada y el pago quedo pagado,
+			// aseguramos que el estado final respete esa eleccion incluso con total 0.
+			if (deseaCompletada && nuevoEstadoPago === "pagado") {
+				nuevoEstadoReserva = "completada";
+			}
+		}
+
+		if (estadoPagoSolicitado) {
+			switch (estadoPagoSolicitado) {
+				case "reembolsado": {
+					nuevoEstadoPago = "reembolsado";
+					nuevoEstadoReserva = "cancelada";
+					nuevoSaldoPendiente = 0;
+					abonoPagado = false;
+					saldoPagado = false;
+					pagoTotalNuevo = 0;
+					debeActualizarPagoMonto = true;
+					pagoFechaFinal = null;
+					nuevoTipoPago = null;
+					break;
+				}
+				case "fallido": {
+					nuevoEstadoPago = "fallido";
+					nuevoEstadoReserva =
+						estadoReservaValido ||
+						(["completada", "cancelada"].includes(reserva.estado)
+							? "cancelada"
+							: reserva.estado === "pendiente_detalles"
+							? "pendiente_detalles"
+							: "pendiente");
+					nuevoSaldoPendiente = totalReserva;
+					abonoPagado = false;
+					saldoPagado = false;
+					pagoTotalNuevo = 0;
+					debeActualizarPagoMonto = true;
+					pagoFechaFinal = null;
+					nuevoTipoPago = null;
+					break;
+				}
+				case "pendiente": {
+					nuevoEstadoPago = "pendiente";
+					nuevoEstadoReserva =
+						estadoReservaValido ||
+						(reserva.estado === "pendiente_detalles"
+							? "pendiente_detalles"
+							: "pendiente");
+					nuevoSaldoPendiente = totalReserva;
+					abonoPagado = false;
+					saldoPagado = false;
+					pagoTotalNuevo = 0;
+					debeActualizarPagoMonto = true;
+					pagoFechaFinal = null;
+					nuevoTipoPago = null;
+					break;
+				}
+				case "pagado": {
+					nuevoEstadoPago = "pagado";
+					abonoPagado = true;
+					saldoPagado = true;
+					if (totalReserva > 0 && pagoTotalNuevo < totalReserva) {
+						pagoTotalNuevo = totalReserva;
+						debeActualizarPagoMonto = true;
+					}
+					nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+					if (
+						deseaCompletada ||
+						estadoReservaValido === "completada" ||
+						reserva.estado === "completada"
+					) {
+						nuevoEstadoReserva = "completada";
+					} else if (
+						["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+					) {
+						nuevoEstadoReserva = "confirmada";
+					}
+					if (!pagoFechaFinal) {
+						pagoFechaFinal = fechaPago;
+					}
+					if (!tipoPagoSolicitado) {
+						nuevoTipoPago = "total";
+					}
+					break;
+				}
+				case "parcial":
+				case "aprobado": {
+					nuevoEstadoPago = estadoPagoSolicitado;
+					nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+					if (
+						estadoPagoSolicitado === "parcial" &&
+						["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva) &&
+						(pagoTotalNuevo >= umbralAbono || reserva.abonoPagado)
+					) {
+						nuevoEstadoReserva = "confirmada";
+					}
+					if (estadoPagoSolicitado === "parcial" && pagoTotalNuevo <= 0) {
+						abonoPagado = false;
+						saldoPagado = false;
+						if (!tipoPagoSolicitado) {
+							nuevoTipoPago = null;
+						}
+					} else if (
+						estadoPagoSolicitado === "parcial" &&
+						!tipoPagoSolicitado &&
+						pagoTotalNuevo >= umbralAbono
+					) {
+						nuevoTipoPago = "abono";
+					}
+					break;
+				}
+				default:
+					break;
+			}
+		}
+
+		// Evitar valores negativos por ajustes manuales
+		if (nuevoSaldoPendiente < 0) {
+			nuevoSaldoPendiente = 0;
+		}
+		if (pagoTotalNuevo < 0) {
+			pagoTotalNuevo = 0;
+		}
+
+		const payloadActualizacion = {
+			estadoPago: nuevoEstadoPago,
+			metodoPago: metodoPago || reserva.metodoPago,
+			referenciaPago: referenciaPago || reserva.referenciaPago,
+			tipoPago: nuevoTipoPago,
+			saldoPendiente: nuevoSaldoPendiente,
+			abonoPagado,
+			saldoPagado,
+			estado: nuevoEstadoReserva,
+		};
+
+		if (debeActualizarPagoMonto) {
+			payloadActualizacion.pagoMonto = pagoTotalNuevo;
+			payloadActualizacion.pagoFecha = pagoFechaFinal;
+		} else if (saldoPagado && !reserva.saldoPagado) {
+			payloadActualizacion.pagoFecha = pagoFechaFinal || fechaPago;
+		}
+
+		await reserva.update(payloadActualizacion, { transaction });
+
+		let clienteActualizado = null;
+		if (reserva.clienteId) {
+			clienteActualizado = await actualizarResumenCliente(
+				reserva.clienteId,
+				transaction
+			);
+		}
+
+		await transaction.commit();
+
+		const reservaActualizada = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			message: "Estado de pago actualizado",
+			reserva: reservaActualizada,
+			cliente: clienteActualizado,
+		});
+	} catch (error) {
+		await transaction.rollback();
+		console.error("Error actualizando estado de pago:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Asegurar tabla de historial de pagos y exponer endpoints para historial y registro manual
+const ensureReservaPagosTable = async () => {
+	await sequelize.query(`
+		CREATE TABLE IF NOT EXISTS reserva_pagos (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			reserva_id INT NOT NULL,
+			amount DECIMAL(10,2) NOT NULL,
+			metodo VARCHAR(100) NULL,
+			referencia VARCHAR(255) NULL,
+			source VARCHAR(50) DEFAULT 'manual',
+			is_manual TINYINT(1) DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			INDEX idx_reserva_pagos_reserva_id (reserva_id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+	`);
+};
+
+// Endpoint: obtener historial de pagos de una reserva
+app.get("/api/reservas/:id/pagos", async (req, res) => {
+	try {
+		const { id } = req.params;
+		await ensureReservaPagosTable();
+		const [rows] = await sequelize.query(
+			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC",
+			{ replacements: { id } }
+		);
+		res.json({ success: true, pagos: rows });
+	} catch (error) {
+		console.error("Error obteniendo historial de pagos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint: registrar pago manual para una reserva (inserta en historial y actualiza reserva)
+app.post("/api/reservas/:id/pagos", async (req, res) => {
+	const transaction = await sequelize.transaction();
+	try {
+		const { id } = req.params;
+		const { amount, metodo, referencia, source } = req.body;
+		// Log de depuración: registrar intento de pago manual
+		try {
+			const hasAuth = !!req.headers.authorization;
+			console.log(`DEBUG [POST /api/reservas/${id}/pagos] payload:`, {
+				id,
+				amount,
+				metodo,
+				referencia,
+				source,
+				hasAuth,
+			});
+		} catch (lerr) {
+			console.warn("DEBUG: no se pudo loggear payload de pago manual", lerr);
+		}
+
+		const monto = parseFloat(amount || 0) || 0;
+		if (monto <= 0) {
+			await transaction.rollback();
+			return res.status(400).json({ error: "Monto inválido" });
+		}
+
+		const reserva = await Reserva.findByPk(id, { transaction });
+		if (!reserva) {
+			await transaction.rollback();
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		await ensureReservaPagosTable();
+
+		// Insertar registro en historial
+		const insertSql = `
+			INSERT INTO reserva_pagos (reserva_id, amount, metodo, referencia, source, is_manual)
+			VALUES (:reservaId, :amount, :metodo, :referencia, :source, :isManual)
+		`;
+		await sequelize.query(insertSql, {
+			replacements: {
+				reservaId: id,
+				amount: monto,
+				metodo: metodo || null,
+				referencia: referencia || null,
+				source: source || "manual",
+				isManual: source === "web" ? 0 : 1,
+			},
+			transaction,
+		});
+
+		// Reutilizar lógica de acumulado similar a /pago: actualizar reserva con el monto
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+		const pagoTotalNuevo = pagoPrevio + monto;
+		const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
+
+		let nuevoEstadoPago = reserva.estadoPago;
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+		let abonoPagado = reserva.abonoPagado;
+		let saldoPagado = reserva.saldoPagado;
+
+		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
+			nuevoSaldoPendiente = 0;
+			abonoPagado = true;
+			saldoPagado = true;
+		} else if (pagoTotalNuevo > 0) {
+			if (
+				pagoTotalNuevo >= umbralAbono &&
+				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+			) {
+				nuevoEstadoReserva = "confirmada";
+			}
+			nuevoEstadoPago = "parcial";
+			if (pagoTotalNuevo >= umbralAbono) abonoPagado = true;
+		}
+
+		if (
+			nuevoSaldoPendiente <= 0 &&
+			pagoTotalNuevo >= totalReserva &&
+			totalReserva > 0
+		) {
+			saldoPagado = true;
+			abonoPagado = true;
+			nuevoEstadoPago = "pagado";
+			nuevoEstadoReserva = "completada";
+		}
+
+		const updatePayload = {
+			estadoPago: nuevoEstadoPago,
+			saldoPendiente: nuevoSaldoPendiente,
+			abonoPagado,
+			saldoPagado,
+			estado: nuevoEstadoReserva,
+			pagoMonto: pagoTotalNuevo,
+			pagoFecha: new Date(),
+		};
+
+		await reserva.update(updatePayload, { transaction });
+
+		let clienteActualizado = null;
+		if (reserva.clienteId) {
+			clienteActualizado = await actualizarResumenCliente(
+				reserva.clienteId,
+				transaction
+			);
+		}
+
+		await transaction.commit();
+
+		// Devolver reserva actualizada y el pago insertado
+		const [rows] = await sequelize.query(
+			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC LIMIT 1",
+			{ replacements: { id } }
+		);
+		const pagoInsertado = rows[0] || null;
+
+		const reservaActualizada = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: [
+						"id",
+						"nombre",
+						"email",
+						"telefono",
+						"esCliente",
+						"clasificacion",
+						"totalReservas",
+					],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			reserva: reservaActualizada,
+			pago: pagoInsertado,
+			cliente: clienteActualizado,
+		});
+	} catch (error) {
+		await transaction.rollback();
+		console.error("Error registrando pago manual:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar campos generales de una reserva (admin)
+app.put("/api/reservas/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		const {
+			nombre,
+			email,
+			telefono,
+			fecha,
+			hora,
+			pasajeros,
+			numeroVuelo,
+			hotel,
+			equipajeEspecial,
+			sillaInfantil,
+			idaVuelta,
+			fechaRegreso,
+			horaRegreso,
+			mensaje,
+		} = req.body || {};
+
+		await reserva.update({
+			nombre: nombre !== undefined ? nombre : reserva.nombre,
+			email: email !== undefined ? email : reserva.email,
+			telefono: telefono !== undefined ? telefono : reserva.telefono,
+			fecha: fecha !== undefined ? fecha : reserva.fecha,
+			hora: hora !== undefined ? hora : reserva.hora,
+			pasajeros:
+				pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
+			numeroVuelo:
+				numeroVuelo !== undefined ? numeroVuelo : reserva.numeroVuelo,
+			hotel: hotel !== undefined ? hotel : reserva.hotel,
+			equipajeEspecial:
+				equipajeEspecial !== undefined
+					? equipajeEspecial
+					: reserva.equipajeEspecial,
+			sillaInfantil:
+				sillaInfantil !== undefined
+					? Boolean(sillaInfantil)
+					: reserva.sillaInfantil,
+			idaVuelta:
+				idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
+			fechaRegreso:
+				fechaRegreso !== undefined ? fechaRegreso : reserva.fechaRegreso,
+			horaRegreso:
+				horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
+			mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
+		});
+
+		res.json({ success: true, message: "Reserva actualizada", reserva });
+	} catch (error) {
+		console.error("Error actualizando reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar ruta (origen/destino) de una reserva
+app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { origen, destino } = req.body || {};
+		if (!origen || !destino) {
+			return res.status(400).json({ error: "Origen y Destino son requeridos" });
+		}
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+		await reserva.update({ origen, destino });
+
+		// DEBUG accidental eliminado: no corresponde a este endpoint
+		res.json({ success: true, message: "Ruta actualizada", reserva });
+	} catch (error) {
+		console.error("Error actualizando ruta de reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Asignar vehículo y (opcional) conductor a una reserva
+app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { vehiculoId, conductorId, sendEmail } = req.body || {};
+		const shouldSend = sendEmail !== false;
+
+		if (!vehiculoId || !Number.isFinite(Number(vehiculoId))) {
+			return res
+				.status(400)
+				.json({ error: "vehiculoId es requerido y debe ser numérico" });
+		}
 
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		await reserva.update({
-			estadoPago,
-			metodoPago: metodoPago || reserva.metodoPago,
-			referenciaPago: referenciaPago || reserva.referenciaPago,
-		});
+		const vehiculo = await Vehiculo.findByPk(Number(vehiculoId));
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
 
-		// Si el pago es exitoso, actualizar el cliente
-		if (estadoPago === "pagado" && reserva.clienteId) {
-			const cliente = await Cliente.findByPk(reserva.clienteId);
-			if (cliente) {
-				await cliente.update({
-					esCliente: true,
-					totalPagos: cliente.totalPagos + 1,
-					totalGastado:
-						parseFloat(cliente.totalGastado) +
-						parseFloat(reserva.totalConDescuento || 0),
-				});
+		let conductor = null;
+		if (conductorId) {
+			conductor = await Conductor.findByPk(Number(conductorId));
+			if (!conductor) {
+				return res.status(404).json({ error: "Conductor no encontrado" });
 			}
 		}
 
-		res.json({
+		// Actualizar la reserva con datos legibles y persistir los IDs
+		const vehiculoTipo = (
+			vehiculo.tipo?.toUpperCase?.() ||
+			vehiculo.tipo ||
+			"Vehículo"
+		).toString();
+		const vehiculoLabel = `${vehiculoTipo} ${vehiculo.patente}`;
+		const patenteLast4 = (vehiculo.patente || "").toString().slice(-4);
+
+		// Actualizar campo 'vehiculo' y persistir vehiculoId/conductorId en la reserva
+		// para que la UI pueda detectar la asignación por ids.
+		await reserva.update({
+			vehiculo: vehiculoLabel,
+			vehiculoId: Number(vehiculo.id) || null,
+			conductorId: conductor ? Number(conductor.id) : null,
+		});
+
+		// Registrar en historial solo si hubo cambio
+		try {
+			const [rows] = await sequelize.query(
+				`SELECT vehiculo, conductor FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC LIMIT 1`,
+				{ replacements: { id } }
+			);
+
+			const ultimo = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+			const nuevoVehiculo = vehiculoTipo;
+			const nuevoConductor = conductor ? conductor.nombre : null;
+			const cambio =
+				!ultimo ||
+				ultimo.vehiculo !== nuevoVehiculo ||
+				(ultimo.conductor || null) !== (nuevoConductor || null);
+
+			if (cambio) {
+				await sequelize.query(
+					`INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor) VALUES (:reservaId, :vehiculo, :conductor)`,
+					{
+						replacements: {
+							reservaId: id,
+							vehiculo: nuevoVehiculo,
+							conductor: nuevoConductor,
+						},
+					}
+				);
+			}
+		} catch (histErr) {
+			console.warn(
+				"⚠️ No se pudo registrar historial de asignación:",
+				histErr.message
+			);
+		}
+
+		// Intentar enviar notificación por email al pasajero
+		try {
+			const phpUrl =
+				process.env.PHP_ASIGNACION_URL ||
+				"https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
+
+			const payload = {
+				email: reserva.email,
+				nombre: reserva.nombre,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				pasajeros: reserva.pasajeros,
+				// En el correo solo mostraremos el tipo, no la patente completa
+				vehiculo: vehiculoTipo,
+				vehiculoTipo: vehiculoTipo,
+				vehiculoPatenteLast4: patenteLast4 || null,
+				conductorNombre: conductor?.nombre || null,
+				// No enviar RUT del conductor por privacidad
+			};
+
+			if (shouldSend) {
+				await axios.post(phpUrl, payload, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 30000,
+				});
+				console.log("📧 Email de asignación enviado");
+			} else {
+				console.log("ℹ️ Email de asignación no enviado (sendEmail=false)");
+			}
+		} catch (emailErr) {
+			console.warn(
+				"⚠️ No se pudo enviar email de asignación:",
+				emailErr.message
+			);
+		}
+
+		// Recargar la reserva para devolver los valores actualizados
+		await reserva.reload();
+
+		return res.json({
 			success: true,
-			message: "Estado de pago actualizado",
+			message: "Asignación actualizada",
 			reserva,
 		});
 	} catch (error) {
-		console.error("Error actualizando estado de pago:", error);
+		console.error("Error asignando vehículo/conductor:", error);
+		return res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener historial de asignaciones de una reserva (uso interno)
+app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const [rows] = await sequelize.query(
+			`SELECT id, vehiculo, conductor, created_at FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC`,
+			{ replacements: { id } }
+		);
+		res.json({ historial: rows || [] });
+	} catch (error) {
+		console.error("Error obteniendo historial de asignaciones:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -2580,6 +4166,590 @@ app.post("/api/clientes/crear-o-actualizar", async (req, res) => {
 	}
 });
 
+// ==================== RUTAS DE VEHÍCULOS ====================
+
+// Listar todos los vehículos
+app.get("/api/vehiculos", async (req, res) => {
+	try {
+		const { estado, tipo } = req.query;
+		const where = {};
+
+		if (estado) {
+			where.estado = estado;
+		}
+		if (tipo) {
+			where.tipo = tipo;
+		}
+
+		const vehiculos = await Vehiculo.findAll({
+			where,
+			order: [["patente", "ASC"]],
+		});
+
+		res.json({ vehiculos });
+	} catch (error) {
+		console.error("Error obteniendo vehículos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ==================== RUTAS DE DESTINOS (ADMIN) ====================
+// Listar destinos (opcionalmente solo activos)
+app.get("/api/destinos", async (req, res) => {
+	try {
+		const { activos } = req.query;
+		const where = {};
+		if (activos === "true") where.activo = true;
+		if (activos === "false") where.activo = false;
+		const destinos = await Destino.findAll({
+			where,
+			order: [
+				["orden", "ASC"],
+				["nombre", "ASC"],
+			],
+		});
+		res.json({ destinos });
+	} catch (error) {
+		console.error("Error obteniendo destinos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear destino rápido (sin activarlo por defecto)
+app.post("/api/destinos", authAdmin, async (req, res) => {
+	try {
+		const {
+			nombre,
+			precioIda = 0,
+			precioVuelta = 0,
+			precioIdaVuelta = 0,
+			descripcion = "",
+		} = req.body || {};
+		if (!nombre || !nombre.trim()) {
+			return res.status(400).json({ error: "Nombre de destino es requerido" });
+		}
+		const existing = await Destino.findOne({
+			where: { nombre: nombre.trim() },
+		});
+		if (existing) {
+			return res.json({ success: true, destino: existing, existed: true });
+		}
+		const destino = await Destino.create({
+			nombre: nombre.trim(),
+			precioIda: Number(precioIda) || 0,
+			precioVuelta: Number(precioVuelta) || 0,
+			precioIdaVuelta: Number(precioIdaVuelta) || 0,
+			activo: false,
+			descripcion,
+			tiempo: "",
+			imagen: "",
+			maxPasajeros: 4,
+			minHorasAnticipacion: 5,
+			orden: 9999,
+		});
+		res.status(201).json({ success: true, destino, existed: false });
+	} catch (error) {
+		console.error("Error creando destino:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar destino (activar, precios, nombre, etc.)
+app.put("/api/destinos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const destino = await Destino.findByPk(id);
+		if (!destino) {
+			return res.status(404).json({ error: "Destino no encontrado" });
+		}
+		const {
+			nombre,
+			precioIda,
+			precioVuelta,
+			precioIdaVuelta,
+			activo,
+			descripcion,
+			tiempo,
+			imagen,
+			maxPasajeros,
+			minHorasAnticipacion,
+			orden,
+		} = req.body || {};
+
+		await destino.update({
+			nombre: nombre !== undefined ? nombre : destino.nombre,
+			precioIda:
+				precioIda !== undefined ? Number(precioIda) : destino.precioIda,
+			precioVuelta:
+				precioVuelta !== undefined
+					? Number(precioVuelta)
+					: destino.precioVuelta,
+			precioIdaVuelta:
+				precioIdaVuelta !== undefined
+					? Number(precioIdaVuelta)
+					: destino.precioIdaVuelta,
+			activo: activo !== undefined ? Boolean(activo) : destino.activo,
+			descripcion:
+				descripcion !== undefined ? descripcion : destino.descripcion,
+			tiempo: tiempo !== undefined ? tiempo : destino.tiempo,
+			imagen: imagen !== undefined ? imagen : destino.imagen,
+			maxPasajeros:
+				maxPasajeros !== undefined
+					? Number(maxPasajeros)
+					: destino.maxPasajeros,
+			minHorasAnticipacion:
+				minHorasAnticipacion !== undefined
+					? Number(minHorasAnticipacion)
+					: destino.minHorasAnticipacion,
+			orden: orden !== undefined ? Number(orden) : destino.orden,
+		});
+
+		res.json({ success: true, destino });
+	} catch (error) {
+		console.error("Error actualizando destino:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un vehículo por ID
+app.get("/api/vehiculos/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const vehiculo = await Vehiculo.findByPk(id);
+
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		res.json({ vehiculo });
+	} catch (error) {
+		console.error("Error obteniendo vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo vehículo
+app.post("/api/vehiculos", authAdmin, async (req, res) => {
+	try {
+		const {
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad,
+			estado,
+			observaciones,
+		} = req.body;
+
+		if (!patente || !tipo) {
+			return res.status(400).json({
+				error: "Patente y tipo son obligatorios",
+			});
+		}
+
+		// Normalizar patente: convertir a mayúsculas y trim para evitar duplicados por casing
+		const patenteNorm = patente?.trim().toUpperCase();
+
+		// Normalizar año: convertir cadena vacía a null para respetar allowNull
+		const anioNorm =
+			anio === "" || anio === null || anio === undefined ? null : Number(anio);
+
+		// Normalizar capacidad
+		const capacidadNorm =
+			capacidad === "" || capacidad === null || capacidad === undefined
+				? 4
+				: Number(capacidad);
+
+		// Validar año y capacidad
+		if (
+			(anioNorm !== null &&
+				(isNaN(anioNorm) ||
+					anioNorm < 1900 ||
+					anioNorm > new Date().getFullYear() + 1)) ||
+			isNaN(capacidadNorm) ||
+			!Number.isInteger(capacidadNorm) ||
+			capacidadNorm < 1 ||
+			capacidadNorm > 50
+		) {
+			return res.status(400).json({
+				error:
+					"Año o capacidad inválidos. Año debe ser un número entre 1900 y el próximo año, capacidad debe ser un entero positivo entre 1 y 50.",
+			});
+		}
+		// Verificar si ya existe un vehículo con esa patente normalizada
+		const existente = await Vehiculo.findOne({
+			where: { patente: patenteNorm },
+		});
+		if (existente) {
+			return res.status(409).json({
+				error: "Ya existe un vehículo con esta patente",
+			});
+		}
+
+		const vehiculo = await Vehiculo.create({
+			patente: patenteNorm,
+			tipo,
+			marca,
+			modelo,
+			anio: anioNorm,
+			capacidad: capacidadNorm,
+			estado: estado || "disponible",
+			observaciones,
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Vehículo creado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error creando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un vehículo
+app.put("/api/vehiculos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			patente,
+			tipo,
+			marca,
+			modelo,
+			anio,
+			capacidad,
+			estado,
+			observaciones,
+		} = req.body;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		// Normalizar patente si viene
+		const patenteNorm = patente
+			? patente.trim().toUpperCase()
+			: vehiculo.patente;
+
+		// Validar y normalizar año
+		let anioNorm;
+		if (anio === "") {
+			anioNorm = null;
+		} else if (anio !== undefined) {
+			const anioNum = Number(anio);
+			const currentYear = new Date().getFullYear();
+			if (isNaN(anioNum) || anioNum < 1900 || anioNum > currentYear + 1) {
+				return res.status(400).json({
+					error:
+						"El año debe ser un número válido entre 1900 y " +
+						(currentYear + 1),
+				});
+			}
+			anioNorm = anioNum;
+		} else {
+			anioNorm = vehiculo.anio;
+		}
+
+		// Validar y normalizar capacidad
+		let capacidadNorm;
+		if (capacidad !== undefined) {
+			const capacidadNum = Number(capacidad);
+			const MAX_CAPACIDAD = 50; // Si el valor máximo es configurable, reemplazar por la variable correspondiente
+			if (isNaN(capacidadNum) || capacidadNum <= 0) {
+				return res.status(400).json({
+					error: "La capacidad debe ser un número positivo válido",
+				});
+			}
+			if (capacidadNum > MAX_CAPACIDAD) {
+				return res.status(400).json({
+					error: `La capacidad máxima permitida es ${MAX_CAPACIDAD}`,
+				});
+			}
+			capacidadNorm = capacidadNum;
+		} else {
+			capacidadNorm = vehiculo.capacidad;
+		}
+
+		// Si se está cambiando la patente, verificar que no exista otra con ese valor
+		if (patenteNorm !== vehiculo.patente) {
+			const existente = await Vehiculo.findOne({
+				where: { patente: patenteNorm },
+			});
+			if (existente) {
+				return res.status(409).json({
+					error: "Ya existe un vehículo con esta patente",
+				});
+			}
+		}
+
+		await vehiculo.update({
+			patente: patenteNorm,
+			tipo: tipo || vehiculo.tipo,
+			marca: marca !== undefined ? marca : vehiculo.marca,
+			modelo: modelo !== undefined ? modelo : vehiculo.modelo,
+			anio: anioNorm,
+			capacidad: capacidadNorm,
+			estado: estado !== undefined ? estado : vehiculo.estado,
+			observaciones:
+				observaciones !== undefined ? observaciones : vehiculo.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Vehículo actualizado exitosamente",
+			vehiculo,
+		});
+	} catch (error) {
+		console.error("Error actualizando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un vehículo
+app.delete("/api/vehiculos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const vehiculo = await Vehiculo.findByPk(id);
+		if (!vehiculo) {
+			return res.status(404).json({ error: "Vehículo no encontrado" });
+		}
+
+		await vehiculo.destroy();
+
+		res.json({
+			success: true,
+			message: "Vehículo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando vehículo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ==================== RUTAS DE CONDUCTORES ====================
+
+// Listar todos los conductores
+app.get("/api/conductores", async (req, res) => {
+	try {
+		const { estado } = req.query;
+		const where = {};
+
+		if (estado) {
+			where.estado = estado;
+		}
+
+		const conductores = await Conductor.findAll({
+			where,
+			order: [["nombre", "ASC"]],
+		});
+
+		res.json({ conductores });
+	} catch (error) {
+		console.error("Error obteniendo conductores:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener un conductor por ID
+app.get("/api/conductores/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const conductor = await Conductor.findByPk(id);
+
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		res.json({ conductor });
+	} catch (error) {
+		console.error("Error obteniendo conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear un nuevo conductor
+app.post("/api/conductores", authAdmin, async (req, res) => {
+	try {
+		const {
+			nombre,
+			rut,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado,
+			observaciones,
+		} = req.body;
+
+		if (!nombre || !rut || !telefono) {
+			return res.status(400).json({
+				error: "Nombre, RUT y teléfono son obligatorios",
+			});
+		}
+
+		// Validar RUT con dígito verificador
+		if (!validarRUT(rut)) {
+			return res
+				.status(400)
+				.json({ error: "RUT inválido. Verifique el dígito verificador." });
+		}
+
+		// Formatear RUT
+		const rutFormateado = formatearRUT(rut);
+		if (!rutFormateado) {
+			return res.status(400).json({ error: "RUT inválido" });
+		}
+
+		// Normalizar email: cadena vacía a null para respetar validación isEmail
+		const emailNorm = email?.trim() === "" || !email ? null : email.trim();
+
+		// Normalizar fecha: cadena vacía a null para evitar fechas inválidas
+		const fechaNorm =
+			!fechaVencimientoLicencia || fechaVencimientoLicencia === ""
+				? null
+				: fechaVencimientoLicencia;
+
+		// Verificar si ya existe un conductor con ese RUT
+		const existente = await Conductor.findOne({
+			where: { rut: rutFormateado },
+		});
+		if (existente) {
+			return res.status(409).json({
+				error: "Ya existe un conductor con este RUT",
+			});
+		}
+
+		const conductor = await Conductor.create({
+			nombre,
+			rut: rutFormateado,
+			telefono,
+			email: emailNorm,
+			licencia,
+			fechaVencimientoLicencia: fechaNorm,
+			estado: estado || "disponible",
+			observaciones,
+		});
+
+		res.status(201).json({
+			success: true,
+			message: "Conductor creado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error creando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar un conductor
+app.put("/api/conductores/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			nombre,
+			rut,
+			telefono,
+			email,
+			licencia,
+			fechaVencimientoLicencia,
+			estado,
+			observaciones,
+		} = req.body;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		// Si se está cambiando el RUT, validar y formatear
+		let rutFormateado = conductor.rut;
+		if (rut && rut !== conductor.rut) {
+			// Validar RUT con dígito verificador
+			if (!validarRUT(rut)) {
+				return res
+					.status(400)
+					.json({ error: "RUT inválido. Verifique el dígito verificador." });
+			}
+
+			rutFormateado = formatearRUT(rut);
+			if (!rutFormateado) {
+				return res.status(400).json({ error: "RUT inválido" });
+			}
+
+			const existente = await Conductor.findOne({
+				where: { rut: rutFormateado },
+			});
+			if (existente) {
+				return res.status(409).json({
+					error: "Ya existe un conductor con este RUT",
+				});
+			}
+		}
+
+		// Normalizar email: aplicar trim y cadena vacía a null
+		const emailNorm =
+			typeof email === "string" && email.trim() === ""
+				? null
+				: typeof email === "string"
+				? email.trim()
+				: email;
+
+		// Normalizar fecha: cadena vacía a null
+		const fechaNorm =
+			fechaVencimientoLicencia === "" ? null : fechaVencimientoLicencia;
+
+		await conductor.update({
+			nombre: nombre || conductor.nombre,
+			rut: rutFormateado,
+			telefono: telefono || conductor.telefono,
+			email: email !== undefined ? emailNorm : conductor.email,
+			licencia: licencia !== undefined ? licencia : conductor.licencia,
+			fechaVencimientoLicencia:
+				fechaVencimientoLicencia !== undefined
+					? fechaNorm
+					: conductor.fechaVencimientoLicencia,
+			estado: estado !== undefined ? estado : conductor.estado,
+			observaciones:
+				observaciones !== undefined ? observaciones : conductor.observaciones,
+		});
+
+		res.json({
+			success: true,
+			message: "Conductor actualizado exitosamente",
+			conductor,
+		});
+	} catch (error) {
+		console.error("Error actualizando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar un conductor
+app.delete("/api/conductores/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({ error: "Conductor no encontrado" });
+		}
+
+		await conductor.destroy();
+
+		res.json({
+			success: true,
+			message: "Conductor eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Eliminar una reserva
 app.delete("/api/reservas/:id", async (req, res) => {
 	try {
@@ -2604,17 +4774,53 @@ app.delete("/api/reservas/:id", async (req, res) => {
 
 // Cambiar estado de una reserva
 app.put("/api/reservas/:id/estado", async (req, res) => {
+	console.log(
+		"PUT /api/reservas/:id/estado llamado con id:",
+		req.params.id,
+		"estado:",
+		req.body?.estado
+	);
 	try {
 		const { id } = req.params;
-		const { estado } = req.body;
+		const { estado, observaciones } = req.body || {};
 
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
+			console.log("Reserva no encontrada:", id);
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		await reserva.update({ estado });
+		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
+		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			console.log(
+				"Intento de cambiar a pendiente con pagos:",
+				reserva.pagoMonto
+			);
+			return res.status(400).json({
+				error:
+					"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
+			});
+		}
 
+		// Permitir dejar observaciones vacías: si viene "" lo convertimos a NULL
+		const obsValue =
+			observaciones !== undefined
+				? typeof observaciones === "string" && observaciones.trim() === ""
+					? null
+					: observaciones
+				: reserva.observaciones;
+
+		await reserva.update({
+			estado,
+			observaciones: obsValue,
+		});
+
+		console.log(
+			"Estado actualizado exitosamente para reserva:",
+			id,
+			"a:",
+			estado
+		);
 		res.json({
 			success: true,
 			message: "Estado actualizado",
@@ -2628,7 +4834,16 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 // Endpoint para generar pagos desde el frontend
 app.post("/create-payment", async (req, res) => {
-	const { gateway, amount, description, email } = req.body || {};
+	const {
+		gateway,
+		amount,
+		description,
+		email,
+		reservaId,
+		codigoReserva,
+		tipoPago,
+		referenciaPago,
+	} = req.body || {};
 
 	if (!gateway || !amount || !description || !email) {
 		return res.status(400).json({
@@ -2642,46 +4857,27 @@ app.post("/create-payment", async (req, res) => {
 	const backendBase =
 		process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 
-	if (gateway === "mercadopago") {
-		const preferenceData = {
-			items: [
-				{
-					title: description,
-					unit_price: Number(amount),
-					quantity: 1,
-				},
-			],
-			back_urls: {
-				success: `${frontendBase}/pago-exitoso`,
-				failure: `${frontendBase}/pago-fallido`,
-				pending: `${frontendBase}/pago-pendiente`,
-			},
-			auto_return: "approved",
-			payer: {
-				email,
-			},
-		};
-
-		try {
-			const preference = new Preference(client);
-			const result = await preference.create({ body: preferenceData });
-			return res.json({ url: result.init_point });
-		} catch (error) {
-			console.error(
-				"Error al crear preferencia de Mercado Pago:",
-				error.response ? error.response.data : error.message
-			);
-			return res.status(500).json({
-				message: "Error al generar el pago con Mercado Pago.",
-			});
-		}
-	}
-
 	if (gateway === "flow") {
 		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+		const codigoReservaNormalizado =
+			typeof codigoReserva === "string" && codigoReserva.trim().length > 0
+				? codigoReserva.trim().toUpperCase()
+				: null;
+		const comercioBase = codigoReservaNormalizado || "ORDEN";
+		const commerceOrder = `${comercioBase}-${Date.now()}`;
+
+		// Incluir datos auxiliares para que el webhook identifique la reserva sin depender del correo
+		const optionalPayload = {};
+		if (email) optionalPayload.email = email;
+		if (reservaId) optionalPayload.reservaId = reservaId;
+		if (codigoReservaNormalizado)
+			optionalPayload.codigoReserva = codigoReservaNormalizado;
+		if (tipoPago) optionalPayload.tipoPago = tipoPago;
+		if (referenciaPago) optionalPayload.referenciaPago = referenciaPago;
+
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
-			commerceOrder: `ORDEN-${Date.now()}`,
+			commerceOrder,
 			subject: description,
 			currency: "CLP",
 			amount: Number(amount),
@@ -2689,6 +4885,19 @@ app.post("/create-payment", async (req, res) => {
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			urlReturn: `${frontendBase}/flow-return`,
 		};
+
+		if (Object.keys(optionalPayload).length > 0) {
+			optionalPayload.commerceOrder = commerceOrder;
+			try {
+				params.optional = JSON.stringify(optionalPayload);
+			} catch (optionalError) {
+				console.warn(
+					"No se pudo serializar la metadata optional para Flow:",
+					optionalError.message
+				);
+			}
+		}
+
 		params.s = signParams(params);
 
 		try {
@@ -2718,31 +4927,10 @@ app.post("/create-payment", async (req, res) => {
 		}
 	}
 
-	return res.status(400).json({ message: "Pasarela de pago no valida." });
+	return res.status(400).json({ message: "Pasarela de pago no válida." });
 });
 
-// --- ENDPOINTS DE PAGO (mantener los existentes) ---
-app.post("/api/create-preference", async (req, res) => {
-	try {
-		const { items, back_urls, auto_return } = req.body;
-
-		const preference = new Preference(client);
-		const result = await preference.create({
-			body: {
-				items,
-				back_urls,
-				auto_return,
-				notification_url: `${process.env.BACKEND_URL}/api/webhook-mercadopago`,
-			},
-		});
-
-		res.json(result);
-	} catch (error) {
-		console.error("Error creando preferencia:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
-	}
-});
-
+// --- ENDPOINT DE PAGO FLOW ---
 app.post("/api/create-flow-payment", async (req, res) => {
 	try {
 		const { amount, subject, email, nombre, apellido, telefono } = req.body;
@@ -2781,14 +4969,1964 @@ app.post("/api/create-flow-payment", async (req, res) => {
 	}
 });
 
-app.post("/api/webhook-mercadopago", (req, res) => {
-	console.log("Webhook MercadoPago recibido:", req.body);
-	res.status(200).send("OK");
+// Webhook para Flow - Maneja confirmaciones de pago
+
+// Importar express para usar urlencoded (en módulos ES)
+
+app.use("/api/flow-confirmation", express.urlencoded({ extended: true }));
+
+app.post("/api/flow-confirmation", async (req, res) => {
+	try {
+		// Log completo del body y headers para depuración
+		console.log("🔔 Confirmación Flow recibida:", req.body);
+		console.log("🔎 Headers recibidos:", req.headers);
+
+		// Soporte para diferentes formatos de envío (JSON o x-www-form-urlencoded)
+		let token = req.body.token;
+		// Si viene como 'Token' (mayúscula)
+		if (!token && req.body.Token) token = req.body.Token;
+		// Si viene como query param (por compatibilidad)
+		if (!token && req.query && req.query.token) token = req.query.token;
+
+		if (!token) {
+			console.log("⚠️  No se recibió token de Flow (body recibido):", req.body);
+			return res.status(400).send("Missing token");
+		}
+
+		// Consultar estado del pago en Flow
+		const params = {
+			apiKey: process.env.FLOW_API_KEY,
+			token: token,
+		};
+		params.s = signParams(params);
+
+		const flowResponse = await axios.get(
+			"https://www.flow.cl/api/payment/getStatus",
+			{ params }
+		);
+
+		const payment = flowResponse.data;
+		console.log("💳 Estado del pago Flow:", {
+			flowOrder: payment.flowOrder,
+			status: payment.status,
+			amount: payment.amount,
+		});
+
+		// Responder a Flow
+		res.status(200).send("OK");
+
+		// Solo procesar pagos exitosos (status 2 = pagado)
+		if (payment.status !== 2) {
+			console.log(
+				`ℹ️  Pago no exitoso (status: ${payment.status}), no se actualiza reserva`
+			);
+			return;
+		}
+
+		// Extraer metadata auxiliar enviada en el optional de Flow
+		let optionalMetadata = {};
+		if (payment.optional && typeof payment.optional === "string") {
+			try {
+				optionalMetadata =
+					payment.optional.trim().length > 0
+						? JSON.parse(payment.optional)
+						: {};
+			} catch (optionalParseError) {
+				console.warn(
+					"⚠️  No se pudo interpretar la metadata optional de Flow:",
+					optionalParseError.message
+				);
+				optionalMetadata = {};
+			}
+		}
+		const emailOptional = optionalMetadata.email;
+		const email = payment.payer?.email || emailOptional;
+		const commerceOrder = payment.commerceOrder;
+		const optionalReservaId =
+			optionalMetadata.reservaId !== undefined &&
+			optionalMetadata.reservaId !== null &&
+			optionalMetadata.reservaId !== ""
+				? Number(optionalMetadata.reservaId)
+				: null;
+		const optionalCodigoReserva =
+			typeof optionalMetadata.codigoReserva === "string" &&
+			optionalMetadata.codigoReserva.trim().length > 0
+				? optionalMetadata.codigoReserva.trim().toUpperCase()
+				: null;
+		const optionalTipoPago =
+			typeof optionalMetadata.tipoPago === "string" &&
+			optionalMetadata.tipoPago.trim().length > 0
+				? optionalMetadata.tipoPago.trim().toLowerCase()
+				: null;
+		const optionalReferenciaPago =
+			typeof optionalMetadata.referenciaPago === "string" &&
+			optionalMetadata.referenciaPago.trim().length > 0
+				? optionalMetadata.referenciaPago.trim().toUpperCase()
+				: null;
+
+		if (
+			!commerceOrder &&
+			!optionalReservaId &&
+			!optionalCodigoReserva &&
+			!email
+		) {
+			console.log(
+				"⚠️  No se puede identificar la reserva (falta metadata suficiente)"
+			);
+			return;
+		}
+
+		let reserva = null;
+
+		if (optionalReservaId && !Number.isNaN(optionalReservaId)) {
+			reserva = await Reserva.findByPk(optionalReservaId);
+		}
+
+		if (!reserva && optionalCodigoReserva) {
+			reserva = await Reserva.findOne({
+				where: { codigoReserva: optionalCodigoReserva },
+			});
+		}
+
+		if (!reserva && commerceOrder) {
+			const partesCommerce = commerceOrder.split("-");
+			if (partesCommerce.length > 2) {
+				const posibleCodigo = partesCommerce.slice(0, -1).join("-");
+				if (posibleCodigo) {
+					reserva = await Reserva.findOne({
+						where: { codigoReserva: posibleCodigo },
+					});
+				}
+			}
+		}
+
+		if (!reserva && email) {
+			reserva = await Reserva.findOne({
+				where: { email: email },
+				order: [["created_at", "DESC"]],
+			});
+		}
+
+		if (!reserva && emailOptional && emailOptional !== email) {
+			reserva = await Reserva.findOne({
+				where: { email: emailOptional },
+				order: [["created_at", "DESC"]],
+			});
+		}
+
+		if (!reserva) {
+			console.log("⚠️  Reserva no encontrada en la base de datos");
+			return;
+		}
+
+		console.log(
+			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`
+		);
+
+		// Reglas: parcial (>= 40% del total) => confirmada, total => confirmada (estado completada se gestiona manualmente)
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
+		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+		const montoActual = Number(payment.amount) || 0;
+		const pagoAcumulado = pagoPrevio + montoActual;
+		const umbralAbono = Math.max(
+			totalReserva * 0.4,
+			parseFloat(reserva.abonoSugerido || 0) || 0
+		);
+
+		let nuevoEstadoPago = reserva.estadoPago;
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
+		let abonoPagado = reserva.abonoPagado;
+		let saldoPagado = reserva.saldoPagado;
+		const referenciaPagoFinal =
+			optionalReferenciaPago || reserva.referenciaPago || null;
+
+		let tipoPagoFinal = optionalTipoPago || reserva.tipoPago;
+		if (!tipoPagoFinal) {
+			if (pagoAcumulado >= totalReserva && totalReserva > 0) {
+				tipoPagoFinal = "total";
+			} else if (pagoAcumulado > 0) {
+				tipoPagoFinal = "abono";
+			}
+		}
+
+		if (pagoAcumulado >= totalReserva && totalReserva > 0) {
+			nuevoEstadoPago = "pagado";
+			nuevoSaldoPendiente = 0;
+			abonoPagado = true;
+			saldoPagado = true;
+			if (
+				["pendiente", "pendiente_detalles", "confirmada"].includes(
+					nuevoEstadoReserva
+				)
+			) {
+				nuevoEstadoReserva = "confirmada";
+			}
+		} else if (pagoAcumulado > 0) {
+			nuevoEstadoPago = "parcial";
+			if (
+				pagoAcumulado >= umbralAbono &&
+				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
+			) {
+				nuevoEstadoReserva = "confirmada";
+			}
+			if (pagoAcumulado >= umbralAbono) {
+				abonoPagado = true;
+			}
+		}
+
+		// Actualizar estado de pago en la reserva (acumulando pagoMonto)
+		await reserva.update({
+			estadoPago: nuevoEstadoPago,
+			pagoId: payment.flowOrder.toString(),
+			pagoGateway: "flow",
+			pagoMonto: pagoAcumulado,
+			pagoFecha: new Date(payment.paymentDate || new Date()),
+			estado: nuevoEstadoReserva,
+			saldoPendiente: nuevoSaldoPendiente,
+			referenciaPago: referenciaPagoFinal,
+			tipoPago: tipoPagoFinal,
+			abonoPagado,
+			saldoPagado,
+		});
+
+		// Intentar vincular la reserva con un cliente existente o crearlo si es necesario
+		let clienteActualizado = null;
+		try {
+			let clienteId = reserva.clienteId;
+			let clienteAsociado = null;
+
+			if (clienteId) {
+				clienteAsociado = await Cliente.findByPk(clienteId);
+			} else {
+				const emailNormalizado = (reserva.email || "").trim().toLowerCase();
+				const telefonoNormalizado = (reserva.telefono || "").trim();
+
+				if (emailNormalizado) {
+					clienteAsociado = await Cliente.findOne({
+						where: sequelize.where(
+							sequelize.fn("LOWER", sequelize.col("email")),
+							emailNormalizado
+						),
+					});
+				}
+
+				if (!clienteAsociado && telefonoNormalizado) {
+					clienteAsociado = await Cliente.findOne({
+						where: { telefono: telefonoNormalizado },
+					});
+				}
+
+				if (!clienteAsociado) {
+					clienteAsociado = await Cliente.create({
+						nombre: reserva.nombre || "Cliente sin nombre",
+						email: reserva.email || email || "",
+						telefono: telefonoNormalizado || "",
+						rut: reserva.rut || null,
+						notas: null,
+						esCliente: false,
+						marcadoManualmente: false,
+						totalReservas: 0,
+						totalPagos: 0,
+						totalGastado: 0,
+					});
+				}
+
+				if (clienteAsociado && reserva.clienteId !== clienteAsociado.id) {
+					await reserva.update({ clienteId: clienteAsociado.id });
+					clienteId = clienteAsociado.id;
+				} else if (clienteAsociado) {
+					clienteId = clienteAsociado.id;
+				}
+			}
+
+			if (!clienteAsociado && clienteId) {
+				clienteAsociado = await Cliente.findByPk(clienteId);
+			}
+
+			if (clienteAsociado) {
+				clienteActualizado = await actualizarResumenCliente(clienteAsociado.id);
+			}
+		} catch (clienteError) {
+			console.error(
+				"⚠️ No se pudo sincronizar el cliente tras pago Flow:",
+				clienteError.message
+			);
+		}
+
+		if (clienteActualizado) {
+			console.log(
+				`👤 Cliente sincronizado tras pago Flow: ${clienteActualizado.id}`
+			);
+		}
+
+		console.log("💾 Reserva actualizada con información de pago Flow");
+
+		// Si la reserva proviene de un código de pago, marcarlo como usado
+		try {
+			const codigoDePago = reserva.referenciaPago;
+			if (
+				codigoDePago &&
+				typeof codigoDePago === "string" &&
+				codigoDePago.trim().length > 0
+			) {
+				const codigo = codigoDePago.trim().toUpperCase();
+				const registro = await CodigoPago.findOne({ where: { codigo } });
+				if (registro) {
+					const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+					const estado =
+						nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+					await registro.update({
+						usosActuales: nuevosUsos,
+						reservaId: reserva.id,
+						emailCliente: reserva.email,
+						fechaUso: new Date(),
+						estado,
+					});
+					console.log("✅ Código de pago marcado como usado:", codigo);
+				} else {
+					console.log(
+						"ℹ️ Código de pago no encontrado para marcar uso:",
+						codigo
+					);
+				}
+			}
+		} catch (cpError) {
+			console.warn(
+				"⚠️ No se pudo marcar el código de pago como usado:",
+				cpError.message
+			);
+		}
+
+		// Enviar correo de confirmación de pago
+		try {
+			console.log("📧 Enviando email de confirmación de pago...");
+
+			const emailData = {
+				email: reserva.email,
+				nombre: reserva.nombre,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				pasajeros: reserva.pasajeros,
+				vehiculo: reserva.vehiculo,
+				monto: payment.amount,
+				gateway: "Flow",
+				paymentId: payment.flowOrder.toString(),
+				estadoPago: "approved",
+			};
+
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
+
+			const emailResponse = await axios.post(phpUrl, emailData, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 30000,
+			});
+
+			console.log(
+				"✅ Email de confirmación de pago Flow enviado:",
+				emailResponse.data
+			);
+		} catch (emailError) {
+			console.error(
+				"❌ Error al enviar email de confirmación (no crítico):",
+				emailError.message
+			);
+		}
+	} catch (error) {
+		console.error("❌ Error procesando confirmación Flow:", error.message);
+		res.status(500).send("Error");
+	}
 });
 
-app.post("/api/flow-confirmation", (req, res) => {
-	console.log("Confirmación Flow recibida:", req.body);
-	res.status(200).send("OK");
+// --- RUTAS DE GASTOS ---
+//
+// Nota: Se asume que existe un modelo Gasto en ./models/Gasto.js exportado
+// y que las asociaciones con Reserva, Conductor y Vehiculo están definidas en models/associations.js
+//
+// Las rutas requieren autenticación admin (authAdmin) para operaciones de creación/edición/eliminación
+//
+
+// Obtener todos los gastos de una reserva
+app.get("/api/reservas/:id/gastos", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const gastos = await Gasto.findAll({
+			where: { reservaId: id },
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre"],
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculo",
+					attributes: ["id", "patente", "marca", "modelo"],
+				},
+			],
+			order: [["fecha", "DESC"]],
+		});
+
+		const totalGastos = gastos.reduce(
+			(sum, gasto) => sum + parseFloat(gasto.monto || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			gastos,
+			totalGastos,
+		});
+	} catch (error) {
+		console.error("Error al obtener gastos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener gastos",
+		});
+	}
+});
+
+// Crear un nuevo gasto
+app.post("/api/gastos", authAdmin, async (req, res) => {
+	try {
+		const {
+			reservaId,
+			tipoGasto,
+			monto,
+			porcentaje,
+			descripcion,
+			fecha,
+			comprobante,
+			conductorId,
+			vehiculoId,
+			observaciones,
+		} = req.body;
+
+		// Validaciones
+		if (!reservaId || !tipoGasto || !monto) {
+			return res.status(400).json({
+				success: false,
+				error: "Faltan campos requeridos: reservaId, tipoGasto, monto",
+			});
+		}
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(reservaId);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Calcular monto automáticamente si es comisión Flow
+		let montoFinal = parseFloat(monto);
+		if (tipoGasto === "comision_flow" && porcentaje) {
+			montoFinal =
+				(parseFloat(reserva.totalConDescuento) * parseFloat(porcentaje)) / 100;
+		}
+
+		const gasto = await Gasto.create({
+			reservaId,
+			tipoGasto,
+			monto: montoFinal,
+			porcentaje: porcentaje || null,
+			descripcion: descripcion || null,
+			fecha: fecha || new Date(),
+			comprobante: comprobante || null,
+			conductorId: conductorId || null,
+			vehiculoId: vehiculoId || null,
+			observaciones: observaciones || null,
+		});
+
+		// Cargar relaciones para la respuesta
+		const gastoCompleto = await Gasto.findByPk(gasto.id, {
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre"],
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculo",
+					attributes: ["id", "patente", "marca", "modelo"],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			gasto: gastoCompleto,
+		});
+	} catch (error) {
+		console.error("Error al crear gasto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al crear gasto",
+		});
+	}
+});
+
+// Actualizar un gasto
+app.put("/api/gastos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			tipoGasto,
+			monto,
+			porcentaje,
+			descripcion,
+			fecha,
+			comprobante,
+			conductorId,
+			vehiculoId,
+			observaciones,
+		} = req.body;
+
+		const gasto = await Gasto.findByPk(id);
+		if (!gasto) {
+			return res.status(404).json({
+				success: false,
+				error: "Gasto no encontrado",
+			});
+		}
+
+		await gasto.update({
+			tipoGasto: tipoGasto || gasto.tipoGasto,
+			monto: monto !== undefined ? monto : gasto.monto,
+			porcentaje: porcentaje !== undefined ? porcentaje : gasto.porcentaje,
+			descripcion: descripcion !== undefined ? descripcion : gasto.descripcion,
+			fecha: fecha || gasto.fecha,
+			comprobante: comprobante !== undefined ? comprobante : gasto.comprobante,
+			conductorId: conductorId !== undefined ? conductorId : gasto.conductorId,
+			vehiculoId: vehiculoId !== undefined ? vehiculoId : gasto.vehiculoId,
+			observaciones:
+				observaciones !== undefined ? observaciones : gasto.observaciones,
+		});
+
+		// Cargar relaciones para la respuesta
+		const gastoActualizado = await Gasto.findByPk(id, {
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre"],
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculo",
+					attributes: ["id", "patente", "marca", "modelo"],
+				},
+			],
+		});
+
+		res.json({
+			success: true,
+			gasto: gastoActualizado,
+		});
+	} catch (error) {
+		console.error("Error al actualizar gasto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al actualizar gasto",
+		});
+	}
+});
+
+// Eliminar un gasto
+app.delete("/api/gastos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const gasto = await Gasto.findByPk(id);
+		if (!gasto) {
+			return res.status(404).json({
+				success: false,
+				error: "Gasto no encontrado",
+			});
+		}
+
+		await gasto.destroy();
+
+		res.json({
+			success: true,
+			message: "Gasto eliminado correctamente",
+		});
+	} catch (error) {
+		console.error("Error al eliminar gasto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al eliminar gasto",
+		});
+	}
+});
+
+// Obtener estadísticas por conductor
+app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
+	try {
+		const { from, to } = req.query;
+		const fechaInicio = from ? new Date(from) : null;
+		const fechaFin = to ? new Date(to) : null;
+
+		if (
+			(from && Number.isNaN(fechaInicio?.getTime())) ||
+			(to && Number.isNaN(fechaFin?.getTime()))
+		) {
+			return res.status(400).json({
+				success: false,
+				error: "Parámetros de fecha inválidos.",
+			});
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			return res.status(400).json({
+				success: false,
+				error: "El rango de fechas es inválido.",
+			});
+		}
+
+		const filtroReservas = {};
+		if (fechaInicio) {
+			filtroReservas[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroReservas[Op.lte] = fechaFin;
+		}
+		const whereReservas =
+			Object.keys(filtroReservas).length > 0
+				? { fecha: filtroReservas }
+				: undefined;
+
+		const filtroGastos = {};
+		if (fechaInicio) {
+			filtroGastos[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroGastos[Op.lte] = fechaFin;
+		}
+		const whereGastos =
+			Object.keys(filtroGastos).length > 0
+				? { fecha: filtroGastos }
+				: undefined;
+
+		const conductores = await Conductor.findAll({
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+					where: whereReservas,
+					required: false,
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					attributes: ["id", "monto", "tipoGasto", "fecha"],
+					where: whereGastos,
+					required: false,
+				},
+			],
+		});
+
+		const estadisticas = conductores.map((conductor) => {
+			const reservas = conductor.reservas || [];
+			const gastos = conductor.gastos || [];
+
+			const totalReservas = reservas.length;
+			const reservasCompletadas = reservas.filter(
+				(r) => r.estado === "completada"
+			).length;
+			const totalIngresos = reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			);
+			const totalGastos = gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			);
+			const pagosConductor = gastos
+				.filter((g) => g.tipoGasto === "pago_conductor")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+
+			return {
+				id: conductor.id,
+				nombre: conductor.nombre,
+				rut: conductor.rut,
+				telefono: conductor.telefono,
+				email: conductor.email,
+				totalReservas,
+				reservasCompletadas,
+				totalIngresos,
+				totalGastos,
+				pagosConductor,
+				utilidad: totalIngresos - totalGastos,
+			};
+		});
+
+		res.json({
+			success: true,
+			estadisticas,
+			filtro: {
+				from: fechaInicio ? fechaInicio.toISOString() : null,
+				to: fechaFin ? fechaFin.toISOString() : null,
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas de conductores:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas de conductores",
+		});
+	}
+});
+
+// Obtener estadísticas por vehículo
+app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
+	try {
+		const { from, to } = req.query;
+		const fechaInicio = from ? new Date(from) : null;
+		const fechaFin = to ? new Date(to) : null;
+
+		if (
+			(from && Number.isNaN(fechaInicio?.getTime())) ||
+			(to && Number.isNaN(fechaFin?.getTime()))
+		) {
+			return res.status(400).json({
+				success: false,
+				error: "Parámetros de fecha inválidos.",
+			});
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			return res.status(400).json({
+				success: false,
+				error: "El rango de fechas es inválido.",
+			});
+		}
+
+		const filtroReservas = {};
+		if (fechaInicio) {
+			filtroReservas[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroReservas[Op.lte] = fechaFin;
+		}
+		const whereReservas =
+			Object.keys(filtroReservas).length > 0
+				? { fecha: filtroReservas }
+				: undefined;
+
+		const filtroGastos = {};
+		if (fechaInicio) {
+			filtroGastos[Op.gte] = fechaInicio;
+		}
+		if (fechaFin) {
+			filtroGastos[Op.lte] = fechaFin;
+		}
+		const whereGastos =
+			Object.keys(filtroGastos).length > 0
+				? { fecha: filtroGastos }
+				: undefined;
+
+		const vehiculos = await Vehiculo.findAll({
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+					where: whereReservas,
+					required: false,
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					attributes: ["id", "monto", "tipoGasto", "fecha"],
+					where: whereGastos,
+					required: false,
+				},
+			],
+		});
+
+		const estadisticas = vehiculos.map((vehiculo) => {
+			const reservas = vehiculo.reservas || [];
+			const gastos = vehiculo.gastos || [];
+
+			const totalReservas = reservas.length;
+			const reservasCompletadas = reservas.filter(
+				(r) => r.estado === "completada"
+			).length;
+			const totalIngresos = reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			);
+			const totalGastos = gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			);
+			const gastoCombustible = gastos
+				.filter((g) => g.tipoGasto === "combustible")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+			const gastoMantenimiento = gastos
+				.filter((g) => g.tipoGasto === "mantenimiento")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+
+			return {
+				id: vehiculo.id,
+				patente: vehiculo.patente,
+				marca: vehiculo.marca,
+				modelo: vehiculo.modelo,
+				tipo: vehiculo.tipo,
+				capacidad: vehiculo.capacidad,
+				totalReservas,
+				reservasCompletadas,
+				totalIngresos,
+				totalGastos,
+				gastoCombustible,
+				gastoMantenimiento,
+				utilidad: totalIngresos - totalGastos,
+			};
+		});
+
+		res.json({
+			success: true,
+			estadisticas,
+			filtro: {
+				from: fechaInicio ? fechaInicio.toISOString() : null,
+				to: fechaFin ? fechaFin.toISOString() : null,
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas de vehículos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas de vehículos",
+		});
+	}
+});
+
+app.get("/api/estadisticas/gastos", authAdmin, async (req, res) => {
+	try {
+		const { from, to, tipo } = req.query;
+		const fechaInicio = from ? new Date(from) : null;
+		const fechaFin = to ? new Date(to) : null;
+		const tipoFiltrado = tipo && tipo !== "todos" ? tipo : null;
+
+		const tiposValidos = [
+			"combustible",
+			"comision_flow",
+			"pago_conductor",
+			"peaje",
+			"mantenimiento",
+			"estacionamiento",
+			"otro",
+		];
+
+		if (
+			(from && Number.isNaN(fechaInicio?.getTime())) ||
+			(to && Number.isNaN(fechaFin?.getTime()))
+		) {
+			return res.status(400).json({
+				success: false,
+				error: "Parámetros de fecha inválidos.",
+			});
+		}
+
+		if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+			return res.status(400).json({
+				success: false,
+				error: "El rango de fechas es inválido.",
+			});
+		}
+
+		if (tipoFiltrado && !tiposValidos.includes(tipoFiltrado)) {
+			return res.status(400).json({
+				success: false,
+				error: "Tipo de gasto inválido.",
+			});
+		}
+
+		const where = {};
+		if (fechaInicio || fechaFin) {
+			where.fecha = {};
+			if (fechaInicio) {
+				where.fecha[Op.gte] = fechaInicio;
+			}
+			if (fechaFin) {
+				where.fecha[Op.lte] = fechaFin;
+			}
+		}
+		if (tipoFiltrado) {
+			where.tipoGasto = tipoFiltrado;
+		}
+
+		const gastos = await Gasto.findAll({
+			where,
+			attributes: ["fecha", "monto", "tipoGasto"],
+			raw: true,
+		});
+
+		const resumenPorFechaMap = {};
+		const totalesPorTipo = {};
+		let totalGeneral = 0;
+
+		gastos.forEach((gasto) => {
+			const fechaClave = new Date(gasto.fecha).toISOString().slice(0, 10);
+			const monto = Number.parseFloat(gasto.monto || 0);
+			const tipoGasto = gasto.tipoGasto;
+
+			if (!Number.isFinite(monto)) {
+				return;
+			}
+
+			totalGeneral += monto;
+
+			if (!totalesPorTipo[tipoGasto]) {
+				totalesPorTipo[tipoGasto] = 0;
+			}
+			totalesPorTipo[tipoGasto] += monto;
+
+			if (!resumenPorFechaMap[fechaClave]) {
+				resumenPorFechaMap[fechaClave] = {
+					fecha: fechaClave,
+					total: 0,
+					porTipo: {},
+					registros: 0,
+				};
+			}
+
+			resumenPorFechaMap[fechaClave].total += monto;
+			resumenPorFechaMap[fechaClave].registros += 1;
+			if (!resumenPorFechaMap[fechaClave].porTipo[tipoGasto]) {
+				resumenPorFechaMap[fechaClave].porTipo[tipoGasto] = 0;
+			}
+			resumenPorFechaMap[fechaClave].porTipo[tipoGasto] += monto;
+		});
+
+		const resumenPorFecha = Object.values(resumenPorFechaMap).sort(
+			(a, b) => new Date(a.fecha) - new Date(b.fecha)
+		);
+
+		res.json({
+			success: true,
+			totalGeneral,
+			totalRegistros: gastos.length,
+			totalesPorTipo,
+			resumenPorFecha,
+			filtro: {
+				from: fechaInicio ? fechaInicio.toISOString() : null,
+				to: fechaFin ? fechaFin.toISOString() : null,
+				tipo: tipoFiltrado || "todos",
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener resumen de gastos:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener resumen de gastos",
+		});
+	}
+});
+
+// Obtener estadísticas detalladas de un conductor
+app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id, {
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					include: [
+						{
+							model: Vehiculo,
+							as: "vehiculo_asignado",
+							attributes: ["id", "patente", "marca", "modelo"],
+						},
+					],
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					include: [
+						{
+							model: Reserva,
+							as: "reserva",
+							attributes: ["id", "codigoReserva", "fecha"],
+						},
+					],
+				},
+			],
+		});
+
+		if (!conductor) {
+			return res.status(404).json({
+				success: false,
+				error: "Conductor no encontrado",
+			});
+		}
+
+		const reservas = conductor.reservas || [];
+		const gastos = conductor.gastos || [];
+
+		// Agrupar gastos por tipo
+		const gastosPorTipo = gastos.reduce((acc, gasto) => {
+			const tipo = gasto.tipoGasto;
+			if (!acc[tipo]) {
+				acc[tipo] = { total: 0, cantidad: 0 };
+			}
+			acc[tipo].total += parseFloat(gasto.monto || 0);
+			acc[tipo].cantidad += 1;
+			return acc;
+		}, {});
+
+		// Vehículos asociados
+		const vehiculosSet = new Set();
+		reservas.forEach((r) => {
+			if (r.vehiculo_asignado) {
+				vehiculosSet.add(
+					JSON.stringify({
+						id: r.vehiculo_asignado.id,
+						patente: r.vehiculo_asignado.patente,
+						marca: r.vehiculo_asignado.marca,
+						modelo: r.vehiculo_asignado.modelo,
+					})
+				);
+			}
+		});
+		const vehiculosAsociados = Array.from(vehiculosSet).map((v) =>
+			JSON.parse(v)
+		);
+
+		res.json({
+			success: true,
+			conductor: {
+				id: conductor.id,
+				nombre: conductor.nombre,
+				rut: conductor.rut,
+				telefono: conductor.telefono,
+				email: conductor.email,
+			},
+			reservas: reservas.map((r) => ({
+				id: r.id,
+				codigoReserva: r.codigoReserva,
+				fecha: r.fecha,
+				origen: r.origen,
+				destino: r.destino,
+				estado: r.estado,
+				totalConDescuento: r.totalConDescuento,
+				vehiculo: r.vehiculo_asignado
+					? {
+							id: r.vehiculo_asignado.id,
+							patente: r.vehiculo_asignado.patente,
+							marca: r.vehiculo_asignado.marca,
+							modelo: r.vehiculo_asignado.modelo,
+					  }
+					: null,
+			})),
+			gastos: gastos.map((g) => ({
+				id: g.id,
+				tipoGasto: g.tipoGasto,
+				monto: g.monto,
+				fecha: g.fecha,
+				descripcion: g.descripcion,
+				reserva: g.reserva
+					? {
+							id: g.reserva.id,
+							codigoReserva: g.reserva.codigoReserva,
+							fecha: g.reserva.fecha,
+					  }
+					: null,
+			})),
+			gastosPorTipo,
+			vehiculosAsociados,
+			totalReservas: reservas.length,
+			totalIngresos: reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			),
+			totalGastos: gastos.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0),
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas del conductor:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas del conductor",
+		});
+	}
+});
+
+// ==========================================
+// ENDPOINTS DE PRODUCTOS
+// ==========================================
+
+/**
+ * GET /api/productos
+ * Listar todos los productos disponibles
+ * Filtros opcionales: categoria, disponible
+ */
+const limpiarListaTexto = (lista) =>
+        lista
+                .map((item) =>
+                        item !== undefined && item !== null
+                                ? String(item).trim()
+                                : ""
+                )
+                .filter((item) => item.length > 0);
+
+const normalizarListaFlexible = (valor) => {
+        if (valor === undefined || valor === null) {
+                return null;
+        }
+
+        if (Array.isArray(valor)) {
+                const valores = limpiarListaTexto(valor);
+                return valores.length > 0 ? valores : null;
+        }
+
+        if (typeof valor === "string") {
+                const texto = valor.trim();
+                if (!texto) {
+                        return null;
+                }
+
+                try {
+                        const posibleJson = JSON.parse(texto);
+                        if (Array.isArray(posibleJson)) {
+                                const valores = limpiarListaTexto(posibleJson);
+                                return valores.length > 0 ? valores : null;
+                        }
+                } catch {
+                        // Ignorar errores de parseo y continuar con la lógica por defecto
+                }
+
+                const valores = limpiarListaTexto(texto.split(/[,;\n]/));
+                return valores.length > 0 ? valores : null;
+        }
+
+        if (typeof valor === "object") {
+                const valores = limpiarListaTexto(Object.values(valor));
+                return valores.length > 0 ? valores : null;
+        }
+
+        return null;
+};
+
+const normalizarBooleano = (valor, predeterminado = true) => {
+        if (valor === undefined || valor === null) {
+                return predeterminado;
+        }
+
+        if (typeof valor === "boolean") {
+                return valor;
+        }
+
+        if (typeof valor === "number") {
+                return valor === 1;
+        }
+
+        if (typeof valor === "string") {
+                const texto = valor.trim().toLowerCase();
+                if (["true", "1", "si", "sí", "on"].includes(texto)) {
+                        return true;
+                }
+                if (["false", "0", "no", "off"].includes(texto)) {
+                        return false;
+                }
+        }
+
+        return predeterminado;
+};
+
+app.get("/api/productos", async (req, res) => {
+        try {
+                const { categoria, disponible } = req.query;
+                const where = {};
+
+                if (categoria) {
+                        where.categoria = categoria;
+                }
+
+                if (disponible !== undefined) {
+                        where.disponible = normalizarBooleano(disponible);
+                }
+
+                const productos = await Producto.findAll({
+                        where,
+                        order: [
+                                [sequelize.literal("orden IS NULL"), "ASC"],
+                                ["orden", "ASC"],
+                                ["nombre", "ASC"],
+                        ],
+                });
+
+                res.json({
+                        success: true,
+                        productos,
+                        total: productos.length,
+                });
+        } catch (error) {
+                console.error("Error al obtener productos:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al obtener productos",
+                });
+        }
+});
+
+/**
+ * GET /api/productos/:id
+ * Obtener detalles de un producto específico
+ */
+app.get("/api/productos/:id", async (req, res) => {
+        try {
+                const { id } = req.params;
+                const producto = await Producto.findByPk(id);
+
+		if (!producto) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado",
+			});
+		}
+
+		res.json({
+			success: true,
+			producto,
+		});
+	} catch (error) {
+		console.error("Error al obtener producto:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener producto",
+                });
+        }
+});
+
+/**
+ * POST /api/productos
+ * Crear un nuevo producto para el catálogo
+ */
+app.post("/api/productos", authAdmin, async (req, res) => {
+        try {
+                const {
+                        nombre,
+                        descripcion = "",
+                        categoria = "general",
+                        precio,
+                        disponible = true,
+                        stock,
+                        imagenUrl,
+                        orden,
+                        disponibleEnRuta,
+                        disponibleEnVehiculo,
+                } = req.body || {};
+
+                const nombreNormalizado = typeof nombre === "string" ? nombre.trim() : "";
+                if (!nombreNormalizado) {
+                        return res.status(400).json({
+                                success: false,
+                                error: "El nombre del producto es obligatorio",
+                        });
+                }
+
+                const existente = await Producto.findOne({
+                        where: sequelize.where(
+                                sequelize.fn("LOWER", sequelize.col("nombre")),
+                                nombreNormalizado.toLowerCase()
+                        ),
+                });
+
+                if (existente) {
+                        return res.status(409).json({
+                                success: false,
+                                error: "Ya existe un producto con este nombre",
+                        });
+                }
+
+                const precioTexto =
+                        precio === undefined || precio === null
+                                ? "0"
+                                : String(precio).toString();
+                const precioNormalizado = Number.parseFloat(precioTexto);
+                if (Number.isNaN(precioNormalizado) || precioNormalizado < 0) {
+                        return res.status(400).json({
+                                success: false,
+                                error: "El precio debe ser un número válido mayor o igual a 0",
+                        });
+                }
+
+                let stockNormalizado = null;
+                if (stock !== undefined) {
+                        if (stock === null || stock === "") {
+                                stockNormalizado = null;
+                        } else {
+                                const stockNumero = Number.parseInt(stock, 10);
+                                if (Number.isNaN(stockNumero) || stockNumero < 0) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El stock debe ser un número entero mayor o igual a 0",
+                                        });
+                                }
+                                stockNormalizado = stockNumero;
+                        }
+                }
+
+                let ordenNormalizado = null;
+                if (orden !== undefined) {
+                        if (orden === null || orden === "") {
+                                ordenNormalizado = null;
+                        } else {
+                                const ordenNumero = Number.parseInt(orden, 10);
+                                if (Number.isNaN(ordenNumero)) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El orden debe ser un número entero válido",
+                                        });
+                                }
+                                ordenNormalizado = ordenNumero;
+                        }
+                }
+
+                const producto = await Producto.create({
+                        nombre: nombreNormalizado,
+                        descripcion,
+                        categoria: typeof categoria === "string" && categoria.trim()
+                                ? categoria.trim()
+                                : "general",
+                        precio: precioNormalizado,
+                        disponible: normalizarBooleano(disponible, true),
+                        stock: stockNormalizado,
+                        imagenUrl:
+                                typeof imagenUrl === "string" && imagenUrl.trim()
+                                        ? imagenUrl.trim()
+                                        : null,
+                        orden: ordenNormalizado,
+                        disponibleEnRuta: normalizarListaFlexible(disponibleEnRuta),
+                        disponibleEnVehiculo: normalizarListaFlexible(disponibleEnVehiculo),
+                });
+
+                await producto.reload();
+
+                res.status(201).json({
+                        success: true,
+                        mensaje: "Producto creado exitosamente",
+                        producto,
+                });
+        } catch (error) {
+                console.error("Error al crear producto:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al crear el producto",
+                });
+        }
+});
+
+/**
+ * PUT /api/productos/:id
+ * Actualizar los datos de un producto existente
+ */
+app.put("/api/productos/:id", authAdmin, async (req, res) => {
+        try {
+                const { id } = req.params;
+                const producto = await Producto.findByPk(id);
+
+                if (!producto) {
+                        return res.status(404).json({
+                                success: false,
+                                error: "Producto no encontrado",
+                        });
+                }
+
+                const {
+                        nombre,
+                        descripcion,
+                        categoria,
+                        precio,
+                        disponible,
+                        stock,
+                        imagenUrl,
+                        orden,
+                        disponibleEnRuta,
+                        disponibleEnVehiculo,
+                } = req.body || {};
+
+                const cambios = {};
+
+                if (nombre !== undefined) {
+                        const nombreNormalizado = typeof nombre === "string" ? nombre.trim() : "";
+                        if (!nombreNormalizado) {
+                                return res.status(400).json({
+                                        success: false,
+                                        error: "El nombre del producto no puede quedar vacío",
+                                });
+                        }
+
+                        if (nombreNormalizado.toLowerCase() !== producto.nombre.toLowerCase()) {
+                                const existente = await Producto.findOne({
+                                        where: {
+                                                [Op.and]: [
+                                                        sequelize.where(
+                                                                sequelize.fn("LOWER", sequelize.col("nombre")),
+                                                                nombreNormalizado.toLowerCase()
+                                                        ),
+                                                        { id: { [Op.ne]: producto.id } },
+                                                ],
+                                        },
+                                });
+
+                                if (existente) {
+                                        return res.status(409).json({
+                                                success: false,
+                                                error: "Ya existe otro producto con este nombre",
+                                        });
+                                }
+                        }
+
+                        cambios.nombre = nombreNormalizado;
+                }
+
+                if (descripcion !== undefined) {
+                        cambios.descripcion = descripcion;
+                }
+
+                if (categoria !== undefined) {
+                        cambios.categoria =
+                                typeof categoria === "string" && categoria.trim()
+                                        ? categoria.trim()
+                                        : producto.categoria;
+                }
+
+                if (precio !== undefined) {
+                        const precioNumero = Number.parseFloat(String(precio));
+                        if (Number.isNaN(precioNumero) || precioNumero < 0) {
+                                return res.status(400).json({
+                                        success: false,
+                                        error: "El precio debe ser un número válido mayor o igual a 0",
+                                });
+                        }
+                        cambios.precio = precioNumero;
+                }
+
+                if (disponible !== undefined) {
+                        cambios.disponible = normalizarBooleano(disponible, producto.disponible);
+                }
+
+                if (stock !== undefined) {
+                        if (stock === null || stock === "") {
+                                cambios.stock = null;
+                        } else {
+                                const stockNumero = Number.parseInt(stock, 10);
+                                if (Number.isNaN(stockNumero) || stockNumero < 0) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El stock debe ser un número entero mayor o igual a 0",
+                                        });
+                                }
+                                cambios.stock = stockNumero;
+                        }
+                }
+
+                if (imagenUrl !== undefined) {
+                        cambios.imagenUrl =
+                                typeof imagenUrl === "string" && imagenUrl.trim()
+                                        ? imagenUrl.trim()
+                                        : null;
+                }
+
+                if (orden !== undefined) {
+                        if (orden === null || orden === "") {
+                                cambios.orden = null;
+                        } else {
+                                const ordenNumero = Number.parseInt(orden, 10);
+                                if (Number.isNaN(ordenNumero)) {
+                                        return res.status(400).json({
+                                                success: false,
+                                                error: "El orden debe ser un número entero válido",
+                                        });
+                                }
+                                cambios.orden = ordenNumero;
+                        }
+                }
+
+                if (disponibleEnRuta !== undefined) {
+                        cambios.disponibleEnRuta = normalizarListaFlexible(disponibleEnRuta);
+                }
+
+                if (disponibleEnVehiculo !== undefined) {
+                        cambios.disponibleEnVehiculo = normalizarListaFlexible(
+                                disponibleEnVehiculo
+                        );
+                }
+
+                await producto.update(cambios);
+                await producto.reload();
+
+                res.json({
+                        success: true,
+                        mensaje: "Producto actualizado exitosamente",
+                        producto,
+                });
+        } catch (error) {
+                console.error("Error al actualizar producto:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al actualizar el producto",
+                });
+        }
+});
+
+/**
+ * DELETE /api/productos/:id
+ * Eliminar un producto del catálogo (solo si no tiene reservas asociadas)
+ */
+app.delete("/api/productos/:id", authAdmin, async (req, res) => {
+        try {
+                const { id } = req.params;
+                const producto = await Producto.findByPk(id);
+
+                if (!producto) {
+                        return res.status(404).json({
+                                success: false,
+                                error: "Producto no encontrado",
+                        });
+                }
+
+                const reservasAsociadas = await ProductoReserva.count({
+                        where: { productoId: id },
+                });
+
+                if (reservasAsociadas > 0) {
+                        return res.status(409).json({
+                                success: false,
+                                error:
+                                        "No es posible eliminar el producto porque está asociado a reservas existentes",
+                        });
+                }
+
+                await producto.destroy();
+
+                res.json({
+                        success: true,
+                        mensaje: "Producto eliminado exitosamente",
+                });
+        } catch (error) {
+                console.error("Error al eliminar producto:", error);
+                res.status(500).json({
+                        success: false,
+                        error: "Error al eliminar el producto",
+                });
+        }
+});
+
+/**
+ * GET /api/reservas/:id/productos
+ * Obtener todos los productos agregados a una reserva
+ */
+app.get("/api/reservas/:id/productos", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Obtener productos de la reserva con toda la información
+		const productosReserva = await ProductoReserva.findAll({
+			where: { reservaId: id },
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+			order: [["createdAt", "ASC"]],
+		});
+
+		// Calcular total de productos
+		const totalProductos = productosReserva.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			productos: productosReserva,
+			total: productosReserva.length,
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error al obtener productos de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener productos de reserva",
+		});
+	}
+});
+
+/**
+ * POST /api/reservas/:id/productos
+ * Agregar un producto a una reserva activa/confirmada
+ */
+app.post("/api/reservas/:id/productos", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { productoId, cantidad = 1, notas } = req.body;
+
+		// Validaciones
+		if (!productoId) {
+			return res.status(400).json({
+				success: false,
+				error: "El ID del producto es requerido",
+			});
+		}
+
+		if (cantidad < 1) {
+			return res.status(400).json({
+				success: false,
+				error: "La cantidad debe ser mayor a 0",
+			});
+		}
+
+		// Verificar que la reserva existe y está en estado válido
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Verificar que la reserva está confirmada o activa
+		if (!["confirmada", "pendiente_detalles", "pendiente"].includes(reserva.estado)) {
+			return res.status(400).json({
+				success: false,
+				error: "Solo se pueden agregar productos a reservas activas o confirmadas",
+			});
+		}
+
+		// Verificar que el producto existe y está disponible
+		const producto = await Producto.findByPk(productoId);
+		if (!producto) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado",
+			});
+		}
+
+		if (!producto.disponible) {
+			return res.status(400).json({
+				success: false,
+				error: "El producto no está disponible actualmente",
+			});
+		}
+
+		// Verificar stock si está controlado
+		if (producto.stock !== null && producto.stock < cantidad) {
+			return res.status(400).json({
+				success: false,
+				error: `Stock insuficiente. Disponible: ${producto.stock}`,
+			});
+		}
+
+		// Calcular subtotal
+		const precioUnitario = parseFloat(producto.precio);
+		const subtotal = precioUnitario * cantidad;
+
+		// Agregar producto a la reserva
+		const productoReserva = await ProductoReserva.create({
+			reservaId: id,
+			productoId,
+			cantidad,
+			precioUnitario,
+			subtotal,
+			notas: notas || null,
+			estadoEntrega: "pendiente",
+		});
+
+		// Actualizar stock si está controlado
+		if (producto.stock !== null) {
+			await producto.update({
+				stock: producto.stock - cantidad,
+			});
+		}
+
+		// Obtener el producto agregado con sus detalles
+		const productoAgregado = await ProductoReserva.findByPk(productoReserva.id, {
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		// Calcular nuevo total de productos
+		const todosProductos = await ProductoReserva.findAll({
+			where: { reservaId: id },
+		});
+		const totalProductos = todosProductos.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		// Calcular nuevo total de la reserva (precio base + productos)
+		const nuevoTotal = parseFloat(reserva.totalConDescuento || 0) + totalProductos;
+
+		console.log(`✅ Producto agregado a reserva ${reserva.codigoReserva}: ${producto.nombre} x${cantidad}`);
+
+		// Enviar notificación por email (PHP en Hostinger)
+		// Se ejecuta en segundo plano para no bloquear la respuesta
+		const enviarNotificacion = async () => {
+			try {
+				const frontendUrl = process.env.FRONTEND_URL || "https://transportesaraucaria.cl";
+				const notifUrl = `${frontendUrl}/enviar_notificacion_productos.php`;
+				
+				// Obtener información del conductor si está asignado
+				let emailConductor = null;
+				let nombreConductor = null;
+				if (reserva.conductorId) {
+					const conductor = await Conductor.findByPk(reserva.conductorId);
+					if (conductor) {
+						emailConductor = conductor.email;
+						nombreConductor = conductor.nombre;
+					}
+				}
+				
+				// Obtener lista completa de productos con sus detalles
+				const productosCompletos = await ProductoReserva.findAll({
+					where: { reservaId: id },
+					include: [
+						{
+							model: Producto,
+							as: "producto",
+						},
+					],
+				});
+				
+				// Formatear productos para la notificación
+				const productosParaNotificacion = productosCompletos.map(pr => ({
+					nombre: pr.producto?.nombre || "Producto",
+					cantidad: pr.cantidad,
+					precioUnitario: parseFloat(pr.precioUnitario),
+					subtotal: parseFloat(pr.subtotal),
+					notas: pr.notas || null,
+				}));
+				
+				const notifData = {
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva,
+					emailPasajero: reserva.email,
+					nombrePasajero: reserva.nombre,
+					productos: productosParaNotificacion, // Lista completa de productos
+					totalProductos: parseFloat(totalProductos), // Total acumulado de todos los productos
+					nuevoTotal: parseFloat(nuevoTotal),
+					emailConductor,
+					nombreConductor,
+				};
+				
+				await axios.post(notifUrl, notifData, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				});
+				
+				console.log(`📧 Notificación de productos enviada para reserva ${reserva.codigoReserva}`);
+			} catch (err) {
+				console.error("⚠️ Error enviando notificación de productos:", err.message);
+				// No fallar si la notificación falla
+			}
+		};
+		
+		// Ejecutar notificación en segundo plano
+		enviarNotificacion().catch(err => {
+			console.error("Error en enviarNotificacion:", err);
+		});
+
+		res.json({
+			success: true,
+			mensaje: "Producto agregado exitosamente",
+			productoReserva: productoAgregado,
+			totalProductos,
+			nuevoTotalReserva: nuevoTotal,
+		});
+	} catch (error) {
+		console.error("Error al agregar producto a reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al agregar producto a reserva",
+		});
+	}
+});
+
+/**
+ * PUT /api/reservas/:id/productos/:productoReservaId
+ * Actualizar cantidad o notas de un producto en una reserva
+ */
+app.put("/api/reservas/:id/productos/:productoReservaId", async (req, res) => {
+	try {
+		const { id, productoReservaId } = req.params;
+		const { cantidad, notas, estadoEntrega } = req.body;
+
+		// Buscar el producto en la reserva
+		const productoReserva = await ProductoReserva.findOne({
+			where: {
+				id: productoReservaId,
+				reservaId: id,
+			},
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		if (!productoReserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado en la reserva",
+			});
+		}
+
+		// Actualizar campos
+		const updates = {};
+		
+		if (cantidad !== undefined && cantidad > 0) {
+			// Actualizar stock si es necesario
+			const producto = productoReserva.producto;
+			if (producto.stock !== null) {
+				const diferencia = cantidad - productoReserva.cantidad;
+				if (diferencia > 0 && producto.stock < diferencia) {
+					return res.status(400).json({
+						success: false,
+						error: `Stock insuficiente. Disponible: ${producto.stock}`,
+					});
+				}
+				await producto.update({
+					stock: producto.stock - diferencia,
+				});
+			}
+
+			updates.cantidad = cantidad;
+			updates.subtotal = parseFloat(productoReserva.precioUnitario) * cantidad;
+		}
+
+		if (notas !== undefined) {
+			updates.notas = notas;
+		}
+
+		if (estadoEntrega) {
+			updates.estadoEntrega = estadoEntrega;
+		}
+
+		await productoReserva.update(updates);
+
+		// Recargar con datos actualizados
+		await productoReserva.reload({
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		// Calcular nuevo total de productos
+		const todosProductos = await ProductoReserva.findAll({
+			where: { reservaId: id },
+		});
+		const totalProductos = todosProductos.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			mensaje: "Producto actualizado exitosamente",
+			productoReserva,
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error al actualizar producto de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al actualizar producto de reserva",
+		});
+	}
+});
+
+/**
+ * DELETE /api/reservas/:id/productos/:productoReservaId
+ * Eliminar un producto de una reserva
+ */
+app.delete("/api/reservas/:id/productos/:productoReservaId", async (req, res) => {
+	try {
+		const { id, productoReservaId } = req.params;
+
+		// Buscar el producto en la reserva
+		const productoReserva = await ProductoReserva.findOne({
+			where: {
+				id: productoReservaId,
+				reservaId: id,
+			},
+			include: [
+				{
+					model: Producto,
+					as: "producto",
+				},
+			],
+		});
+
+		if (!productoReserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Producto no encontrado en la reserva",
+			});
+		}
+
+		// Restaurar stock si está controlado
+		const producto = productoReserva.producto;
+		if (producto && producto.stock !== null) {
+			await producto.update({
+				stock: producto.stock + productoReserva.cantidad,
+			});
+		}
+
+		// Eliminar el producto de la reserva
+		await productoReserva.destroy();
+
+		// Calcular nuevo total de productos
+		const todosProductos = await ProductoReserva.findAll({
+			where: { reservaId: id },
+		});
+		const totalProductos = todosProductos.reduce(
+			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
+			0
+		);
+
+		res.json({
+			success: true,
+			mensaje: "Producto eliminado exitosamente",
+			totalProductos,
+		});
+	} catch (error) {
+		console.error("Error al eliminar producto de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al eliminar producto de reserva",
+		});
+	}
 });
 
 // --- UTILIDADES DE KEEP ALIVE ---
@@ -2826,48 +6964,11 @@ const startServer = async () => {
 	try {
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
-		
-		// Ejecutar migración automáticamente
-		try {
-			console.log("🔧 Ejecutando migración de base de datos...");
-			const queryInterface = sequelize.getQueryInterface();
-			
-			// Verificar si la tabla reservas existe
-			const tables = await queryInterface.showAllTables();
-			const reservasExists = tables.includes("reservas") || tables.includes("Reservas");
-			
-			if (reservasExists) {
-				// Verificar si las columnas ya existen
-				const reservasColumns = await queryInterface.describeTable("reservas").catch(() => ({}));
-				
-				if (!reservasColumns.cliente_id && !reservasColumns.clienteId) {
-					console.log("📦 Agregando columna cliente_id a reservas...");
-					await queryInterface.addColumn("reservas", "cliente_id", {
-						type: sequelize.Sequelize.INTEGER,
-						allowNull: true,
-					});
-					console.log("✅ Columna cliente_id agregada");
-				} else {
-					console.log("ℹ️  Columna cliente_id ya existe");
-				}
-				
-				if (!reservasColumns.rut) {
-					console.log("📦 Agregando columna rut a reservas...");
-					await queryInterface.addColumn("reservas", "rut", {
-						type: sequelize.Sequelize.STRING(20),
-						allowNull: true,
-					});
-					console.log("✅ Columna rut agregada");
-				} else {
-					console.log("ℹ️  Columna rut ya existe");
-				}
-			}
-			
-			console.log("✅ Migración completada");
-		} catch (migrationError) {
-			console.error("⚠️ Error en migración (no crítico):", migrationError.message);
-		}
-		
+
+		// NOTA: Las migraciones de base de datos deben ejecutarse con el script
+		// separado: npm run migrate o npm run start:migrate
+		// Esto evita duplicar lógica y asegura que las migraciones se ejecuten
+		// de forma controlada antes del inicio del servidor
 	} catch (error) {
 		console.error(
 			"⚠️ Advertencia: No se pudo conectar a la base de datos:",

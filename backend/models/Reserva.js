@@ -9,10 +9,17 @@ const Reserva = sequelize.define(
 			primaryKey: true,
 			autoIncrement: true,
 		},
+		codigoReserva: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			unique: true,
+			field: "codigo_reserva",
+			comment: "Código único de reserva (formato: AR-YYYYMMDD-XXXX)",
+		},
 		clienteId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
-			field: 'cliente_id', // Mapear a snake_case en la base de datos
+			field: "cliente_id", // Mapear a snake_case en la base de datos
 			comment: "ID del cliente asociado (si existe)",
 		},
 		rut: {
@@ -47,7 +54,6 @@ const Reserva = sequelize.define(
 		hora: {
 			type: DataTypes.TIME,
 			allowNull: true,
-			defaultValue: "08:00",
 		},
 		pasajeros: {
 			type: DataTypes.INTEGER,
@@ -66,14 +72,8 @@ const Reserva = sequelize.define(
 		vehiculoId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
-			field: 'vehiculo_id',
-			comment: "ID del vehículo asignado",
-		},
-		conductorId: {
-			type: DataTypes.INTEGER,
-			allowNull: true,
-			field: 'conductor_id',
-			comment: "ID del conductor asignado",
+			field: "vehiculo_id",
+			comment: "ID del vehículo asignado (FK)",
 		},
 		numeroVuelo: {
 			type: DataTypes.STRING(50),
@@ -113,6 +113,20 @@ const Reserva = sequelize.define(
 			allowNull: true,
 			defaultValue: 0,
 		},
+		abonoPagado: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false,
+			field: "abono_pagado",
+			comment: "TRUE cuando el abono sugerido fue pagado",
+		},
+		saldoPagado: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false,
+			field: "saldo_pagado",
+			comment: "TRUE cuando el saldo restante fue pagado por completo",
+		},
 		descuentoBase: {
 			type: DataTypes.DECIMAL(10, 2),
 			allowNull: true,
@@ -132,18 +146,6 @@ const Reserva = sequelize.define(
 			type: DataTypes.DECIMAL(10, 2),
 			allowNull: true,
 			defaultValue: 0,
-		},
-		ajusteTarifaDinamica: {
-			type: DataTypes.DECIMAL(10, 2),
-			allowNull: true,
-			defaultValue: 0,
-			comment: "Ajuste por tarifa dinámica (puede ser positivo o negativo)",
-		},
-		descuentoRetorno: {
-			type: DataTypes.DECIMAL(10, 2),
-			allowNull: true,
-			defaultValue: 0,
-			comment: "Descuento por viaje de retorno (50% cuando hay vehículo disponible)",
 		},
 		totalConDescuento: {
 			type: DataTypes.DECIMAL(10, 2),
@@ -168,14 +170,18 @@ const Reserva = sequelize.define(
 			),
 			defaultValue: "pendiente",
 		},
-		// Campo virtual para no persistir hasta que exista en BD
+		// Campo virtual calculado: true si tiene detalles completos del viaje
 		detallesCompletos: {
 			type: DataTypes.VIRTUAL,
 			get() {
-				return this.getDataValue("detallesCompletos") ?? false;
-			},
-			set(val) {
-				this.setDataValue("detallesCompletos", Boolean(val));
+				// Una reserva tiene detalles completos si tiene al menos el número de vuelo o hotel
+				const tieneNumeroVuelo =
+					this.getDataValue("numeroVuelo") &&
+					this.getDataValue("numeroVuelo").trim() !== "";
+				const tieneHotel =
+					this.getDataValue("hotel") &&
+					this.getDataValue("hotel").trim() !== "";
+				return tieneNumeroVuelo || tieneHotel;
 			},
 		},
 		ipAddress: {
@@ -194,9 +200,46 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(50),
 			allowNull: true,
 		},
+		tipoPago: {
+			type: DataTypes.STRING(20),
+			allowNull: true,
+			field: "tipo_pago",
+			comment: "Tipo de pago registrado (abono, saldo, total)",
+		},
 		estadoPago: {
-			type: DataTypes.ENUM("pendiente", "pagado", "fallido", "reembolsado"),
+			type: DataTypes.ENUM(
+				"pendiente",
+				"aprobado",
+				"parcial",
+				"pagado",
+				"fallido",
+				"reembolsado"
+			),
 			defaultValue: "pendiente",
+		},
+		pagoId: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "pago_id",
+			comment: "ID de transacción del gateway de pago",
+		},
+		pagoGateway: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "pago_gateway",
+			comment: "Gateway de pago utilizado (flow, transferencia, efectivo, etc)",
+		},
+		pagoMonto: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			field: "pago_monto",
+			comment: "Monto pagado en la transacción",
+		},
+		pagoFecha: {
+			type: DataTypes.DATE,
+			allowNull: true,
+			field: "pago_fecha",
+			comment: "Fecha y hora del pago confirmado",
 		},
 		referenciaPago: {
 			type: DataTypes.STRING(255),
@@ -205,6 +248,12 @@ const Reserva = sequelize.define(
 		observaciones: {
 			type: DataTypes.TEXT,
 			allowNull: true,
+		},
+		conductorId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "conductor_id",
+			comment: "ID del conductor asignado (FK)",
 		},
 	},
 	{
@@ -217,6 +266,7 @@ const Reserva = sequelize.define(
 			{ fields: ["created_at"] },
 			{ fields: ["clienteId"] },
 			{ fields: ["rut"] },
+			{ fields: ["codigo_reserva"], unique: true },
 		],
 	}
 );
