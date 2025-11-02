@@ -56,7 +56,7 @@ function Hero({
 	promotionDiscountRate,
 	roundTripDiscountRate,
 	personalizedDiscountRate,
-	// descuentosPersonalizados, // No usado en este componente
+        // descuentosPersonalizados, // Este dato está disponible pero no se utiliza directamente aquí
 	activePromotion,
 	reviewChecklist,
 	setReviewChecklist,
