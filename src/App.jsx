@@ -1094,7 +1094,6 @@ function App() {
 	]);
 
 	const {
-		precioBase,
 		descuentoOnline,
 		totalConDescuento,
 		abono,
