@@ -95,3 +95,9 @@ function AdminDashboard() {
         ) : (
           <AdminPricing />
         )}
+      </div>
+    </div>
+  );
+}
+
+export default AdminDashboard;
