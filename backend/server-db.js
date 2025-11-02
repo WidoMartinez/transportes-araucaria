@@ -428,20 +428,33 @@ const normalizeUsuariosQueUsaron = (raw) => {
 		.filter(Boolean);
 };
 
-app.use(
-	cors({
-		origin: [
-			"https://www.transportesaraucaria.cl",
-			"https://transportesaraucaria.cl",
-			"http://localhost:3000",
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
-		],
-		credentials: true,
-		methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-		allowedHeaders: ["Content-Type", "Authorization"],
-	})
-);
+// --- Configuración CORS ---
+// Nota: ampliamos headers permitidos y respondemos a preflight para evitar bloqueos desde el dominio público
+const corsOptions = {
+	origin: [
+		"https://www.transportesaraucaria.cl",
+		"https://transportesaraucaria.cl",
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+	],
+	credentials: true,
+	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+	// Permitimos cabeceras comunes y X-Requested-With; si el navegador envía otras,
+	// conviene no restringir en exceso (también podríamos omitir esta opción para reflejar automáticamente)
+	allowedHeaders: [
+		"Content-Type",
+		"Authorization",
+		"X-Requested-With",
+		"Accept",
+		"Origin",
+	],
+	optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+// Responder explícitamente a las solicitudes de preflight
+app.options("*", cors(corsOptions));
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 // Función para ejecutar migración automática del código de reserva
