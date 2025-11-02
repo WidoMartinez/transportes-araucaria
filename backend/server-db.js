@@ -5337,6 +5337,52 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				emailError.message
 			);
 		}
+
+		// Enviar notificación de productos si corresponde
+		try {
+			const productosEnReserva = await ProductoReserva.findAll({
+				where: { reservaId: reserva.id },
+				include: [{ model: Producto, as: 'producto' }]
+			});
+
+			if (productosEnReserva.length > 0) {
+				console.log(`📧 Enviando notificación de productos para reserva ${reserva.codigoReserva}...`);
+
+				const productosParaNotificacion = productosEnReserva.map(pr => ({
+					nombre: pr.producto?.nombre || 'Producto',
+					cantidad: pr.cantidad,
+					precioUnitario: parseFloat(pr.precioUnitario),
+					subtotal: parseFloat(pr.subtotal),
+					notas: pr.notas || null
+				}));
+
+				const totalProductos = productosParaNotificacion.reduce((sum, p) => sum + p.subtotal, 0);
+
+				const notifData = {
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva,
+					emailPasajero: reserva.email,
+					nombrePasajero: reserva.nombre,
+					productos: productosParaNotificacion,
+					totalProductos: totalProductos,
+				};
+
+				const notifUrl = "https://www.transportesaraucaria.cl/enviar_notificacion_productos.php";
+
+				await axios.post(notifUrl, notifData, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				});
+
+				console.log(`✅ Notificación de productos enviada para reserva ${reserva.codigoReserva}`);
+			}
+		} catch (notifError) {
+			console.error(
+				"❌ Error al enviar notificación de productos (no crítico):",
+				notifError.message
+			);
+		}
+
 	} catch (error) {
 		console.error("❌ Error procesando confirmación Flow:", error.message);
 		res.status(500).send("Error");
