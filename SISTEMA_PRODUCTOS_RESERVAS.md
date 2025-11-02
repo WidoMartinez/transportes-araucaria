@@ -2,7 +2,7 @@
 
 ## Descripción General
 
-Este sistema permite a los pasajeros agregar productos (snacks, bebidas, accesorios) a sus reservas activas y confirmadas, mejorando la experiencia del cliente de manera similar a aplicaciones como Uber Eats.
+Este sistema permite a los pasajeros agregar productos (snacks, bebidas, accesorios) a sus reservas confirmadas, mejorando la experiencia del cliente de manera similar a aplicaciones como Uber Eats.
 
 ## Características Principales
 
@@ -13,7 +13,7 @@ Este sistema permite a los pasajeros agregar productos (snacks, bebidas, accesor
 - **Filtros contextuales**: Productos disponibles según ruta o vehículo
 
 ### 📦 Gestión de Productos en Reservas
-- **Agregar productos**: Los pasajeros pueden agregar productos a reservas activas/confirmadas
+- **Agregar productos**: Los pasajeros pueden agregar productos a reservas confirmadas
 - **Control de cantidad**: Selector de cantidad con validación de stock
 - **Notas especiales**: Campo para instrucciones (ej: "sin azúcar", "extra frío")
 - **Actualización en tiempo real**: Cálculo automático de subtotales y total de reserva
@@ -264,9 +264,9 @@ La migración crea estos productos automáticamente:
 
 ### Cuándo se Pueden Agregar Productos
 ✅ Reserva en estado `confirmada`
-✅ Reserva en estado `pendiente_detalles`
-✅ Reserva en estado `pendiente`
 
+❌ Reserva en estado `pendiente_detalles`
+❌ Reserva en estado `pendiente`
 ❌ Reserva en estado `completada`
 ❌ Reserva en estado `cancelada`
 

@@ -6646,7 +6646,7 @@ app.get("/api/reservas/:id/productos", async (req, res) => {
 
 /**
  * POST /api/reservas/:id/productos
- * Agregar un producto a una reserva activa/confirmada
+ * Agregar un producto a una reserva confirmada
  */
 app.post("/api/reservas/:id/productos", async (req, res) => {
 	try {
@@ -6677,16 +6677,12 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 			});
 		}
 
-		// Verificar que la reserva está confirmada o activa
-		if (
-			!["confirmada", "pendiente_detalles", "pendiente"].includes(
-				reserva.estado
-			)
-		) {
+		// Verificar que la reserva está confirmada
+		if (reserva.estado !== "confirmada") {
 			return res.status(400).json({
 				success: false,
 				error:
-					"Solo se pueden agregar productos a reservas activas o confirmadas",
+					"Solo se pueden agregar productos a reservas confirmadas",
 			});
 		}
 

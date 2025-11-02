@@ -2,7 +2,7 @@
 /* global process */
 /**
  * Migración: Agregar tablas de productos y productos_reserva
- * Permite a los pasajeros agregar productos a reservas activas y confirmadas
+ * Permite a los pasajeros agregar productos a reservas confirmadas
  */
 import sequelize from "../config/database.js";
 
