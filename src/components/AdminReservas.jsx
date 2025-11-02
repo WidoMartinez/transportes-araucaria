@@ -2408,12 +2408,27 @@ function AdminReservas() {
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
 				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>
-							Detalles de Reserva #{selectedReserva?.id}
-						</DialogTitle>
-						<DialogDescription>
-							Información completa de la reserva
-						</DialogDescription>
+						<div className="flex justify-between items-center">
+							<div>
+								<DialogTitle>
+									Detalles de Reserva #{selectedReserva?.id}
+								</DialogTitle>
+								<DialogDescription>
+									Información completa de la reserva
+								</DialogDescription>
+							</div>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => {
+									const link = `${window.location.origin}/#comprar-productos/${selectedReserva.codigoReserva}`;
+									navigator.clipboard.writeText(link);
+									alert(`Enlace copiado al portapapeles: ${link}`);
+								}}
+							>
+								Generar Link de Compra
+							</Button>
+						</div>
 					</DialogHeader>
 
 					{selectedReserva && (

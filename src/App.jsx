@@ -42,7 +42,7 @@ import { getBackendUrl } from "./lib/backend";
 import { destinosBase, destacadosData } from "./data/destinos";
 
 // Descuentos ahora se cargan dinámicamente desde descuentosGlobales
-const ROUND_TRIP_DISCOUNT = 0.05;
+// Eliminado: variable ROUND_TRIP_DISCOUNT no utilizada
 
 const parsePromotionMetadata = (promo) => {
 	if (!promo || typeof promo.descripcion !== "string") return null;
@@ -1094,7 +1094,6 @@ function App() {
 	]);
 
 	const {
-		precioBase,
 		descuentoOnline,
 		totalConDescuento,
 		abono,
