@@ -344,214 +344,118 @@ function HeroExpress({
 	return (
 		<section
 			id="inicio"
-			className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
+			className="relative bg-white min-h-screen flex items-center"
 		>
-			<div
-				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-				style={{ backgroundImage: `url(${heroVan})` }}
-			></div>
-			<div className="absolute inset-0 bg-black/50"></div>
-
-			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
+			<div className="relative container mx-auto px-4 pt-20 md:pt-24 pb-16 md:pb-20">
 				{!showBookingModule && (
-					<>
-						<h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
-							Traslados Privados Aeropuerto La Araucanía
-							<br />
-							<span className="text-accent drop-shadow-lg text-3xl md:text-5xl">
-								Reserva en 2 minutos
-							</span>
+					<div className="max-w-2xl">
+						<h1 className="text-4xl md:text-5xl font-bold mb-4 text-gray-900">
+							Viaja a cualquier lugar con Transportes Araucanía
 						</h1>
-						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
-							Descubre La Araucanía con nuestros traslados privados: conectamos
-							el aeropuerto directamente con Pucón, Villarrica, Malalcahuello y
-							todos los destinos turísticos de la región.
-							<br />
-							<span className="text-accent font-bold">
-								¡Aprovecha nuestro descuento web del {baseDiscountPercentage}%
-								garantizado
-								{promoDiscountPercentage > 0 &&
-									` + ${promoDiscountPercentage}% extra`}
-								!
-							</span>
-						</p>
-					</>
-				)}
-
-				{!showBookingModule && (
-					<div className="flex flex-col items-center justify-center space-y-6">
-						<Button
-							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
-						>
-							🚀 Reservar ahora
-						</Button>
-						<Button
-							variant="outline"
-							className="bg-transparent border-white text-white hover:bg-white/10"
-							asChild
-						>
-							<a href="#consultar-reserva">Continuar con código</a>
-						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso súper rápido • Solo 2 pasos • Pago seguro
+						<p className="text-base md:text-lg mb-8 text-gray-600">
+							Traslados privados desde el Aeropuerto La Araucanía hacia Pucón,
+							Villarrica, Malalcahuello y todos los destinos de la región.
 						</p>
 					</div>
 				)}
 
-				{showBookingModule && (
-					<div className="w-full">
-						<div className="text-center mb-6">
-							<h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-2xl mb-3">
-								¡Reserva express y ahorra!
-							</h3>
-							<p className="text-lg md:text-xl text-white/95 drop-shadow-lg font-medium">
-								Solo 2 pasos • Descuento del{" "}
-								<span className="text-accent font-bold text-2xl">
-									{baseDiscountPercentage}%
-								</span>{" "}
-								aplicado automáticamente
-							</p>
-						</div>
+				{!showBookingModule && (
+					<div className="flex flex-col items-start space-y-4 max-w-2xl">
+						<Button
+							onClick={() => setShowBookingModule(true)}
+							className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg font-medium rounded-lg transition-colors"
+						>
+							Reservar traslado
+						</Button>
+						<Button
+							variant="ghost"
+							className="text-gray-700 hover:bg-gray-100"
+							asChild
+						>
+							<a href="#consultar-reserva">Continuar con código de reserva</a>
+						</Button>
+					</div>
+				)}
 
-						<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left">
-							<CardHeader className="space-y-4">
-								<div className="flex flex-wrap items-center justify-between gap-2">
+				{showBookingModule && (
+					<div className="w-full max-w-2xl">
+						<Card className="bg-white shadow-lg border-0 rounded-2xl">
+							<CardHeader className="space-y-3 pb-4">
+								<div className="flex items-center justify-between">
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => setShowBookingModule(false)}
-										className="text-gray-500 hover:text-gray-700"
+										className="text-gray-600 hover:text-gray-900 -ml-2"
 									>
 										← Volver
 									</Button>
-									<div className="flex items-center gap-2">
-										<Badge variant="secondary" className="text-sm">
-											Descuento web {baseDiscountPercentage}%
-										</Badge>
-										{promoDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-emerald-500 text-white"
-											>
-												Extra +{promoDiscountPercentage}%
-											</Badge>
-										)}
-									</div>
-								</div>
-
-								{/* Progress simplificado */}
-								<div className="space-y-4">
-									<div className="grid gap-4 md:grid-cols-2">
-										{steps.map((step, index) => {
-											const isCompleted = index < currentStep;
-											const isActive = index === currentStep;
-
-											return (
-												<div
-													key={step.title}
-													className={`flex items-center gap-3 rounded-lg border p-4 transition ${
-														isActive
-															? "border-primary bg-primary/10"
-															: isCompleted
-															? "border-green-500 bg-green-50"
-															: "border-gray-200 bg-gray-50"
-													}`}
-												>
-													<div
-														className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl ${
-															isCompleted
-																? "bg-green-500 text-white"
-																: isActive
-																? "bg-primary text-white"
-																: "bg-gray-200 text-gray-500"
-														}`}
-													>
-														{isCompleted ? "✓" : step.icon}
-													</div>
-													<div>
-														<p className="font-semibold text-foreground text-lg">
-															{step.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{step.description}
-														</p>
-													</div>
-												</div>
-											);
-										})}
-									</div>
-									<Progress value={progressValue} className="h-3" />
+									{baseDiscountPercentage > 0 && (
+										<span className="text-sm text-gray-600">
+											Descuento web {baseDiscountPercentage}% incluido
+										</span>
+									)}
 								</div>
 							</CardHeader>
 
-							<CardContent className="space-y-6">
+							<CardContent className="space-y-5 px-6 pb-6">
 								{/* PASO 1: Información básica del viaje */}
 								{currentStep === 0 && (
-									<div className="space-y-6">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-2">
-												<Label
-													htmlFor="origen-express"
-													className="text-base font-medium"
-												>
-													<span className="flex items-center gap-2">
-														🚐 Origen
-													</span>
-												</Label>
-												<select
-													id="origen-express"
-													name="origen"
-													value={formData.origen}
-													onChange={handleInputChange}
-													className="flex h-12 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-													required
-												>
-													{origenes.map((origen) => (
-														<option key={origen} value={origen}>
-															{origen}
-														</option>
-													))}
-												</select>
-											</div>
-
-											<div className="space-y-2">
-												<Label
-													htmlFor="destino-express"
-													className="text-base font-medium"
-												>
-													<span className="flex items-center gap-2">
-														🎯 Destino
-													</span>
-												</Label>
-												<select
-													id="destino-express"
-													name="destino"
-													value={formData.destino}
-													onChange={handleInputChange}
-													className="flex h-12 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-													required
-												>
-													<option value="">Seleccionar destino</option>
-													{destinos.map((d) => (
-														<option key={d} value={d}>
-															{d}
-														</option>
-													))}
-												</select>
-											</div>
+									<div className="space-y-4">
+										<div className="space-y-1">
+											<Label
+												htmlFor="origen-express"
+												className="text-sm font-normal text-gray-700"
+											>
+												Punto de partida
+											</Label>
+											<select
+												id="origen-express"
+												name="origen"
+												value={formData.origen}
+												onChange={handleInputChange}
+												className="flex h-14 w-full items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+												required
+											>
+												{origenes.map((origen) => (
+													<option key={origen} value={origen}>
+														{origen}
+													</option>
+												))}
+											</select>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-2">
+										<div className="space-y-1">
+											<Label
+												htmlFor="destino-express"
+												className="text-sm font-normal text-gray-700"
+											>
+												Entrega
+											</Label>
+											<select
+												id="destino-express"
+												name="destino"
+												value={formData.destino}
+												onChange={handleInputChange}
+												className="flex h-14 w-full items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+												required
+											>
+												<option value="">Seleccionar destino</option>
+												{destinos.map((d) => (
+													<option key={d} value={d}>
+														{d}
+													</option>
+												))}
+											</select>
+										</div>
+
+										<div className="grid grid-cols-2 gap-4">
+											<div className="space-y-1">
 												<Label
 													htmlFor="fecha-express"
-													className="text-base font-medium"
+													className="text-sm font-normal text-gray-700"
 												>
-													<span className="flex items-center gap-2">
-														<Calendar className="h-4 w-4" />
-														Fecha del traslado
-													</span>
+													Fecha
 												</Label>
 												<Input
 													id="fecha-express"
@@ -560,32 +464,29 @@ function HeroExpress({
 													value={formData.fecha}
 													onChange={handleInputChange}
 													min={minDateTime}
-													className="h-12 text-base"
+													className="h-14 text-base rounded-lg border-gray-300 bg-gray-50 focus:ring-2 focus:ring-gray-900"
 													required
 												/>
 											</div>
 
-											<div className="space-y-2">
+											<div className="space-y-1">
 												<Label
 													htmlFor="pasajeros-express"
-													className="text-base font-medium"
+													className="text-sm font-normal text-gray-700"
 												>
-													<span className="flex items-center gap-2">
-														<Users className="h-4 w-4" />
-														Pasajeros
-													</span>
+													Pasajeros
 												</Label>
 												<select
 													id="pasajeros-express"
 													name="pasajeros"
 													value={formData.pasajeros}
 													onChange={handleInputChange}
-													className="flex h-12 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+													className="flex h-14 w-full items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
 													required
 												>
 													{[...Array(maxPasajeros)].map((_, i) => (
 														<option key={i + 1} value={i + 1}>
-															{i + 1} {i === 0 ? "pasajero" : "pasajeros"}
+															{i + 1}
 														</option>
 													))}
 												</select>
@@ -593,148 +494,91 @@ function HeroExpress({
 										</div>
 
 										{/* Opción de ida y vuelta */}
-										<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
-											<div className="flex items-start gap-3">
-												<Checkbox
-													id="ida-vuelta-express"
-													checked={formData.idaVuelta}
-													onCheckedChange={(value) => {
-														const isRoundTrip = Boolean(value);
+										<div className="flex items-center gap-2 py-2">
+											<Checkbox
+												id="ida-vuelta-express"
+												checked={formData.idaVuelta}
+												onCheckedChange={(value) => {
+													const isRoundTrip = Boolean(value);
+													handleInputChange({
+														target: { name: "idaVuelta", value: isRoundTrip },
+													});
+													if (!isRoundTrip) {
 														handleInputChange({
-															target: { name: "idaVuelta", value: isRoundTrip },
+															target: { name: "fechaRegreso", value: "" },
 														});
-														if (!isRoundTrip) {
-															handleInputChange({
-																target: { name: "fechaRegreso", value: "" },
-															});
-														} else if (formData.fecha) {
-															// Auto-completar fecha de regreso con la fecha de ida si está disponible
-															handleInputChange({
-																target: {
-																	name: "fechaRegreso",
-																	value: formData.fecha,
-																},
-															});
-														}
-													}}
-												/>
-												<label
-													htmlFor="ida-vuelta-express"
-													className="text-sm font-medium leading-relaxed cursor-pointer"
-												>
-													¿También necesitas el regreso?
-													<span className="block text-muted-foreground font-normal">
-														Coordina ida y vuelta en una sola reserva y ahorra
-													</span>
-												</label>
-											</div>
-
-											{formData.idaVuelta && (
-												<div className="pt-4 border-t border-muted/40">
-													<div className="space-y-2">
-														<Label
-															htmlFor="fecha-regreso-express"
-															className="text-base font-medium"
-														>
-															<span className="flex items-center gap-2">
-																<Calendar className="h-4 w-4" />
-																Fecha de regreso
-															</span>
-														</Label>
-														<Input
-															id="fecha-regreso-express"
-															type="date"
-															name="fechaRegreso"
-															value={formData.fechaRegreso}
-															onChange={handleInputChange}
-															min={formData.fecha || minDateTime}
-															className="h-12 text-base"
-															required={formData.idaVuelta}
-														/>
-														<p className="text-xs text-muted-foreground">
-															💡 La hora exacta de regreso podrás especificarla
-															después del pago
-														</p>
-													</div>
-												</div>
-											)}
+													} else if (formData.fecha) {
+														handleInputChange({
+															target: {
+																name: "fechaRegreso",
+																value: formData.fecha,
+															},
+														});
+													}
+												}}
+											/>
+											<label
+												htmlFor="ida-vuelta-express"
+												className="text-sm text-gray-700 cursor-pointer"
+											>
+												Agregar viaje de regreso
+											</label>
 										</div>
+
+										{formData.idaVuelta && (
+											<div className="space-y-1 pl-6 border-l-2 border-gray-200">
+												<Label
+													htmlFor="fecha-regreso-express"
+													className="text-sm font-normal text-gray-700"
+												>
+													Fecha de regreso
+												</Label>
+												<Input
+													id="fecha-regreso-express"
+													type="date"
+													name="fechaRegreso"
+													value={formData.fechaRegreso}
+													onChange={handleInputChange}
+													min={formData.fecha || minDateTime}
+													className="h-14 text-base rounded-lg border-gray-300 bg-gray-50 focus:ring-2 focus:ring-gray-900"
+													required={formData.idaVuelta}
+												/>
+											</div>
+										)}
 
 										{/* Precio estimado */}
 										{mostrarPrecio ? (
-											<div className="rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 p-6">
-												<div className="grid gap-4 md:grid-cols-2 md:items-center">
-													<div className="space-y-2">
-														<div className="flex items-center gap-2 flex-wrap">
-															<Badge variant="secondary">Precio estimado</Badge>
-															<Badge variant="default" className="bg-green-500">
-																-{baseDiscountPercentage}% web
-															</Badge>
-															{formData.idaVuelta &&
-																pricing.descuentoRoundTrip > 0 && (
-																	<Badge
-																		variant="default"
-																		className="bg-blue-500"
-																	>
-																		🔄 Ida y vuelta
-																	</Badge>
-																)}
-														</div>
-														<p className="text-2xl font-bold text-primary">
-															{formatCurrency(pricing.totalConDescuento)}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															Vehículo: {cotizacion.vehiculo}
-															{formData.idaVuelta && " · Ida y vuelta"}
-														</p>
-													</div>
-													<div className="text-left md:text-right space-y-1">
-														<p className="text-sm text-muted-foreground line-through">
-															Precio regular:{" "}
-															{formatCurrency(pricing.precioBase)}
-														</p>
-														<p className="text-lg font-semibold text-green-600">
-															Ahorro total:{" "}
-															{formatCurrency(
-																pricing.descuentoBase +
-																	pricing.descuentoRoundTrip +
-																	pricing.descuentoCodigo
-															)}
-														</p>
-														{formData.idaVuelta &&
-															pricing.descuentoRoundTrip > 0 && (
-																<p className="text-xs text-blue-600">
-																	Incluye descuento ida y vuelta:{" "}
-																	{formatCurrency(pricing.descuentoRoundTrip)}
-																</p>
-															)}
-													</div>
+											<div className="bg-gray-50 rounded-lg p-4 space-y-2">
+												<div className="flex items-center justify-between">
+													<span className="text-sm text-gray-600">
+														Precio estimado
+													</span>
+													<span className="text-xl font-semibold text-gray-900">
+														{formatCurrency(pricing.totalConDescuento)}
+													</span>
 												</div>
+												{pricing.descuentoBase > 0 && (
+													<p className="text-xs text-gray-500">
+														Incluye descuento web del {baseDiscountPercentage}%
+													</p>
+												)}
 											</div>
 										) : (
-											<div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
-												<p className="font-semibold text-primary">
-													📋 Cotización personalizada
-												</p>
-												<p className="text-sm text-primary/80">
-													Te enviaremos el precio exacto junto con la
-													confirmación
+											<div className="bg-gray-50 rounded-lg p-4 text-center">
+												<p className="text-sm text-gray-700">
+													Te enviaremos una cotización personalizada
 												</p>
 											</div>
 										)}
 
-										<div className="text-center">
-											<p className="text-sm text-muted-foreground mb-4">
-												💡 <strong>Tip:</strong> Podrás ajustar la hora exacta y
-												otros detalles después de confirmar el pago
-											</p>
+										<div className="pt-2">
 											<Button
 												type="button"
 												onClick={handleStepOneNext}
-												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-semibold"
+												className="w-full bg-gray-900 hover:bg-gray-800 text-white h-14 text-base font-medium rounded-lg transition-colors"
 												disabled={isSubmitting}
 											>
-												Continuar al pago →
+												Ver precios
 											</Button>
 										</div>
 									</div>
@@ -742,83 +586,33 @@ function HeroExpress({
 
 								{/* PASO 2: Datos personales y pago */}
 								{currentStep === 1 && (
-									<div className="space-y-6">
-										{/* Resumen del viaje */}
-										<div className="bg-gray-50 rounded-lg p-4 space-y-2">
-											<h4 className="font-semibold text-lg mb-3">
-												📋 Resumen de tu traslado
-											</h4>
-											<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-												<div>
-													<span className="text-muted-foreground">Ruta:</span>
-													<p className="font-medium">
-														{origenFinal} → {destinoFinal}
-														{formData.idaVuelta && (
-															<>
-																<br />
-																<span className="text-blue-600">
-																	{destinoFinal} → {origenFinal}
-																</span>
-															</>
-														)}
-													</p>
-												</div>
-												<div>
-													<span className="text-muted-foreground">
-														Fecha{formData.idaVuelta && "s"}:
+									<div className="space-y-4">
+										{/* Resumen compacto del viaje */}
+										<div className="bg-gray-50 rounded-lg p-4">
+											<div className="flex items-center justify-between text-sm">
+												<span className="text-gray-600">
+													{origenFinal} → {destinoFinal}
+												</span>
+												{mostrarPrecio && (
+													<span className="font-semibold text-gray-900">
+														{formatCurrency(pricing.totalConDescuento)}
 													</span>
-													<p className="font-medium">
-														{fechaLegible}
-														{formData.idaVuelta && formData.fechaRegreso && (
-															<>
-																<br />
-																<span className="text-blue-600">
-																	{new Date(
-																		`${formData.fechaRegreso}T00:00:00`
-																	).toLocaleDateString("es-CL", {
-																		dateStyle: "long",
-																		timeZone: "America/Santiago",
-																	})}
-																</span>
-															</>
-														)}
-													</p>
-												</div>
-												<div>
-													<span className="text-muted-foreground">
-														Pasajeros:
-													</span>
-													<p className="font-medium">{formData.pasajeros}</p>
-												</div>
+												)}
 											</div>
-											{mostrarPrecio && (
-												<div className="pt-2 border-t">
-													<div className="flex justify-between items-center">
-														<span className="font-medium">
-															Total con descuento:
-														</span>
-														<span className="text-xl font-bold text-primary">
-															{formatCurrency(pricing.totalConDescuento)}
-														</span>
-													</div>
-													{formData.idaVuelta && (
-														<p className="text-xs text-blue-600 mt-1">
-															🔄 Incluye ida y vuelta
-														</p>
-													)}
-												</div>
-											)}
+											<div className="mt-1 text-xs text-gray-500">
+												{fechaLegible} · {formData.pasajeros}{" "}
+												{formData.pasajeros === "1" ? "pasajero" : "pasajeros"}
+											</div>
 										</div>
 
 										{/* Datos personales */}
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-											<div className="space-y-2">
+										<div className="space-y-3">
+											<div className="space-y-1">
 												<Label
 													htmlFor="nombre-express"
-													className="text-base font-medium"
+													className="text-sm font-normal text-gray-700"
 												>
-													👤 Nombre completo{" "}
-													<span className="text-destructive">*</span>
+													Nombre completo
 												</Label>
 												<Input
 													id="nombre-express"
@@ -826,18 +620,17 @@ function HeroExpress({
 													value={formData.nombre}
 													onChange={handleInputChange}
 													placeholder="Ej: Juan Pérez"
-													className="h-12 text-base"
+													className="h-14 text-base rounded-lg border-gray-300 bg-gray-50 focus:ring-2 focus:ring-gray-900"
 													required
 												/>
 											</div>
 
-											<div className="space-y-2">
+											<div className="space-y-1">
 												<Label
 													htmlFor="email-express"
-													className="text-base font-medium"
+													className="text-sm font-normal text-gray-700"
 												>
-													📧 Correo electrónico{" "}
-													<span className="text-destructive">*</span>
+													Correo electrónico
 												</Label>
 												<Input
 													id="email-express"
@@ -847,40 +640,29 @@ function HeroExpress({
 													onChange={handleInputChange}
 													onBlur={(e) => verificarReservaActiva(e.target.value)}
 													placeholder="tu@email.cl"
-													className="h-12 text-base"
+													className="h-14 text-base rounded-lg border-gray-300 bg-gray-50 focus:ring-2 focus:ring-gray-900"
 													required
 												/>
 												{verificandoReserva && (
-													<p className="text-xs text-blue-600 flex items-center gap-1">
+													<p className="text-xs text-gray-500 flex items-center gap-1">
 														<LoaderCircle className="w-3 h-3 animate-spin" />
-														Verificando reservas...
+														Verificando...
 													</p>
 												)}
 												{reservaActiva && (
-													<div className="bg-amber-50 border border-amber-300 rounded-lg p-3 text-sm">
-														<p className="font-medium text-amber-800 mb-1">
-															⚠️ Tienes una reserva sin pagar
-														</p>
-														<p className="text-amber-700 text-xs">
-															Código:{" "}
-															<span className="font-mono font-semibold">
-																{reservaActiva.codigoReserva}
-															</span>
-															<br />
-															Al continuar, se modificará tu reserva existente
-															en lugar de crear una nueva.
-														</p>
+													<div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+														Ya tienes una reserva pendiente (Código:{" "}
+														{reservaActiva.codigoReserva})
 													</div>
 												)}
 											</div>
 
-											<div className="space-y-2">
+											<div className="space-y-1">
 												<Label
 													htmlFor="telefono-express"
-													className="text-base font-medium"
+													className="text-sm font-normal text-gray-700"
 												>
-													📱 Teléfono{" "}
-													<span className="text-destructive">*</span>
+													Teléfono
 												</Label>
 												<Input
 													id="telefono-express"
@@ -888,7 +670,7 @@ function HeroExpress({
 													value={formData.telefono}
 													onChange={handleInputChange}
 													placeholder="+56 9 1234 5678"
-													className="h-12 text-base"
+													className="h-14 text-base rounded-lg border-gray-300 bg-gray-50 focus:ring-2 focus:ring-gray-900"
 													required
 												/>
 												{phoneError && (
@@ -897,266 +679,164 @@ function HeroExpress({
 											</div>
 										</div>
 
-										{/* Código de descuento */}
-										<div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-											<h4 className="font-medium mb-3">
-												🎟️ ¿Tienes un código de descuento?
-											</h4>
-											<CodigoDescuento
-												codigoAplicado={codigoAplicado}
-												codigoError={codigoError}
-												validandoCodigo={validandoCodigo}
-												onAplicarCodigo={onAplicarCodigo}
-												onRemoverCodigo={onRemoverCodigo}
-											/>
-										</div>
+										{/* Código de descuento - más discreto */}
+										<details className="group">
+											<summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex items-center gap-2">
+												<span>¿Tienes un código de descuento?</span>
+												<span className="text-xs group-open:rotate-180 transition-transform">
+													▼
+												</span>
+											</summary>
+											<div className="mt-3 pt-3 border-t border-gray-200">
+												<CodigoDescuento
+													codigoAplicado={codigoAplicado}
+													codigoError={codigoError}
+													validandoCodigo={validandoCodigo}
+													onAplicarCodigo={onAplicarCodigo}
+													onRemoverCodigo={onRemoverCodigo}
+												/>
+											</div>
+										</details>
 
-										{/* Opciones de pago - Solo si todos los campos están completos */}
+										{/* Opciones de pago simplificadas */}
 										{mostrarPrecio &&
 											!requiereCotizacionManual &&
 											todosLosCamposCompletos && (
-												<div className="space-y-4">
-													<h4 className="font-semibold text-lg">
-														💳 Opciones de pago
-													</h4>
-
-													{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
-													{!selectedPaymentType && (
-														<div className="space-y-3">
-															<p className="text-sm text-muted-foreground">
-																Elige cuánto deseas pagar ahora
-															</p>
-															<div className="grid gap-3 md:grid-cols-2">
-																{paymentOptions.map((option) => (
-																	<button
-																		key={option.id}
-																		type="button"
-																		onClick={() =>
-																			setSelectedPaymentType(option.type)
-																		}
-																		className={`border rounded-lg p-4 text-left transition-all hover:border-primary hover:shadow-md ${
-																			option.recommended
-																				? "border-primary bg-primary/5 ring-2 ring-primary/20"
-																				: "border-gray-200"
-																		}`}
-																	>
-																		<div className="flex justify-between items-start mb-2">
-																			<div>
-																				<h5 className="font-semibold">
-																					{option.title}
-																				</h5>
-																				<p className="text-sm text-muted-foreground">
-																					{option.subtitle}
-																				</p>
-																			</div>
-																			{option.recommended && (
-																				<Badge
-																					variant="default"
-																					className="text-xs"
-																				>
-																					Recomendado
-																				</Badge>
-																			)}
+												<div className="space-y-3">
+													{!selectedPaymentType ? (
+														<div className="space-y-2">
+															{paymentOptions.map((option) => (
+																<button
+																	key={option.id}
+																	type="button"
+																	onClick={() =>
+																		setSelectedPaymentType(option.type)
+																	}
+																	className="w-full border border-gray-300 rounded-lg p-4 text-left hover:border-gray-900 transition-colors"
+																>
+																	<div className="flex justify-between items-center">
+																		<div>
+																			<p className="font-medium text-gray-900">
+																				{option.title}
+																			</p>
+																			<p className="text-sm text-gray-600">
+																				{option.subtitle}
+																			</p>
 																		</div>
-																		<p className="text-xl font-bold text-primary">
+																		<p className="text-lg font-semibold text-gray-900">
 																			{formatCurrency(option.amount)}
 																		</p>
-																	</button>
-																))}
-															</div>
+																	</div>
+																</button>
+															))}
 														</div>
-													)}
-
-													{/* Paso 2: Seleccionar método de pago una vez elegido el tipo */}
-													{selectedPaymentType && (
+													) : (
 														<div className="space-y-3">
-															<div className="flex items-center justify-between">
-																<div>
-																	<p className="text-sm text-muted-foreground">
-																		Elige tu método de pago
-																	</p>
-																	<p className="text-lg font-semibold text-primary">
-																		Pagarás:{" "}
-																		{formatCurrency(
-																			paymentOptions.find(
-																				(opt) =>
-																					opt.type === selectedPaymentType
-																			)?.amount || 0
-																		)}
-																	</p>
-																</div>
-																<Button
+															<div className="flex items-center justify-between text-sm">
+																<span className="text-gray-600">
+																	Pagarás:{" "}
+																	{formatCurrency(
+																		paymentOptions.find(
+																			(opt) => opt.type === selectedPaymentType
+																		)?.amount || 0
+																	)}
+																</span>
+																<button
 																	type="button"
-																	variant="ghost"
-																	size="sm"
 																	onClick={() => setSelectedPaymentType(null)}
-																	className="text-sm"
+																	className="text-gray-900 hover:underline"
 																>
-																	← Cambiar monto
-																</Button>
+																	Cambiar
+																</button>
 															</div>
 
-															<div className="grid gap-3 md:grid-cols-2">
-																{paymentMethods.map((method) => (
-																	<Button
-																		key={method.id}
-																		type="button"
-																		variant="outline"
-																		onClick={() =>
-																			handleProcesarPago(
-																				method.gateway,
-																				selectedPaymentType
-																			)
-																		}
-																		disabled={
-																			isSubmitting ||
-																			loadingGateway ===
-																				`${method.gateway}-${selectedPaymentType}`
-																		}
-																		className="h-auto p-4 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5"
-																	>
-																		{loadingGateway ===
-																		`${method.gateway}-${selectedPaymentType}` ? (
-																			<LoaderCircle className="h-8 w-8 animate-spin" />
-																		) : (
-																			<img
-																				src={method.image}
-																				alt={method.title}
-																				className="h-8 w-auto object-contain"
-																			/>
-																		)}
-																		<span className="text-sm font-medium">
-																			{method.title}
-																		</span>
-																		<span className="text-xs text-muted-foreground text-center">
-																			{method.subtitle}
-																		</span>
-																	</Button>
-																))}
-															</div>
+															{paymentMethods.map((method) => (
+																<Button
+																	key={method.id}
+																	type="button"
+																	onClick={() =>
+																		handleProcesarPago(
+																			method.gateway,
+																			selectedPaymentType
+																		)
+																	}
+																	disabled={
+																		isSubmitting ||
+																		loadingGateway ===
+																			`${method.gateway}-${selectedPaymentType}`
+																	}
+																	className="w-full bg-gray-900 hover:bg-gray-800 text-white h-14 rounded-lg transition-colors"
+																>
+																	{loadingGateway ===
+																	`${method.gateway}-${selectedPaymentType}` ? (
+																		<>
+																			<LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
+																			Procesando...
+																		</>
+																	) : (
+																		`Confirmar y pagar con ${method.title}`
+																	)}
+																</Button>
+															))}
 														</div>
 													)}
 												</div>
 											)}
 
-										{/* Mensaje cuando faltan campos por completar */}
-										{mostrarPrecio &&
-											!requiereCotizacionManual &&
-											!todosLosCamposCompletos && (
-												<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-													<p className="text-sm text-amber-800 font-medium">
-														⚠️ Completa todos los campos obligatorios para ver
-														las opciones de pago
-													</p>
-													<ul className="text-xs text-amber-700 mt-2 space-y-1 ml-5 list-disc">
-														{!formData.nombre?.trim() && (
-															<li>Nombre completo</li>
-														)}
-														{(!formData.email?.trim() ||
-															!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-																formData.email
-															)) && <li>Correo electrónico válido</li>}
-														{!formData.telefono?.trim() && <li>Teléfono</li>}
-														{!paymentConsent && (
-															<li>Aceptar términos y condiciones</li>
-														)}
-													</ul>
-												</div>
-											)}
-
-										{/* Consentimiento para pago */}
-										<div className="border border-gray-200 rounded-lg p-4 space-y-3">
-											<div className="flex items-start gap-3">
-												<Checkbox
-													id="payment-consent"
-													checked={paymentConsent}
-													onCheckedChange={(value) =>
-														setPaymentConsent(Boolean(value))
-													}
-												/>
-												<label
-													htmlFor="payment-consent"
-													className="text-sm leading-relaxed text-muted-foreground cursor-pointer"
-												>
-													✅ Acepto recibir la confirmación por email y
-													WhatsApp, y comprendo que podré especificar la hora
-													exacta y detalles adicionales después de confirmar el
-													pago.
-												</label>
-											</div>
+										{/* Consentimiento */}
+										<div className="flex items-start gap-2 py-2">
+											<Checkbox
+												id="payment-consent"
+												checked={paymentConsent}
+												onCheckedChange={(value) =>
+													setPaymentConsent(Boolean(value))
+												}
+											/>
+											<label
+												htmlFor="payment-consent"
+												className="text-xs text-gray-600 leading-relaxed cursor-pointer"
+											>
+												Acepto recibir confirmación por email y WhatsApp
+											</label>
 										</div>
 
 										{/* Navegación */}
-										<div className="space-y-3">
-											{/* Botón de volver */}
-											<div className="flex justify-start">
-												<Button
-													type="button"
-													variant="outline"
-													onClick={handleStepBack}
-													disabled={isSubmitting}
-													size="sm"
-												>
-													← Volver
-												</Button>
-											</div>
+										<div className="flex items-center justify-between pt-2">
+											<Button
+												type="button"
+												variant="ghost"
+												onClick={handleStepBack}
+												disabled={isSubmitting}
+												className="text-gray-600"
+											>
+												← Volver
+											</Button>
 
 											{requiereCotizacionManual ? (
-												<Button asChild className="w-full" variant="secondary">
-													<a href="#contacto">
-														Solicitar cotización personalizada
-													</a>
+												<Button asChild variant="ghost">
+													<a href="#contacto">Solicitar cotización</a>
 												</Button>
+											) : !todosLosCamposCompletos ? (
+												<span className="text-xs text-gray-500">
+													Completa todos los campos
+												</span>
 											) : (
-												<div className="space-y-3">
-													{/* Botón para guardar reserva sin pagar */}
-													<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-														<div className="flex items-start gap-3 mb-3">
-															<div className="flex-1">
-																<h5 className="font-medium text-blue-900 mb-1">
-																	💾 Guardar y continuar después
-																</h5>
-																<p className="text-sm text-blue-700">
-																	Guarda tu reserva ahora y recibe un enlace por
-																	email para pagar más tarde
-																</p>
-															</div>
-														</div>
-														<Button
-															type="button"
-															onClick={handleGuardarReserva}
-															disabled={
-																isSubmitting || !todosLosCamposCompletos
-															}
-															variant="outline"
-															className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
-														>
-															{isSubmitting ? (
-																<>
-																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-																	Guardando reserva...
-																</>
-															) : (
-																"Guardar reserva para después"
-															)}
-														</Button>
-													</div>
-
-													{/* Instrucciones para pago inmediato */}
-													{todosLosCamposCompletos && (
-														<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-															<p className="text-sm text-green-800 font-medium mb-2">
-																✅ ¿Listo para pagar? Selecciona el monto y
-																método de pago arriba
-															</p>
-															<p className="text-xs text-green-700">
-																Al elegir una opción de pago arriba, tu reserva
-																se guardará automáticamente y serás redirigido
-																al proceso de pago seguro
-															</p>
-														</div>
+												<Button
+													type="button"
+													onClick={handleGuardarReserva}
+													disabled={isSubmitting}
+													variant="ghost"
+													className="text-gray-600"
+												>
+													{isSubmitting ? (
+														<>
+															<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+															Guardando...
+														</>
+													) : (
+														"Guardar para después"
 													)}
-												</div>
+												</Button>
 											)}
 										</div>
 									</div>
