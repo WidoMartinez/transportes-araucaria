@@ -35,7 +35,7 @@ function PagarConCodigo() {
 	const [procesando, setProcesando] = useState(false);
 	const [loadingGateway, setLoadingGateway] = useState(null);
 
-	const backendUrl = getBackendUrl();
+	const backendUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 	const formatCurrency = (value) => {
 		return new Intl.NumberFormat("es-CL", {
