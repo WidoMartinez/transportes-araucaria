@@ -3,11 +3,8 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Progress } from "./ui/progress";
 import { Checkbox } from "./ui/checkbox";
-import { LoaderCircle, Calendar, Users } from "lucide-react";
-import heroVan from "../assets/hero-van.png";
+import { LoaderCircle } from "lucide-react";
 import flow from "../assets/formasPago/flow.png";
 import CodigoDescuento from "./CodigoDescuento";
 import { getBackendUrl } from "../lib/backend";
@@ -25,7 +22,6 @@ function HeroExpress({
 	cotizacion,
 	pricing,
 	baseDiscountRate,
-	promotionDiscountRate,
 	handlePayment,
 	loadingGateway,
 	onSubmitWizard,
@@ -44,27 +40,7 @@ function HeroExpress({
 	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
 
-	// Pasos simplificados para flujo express
-	const steps = useMemo(
-		() => [
-			{
-				title: "¿A dónde viajas?",
-				description: "Origen, destino, fecha y pasajeros",
-				icon: "🚐",
-			},
-			{
-				title: "Datos y pago",
-				description: "Tu información y pago seguro",
-				icon: "💳",
-			},
-		],
-		[]
-	);
 
-	const progressValue = useMemo(() => {
-		const safeStep = Math.min(currentStep, steps.length - 1);
-		return Math.round(((safeStep + 1) / steps.length) * 100);
-	}, [currentStep, steps.length]);
 
 	const currencyFormatter = useMemo(
 		() =>
@@ -315,9 +291,6 @@ function HeroExpress({
 	);
 
 	const baseDiscountPercentage = Math.round((baseDiscountRate || 0) * 100);
-	const promoDiscountPercentage = Math.round(
-		(promotionDiscountRate || 0) * 100
-	);
 
 	// Validar si todos los campos obligatorios del paso 2 están completos
 	const todosLosCamposCompletos = useMemo(() => {
