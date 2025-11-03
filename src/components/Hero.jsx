@@ -859,41 +859,47 @@ function Hero({
 											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-2">
-												<Label htmlFor="origen-hero">Origen</Label>
-												<select
-													id="origen-hero"
-													name="origen"
-													value={formData.origen}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
-												>
-													{origenes.map((origen) => (
-														<option key={origen} value={origen}>
-															{origen}
-														</option>
-													))}
-												</select>
+										{/* Nueva estructura para Origen y Destino */}
+										<div className="flex gap-4">
+											<div className="flex flex-col items-center mt-3">
+												<div className="h-3 w-3 rounded-full border-2 border-gray-400"></div>
+												<div className="flex-grow w-px bg-gray-300 my-1"></div>
+												<div className="h-3 w-3 bg-gray-400"></div>
 											</div>
-											<div className="space-y-2">
-												<Label htmlFor="destino-hero">Destino</Label>
-												<select
-													id="destino-hero"
-													name="destino"
-													value={formData.destino}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
-												>
-													<option value="">Seleccionar destino</option>
-													{destinos.map((d) => (
-														<option key={d} value={d}>
-															{d}
-														</option>
-													))}
-												</select>
+											<div className="flex-grow space-y-3">
+												<div className="space-y-2">
+													<select
+														id="origen-hero"
+														name="origen"
+														value={formData.origen}
+														onChange={handleInputChange}
+														className="flex h-12 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+														required
+													>
+														{origenes.map((origen) => (
+															<option key={origen} value={origen}>
+																{origen}
+															</option>
+														))}
+													</select>
+												</div>
+												<div className="space-y-2">
+													<select
+														id="destino-hero"
+														name="destino"
+														value={formData.destino}
+														onChange={handleInputChange}
+														className="flex h-12 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+														required
+													>
+														<option value="">Seleccionar destino</option>
+														{destinos.map((d) => (
+															<option key={d} value={d}>
+																{d}
+															</option>
+														))}
+													</select>
+												</div>
 											</div>
 										</div>
 
@@ -932,23 +938,6 @@ function Hero({
 														))}
 													</SelectContent>
 												</Select>
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="pasajeros-hero">Pasajeros</Label>
-												<select
-													id="pasajeros-hero"
-													name="pasajeros"
-													value={formData.pasajeros}
-													onChange={handleInputChange}
-													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
-													required
-												>
-													{[...Array(maxPasajeros)].map((_, i) => (
-														<option key={i + 1} value={i + 1}>
-															{i + 1} pasajero(s)
-														</option>
-													))}
-												</select>
 											</div>
 										</div>
 
@@ -1193,7 +1182,7 @@ function Hero({
 											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 											<div className="space-y-2">
 												<Label htmlFor="telefono-hero">Teléfono móvil</Label>
 												<Input
@@ -1218,6 +1207,23 @@ function Hero({
 													onChange={handleInputChange}
 													placeholder="Ej: LA123"
 												/>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="pasajeros-hero">Pasajeros</Label>
+												<select
+													id="pasajeros-hero"
+													name="pasajeros"
+													value={formData.pasajeros}
+													onChange={handleInputChange}
+													className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground"
+													required
+												>
+													{[...Array(maxPasajeros)].map((_, i) => (
+														<option key={i + 1} value={i + 1}>
+															{i + 1} pasajero(s)
+														</option>
+													))}
+												</select>
 											</div>
 										</div>
 
