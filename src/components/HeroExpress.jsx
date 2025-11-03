@@ -7,7 +7,6 @@ import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Checkbox } from "./ui/checkbox";
 import { LoaderCircle, Calendar, Users } from "lucide-react";
-import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import CodigoDescuento from "./CodigoDescuento";
 import { getBackendUrl } from "../lib/backend";
@@ -330,161 +329,150 @@ function HeroExpress({
 		const telefonoValido = formData.telefono?.trim().length > 0;
 		const consentimientoValido = paymentConsent;
 
-		return (
-			nombreValido && emailValido && telefonoValido && consentimientoValido
-		);
-	}, [
-		currentStep,
-		formData.nombre,
-		formData.email,
-		formData.telefono,
-		paymentConsent,
-	]);
-
-	return (
-		<section
-			id="inicio"
-			className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
-		>
-			<div
-				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-				style={{ backgroundImage: `url(${heroVan})` }}
-			></div>
-			<div className="absolute inset-0 bg-black/50"></div>
-
-			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
-				{!showBookingModule && (
-					<>
-						<h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
-							Traslados Privados Aeropuerto La Araucanía
-							<br />
-							<span className="text-accent drop-shadow-lg text-3xl md:text-5xl">
-								Reserva en 2 minutos
-							</span>
-						</h1>
-						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
-							Descubre La Araucanía con nuestros traslados privados: conectamos
-							el aeropuerto directamente con Pucón, Villarrica, Malalcahuello y
-							todos los destinos turísticos de la región.
-							<br />
-							<span className="text-accent font-bold">
-								¡Aprovecha nuestro descuento web del {baseDiscountPercentage}%
-								garantizado
-								{promoDiscountPercentage > 0 &&
-									` + ${promoDiscountPercentage}% extra`}
-								!
-							</span>
-						</p>
-					</>
-				)}
-
-				{!showBookingModule && (
-					<div className="flex flex-col items-center justify-center space-y-6">
-						<Button
-							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
-						>
-							🚀 Reservar ahora
-						</Button>
-						<Button
-							variant="outline"
-							className="bg-transparent border-white text-white hover:bg-white/10"
-							asChild
-						>
-							<a href="#consultar-reserva">Continuar con código</a>
-						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso súper rápido • Solo 2 pasos • Pago seguro
-						</p>
-					</div>
-				)}
-
-				{showBookingModule && (
-					<div className="w-full">
-						<div className="text-center mb-6">
-							<h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-2xl mb-3">
-								¡Reserva express y ahorra!
-							</h3>
-							<p className="text-lg md:text-xl text-white/95 drop-shadow-lg font-medium">
-								Solo 2 pasos • Descuento del{" "}
-								<span className="text-accent font-bold text-2xl">
-									{baseDiscountPercentage}%
-								</span>{" "}
-								aplicado automáticamente
-							</p>
-						</div>
-
-						<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left">
-							<CardHeader className="space-y-4">
-								<div className="flex flex-wrap items-center justify-between gap-2">
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => setShowBookingModule(false)}
-										className="text-gray-500 hover:text-gray-700"
-									>
-										← Volver
-									</Button>
-									<div className="flex items-center gap-2">
-										<Badge variant="secondary" className="text-sm">
-											Descuento web {baseDiscountPercentage}%
-										</Badge>
-										{promoDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-emerald-500 text-white"
-											>
-												Extra +{promoDiscountPercentage}%
-											</Badge>
-										)}
-									</div>
-								</div>
-
-								{/* Progress simplificado */}
-								<div className="space-y-4">
-									<div className="grid gap-4 md:grid-cols-2">
-										{steps.map((step, index) => {
-											const isCompleted = index < currentStep;
-											const isActive = index === currentStep;
-
-											return (
-												<div
-													key={step.title}
-													className={`flex items-center gap-3 rounded-lg border p-4 transition ${
-														isActive
-															? "border-primary bg-primary/10"
-															: isCompleted
-															? "border-green-500 bg-green-50"
-															: "border-gray-200 bg-gray-50"
-													}`}
-												>
-													<div
-														className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl ${
-															isCompleted
-																? "bg-green-500 text-white"
-																: isActive
-																? "bg-primary text-white"
-																: "bg-gray-200 text-gray-500"
-														}`}
-													>
-														{isCompleted ? "✓" : step.icon}
+							return (
+								<section id="inicio" className="bg-background text-foreground">
+									<div className="container mx-auto px-4 py-16 md:py-24">
+										{!showBookingModule ? (
+											<div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,1fr)] lg:items-start">
+												<div className="space-y-6 text-left">
+													<div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">
+														<span className="h-2 w-2 rounded-full bg-primary"></span>
+														Traslados privados en La Araucanía
 													</div>
-													<div>
-														<p className="font-semibold text-foreground text-lg">
-															{step.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{step.description}
-														</p>
+												<h1 className="text-4xl font-semibold leading-tight text-foreground md:text-5xl">
+														Traslados Privados Aeropuerto La Araucanía
+														<br />
+														<span className="text-3xl font-medium text-primary md:text-4xl">
+															Reserva en 2 minutos
+														</span>
+													</h1>
+													<p className="text-lg text-muted-foreground md:text-xl">
+														Descubre La Araucanía con nuestros traslados privados: conectamos el aeropuerto directamente con Pucón, Villarrica, Malalcahuello y todos los destinos turísticos de la región.
+														<br />
+														<span className="font-semibold text-primary">
+															¡Aprovecha nuestro descuento web del {baseDiscountPercentage}% garantizado
+															{promoDiscountPercentage > 0 && ` + ${promoDiscountPercentage}% extra`}!
+														</span>
+													</p>
+													<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+														<Button
+															onClick={() => setShowBookingModule(true)}
+															className="h-12 rounded-full px-8 text-base font-semibold shadow-sm"
+														>
+															🚀 Reservar ahora
+														</Button>
+														<Button variant="outline" className="h-12 rounded-full px-8 text-base font-semibold" asChild>
+															<a href="#consultar-reserva">Continuar con código</a>
+														</Button>
+													</div>
+													<div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+														<div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background p-4">
+															<Calendar className="h-5 w-5 text-primary" />
+															<span>Disponibilidad inmediata y confirmación al instante.</span>
+														</div>
+														<div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background p-4">
+															<Users className="h-5 w-5 text-primary" />
+															<span>Capacidad para grupos y traslados familiares.</span>
+														</div>
+													</div>
+											</div>
+												<div className="space-y-6 rounded-3xl border border-border bg-white p-8 shadow-sm">
+													<p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+														Reserva express
+													</p>
+													<p className="text-2xl font-semibold text-foreground">
+														Proceso súper rápido en solo 2 pasos.
+													</p>
+													<p className="text-sm leading-relaxed text-muted-foreground">
+														Pago seguro con confirmación inmediata y soporte directo para tu viaje. Tu reserva queda protegida y puedes monitorearla con tu código único.
+													</p>
+													<div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary">
+														Descuento web {baseDiscountPercentage}%
+														{promoDiscountPercentage > 0 && (
+															<span className="font-semibold"> + {promoDiscountPercentage}% extra</span>
+														)}
+														{" "}aplicado automáticamente.
 													</div>
 												</div>
-											);
-										})}
-									</div>
-									<Progress value={progressValue} className="h-3" />
-								</div>
-							</CardHeader>
+											</div>
+										) : (
+											<div className="mx-auto w-full max-w-5xl space-y-10">
+												<div className="space-y-3 text-center">
+													<h3 className="text-2xl font-semibold text-foreground md:text-3xl">
+														¡Reserva express y ahorra!
+													</h3>
+													<p className="text-base text-muted-foreground md:text-lg">
+														Solo 2 pasos • Descuento del <span className="font-semibold text-primary">{baseDiscountPercentage}%</span> aplicado automáticamente
+													</p>
+												</div>
 
+												<Card className="mx-auto max-w-4xl border border-border bg-white text-left shadow-sm">
+													<CardHeader className="space-y-6 border-b border-border/70 bg-muted/40 p-6">
+														<div className="flex flex-wrap items-center justify-between gap-3">
+															<Button
+																variant="ghost"
+																size="sm"
+																onClick={() => setShowBookingModule(false)}
+																className="text-sm font-medium text-muted-foreground hover:text-foreground"
+															>
+																← Volver
+															</Button>
+															<div className="flex items-center gap-2">
+																<Badge variant="secondary" className="text-sm font-medium">
+																	Descuento web {baseDiscountPercentage}%
+																</Badge>
+																{promoDiscountPercentage > 0 && (
+																	<Badge variant="default" className="text-sm font-medium bg-primary text-primary-foreground">
+																		Extra +{promoDiscountPercentage}%
+																	</Badge>
+																)}
+															</div>
+														</div>
+
+														{/* Indicador de progreso con estilo minimalista */}
+														<div className="space-y-4">
+															<div className="grid gap-4 md:grid-cols-2">
+																{steps.map((step, index) => {
+																	const isCompleted = index < currentStep;
+																	const isActive = index === currentStep;
+
+																	return (
+																		<div
+																			key={step.title}
+																			className={`flex items-start gap-3 rounded-2xl border p-4 transition-colors ${
+																				isActive
+																					? "border-primary/70 bg-primary/5"
+																					: isCompleted
+																					? "border-accent/70 bg-accent/10"
+																					: "border-border bg-white"
+																				}`}
+																			>
+																				<div
+																					className={`flex h-12 w-12 items-center justify-center rounded-xl border text-xl font-semibold ${
+																						isCompleted
+																							? "border-accent bg-accent text-white"
+																						: isActive
+																							? "border-primary bg-primary text-white"
+																						: "border-border bg-white text-muted-foreground"
+																				}`}
+																				>
+																					{isCompleted ? "✓" : step.icon}
+																				</div>
+																				<div className="space-y-1">
+																					<p className="text-base font-semibold text-foreground">
+																						{step.title}
+																					</p>
+																					<p className="text-sm text-muted-foreground">
+																						{step.description}
+																					</p>
+																				</div>
+																		</div>
+																);
+															})}
+															</div>
+															<Progress value={progressValue} className="h-2 rounded-full" />
+														</div>
+													</CardHeader>
 							<CardContent className="space-y-6">
 								{/* PASO 1: Información básica del viaje */}
 								{currentStep === 0 && (
