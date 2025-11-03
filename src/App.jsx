@@ -20,7 +20,7 @@ import { LoaderCircle } from "lucide-react";
 
 // --- Componentes de Sección ---
 import Header from "./components/Header";
-// Hero eliminado - solo flujo express disponible
+// import Hero from "./components/Hero"; // Importar Hero en lugar de HeroExpress
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
 import Destinos from "./components/Destinos";
@@ -1615,7 +1615,6 @@ function App() {
 			<Header />
 
 			<main>
-				{/* Solo flujo express disponible */}
 				<HeroExpress
 					formData={formData}
 					handleInputChange={handleInputChange}
