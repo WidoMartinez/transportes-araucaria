@@ -245,8 +245,6 @@ function HeroExpress({
 
 	// Validar si todos los campos obligatorios del paso 2 están completos
 	const todosLosCamposCompletos = useMemo(() => {
-		if (currentStep !== 1) return false;
-
 		const nombreValido = formData.nombre?.trim().length > 0;
 		const emailValido =
 			formData.email?.trim().length > 0 &&
@@ -258,7 +256,6 @@ function HeroExpress({
 			nombreValido && emailValido && telefonoValido && consentimientoValido
 		);
 	}, [
-		currentStep,
 		formData.nombre,
 		formData.email,
 		formData.telefono,
