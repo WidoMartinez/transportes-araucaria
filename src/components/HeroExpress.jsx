@@ -342,163 +342,134 @@ function HeroExpress({
 	]);
 
 	return (
-		<section
-			id="inicio"
-			className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
-		>
-			<div
-				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-				style={{ backgroundImage: `url(${heroVan})` }}
-			></div>
-			<div className="absolute inset-0 bg-black/50"></div>
-
-			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
-				{!showBookingModule && (
-					<>
-						<h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
-							Traslados Privados Aeropuerto La Araucanía
-							<br />
-							<span className="text-accent drop-shadow-lg text-3xl md:text-5xl">
-								Reserva en 2 minutos
+		<section id="inicio" className="bg-slate-50">
+			<div className="container mx-auto px-4 py-12 md:py-20">
+				<div className="grid gap-12 md:grid-cols-[minmax(0,1fr)_minmax(0,380px)] md:items-center">
+					<div className="space-y-6">
+						<div className="space-y-2">
+							<span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+								Traslados privados en La Araucanía
 							</span>
-						</h1>
-						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
-							Descubre La Araucanía con nuestros traslados privados: conectamos
-							el aeropuerto directamente con Pucón, Villarrica, Malalcahuello y
-							todos los destinos turísticos de la región.
-							<br />
-							<span className="text-accent font-bold">
-								¡Aprovecha nuestro descuento web del {baseDiscountPercentage}%
-								garantizado
-								{promoDiscountPercentage > 0 &&
-									` + ${promoDiscountPercentage}% extra`}
-								!
-							</span>
-						</p>
-					</>
-				)}
-
-				{!showBookingModule && (
-					<div className="flex flex-col items-center justify-center space-y-6">
-						<Button
-							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
-						>
-							🚀 Reservar ahora
-						</Button>
-						<Button
-							variant="outline"
-							className="bg-transparent border-white text-white hover:bg-white/10"
-							asChild
-						>
-							<a href="#consultar-reserva">Continuar con código</a>
-						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso súper rápido • Solo 2 pasos • Pago seguro
-						</p>
-					</div>
-				)}
-
-				{showBookingModule && (
-					<div className="w-full">
-						<div className="text-center mb-6">
-							<h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-2xl mb-3">
-								¡Reserva express y ahorra!
-							</h3>
-							<p className="text-lg md:text-xl text-white/95 drop-shadow-lg font-medium">
-								Solo 2 pasos • Descuento del{" "}
-								<span className="text-accent font-bold text-2xl">
-									{baseDiscountPercentage}%
-								</span>{" "}
-								aplicado automáticamente
+							<h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+								Conecta el aeropuerto con tu destino en un par de pasos
+							</h1>
+							<p className="text-base md:text-lg text-slate-600">
+								Gestiona tu traslado express con un flujo claro y directo. Confirmas
+								tu ruta, compartes tus datos y decides cómo pagar en minutos.
 							</p>
 						</div>
+						<div className="flex flex-col sm:flex-row gap-4">
+							<Button
+								onClick={() => setShowBookingModule(true)}
+								className="w-full sm:w-auto bg-primary text-white hover:bg-primary/90 px-6 py-3 text-base font-semibold"
+							>
+								Reservar en línea
+							</Button>
+							<Button
+								variant="outline"
+								className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-100"
+								asChild
+							>
+								<a href="#consultar-reserva">Tengo un código</a>
+							</Button>
+						</div>
+						<div className="flex items-center gap-2 text-sm text-slate-500">
+							<Calendar className="h-4 w-4" />
+							<span>Flujo simple en dos etapas con confirmación inmediata</span>
+						</div>
+					</div>
 
-						<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left">
+					{!showBookingModule && (
+						<div className="hidden md:block">
+							<div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
+								<img
+									src={heroVan}
+									alt="Transporte privado"
+									className="h-full w-full object-cover"
+								/>
+							</div>
+						</div>
+					)}
+				</div>
+
+				{showBookingModule && (
+					<div className="mt-12">
+						<Card className="max-w-4xl mx-auto border border-slate-200 shadow-sm">
 							<CardHeader className="space-y-4">
-								<div className="flex flex-wrap items-center justify-between gap-2">
+								<div className="flex flex-wrap items-center justify-between gap-3">
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => setShowBookingModule(false)}
-										className="text-gray-500 hover:text-gray-700"
+										className="text-slate-500 hover:text-slate-700"
 									>
-										← Volver
+										Volver
 									</Button>
-									<div className="flex items-center gap-2">
-										<Badge variant="secondary" className="text-sm">
-											Descuento web {baseDiscountPercentage}%
+									<div className="flex items-center gap-2 text-sm text-slate-600">
+										<Badge variant="secondary" className="bg-primary/10 text-primary">
+											Descuento {baseDiscountPercentage}%
 										</Badge>
 										{promoDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-emerald-500 text-white"
-											>
+											<Badge variant="outline" className="border-primary/40 text-primary">
 												Extra +{promoDiscountPercentage}%
 											</Badge>
 										)}
 									</div>
 								</div>
 
-								{/* Progress simplificado */}
-								<div className="space-y-4">
-									<div className="grid gap-4 md:grid-cols-2">
+								<div className="space-y-3">
+									<div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
 										{steps.map((step, index) => {
 											const isCompleted = index < currentStep;
 											const isActive = index === currentStep;
 
 											return (
-												<div
-													key={step.title}
-													className={`flex items-center gap-3 rounded-lg border p-4 transition ${
-														isActive
-															? "border-primary bg-primary/10"
-															: isCompleted
-															? "border-green-500 bg-green-50"
-															: "border-gray-200 bg-gray-50"
-													}`}
-												>
-													<div
-														className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl ${
-															isCompleted
-																? "bg-green-500 text-white"
-																: isActive
-																? "bg-primary text-white"
-																: "bg-gray-200 text-gray-500"
-														}`}
-													>
-														{isCompleted ? "✓" : step.icon}
-													</div>
-													<div>
-														<p className="font-semibold text-foreground text-lg">
-															{step.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{step.description}
-														</p>
-													</div>
-												</div>
+												<React.Fragment key={step.title}>
+													<div className="flex items-center gap-3">
+														<span
+															className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+																isCompleted
+																        ? "bg-primary text-white"
+																        : isActive
+																        ? "bg-primary/90 text-white"
+																        : "bg-slate-200 text-slate-600"
+																}`}
+															>
+																{isCompleted ? "✓" : index + 1}
+															</span>
+															<div className="space-y-0.5">
+																<p className="text-sm font-semibold text-slate-900">
+																	{step.title}
+																</p>
+																<p className="text-xs text-slate-500">
+																	{step.description}
+																</p>
+															</div>
+														</div>
+														{index < steps.length - 1 && (
+															<span className="hidden md:block h-px flex-1 bg-slate-200" aria-hidden="true"></span>
+														)}
+													</React.Fragment>
 											);
 										})}
 									</div>
-									<Progress value={progressValue} className="h-3" />
+									<Progress value={progressValue} className="h-2" />
 								</div>
 							</CardHeader>
+
 
 							<CardContent className="space-y-6">
 								{/* PASO 1: Información básica del viaje */}
 								{currentStep === 0 && (
 									<div className="space-y-6">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-2">
-												<Label
-													htmlFor="origen-express"
-													className="text-base font-medium"
-												>
-													<span className="flex items-center gap-2">
-														🚐 Origen
-													</span>
-												</Label>
+                                                                                        <div className="space-y-2">
+                                                                                                <Label
+                                                                                                        htmlFor="origen-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Origen
+                                                                                                </Label>
 												<select
 													id="origen-express"
 													name="origen"
@@ -515,15 +486,13 @@ function HeroExpress({
 												</select>
 											</div>
 
-											<div className="space-y-2">
-												<Label
-													htmlFor="destino-express"
-													className="text-base font-medium"
-												>
-													<span className="flex items-center gap-2">
-														🎯 Destino
-													</span>
-												</Label>
+                                                                                        <div className="space-y-2">
+                                                                                                <Label
+                                                                                                        htmlFor="destino-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Destino
+                                                                                                </Label>
 												<select
 													id="destino-express"
 													name="destino"
@@ -543,16 +512,13 @@ function HeroExpress({
 										</div>
 
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-2">
-												<Label
-													htmlFor="fecha-express"
-													className="text-base font-medium"
-												>
-													<span className="flex items-center gap-2">
-														<Calendar className="h-4 w-4" />
-														Fecha del traslado
-													</span>
-												</Label>
+                                                                                        <div className="space-y-2">
+                                                                                                <Label
+                                                                                                        htmlFor="fecha-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Fecha del traslado
+                                                                                                </Label>
 												<Input
 													id="fecha-express"
 													type="date"
@@ -565,16 +531,13 @@ function HeroExpress({
 												/>
 											</div>
 
-											<div className="space-y-2">
-												<Label
-													htmlFor="pasajeros-express"
-													className="text-base font-medium"
-												>
-													<span className="flex items-center gap-2">
-														<Users className="h-4 w-4" />
-														Pasajeros
-													</span>
-												</Label>
+                                                                                        <div className="space-y-2">
+                                                                                                <Label
+                                                                                                        htmlFor="pasajeros-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Pasajeros
+                                                                                                </Label>
 												<select
 													id="pasajeros-express"
 													name="pasajeros"
@@ -618,29 +581,26 @@ function HeroExpress({
 														}
 													}}
 												/>
-												<label
-													htmlFor="ida-vuelta-express"
-													className="text-sm font-medium leading-relaxed cursor-pointer"
-												>
-													¿También necesitas el regreso?
-													<span className="block text-muted-foreground font-normal">
-														Coordina ida y vuelta en una sola reserva y ahorra
-													</span>
-												</label>
+                                                                                                <label
+                                                                                                        htmlFor="ida-vuelta-express"
+                                                                                                        className="text-sm font-semibold text-slate-600 leading-relaxed cursor-pointer"
+                                                                                                >
+                                                                                                        ¿Necesitas el regreso?
+                                                                                                        <span className="block text-xs font-normal text-slate-500">
+                                                                                                                Gestiona ida y vuelta con la misma reserva.
+                                                                                                        </span>
+                                                                                                </label>
 											</div>
 
 											{formData.idaVuelta && (
 												<div className="pt-4 border-t border-muted/40">
 													<div className="space-y-2">
-														<Label
-															htmlFor="fecha-regreso-express"
-															className="text-base font-medium"
-														>
-															<span className="flex items-center gap-2">
-																<Calendar className="h-4 w-4" />
-																Fecha de regreso
-															</span>
-														</Label>
+                                                                                                                <Label
+                                                                                                                        htmlFor="fecha-regreso-express"
+                                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                                >
+                                                                                                                        Fecha de regreso
+                                                                                                                </Label>
 														<Input
 															id="fecha-regreso-express"
 															type="date"
@@ -651,10 +611,9 @@ function HeroExpress({
 															className="h-12 text-base"
 															required={formData.idaVuelta}
 														/>
-														<p className="text-xs text-muted-foreground">
-															💡 La hora exacta de regreso podrás especificarla
-															después del pago
-														</p>
+                                                                                                                <p className="text-xs text-slate-500">
+                                                                                                                        Podrás definir la hora exacta al confirmar el servicio.
+                                                                                                                </p>
 													</div>
 												</div>
 											)}
@@ -662,38 +621,46 @@ function HeroExpress({
 
 										{/* Precio estimado */}
 										{mostrarPrecio ? (
-											<div className="rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 p-6">
+                                                                                        <div className="rounded-lg border border-slate-200 bg-white p-5">
 												<div className="grid gap-4 md:grid-cols-2 md:items-center">
 													<div className="space-y-2">
-														<div className="flex items-center gap-2 flex-wrap">
-															<Badge variant="secondary">Precio estimado</Badge>
-															<Badge variant="default" className="bg-green-500">
-																-{baseDiscountPercentage}% web
-															</Badge>
+                                                                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                                                                        <Badge
+                                                                                                                                variant="outline"
+                                                                                                                                className="text-xs font-medium text-slate-600"
+                                                                                                                        >
+                                                                                                                                Precio estimado
+                                                                                                                        </Badge>
+                                                                                                                        <Badge
+                                                                                                                                variant="secondary"
+                                                                                                                                className="bg-primary/10 text-primary"
+                                                                                                                        >
+                                                                                                                                -{baseDiscountPercentage}% web
+                                                                                                                        </Badge>
 															{formData.idaVuelta &&
 																pricing.descuentoRoundTrip > 0 && (
-																	<Badge
-																		variant="default"
-																		className="bg-blue-500"
-																	>
-																		🔄 Ida y vuelta
-																	</Badge>
+                                                                                                                                <Badge
+                                                                                                                                        variant="outline"
+                                                                                                                                        className="text-xs font-medium text-slate-600"
+                                                                                                                                >
+                                                                                                                                        Ida y vuelta
+                                                                                                                                </Badge>
 																)}
 														</div>
-														<p className="text-2xl font-bold text-primary">
+                                                                                                                <p className="text-2xl font-semibold text-slate-900">
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
-														<p className="text-sm text-muted-foreground">
+                                                                                                                <p className="text-xs text-slate-500">
 															Vehículo: {cotizacion.vehiculo}
 															{formData.idaVuelta && " · Ida y vuelta"}
 														</p>
 													</div>
-													<div className="text-left md:text-right space-y-1">
-														<p className="text-sm text-muted-foreground line-through">
+                                                                                                        <div className="text-left md:text-right space-y-1">
+                                                                                                                <p className="text-xs text-slate-400 line-through">
 															Precio regular:{" "}
 															{formatCurrency(pricing.precioBase)}
 														</p>
-														<p className="text-lg font-semibold text-green-600">
+                                                                                                                <p className="text-sm font-medium text-slate-600">
 															Ahorro total:{" "}
 															{formatCurrency(
 																pricing.descuentoBase +
@@ -703,40 +670,38 @@ function HeroExpress({
 														</p>
 														{formData.idaVuelta &&
 															pricing.descuentoRoundTrip > 0 && (
-																<p className="text-xs text-blue-600">
-																	Incluye descuento ida y vuelta:{" "}
+                                                                                                                                <p className="text-xs text-slate-500">
+                                                                                                                                        Incluye beneficio ida y vuelta:{" "}
 																	{formatCurrency(pricing.descuentoRoundTrip)}
 																</p>
 															)}
 													</div>
 												</div>
 											</div>
-										) : (
-											<div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
-												<p className="font-semibold text-primary">
-													📋 Cotización personalizada
-												</p>
-												<p className="text-sm text-primary/80">
-													Te enviaremos el precio exacto junto con la
-													confirmación
-												</p>
-											</div>
-										)}
+                                                                                ) : (
+                                                                                        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-5 text-center">
+                                                                                                <p className="font-semibold text-slate-700">
+                                                                                                        Cotización personalizada
+                                                                                                </p>
+                                                                                                <p className="text-xs text-slate-500">
+                                                                                                        Te enviaremos el monto final junto con la confirmación.
+                                                                                                </p>
+                                                                                        </div>
+                                                                                )}
 
-										<div className="text-center">
-											<p className="text-sm text-muted-foreground mb-4">
-												💡 <strong>Tip:</strong> Podrás ajustar la hora exacta y
-												otros detalles después de confirmar el pago
-											</p>
-											<Button
-												type="button"
-												onClick={handleStepOneNext}
-												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-semibold"
-												disabled={isSubmitting}
-											>
-												Continuar al pago →
-											</Button>
-										</div>
+                                                                                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                                                        <p className="text-xs text-slate-500">
+                                                                                                Verifica la información y avanza cuando estés listo.
+                                                                                        </p>
+                                                                                        <Button
+                                                                                                type="button"
+                                                                                                onClick={handleStepOneNext}
+                                                                                                className="w-full md:w-auto bg-primary text-white hover:bg-primary/90 px-6 py-3 text-base font-semibold"
+                                                                                                disabled={isSubmitting}
+                                                                                        >
+                                                                                                Continuar al siguiente paso
+                                                                                        </Button>
+                                                                                </div>
 									</div>
 								)}
 
@@ -744,23 +709,23 @@ function HeroExpress({
 								{currentStep === 1 && (
 									<div className="space-y-6">
 										{/* Resumen del viaje */}
-										<div className="bg-gray-50 rounded-lg p-4 space-y-2">
-											<h4 className="font-semibold text-lg mb-3">
-												📋 Resumen de tu traslado
-											</h4>
+                                                                                <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+                                                                                        <h4 className="text-base font-semibold text-slate-700">
+                                                                                                Resumen del traslado
+                                                                                        </h4>
 											<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
 												<div>
 													<span className="text-muted-foreground">Ruta:</span>
 													<p className="font-medium">
 														{origenFinal} → {destinoFinal}
-														{formData.idaVuelta && (
-															<>
-																<br />
-																<span className="text-blue-600">
-																	{destinoFinal} → {origenFinal}
-																</span>
-															</>
-														)}
+                                                                                                                {formData.idaVuelta && (
+                                                                                                                        <>
+                                                                                                                                <br />
+                                                                                                                                <span className="text-slate-500">
+                                                                                                                                        {destinoFinal} → {origenFinal}
+                                                                                                                                </span>
+                                                                                                                        </>
+                                                                                                                )}
 													</p>
 												</div>
 												<div>
@@ -769,19 +734,19 @@ function HeroExpress({
 													</span>
 													<p className="font-medium">
 														{fechaLegible}
-														{formData.idaVuelta && formData.fechaRegreso && (
-															<>
-																<br />
-																<span className="text-blue-600">
-																	{new Date(
-																		`${formData.fechaRegreso}T00:00:00`
-																	).toLocaleDateString("es-CL", {
-																		dateStyle: "long",
-																		timeZone: "America/Santiago",
-																	})}
-																</span>
-															</>
-														)}
+                                                                                                                {formData.idaVuelta && formData.fechaRegreso && (
+                                                                                                                        <>
+                                                                                                                                <br />
+                                                                                                                                <span className="text-slate-500">
+                                                                                                                                        {new Date(
+                                                                                                                                                `${formData.fechaRegreso}T00:00:00`
+                                                                                                                                        ).toLocaleDateString("es-CL", {
+                                                                                                                                                dateStyle: "long",
+                                                                                                                                                timeZone: "America/Santiago",
+                                                                                                                                        })}
+                                                                                                                                </span>
+                                                                                                                        </>
+                                                                                                                )}
 													</p>
 												</div>
 												<div>
@@ -797,7 +762,7 @@ function HeroExpress({
 														<span className="font-medium">
 															Total con descuento:
 														</span>
-														<span className="text-xl font-bold text-primary">
+                                                                                                                <span className="text-xl font-semibold text-slate-900">
 															{formatCurrency(pricing.totalConDescuento)}
 														</span>
 													</div>
@@ -813,13 +778,12 @@ function HeroExpress({
 										{/* Datos personales */}
 										<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 											<div className="space-y-2">
-												<Label
-													htmlFor="nombre-express"
-													className="text-base font-medium"
-												>
-													👤 Nombre completo{" "}
-													<span className="text-destructive">*</span>
-												</Label>
+                                                                                                <Label
+                                                                                                        htmlFor="nombre-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Nombre completo <span className="text-destructive">*</span>
+                                                                                                </Label>
 												<Input
 													id="nombre-express"
 													name="nombre"
@@ -832,13 +796,12 @@ function HeroExpress({
 											</div>
 
 											<div className="space-y-2">
-												<Label
-													htmlFor="email-express"
-													className="text-base font-medium"
-												>
-													📧 Correo electrónico{" "}
-													<span className="text-destructive">*</span>
-												</Label>
+                                                                                                <Label
+                                                                                                        htmlFor="email-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Correo electrónico <span className="text-destructive">*</span>
+                                                                                                </Label>
 												<Input
 													id="email-express"
 													type="email"
@@ -875,13 +838,12 @@ function HeroExpress({
 											</div>
 
 											<div className="space-y-2">
-												<Label
-													htmlFor="telefono-express"
-													className="text-base font-medium"
-												>
-													📱 Teléfono{" "}
-													<span className="text-destructive">*</span>
-												</Label>
+                                                                                                <Label
+                                                                                                        htmlFor="telefono-express"
+                                                                                                        className="text-sm font-semibold text-slate-600"
+                                                                                                >
+                                                                                                        Teléfono <span className="text-destructive">*</span>
+                                                                                                </Label>
 												<Input
 													id="telefono-express"
 													name="telefono"
