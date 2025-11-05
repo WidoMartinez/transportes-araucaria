@@ -4824,12 +4824,19 @@ app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
+		console.log("📝 Actualizando configuración ID:", id);
+		console.log("📝 Datos recibidos:", JSON.stringify(req.body, null, 2));
+		console.log("📝 diasSemana recibido:", req.body.diasSemana, "tipo:", typeof req.body.diasSemana);
+
 		const config = await ConfiguracionTarifaDinamica.findByPk(id);
 		if (!config) {
 			return res.status(404).json({ error: "Configuración no encontrada" });
 		}
 
 		await config.update(req.body);
+
+		console.log("✅ Configuración actualizada");
+		console.log("✅ diasSemana guardado:", config.diasSemana, "tipo:", typeof config.diasSemana);
 
 		res.json(config);
 	} catch (error) {

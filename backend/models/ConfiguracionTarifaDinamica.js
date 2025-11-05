@@ -44,6 +44,22 @@ const ConfiguracionTarifaDinamica = sequelize.define(
 			type: DataTypes.JSON,
 			allowNull: true,
 			comment: "Array de días de la semana: [0=domingo, 1=lunes, ..., 6=sábado]",
+			get() {
+				const rawValue = this.getDataValue("diasSemana");
+				// Si es string, parsearlo; si ya es array, devolverlo; sino, array vacío
+				if (typeof rawValue === "string") {
+					try {
+						return JSON.parse(rawValue);
+					} catch {
+						return [];
+					}
+				}
+				return Array.isArray(rawValue) ? rawValue : [];
+			},
+			set(value) {
+				// Asegurar que siempre se guarde como array
+				this.setDataValue("diasSemana", Array.isArray(value) ? value : []);
+			},
 		},
 		// Configuración para tipo "horario"
 		horaInicio: {
@@ -78,6 +94,25 @@ const ConfiguracionTarifaDinamica = sequelize.define(
 			type: DataTypes.JSON,
 			allowNull: true,
 			comment: "Array de nombres de destinos excluidos de esta regla",
+			get() {
+				const rawValue = this.getDataValue("destinosExcluidos");
+				// Si es string, parsearlo; si ya es array, devolverlo; sino, array vacío
+				if (typeof rawValue === "string") {
+					try {
+						return JSON.parse(rawValue);
+					} catch {
+						return [];
+					}
+				}
+				return Array.isArray(rawValue) ? rawValue : [];
+			},
+			set(value) {
+				// Asegurar que siempre se guarde como array
+				this.setDataValue(
+					"destinosExcluidos",
+					Array.isArray(value) ? value : []
+				);
+			},
 		},
 		// Descripción y notas
 		descripcion: {
