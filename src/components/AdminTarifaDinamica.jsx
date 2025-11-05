@@ -1,7 +1,13 @@
 // src/components/AdminTarifaDinamica.jsx
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, TrendingDown, Calendar, Clock } from "lucide-react";
+import {
+	Loader2,
+	TrendingUp,
+	TrendingDown,
+	Calendar,
+	Clock,
+} from "lucide-react";
 
 const API_BASE_URL =
 	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
@@ -12,7 +18,11 @@ const tiposConfig = [
 	{ value: "anticipacion", label: "Por Anticipación", icon: Calendar },
 	{ value: "dia_semana", label: "Por Día de Semana", icon: Calendar },
 	{ value: "horario", label: "Por Horario", icon: Clock },
-	{ value: "descuento_retorno", label: "Descuento Retorno", icon: TrendingDown },
+	{
+		value: "descuento_retorno",
+		label: "Descuento Retorno",
+		icon: TrendingDown,
+	},
 ];
 
 const diasSemana = [
@@ -124,12 +134,15 @@ function AdminTarifaDinamica() {
 
 		try {
 			setSaving(true);
-			const response = await fetch(`${API_BASE_URL}/api/tarifa-dinamica/${id}`, {
-				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
-			});
+			const response = await fetch(
+				`${API_BASE_URL}/api/tarifa-dinamica/${id}`,
+				{
+					method: "DELETE",
+					headers: {
+						Authorization: `Bearer ${ADMIN_TOKEN}`,
+					},
+				}
+			);
 			if (!response.ok) throw new Error("Error al eliminar configuración");
 			setSuccess("Configuración eliminada correctamente");
 			await cargarDatos();
@@ -315,9 +328,7 @@ function TarjetaConfig({ config, onEditar, onEliminar, saving }) {
 					<span>Prioridad: {config.prioridad}</span>
 					{Array.isArray(config.destinosExcluidos) &&
 						config.destinosExcluidos.length > 0 && (
-							<span>
-								Excluye {config.destinosExcluidos.length} destino(s)
-							</span>
+							<span>Excluye {config.destinosExcluidos.length} destino(s)</span>
 						)}
 				</div>
 			</div>
@@ -326,7 +337,12 @@ function TarjetaConfig({ config, onEditar, onEliminar, saving }) {
 				<Button size="sm" variant="outline" onClick={onEditar}>
 					Editar
 				</Button>
-				<Button size="sm" variant="destructive" onClick={onEliminar} disabled={saving}>
+				<Button
+					size="sm"
+					variant="destructive"
+					onClick={onEliminar}
+					disabled={saving}
+				>
 					Eliminar
 				</Button>
 			</div>
@@ -334,7 +350,14 @@ function TarjetaConfig({ config, onEditar, onEliminar, saving }) {
 	);
 }
 
-function FormularioConfig({ config, onChange, onGuardar, onCancelar, saving, destinos }) {
+function FormularioConfig({
+	config,
+	onChange,
+	onGuardar,
+	onCancelar,
+	saving,
+	destinos,
+}) {
 	return (
 		<div className="space-y-4 rounded-lg border-2 border-blue-500 bg-slate-900 p-4">
 			<h3 className="text-lg font-semibold text-white">
@@ -371,7 +394,8 @@ function FormularioConfig({ config, onChange, onGuardar, onCancelar, saving, des
 
 				<div>
 					<label className="block text-sm text-slate-300">
-						Ajuste (%) * {config.porcentajeAjuste > 0 ? "(Recargo)" : "(Descuento)"}
+						Ajuste (%) *{" "}
+						{config.porcentajeAjuste > 0 ? "(Recargo)" : "(Descuento)"}
 					</label>
 					<input
 						type="number"

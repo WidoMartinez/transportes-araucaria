@@ -4800,7 +4800,10 @@ app.get("/api/tarifa-dinamica", async (req, res) => {
 
 		res.json(configuracionesNormalizadas);
 	} catch (error) {
-		console.error("Error obteniendo configuraciones de tarifa dinámica:", error);
+		console.error(
+			"Error obteniendo configuraciones de tarifa dinámica:",
+			error
+		);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -4830,7 +4833,10 @@ app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 
 		res.json(config);
 	} catch (error) {
-		console.error("Error actualizando configuración de tarifa dinámica:", error);
+		console.error(
+			"Error actualizando configuración de tarifa dinámica:",
+			error
+		);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -4880,12 +4886,20 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 
 		// Analizar la fecha como YYYY-MM-DD para evitar problemas de zona horaria
 		const [year, month, day] = fecha.split("-");
-		const fechaViaje = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+		const fechaViaje = new Date(
+			parseInt(year),
+			parseInt(month) - 1,
+			parseInt(day)
+		);
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
-		
+
 		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
 		const ahora = new Date();
-		const hoyInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+		const hoyInicio = new Date(
+			ahora.getFullYear(),
+			ahora.getMonth(),
+			ahora.getDate()
+		);
 		const diasAnticipacion = Math.floor(
 			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)
 		);
@@ -4915,7 +4929,8 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 				tipo: "festivo",
 				porcentaje: parseFloat(festivo.porcentajeRecargo),
 				detalle: festivo.nombre,
-				descripcion: festivo.descripcion || `Recargo por festivo: ${festivo.nombre}`,
+				descripcion:
+					festivo.descripcion || `Recargo por festivo: ${festivo.nombre}`,
 			});
 			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
 		}
@@ -7025,8 +7040,7 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 		if (reserva.estado !== "confirmada") {
 			return res.status(400).json({
 				success: false,
-				error:
-					"Solo se pueden agregar productos a reservas confirmadas",
+				error: "Solo se pueden agregar productos a reservas confirmadas",
 			});
 		}
 
