@@ -37,13 +37,15 @@ const ConfiguracionTarifaDinamica = sequelize.define(
 		diasMaximos: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
-			comment: "Días máximos de anticipación para esta regla (null = sin límite)",
+			comment:
+				"Días máximos de anticipación para esta regla (null = sin límite)",
 		},
 		// Configuración para tipo "dia_semana"
 		diasSemana: {
 			type: DataTypes.JSON,
 			allowNull: true,
-			comment: "Array de días de la semana: [0=domingo, 1=lunes, ..., 6=sábado]",
+			comment:
+				"Array de días de la semana: [0=domingo, 1=lunes, ..., 6=sábado]",
 			get() {
 				const rawValue = this.getDataValue("diasSemana");
 				// Si es string, parsearlo; si ya es array, devolverlo; sino, array vacío

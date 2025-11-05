@@ -4826,7 +4826,12 @@ app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 
 		console.log("📝 Actualizando configuración ID:", id);
 		console.log("📝 Datos recibidos:", JSON.stringify(req.body, null, 2));
-		console.log("📝 diasSemana recibido:", req.body.diasSemana, "tipo:", typeof req.body.diasSemana);
+		console.log(
+			"📝 diasSemana recibido:",
+			req.body.diasSemana,
+			"tipo:",
+			typeof req.body.diasSemana
+		);
 
 		const config = await ConfiguracionTarifaDinamica.findByPk(id);
 		if (!config) {
@@ -4836,7 +4841,12 @@ app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 		await config.update(req.body);
 
 		console.log("✅ Configuración actualizada");
-		console.log("✅ diasSemana guardado:", config.diasSemana, "tipo:", typeof config.diasSemana);
+		console.log(
+			"✅ diasSemana guardado:",
+			config.diasSemana,
+			"tipo:",
+			typeof config.diasSemana
+		);
 
 		res.json(config);
 	} catch (error) {
