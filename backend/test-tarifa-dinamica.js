@@ -46,7 +46,8 @@ async function testTarifaDinamica() {
 		// Test 3: Calcular tarifa dinámica - Fin de semana
 		console.log("3️⃣ Test: Calcular tarifa - Fin de semana");
 		const proximoSabado = new Date();
-		proximoSabado.setDate(proximoSabado.getDate() + ((6 - proximoSabado.getDay() + 7) % 7 || 7));
+		const diasHastaSabado = (6 - proximoSabado.getDay() + 7) % 7;
+		proximoSabado.setDate(proximoSabado.getDate() + (diasHastaSabado === 0 ? 7 : diasHastaSabado));
 		const fechaSabado = proximoSabado.toISOString().split("T")[0];
 		const calculoFinSemana = await fetch.post(
 			`${API_BASE_URL}/api/tarifa-dinamica/calcular`,

@@ -4792,7 +4792,7 @@ app.get("/api/tarifa-dinamica", async (req, res) => {
 });
 
 // Crear nueva configuración de tarifa dinámica
-app.post("/api/tarifa-dinamica", async (req, res) => {
+app.post("/api/tarifa-dinamica", authAdmin, async (req, res) => {
 	try {
 		const nuevaConfig = await ConfiguracionTarifaDinamica.create(req.body);
 		res.status(201).json(nuevaConfig);
@@ -4803,7 +4803,7 @@ app.post("/api/tarifa-dinamica", async (req, res) => {
 });
 
 // Actualizar configuración de tarifa dinámica
-app.put("/api/tarifa-dinamica/:id", async (req, res) => {
+app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -4822,7 +4822,7 @@ app.put("/api/tarifa-dinamica/:id", async (req, res) => {
 });
 
 // Eliminar configuración de tarifa dinámica
-app.delete("/api/tarifa-dinamica/:id", async (req, res) => {
+app.delete("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -4864,15 +4864,20 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		const ajustesAplicados = [];
 		let porcentajeTotal = 0;
 
-		const fechaViaje = new Date(fecha);
+		// Parse date as YYYY-MM-DD to avoid timezone issues
+		const [year, month, day] = fecha.split("-");
+		const fechaViaje = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+		
+		// Calculate days in advance using date-only comparison
 		const ahora = new Date();
+		const hoyInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
 		const diasAnticipacion = Math.floor(
-			(fechaViaje - ahora) / (1000 * 60 * 60 * 24)
+			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)
 		);
 
 		// Verificar si la fecha es festivo
-		const fechaStr = fechaViaje.toISOString().split("T")[0];
+		const fechaStr = fecha; // Use original date string
 		const festivo = await Festivo.findOne({
 			where: {
 				activo: true,
@@ -4954,7 +4959,17 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 						const horaInicio = config.horaInicio.substring(0, 5);
 						const horaFin = config.horaFin.substring(0, 5);
 
-						if (horaViaje >= horaInicio && horaViaje <= horaFin) {
+						// Handle time ranges that span midnight (e.g., 22:00 - 06:00)
+						let dentroRango = false;
+						if (horaInicio <= horaFin) {
+							// Normal range (e.g., 08:00 - 20:00)
+							dentroRango = horaViaje >= horaInicio && horaViaje <= horaFin;
+						} else {
+							// Range spanning midnight (e.g., 22:00 - 06:00)
+							dentroRango = horaViaje >= horaInicio || horaViaje <= horaFin;
+						}
+
+						if (dentroRango) {
 							aplica = true;
 							detalle = `Horario ${horaInicio} - ${horaFin}`;
 						}
