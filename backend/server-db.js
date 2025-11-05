@@ -21,6 +21,7 @@ import Gasto from "./models/Gasto.js";
 import Producto from "./models/Producto.js";
 import ProductoReserva from "./models/ProductoReserva.js";
 import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
+import Festivo from "./models/Festivo.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
@@ -30,6 +31,7 @@ import addGastosTable from "./migrations/add-gastos-table.js";
 import addProductosTables from "./migrations/add-productos-tables.js";
 import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
 import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
+import addFestivosTable from "./migrations/add-festivos-table.js";
 import setupAssociations from "./models/associations.js";
 
 dotenv.config();
@@ -577,6 +579,7 @@ const initializeDatabase = async () => {
 		await addProductosTables(); // Migración para tablas de productos
 		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
 		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
+		await addFestivosTable(); // Migración para tabla de festivos
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -4868,6 +4871,36 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			(fechaViaje - ahora) / (1000 * 60 * 60 * 24)
 		);
 
+		// Verificar si la fecha es festivo
+		const fechaStr = fechaViaje.toISOString().split("T")[0];
+		const festivo = await Festivo.findOne({
+			where: {
+				activo: true,
+				[Op.or]: [
+					{ fecha: fechaStr },
+					{
+						recurrente: true,
+						[Op.and]: sequelize.where(
+							sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
+							sequelize.fn("DATE_FORMAT", fechaStr, "%m-%d")
+						),
+					},
+				],
+			},
+		});
+
+		// Si es festivo y tiene recargo específico, aplicarlo
+		if (festivo && festivo.porcentajeRecargo) {
+			ajustesAplicados.push({
+				nombre: `Festivo: ${festivo.nombre}`,
+				tipo: "festivo",
+				porcentaje: parseFloat(festivo.porcentajeRecargo),
+				detalle: festivo.nombre,
+				descripcion: festivo.descripcion || `Recargo por festivo: ${festivo.nombre}`,
+			});
+			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
+		}
+
 		for (const config of configuraciones) {
 			// Verificar si el destino está excluido
 			if (
@@ -4960,6 +4993,74 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error calculando tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS PARA FESTIVOS Y FECHAS ESPECIALES ---
+
+// Listar todos los festivos
+app.get("/api/festivos", async (req, res) => {
+	try {
+		const festivos = await Festivo.findAll({
+			order: [["fecha", "ASC"]],
+		});
+
+		res.json(festivos);
+	} catch (error) {
+		console.error("Error obteniendo festivos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nuevo festivo
+app.post("/api/festivos", authAdmin, async (req, res) => {
+	try {
+		const nuevoFestivo = await Festivo.create(req.body);
+		res.status(201).json(nuevoFestivo);
+	} catch (error) {
+		console.error("Error creando festivo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar festivo
+app.put("/api/festivos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const festivo = await Festivo.findByPk(id);
+		if (!festivo) {
+			return res.status(404).json({ error: "Festivo no encontrado" });
+		}
+
+		await festivo.update(req.body);
+
+		res.json(festivo);
+	} catch (error) {
+		console.error("Error actualizando festivo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar festivo
+app.delete("/api/festivos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const festivo = await Festivo.findByPk(id);
+		if (!festivo) {
+			return res.status(404).json({ error: "Festivo no encontrado" });
+		}
+
+		await festivo.destroy();
+
+		res.json({
+			success: true,
+			message: "Festivo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando festivo:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
