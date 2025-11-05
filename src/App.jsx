@@ -251,6 +251,11 @@ function App() {
 		contacto: false,
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
+	const [tarifaDinamica, setTarifaDinamica] = useState({
+		ajustesAplicados: [],
+		precioFinal: null,
+		cargando: false,
+	});
 
 	// Sincronizar vista de Fletes cuando cambia el hash o el historial
 	useEffect(() => {
@@ -901,6 +906,74 @@ function App() {
 		[destinosData]
 	);
 
+	// Función para calcular tarifa dinámica
+	const calcularTarifaDinamica = useCallback(
+		async (precioBase, destino, fecha, hora) => {
+			if (!precioBase || !destino || !fecha) {
+				setTarifaDinamica({
+					ajustesAplicados: [],
+					precioFinal: precioBase,
+					cargando: false,
+				});
+				return precioBase;
+			}
+
+			try {
+				setTarifaDinamica((prev) => ({ ...prev, cargando: true }));
+				const apiUrl =
+					getBackendUrl() || "https://transportes-araucaria.onrender.com";
+
+				console.log("💰 Calculando tarifa dinámica:", {
+					precioBase,
+					destino,
+					fecha,
+					hora,
+				});
+
+				const response = await fetch(`${apiUrl}/api/tarifa-dinamica/calcular`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						precioBase,
+						destino,
+						fecha,
+						hora,
+					}),
+				});
+
+				if (!response.ok) {
+					throw new Error("Error al calcular tarifa dinámica");
+				}
+
+				const data = await response.json();
+
+				console.log("✅ Tarifa dinámica calculada:", data);
+
+				setTarifaDinamica({
+					ajustesAplicados: data.ajustesAplicados || [],
+					precioFinal: data.precioFinal,
+					ajusteTotal: data.ajusteTotal,
+					ajusteMonto: data.ajusteMonto,
+					diasAnticipacion: data.diasAnticipacion,
+					cargando: false,
+				});
+
+				return data.precioFinal;
+			} catch (error) {
+				console.error("❌ Error al calcular tarifa dinámica:", error);
+				setTarifaDinamica({
+					ajustesAplicados: [],
+					precioFinal: precioBase,
+					cargando: false,
+				});
+				return precioBase;
+			}
+		},
+		[]
+	);
+
 	useEffect(() => {
 		const handleLocationChange = () => {
 			setIsAdminView(resolveIsAdminView());
@@ -921,6 +994,28 @@ function App() {
 		formData.destino,
 		formData.pasajeros,
 		calcularCotizacion,
+	]);
+
+	// Efecto para calcular tarifa dinámica cuando cambian fecha/hora
+	useEffect(() => {
+		if (cotizacion.precio && formData.fecha) {
+			const tramo = [formData.origen, formData.destino].find(
+				(lugar) => lugar !== "Aeropuerto La Araucanía"
+			);
+			calcularTarifaDinamica(
+				cotizacion.precio,
+				tramo,
+				formData.fecha,
+				formData.hora || "12:00"
+			);
+		}
+	}, [
+		cotizacion.precio,
+		formData.fecha,
+		formData.hora,
+		formData.origen,
+		formData.destino,
+		calcularTarifaDinamica,
 	]);
 
 	const validarTelefono = (telefono) =>
@@ -989,7 +1084,12 @@ function App() {
 	};
 
 	const pricing = useMemo(() => {
-		const precioIda = cotizacion.precio || 0;
+		// Usar precio con tarifa dinámica si está disponible, sino usar cotización base
+		const precioIdaBase = cotizacion.precio || 0;
+		const precioIda =
+			tarifaDinamica.precioFinal !== null
+				? tarifaDinamica.precioFinal
+				: precioIdaBase;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
 
 		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
@@ -1107,6 +1207,7 @@ function App() {
 		};
 	}, [
 		cotizacion.precio,
+		tarifaDinamica.precioFinal,
 		promotionDiscountRate,
 		roundTripDiscountRate,
 		onlineDiscountRate,
