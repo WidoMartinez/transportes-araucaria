@@ -1,9 +1,11 @@
 # Configuración del Token de Administrador
 
 ## Problema Resuelto
+
 Error 401 al intentar guardar configuraciones de tarifa dinámica desde el panel de administración.
 
 ## Causa
+
 Las rutas administrativas del backend están protegidas con un token de autenticación (`ADMIN_TOKEN`), pero el frontend no tenía configurado este token correctamente.
 
 ## Solución Aplicada
@@ -11,19 +13,23 @@ Las rutas administrativas del backend están protegidas con un token de autentic
 ### 1. Archivos Creados/Actualizados
 
 #### Frontend:
+
 - ✅ **`.env`** - Configuración local con el token
 - ✅ **`.env.example`** - Ejemplo para otros desarrolladores
 
 #### Backend:
+
 - ✅ **`backend/.env`** - Agregado `ADMIN_TOKEN`
 - ✅ **`backend/env.example`** - Documentado `ADMIN_TOKEN`
 
 ### 2. Token Configurado
+
 ```
 ADMIN_TOKEN=araucaria-admin-2024-secure-token-xyz789
 ```
 
 Este token debe estar **idéntico** en:
+
 - `backend/.env` → `ADMIN_TOKEN`
 - `.env` (frontend) → `VITE_ADMIN_TOKEN`
 
@@ -34,12 +40,14 @@ Este token debe estar **idéntico** en:
 1. **Detener los servidores** (Ctrl+C en ambas terminales)
 
 2. **Reiniciar el backend:**
+
    ```bash
    cd backend
    node server-db.js
    ```
 
 3. **Reiniciar el frontend:**
+
    ```bash
    npm run dev
    ```
@@ -61,6 +69,7 @@ Este token debe estar **idéntico** en:
 Si el frontend está desplegado en un servicio de hosting:
 
 1. **Configurar variable de entorno en el servicio:**
+
    - **Variable:** `VITE_ADMIN_TOKEN`
    - **Valor:** `araucaria-admin-2024-secure-token-xyz789`
 
@@ -77,6 +86,7 @@ Si el frontend está desplegado en un servicio de hosting:
 ## Seguridad
 
 ⚠️ **IMPORTANTE:**
+
 - El archivo `.env` NO se sube a Git (está en `.gitignore`)
 - Usa tokens diferentes para desarrollo y producción
 - Cambia el token regularmente
@@ -85,6 +95,7 @@ Si el frontend está desplegado en un servicio de hosting:
 ## Cambiar el Token en el Futuro
 
 1. Generar un nuevo token aleatorio:
+
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
