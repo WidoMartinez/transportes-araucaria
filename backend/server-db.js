@@ -4864,12 +4864,12 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		const ajustesAplicados = [];
 		let porcentajeTotal = 0;
 
-		// Parse date as YYYY-MM-DD to avoid timezone issues
+		// Analizar la fecha como YYYY-MM-DD para evitar problemas de zona horaria
 		const [year, month, day] = fecha.split("-");
 		const fechaViaje = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
 		
-		// Calculate days in advance using date-only comparison
+		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
 		const ahora = new Date();
 		const hoyInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
 		const diasAnticipacion = Math.floor(
@@ -4877,7 +4877,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		);
 
 		// Verificar si la fecha es festivo
-		const fechaStr = fecha; // Use original date string
+		const fechaStr = fecha; // Usar la cadena de fecha original
 		const festivo = await Festivo.findOne({
 			where: {
 				activo: true,
@@ -4959,13 +4959,13 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 						const horaInicio = config.horaInicio.substring(0, 5);
 						const horaFin = config.horaFin.substring(0, 5);
 
-						// Handle time ranges that span midnight (e.g., 22:00 - 06:00)
+						// Manejar rangos horarios que cruzan la medianoche (por ejemplo, 22:00 - 06:00)
 						let dentroRango = false;
 						if (horaInicio <= horaFin) {
-							// Normal range (e.g., 08:00 - 20:00)
+							// Rango horario normal (por ejemplo, 08:00 - 20:00)
 							dentroRango = horaViaje >= horaInicio && horaViaje <= horaFin;
 						} else {
-							// Range spanning midnight (e.g., 22:00 - 06:00)
+							// Rango que abarca la medianoche (por ejemplo, 22:00 - 06:00)
 							dentroRango = horaViaje >= horaInicio || horaViaje <= horaFin;
 						}
 
@@ -4996,7 +4996,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 
 		// Calcular montos
 		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
-		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Asegurar que no sea negativo
+		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
 
 		res.json({
 			precioBase: parseFloat(precioBase),

@@ -222,7 +222,7 @@ function AdminFestivos() {
 
 function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 	const formatearFecha = (fecha) => {
-		// Parse date as UTC to avoid timezone issues
+		// Analizar la fecha como UTC para evitar problemas de zona horaria
 		const [year, month, day] = fecha.split("-");
 		const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
 		return d.toLocaleDateString("es-CL", {
