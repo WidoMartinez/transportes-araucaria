@@ -693,7 +693,7 @@ function HeroExpress({
 																{new Date(
 																	`${formData.fechaRegreso}T00:00:00`
 																).toLocaleDateString("es-CL", {
-																	dateStyle: "short",
+																	dateStyle: "medium",
 																	timeZone: "America/Santiago",
 																})}
 															</span>
