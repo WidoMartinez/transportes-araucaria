@@ -414,7 +414,7 @@ function HeroExpress({
 				)}
 
 				{showBookingModule && (
-					<div className="w-full max-w-3xl mx-auto">
+					<div className="w-full max-w-7xl mx-auto">
 						{/* Header simplificado */}
 						<div className="text-center mb-8">
 							<h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
@@ -425,7 +425,9 @@ function HeroExpress({
 							</p>
 						</div>
 
-						<Card className="bg-white shadow-2xl border-0 overflow-hidden">
+						<div className="grid lg:grid-cols-[1fr_400px] gap-6">
+							{/* Columna principal: Formulario */}
+							<Card className="bg-white shadow-2xl border-0 overflow-hidden">
 							{/* Header de la card minimalista */}
 							<div className="bg-gradient-to-r from-blue-50 to-slate-50 px-6 py-4 border-b border-gray-100">
 								<div className="flex items-center justify-between">
@@ -1212,6 +1214,165 @@ function HeroExpress({
 								)}
 							</CardContent>
 						</Card>
+
+						{/* Columna lateral: Resumen persistente */}
+						<div className="hidden lg:block space-y-6">
+							{/* Resumen del viaje */}
+							{currentStep >= 0 && (
+								<Card className="bg-white shadow-xl border-0 sticky top-6">
+									<CardHeader className="bg-gradient-to-br from-blue-50 to-slate-50 border-b border-gray-100">
+										<h3 className="font-bold text-lg text-gray-900">
+											Resumen de tu reserva
+										</h3>
+									</CardHeader>
+									<CardContent className="p-6 space-y-6">
+										{/* Ruta */}
+										<div className="space-y-2">
+											<div className="flex items-center gap-2 text-sm text-gray-600">
+												<div className="w-2 h-2 rounded-full bg-blue-500"></div>
+												<span className="font-medium">Ruta</span>
+											</div>
+											<div className="pl-4 border-l-2 border-blue-200">
+												<p className="font-semibold text-gray-900">
+													{origenFinal}
+												</p>
+												<div className="text-blue-600 my-2" aria-hidden="true">↓</div>
+												<p className="font-semibold text-gray-900">
+													{destinoFinal}
+												</p>
+											</div>
+											{formData.idaVuelta && (
+												<div className="mt-4 pl-4 border-l-2 border-emerald-200">
+													<div className="flex items-center gap-2 mb-2">
+														<div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+														<span className="text-sm font-medium text-emerald-700">Regreso</span>
+													</div>
+													<p className="font-semibold text-gray-900">
+														{destinoFinal}
+													</p>
+													<div className="text-emerald-600 my-2" aria-hidden="true">↓</div>
+													<p className="font-semibold text-gray-900">
+														{origenFinal}
+													</p>
+												</div>
+											)}
+										</div>
+
+										{/* Fecha(s) */}
+										<div className="space-y-2 pt-4 border-t border-gray-100">
+											<div className="flex items-center gap-2 text-sm text-gray-600">
+												<Calendar className="w-4 h-4 text-blue-600" />
+												<span className="font-medium">Fecha{formData.idaVuelta ? "s" : ""}</span>
+											</div>
+											<p className="text-gray-900 font-medium pl-6">
+												{fechaLegible || "Por confirmar"}
+											</p>
+											{formData.idaVuelta && formData.fechaRegreso && (
+												<p className="text-emerald-700 font-medium pl-6">
+													Regreso: {new Date(
+														`${formData.fechaRegreso}T00:00:00`
+													).toLocaleDateString("es-CL", {
+														dateStyle: "long",
+														timeZone: "America/Santiago",
+													})}
+												</p>
+											)}
+										</div>
+
+										{/* Pasajeros */}
+										<div className="space-y-2 pt-4 border-t border-gray-100">
+											<div className="flex items-center gap-2 text-sm text-gray-600">
+												<Users className="w-4 h-4 text-blue-600" />
+												<span className="font-medium">Pasajeros</span>
+											</div>
+											<p className="text-gray-900 font-semibold text-lg pl-6">
+												{formData.pasajeros} {formData.pasajeros === "1" ? "pasajero" : "pasajeros"}
+											</p>
+										</div>
+
+										{/* Vehículo */}
+										{cotizacion.vehiculo && (
+											<div className="space-y-2 pt-4 border-t border-gray-100">
+												<div className="flex items-center gap-2 text-sm text-gray-600">
+													<div className="w-2 h-2 rounded-full bg-blue-500"></div>
+													<span className="font-medium">Vehículo</span>
+												</div>
+												<p className="text-gray-900 font-medium pl-6">
+													{cotizacion.vehiculo}
+												</p>
+											</div>
+										)}
+
+										{/* Precio */}
+										{mostrarPrecio && (
+											<div className="space-y-3 pt-4 border-t-2 border-gray-200">
+												<div className="space-y-1">
+													<div className="flex justify-between items-center text-sm">
+														<span className="text-gray-600">Precio base</span>
+														<span className="line-through text-gray-400">
+															{formatCurrency(pricing.precioBase)}
+														</span>
+													</div>
+													{pricing.descuentoBase > 0 && (
+														<div className="flex justify-between items-center text-sm">
+															<span className="text-emerald-600">Descuento web ({baseDiscountPercentage}%)</span>
+															<span className="text-emerald-600 font-medium">
+																-{formatCurrency(pricing.descuentoBase)}
+															</span>
+														</div>
+													)}
+													{pricing.descuentoRoundTrip > 0 && (
+														<div className="flex justify-between items-center text-sm">
+															<span className="text-emerald-600">Ida y vuelta</span>
+															<span className="text-emerald-600 font-medium">
+																-{formatCurrency(pricing.descuentoRoundTrip)}
+															</span>
+														</div>
+													)}
+													{pricing.descuentoCodigo > 0 && (
+														<div className="flex justify-between items-center text-sm">
+															<span className="text-emerald-600">Código descuento</span>
+															<span className="text-emerald-600 font-medium">
+																-{formatCurrency(pricing.descuentoCodigo)}
+															</span>
+														</div>
+													)}
+												</div>
+												<div className="flex justify-between items-center pt-3 border-t-2 border-blue-100">
+													<span className="text-lg font-bold text-gray-900">Total</span>
+													<span className="text-2xl font-bold text-blue-600">
+														{formatCurrency(pricing.totalConDescuento)}
+													</span>
+												</div>
+												{(pricing.descuentoBase + pricing.descuentoRoundTrip + pricing.descuentoCodigo) > 0 && (
+													<div className="bg-emerald-50 rounded-lg p-3 text-center">
+														<p className="text-sm font-bold text-emerald-700">
+															¡Ahorras {formatCurrency(
+																pricing.descuentoBase +
+																pricing.descuentoRoundTrip +
+																pricing.descuentoCodigo
+															)}!
+														</p>
+													</div>
+												)}
+											</div>
+										)}
+
+										{!mostrarPrecio && (
+											<div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-200">
+												<p className="text-sm font-semibold text-blue-900">
+													Cotización personalizada
+												</p>
+												<p className="text-xs text-blue-700 mt-1">
+													Te enviaremos el precio por correo
+												</p>
+											</div>
+										)}
+									</CardContent>
+								</Card>
+							)}
+						</div>
+						</div>
 					</div>
 				)}
 			</div>
