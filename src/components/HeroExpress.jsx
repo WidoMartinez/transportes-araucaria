@@ -506,9 +506,8 @@ function HeroExpress({
 											<div className="space-y-3">
 												<Label
 													htmlFor="origen-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-base font-semibold text-gray-900"
 												>
-													<span className="text-xl">🚐</span>
 													Origen
 												</Label>
 												<select
@@ -530,9 +529,8 @@ function HeroExpress({
 											<div className="space-y-3">
 												<Label
 													htmlFor="destino-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-base font-semibold text-gray-900"
 												>
-													<span className="text-xl">🎯</span>
 													Destino
 												</Label>
 												<select
@@ -600,7 +598,7 @@ function HeroExpress({
 										</div>
 
 										{/* Opción de ida y vuelta - diseño mejorado */}
-										<div className="bg-gradient-to-br from-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-2xl p-6 space-y-4">
+										<div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
 											<div className="flex items-start gap-4">
 												<Checkbox
 													id="ida-vuelta-express"
@@ -638,14 +636,14 @@ function HeroExpress({
 											</div>
 
 											{formData.idaVuelta && (
-												<div className="pt-4 border-t-2 border-indigo-200">
+												<div className="pt-4 border-t-2 border-blue-200">
 													<div className="space-y-3">
 														<Label
 															htmlFor="fecha-regreso-express"
 															className="text-base font-semibold text-gray-900"
 														>
 															<span className="flex items-center gap-2">
-																<Calendar className="h-5 w-5 text-indigo-600" />
+																<Calendar className="h-5 w-5 text-blue-600" />
 																Fecha de regreso
 															</span>
 														</Label>
@@ -656,13 +654,12 @@ function HeroExpress({
 															value={formData.fechaRegreso}
 															onChange={handleInputChange}
 															min={formData.fecha || minDateTime}
-															className="h-12 text-base border-2 border-indigo-200 focus:border-indigo-500"
+															className="h-14 text-base border-2 border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 rounded-xl font-medium"
 															required={formData.idaVuelta}
 														/>
-														<div className="bg-indigo-100 rounded-lg p-3">
-															<p className="text-xs text-indigo-800 flex items-center gap-2">
-																<span>💡</span>
-																<span>La hora exacta de regreso podrás especificarla después del pago</span>
+														<div className="bg-blue-100 rounded-lg p-3">
+															<p className="text-xs text-blue-800">
+																La hora exacta de regreso podrás especificarla después del pago
 															</p>
 														</div>
 													</div>
@@ -720,9 +717,9 @@ function HeroExpress({
 										)}
 
 										<div className="pt-4">
-											<div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
-												<p className="text-sm text-blue-800">
-													<span className="font-semibold">💡 Siguiente paso:</span> Ingresarás tus datos y podrás ajustar la hora exacta después del pago
+											<div className="bg-blue-50 rounded-xl p-4 mb-6 border-2 border-blue-200">
+												<p className="text-sm text-blue-900 font-medium">
+													<span className="font-bold">Siguiente paso:</span> Ingresarás tus datos y podrás ajustar la hora exacta después del pago
 												</p>
 											</div>
 											<Button
@@ -801,7 +798,7 @@ function HeroExpress({
 													</div>
 													{formData.idaVuelta && (
 														<p className="text-xs text-blue-600 mt-1">
-															🔄 Incluye ida y vuelta
+															Incluye ida y vuelta
 														</p>
 													)}
 												</div>
@@ -809,15 +806,14 @@ function HeroExpress({
 										</div>
 
 										{/* Datos personales - diseño mejorado */}
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 											<div className="space-y-3">
 												<Label
 													htmlFor="nombre-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-base font-semibold text-gray-900"
 												>
-													<span className="text-xl">👤</span>
 													Nombre completo
-													<span className="text-red-500">*</span>
+													<span className="text-red-500 ml-1">*</span>
 												</Label>
 												<Input
 													id="nombre-express"
@@ -833,11 +829,10 @@ function HeroExpress({
 											<div className="space-y-3">
 												<Label
 													htmlFor="email-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-base font-semibold text-gray-900"
 												>
-													<span className="text-xl">📧</span>
 													Correo electrónico
-													<span className="text-red-500">*</span>
+													<span className="text-red-500 ml-1">*</span>
 												</Label>
 												<Input
 													id="email-express"
@@ -857,9 +852,8 @@ function HeroExpress({
 													</p>
 												)}
 												{reservaActiva && (
-													<div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl p-4 text-sm">
-														<p className="font-bold text-amber-900 mb-2 flex items-center gap-2">
-															<span className="text-lg">⚠️</span>
+													<div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm">
+														<p className="font-bold text-amber-900 mb-2">
 															Tienes una reserva sin pagar
 														</p>
 														<p className="text-amber-800 text-xs">
@@ -879,11 +873,10 @@ function HeroExpress({
 											<div className="space-y-3">
 												<Label
 													htmlFor="telefono-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-base font-semibold text-gray-900"
 												>
-													<span className="text-xl">📱</span>
 													Teléfono
-													<span className="text-red-500">*</span>
+													<span className="text-red-500 ml-1">*</span>
 												</Label>
 												<Input
 													id="telefono-express"
@@ -903,9 +896,8 @@ function HeroExpress({
 										</div>
 
 										{/* Código de descuento - diseño simplificado */}
-										<div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-6">
-											<h4 className="font-bold mb-4 text-gray-900 flex items-center gap-2">
-												<span className="text-2xl">🎟️</span>
+										<div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-6">
+											<h4 className="font-bold mb-4 text-gray-900">
 												¿Tienes un código de descuento?
 											</h4>
 											<CodigoDescuento
@@ -1067,10 +1059,10 @@ function HeroExpress({
 										{mostrarPrecio &&
 											!requiereCotizacionManual &&
 											!todosLosCamposCompletos && (
-												<div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-6">
+												<div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6">
 													<div className="flex items-start gap-3">
-														<div className="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center text-white text-xl flex-shrink-0">
-															⚠️
+														<div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white text-xl flex-shrink-0 font-bold">
+															!
 														</div>
 														<div className="flex-1">
 															<p className="font-bold text-amber-900 mb-2">
@@ -1157,19 +1149,14 @@ function HeroExpress({
 											) : (
 												<div className="space-y-4">
 													{/* Botón para guardar reserva sin pagar - diseño mejorado */}
-													<div className="bg-gradient-to-br from-blue-50 to-slate-50 border-2 border-blue-200 rounded-2xl p-6">
-														<div className="flex items-start gap-4 mb-4">
-															<div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl flex-shrink-0">
-																💾
-															</div>
-															<div className="flex-1">
-																<h5 className="font-bold text-blue-900 mb-1 text-lg">
-																	Guardar y continuar después
-																</h5>
-																<p className="text-sm text-blue-700">
-																	Guarda tu reserva ahora y recibe un enlace por email para pagar cuando quieras
-																</p>
-															</div>
+													<div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+														<div className="mb-4">
+															<h5 className="font-bold text-blue-900 mb-2 text-lg">
+																Guardar y continuar después
+															</h5>
+															<p className="text-sm text-blue-700">
+																Guarda tu reserva ahora y recibe un enlace por email para pagar cuando quieras
+															</p>
 														</div>
 														<Button
 															type="button"
@@ -1193,19 +1180,14 @@ function HeroExpress({
 
 													{/* Instrucciones para pago inmediato */}
 													{todosLosCamposCompletos && (
-														<div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-2xl p-6">
-															<div className="flex items-start gap-4">
-																<div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white text-xl flex-shrink-0">
-																	✓
-																</div>
-																<div>
-																	<p className="font-bold text-emerald-900 mb-2">
-																		¿Listo para pagar ahora?
-																	</p>
-																	<p className="text-sm text-emerald-800">
-																		Selecciona el monto y método de pago arriba. Tu reserva se guardará automáticamente y serás redirigido al proceso de pago seguro.
-																	</p>
-																</div>
+														<div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-6">
+															<div>
+																<p className="font-bold text-emerald-900 mb-2">
+																	¿Listo para pagar ahora?
+																</p>
+																<p className="text-sm text-emerald-800">
+																	Selecciona el monto y método de pago arriba. Tu reserva se guardará automáticamente y serás redirigido al proceso de pago seguro.
+																</p>
 															</div>
 														</div>
 													)}
@@ -1216,10 +1198,10 @@ function HeroExpress({
 								)}
 
 								{stepError && (
-									<div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-2xl p-6 animate-shake">
-										<div className="flex items-start gap-4">
-											<div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white text-xl flex-shrink-0">
-												⚠️
+									<div className="bg-red-50 border-2 border-red-300 rounded-2xl p-6">
+										<div className="flex items-start gap-3">
+											<div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white text-xl flex-shrink-0 font-bold">
+												!
 											</div>
 											<div className="flex-1">
 												<p className="font-bold text-red-900 mb-1">Error</p>
