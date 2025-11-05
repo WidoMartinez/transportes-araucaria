@@ -381,10 +381,10 @@ function HeroExpress({
 						<div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
 							<Button
 								onClick={() => setShowBookingModule(true)}
-								className="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-10 py-7 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 transform hover:scale-105 border-0"
+								className="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-10 py-7 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 transform hover:scale-105 border-0 will-change-transform"
 							>
 								Reservar ahora
-								<span className="ml-2 group-hover:translate-x-1 transition-transform inline-block">→</span>
+								<span className="ml-2 group-hover:translate-x-1 transition-transform inline-block" aria-hidden="true">→</span>
 							</Button>
 							<Button
 								variant="outline"
@@ -469,8 +469,13 @@ function HeroExpress({
 																? "bg-blue-600 text-white ring-4 ring-blue-100"
 																: "bg-gray-200 text-gray-400"
 														}`}
+														aria-label={isCompleted ? "Paso completado" : `Paso ${index + 1}`}
 													>
-														{isCompleted ? "✓" : index + 1}
+														{isCompleted ? (
+															<span aria-hidden="true">✓</span>
+														) : (
+															index + 1
+														)}
 													</div>
 													<p className={`text-xs mt-2 font-medium ${
 														isActive ? "text-blue-600" : "text-gray-500"
@@ -479,9 +484,13 @@ function HeroExpress({
 													</p>
 												</div>
 												{index < steps.length - 1 && (
-													<div className={`h-0.5 flex-1 mx-2 mt-[-20px] ${
-														isCompleted ? "bg-emerald-500" : "bg-gray-200"
-													}`}></div>
+													<div 
+														className={`h-0.5 flex-1 mx-2 ${
+															isCompleted ? "bg-emerald-500" : "bg-gray-200"
+														}`}
+														style={{ marginTop: 'calc(-1.25rem - 4px)' }}
+														aria-hidden="true"
+													></div>
 												)}
 											</React.Fragment>
 										);
@@ -719,11 +728,11 @@ function HeroExpress({
 											<Button
 												type="button"
 												onClick={handleStepOneNext}
-												className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+												className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all will-change-transform"
 												disabled={isSubmitting}
 											>
 												Continuar al pago
-												<span className="ml-2 group-hover:translate-x-1 transition-transform inline-block">→</span>
+												<span className="ml-2 group-hover:translate-x-1 transition-transform inline-block" aria-hidden="true">→</span>
 											</Button>
 										</div>
 									</div>
@@ -936,7 +945,7 @@ function HeroExpress({
 																		onClick={() =>
 																			setSelectedPaymentType(option.type)
 																		}
-																		className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:scale-[1.02] ${
+																		className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all will-change-transform hover:scale-[1.02] ${
 																			option.recommended
 																				? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl"
 																				: "bg-white border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg"
