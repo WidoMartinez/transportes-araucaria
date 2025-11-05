@@ -2,13 +2,24 @@
 
 ## 📋 Descripción General
 
-El sistema de tarifa dinámica permite ajustar automáticamente los precios de los viajes según múltiples factores:
+El sistema de tarifa dinámica permite ajustar automáticamente los precios de los viajes según múltiples factores configurables desde el panel de administración:
 
 - **Anticipación de reserva**: Desde +25% el mismo día hasta -15% con 1 mes o más de anticipación
 - **Días de alta demanda**: Viernes, sábado y domingo con recargo del 10%
 - **Horarios premium**: Antes de las 9:00 AM con recargo adicional del 15%
+- **Festivos y fechas especiales**: Gestión de festivos nacionales y fechas especiales con recargos personalizados
 - **Exclusiones por destino**: Posibilidad de excluir destinos específicos de ciertas reglas
 - **Descuento de retorno**: Sistema preparado para aplicar 50% de descuento cuando hay vehículo disponible
+
+## ✨ Características Principales
+
+- ✅ **Configuración 100% dinámica**: Todas las reglas son configurables desde el panel admin
+- ✅ **Reglas acumulativas**: Se pueden aplicar múltiples ajustes simultáneamente
+- ✅ **Gestión de festivos**: Calendario de festivos con soporte para fechas recurrentes
+- ✅ **Activación/Desactivación**: Control individual de cada regla sin necesidad de eliminarla
+- ✅ **Prioridades**: Orden de aplicación configurable
+- ✅ **Exclusiones por destino**: Flexibilidad para destinos especiales
+- ✅ **Auditoría**: Registro detallado de ajustes aplicados en cada reserva
 
 ## 🗄️ Modelos de Base de Datos
 
@@ -50,6 +61,31 @@ Define las reglas de ajuste de precios.
 - `prioridad`: Orden de aplicación (mayor = se aplica primero)
 - `destinosExcluidos`: Array de destinos que no aplican a esta regla
 
+### 4. Festivo
+Gestiona festivos nacionales, regionales y fechas especiales.
+
+**Tipos de festivos:**
+- `feriado_nacional`: Feriado nacional oficial
+- `feriado_regional`: Feriado regional específico
+- `fecha_especial`: Fecha especial con tratamiento personalizado
+
+**Campos principales:**
+- `fecha`: Fecha del festivo (YYYY-MM-DD)
+- `nombre`: Nombre del festivo
+- `tipo`: Tipo de festivo
+- `recurrente`: Si se repite cada año (ej: Navidad, Año Nuevo)
+- `porcentajeRecargo`: Recargo específico para este festivo (null = usa configuración de día de semana)
+- `activo`: Si el festivo está activo
+- `descripcion`: Descripción o notas adicionales
+
+**Festivos Precargados (Chile 2025):**
+- Año Nuevo, Viernes Santo, Sábado Santo
+- Día del Trabajo, Glorias Navales
+- San Pedro y San Pablo, Virgen del Carmen
+- Asunción de la Virgen, Fiestas Patrias (18 y 19)
+- Encuentro de Dos Mundos, Día de las Iglesias Evangélicas
+- Todos los Santos, Inmaculada Concepción, Navidad
+
 ## 🔧 Configuraciones Predeterminadas
 
 El sistema inicializa automáticamente con las siguientes configuraciones:
@@ -76,16 +112,16 @@ El sistema inicializa automáticamente con las siguientes configuraciones:
 
 ### Vehículos
 - `GET /api/vehiculos` - Listar todos los vehículos
-- `POST /api/vehiculos` - Crear nuevo vehículo
-- `PUT /api/vehiculos/:id` - Actualizar vehículo
-- `DELETE /api/vehiculos/:id` - Eliminar vehículo
+- `POST /api/vehiculos` - Crear nuevo vehículo (requiere autenticación)
+- `PUT /api/vehiculos/:id` - Actualizar vehículo (requiere autenticación)
+- `DELETE /api/vehiculos/:id` - Eliminar vehículo (requiere autenticación)
 - `POST /api/vehiculos/disponibilidad` - Verificar disponibilidad por fecha/hora
 
 ### Conductores
 - `GET /api/conductores` - Listar todos los conductores
-- `POST /api/conductores` - Crear nuevo conductor
-- `PUT /api/conductores/:id` - Actualizar conductor
-- `DELETE /api/conductores/:id` - Eliminar conductor
+- `POST /api/conductores` - Crear nuevo conductor (requiere autenticación)
+- `PUT /api/conductores/:id` - Actualizar conductor (requiere autenticación)
+- `DELETE /api/conductores/:id` - Eliminar conductor (requiere autenticación)
 
 ### Tarifa Dinámica
 - `GET /api/tarifa-dinamica` - Listar todas las configuraciones
@@ -94,12 +130,18 @@ El sistema inicializa automáticamente con las siguientes configuraciones:
 - `DELETE /api/tarifa-dinamica/:id` - Eliminar configuración
 - `POST /api/tarifa-dinamica/calcular` - Calcular tarifa para un viaje específico
 
+### Festivos y Fechas Especiales
+- `GET /api/festivos` - Listar todos los festivos
+- `POST /api/festivos` - Crear nuevo festivo (requiere autenticación)
+- `PUT /api/festivos/:id` - Actualizar festivo (requiere autenticación)
+- `DELETE /api/festivos/:id` - Eliminar festivo (requiere autenticación)
+
 ## 💻 Componentes Frontend
 
 ### Hooks Personalizados
 
 #### `useTarifaDinamica(precioBase, destino, fecha, hora)`
-Calcula automáticamente la tarifa dinámica basada en los parámetros.
+Calcula automáticamente la tarifa dinámica basada en los parámetros. Intenta utilizar el endpoint backend y si no está disponible, usa cálculo local como fallback.
 
 **Retorna:**
 ```javascript
@@ -162,6 +204,16 @@ Interfaz para configurar reglas de tarifa dinámica:
 - Creación y edición de configuraciones
 - Control de prioridades y exclusiones
 - Activación/desactivación de reglas
+- Gestión de destinos excluidos
+
+#### `AdminFestivos`
+Interfaz para gestionar festivos y fechas especiales:
+- Visualización de festivos agrupados por año
+- Creación y edición de festivos
+- Soporte para festivos recurrentes (ej: Navidad, Año Nuevo)
+- Configuración de recargos personalizados por festivo
+- Activación/desactivación de festivos
+- Precargado con festivos nacionales de Chile 2025
 
 ## 🎨 Interfaz de Usuario
 
@@ -187,14 +239,24 @@ Si no hay vehículos disponibles:
 El sistema calcula la tarifa dinámica en el siguiente orden:
 
 1. **Precio Base**: Precio estándar del destino según tipo de vehículo y pasajeros
-2. **Ajustes por Anticipación**: Se aplica según días de anticipación
-3. **Ajustes por Día**: Recargo para días de alta demanda
-4. **Ajustes por Horario**: Recargo para horarios premium
-5. **Descuentos Adicionales**: Descuentos online, ida y vuelta, códigos, etc.
-6. **Descuento Retorno**: Si aplica, 50% en viajes de retorno
+2. **Verificación de Festivos**: Se consulta si la fecha es festivo (incluyendo festivos recurrentes)
+3. **Ajustes por Anticipación**: Se aplica según días de anticipación
+4. **Ajustes por Día de Semana**: Recargo para días de alta demanda
+5. **Ajustes por Horario**: Recargo para horarios premium
+6. **Descuento Retorno**: Si aplica, descuento en viajes de retorno
+7. **Descuentos Adicionales**: Descuentos online, ida y vuelta, códigos, etc.
 
-### Ejemplo de Cálculo
+### Reglas de Aplicación
 
+- **Acumulación**: Las reglas son acumulativas, se pueden aplicar múltiples ajustes simultáneamente
+- **Prioridad**: Las configuraciones se aplican según su prioridad (mayor = se aplica primero)
+- **Exclusiones**: Los destinos excluidos no reciben el ajuste de esa regla específica
+- **Festivos**: Si un festivo tiene recargo específico, se aplica; si no, usa las reglas de día de semana
+- **Validación**: El precio final nunca puede ser negativo (se valida con Math.max(0, precioFinal))
+
+### Ejemplos de Cálculo
+
+#### Ejemplo 1: Viaje Normal con Anticipación
 ```javascript
 Viaje: Aeropuerto → Pucón
 Fecha: Viernes en 5 días
@@ -209,6 +271,40 @@ Horario (antes 9am): +15% → $75,900
 Precio con tarifa dinámica: $75,900
 Descuento online (5%): -$3,795
 Total final: $72,105
+```
+
+#### Ejemplo 2: Reserva de Último Minuto en Festivo
+```javascript
+Viaje: Aeropuerto → Villarrica
+Fecha: 18 de Septiembre (Fiestas Patrias) - Mismo día
+Hora: 10:00 AM
+Pasajeros: 4 (Auto Privado)
+
+Precio base: $55,000
+Festivo (Fiestas Patrias): +15% → $63,250
+Anticipación (mismo día): +25% → $79,063
+Día (Jueves - no aplica fin de semana): 0% → $79,063
+
+Precio con tarifa dinámica: $79,063
+Descuento online (5%): -$3,953
+Total final: $75,110
+```
+
+#### Ejemplo 3: Reserva Anticipada Fuera de Horario Premium
+```javascript
+Viaje: Aeropuerto → Pucón
+Fecha: Miércoles en 35 días
+Hora: 14:00 PM
+Pasajeros: 4 (Auto Privado)
+
+Precio base: $60,000
+Anticipación (30+ días): -15% → $51,000
+Día (Miércoles - no aplica): 0% → $51,000
+Horario (14:00 - no aplica): 0% → $51,000
+
+Precio con tarifa dinámica: $51,000
+Descuento online (5%): -$2,550
+Total final: $48,450
 ```
 
 ## ⚙️ Configuración y Personalización
@@ -310,8 +406,10 @@ npm run build
 ### Campos Adicionales en Reserva
 - `vehiculoId`: ID del vehículo asignado
 - `conductorId`: ID del conductor asignado
-- `ajusteTarifaDinamica`: Monto del ajuste aplicado
-- `descuentoRetorno`: Descuento por viaje de retorno
+- `ajusteTarifaDinamica`: Monto del ajuste aplicado (en CLP)
+- `porcentajeTarifaDinamica`: Porcentaje total de ajuste aplicado
+- `detalleAjustesTarifa`: JSON con desglose completo de todos los ajustes aplicados
+- `descuentoRetorno`: Descuento por viaje de retorno (para implementación futura)
 
 ## 🔮 Funcionalidades Futuras
 

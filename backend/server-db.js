@@ -20,6 +20,8 @@ import Conductor from "./models/Conductor.js";
 import Gasto from "./models/Gasto.js";
 import Producto from "./models/Producto.js";
 import ProductoReserva from "./models/ProductoReserva.js";
+import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
+import Festivo from "./models/Festivo.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
@@ -27,6 +29,9 @@ import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
 import addGastosTable from "./migrations/add-gastos-table.js";
 import addProductosTables from "./migrations/add-productos-tables.js";
+import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
+import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
+import addFestivosTable from "./migrations/add-festivos-table.js";
 import setupAssociations from "./models/associations.js";
 
 dotenv.config();
@@ -572,6 +577,9 @@ const initializeDatabase = async () => {
 		await addCodigosPagoTable();
 		await addGastosTable();
 		await addProductosTables(); // Migración para tablas de productos
+		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
+		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
+		await addFestivosTable(); // Migración para tabla de festivos
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -4759,6 +4767,315 @@ app.delete("/api/conductores/:id", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error eliminando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS PARA TARIFA DINÁMICA ---
+
+// Listar todas las configuraciones de tarifa dinámica
+app.get("/api/tarifa-dinamica", async (req, res) => {
+	try {
+		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+			order: [
+				["prioridad", "DESC"],
+				["tipo", "ASC"],
+				["created_at", "DESC"],
+			],
+		});
+
+		res.json(configuraciones);
+	} catch (error) {
+		console.error("Error obteniendo configuraciones de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nueva configuración de tarifa dinámica
+app.post("/api/tarifa-dinamica", authAdmin, async (req, res) => {
+	try {
+		const nuevaConfig = await ConfiguracionTarifaDinamica.create(req.body);
+		res.status(201).json(nuevaConfig);
+	} catch (error) {
+		console.error("Error creando configuración de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar configuración de tarifa dinámica
+app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const config = await ConfiguracionTarifaDinamica.findByPk(id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+
+		await config.update(req.body);
+
+		res.json(config);
+	} catch (error) {
+		console.error("Error actualizando configuración de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar configuración de tarifa dinámica
+app.delete("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const config = await ConfiguracionTarifaDinamica.findByPk(id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+
+		await config.destroy();
+
+		res.json({
+			success: true,
+			message: "Configuración eliminada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando configuración de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Calcular tarifa dinámica para un viaje específico
+app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
+	try {
+		const { precioBase, destino, fecha, hora } = req.body;
+
+		if (!precioBase || !fecha) {
+			return res.status(400).json({
+				error: "Se requieren precioBase y fecha",
+			});
+		}
+
+		// Obtener todas las configuraciones activas ordenadas por prioridad
+		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+			where: { activo: true },
+			order: [["prioridad", "DESC"]],
+		});
+
+		// Calcular ajustes aplicables
+		const ajustesAplicados = [];
+		let porcentajeTotal = 0;
+
+		// Analizar la fecha como YYYY-MM-DD para evitar problemas de zona horaria
+		const [year, month, day] = fecha.split("-");
+		const fechaViaje = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+		
+		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
+		const ahora = new Date();
+		const hoyInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+		const diasAnticipacion = Math.floor(
+			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)
+		);
+
+		// Verificar si la fecha es festivo
+		const fechaStr = fecha; // Usar la cadena de fecha original
+		const festivo = await Festivo.findOne({
+			where: {
+				activo: true,
+				[Op.or]: [
+					{ fecha: fechaStr },
+					{
+						recurrente: true,
+						[Op.and]: sequelize.where(
+							sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
+							sequelize.fn("DATE_FORMAT", fechaStr, "%m-%d")
+						),
+					},
+				],
+			},
+		});
+
+		// Si es festivo y tiene recargo específico, aplicarlo
+		if (festivo && festivo.porcentajeRecargo) {
+			ajustesAplicados.push({
+				nombre: `Festivo: ${festivo.nombre}`,
+				tipo: "festivo",
+				porcentaje: parseFloat(festivo.porcentajeRecargo),
+				detalle: festivo.nombre,
+				descripcion: festivo.descripcion || `Recargo por festivo: ${festivo.nombre}`,
+			});
+			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
+		}
+
+		for (const config of configuraciones) {
+			// Verificar si el destino está excluido
+			if (
+				config.destinosExcluidos &&
+				Array.isArray(config.destinosExcluidos) &&
+				config.destinosExcluidos.includes(destino)
+			) {
+				continue;
+			}
+
+			let aplica = false;
+			let detalle = "";
+
+			switch (config.tipo) {
+				case "anticipacion":
+					if (
+						diasAnticipacion >= config.diasMinimos &&
+						(config.diasMaximos === null ||
+							diasAnticipacion <= config.diasMaximos)
+					) {
+						aplica = true;
+						detalle = `${config.diasMinimos}${
+							config.diasMaximos ? `-${config.diasMaximos}` : "+"
+						} días de anticipación`;
+					}
+					break;
+
+				case "dia_semana":
+					if (
+						config.diasSemana &&
+						Array.isArray(config.diasSemana) &&
+						config.diasSemana.includes(diaSemana)
+					) {
+						aplica = true;
+						const nombresDias = [
+							"Domingo",
+							"Lunes",
+							"Martes",
+							"Miércoles",
+							"Jueves",
+							"Viernes",
+							"Sábado",
+						];
+						detalle = `${nombresDias[diaSemana]}`;
+					}
+					break;
+
+				case "horario":
+					if (hora && config.horaInicio && config.horaFin) {
+						const horaViaje = hora.substring(0, 5);
+						const horaInicio = config.horaInicio.substring(0, 5);
+						const horaFin = config.horaFin.substring(0, 5);
+
+						// Manejar rangos horarios que cruzan la medianoche (por ejemplo, 22:00 - 06:00)
+						let dentroRango = false;
+						if (horaInicio <= horaFin) {
+							// Rango horario normal (por ejemplo, 08:00 - 20:00)
+							dentroRango = horaViaje >= horaInicio && horaViaje <= horaFin;
+						} else {
+							// Rango que abarca la medianoche (por ejemplo, 22:00 - 06:00)
+							dentroRango = horaViaje >= horaInicio || horaViaje <= horaFin;
+						}
+
+						if (dentroRango) {
+							aplica = true;
+							detalle = `Horario ${horaInicio} - ${horaFin}`;
+						}
+					}
+					break;
+
+				case "descuento_retorno":
+					// Este tipo requiere lógica adicional de disponibilidad de vehículos
+					// Por ahora lo dejamos para implementación futura
+					break;
+			}
+
+			if (aplica) {
+				ajustesAplicados.push({
+					nombre: config.nombre,
+					tipo: config.tipo,
+					porcentaje: parseFloat(config.porcentajeAjuste),
+					detalle: detalle,
+					descripcion: config.descripcion,
+				});
+				porcentajeTotal += parseFloat(config.porcentajeAjuste);
+			}
+		}
+
+		// Calcular montos
+		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
+		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
+
+		res.json({
+			precioBase: parseFloat(precioBase),
+			ajusteTotal: porcentajeTotal,
+			ajusteMonto: ajusteMonto,
+			precioFinal: precioFinal,
+			diasAnticipacion: diasAnticipacion,
+			ajustesAplicados: ajustesAplicados,
+		});
+	} catch (error) {
+		console.error("Error calculando tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS PARA FESTIVOS Y FECHAS ESPECIALES ---
+
+// Listar todos los festivos
+app.get("/api/festivos", async (req, res) => {
+	try {
+		const festivos = await Festivo.findAll({
+			order: [["fecha", "ASC"]],
+		});
+
+		res.json(festivos);
+	} catch (error) {
+		console.error("Error obteniendo festivos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nuevo festivo
+app.post("/api/festivos", authAdmin, async (req, res) => {
+	try {
+		const nuevoFestivo = await Festivo.create(req.body);
+		res.status(201).json(nuevoFestivo);
+	} catch (error) {
+		console.error("Error creando festivo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar festivo
+app.put("/api/festivos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const festivo = await Festivo.findByPk(id);
+		if (!festivo) {
+			return res.status(404).json({ error: "Festivo no encontrado" });
+		}
+
+		await festivo.update(req.body);
+
+		res.json(festivo);
+	} catch (error) {
+		console.error("Error actualizando festivo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar festivo
+app.delete("/api/festivos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const festivo = await Festivo.findByPk(id);
+		if (!festivo) {
+			return res.status(404).json({ error: "Festivo no encontrado" });
+		}
+
+		await festivo.destroy();
+
+		res.json({
+			success: true,
+			message: "Festivo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando festivo:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
