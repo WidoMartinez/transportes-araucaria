@@ -4784,7 +4784,21 @@ app.get("/api/tarifa-dinamica", async (req, res) => {
 			],
 		});
 
-		res.json(configuraciones);
+		// Normalizar los campos JSON para asegurar que sean arrays
+		const configuracionesNormalizadas = configuraciones.map((config) => {
+			const configData = config.toJSON();
+			return {
+				...configData,
+				diasSemana: Array.isArray(configData.diasSemana)
+					? configData.diasSemana
+					: [],
+				destinosExcluidos: Array.isArray(configData.destinosExcluidos)
+					? configData.destinosExcluidos
+					: [],
+			};
+		});
+
+		res.json(configuracionesNormalizadas);
 	} catch (error) {
 		console.error("Error obteniendo configuraciones de tarifa dinámica:", error);
 		res.status(500).json({ error: "Error interno del servidor" });

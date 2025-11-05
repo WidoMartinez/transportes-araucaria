@@ -69,7 +69,16 @@ function AdminTarifaDinamica() {
 			const configs = await configResp.json();
 			const precios = await preciosResp.json();
 
-			setConfiguraciones(configs);
+			// Normalizar configuraciones: asegurar que diasSemana y destinosExcluidos sean arrays
+			const configsNormalizadas = configs.map((config) => ({
+				...config,
+				diasSemana: Array.isArray(config.diasSemana) ? config.diasSemana : [],
+				destinosExcluidos: Array.isArray(config.destinosExcluidos)
+					? config.destinosExcluidos
+					: [],
+			}));
+
+			setConfiguraciones(configsNormalizadas);
 			setDestinos(precios.destinos || []);
 		} catch (err) {
 			setError("Error al cargar datos: " + err.message);
@@ -286,14 +295,17 @@ function TarjetaConfig({ config, onEditar, onEliminar, saving }) {
 							{config.diasMinimos} - {config.diasMaximos || "∞"} días
 						</span>
 					)}
-					{config.tipo === "dia_semana" && config.diasSemana && (
-						<span>
-							Días:{" "}
-							{config.diasSemana
-								.map((d) => diasSemana.find((ds) => ds.value === d)?.label)
-								.join(", ")}
-						</span>
-					)}
+					{config.tipo === "dia_semana" &&
+						Array.isArray(config.diasSemana) &&
+						config.diasSemana.length > 0 && (
+							<span>
+								Días:{" "}
+								{config.diasSemana
+									.map((d) => diasSemana.find((ds) => ds.value === d)?.label)
+									.filter(Boolean)
+									.join(", ")}
+							</span>
+						)}
 					{config.tipo === "horario" && (
 						<span>
 							{config.horaInicio?.substring(0, 5)} -{" "}
@@ -301,11 +313,12 @@ function TarjetaConfig({ config, onEditar, onEliminar, saving }) {
 						</span>
 					)}
 					<span>Prioridad: {config.prioridad}</span>
-					{config.destinosExcluidos && config.destinosExcluidos.length > 0 && (
-						<span>
-							Excluye {config.destinosExcluidos.length} destino(s)
-						</span>
-					)}
+					{Array.isArray(config.destinosExcluidos) &&
+						config.destinosExcluidos.length > 0 && (
+							<span>
+								Excluye {config.destinosExcluidos.length} destino(s)
+							</span>
+						)}
 				</div>
 			</div>
 
