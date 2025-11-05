@@ -9,6 +9,8 @@ import AdminCodigosPago from "./AdminCodigosPago";
 import AdminGastos from "./AdminGastos";
 import AdminEstadisticas from "./AdminEstadisticas";
 import AdminProductos from "./AdminProductos";
+import AdminTarifaDinamica from "./AdminTarifaDinamica";
+import AdminFestivos from "./AdminFestivos";
 
 function AdminDashboard() {
   const [active, setActive] = useState(() => {
@@ -29,7 +31,7 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
+      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "festivos"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
         <h1 className="text-2xl font-semibold mb-4">Panel Administrativo</h1>
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
@@ -61,6 +63,14 @@ function AdminDashboard() {
             onClick={() => setPanel("pricing")}
           >Precios</button>
           <button
+            className={`px-3 py-2 rounded border ${active === "tarifa-dinamica" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("tarifa-dinamica")}
+          >Tarifa Dinámica</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "festivos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("festivos")}
+          >Festivos</button>
+          <button
             className={`px-3 py-2 rounded border ${active === "codigos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("codigos")}
           >Códigos</button>
@@ -86,6 +96,10 @@ function AdminDashboard() {
           <AdminGastos />
         ) : active === "estadisticas" ? (
           <AdminEstadisticas />
+        ) : active === "tarifa-dinamica" ? (
+          <AdminTarifaDinamica />
+        ) : active === "festivos" ? (
+          <AdminFestivos />
         ) : active === "codigos" ? (
           <AdminCodigos />
         ) : active === "codigos-mejorado" ? (
