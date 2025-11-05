@@ -4896,7 +4896,11 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		console.log("📅 DEBUG Tarifa Dinámica:");
 		console.log("  Fecha recibida:", fecha);
 		console.log("  Fecha parseada:", fechaViaje);
-		console.log("  Día de la semana:", diaSemana, ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][diaSemana]);
+		console.log(
+			"  Día de la semana:",
+			diaSemana,
+			["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][diaSemana]
+		);
 		console.log("  Hora:", hora);
 		console.log("  Precio base:", precioBase);
 		console.log("  Destino:", destino);
@@ -4943,11 +4947,15 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
 		}
 
-		console.log(`\n🔍 Evaluando ${configuraciones.length} configuraciones activas...`);
+		console.log(
+			`\n🔍 Evaluando ${configuraciones.length} configuraciones activas...`
+		);
 
 		for (const config of configuraciones) {
-			console.log(`\n  ⚙️  Evaluando: "${config.nombre}" (tipo: ${config.tipo})`);
-			
+			console.log(
+				`\n  ⚙️  Evaluando: "${config.nombre}" (tipo: ${config.tipo})`
+			);
+
 			// Verificar si el destino está excluido
 			if (
 				config.destinosExcluidos &&
