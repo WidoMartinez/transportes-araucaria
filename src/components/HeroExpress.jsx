@@ -377,18 +377,18 @@ function HeroExpress({
 							</span>
 						</div>
 
-						{/* Botones con diseño más limpio */}
-						<div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+						{/* Botones compactos tipo dashboard */}
+						<div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
 							<Button
 								onClick={() => setShowBookingModule(true)}
-								className="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-10 py-7 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 transform hover:scale-105 border-0 will-change-transform"
+								className="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 text-base font-bold rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all will-change-transform hover:scale-[1.02]"
 							>
 								Reservar ahora
 								<span className="ml-2 group-hover:translate-x-1 transition-transform inline-block" aria-hidden="true">→</span>
 							</Button>
 							<Button
 								variant="outline"
-								className="bg-white/10 border-2 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm px-8 py-7 text-lg rounded-2xl"
+								className="bg-white/10 border-2 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm px-6 py-4 text-sm rounded-lg hover:scale-[1.02] transition-all"
 								asChild
 							>
 								<a href="#consultar-reserva">Continuar con código</a>
@@ -725,11 +725,11 @@ function HeroExpress({
 											<Button
 												type="button"
 												onClick={handleStepOneNext}
-												className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-6 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all will-change-transform"
+												className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3.5 text-base font-semibold rounded-lg shadow-md hover:shadow-lg transition-all will-change-transform hover:scale-[1.01]"
 												disabled={isSubmitting}
 											>
 												Continuar al pago
-												<span className="ml-2 group-hover:translate-x-1 transition-transform inline-block" aria-hidden="true">→</span>
+												<span className="ml-2" aria-hidden="true">→</span>
 											</Button>
 										</div>
 									</div>
@@ -923,13 +923,13 @@ function HeroExpress({
 														</h4>
 													</div>
 
-													{/* Paso 1: Seleccionar tipo de pago - diseño más limpio */}
+													{/* Paso 1: Seleccionar tipo de pago - Cards compactas tipo dashboard */}
 													{!selectedPaymentType && (
-														<div className="space-y-4">
-															<p className="text-gray-600">
+														<div className="space-y-3">
+															<p className="text-gray-600 text-sm">
 																Elige cuánto deseas pagar ahora
 															</p>
-															<div className="grid gap-4 md:grid-cols-2">
+															<div className="grid gap-3 md:grid-cols-2">
 																{paymentOptions.map((option) => (
 																	<button
 																		key={option.id}
@@ -937,33 +937,33 @@ function HeroExpress({
 																		onClick={() =>
 																			setSelectedPaymentType(option.type)
 																		}
-																		className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all will-change-transform hover:scale-[1.02] ${
+																		className={`group relative overflow-hidden rounded-lg p-4 text-left transition-all will-change-transform hover:scale-[1.01] ${
 																			option.recommended
-																				? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl"
-																				: "bg-white border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg"
+																				? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg"
+																				: "bg-white border-2 border-gray-200 hover:border-blue-300 hover:shadow-md"
 																		}`}
 																	>
 																		{option.recommended && (
-																			<div className="absolute top-4 right-4">
-																				<span className="bg-emerald-400 text-emerald-900 text-xs font-bold px-3 py-1 rounded-full">
+																			<div className="absolute top-3 right-3">
+																				<span className="bg-emerald-400 text-emerald-900 text-xs font-bold px-2 py-0.5 rounded-full">
 																					Recomendado
 																				</span>
 																			</div>
 																		)}
-																		<div className="space-y-3">
+																		<div className="space-y-2">
 																			<div>
-																				<h5 className={`text-xl font-bold mb-1 ${
+																				<h5 className={`text-base font-bold mb-0.5 ${
 																					option.recommended ? "text-white" : "text-gray-900"
 																				}`}>
 																					{option.title}
 																				</h5>
-																				<p className={`text-sm ${
+																				<p className={`text-xs ${
 																					option.recommended ? "text-blue-100" : "text-gray-600"
 																				}`}>
 																					{option.subtitle}
 																				</p>
 																			</div>
-																			<p className={`text-3xl font-bold ${
+																			<p className={`text-2xl font-bold ${
 																				option.recommended ? "text-white" : "text-blue-600"
 																			}`}>
 																				{formatCurrency(option.amount)}
@@ -1149,13 +1149,13 @@ function HeroExpress({
 												</Button>
 											) : (
 												<div className="space-y-3">
-													{/* Botón para guardar reserva sin pagar compacto */}
-													<div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-														<div className="mb-3">
-															<h5 className="font-bold text-blue-900 mb-1 text-sm">
+													{/* Card compacta tipo dashboard para guardar reserva */}
+													<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
+														<div className="mb-2">
+															<h5 className="font-bold text-blue-900 mb-0.5 text-xs">
 																Guardar y continuar después
 															</h5>
-															<p className="text-xs text-blue-700">
+															<p className="text-xs text-blue-700 leading-snug">
 																Guarda tu reserva ahora y recibe un enlace por email para pagar cuando quieras
 															</p>
 														</div>
@@ -1166,11 +1166,11 @@ function HeroExpress({
 																isSubmitting || !todosLosCamposCompletos
 															}
 															variant="outline"
-															className="w-full border-2 border-blue-400 text-blue-700 hover:bg-blue-100 py-4 rounded-lg font-semibold text-sm"
+															className="w-full border-2 border-blue-400 text-blue-700 hover:bg-blue-100 py-2.5 rounded-md font-semibold text-xs"
 														>
 															{isSubmitting ? (
 																<>
-																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+																	<LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" />
 																	Guardando reserva...
 																</>
 															) : (
@@ -1179,14 +1179,14 @@ function HeroExpress({
 														</Button>
 													</div>
 
-													{/* Instrucciones para pago inmediato */}
+													{/* Card compacta de instrucción para pago inmediato */}
 													{todosLosCamposCompletos && (
-														<div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4">
+														<div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3">
 															<div>
-																<p className="font-bold text-emerald-900 mb-1 text-sm">
+																<p className="font-bold text-emerald-900 mb-0.5 text-xs">
 																	¿Listo para pagar ahora?
 																</p>
-																<p className="text-xs text-emerald-800">
+																<p className="text-xs text-emerald-800 leading-snug">
 																	Selecciona el monto y método de pago arriba. Tu reserva se guardará automáticamente y serás redirigido al proceso de pago seguro.
 																</p>
 															</div>
