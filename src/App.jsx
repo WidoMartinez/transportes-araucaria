@@ -1216,14 +1216,13 @@ function App() {
 		codigoAplicado,
 	]);
 
-	const {
-		descuentoOnline,
-		totalConDescuento,
-		abono,
-		saldoPendiente,
-	} = pricing;
+	const { descuentoOnline, totalConDescuento, abono, saldoPendiente } = pricing;
 
-	const handlePayment = async (gateway, type = "abono", identificadores = {}) => {
+	const handlePayment = async (
+		gateway,
+		type = "abono",
+		identificadores = {}
+	) => {
 		// Prevenir múltiples peticiones
 		if (loadingGateway) {
 			console.log("Ya hay una petición de pago en proceso");
@@ -1578,10 +1577,10 @@ function App() {
 			}
 
 			// Incluir codigoReserva en el resultado para mejor trazabilidad
-			return { 
-				success: true, 
+			return {
+				success: true,
 				reservaId: result.reservaId,
-				codigoReserva: result.codigoReserva 
+				codigoReserva: result.codigoReserva,
 			};
 		} catch (error) {
 			console.error("Error al enviar reserva express:", error);
