@@ -415,12 +415,12 @@ function HeroExpress({
 
 				{showBookingModule && (
 					<div className="w-full max-w-7xl mx-auto">
-						{/* Header simplificado */}
-						<div className="text-center mb-8">
-							<h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+						{/* Header compacto */}
+						<div className="text-center mb-4">
+							<h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
 								Completa tu reserva
 							</h2>
-							<p className="text-blue-200">
+							<p className="text-sm text-blue-200">
 								Solo 2 pasos • {baseDiscountPercentage}% de descuento aplicado
 							</p>
 						</div>
@@ -428,24 +428,24 @@ function HeroExpress({
 						<div className="grid lg:grid-cols-[1fr_400px] gap-6">
 							{/* Columna principal: Formulario */}
 							<Card className="bg-white shadow-2xl border-0 overflow-hidden">
-							{/* Header de la card minimalista */}
-							<div className="bg-gradient-to-r from-blue-50 to-slate-50 px-6 py-4 border-b border-gray-100">
+							{/* Header compacto */}
+							<div className="bg-gradient-to-r from-blue-50 to-slate-50 px-4 py-3 border-b border-gray-100">
 								<div className="flex items-center justify-between">
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => setShowBookingModule(false)}
-										className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 -ml-2"
+										className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 -ml-2 text-sm"
 									>
 										← Volver
 									</Button>
-									<div className="flex items-center gap-2">
-										<div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
-											<div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+									<div className="flex items-center gap-1.5">
+										<div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-medium">
+											<div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
 											{baseDiscountPercentage}% descuento
 										</div>
 										{promoDiscountPercentage > 0 && (
-											<div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+											<div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-medium">
 												+{promoDiscountPercentage}%
 											</div>
 										)}
@@ -453,9 +453,9 @@ function HeroExpress({
 								</div>
 							</div>
 
-							{/* Indicador de progreso minimalista */}
-							<div className="px-6 py-6 border-b border-gray-100">
-								<div className="flex items-center justify-between mb-4">
+							{/* Indicador de progreso compacto */}
+							<div className="px-4 py-3 border-b border-gray-100">
+								<div className="flex items-center justify-between">
 									{steps.map((step, index) => {
 										const isCompleted = index < currentStep;
 										const isActive = index === currentStep;
@@ -464,11 +464,11 @@ function HeroExpress({
 											<React.Fragment key={step.title}>
 												<div className="flex flex-col items-center flex-1">
 													<div
-														className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+														className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
 															isCompleted
 																? "bg-emerald-500 text-white"
 																: isActive
-																? "bg-blue-600 text-white ring-4 ring-blue-100"
+																? "bg-blue-600 text-white ring-2 ring-blue-100"
 																: "bg-gray-200 text-gray-400"
 														}`}
 														aria-label={isCompleted ? "Paso completado" : `Paso ${index + 1}`}
@@ -479,7 +479,7 @@ function HeroExpress({
 															index + 1
 														)}
 													</div>
-													<p className={`text-xs mt-2 font-medium ${
+													<p className={`text-xs mt-1 font-medium ${
 														isActive ? "text-blue-600" : "text-gray-500"
 													}`}>
 														{step.title}
@@ -490,7 +490,7 @@ function HeroExpress({
 														className={`h-0.5 flex-1 mx-2 ${
 															isCompleted ? "bg-emerald-500" : "bg-gray-200"
 														}`}
-														style={{ marginTop: 'calc(-1.25rem - 4px)' }}
+														style={{ marginTop: 'calc(-1rem - 2px)' }}
 														aria-hidden="true"
 													></div>
 												)}
@@ -500,15 +500,15 @@ function HeroExpress({
 								</div>
 							</div>
 
-							<CardContent className="p-8">
+							<CardContent className="p-5">
 								{/* PASO 1: Información básica del viaje */}
 								{currentStep === 0 && (
-									<div className="space-y-8">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-3">
+									<div className="space-y-4">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-2">
 												<Label
 													htmlFor="origen-express"
-													className="text-base font-semibold text-gray-900"
+													className="text-sm font-semibold text-gray-900"
 												>
 													Origen
 												</Label>
@@ -517,7 +517,7 @@ function HeroExpress({
 													name="origen"
 													value={formData.origen}
 													onChange={handleInputChange}
-													className="flex h-14 w-full items-center justify-between rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+													className="flex h-11 w-full items-center justify-between rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
 													required
 												>
 													{origenes.map((origen) => (
@@ -528,10 +528,10 @@ function HeroExpress({
 												</select>
 											</div>
 
-											<div className="space-y-3">
+											<div className="space-y-2">
 												<Label
 													htmlFor="destino-express"
-													className="text-base font-semibold text-gray-900"
+													className="text-sm font-semibold text-gray-900"
 												>
 													Destino
 												</Label>
@@ -540,7 +540,7 @@ function HeroExpress({
 													name="destino"
 													value={formData.destino}
 													onChange={handleInputChange}
-													className="flex h-14 w-full items-center justify-between rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+													className="flex h-11 w-full items-center justify-between rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
 													required
 												>
 													<option value="">Seleccionar destino</option>
@@ -553,13 +553,13 @@ function HeroExpress({
 											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-											<div className="space-y-3">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-2">
 												<Label
 													htmlFor="fecha-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-sm font-semibold text-gray-900 flex items-center gap-1.5"
 												>
-													<Calendar className="h-5 w-5 text-blue-600" />
+													<Calendar className="h-4 w-4 text-blue-600" />
 													Fecha del traslado
 												</Label>
 												<Input
@@ -569,17 +569,17 @@ function HeroExpress({
 													value={formData.fecha}
 													onChange={handleInputChange}
 													min={minDateTime}
-													className="h-14 text-base border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
+													className="h-11 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
 													required
 												/>
 											</div>
 
-											<div className="space-y-3">
+											<div className="space-y-2">
 												<Label
 													htmlFor="pasajeros-express"
-													className="text-base font-semibold text-gray-900 flex items-center gap-2"
+													className="text-sm font-semibold text-gray-900 flex items-center gap-1.5"
 												>
-													<Users className="h-5 w-5 text-blue-600" />
+													<Users className="h-4 w-4 text-blue-600" />
 													Pasajeros
 												</Label>
 												<select
@@ -587,7 +587,7 @@ function HeroExpress({
 													name="pasajeros"
 													value={formData.pasajeros}
 													onChange={handleInputChange}
-													className="flex h-14 w-full items-center justify-between rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+													className="flex h-11 w-full items-center justify-between rounded-lg border-2 border-gray-300 bg-white px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
 													required
 												>
 													{[...Array(maxPasajeros)].map((_, i) => (
@@ -599,9 +599,9 @@ function HeroExpress({
 											</div>
 										</div>
 
-										{/* Opción de ida y vuelta - diseño mejorado */}
-										<div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 space-y-4">
-											<div className="flex items-start gap-4">
+										{/* Opción de ida y vuelta compacta */}
+										<div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 space-y-3">
+											<div className="flex items-start gap-3">
 												<Checkbox
 													id="ida-vuelta-express"
 													checked={formData.idaVuelta}
@@ -624,30 +624,28 @@ function HeroExpress({
 															});
 														}
 													}}
-													className="mt-1"
+													className="mt-0.5"
 												/>
 												<label
 													htmlFor="ida-vuelta-express"
-													className="text-sm font-medium leading-relaxed cursor-pointer flex-1"
+													className="text-sm font-medium leading-snug cursor-pointer flex-1"
 												>
 													<span className="text-gray-900 font-bold">¿También necesitas el regreso?</span>
-													<span className="block text-gray-600 font-normal mt-1">
-														Coordina ida y vuelta en una sola reserva y ahorra más
+													<span className="block text-xs text-gray-600 font-normal mt-0.5">
+														Coordina ida y vuelta en una reserva y ahorra más
 													</span>
 												</label>
 											</div>
 
 											{formData.idaVuelta && (
-												<div className="pt-4 border-t-2 border-blue-200">
-													<div className="space-y-3">
+												<div className="pt-3 border-t-2 border-blue-200">
+													<div className="space-y-2">
 														<Label
 															htmlFor="fecha-regreso-express"
-															className="text-base font-semibold text-gray-900"
+															className="text-sm font-semibold text-gray-900 flex items-center gap-1.5"
 														>
-															<span className="flex items-center gap-2">
-																<Calendar className="h-5 w-5 text-blue-600" />
-																Fecha de regreso
-															</span>
+															<Calendar className="h-4 w-4 text-blue-600" />
+															Fecha de regreso
 														</Label>
 														<Input
 															id="fecha-regreso-express"
@@ -656,12 +654,12 @@ function HeroExpress({
 															value={formData.fechaRegreso}
 															onChange={handleInputChange}
 															min={formData.fecha || minDateTime}
-															className="h-14 text-base border-2 border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 rounded-xl font-medium"
+															className="h-11 text-sm border-2 border-blue-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 rounded-lg font-medium"
 															required={formData.idaVuelta}
 														/>
-														<div className="bg-blue-100 rounded-lg p-3">
+														<div className="bg-blue-100 rounded-lg p-2">
 															<p className="text-xs text-blue-800">
-																La hora exacta de regreso podrás especificarla después del pago
+																La hora exacta de regreso la especificarás después del pago
 															</p>
 														</div>
 													</div>
@@ -669,33 +667,33 @@ function HeroExpress({
 											)}
 										</div>
 
-										{/* Precio estimado - diseño más limpio */}
+										{/* Precio estimado compacto */}
 										{mostrarPrecio ? (
-											<div className="bg-gradient-to-br from-blue-50 to-slate-50 rounded-2xl p-8 border border-blue-100">
-												<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-													<div className="space-y-3">
+											<div className="bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl p-5 border border-blue-100">
+												<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+													<div className="space-y-2">
 														<div className="flex items-center gap-2">
-															<span className="text-sm font-medium text-gray-600">Precio total con descuento</span>
+															<span className="text-xs font-medium text-gray-600">Precio total con descuento</span>
 															{formData.idaVuelta && (
-																<span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+																<span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
 																	Ida y vuelta
 																</span>
 															)}
 														</div>
-														<p className="text-4xl font-bold text-blue-600">
+														<p className="text-3xl font-bold text-blue-600">
 															{formatCurrency(pricing.totalConDescuento)}
 														</p>
-														<p className="text-sm text-gray-600">
+														<p className="text-xs text-gray-600">
 															{cotizacion.vehiculo} • {formData.pasajeros} {formData.pasajeros === "1" ? "pasajero" : "pasajeros"}
 														</p>
 													</div>
-													<div className="text-left md:text-right space-y-2 md:min-w-[200px]">
-														<div className="space-y-1">
-															<p className="text-sm text-gray-500 line-through">
+													<div className="text-left md:text-right space-y-1.5 md:min-w-[180px]">
+														<div className="space-y-0.5">
+															<p className="text-xs text-gray-500 line-through">
 																{formatCurrency(pricing.precioBase)}
 															</p>
-															<div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg">
-																<span className="text-lg font-bold">
+															<div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-2.5 py-1.5 rounded-lg">
+																<span className="text-sm font-bold">
 																	Ahorras {formatCurrency(
 																		pricing.descuentoBase +
 																			pricing.descuentoRoundTrip +
@@ -807,12 +805,12 @@ function HeroExpress({
 											)}
 										</div>
 
-										{/* Datos personales - diseño mejorado */}
-										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-											<div className="space-y-3">
+										{/* Datos personales compactos */}
+										<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+											<div className="space-y-2">
 												<Label
 													htmlFor="nombre-express"
-													className="text-base font-semibold text-gray-900"
+													className="text-sm font-semibold text-gray-900"
 												>
 													Nombre completo
 													<span className="text-red-500 ml-1">*</span>
@@ -823,15 +821,15 @@ function HeroExpress({
 													value={formData.nombre}
 													onChange={handleInputChange}
 													placeholder="Ej: Juan Pérez"
-													className="h-14 text-base border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
+													className="h-11 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
 													required
 												/>
 											</div>
 
-											<div className="space-y-3">
+											<div className="space-y-2">
 												<Label
 													htmlFor="email-express"
-													className="text-base font-semibold text-gray-900"
+													className="text-sm font-semibold text-gray-900"
 												>
 													Correo electrónico
 													<span className="text-red-500 ml-1">*</span>
@@ -844,7 +842,7 @@ function HeroExpress({
 													onChange={handleInputChange}
 													onBlur={(e) => verificarReservaActiva(e.target.value)}
 													placeholder="tu@email.cl"
-													className="h-14 text-base border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
+													className="h-11 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
 													required
 												/>
 												{verificandoReserva && (
@@ -872,10 +870,10 @@ function HeroExpress({
 												)}
 											</div>
 
-											<div className="space-y-3">
+											<div className="space-y-2">
 												<Label
 													htmlFor="telefono-express"
-													className="text-base font-semibold text-gray-900"
+													className="text-sm font-semibold text-gray-900"
 												>
 													Teléfono
 													<span className="text-red-500 ml-1">*</span>
@@ -886,20 +884,20 @@ function HeroExpress({
 													value={formData.telefono}
 													onChange={handleInputChange}
 													placeholder="+56 9 1234 5678"
-													className="h-14 text-base border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
+													className="h-11 text-sm border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 font-medium"
 													required
 												/>
 												{phoneError && (
-													<p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+													<p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded-lg border border-amber-200">
 														{phoneError}
 													</p>
 												)}
 											</div>
 										</div>
 
-										{/* Código de descuento - diseño simplificado */}
-										<div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-6">
-											<h4 className="font-bold mb-4 text-gray-900">
+										{/* Código de descuento compacto */}
+										<div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4">
+											<h4 className="font-bold mb-3 text-sm text-gray-900">
 												¿Tienes un código de descuento?
 											</h4>
 											<CodigoDescuento
@@ -1057,20 +1055,20 @@ function HeroExpress({
 												</div>
 											)}
 
-										{/* Mensaje cuando faltan campos - diseño mejorado */}
+										{/* Mensaje cuando faltan campos compacto */}
 										{mostrarPrecio &&
 											!requiereCotizacionManual &&
 											!todosLosCamposCompletos && (
-												<div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6">
-													<div className="flex items-start gap-3">
-														<div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white text-xl flex-shrink-0 font-bold">
+												<div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+													<div className="flex items-start gap-2.5">
+														<div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white text-sm flex-shrink-0 font-bold">
 															!
 														</div>
 														<div className="flex-1">
-															<p className="font-bold text-amber-900 mb-2">
+															<p className="font-bold text-amber-900 mb-1.5 text-sm">
 																Completa la información requerida
 															</p>
-															<ul className="text-sm text-amber-800 space-y-2">
+															<ul className="text-xs text-amber-800 space-y-1">
 																{!formData.nombre?.trim() && (
 																	<li className="flex items-center gap-2">
 																		<div className="w-1.5 h-1.5 rounded-full bg-amber-600"></div>
@@ -1104,33 +1102,34 @@ function HeroExpress({
 												</div>
 											)}
 
-										{/* Consentimiento para pago - diseño mejorado */}
-										<div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-6">
-											<div className="flex items-start gap-4">
+										{/* Consentimiento para pago compacto */}
+										<div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4">
+											<div className="flex items-start gap-3">
 												<Checkbox
 													id="payment-consent"
 													checked={paymentConsent}
 													onCheckedChange={(value) =>
 														setPaymentConsent(Boolean(value))
 													}
-													className="mt-1"
+													className="mt-0.5"
 												/>
 												<label
 													htmlFor="payment-consent"
-													className="text-sm leading-relaxed text-gray-700 cursor-pointer flex-1"
+													className="text-xs leading-snug text-gray-700 cursor-pointer flex-1"
 												>
 													Acepto recibir la confirmación por email y WhatsApp, y comprendo que podré especificar la hora exacta y detalles adicionales después de confirmar el pago.
 												</label>
 											</div>
 										</div>
 
-										{/* Navegación - diseño mejorado */}
-										<div className="space-y-6 pt-4">
+										{/* Navegación compacta */}
+										<div className="space-y-3 pt-2">
 											{/* Botón de volver */}
 											<div className="flex justify-start">
 												<Button
 													type="button"
 													variant="ghost"
+													size="sm"
 													onClick={handleStepBack}
 													disabled={isSubmitting}
 													className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -1142,21 +1141,21 @@ function HeroExpress({
 											{requiereCotizacionManual ? (
 												<Button 
 													asChild 
-													className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 py-6 text-lg rounded-xl"
+													className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 py-5 text-base rounded-xl"
 												>
 													<a href="#contacto">
 														Solicitar cotización personalizada
 													</a>
 												</Button>
 											) : (
-												<div className="space-y-4">
-													{/* Botón para guardar reserva sin pagar - diseño mejorado */}
-													<div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
-														<div className="mb-4">
-															<h5 className="font-bold text-blue-900 mb-2 text-lg">
+												<div className="space-y-3">
+													{/* Botón para guardar reserva sin pagar compacto */}
+													<div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+														<div className="mb-3">
+															<h5 className="font-bold text-blue-900 mb-1 text-sm">
 																Guardar y continuar después
 															</h5>
-															<p className="text-sm text-blue-700">
+															<p className="text-xs text-blue-700">
 																Guarda tu reserva ahora y recibe un enlace por email para pagar cuando quieras
 															</p>
 														</div>
@@ -1167,11 +1166,11 @@ function HeroExpress({
 																isSubmitting || !todosLosCamposCompletos
 															}
 															variant="outline"
-															className="w-full border-2 border-blue-400 text-blue-700 hover:bg-blue-100 py-6 rounded-xl font-semibold"
+															className="w-full border-2 border-blue-400 text-blue-700 hover:bg-blue-100 py-4 rounded-lg font-semibold text-sm"
 														>
 															{isSubmitting ? (
 																<>
-																	<LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
+																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
 																	Guardando reserva...
 																</>
 															) : (
@@ -1182,12 +1181,12 @@ function HeroExpress({
 
 													{/* Instrucciones para pago inmediato */}
 													{todosLosCamposCompletos && (
-														<div className="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-6">
+														<div className="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-4">
 															<div>
-																<p className="font-bold text-emerald-900 mb-2">
+																<p className="font-bold text-emerald-900 mb-1 text-sm">
 																	¿Listo para pagar ahora?
 																</p>
-																<p className="text-sm text-emerald-800">
+																<p className="text-xs text-emerald-800">
 																	Selecciona el monto y método de pago arriba. Tu reserva se guardará automáticamente y serás redirigido al proceso de pago seguro.
 																</p>
 															</div>
@@ -1220,38 +1219,38 @@ function HeroExpress({
 							{/* Resumen del viaje */}
 							{currentStep >= 0 && (
 								<Card className="bg-white shadow-xl border-0 sticky top-6">
-									<CardHeader className="bg-gradient-to-br from-blue-50 to-slate-50 border-b border-gray-100">
-										<h3 className="font-bold text-lg text-gray-900">
+									<CardHeader className="bg-gradient-to-br from-blue-50 to-slate-50 border-b border-gray-100 py-3 px-4">
+										<h3 className="font-bold text-base text-gray-900">
 											Resumen de tu reserva
 										</h3>
 									</CardHeader>
-									<CardContent className="p-6 space-y-6">
+									<CardContent className="p-4 space-y-4">
 										{/* Ruta */}
-										<div className="space-y-2">
-											<div className="flex items-center gap-2 text-sm text-gray-600">
-												<div className="w-2 h-2 rounded-full bg-blue-500"></div>
+										<div className="space-y-1.5">
+											<div className="flex items-center gap-1.5 text-xs text-gray-600">
+												<div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
 												<span className="font-medium">Ruta</span>
 											</div>
-											<div className="pl-4 border-l-2 border-blue-200">
-												<p className="font-semibold text-gray-900">
+											<div className="pl-3 border-l-2 border-blue-200">
+												<p className="font-semibold text-sm text-gray-900">
 													{origenFinal}
 												</p>
-												<div className="text-blue-600 my-2" aria-hidden="true">↓</div>
-												<p className="font-semibold text-gray-900">
+												<div className="text-blue-600 my-1 text-sm" aria-hidden="true">↓</div>
+												<p className="font-semibold text-sm text-gray-900">
 													{destinoFinal}
 												</p>
 											</div>
 											{formData.idaVuelta && (
-												<div className="mt-4 pl-4 border-l-2 border-emerald-200">
-													<div className="flex items-center gap-2 mb-2">
-														<div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-														<span className="text-sm font-medium text-emerald-700">Regreso</span>
+												<div className="mt-3 pl-3 border-l-2 border-emerald-200">
+													<div className="flex items-center gap-1.5 mb-1">
+														<div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+														<span className="text-xs font-medium text-emerald-700">Regreso</span>
 													</div>
-													<p className="font-semibold text-gray-900">
+													<p className="font-semibold text-sm text-gray-900">
 														{destinoFinal}
 													</p>
-													<div className="text-emerald-600 my-2" aria-hidden="true">↓</div>
-													<p className="font-semibold text-gray-900">
+													<div className="text-emerald-600 my-1 text-sm" aria-hidden="true">↓</div>
+													<p className="font-semibold text-sm text-gray-900">
 														{origenFinal}
 													</p>
 												</div>
@@ -1259,16 +1258,16 @@ function HeroExpress({
 										</div>
 
 										{/* Fecha(s) */}
-										<div className="space-y-2 pt-4 border-t border-gray-100">
-											<div className="flex items-center gap-2 text-sm text-gray-600">
-												<Calendar className="w-4 h-4 text-blue-600" />
+										<div className="space-y-1.5 pt-3 border-t border-gray-100">
+											<div className="flex items-center gap-1.5 text-xs text-gray-600">
+												<Calendar className="w-3.5 h-3.5 text-blue-600" />
 												<span className="font-medium">Fecha{formData.idaVuelta ? "s" : ""}</span>
 											</div>
-											<p className="text-gray-900 font-medium pl-6">
+											<p className="text-gray-900 text-sm font-medium pl-5">
 												{fechaLegible || "Por confirmar"}
 											</p>
 											{formData.idaVuelta && formData.fechaRegreso && (
-												<p className="text-emerald-700 font-medium pl-6">
+												<p className="text-emerald-700 text-sm font-medium pl-5">
 													Regreso: {new Date(
 														`${formData.fechaRegreso}T00:00:00`
 													).toLocaleDateString("es-CL", {
@@ -1280,24 +1279,24 @@ function HeroExpress({
 										</div>
 
 										{/* Pasajeros */}
-										<div className="space-y-2 pt-4 border-t border-gray-100">
-											<div className="flex items-center gap-2 text-sm text-gray-600">
-												<Users className="w-4 h-4 text-blue-600" />
+										<div className="space-y-1.5 pt-3 border-t border-gray-100">
+											<div className="flex items-center gap-1.5 text-xs text-gray-600">
+												<Users className="w-3.5 h-3.5 text-blue-600" />
 												<span className="font-medium">Pasajeros</span>
 											</div>
-											<p className="text-gray-900 font-semibold text-lg pl-6">
+											<p className="text-gray-900 font-semibold text-base pl-5">
 												{formData.pasajeros} {formData.pasajeros === "1" ? "pasajero" : "pasajeros"}
 											</p>
 										</div>
 
 										{/* Vehículo */}
 										{cotizacion.vehiculo && (
-											<div className="space-y-2 pt-4 border-t border-gray-100">
-												<div className="flex items-center gap-2 text-sm text-gray-600">
-													<div className="w-2 h-2 rounded-full bg-blue-500"></div>
+											<div className="space-y-1.5 pt-3 border-t border-gray-100">
+												<div className="flex items-center gap-1.5 text-xs text-gray-600">
+													<div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
 													<span className="font-medium">Vehículo</span>
 												</div>
-												<p className="text-gray-900 font-medium pl-6">
+												<p className="text-gray-900 text-sm font-medium pl-5">
 													{cotizacion.vehiculo}
 												</p>
 											</div>
@@ -1305,16 +1304,16 @@ function HeroExpress({
 
 										{/* Precio */}
 										{mostrarPrecio && (
-											<div className="space-y-3 pt-4 border-t-2 border-gray-200">
-												<div className="space-y-1">
-													<div className="flex justify-between items-center text-sm">
+											<div className="space-y-2 pt-3 border-t-2 border-gray-200">
+												<div className="space-y-0.5">
+													<div className="flex justify-between items-center text-xs">
 														<span className="text-gray-600">Precio base</span>
 														<span className="line-through text-gray-400">
 															{formatCurrency(pricing.precioBase)}
 														</span>
 													</div>
 													{pricing.descuentoBase > 0 && (
-														<div className="flex justify-between items-center text-sm">
+														<div className="flex justify-between items-center text-xs">
 															<span className="text-emerald-600">Descuento web ({baseDiscountPercentage}%)</span>
 															<span className="text-emerald-600 font-medium">
 																-{formatCurrency(pricing.descuentoBase)}
@@ -1322,7 +1321,7 @@ function HeroExpress({
 														</div>
 													)}
 													{pricing.descuentoRoundTrip > 0 && (
-														<div className="flex justify-between items-center text-sm">
+														<div className="flex justify-between items-center text-xs">
 															<span className="text-emerald-600">Ida y vuelta</span>
 															<span className="text-emerald-600 font-medium">
 																-{formatCurrency(pricing.descuentoRoundTrip)}
@@ -1330,7 +1329,7 @@ function HeroExpress({
 														</div>
 													)}
 													{pricing.descuentoCodigo > 0 && (
-														<div className="flex justify-between items-center text-sm">
+														<div className="flex justify-between items-center text-xs">
 															<span className="text-emerald-600">Código descuento</span>
 															<span className="text-emerald-600 font-medium">
 																-{formatCurrency(pricing.descuentoCodigo)}
@@ -1338,15 +1337,15 @@ function HeroExpress({
 														</div>
 													)}
 												</div>
-												<div className="flex justify-between items-center pt-3 border-t-2 border-blue-100">
-													<span className="text-lg font-bold text-gray-900">Total</span>
-													<span className="text-2xl font-bold text-blue-600">
+												<div className="flex justify-between items-center pt-2 border-t-2 border-blue-100">
+													<span className="text-base font-bold text-gray-900">Total</span>
+													<span className="text-xl font-bold text-blue-600">
 														{formatCurrency(pricing.totalConDescuento)}
 													</span>
 												</div>
 												{(pricing.descuentoBase + pricing.descuentoRoundTrip + pricing.descuentoCodigo) > 0 && (
-													<div className="bg-emerald-50 rounded-lg p-3 text-center">
-														<p className="text-sm font-bold text-emerald-700">
+													<div className="bg-emerald-50 rounded-lg p-2 text-center">
+														<p className="text-xs font-bold text-emerald-700">
 															¡Ahorras {formatCurrency(
 																pricing.descuentoBase +
 																pricing.descuentoRoundTrip +
@@ -1359,11 +1358,11 @@ function HeroExpress({
 										)}
 
 										{!mostrarPrecio && (
-											<div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-200">
-												<p className="text-sm font-semibold text-blue-900">
+											<div className="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+												<p className="text-xs font-semibold text-blue-900">
 													Cotización personalizada
 												</p>
-												<p className="text-xs text-blue-700 mt-1">
+												<p className="text-xs text-blue-700 mt-0.5">
 													Te enviaremos el precio por correo
 												</p>
 											</div>
