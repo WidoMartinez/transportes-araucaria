@@ -255,6 +255,26 @@ const Reserva = sequelize.define(
 			field: "conductor_id",
 			comment: "ID del conductor asignado (FK)",
 		},
+		ajusteTarifaDinamica: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			defaultValue: 0,
+			field: "ajuste_tarifa_dinamica",
+			comment: "Monto del ajuste de tarifa dinámica aplicado",
+		},
+		porcentajeTarifaDinamica: {
+			type: DataTypes.DECIMAL(5, 2),
+			allowNull: true,
+			defaultValue: 0,
+			field: "porcentaje_tarifa_dinamica",
+			comment: "Porcentaje total de ajuste de tarifa dinámica aplicado",
+		},
+		detalleAjustesTarifa: {
+			type: DataTypes.JSON,
+			allowNull: true,
+			field: "detalle_ajustes_tarifa",
+			comment: "JSON con desglose de ajustes de tarifa dinámica aplicados",
+		},
 	},
 	{
 		tableName: "reservas",

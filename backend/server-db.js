@@ -20,6 +20,7 @@ import Conductor from "./models/Conductor.js";
 import Gasto from "./models/Gasto.js";
 import Producto from "./models/Producto.js";
 import ProductoReserva from "./models/ProductoReserva.js";
+import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import CodigoPago from "./models/CodigoPago.js";
@@ -27,6 +28,8 @@ import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
 import addGastosTable from "./migrations/add-gastos-table.js";
 import addProductosTables from "./migrations/add-productos-tables.js";
+import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
+import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
 import setupAssociations from "./models/associations.js";
 
 dotenv.config();
@@ -572,6 +575,8 @@ const initializeDatabase = async () => {
 		await addCodigosPagoTable();
 		await addGastosTable();
 		await addProductosTables(); // Migración para tablas de productos
+		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
+		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -4759,6 +4764,202 @@ app.delete("/api/conductores/:id", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error eliminando conductor:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// --- ENDPOINTS PARA TARIFA DINÁMICA ---
+
+// Listar todas las configuraciones de tarifa dinámica
+app.get("/api/tarifa-dinamica", async (req, res) => {
+	try {
+		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+			order: [
+				["prioridad", "DESC"],
+				["tipo", "ASC"],
+				["created_at", "DESC"],
+			],
+		});
+
+		res.json(configuraciones);
+	} catch (error) {
+		console.error("Error obteniendo configuraciones de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nueva configuración de tarifa dinámica
+app.post("/api/tarifa-dinamica", async (req, res) => {
+	try {
+		const nuevaConfig = await ConfiguracionTarifaDinamica.create(req.body);
+		res.status(201).json(nuevaConfig);
+	} catch (error) {
+		console.error("Error creando configuración de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar configuración de tarifa dinámica
+app.put("/api/tarifa-dinamica/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const config = await ConfiguracionTarifaDinamica.findByPk(id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+
+		await config.update(req.body);
+
+		res.json(config);
+	} catch (error) {
+		console.error("Error actualizando configuración de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar configuración de tarifa dinámica
+app.delete("/api/tarifa-dinamica/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const config = await ConfiguracionTarifaDinamica.findByPk(id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+
+		await config.destroy();
+
+		res.json({
+			success: true,
+			message: "Configuración eliminada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando configuración de tarifa dinámica:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Calcular tarifa dinámica para un viaje específico
+app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
+	try {
+		const { precioBase, destino, fecha, hora } = req.body;
+
+		if (!precioBase || !fecha) {
+			return res.status(400).json({
+				error: "Se requieren precioBase y fecha",
+			});
+		}
+
+		// Obtener todas las configuraciones activas ordenadas por prioridad
+		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+			where: { activo: true },
+			order: [["prioridad", "DESC"]],
+		});
+
+		// Calcular ajustes aplicables
+		const ajustesAplicados = [];
+		let porcentajeTotal = 0;
+
+		const fechaViaje = new Date(fecha);
+		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
+		const ahora = new Date();
+		const diasAnticipacion = Math.floor(
+			(fechaViaje - ahora) / (1000 * 60 * 60 * 24)
+		);
+
+		for (const config of configuraciones) {
+			// Verificar si el destino está excluido
+			if (
+				config.destinosExcluidos &&
+				Array.isArray(config.destinosExcluidos) &&
+				config.destinosExcluidos.includes(destino)
+			) {
+				continue;
+			}
+
+			let aplica = false;
+			let detalle = "";
+
+			switch (config.tipo) {
+				case "anticipacion":
+					if (
+						diasAnticipacion >= config.diasMinimos &&
+						(config.diasMaximos === null ||
+							diasAnticipacion <= config.diasMaximos)
+					) {
+						aplica = true;
+						detalle = `${config.diasMinimos}${
+							config.diasMaximos ? `-${config.diasMaximos}` : "+"
+						} días de anticipación`;
+					}
+					break;
+
+				case "dia_semana":
+					if (
+						config.diasSemana &&
+						Array.isArray(config.diasSemana) &&
+						config.diasSemana.includes(diaSemana)
+					) {
+						aplica = true;
+						const nombresDias = [
+							"Domingo",
+							"Lunes",
+							"Martes",
+							"Miércoles",
+							"Jueves",
+							"Viernes",
+							"Sábado",
+						];
+						detalle = `${nombresDias[diaSemana]}`;
+					}
+					break;
+
+				case "horario":
+					if (hora && config.horaInicio && config.horaFin) {
+						const horaViaje = hora.substring(0, 5);
+						const horaInicio = config.horaInicio.substring(0, 5);
+						const horaFin = config.horaFin.substring(0, 5);
+
+						if (horaViaje >= horaInicio && horaViaje <= horaFin) {
+							aplica = true;
+							detalle = `Horario ${horaInicio} - ${horaFin}`;
+						}
+					}
+					break;
+
+				case "descuento_retorno":
+					// Este tipo requiere lógica adicional de disponibilidad de vehículos
+					// Por ahora lo dejamos para implementación futura
+					break;
+			}
+
+			if (aplica) {
+				ajustesAplicados.push({
+					nombre: config.nombre,
+					tipo: config.tipo,
+					porcentaje: parseFloat(config.porcentajeAjuste),
+					detalle: detalle,
+					descripcion: config.descripcion,
+				});
+				porcentajeTotal += parseFloat(config.porcentajeAjuste);
+			}
+		}
+
+		// Calcular montos
+		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
+		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Asegurar que no sea negativo
+
+		res.json({
+			precioBase: parseFloat(precioBase),
+			ajusteTotal: porcentajeTotal,
+			ajusteMonto: ajusteMonto,
+			precioFinal: precioFinal,
+			diasAnticipacion: diasAnticipacion,
+			ajustesAplicados: ajustesAplicados,
+		});
+	} catch (error) {
+		console.error("Error calculando tarifa dinámica:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
