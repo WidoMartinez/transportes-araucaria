@@ -4893,6 +4893,14 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		);
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
 
+		console.log("📅 DEBUG Tarifa Dinámica:");
+		console.log("  Fecha recibida:", fecha);
+		console.log("  Fecha parseada:", fechaViaje);
+		console.log("  Día de la semana:", diaSemana, ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][diaSemana]);
+		console.log("  Hora:", hora);
+		console.log("  Precio base:", precioBase);
+		console.log("  Destino:", destino);
+
 		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
 		const ahora = new Date();
 		const hoyInicio = new Date(
@@ -4935,13 +4943,18 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
 		}
 
+		console.log(`\n🔍 Evaluando ${configuraciones.length} configuraciones activas...`);
+
 		for (const config of configuraciones) {
+			console.log(`\n  ⚙️  Evaluando: "${config.nombre}" (tipo: ${config.tipo})`);
+			
 			// Verificar si el destino está excluido
 			if (
 				config.destinosExcluidos &&
 				Array.isArray(config.destinosExcluidos) &&
 				config.destinosExcluidos.includes(destino)
 			) {
+				console.log(`    ❌ Destino excluido: ${destino}`);
 				continue;
 			}
 
@@ -4963,6 +4976,8 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 					break;
 
 				case "dia_semana":
+					console.log(`    📆 Días configurados:`, config.diasSemana);
+					console.log(`    📆 Día del viaje: ${diaSemana}`);
 					if (
 						config.diasSemana &&
 						Array.isArray(config.diasSemana) &&
@@ -4979,6 +4994,9 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 							"Sábado",
 						];
 						detalle = `${nombresDias[diaSemana]}`;
+						console.log(`    ✅ APLICA - Día ${detalle}`);
+					} else {
+						console.log(`    ❌ NO APLICA - Día no incluido`);
 					}
 					break;
 
@@ -5012,6 +5030,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			}
 
 			if (aplica) {
+				console.log(`    ✅ Ajuste aplicado: ${config.porcentajeAjuste}%`);
 				ajustesAplicados.push({
 					nombre: config.nombre,
 					tipo: config.tipo,
@@ -5026,6 +5045,13 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		// Calcular montos
 		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
 		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
+
+		console.log("\n💰 RESULTADO:");
+		console.log("  Precio base:", precioBase);
+		console.log("  Ajuste total:", porcentajeTotal + "%");
+		console.log("  Ajuste monto:", ajusteMonto);
+		console.log("  Precio final:", precioFinal);
+		console.log("  Ajustes aplicados:", ajustesAplicados.length);
 
 		res.json({
 			precioBase: parseFloat(precioBase),
