@@ -33,6 +33,8 @@ import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
 import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
 import addFestivosTable from "./migrations/add-festivos-table.js";
 import setupAssociations from "./models/associations.js";
+import authRoutes from "./routes/auth.js";
+import { authAdminCompatible } from "./middleware/authJWT.js";
 
 dotenv.config();
 
@@ -460,6 +462,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // Responder explícitamente a las solicitudes de preflight
 app.options("*", cors(corsOptions));
+
+// --- RUTAS DE AUTENTICACIÓN ---
+app.use("/api/auth", authRoutes);
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 // Función para ejecutar migración automática del código de reserva
