@@ -21,7 +21,7 @@ import {
 	getUserAgentFromRequest,
 } from "../utils/auditLog.js";
 import { authJWT, requireRole } from "../middleware/authJWT.js";
-import { loginLimiter, strictLimiter } from "../middleware/rateLimiter.js";
+import { loginLimiter, apiLimiter, strictLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
@@ -195,7 +195,7 @@ router.post("/login", loginLimiter, async (req, res) => {
  * POST /api/auth/logout
  * Cerrar sesión
  */
-router.post("/logout", authJWT, async (req, res) => {
+router.post("/logout", apiLimiter, authJWT, async (req, res) => {
 	try {
 		const user = await AdminUser.findByPk(req.user.id);
 
@@ -228,7 +228,7 @@ router.post("/logout", authJWT, async (req, res) => {
  * POST /api/auth/refresh
  * Renovar token de acceso usando refresh token
  */
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", apiLimiter, async (req, res) => {
 	try {
 		const { refreshToken } = req.body;
 
@@ -294,7 +294,7 @@ router.post("/refresh", async (req, res) => {
  * GET /api/auth/verify
  * Verificar si el token actual es válido
  */
-router.get("/verify", authJWT, async (req, res) => {
+router.get("/verify", apiLimiter, authJWT, async (req, res) => {
 	res.json({
 		success: true,
 		data: {
@@ -307,7 +307,7 @@ router.get("/verify", authJWT, async (req, res) => {
  * POST /api/auth/change-password
  * Cambiar contraseña (requiere autenticación)
  */
-router.post("/change-password", authJWT, strictLimiter, async (req, res) => {
+router.post("/change-password", strictLimiter, authJWT, async (req, res) => {
 	try {
 		const { currentPassword, newPassword } = req.body;
 
@@ -376,9 +376,9 @@ router.post("/change-password", authJWT, strictLimiter, async (req, res) => {
  */
 router.post(
 	"/users",
+	strictLimiter,
 	authJWT,
 	requireRole("superadmin"),
-	strictLimiter,
 	async (req, res) => {
 		try {
 			const { username, email, password, nombre, rol } = req.body;
@@ -457,7 +457,7 @@ router.post(
  * GET /api/auth/users
  * Listar usuarios admin (solo superadmin)
  */
-router.get("/users", authJWT, requireRole("superadmin"), async (req, res) => {
+router.get("/users", apiLimiter, authJWT, requireRole("superadmin"), async (req, res) => {
 	try {
 		const users = await AdminUser.findAll({
 			attributes: [
