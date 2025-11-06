@@ -37,6 +37,8 @@ import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
 import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
 
 // --- Datos Iniciales y Lógica ---
@@ -1618,7 +1620,13 @@ function App() {
 	}
 
 	if (isAdminView) {
-		return <AdminDashboard />;
+		return (
+			<AuthProvider>
+				<ProtectedRoute>
+					<AdminDashboard />
+				</ProtectedRoute>
+			</AuthProvider>
+		);
 	}
 
 	if (isConsultaView) {

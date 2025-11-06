@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { Button } from "./ui/button";
+import { LogOut, User, Shield } from "lucide-react";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
@@ -13,6 +16,7 @@ import AdminTarifaDinamica from "./AdminTarifaDinamica";
 import AdminFestivos from "./AdminFestivos";
 
 function AdminDashboard() {
+  const { user, logout } = useAuth();
   const [active, setActive] = useState(() => {
     const url = new URL(window.location.href);
     return url.searchParams.get("panel") || "pricing";
@@ -29,10 +33,51 @@ function AdminDashboard() {
     setActive(panel);
   };
 
+  const handleLogout = () => {
+    if (confirm("¿Está seguro que desea cerrar sesión?")) {
+      logout();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Header con información de usuario */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl font-semibold">Panel Administrativo</h1>
+            <p className="text-sm text-gray-500">Transportes Araucaria</p>
+          </div>
+          <div className="flex items-center gap-4">
+            {user && (
+              <div className="flex items-center gap-2 text-sm">
+                <div className="text-right">
+                  <p className="font-medium">{user.nombre}</p>
+                  <div className="flex items-center gap-1 text-gray-500">
+                    <Shield className="h-3 w-3" />
+                    <span className="capitalize">{user.rol}</span>
+                  </div>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar Sesión
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "festivos"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
-        <h1 className="text-2xl font-semibold mb-4">Panel Administrativo</h1>
+        <h2 className="text-xl font-semibold mb-4">Gestión</h2>
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
             className={`px-3 py-2 rounded border ${active === "reservas" ? "bg-primary text-primary-foreground" : "bg-white"}`}
