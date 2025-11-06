@@ -54,6 +54,10 @@ export const useAuthenticatedFetch = () => {
 	 */
 	const get = async (url) => {
 		const response = await authenticatedFetch(url, { method: "GET" });
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
+			throw new Error(error.message || `HTTP ${response.status}`);
+		}
 		return response.json();
 	};
 
@@ -65,6 +69,10 @@ export const useAuthenticatedFetch = () => {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
+			throw new Error(error.message || `HTTP ${response.status}`);
+		}
 		return response.json();
 	};
 
@@ -76,6 +84,10 @@ export const useAuthenticatedFetch = () => {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
+			throw new Error(error.message || `HTTP ${response.status}`);
+		}
 		return response.json();
 	};
 
@@ -84,6 +96,10 @@ export const useAuthenticatedFetch = () => {
 	 */
 	const del = async (url) => {
 		const response = await authenticatedFetch(url, { method: "DELETE" });
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
+			throw new Error(error.message || `HTTP ${response.status}`);
+		}
 		return response.json();
 	};
 

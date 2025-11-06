@@ -44,12 +44,30 @@ export const AuthProvider = ({ children }) => {
 		setLoading(false);
 	}, []);
 
-	// Verificar token periódicamente (cada 5 minutos)
+	// Verificar token periódicamente (cada 10 minutos) solo si hay actividad
 	useEffect(() => {
 		if (!accessToken) return;
 
+		let lastActivity = Date.now();
+
+		// Detectar actividad del usuario
+		const updateActivity = () => {
+			lastActivity = Date.now();
+		};
+
+		// Escuchar eventos de actividad
+		window.addEventListener("mousemove", updateActivity);
+		window.addEventListener("keydown", updateActivity);
+		window.addEventListener("click", updateActivity);
+
 		const verifyToken = async () => {
 			try {
+				// Solo verificar si hubo actividad en los últimos 10 minutos
+				const inactiveTime = Date.now() - lastActivity;
+				if (inactiveTime > 10 * 60 * 1000) {
+					return; // Usuario inactivo, no verificar
+				}
+
 				const response = await fetch(`${getBackendUrl()}/api/auth/verify`, {
 					headers: {
 						Authorization: `Bearer ${accessToken}`,
@@ -65,10 +83,15 @@ export const AuthProvider = ({ children }) => {
 			}
 		};
 
-		const interval = setInterval(verifyToken, 5 * 60 * 1000); // 5 minutos
+		const interval = setInterval(verifyToken, 10 * 60 * 1000); // 10 minutos
 
-		return () => clearInterval(interval);
-	}, [accessToken]);
+		return () => {
+			clearInterval(interval);
+			window.removeEventListener("mousemove", updateActivity);
+			window.removeEventListener("keydown", updateActivity);
+			window.removeEventListener("click", updateActivity);
+		};
+	}, [accessToken, renewToken]);
 
 	/**
 	 * Iniciar sesión

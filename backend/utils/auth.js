@@ -7,11 +7,18 @@ import jwt from "jsonwebtoken";
 
 // Constantes de configuración
 const SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.JWT_SECRET || "transportes-araucaria-secret-2024";
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "8h"; // Token expira en 8 horas
 const REFRESH_TOKEN_EXPIRES_IN = "7d"; // Refresh token expira en 7 días
 const MAX_LOGIN_ATTEMPTS = 5; // Máximo de intentos fallidos
 const LOCK_TIME = 30 * 60 * 1000; // 30 minutos de bloqueo
+
+// Verificar que JWT_SECRET esté configurado
+if (!JWT_SECRET) {
+	console.error("❌ ERROR CRÍTICO: JWT_SECRET no está configurado en las variables de entorno");
+	console.error("Por favor, configure JWT_SECRET en el archivo .env");
+	process.exit(1);
+}
 
 /**
  * Hashear contraseña usando bcrypt
