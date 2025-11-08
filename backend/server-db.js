@@ -53,6 +53,12 @@ const signParams = (params) => {
 };
 
 const app = express();
+
+// Configurar trust proxy para que Express confíe en los proxies (Render.com, nginx, etc.)
+// Esto es necesario para que express-rate-limit y otras librerías puedan leer correctamente
+// los headers X-Forwarded-For, X-Forwarded-Proto, etc.
+app.set("trust proxy", 1);
+
 app.use(express.json());
 
 // Middleware de autenticación para rutas administrativas
