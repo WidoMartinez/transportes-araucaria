@@ -8,6 +8,8 @@ import Conductor from "./Conductor.js";
 import Gasto from "./Gasto.js";
 import Producto from "./Producto.js";
 import ProductoReserva from "./ProductoReserva.js";
+import AdminUser from "./AdminUser.js";
+import AdminAuditLog from "./AdminAuditLog.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -111,6 +113,17 @@ export const setupAssociations = () => {
 	Producto.hasMany(ProductoReserva, {
 		foreignKey: "productoId",
 		as: "productosReserva",
+	});
+
+	// Relación: AdminUser -> AdminAuditLog (Un admin puede tener muchos logs)
+	AdminUser.hasMany(AdminAuditLog, {
+		foreignKey: "adminUserId",
+		as: "auditLogs",
+	});
+	
+	AdminAuditLog.belongsTo(AdminUser, {
+		foreignKey: "adminUserId",
+		as: "adminUser",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
