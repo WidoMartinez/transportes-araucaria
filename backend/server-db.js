@@ -583,21 +583,23 @@ const initializeDatabase = async () => {
 			DescuentoGlobal,
 		]); // false = no forzar recreación
 
-		// Crear usuario admin por defecto si no existe
+		// Crear o actualizar usuario admin por defecto
 		try {
-			const adminExists = await AdminUser.findOne({
+			let adminUser = await AdminUser.findOne({
 				where: { username: 'admin' }
 			});
 
-			if (!adminExists) {
+			const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+			const defaultEmail = process.env.ADMIN_DEFAULT_EMAIL || 'contacto@transportesaraucaria.cl';
+
+			if (!adminUser) {
 				console.log('👤 Creando usuario administrador por defecto...');
 				
-				const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
 				const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
-				await AdminUser.create({
+				adminUser = await AdminUser.create({
 					username: 'admin',
-					email: process.env.ADMIN_DEFAULT_EMAIL || 'contacto@transportesaraucaria.cl',
+					email: defaultEmail,
 					password: hashedPassword,
 					nombre: 'Administrador Principal',
 					rol: 'superadmin',
@@ -611,6 +613,24 @@ const initializeDatabase = async () => {
 				console.log('⚠️  IMPORTANTE: Cambia la contraseña después del primer login');
 			} else {
 				console.log('✅ Usuario administrador ya existe');
+				console.log(`📧 Email actual: ${adminUser.email}`);
+				console.log(`👤 Nombre: ${adminUser.nombre}`);
+				console.log(`🔑 Rol: ${adminUser.rol}`);
+				
+				// Actualizar contraseña si es diferente del hash esperado
+				const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+				const passwordMatch = await bcrypt.compare(defaultPassword, adminUser.password);
+				
+				if (!passwordMatch) {
+					console.log('🔄 Actualizando contraseña a valor por defecto...');
+					adminUser.password = hashedPassword;
+					adminUser.email = defaultEmail; // También actualizar email
+					await adminUser.save();
+					console.log('✅ Credenciales actualizadas:');
+					console.log('   Usuario: admin');
+					console.log(`   Contraseña: ${defaultPassword}`);
+					console.log(`   Email: ${defaultEmail}`);
+				}
 			}
 		} catch (adminError) {
 			console.error('⚠️ Error al crear usuario admin:', adminError.message);
