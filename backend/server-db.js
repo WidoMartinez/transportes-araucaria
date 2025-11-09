@@ -35,6 +35,8 @@ import addFestivosTable from "./migrations/add-festivos-table.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import { authAdminCompatible } from "./middleware/authJWT.js";
+import AdminUser from "./models/AdminUser.js";
+import bcrypt from "bcrypt";
 
 dotenv.config();
 
@@ -569,6 +571,7 @@ const initializeDatabase = async () => {
 		}
 		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
 		await syncDatabase(false, [
+			AdminUser, // Primero los usuarios admin
 			Destino,
 			Cliente,
 			Vehiculo,
@@ -579,6 +582,39 @@ const initializeDatabase = async () => {
 			Promocion,
 			DescuentoGlobal,
 		]); // false = no forzar recreación
+
+		// Crear usuario admin por defecto si no existe
+		try {
+			const adminExists = await AdminUser.findOne({
+				where: { username: 'admin' }
+			});
+
+			if (!adminExists) {
+				console.log('👤 Creando usuario administrador por defecto...');
+				
+				const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
+				const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+				await AdminUser.create({
+					username: 'admin',
+					email: process.env.ADMIN_DEFAULT_EMAIL || 'admin@transportes-araucaria.com',
+					password: hashedPassword,
+					nombre: 'Administrador Principal',
+					rol: 'superadmin',
+					activo: true
+				});
+
+				console.log('✅ Usuario administrador creado exitosamente');
+				console.log('📝 Credenciales por defecto:');
+				console.log('   Usuario: admin');
+				console.log(`   Contraseña: ${defaultPassword}`);
+				console.log('⚠️  IMPORTANTE: Cambia la contraseña después del primer login');
+			} else {
+				console.log('✅ Usuario administrador ya existe');
+			}
+		} catch (adminError) {
+			console.error('⚠️ Error al crear usuario admin:', adminError.message);
+		}
 
 		// Ejecutar migraciones automáticas
 		await ejecutarMigracionCodigoReserva();

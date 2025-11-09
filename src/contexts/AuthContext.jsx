@@ -64,7 +64,17 @@ export const AuthProvider = ({ children }) => {
 				body: JSON.stringify({ username, password }),
 			});
 
-			const data = await response.json();
+			// Capturar respuesta para debugging
+			let data;
+			try {
+				data = await response.json();
+			} catch (parseError) {
+				console.error("Error al parsear respuesta JSON:", parseError);
+				console.error("Status:", response.status, response.statusText);
+				throw new Error(`Error del servidor (${response.status}): No se pudo parsear la respuesta`);
+			}
+
+			console.log("Respuesta del login:", { status: response.status, data });
 
 			if (!response.ok) {
 				throw new Error(data.message || "Error al iniciar sesión");
