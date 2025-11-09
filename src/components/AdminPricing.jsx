@@ -14,6 +14,8 @@ const nuevoDestinoTemplate = {
 	imagen: "URL_de_imagen_por_defecto.jpg",
 	maxPasajeros: 7,
 	minHorasAnticipacion: 5,
+	duracionIdaMinutos: 60,
+	duracionVueltaMinutos: 60,
 	precios: {
 		auto: { base: 0, porcentajeAdicional: 0.1 },
 		van: { base: 0, porcentajeAdicional: 0.05 },
@@ -1344,6 +1346,38 @@ function AdminPricing() {
 											/>
 										</label>
 										<label className="text-sm text-slate-300">
+											Duración Ida (minutos)
+											<input
+												type="number"
+												min="10"
+												value={newDestino.duracionIdaMinutos || 60}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														duracionIdaMinutos: Number(e.target.value),
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="60"
+											/>
+										</label>
+										<label className="text-sm text-slate-300">
+											Duración Vuelta (minutos)
+											<input
+												type="number"
+												min="10"
+												value={newDestino.duracionVueltaMinutos || 60}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														duracionVueltaMinutos: Number(e.target.value),
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="60"
+											/>
+										</label>
+										<label className="text-sm text-slate-300">
 											Precio Base (Auto)
 											<input
 												type="number"
@@ -1486,6 +1520,40 @@ function AdminPricing() {
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+													/>
+												</label>
+												<label className="text-sm text-slate-300">
+													Duración Ida (min)
+													<input
+														type="number"
+														min="10"
+														value={destino.duracionIdaMinutos || 60}
+														onChange={(e) =>
+															handleGeneralDestinoChange(
+																destino.nombre,
+																"duracionIdaMinutos",
+																e.target.value
+															)
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+														placeholder="60"
+													/>
+												</label>
+												<label className="text-sm text-slate-300">
+													Duración Vuelta (min)
+													<input
+														type="number"
+														min="10"
+														value={destino.duracionVueltaMinutos || 60}
+														onChange={(e) =>
+															handleGeneralDestinoChange(
+																destino.nombre,
+																"duracionVueltaMinutos",
+																e.target.value
+															)
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+														placeholder="60"
 													/>
 												</label>
 											</div>
