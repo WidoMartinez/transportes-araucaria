@@ -13,6 +13,7 @@ import AdminGastos from "./AdminGastos";
 import AdminEstadisticas from "./AdminEstadisticas";
 import AdminProductos from "./AdminProductos";
 import AdminTarifaDinamica from "./AdminTarifaDinamica";
+import AdminDisponibilidad from "./AdminDisponibilidad";
 import AdminFestivos from "./AdminFestivos";
 import AdminUsuarios from "./AdminUsuarios";
 import AdminPerfil from "./AdminPerfil";
@@ -78,7 +79,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "festivos", "usuarios", "perfil"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
+      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "disponibilidad", "festivos", "usuarios", "perfil"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
         <h2 className="text-xl font-semibold mb-4">Gestión</h2>
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
@@ -113,6 +114,10 @@ function AdminDashboard() {
             className={`px-3 py-2 rounded border ${active === "tarifa-dinamica" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("tarifa-dinamica")}
           >Tarifa Dinámica</button>
+          <button
+            className={`px-3 py-2 rounded border ${active === "disponibilidad" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("disponibilidad")}
+          >Disponibilidad</button>
           <button
             className={`px-3 py-2 rounded border ${active === "festivos" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("festivos")}
@@ -155,6 +160,8 @@ function AdminDashboard() {
           <AdminEstadisticas />
         ) : active === "tarifa-dinamica" ? (
           <AdminTarifaDinamica />
+        ) : active === "disponibilidad" ? (
+          <AdminDisponibilidad />
         ) : active === "festivos" ? (
           <AdminFestivos />
         ) : active === "codigos" ? (

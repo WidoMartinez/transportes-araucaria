@@ -21,6 +21,7 @@ import Gasto from "./models/Gasto.js";
 import Producto from "./models/Producto.js";
 import ProductoReserva from "./models/ProductoReserva.js";
 import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
+import ConfiguracionDisponibilidad from "./models/ConfiguracionDisponibilidad.js";
 import Festivo from "./models/Festivo.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
@@ -32,6 +33,7 @@ import addProductosTables from "./migrations/add-productos-tables.js";
 import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
 import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
 import addFestivosTable from "./migrations/add-festivos-table.js";
+import addDisponibilidadConfig from "./migrations/add-disponibilidad-config.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import { authJWT } from "./middleware/authJWT.js";
@@ -653,6 +655,7 @@ const initializeDatabase = async () => {
 		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
 		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
 		await addFestivosTable(); // Migración para tabla de festivos
+		await addDisponibilidadConfig(); // Migración para configuración de disponibilidad y descuentos por retorno
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -4368,6 +4371,8 @@ app.put("/api/destinos/:id", authAdmin, async (req, res) => {
 			maxPasajeros,
 			minHorasAnticipacion,
 			orden,
+			duracionIdaMinutos,
+			duracionVueltaMinutos,
 		} = req.body || {};
 
 		await destino.update({
@@ -4396,6 +4401,14 @@ app.put("/api/destinos/:id", authAdmin, async (req, res) => {
 					? Number(minHorasAnticipacion)
 					: destino.minHorasAnticipacion,
 			orden: orden !== undefined ? Number(orden) : destino.orden,
+			duracionIdaMinutos:
+				duracionIdaMinutos !== undefined
+					? Number(duracionIdaMinutos)
+					: destino.duracionIdaMinutos,
+			duracionVueltaMinutos:
+				duracionVueltaMinutos !== undefined
+					? Number(duracionVueltaMinutos)
+					: destino.duracionVueltaMinutos,
 		});
 
 		res.json({ success: true, destino });
@@ -5232,6 +5245,203 @@ app.delete("/api/festivos/:id", authAdmin, async (req, res) => {
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
+
+// ============================================
+// ENDPOINTS DE DISPONIBILIDAD Y DESCUENTOS POR RETORNO
+// ============================================
+
+// Importar funciones de utilidad
+import {
+	verificarDisponibilidadVehiculos,
+	buscarOportunidadesRetorno,
+	validarHorarioMinimo,
+	obtenerConfiguracionDisponibilidad,
+} from "./utils/disponibilidad.js";
+
+// Obtener configuración de disponibilidad (para panel admin)
+app.get("/api/disponibilidad/configuracion", authAdmin, async (req, res) => {
+	try {
+		const config = await ConfiguracionDisponibilidad.findOne({
+			where: { activo: true },
+			order: [["createdAt", "DESC"]],
+		});
+
+		if (!config) {
+			// Crear configuración por defecto si no existe
+			const nuevaConfig = await ConfiguracionDisponibilidad.create({
+				holguraMinima: 30,
+				holguraOptima: 60,
+				holguraMaximaDescuento: 180,
+				descuentoMinimo: 1.0,
+				descuentoMaximo: 40.0,
+				horaLimiteRetornos: "20:00:00",
+				activo: true,
+				descripcion: "Configuración inicial del sistema",
+			});
+			return res.json(nuevaConfig);
+		}
+
+		res.json(config);
+	} catch (error) {
+		console.error("Error obteniendo configuración de disponibilidad:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar configuración de disponibilidad (para panel admin)
+app.put("/api/disponibilidad/configuracion/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const {
+			holguraOptima,
+			holguraMaximaDescuento,
+			descuentoMinimo,
+			descuentoMaximo,
+			horaLimiteRetornos,
+			activo,
+			descripcion,
+		} = req.body;
+
+		const config = await ConfiguracionDisponibilidad.findByPk(id);
+		if (!config) {
+			return res.status(404).json({ error: "Configuración no encontrada" });
+		}
+
+		// Validaciones
+		if (holguraOptima < 30) {
+			return res.status(400).json({
+				error: "La holgura óptima no puede ser menor a 30 minutos",
+			});
+		}
+
+		if (holguraMaximaDescuento < holguraOptima) {
+			return res.status(400).json({
+				error: "La holgura máxima debe ser mayor o igual a la holgura óptima",
+			});
+		}
+
+		if (descuentoMinimo < 0 || descuentoMinimo > 100) {
+			return res.status(400).json({
+				error: "El descuento mínimo debe estar entre 0 y 100",
+			});
+		}
+
+		if (descuentoMaximo < descuentoMinimo || descuentoMaximo > 100) {
+			return res.status(400).json({
+				error: "El descuento máximo debe ser mayor o igual al mínimo y no superar 100",
+			});
+		}
+
+		await config.update({
+			holguraOptima,
+			holguraMaximaDescuento,
+			descuentoMinimo,
+			descuentoMaximo,
+			horaLimiteRetornos,
+			activo,
+			descripcion,
+			ultimaModificacionPor: req.user?.username || "admin",
+		});
+
+		res.json({
+			success: true,
+			message: "Configuración actualizada exitosamente",
+			config,
+		});
+	} catch (error) {
+		console.error("Error actualizando configuración:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Verificar disponibilidad de vehículos (público, para formulario de reserva)
+app.post("/api/disponibilidad/verificar", async (req, res) => {
+	try {
+		const { fecha, hora, duracionMinutos, pasajeros, excludeReservaId } = req.body;
+
+		if (!fecha || !hora) {
+			return res.status(400).json({
+				error: "Fecha y hora son requeridas",
+			});
+		}
+
+		const resultado = await verificarDisponibilidadVehiculos({
+			fecha,
+			hora,
+			duracionMinutos: duracionMinutos || 60,
+			pasajeros: pasajeros || 1,
+			excludeReservaId,
+		});
+
+		res.json(resultado);
+	} catch (error) {
+		console.error("Error verificando disponibilidad:", error);
+		res.status(500).json({
+			error: "Error interno del servidor",
+			mensaje: error.message,
+		});
+	}
+});
+
+// Buscar oportunidades de retorno (público, para formulario de reserva)
+app.post("/api/disponibilidad/oportunidades-retorno", async (req, res) => {
+	try {
+		const { origen, destino, fecha, hora } = req.body;
+
+		if (!origen || !destino || !fecha || !hora) {
+			return res.status(400).json({
+				error: "Origen, destino, fecha y hora son requeridos",
+			});
+		}
+
+		const resultado = await buscarOportunidadesRetorno({
+			origen,
+			destino,
+			fecha,
+			hora,
+		});
+
+		res.json(resultado);
+	} catch (error) {
+		console.error("Error buscando oportunidades de retorno:", error);
+		res.status(500).json({
+			error: "Error interno del servidor",
+			mensaje: error.message,
+		});
+	}
+});
+
+// Validar horario mínimo (público, para formulario de reserva)
+app.post("/api/disponibilidad/validar-horario", async (req, res) => {
+	try {
+		const { fecha, hora, vehiculoId, excludeReservaId } = req.body;
+
+		if (!fecha || !hora) {
+			return res.status(400).json({
+				error: "Fecha y hora son requeridas",
+			});
+		}
+
+		const resultado = await validarHorarioMinimo({
+			fecha,
+			hora,
+			vehiculoId,
+			excludeReservaId,
+		});
+
+		res.json(resultado);
+	} catch (error) {
+		console.error("Error validando horario:", error);
+		res.status(500).json({
+			error: "Error interno del servidor",
+			mensaje: error.message,
+		});
+	}
+});
+
+// ============================================
+// FIN ENDPOINTS DE DISPONIBILIDAD
+// ============================================
 
 // Eliminar una reserva
 app.delete("/api/reservas/:id", async (req, res) => {
