@@ -446,17 +446,27 @@ const normalizeUsuariosQueUsaron = (raw) => {
 // --- Configuración CORS ---
 // Nota: ampliamos headers permitidos y respondemos a preflight para evitar bloqueos desde el dominio público
 const corsOptions = {
-	origin: [
-		"https://www.transportesaraucaria.cl",
-		"https://transportesaraucaria.cl",
-		"http://localhost:3000",
-		"http://localhost:5173",
-		"http://127.0.0.1:5173",
-	],
+	origin: function (origin, callback) {
+		const allowedOrigins = [
+			"https://www.transportesaraucaria.cl",
+			"https://transportesaraucaria.cl",
+			"http://localhost:3000",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+		];
+		
+		// Permitir peticiones sin origin (como Postman, curl, o server-to-server)
+		if (!origin) return callback(null, true);
+		
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			callback(null, true);
+		} else {
+			console.warn(`⚠️ CORS: Origen no permitido: ${origin}`);
+			callback(null, false);
+		}
+	},
 	credentials: true,
 	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-	// Permitimos cabeceras comunes y X-Requested-With; si el navegador envía otras,
-	// conviene no restringir en exceso (también podríamos omitir esta opción para reflejar automáticamente)
 	allowedHeaders: [
 		"Content-Type",
 		"Authorization",
@@ -465,11 +475,30 @@ const corsOptions = {
 		"Origin",
 	],
 	optionsSuccessStatus: 200,
+	maxAge: 86400, // Cache preflight por 24 horas
 };
 
 app.use(cors(corsOptions));
-// Responder explícitamente a las solicitudes de preflight
-app.options("*", cors(corsOptions));
+
+// Middleware de logging de peticiones CORS
+app.use((req, res, next) => {
+	if (req.method === 'OPTIONS') {
+		console.log(`🔍 CORS Preflight: ${req.method} ${req.path} desde ${req.headers.origin || 'sin origin'}`);
+	}
+	next();
+});
+
+// Responder explícitamente a las solicitudes de preflight con headers manuales
+app.options("*", (req, res) => {
+	const origin = req.headers.origin || "*";
+	console.log(`✅ CORS Preflight respondido para: ${origin}`);
+	res.header("Access-Control-Allow-Origin", origin);
+	res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+	res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+	res.header("Access-Control-Allow-Credentials", "true");
+	res.header("Access-Control-Max-Age", "86400");
+	res.sendStatus(200);
+});
 
 // --- RUTAS DE AUTENTICACIÓN ---
 app.use("/api/auth", authRoutes);
