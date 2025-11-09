@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -78,12 +79,19 @@ function AdminReservas() {
 	// Estado para cambio masivo de estado de pago
 	// Eliminado bulkEstadoPago y setBulkEstadoPago por no usarse
 	// Eliminado showBulkPaymentDialog por no usarse
-	// Token de administrador
-	const ADMIN_TOKEN =
+	
+	// Sistema de autenticación moderno
+	const { accessToken } = useAuth();
+	
+	// Token de administrador (con compatibilidad backward)
+	// Prioriza el nuevo sistema (accessToken) sobre el legacy (localStorage)
+	const ADMIN_TOKEN = 
+		accessToken || 
 		import.meta.env.VITE_ADMIN_TOKEN ||
 		(typeof window !== "undefined"
-			? localStorage.getItem("adminToken") || ""
+			? localStorage.getItem("adminToken") || localStorage.getItem("adminAccessToken") || ""
 			: "");
+	
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -290,7 +298,8 @@ function AdminReservas() {
 		{ key: "contacto", label: "Contacto", defaultVisible: true },
 		{ key: "rut", label: "RUT", defaultVisible: false },
 		{ key: "ruta", label: "Ruta", defaultVisible: true },
-		{ key: "fechaHora", label: "Fecha/Hora", defaultVisible: true },
+		{ key: "fechaHora", label: "Fecha/Hora Viaje", defaultVisible: true },
+		{ key: "fechaCreacion", label: "Fecha Creación", defaultVisible: false },
 		{ key: "pasajeros", label: "Pasajeros", defaultVisible: true },
 		{ key: "total", label: "Total", defaultVisible: true },
 		{ key: "estado", label: "Estado", defaultVisible: true },
@@ -585,7 +594,7 @@ function AdminReservas() {
 
 		setLoadingAsignacion(true);
 		try {
-			const ADMIN_TOKEN = localStorage.getItem("adminToken");
+			// Usa el ADMIN_TOKEN definido al inicio del componente
 			const response = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
 				{
@@ -613,7 +622,7 @@ function AdminReservas() {
 				if (showDetailDialog && selectedReserva?.id) {
 					setLoadingHistorial(true);
 					try {
-						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						// Usa el ADMIN_TOKEN definido al inicio del componente
 						const resp = await fetch(
 							`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`,
 							{
@@ -794,17 +803,14 @@ function AdminReservas() {
 
 		setShowDetailDialog(true);
 
-		// Cargar historial de asignaciones (uso interno) usando token dinámico si existe
+		// Cargar historial de asignaciones (uso interno) usando token del contexto
 		try {
-			const dynamicToken =
-				typeof window !== "undefined"
-					? localStorage.getItem("adminToken")
-					: null;
+			// Usa el ADMIN_TOKEN definido al inicio del componente
 			const resp = await fetch(
 				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
 				{
-					headers: dynamicToken
-						? { Authorization: `Bearer ${dynamicToken}` }
+					headers: ADMIN_TOKEN
+						? { Authorization: `Bearer ${ADMIN_TOKEN}` }
 						: {},
 				}
 			);
@@ -832,7 +838,7 @@ function AdminReservas() {
 		try {
 			// Actualizar datos generales de la reserva
 			try {
-				const ADMIN_TOKEN = localStorage.getItem("adminToken");
+				// Usa el ADMIN_TOKEN definido al inicio del componente
 				const generalResp = await fetch(
 					`${apiUrl}/api/reservas/${selectedReserva.id}`,
 					{
@@ -888,7 +894,7 @@ function AdminReservas() {
 					!destinoExiste(destinoFinalEdit)
 				) {
 					try {
-						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						// Usa el ADMIN_TOKEN definido al inicio del componente
 						await fetch(`${apiUrl}/api/destinos`, {
 							method: "POST",
 							headers: {
@@ -914,7 +920,7 @@ function AdminReservas() {
 					!destinoExiste(origenFinalEdit)
 				) {
 					try {
-						const ADMIN_TOKEN = localStorage.getItem("adminToken");
+						// Usa el ADMIN_TOKEN definido al inicio del componente
 						await fetch(`${apiUrl}/api/destinos`, {
 							method: "POST",
 							headers: {
@@ -933,8 +939,7 @@ function AdminReservas() {
 						// Ignorar errores al guardar origen
 					}
 				}
-				// Actualizar ruta
-				const ADMIN_TOKEN = localStorage.getItem("adminToken");
+				// Actualizar ruta (usa el ADMIN_TOKEN definido al inicio del componente)
 				const rutaResp = await fetch(
 					`${apiUrl}/api/reservas/${selectedReserva.id}/ruta`,
 					{
@@ -1016,11 +1021,7 @@ function AdminReservas() {
 				}
 			}
 
-			// Enviar actualización de pago al backend (incluir token admin si existe)
-			const ADMIN_TOKEN =
-				typeof window !== "undefined"
-					? localStorage.getItem("adminToken")
-					: null;
+			// Enviar actualización de pago al backend (usa el token del contexto)
 			const pagoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
 				{
@@ -1511,7 +1512,7 @@ function AdminReservas() {
 			// Crear destino si es 'otro' y no existe
 			if (destinoEsOtro && destinoFinal && !destinoExiste(destinoFinal)) {
 				try {
-					const ADMIN_TOKEN = localStorage.getItem("adminToken");
+					// Usa el ADMIN_TOKEN definido al inicio del componente
 					await fetch(`${apiUrl}/api/destinos`, {
 						method: "POST",
 						headers: {
@@ -1990,7 +1991,7 @@ function AdminReservas() {
 										onClick={async () => {
 											if (!selectedReserva) return;
 											try {
-												const ADMIN_TOKEN = localStorage.getItem("adminToken");
+												// Usa el ADMIN_TOKEN definido al inicio del componente
 												const resp = await fetch(
 													`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,
 													{
@@ -2106,7 +2107,10 @@ function AdminReservas() {
 									{columnasVisibles.numViajes && <TableHead>Viajes</TableHead>}
 									{columnasVisibles.ruta && <TableHead>Ruta</TableHead>}
 									{columnasVisibles.fechaHora && (
-										<TableHead>Fecha/Hora</TableHead>
+										<TableHead>Fecha/Hora Viaje</TableHead>
+									)}
+									{columnasVisibles.fechaCreacion && (
+										<TableHead>Fecha Creación</TableHead>
 									)}
 									{columnasVisibles.pasajeros && (
 										<TableHead>Pasajeros</TableHead>
@@ -2290,6 +2294,25 @@ function AdminReservas() {
 															<Clock className="w-3 h-3 text-muted-foreground" />
 															<span>{reserva.hora || "-"}</span>
 														</div>
+													</div>
+												</TableCell>
+											)}
+											{columnasVisibles.fechaCreacion && (
+												<TableCell>
+													<div className="text-xs text-muted-foreground">
+														{reserva.createdAt
+															? new Date(reserva.createdAt).toLocaleString(
+																	"es-CL",
+																	{
+																		year: "numeric",
+																		month: "2-digit",
+																		day: "2-digit",
+																		hour: "2-digit",
+																		minute: "2-digit",
+																		hour12: false,
+																	}
+															  )
+															: "-"}
 													</div>
 												</TableCell>
 											)}
@@ -2521,13 +2544,13 @@ function AdminReservas() {
 										<p className="font-medium">{selectedReserva.destino}</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">Fecha</Label>
+										<Label className="text-muted-foreground">Fecha del Viaje</Label>
 										<p className="font-medium">
 											{formatDate(selectedReserva.fecha)}
 										</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">Hora</Label>
+										<Label className="text-muted-foreground">Hora de Recogida</Label>
 										<p className="font-medium">{selectedReserva.hora || "-"}</p>
 									</div>
 									<div>
@@ -2560,6 +2583,60 @@ function AdminReservas() {
 											</div>
 										</>
 									)}
+								</div>
+							</div>
+
+							{/* Información de la Reserva */}
+							<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+								<h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+									<svg
+										className="w-5 h-5 text-slate-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+										/>
+									</svg>
+									Registro de la Reserva
+								</h3>
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<Label className="text-muted-foreground">Fecha de Creación</Label>
+										<p className="font-medium">
+											{selectedReserva.createdAt
+												? new Date(selectedReserva.createdAt).toLocaleString("es-CL", {
+														year: "numeric",
+														month: "2-digit",
+														day: "2-digit",
+														hour: "2-digit",
+														minute: "2-digit",
+														second: "2-digit",
+														hour12: false,
+												  })
+												: "-"}
+										</p>
+									</div>
+									<div>
+										<Label className="text-muted-foreground">Última Modificación</Label>
+										<p className="font-medium">
+											{selectedReserva.updatedAt
+												? new Date(selectedReserva.updatedAt).toLocaleString("es-CL", {
+														year: "numeric",
+														month: "2-digit",
+														day: "2-digit",
+														hour: "2-digit",
+														minute: "2-digit",
+														second: "2-digit",
+														hour12: false,
+												  })
+												: "-"}
+										</p>
+									</div>
 								</div>
 							</div>
 

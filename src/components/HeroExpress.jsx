@@ -6,11 +6,35 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Checkbox } from "./ui/checkbox";
-import { LoaderCircle, Calendar, Users } from "lucide-react";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "./ui/select";
+import { LoaderCircle, Calendar, Users, Clock } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import CodigoDescuento from "./CodigoDescuento";
 import { getBackendUrl } from "../lib/backend";
+
+// Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
+const generateTimeOptions = () => {
+	const options = [];
+	for (let hour = 6; hour <= 20; hour++) {
+		for (let minute = 0; minute < 60; minute += 15) {
+			const timeString = `${hour.toString().padStart(2, "0")}:${minute
+				.toString()
+				.padStart(2, "0")}`;
+			const displayTime = `${hour.toString().padStart(2, "0")}:${minute
+				.toString()
+				.padStart(2, "0")}`;
+			options.push({ value: timeString, label: displayTime });
+		}
+	}
+	return options;
+};
 
 function HeroExpress({
 	formData,
@@ -43,6 +67,9 @@ function HeroExpress({
 	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
 	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
+	
+	// Generar opciones de tiempo en intervalos de 15 minutos
+	const timeOptions = useMemo(() => generateTimeOptions(), []);
 
 	// Pasos simplificados para flujo express
 	const steps = useMemo(
@@ -152,6 +179,11 @@ function HeroExpress({
 
 		if (!formData.fecha) {
 			setStepError("Selecciona la fecha de tu traslado.");
+			return;
+		}
+
+		if (!formData.hora) {
+			setStepError("Selecciona la hora de recogida.");
 			return;
 		}
 
@@ -542,7 +574,7 @@ function HeroExpress({
 											</div>
 										</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 											<div className="space-y-2">
 												<Label
 													htmlFor="fecha-express"
@@ -563,6 +595,40 @@ function HeroExpress({
 													className="h-12 text-base"
 													required
 												/>
+											</div>
+
+											<div className="space-y-2">
+												<Label
+													htmlFor="hora-express"
+													className="text-base font-medium"
+												>
+													<span className="flex items-center gap-2">
+														<Clock className="h-4 w-4" />
+														Hora de recogida
+													</span>
+												</Label>
+												<Select
+													value={formData.hora}
+													onValueChange={(value) => {
+														handleInputChange({
+															target: { name: "hora", value },
+														});
+													}}
+												>
+													<SelectTrigger className="h-12 text-base">
+														<SelectValue placeholder="Selecciona la hora" />
+													</SelectTrigger>
+													<SelectContent>
+														{timeOptions.map((option) => (
+															<SelectItem
+																key={option.value}
+																value={option.value}
+															>
+																{option.label}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
 											</div>
 
 											<div className="space-y-2">
