@@ -2,7 +2,7 @@
 // Se ejecuta automáticamente al iniciar el servidor en Render.com
 
 /* global process */
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import AdminUser from './models/AdminUser.js';
 import { testConnection, syncDatabase } from './config/database.js';
 

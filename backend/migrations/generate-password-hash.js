@@ -1,7 +1,7 @@
 // Script para generar hash de contraseña con bcrypt
 // AVISO: Este archivo debe ejecutarse en el servidor de Render.com o localmente con Node.js
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const password = 'admin123'; // Cambia esta contraseña por la que desees
 const saltRounds = 10;
