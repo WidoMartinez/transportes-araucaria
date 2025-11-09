@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -64,12 +65,7 @@ const TIPOS_GASTO = [
 ];
 
 function AdminGastos() {
-	const ADMIN_TOKEN =
-		import.meta.env.VITE_ADMIN_TOKEN ||
-		(typeof window !== "undefined"
-			? localStorage.getItem("adminToken") || ""
-			: "");
-
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 	const [reservas, setReservas] = useState([]);
@@ -114,10 +110,8 @@ function AdminGastos() {
 
 	const fetchReservas = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/reservas?estado=completada`, {
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
+			const response = await authenticatedFetch(`/api/reservas?estado=completada`, {
+				method: "GET",
 			});
 			if (response.ok) {
 				const data = await response.json();
@@ -130,10 +124,8 @@ function AdminGastos() {
 
 	const fetchConductores = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/conductores`, {
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
+			const response = await authenticatedFetch(`/api/conductores`, {
+				method: "GET",
 			});
 			if (response.ok) {
 				const data = await response.json();
@@ -146,10 +138,8 @@ function AdminGastos() {
 
 	const fetchVehiculos = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/vehiculos`, {
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
+			const response = await authenticatedFetch(`/api/vehiculos`, {
+				method: "GET",
 			});
 			if (response.ok) {
 				const data = await response.json();
@@ -163,10 +153,8 @@ function AdminGastos() {
 	const fetchGastos = async (reservaId) => {
 		setLoading(true);
 		try {
-			const response = await fetch(`${apiUrl}/api/reservas/${reservaId}/gastos`, {
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
+			const response = await authenticatedFetch(`/api/reservas/${reservaId}/gastos`, {
+				method: "GET",
 			});
 			if (response.ok) {
 				const data = await response.json();
@@ -346,12 +334,8 @@ function AdminGastos() {
 		setSavingBulk(true);
 		try {
 			for (const draft of validDrafts) {
-				const response = await fetch(`${apiUrl}/api/gastos`, {
+				const response = await authenticatedFetch(`/api/gastos`, {
 					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
 					body: JSON.stringify({
 						reservaId: reservaSeleccionada.id,
 						tipoGasto: draft.tipoGasto,
@@ -391,12 +375,8 @@ function AdminGastos() {
 
 		setLoading(true);
 		try {
-			const response = await fetch(`${apiUrl}/api/gastos/${editingGasto.id}`, {
+			const response = await authenticatedFetch(`/api/gastos/${editingGasto.id}`, {
 				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
 				body: JSON.stringify({
 					...formData,
 					conductorId: formData.conductorId || null,
@@ -426,11 +406,8 @@ function AdminGastos() {
 
 		setLoading(true);
 		try {
-			const response = await fetch(`${apiUrl}/api/gastos/${gastoToDelete.id}`, {
+			const response = await authenticatedFetch(`/api/gastos/${gastoToDelete.id}`, {
 				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
 			});
 
 			if (response.ok) {
