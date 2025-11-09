@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "../lib/backend";
 
 /**
@@ -43,6 +44,111 @@ export const AuthProvider = ({ children }) => {
 
 		setLoading(false);
 	}, []);
+
+	/**
+	 * Iniciar sesión
+	 */
+	const login = async (username, password) => {
+		try {
+			const response = await fetch(`${getBackendUrl()}/api/auth/login`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ username, password }),
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.message || "Error al iniciar sesión");
+			}
+
+			// Guardar datos en estado y localStorage
+			const { accessToken, refreshToken, user } = data.data;
+
+			setUser(user);
+			setAccessToken(accessToken);
+			setRefreshToken(refreshToken);
+
+			localStorage.setItem("adminUser", JSON.stringify(user));
+			localStorage.setItem("adminAccessToken", accessToken);
+			localStorage.setItem("adminRefreshToken", refreshToken);
+
+			return { success: true, user };
+		} catch (error) {
+			console.error("Error en login:", error);
+			return {
+				success: false,
+				message: error.message || "Error al iniciar sesión",
+			};
+		}
+	};
+
+	/**
+	 * Cerrar sesión
+	 */
+	const logout = useCallback(async () => {
+		try {
+			if (accessToken) {
+				await fetch(`${getBackendUrl()}/api/auth/logout`, {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${accessToken}`,
+					},
+				});
+			}
+		} catch (error) {
+			console.error("Error al cerrar sesión:", error);
+		} finally {
+			// Limpiar estado y localStorage
+			setUser(null);
+			setAccessToken(null);
+			setRefreshToken(null);
+
+			localStorage.removeItem("adminUser");
+			localStorage.removeItem("adminAccessToken");
+			localStorage.removeItem("adminRefreshToken");
+			// Mantener compatibilidad con sistema antiguo
+			localStorage.removeItem("adminToken");
+		}
+	}, [accessToken]);
+
+	/**
+	 * Renovar token de acceso
+	 */
+	const renewToken = useCallback(async () => {
+		if (!refreshToken) {
+			logout();
+			return null;
+		}
+
+		try {
+			const response = await fetch(`${getBackendUrl()}/api/auth/refresh`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ refreshToken }),
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error("Error al renovar token");
+			}
+
+			const newAccessToken = data.data.accessToken;
+			setAccessToken(newAccessToken);
+			localStorage.setItem("adminAccessToken", newAccessToken);
+
+			return newAccessToken;
+		} catch (error) {
+			console.error("Error al renovar token:", error);
+			logout();
+			return null;
+		}
+	}, [logout, refreshToken]);
 
 	// Verificar token periódicamente (cada 10 minutos) solo si hay actividad
 	useEffect(() => {
@@ -92,111 +198,6 @@ export const AuthProvider = ({ children }) => {
 			window.removeEventListener("click", updateActivity);
 		};
 	}, [accessToken, renewToken]);
-
-	/**
-	 * Iniciar sesión
-	 */
-	const login = async (username, password) => {
-		try {
-			const response = await fetch(`${getBackendUrl()}/api/auth/login`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ username, password }),
-			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.message || "Error al iniciar sesión");
-			}
-
-			// Guardar datos en estado y localStorage
-			const { accessToken, refreshToken, user } = data.data;
-
-			setUser(user);
-			setAccessToken(accessToken);
-			setRefreshToken(refreshToken);
-
-			localStorage.setItem("adminUser", JSON.stringify(user));
-			localStorage.setItem("adminAccessToken", accessToken);
-			localStorage.setItem("adminRefreshToken", refreshToken);
-
-			return { success: true, user };
-		} catch (error) {
-			console.error("Error en login:", error);
-			return {
-				success: false,
-				message: error.message || "Error al iniciar sesión",
-			};
-		}
-	};
-
-	/**
-	 * Cerrar sesión
-	 */
-	const logout = async () => {
-		try {
-			if (accessToken) {
-				await fetch(`${getBackendUrl()}/api/auth/logout`, {
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${accessToken}`,
-					},
-				});
-			}
-		} catch (error) {
-			console.error("Error al cerrar sesión:", error);
-		} finally {
-			// Limpiar estado y localStorage
-			setUser(null);
-			setAccessToken(null);
-			setRefreshToken(null);
-
-			localStorage.removeItem("adminUser");
-			localStorage.removeItem("adminAccessToken");
-			localStorage.removeItem("adminRefreshToken");
-			// Mantener compatibilidad con sistema antiguo
-			localStorage.removeItem("adminToken");
-		}
-	};
-
-	/**
-	 * Renovar token de acceso
-	 */
-	const renewToken = async () => {
-		if (!refreshToken) {
-			logout();
-			return null;
-		}
-
-		try {
-			const response = await fetch(`${getBackendUrl()}/api/auth/refresh`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ refreshToken }),
-			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error("Error al renovar token");
-			}
-
-			const newAccessToken = data.data.accessToken;
-			setAccessToken(newAccessToken);
-			localStorage.setItem("adminAccessToken", newAccessToken);
-
-			return newAccessToken;
-		} catch (error) {
-			console.error("Error al renovar token:", error);
-			logout();
-			return null;
-		}
-	};
 
 	/**
 	 * Obtener token válido (renovar si es necesario)
