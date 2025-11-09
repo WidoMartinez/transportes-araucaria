@@ -36,6 +36,7 @@ import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import { authAdminCompatible } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
+import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
 
 dotenv.config();
@@ -601,6 +602,7 @@ const initializeDatabase = async () => {
 		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
 		await syncDatabase(false, [
 			AdminUser, // Primero los usuarios admin
+			AdminAuditLog, // Logs de auditoría de admin
 			Destino,
 			Cliente,
 			Vehiculo,
