@@ -14,6 +14,8 @@ import AdminEstadisticas from "./AdminEstadisticas";
 import AdminProductos from "./AdminProductos";
 import AdminTarifaDinamica from "./AdminTarifaDinamica";
 import AdminFestivos from "./AdminFestivos";
+import AdminUsuarios from "./AdminUsuarios";
+import AdminPerfil from "./AdminPerfil";
 
 function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -76,7 +78,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "festivos"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
+      <div className={`${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "festivos", "usuarios", "perfil"].includes(active) ? "w-full" : "max-w-6xl mx-auto"} px-4 py-6`}>
         <h2 className="text-xl font-semibold mb-4">Gestión</h2>
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
@@ -127,6 +129,16 @@ function AdminDashboard() {
             className={`px-3 py-2 rounded border ${active === "codigos-pago" ? "bg-primary text-primary-foreground" : "bg-white"}`}
             onClick={() => setPanel("codigos-pago")}
           >Códigos de Pago</button>
+          {user?.rol === "superadmin" && (
+            <button
+              className={`px-3 py-2 rounded border ${active === "usuarios" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+              onClick={() => setPanel("usuarios")}
+            >Usuarios</button>
+          )}
+          <button
+            className={`px-3 py-2 rounded border ${active === "perfil" ? "bg-primary text-primary-foreground" : "bg-white"}`}
+            onClick={() => setPanel("perfil")}
+          >Mi Perfil</button>
         </div>
 
         {active === "reservas" ? (
@@ -151,6 +163,10 @@ function AdminDashboard() {
           <AdminCodigosMejorado />
         ) : active === "codigos-pago" ? (
           <AdminCodigosPago />
+        ) : active === "usuarios" ? (
+          <AdminUsuarios />
+        ) : active === "perfil" ? (
+          <AdminPerfil />
         ) : (
           <AdminPricing />
         )}

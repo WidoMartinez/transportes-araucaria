@@ -475,7 +475,7 @@ router.get("/users", apiLimiter, authJWT, requireRole("superadmin"), async (req,
 
 		res.json({
 			success: true,
-			data: users,
+			users,
 		});
 	} catch (error) {
 		console.error("Error al listar usuarios:", error);
@@ -485,5 +485,158 @@ router.get("/users", apiLimiter, authJWT, requireRole("superadmin"), async (req,
 		});
 	}
 });
+
+/**
+ * PUT /api/auth/users/:id
+ * Actualizar usuario admin (solo superadmin)
+ */
+router.put(
+	"/users/:id",
+	strictLimiter,
+	authJWT,
+	requireRole("superadmin"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { email, password, nombre, rol, activo } = req.body;
+
+			// Buscar usuario
+			const user = await AdminUser.findByPk(id);
+
+			if (!user) {
+				return res.status(404).json({
+					success: false,
+					message: "Usuario no encontrado",
+				});
+			}
+
+			// Preparar datos de actualización
+			const updateData = {};
+
+			if (email) {
+				const sanitizedEmail = sanitizeInput(email);
+				
+				// Verificar si el email ya existe en otro usuario
+				const existingUser = await AdminUser.findOne({
+					where: {
+						email: sanitizedEmail,
+						id: { [Op.ne]: id },
+					},
+				});
+
+				if (existingUser) {
+					return res.status(400).json({
+						success: false,
+						message: "El email ya está en uso",
+					});
+				}
+
+				updateData.email = sanitizedEmail;
+			}
+
+			if (nombre !== undefined) {
+				updateData.nombre = sanitizeInput(nombre);
+			}
+
+			if (rol !== undefined) {
+				if (!["admin", "superadmin"].includes(rol)) {
+					return res.status(400).json({
+						success: false,
+						message: "Rol inválido",
+					});
+				}
+				updateData.rol = rol;
+			}
+
+			if (activo !== undefined) {
+				updateData.activo = activo;
+			}
+
+			if (password) {
+				// Validar fortaleza de la nueva contraseña
+				const validation = validatePasswordStrength(password);
+				if (!validation.valid) {
+					return res.status(400).json({
+						success: false,
+						message: "La contraseña no cumple con los requisitos de seguridad",
+						errors: validation.errors,
+					});
+				}
+
+				updateData.password = await hashPassword(password);
+			}
+
+			// Actualizar usuario
+			await user.update(updateData);
+
+			res.json({
+				success: true,
+				message: "Usuario actualizado exitosamente",
+				data: {
+					id: user.id,
+					username: user.username,
+					email: user.email,
+					nombre: user.nombre,
+					rol: user.rol,
+					activo: user.activo,
+				},
+			});
+		} catch (error) {
+			console.error("Error al actualizar usuario:", error);
+			res.status(500).json({
+				success: false,
+				message: "Error al actualizar usuario",
+			});
+		}
+	}
+);
+
+/**
+ * DELETE /api/auth/users/:id
+ * Eliminar usuario admin (solo superadmin)
+ */
+router.delete(
+	"/users/:id",
+	strictLimiter,
+	authJWT,
+	requireRole("superadmin"),
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+
+			// No permitir eliminar el propio usuario
+			if (parseInt(id) === req.user.id) {
+				return res.status(400).json({
+					success: false,
+					message: "No puedes eliminar tu propio usuario",
+				});
+			}
+
+			// Buscar usuario
+			const user = await AdminUser.findByPk(id);
+
+			if (!user) {
+				return res.status(404).json({
+					success: false,
+					message: "Usuario no encontrado",
+				});
+			}
+
+			// Eliminar usuario
+			await user.destroy();
+
+			res.json({
+				success: true,
+				message: "Usuario eliminado exitosamente",
+			});
+		} catch (error) {
+			console.error("Error al eliminar usuario:", error);
+			res.status(500).json({
+				success: false,
+				message: "Error al eliminar usuario",
+			});
+		}
+	}
+);
 
 export default router;
