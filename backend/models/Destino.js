@@ -54,6 +54,20 @@ const Destino = sequelize.define(
 			type: DataTypes.INTEGER,
 			defaultValue: 5,
 		},
+		duracionIdaMinutos: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			defaultValue: 60,
+			field: "duracion_ida_minutos",
+			comment: "Duración estimada del viaje de ida en minutos",
+		},
+		duracionVueltaMinutos: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			defaultValue: 60,
+			field: "duracion_vuelta_minutos",
+			comment: "Duración estimada del viaje de vuelta en minutos",
+		},
 	},
 	{
 		tableName: "destinos",
