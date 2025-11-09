@@ -376,7 +376,7 @@ function HeroExpress({
 	return (
 		<section
 			id="inicio"
-			className="relative bg-gradient-to-r from-primary to-secondary text-white min-h-screen flex items-center"
+			className="relative bg-primary text-white min-h-screen flex items-center"
 		>
 			<div
 				className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -388,67 +388,46 @@ function HeroExpress({
 				{!showBookingModule && (
 					<>
 						<h1 className="text-4xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
-							Traslados Privados Aeropuerto La Araucanía
-							<br />
-							<span className="text-accent drop-shadow-lg text-3xl md:text-5xl">
-								Reserva en 2 minutos
-							</span>
+							Traslados Aeropuerto La Araucanía
 						</h1>
-						<p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto drop-shadow-lg">
-							Descubre La Araucanía con nuestros traslados privados: conectamos
-							el aeropuerto directamente con Pucón, Villarrica, Malalcahuello y
-							todos los destinos turísticos de la región.
-							<br />
-							<span className="text-accent font-bold">
-								¡Aprovecha nuestro descuento web del {baseDiscountPercentage}%
-								garantizado
-								{promoDiscountPercentage > 0 &&
-									` + ${promoDiscountPercentage}% extra`}
-								!
-							</span>
+						<p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto drop-shadow-lg">
+							Reserva tu traslado privado al aeropuerto. Rápido, seguro y con {baseDiscountPercentage}% de descuento.
 						</p>
 					</>
 				)}
 
 				{!showBookingModule && (
-					<div className="flex flex-col items-center justify-center space-y-6">
+					<div className="flex flex-col items-center justify-center space-y-4">
 						<Button
 							onClick={() => setShowBookingModule(true)}
-							className="bg-accent hover:bg-accent/90 text-accent-foreground px-12 py-6 text-2xl font-bold rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-110 drop-shadow-lg animate-bounce hover:animate-none"
+							className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-4 text-xl font-semibold rounded-lg shadow-lg"
 						>
-							🚀 Reservar ahora
+							Reservar ahora
 						</Button>
 						<Button
 							variant="outline"
-							className="bg-transparent border-white text-white hover:bg-white/10"
+							className="bg-transparent border-white text-white hover:bg-white/20"
 							asChild
 						>
 							<a href="#consultar-reserva">Continuar con código</a>
 						</Button>
-						<p className="text-lg text-white/95 drop-shadow-md font-medium">
-							Proceso súper rápido • Solo 2 pasos • Pago seguro
-						</p>
 					</div>
 				)}
 
 				{showBookingModule && (
 					<div className="w-full">
 						<div className="text-center mb-6">
-							<h3 className="text-2xl md:text-3xl font-bold text-white drop-shadow-2xl mb-3">
-								¡Reserva express y ahorra!
+							<h3 className="text-2xl font-bold text-white mb-2">
+								Reserva tu traslado
 							</h3>
-							<p className="text-lg md:text-xl text-white/95 drop-shadow-lg font-medium">
-								Solo 2 pasos • Descuento del{" "}
-								<span className="text-accent font-bold text-2xl">
-									{baseDiscountPercentage}%
-								</span>{" "}
-								aplicado automáticamente
+							<p className="text-base text-white/90">
+								{baseDiscountPercentage}% de descuento incluido
 							</p>
 						</div>
 
-						<Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-sm shadow-xl border text-left">
+						<Card className="max-w-4xl mx-auto bg-white shadow-xl text-left">
 							<CardHeader className="space-y-4">
-								<div className="flex flex-wrap items-center justify-between gap-2">
+								<div className="flex items-center justify-between">
 									<Button
 										variant="ghost"
 										size="sm"
@@ -457,63 +436,46 @@ function HeroExpress({
 									>
 										← Volver
 									</Button>
-									<div className="flex items-center gap-2">
-										<Badge variant="secondary" className="text-sm">
-											Descuento web {baseDiscountPercentage}%
-										</Badge>
-										{promoDiscountPercentage > 0 && (
-											<Badge
-												variant="default"
-												className="text-sm bg-emerald-500 text-white"
-											>
-												Extra +{promoDiscountPercentage}%
-											</Badge>
-										)}
-									</div>
+									<Badge variant="secondary" className="text-sm">
+										Descuento {baseDiscountPercentage}%
+									</Badge>
 								</div>
 
-								{/* Progress simplificado */}
-								<div className="space-y-4">
-									<div className="grid gap-4 md:grid-cols-2">
+								{/* Indicador de progreso simple */}
+								<div className="space-y-3">
+									<div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
 										{steps.map((step, index) => {
-											const isCompleted = index < currentStep;
 											const isActive = index === currentStep;
+											const isCompleted = index < currentStep;
 
 											return (
-												<div
-													key={step.title}
-													className={`flex items-center gap-3 rounded-lg border p-4 transition ${
-														isActive
-															? "border-primary bg-primary/10"
-															: isCompleted
-															? "border-green-500 bg-green-50"
-															: "border-gray-200 bg-gray-50"
-													}`}
-												>
+												<React.Fragment key={step.title}>
 													<div
-														className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl ${
-															isCompleted
-																? "bg-green-500 text-white"
-																: isActive
-																? "bg-primary text-white"
-																: "bg-gray-200 text-gray-500"
-														}`}
+														className={`flex items-center gap-2 ${
+															isActive ? "text-primary font-medium" : ""
+														} ${isCompleted ? "text-green-600" : ""}`}
 													>
-														{isCompleted ? "✓" : step.icon}
+														<div
+															className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+																isCompleted
+																	? "bg-green-500 text-white"
+																	: isActive
+																	? "bg-primary text-white"
+																	: "bg-gray-200 text-gray-500"
+															}`}
+														>
+															{isCompleted ? "✓" : index + 1}
+														</div>
+														<span className="hidden sm:inline">{step.title}</span>
 													</div>
-													<div>
-														<p className="font-semibold text-foreground text-lg">
-															{step.title}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															{step.description}
-														</p>
-													</div>
-												</div>
+													{index < steps.length - 1 && (
+														<div className="w-8 h-px bg-gray-300"></div>
+													)}
+												</React.Fragment>
 											);
 										})}
 									</div>
-									<Progress value={progressValue} className="h-3" />
+									<Progress value={progressValue} className="h-2" />
 								</div>
 							</CardHeader>
 
@@ -728,79 +690,39 @@ function HeroExpress({
 
 										{/* Precio estimado */}
 										{mostrarPrecio ? (
-											<div className="rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-secondary/5 p-6">
-												<div className="grid gap-4 md:grid-cols-2 md:items-center">
-													<div className="space-y-2">
-														<div className="flex items-center gap-2 flex-wrap">
-															<Badge variant="secondary">Precio estimado</Badge>
-															<Badge variant="default" className="bg-green-500">
-																-{baseDiscountPercentage}% web
-															</Badge>
-															{formData.idaVuelta &&
-																pricing.descuentoRoundTrip > 0 && (
-																	<Badge
-																		variant="default"
-																		className="bg-blue-500"
-																	>
-																		🔄 Ida y vuelta
-																	</Badge>
-																)}
-														</div>
-														<p className="text-2xl font-bold text-primary">
-															{formatCurrency(pricing.totalConDescuento)}
-														</p>
-														<p className="text-sm text-muted-foreground">
-															Vehículo: {cotizacion.vehiculo}
-															{formData.idaVuelta && " · Ida y vuelta"}
-														</p>
-													</div>
-													<div className="text-left md:text-right space-y-1">
-														<p className="text-sm text-muted-foreground line-through">
-															Precio regular:{" "}
-															{formatCurrency(pricing.precioBase)}
-														</p>
-														<p className="text-lg font-semibold text-green-600">
-															Ahorro total:{" "}
-															{formatCurrency(
-																pricing.descuentoBase +
-																	pricing.descuentoRoundTrip +
-																	pricing.descuentoCodigo
-															)}
-														</p>
-														{formData.idaVuelta &&
-															pricing.descuentoRoundTrip > 0 && (
-																<p className="text-xs text-blue-600">
-																	Incluye descuento ida y vuelta:{" "}
-																	{formatCurrency(pricing.descuentoRoundTrip)}
-																</p>
-															)}
-													</div>
+											<div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+												<div className="flex justify-between items-center mb-2">
+													<span className="text-sm text-muted-foreground">
+														Total con descuento
+													</span>
+													<span className="text-2xl font-bold text-primary">
+														{formatCurrency(pricing.totalConDescuento)}
+													</span>
+												</div>
+												<div className="text-xs text-muted-foreground space-y-1">
+													<p>Vehículo: {cotizacion.vehiculo}</p>
+													{formData.idaVuelta && <p>Incluye ida y vuelta</p>}
 												</div>
 											</div>
 										) : (
-											<div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
-												<p className="font-semibold text-primary">
-													📋 Cotización personalizada
+											<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-center">
+												<p className="font-medium text-muted-foreground">
+													Cotización personalizada
 												</p>
-												<p className="text-sm text-primary/80">
-													Te enviaremos el precio exacto junto con la
-													confirmación
+												<p className="text-sm text-muted-foreground">
+													Te enviaremos el precio por email
 												</p>
 											</div>
 										)}
 
 										<div className="text-center">
-											<p className="text-sm text-muted-foreground mb-4">
-												💡 <strong>Tip:</strong> Podrás ajustar la hora exacta y
-												otros detalles después de confirmar el pago
-											</p>
 											<Button
 												type="button"
 												onClick={handleStepOneNext}
-												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-semibold"
+												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3"
 												disabled={isSubmitting}
 											>
-												Continuar al pago →
+												Continuar
 											</Button>
 										</div>
 									</div>
@@ -810,70 +732,51 @@ function HeroExpress({
 								{currentStep === 1 && (
 									<div className="space-y-6">
 										{/* Resumen del viaje */}
-										<div className="bg-gray-50 rounded-lg p-4 space-y-2">
-											<h4 className="font-semibold text-lg mb-3">
-												📋 Resumen de tu traslado
+										<div className="bg-gray-50 rounded-lg p-4">
+											<h4 className="font-medium text-base mb-3">
+												Resumen del viaje
 											</h4>
-											<div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-												<div>
+											<div className="space-y-2 text-sm">
+												<div className="flex justify-between">
 													<span className="text-muted-foreground">Ruta:</span>
-													<p className="font-medium">
+													<span className="font-medium text-right">
 														{origenFinal} → {destinoFinal}
-														{formData.idaVuelta && (
-															<>
-																<br />
-																<span className="text-blue-600">
-																	{destinoFinal} → {origenFinal}
-																</span>
-															</>
-														)}
-													</p>
-												</div>
-												<div>
-													<span className="text-muted-foreground">
-														Fecha{formData.idaVuelta && "s"}:
 													</span>
-													<p className="font-medium">
-														{fechaLegible}
-														{formData.idaVuelta && formData.fechaRegreso && (
-															<>
-																<br />
-																<span className="text-blue-600">
-																	{new Date(
-																		`${formData.fechaRegreso}T00:00:00`
-																	).toLocaleDateString("es-CL", {
-																		dateStyle: "long",
-																		timeZone: "America/Santiago",
-																	})}
-																</span>
-															</>
-														)}
-													</p>
 												</div>
-												<div>
-													<span className="text-muted-foreground">
-														Pasajeros:
-													</span>
-													<p className="font-medium">{formData.pasajeros}</p>
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Fecha:</span>
+													<span className="font-medium">{fechaLegible}</span>
 												</div>
-											</div>
-											{mostrarPrecio && (
-												<div className="pt-2 border-t">
-													<div className="flex justify-between items-center">
-														<span className="font-medium">
-															Total con descuento:
-														</span>
-														<span className="text-xl font-bold text-primary">
-															{formatCurrency(pricing.totalConDescuento)}
-														</span>
+												<div className="flex justify-between">
+													<span className="text-muted-foreground">Pasajeros:</span>
+													<span className="font-medium">{formData.pasajeros}</span>
+												</div>
+												{formData.idaVuelta && formData.fechaRegreso && (
+													<div className="pt-2 border-t">
+														<div className="flex justify-between text-primary">
+															<span>Regreso:</span>
+															<span className="font-medium">
+																{new Date(
+																	`${formData.fechaRegreso}T00:00:00`
+																).toLocaleDateString("es-CL", {
+																	dateStyle: "medium",
+																	timeZone: "America/Santiago",
+																})}
+															</span>
+														</div>
 													</div>
-													{formData.idaVuelta && (
-														<p className="text-xs text-blue-600 mt-1">
-															🔄 Incluye ida y vuelta
-														</p>
-													)}
-												</div>
-											)}
+												)}
+												{mostrarPrecio && (
+													<div className="pt-2 border-t">
+														<div className="flex justify-between items-center">
+															<span className="font-medium">Total:</span>
+															<span className="text-xl font-bold text-primary">
+																{formatCurrency(pricing.totalConDescuento)}
+															</span>
+														</div>
+													</div>
+												)}
+											</div>
 										</div>
 
 										{/* Datos personales */}
@@ -964,9 +867,9 @@ function HeroExpress({
 										</div>
 
 										{/* Código de descuento */}
-										<div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-											<h4 className="font-medium mb-3">
-												🎟️ ¿Tienes un código de descuento?
+										<div className="border border-gray-200 rounded-lg p-4">
+											<h4 className="font-medium text-sm mb-3">
+												¿Tienes un código de descuento?
 											</h4>
 											<CodigoDescuento
 												codigoAplicado={codigoAplicado}
@@ -981,93 +884,64 @@ function HeroExpress({
 										{mostrarPrecio &&
 											!requiereCotizacionManual &&
 											todosLosCamposCompletos && (
-												<div className="space-y-4">
-													<h4 className="font-semibold text-lg">
-														💳 Opciones de pago
+												<div className="space-y-3">
+													<h4 className="font-medium text-base">
+														Forma de pago
 													</h4>
 
 													{/* Paso 1: Seleccionar tipo de pago (40% o 100%) */}
 													{!selectedPaymentType && (
-														<div className="space-y-3">
-															<p className="text-sm text-muted-foreground">
-																Elige cuánto deseas pagar ahora
-															</p>
-															<div className="grid gap-3 md:grid-cols-2">
-																{paymentOptions.map((option) => (
-																	<button
-																		key={option.id}
-																		type="button"
-																		onClick={() =>
-																			setSelectedPaymentType(option.type)
-																		}
-																		className={`border rounded-lg p-4 text-left transition-all hover:border-primary hover:shadow-md ${
-																			option.recommended
-																				? "border-primary bg-primary/5 ring-2 ring-primary/20"
-																				: "border-gray-200"
-																		}`}
-																	>
-																		<div className="flex justify-between items-start mb-2">
-																			<div>
-																				<h5 className="font-semibold">
-																					{option.title}
-																				</h5>
-																				<p className="text-sm text-muted-foreground">
-																					{option.subtitle}
-																				</p>
-																			</div>
-																			{option.recommended && (
-																				<Badge
-																					variant="default"
-																					className="text-xs"
-																				>
-																					Recomendado
-																				</Badge>
-																			)}
-																		</div>
-																		<p className="text-xl font-bold text-primary">
+														<div className="grid gap-3 md:grid-cols-2">
+															{paymentOptions.map((option) => (
+																<button
+																	key={option.id}
+																	type="button"
+																	onClick={() =>
+																		setSelectedPaymentType(option.type)
+																	}
+																	className={`border rounded-lg p-3 text-left transition-all hover:border-primary ${
+																		option.recommended
+																			? "border-primary bg-primary/5"
+																			: "border-gray-200"
+																	}`}
+																>
+																	<div className="space-y-1">
+																		<h5 className="font-medium text-sm">
+																			{option.title}
+																		</h5>
+																		<p className="text-xs text-muted-foreground">
+																			{option.subtitle}
+																		</p>
+																		<p className="text-lg font-bold text-primary">
 																			{formatCurrency(option.amount)}
 																		</p>
-																	</button>
-																))}
-															</div>
+																	</div>
+																</button>
+															))}
 														</div>
 													)}
 
 													{/* Paso 2: Seleccionar método de pago una vez elegido el tipo */}
 													{selectedPaymentType && (
 														<div className="space-y-3">
-															<div className="flex items-center justify-between">
-																<div>
-																	<p className="text-sm text-muted-foreground">
-																		Elige tu método de pago
-																	</p>
-																	<p className="text-lg font-semibold text-primary">
-																		Pagarás:{" "}
-																		{formatCurrency(
-																			paymentOptions.find(
-																				(opt) =>
-																					opt.type === selectedPaymentType
-																			)?.amount || 0
-																		)}
-																	</p>
-																</div>
-																<Button
-																	type="button"
-																	variant="ghost"
-																	size="sm"
-																	onClick={() => setSelectedPaymentType(null)}
-																	className="text-sm"
-																>
-																	← Cambiar monto
-																</Button>
+															<div className="flex items-center justify-between text-sm">
+																<span className="text-muted-foreground">
+																	Total a pagar:
+																</span>
+																<span className="font-semibold">
+																	{formatCurrency(
+																		paymentOptions.find(
+																			(opt) => opt.type === selectedPaymentType
+																		)?.amount || 0
+																	)}
+																</span>
 															</div>
 
-															<div className="grid gap-3 md:grid-cols-2">
+															<div className="grid gap-3">
 																{paymentMethods.map((method) => (
 																	<Button
 																		key={method.id}
 																		type="button"
-																		variant="outline"
 																		onClick={() =>
 																			handleProcesarPago(
 																				method.gateway,
@@ -1079,27 +953,35 @@ function HeroExpress({
 																			loadingGateway ===
 																				`${method.gateway}-${selectedPaymentType}`
 																		}
-																		className="h-auto p-4 flex flex-col items-center gap-2 hover:border-primary hover:bg-primary/5"
+																		className="h-auto p-3 flex items-center gap-3"
 																	>
 																		{loadingGateway ===
 																		`${method.gateway}-${selectedPaymentType}` ? (
-																			<LoaderCircle className="h-8 w-8 animate-spin" />
+																			<LoaderCircle className="h-6 w-6 animate-spin" />
 																		) : (
-																			<img
-																				src={method.image}
-																				alt={method.title}
-																				className="h-8 w-auto object-contain"
-																			/>
+																			<>
+																				<img
+																					src={method.image}
+																					alt={method.title}
+																					className="h-6 w-auto object-contain"
+																				/>
+																				<span className="text-sm">
+																					Pagar con {method.title}
+																				</span>
+																			</>
 																		)}
-																		<span className="text-sm font-medium">
-																			{method.title}
-																		</span>
-																		<span className="text-xs text-muted-foreground text-center">
-																			{method.subtitle}
-																		</span>
 																	</Button>
 																))}
 															</div>
+															<Button
+																type="button"
+																variant="ghost"
+																size="sm"
+																onClick={() => setSelectedPaymentType(null)}
+																className="w-full text-xs"
+															>
+																Cambiar monto
+															</Button>
 														</div>
 													)}
 												</div>
@@ -1109,29 +991,15 @@ function HeroExpress({
 										{mostrarPrecio &&
 											!requiereCotizacionManual &&
 											!todosLosCamposCompletos && (
-												<div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-													<p className="text-sm text-amber-800 font-medium">
-														⚠️ Completa todos los campos obligatorios para ver
-														las opciones de pago
+												<div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+													<p className="text-sm text-muted-foreground">
+														Completa todos los campos para continuar
 													</p>
-													<ul className="text-xs text-amber-700 mt-2 space-y-1 ml-5 list-disc">
-														{!formData.nombre?.trim() && (
-															<li>Nombre completo</li>
-														)}
-														{(!formData.email?.trim() ||
-															!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-																formData.email
-															)) && <li>Correo electrónico válido</li>}
-														{!formData.telefono?.trim() && <li>Teléfono</li>}
-														{!paymentConsent && (
-															<li>Aceptar términos y condiciones</li>
-														)}
-													</ul>
 												</div>
 											)}
 
 										{/* Consentimiento para pago */}
-										<div className="border border-gray-200 rounded-lg p-4 space-y-3">
+										<div className="border border-gray-200 rounded-lg p-3">
 											<div className="flex items-start gap-3">
 												<Checkbox
 													id="payment-consent"
@@ -1142,52 +1010,38 @@ function HeroExpress({
 												/>
 												<label
 													htmlFor="payment-consent"
-													className="text-sm leading-relaxed text-muted-foreground cursor-pointer"
+													className="text-sm text-muted-foreground cursor-pointer"
 												>
-													✅ Acepto recibir la confirmación por email y
-													WhatsApp, y comprendo que podré especificar la hora
-													exacta y detalles adicionales después de confirmar el
-													pago.
+													Acepto los términos y recibir confirmación por email
 												</label>
 											</div>
 										</div>
 
 										{/* Navegación */}
 										<div className="space-y-3">
-											{/* Botón de volver */}
-											<div className="flex justify-start">
-												<Button
-													type="button"
-													variant="outline"
-													onClick={handleStepBack}
-													disabled={isSubmitting}
-													size="sm"
-												>
-													← Volver
-												</Button>
-											</div>
+											<Button
+												type="button"
+												variant="outline"
+												onClick={handleStepBack}
+												disabled={isSubmitting}
+												size="sm"
+											>
+												← Volver
+											</Button>
 
 											{requiereCotizacionManual ? (
 												<Button asChild className="w-full" variant="secondary">
 													<a href="#contacto">
-														Solicitar cotización personalizada
+														Solicitar cotización
 													</a>
 												</Button>
 											) : (
-												<div className="space-y-3">
+												<div className="space-y-2">
 													{/* Botón para guardar reserva sin pagar */}
-													<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-														<div className="flex items-start gap-3 mb-3">
-															<div className="flex-1">
-																<h5 className="font-medium text-blue-900 mb-1">
-																	💾 Guardar y continuar después
-																</h5>
-																<p className="text-sm text-blue-700">
-																	Guarda tu reserva ahora y recibe un enlace por
-																	email para pagar más tarde
-																</p>
-															</div>
-														</div>
+													<div className="border border-gray-200 rounded-lg p-3">
+														<p className="text-sm text-muted-foreground mb-2">
+															Guarda tu reserva y paga después
+														</p>
 														<Button
 															type="button"
 															onClick={handleGuardarReserva}
@@ -1195,33 +1049,19 @@ function HeroExpress({
 																isSubmitting || !todosLosCamposCompletos
 															}
 															variant="outline"
-															className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
+															className="w-full"
+															size="sm"
 														>
 															{isSubmitting ? (
 																<>
 																	<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-																	Guardando reserva...
+																	Guardando...
 																</>
 															) : (
-																"Guardar reserva para después"
+																"Guardar para después"
 															)}
 														</Button>
 													</div>
-
-													{/* Instrucciones para pago inmediato */}
-													{todosLosCamposCompletos && (
-														<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-															<p className="text-sm text-green-800 font-medium mb-2">
-																✅ ¿Listo para pagar? Selecciona el monto y
-																método de pago arriba
-															</p>
-															<p className="text-xs text-green-700">
-																Al elegir una opción de pago arriba, tu reserva
-																se guardará automáticamente y serás redirigido
-																al proceso de pago seguro
-															</p>
-														</div>
-													)}
 												</div>
 											)}
 										</div>
@@ -1229,8 +1069,8 @@ function HeroExpress({
 								)}
 
 								{stepError && (
-									<div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-										⚠️ {stepError}
+									<div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+										{stepError}
 									</div>
 								)}
 							</CardContent>
