@@ -99,52 +99,7 @@ export const requireRole = (...roles) => {
 	};
 };
 
-/**
- * Middleware de autenticación compatible con el sistema anterior (ADMIN_TOKEN)
- * Permite acceso con el token antiguo o con JWT
- */
-export const authAdminCompatible = async (req, res, next) => {
-	// Intentar autenticación JWT primero
-	const authHeader = req.headers["authorization"];
-	
-	if (authHeader) {
-		const token = authHeader.startsWith("Bearer ")
-			? authHeader.substring(7)
-			: authHeader;
-		
-		// Verificar si es un JWT válido
-		const decoded = verifyToken(token);
-		
-		if (decoded) {
-			// Es un JWT válido, usar authJWT
-			return authJWT(req, res, next);
-		}
-		
-		// Si no es JWT, verificar si es el token antiguo
-		const adminToken = process.env.ADMIN_TOKEN;
-		
-		if (adminToken && authHeader === `Bearer ${adminToken}`) {
-			// Token antiguo válido, permitir acceso
-			req.user = {
-				id: null,
-				username: "admin_legacy",
-				email: "",
-				nombre: "Administrador Legacy",
-				rol: "superadmin",
-			};
-			return next();
-		}
-	}
-	
-	// Sin token o token inválido
-	return res.status(401).json({
-		success: false,
-		message: "Token de autenticación no válido o expirado",
-	});
-};
-
 export default {
 	authJWT,
 	requireRole,
-	authAdminCompatible,
 };

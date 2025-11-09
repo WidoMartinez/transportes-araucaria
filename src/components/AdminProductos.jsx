@@ -39,6 +39,7 @@ import {
 } from "./ui/select";
 import { Switch } from "./ui/switch";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { formatCurrency } from "../lib/utils";
 import {
         Search,
@@ -113,6 +114,7 @@ const normalizarListaParaEnvio = (valor) => {
 };
 
 function AdminProductos() {
+        const { authenticatedFetch } = useAuthenticatedFetch();
         const [productos, setProductos] = useState([]);
         const [loading, setLoading] = useState(true);
         const [error, setError] = useState("");
@@ -135,7 +137,9 @@ function AdminProductos() {
                 try {
                         setLoading(true);
                         setError("");
-                        const response = await fetch(`${API_BASE_URL}/api/productos`);
+                        const response = await authenticatedFetch(`/api/productos`, {
+                                method: "GET",
+                        });
                         const data = await response.json();
 
                         if (!response.ok) {
@@ -205,15 +209,9 @@ function AdminProductos() {
                                 return;
                         }
 
-                        const ADMIN_TOKEN = localStorage.getItem("adminToken");
-                        if (!ADMIN_TOKEN) {
-                                alert("Token de administrador no encontrado. Inicia sesión nuevamente.");
-                                return;
-                        }
-
                         const url = selectedProducto
-                                ? `${API_BASE_URL}/api/productos/${selectedProducto.id}`
-                                : `${API_BASE_URL}/api/productos`;
+                                ? `/api/productos/${selectedProducto.id}`
+                                : `/api/productos`;
                         const method = selectedProducto ? "PUT" : "POST";
 
                         const precioNormalizado =
@@ -265,12 +263,8 @@ function AdminProductos() {
 
                         setSaving(true);
 
-                        const response = await fetch(url, {
+                        const response = await authenticatedFetch(url, {
                                 method,
-                                headers: {
-                                        "Content-Type": "application/json",
-                                        Authorization: `Bearer ${ADMIN_TOKEN}`,
-                                },
                                 body: JSON.stringify(payload),
                         });
 
@@ -293,20 +287,11 @@ function AdminProductos() {
         const handleDelete = async () => {
                 if (!selectedProducto || deleting) return;
                 try {
-                        const ADMIN_TOKEN = localStorage.getItem("adminToken");
-                        if (!ADMIN_TOKEN) {
-                                alert("Token de administrador no encontrado. Inicia sesión nuevamente.");
-                                return;
-                        }
-
                         setDeleting(true);
-                        const response = await fetch(
-                                `${API_BASE_URL}/api/productos/${selectedProducto.id}`,
+                        const response = await authenticatedFetch(
+                                `/api/productos/${selectedProducto.id}`,
                                 {
                                         method: "DELETE",
-                                        headers: {
-                                                Authorization: `Bearer ${ADMIN_TOKEN}`,
-                                        },
                                 }
                         );
 
@@ -330,20 +315,10 @@ function AdminProductos() {
         const handleToggleDisponible = async (producto) => {
                 if (!producto) return;
                 try {
-                        const ADMIN_TOKEN = localStorage.getItem("adminToken");
-                        if (!ADMIN_TOKEN) {
-                                alert("Token de administrador no encontrado. Inicia sesión nuevamente.");
-                                return;
-                        }
-
                         setToggling((prev) => ({ ...prev, [producto.id]: true }));
 
-                        const response = await fetch(`${API_BASE_URL}/api/productos/${producto.id}`, {
+                        const response = await authenticatedFetch(`/api/productos/${producto.id}`, {
                                 method: "PUT",
-                                headers: {
-                                        "Content-Type": "application/json",
-                                        Authorization: `Bearer ${ADMIN_TOKEN}`,
-                                },
                                 body: JSON.stringify({ disponible: !producto.disponible }),
                         });
 

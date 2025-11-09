@@ -2,12 +2,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { Loader2, Calendar, Plus, Pencil, Trash2 } from "lucide-react";
 
 const API_BASE_URL =
 	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
-
-const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || "admin-secret-token";
 
 const tiposFestivo = [
 	{ value: "feriado_nacional", label: "Feriado Nacional" },
@@ -16,6 +15,7 @@ const tiposFestivo = [
 ];
 
 function AdminFestivos() {
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [festivos, setFestivos] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -41,7 +41,7 @@ function AdminFestivos() {
 	const cargarFestivos = async () => {
 		try {
 			setLoading(true);
-			const response = await fetch(`${API_BASE_URL}/api/festivos`);
+			const response = await authenticatedFetch(`/api/festivos`);
 
 			if (!response.ok) throw new Error("Error al cargar festivos");
 
@@ -68,11 +68,9 @@ function AdminFestivos() {
 				method: festivo.id ? "PUT" : "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
 				},
 				body: JSON.stringify(festivo),
 			});
-
 			if (!response.ok) throw new Error("Error al guardar festivo");
 
 			setSuccess("Festivo guardado correctamente");
@@ -91,11 +89,8 @@ function AdminFestivos() {
 
 		try {
 			setSaving(true);
-			const response = await fetch(`${API_BASE_URL}/api/festivos/${id}`, {
+			const response = await authenticatedFetch(`/api/festivos/${id}`, {
 				method: "DELETE",
-				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
 			});
 			if (!response.ok) throw new Error("Error al eliminar festivo");
 			setSuccess("Festivo eliminado correctamente");
@@ -224,7 +219,9 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 	const formatearFecha = (fecha) => {
 		// Analizar la fecha como UTC para evitar problemas de zona horaria
 		const [year, month, day] = fecha.split("-");
-		const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+		const d = new Date(
+			Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day))
+		);
 		return d.toLocaleDateString("es-CL", {
 			day: "2-digit",
 			month: "long",
@@ -244,9 +241,7 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 				<div className="flex items-center gap-3">
 					<h4 className="font-semibold text-white">{festivo.nombre}</h4>
 					<Badge variant="outline">{getTipoLabel(festivo.tipo)}</Badge>
-					{festivo.recurrente && (
-						<Badge variant="secondary">Recurrente</Badge>
-					)}
+					{festivo.recurrente && <Badge variant="secondary">Recurrente</Badge>}
 					{festivo.porcentajeRecargo && (
 						<Badge className="bg-orange-900/50 text-orange-200">
 							+{festivo.porcentajeRecargo}%
@@ -254,9 +249,7 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 					)}
 					<Badge
 						variant={festivo.activo ? "default" : "secondary"}
-						className={
-							festivo.activo ? "bg-green-900/50 text-green-200" : ""
-						}
+						className={festivo.activo ? "bg-green-900/50 text-green-200" : ""}
 					>
 						{festivo.activo ? "Activo" : "Inactivo"}
 					</Badge>
@@ -288,7 +281,13 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 	);
 }
 
-function FormularioFestivo({ festivo, onChange, onGuardar, onCancelar, saving }) {
+function FormularioFestivo({
+	festivo,
+	onChange,
+	onGuardar,
+	onCancelar,
+	saving,
+}) {
 	return (
 		<div className="space-y-4 rounded-lg border-2 border-blue-500 bg-slate-900 p-4">
 			<h3 className="text-lg font-semibold text-white">
@@ -397,7 +396,10 @@ function FormularioFestivo({ festivo, onChange, onGuardar, onCancelar, saving })
 			</div>
 
 			<div className="flex gap-2">
-				<Button onClick={onGuardar} disabled={saving || !festivo.nombre || !festivo.fecha}>
+				<Button
+					onClick={onGuardar}
+					disabled={saving || !festivo.nombre || !festivo.fecha}
+				>
 					{saving ? (
 						<>
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />

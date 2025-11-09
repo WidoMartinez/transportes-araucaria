@@ -1,6 +1,7 @@
 // src/components/AdminTarifaDinamica.jsx
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import {
 	Loader2,
 	TrendingUp,
@@ -11,8 +12,6 @@ import {
 
 const API_BASE_URL =
 	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
-
-const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || "admin-secret-token";
 
 const tiposConfig = [
 	{ value: "anticipacion", label: "Por Anticipación", icon: Calendar },
@@ -36,6 +35,7 @@ const diasSemana = [
 ];
 
 function AdminTarifaDinamica() {
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [configuraciones, setConfiguraciones] = useState([]);
 	const [destinos, setDestinos] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -104,15 +104,11 @@ function AdminTarifaDinamica() {
 			setSuccess("");
 
 			const url = config.id
-				? `${API_BASE_URL}/api/tarifa-dinamica/${config.id}`
-				: `${API_BASE_URL}/api/tarifa-dinamica`;
+				? `/api/tarifa-dinamica/${config.id}`
+				: `/api/tarifa-dinamica`;
 
-			const response = await fetch(url, {
+			const response = await authenticatedFetch(url, {
 				method: config.id ? "PUT" : "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
-				},
 				body: JSON.stringify(config),
 			});
 
@@ -134,13 +130,10 @@ function AdminTarifaDinamica() {
 
 		try {
 			setSaving(true);
-			const response = await fetch(
-				`${API_BASE_URL}/api/tarifa-dinamica/${id}`,
+			const response = await authenticatedFetch(
+				`/api/tarifa-dinamica/${id}`,
 				{
 					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
 				}
 			);
 			if (!response.ok) throw new Error("Error al eliminar configuración");

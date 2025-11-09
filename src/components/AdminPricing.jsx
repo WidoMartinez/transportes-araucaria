@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { destinosBase as destinosIniciales } from "@/data/destinos";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
@@ -108,6 +109,7 @@ const normalizePromotions = (promociones = []) => {
 };
 
 function AdminPricing() {
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [pricing, setPricing] = useState({
 		destinos: [],
 		dayPromotions: [],
@@ -933,13 +935,8 @@ function AdminPricing() {
                                                     onClick={async () => {
                                                         try {
                                                             setSavingRowId(d.id);
-                                                            const ADMIN_TOKEN = localStorage.getItem("adminToken");
-                                                            const resp = await fetch(`${API_BASE_URL}/api/destinos/${d.id}`, {
+                                                            const resp = await authenticatedFetch(`/api/destinos/${d.id}`, {
                                                                 method: "PUT",
-                                                                headers: {
-                                                                    "Content-Type": "application/json",
-                                                                    Authorization: `Bearer ${ADMIN_TOKEN}`,
-                                                                },
                                                                 body: JSON.stringify({
                                                                     nombre: d.nombre,
                                                                     precioIda: d.precioIda,

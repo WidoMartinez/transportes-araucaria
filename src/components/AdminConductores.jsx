@@ -37,6 +37,7 @@ import {
 	AlertCircle,
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -51,12 +52,12 @@ import {
 const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function AdminConductores() {
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [conductores, setConductores] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [filterEstado, setFilterEstado] = useState("todos");
 	const [showDialog, setShowDialog] = useState(false);
-	const [showLoginDialog, setShowLoginDialog] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [selectedConductor, setSelectedConductor] = useState(null);
 	const [formData, setFormData] = useState({
@@ -70,15 +71,6 @@ function AdminConductores() {
 		observaciones: "",
 	});
 
-	const [adminToken, setAdminToken] = useState(() => {
-		try {
-			return localStorage.getItem("adminToken") || "";
-		} catch {}
-		return "";
-	});
-	const [loginPassword, setLoginPassword] = useState("");
-	const [loginError, setLoginError] = useState("");
-
 	// Cargar conductores al montar el componente
 	useEffect(() => {
 		fetchConductores();
@@ -87,7 +79,9 @@ function AdminConductores() {
 	const fetchConductores = async () => {
 		try {
 			setLoading(true);
-			const response = await fetch(`${API_BASE_URL}/api/conductores`);
+			const response = await authenticatedFetch(`/api/conductores`, {
+				method: "GET",
+			});
 			const data = await response.json();
 			setConductores(data.conductores || []);
 		} catch (error) {
@@ -97,16 +91,7 @@ function AdminConductores() {
 		}
 	};
 
-	const requireAdmin = () => {
-		if (!adminToken) {
-			setShowLoginDialog(true);
-			return false;
-		}
-		return true;
-	};
-
 	const handleOpenDialog = (conductor = null) => {
-		if (!requireAdmin()) return;
 		if (conductor) {
 			// Editar conductor existente
 			setSelectedConductor(conductor);
@@ -166,26 +151,17 @@ function AdminConductores() {
 			}
 
 			const url = selectedConductor
-				? `${API_BASE_URL}/api/conductores/${selectedConductor.id}`
-				: `${API_BASE_URL}/api/conductores`;
+				? `/api/conductores/${selectedConductor.id}`
+				: `/api/conductores`;
 
 			const method = selectedConductor ? "PUT" : "POST";
 
-			const response = await fetch(url, {
+			const response = await authenticatedFetch(url, {
 				method,
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${adminToken}`,
-				},
 				body: JSON.stringify(formData),
 			});
 
 			const data = await response.json();
-			if (response.status === 401) {
-				setLoginError("Acceso denegado. Ingrese la clave de administrador.");
-				setShowLoginDialog(true);
-				return;
-			}
 
 			if (response.ok) {
 				await fetchConductores();
@@ -201,22 +177,12 @@ function AdminConductores() {
 
 	const handleDelete = async () => {
 		try {
-			if (!requireAdmin()) return;
-			const response = await fetch(
-				`${API_BASE_URL}/api/conductores/${selectedConductor.id}`,
+			const response = await authenticatedFetch(
+				`/api/conductores/${selectedConductor.id}`,
 				{
 					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${adminToken}`,
-					},
 				}
 			);
-
-			if (response.status === 401) {
-				setLoginError("Acceso denegado. Ingrese la clave de administrador.");
-				setShowLoginDialog(true);
-				return;
-			}
 
 			if (response.ok) {
 				await fetchConductores();
@@ -297,13 +263,6 @@ function AdminConductores() {
 						<Plus className="h-4 w-4" />
 						Nuevo Conductor
 					</Button>
-					{!adminToken ? (
-						<Button variant="outline" onClick={() => setShowLoginDialog(true)}>
-							Iniciar sesión admin
-						</Button>
-					) : (
-						<Badge variant="secondary">Admin autenticado</Badge>
-					)}
 				</div>
 
 				{/* Filtros y búsqueda */}
@@ -557,55 +516,6 @@ function AdminConductores() {
 						</Button>
 						<Button onClick={handleSave}>
 							{selectedConductor ? "Actualizar" : "Crear"}
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
-
-			{/* Dialog de login admin */}
-			<Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Acceso de administrador</DialogTitle>
-						<DialogDescription>
-							Ingrese la clave de administrador para gestionar conductores.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-3">
-						<Label htmlFor="admin-pass">Clave</Label>
-						<Input
-							id="admin-pass"
-							type="password"
-							value={loginPassword}
-							onChange={(e) => setLoginPassword(e.target.value)}
-							placeholder="Pegar token o clave"
-						/>
-						{loginError && (
-							<p className="text-sm text-red-600 flex items-center gap-2">
-								<AlertCircle className="h-4 w-4" /> {loginError}
-							</p>
-						)}
-					</div>
-					<div className="flex justify-end gap-2 mt-4">
-						<Button variant="outline" onClick={() => setShowLoginDialog(false)}>
-							Cancelar
-						</Button>
-						<Button
-							onClick={() => {
-								const token = loginPassword.trim();
-								if (!token) {
-									setLoginError("Ingrese una clave válida");
-									return;
-								}
-								try {
-									localStorage.setItem("adminToken", token);
-									setAdminToken(token);
-									setLoginError("");
-									setShowLoginDialog(false);
-								} catch {}
-							}}
-						>
-							Ingresar
 						</Button>
 					</div>
 				</DialogContent>
