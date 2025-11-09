@@ -23,6 +23,7 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { LoaderCircle, Plus, Trash2 } from "lucide-react";
 import { destinosBase } from "../data/destinos";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 const AEROPUERTO = "Aeropuerto La Araucanía";
 const OPCION_OTRO = "Otro";
@@ -49,11 +50,7 @@ function AdminCodigosPago() {
 		observaciones: "",
 	});
 	const backendUrl = getBackendUrl();
-	const adminToken =
-		import.meta.env.VITE_ADMIN_TOKEN ||
-		(typeof window !== "undefined"
-			? localStorage.getItem("adminToken") || ""
-			: "");
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [destinosOpciones, setDestinosOpciones] = useState(
 		destinosBase.map((d) => d.nombre)
 	);
@@ -115,8 +112,8 @@ function AdminCodigosPago() {
 		setLoading(true);
 		setError("");
 		try {
-			const response = await fetch(`${backendUrl}/api/codigos-pago`, {
-				headers: { Authorization: `Bearer ${adminToken}` },
+			const response = await authenticatedFetch(`/api/codigos-pago`, {
+				method: "GET",
 			});
 			const data = await response.json();
 			if (!response.ok) {
@@ -208,12 +205,8 @@ function AdminCodigosPago() {
 				usosMaximos: parseInt(formData.usosMaximos) || 1,
 				observaciones: formData.observaciones || "",
 			};
-			const response = await fetch(`${backendUrl}/api/codigos-pago`, {
+			const response = await authenticatedFetch(`/api/codigos-pago`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${adminToken}`,
-				},
 				body: JSON.stringify(payload),
 			});
 			const data = await response.json();
@@ -246,9 +239,8 @@ function AdminCodigosPago() {
 	const eliminarCodigo = async (codigo) => {
 		if (!confirm(`¿Estás seguro de eliminar el código ${codigo}?`)) return;
 		try {
-			const response = await fetch(`${backendUrl}/api/codigos-pago/${codigo}`, {
+			const response = await authenticatedFetch(`/api/codigos-pago/${codigo}`, {
 				method: "DELETE",
-				headers: { Authorization: `Bearer ${adminToken}` },
 			});
 			if (!response.ok) {
 				const data = await response.json();

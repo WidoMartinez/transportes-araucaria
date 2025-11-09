@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -58,12 +59,7 @@ const TIPOS_GASTO = [
 ];
 
 function AdminEstadisticas() {
-	const ADMIN_TOKEN =
-		import.meta.env.VITE_ADMIN_TOKEN ||
-		(typeof window !== "undefined"
-			? localStorage.getItem("adminToken") || ""
-			: "");
-
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 	const [vistaActual, setVistaActual] = useState("conductores");
@@ -265,12 +261,10 @@ function AdminEstadisticas() {
 		setLoading(true);
 		try {
 			const query = construirQueryFechas();
-			const response = await fetch(
-				`${apiUrl}/api/estadisticas/conductores${query}`,
+			const response = await authenticatedFetch(
+				`/api/estadisticas/conductores${query}`,
 				{
-					headers: {
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
+					method: "GET",
 				}
 			);
 			if (response.ok) {
@@ -288,12 +282,10 @@ function AdminEstadisticas() {
 		setLoading(true);
 		try {
 			const query = construirQueryFechas();
-			const response = await fetch(
-				`${apiUrl}/api/estadisticas/vehiculos${query}`,
+			const response = await authenticatedFetch(
+				`/api/estadisticas/vehiculos${query}`,
 				{
-					headers: {
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
+					method: "GET",
 				}
 			);
 			if (response.ok) {
@@ -312,12 +304,10 @@ function AdminEstadisticas() {
 		try {
 			const parametros = tipoGasto !== "todos" ? { tipo: tipoGasto } : {};
 			const query = construirQueryFechas(parametros);
-			const response = await fetch(
-				`${apiUrl}/api/estadisticas/gastos${query}`,
+			const response = await authenticatedFetch(
+				`/api/estadisticas/gastos${query}`,
 				{
-					headers: {
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
+					method: "GET",
 				}
 			);
 			if (response.ok) {
@@ -342,12 +332,10 @@ function AdminEstadisticas() {
 	const fetchDetalleConductor = async (conductorId) => {
 		setLoading(true);
 		try {
-			const response = await fetch(
-				`${apiUrl}/api/estadisticas/conductores/${conductorId}`,
+			const response = await authenticatedFetch(
+				`/api/estadisticas/conductores/${conductorId}`,
 				{
-					headers: {
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
+					method: "GET",
 				}
 			);
 			if (response.ok) {
