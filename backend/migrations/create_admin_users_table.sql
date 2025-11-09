@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
 INSERT INTO `admin_users` 
   (`username`, `email`, `password`, `nombre`, `rol`, `activo`) 
 VALUES 
-  ('admin', 'admin@transportes-araucaria.com', '$2b$10$rOvHPKZXg0q5Y5QqZYX5Xu7KzJ8Y5R5Z5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5u', 'Administrador Principal', 'superadmin', 1)
+  ('admin', 'contacto@transportesaraucaria.cl', '$2b$10$rOvHPKZXg0q5Y5QqZYX5Xu7KzJ8Y5R5Z5Y5Y5Y5Y5Y5Y5Y5Y5Y5Y5u', 'Administrador Principal', 'superadmin', 1)
 ON DUPLICATE KEY UPDATE 
   `email` = VALUES(`email`),
   `nombre` = VALUES(`nombre`),

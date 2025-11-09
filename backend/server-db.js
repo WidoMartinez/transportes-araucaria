@@ -597,7 +597,7 @@ const initializeDatabase = async () => {
 
 				await AdminUser.create({
 					username: 'admin',
-					email: process.env.ADMIN_DEFAULT_EMAIL || 'admin@transportes-araucaria.com',
+					email: process.env.ADMIN_DEFAULT_EMAIL || 'contacto@transportesaraucaria.cl',
 					password: hashedPassword,
 					nombre: 'Administrador Principal',
 					rol: 'superadmin',
