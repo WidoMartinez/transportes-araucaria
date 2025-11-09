@@ -125,8 +125,6 @@ export const AuthProvider = ({ children }) => {
 			localStorage.removeItem("adminUser");
 			localStorage.removeItem("adminAccessToken");
 			localStorage.removeItem("adminRefreshToken");
-			// Mantener compatibilidad con sistema antiguo
-			localStorage.removeItem("adminToken");
 		}
 	}, [accessToken]);
 

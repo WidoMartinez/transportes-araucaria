@@ -34,7 +34,7 @@ import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js"
 import addFestivosTable from "./migrations/add-festivos-table.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
-import { authAdminCompatible } from "./middleware/authJWT.js";
+import { authJWT } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
@@ -65,33 +65,8 @@ app.set("trust proxy", 1);
 app.use(express.json());
 
 // Middleware de autenticación para rutas administrativas
-const authAdmin = (req, res, next) => {
-	// TODO: Implementar validación de token/sesión real
-	// Por ahora, verificamos que exista un header de autorización
-	const authHeader = req.headers["authorization"];
-	const adminToken = process.env.ADMIN_TOKEN;
-
-	if (!adminToken) {
-		// Misconfiguration: ADMIN_TOKEN must be set
-		return res.status(500).json({
-			error: "ADMIN_TOKEN no configurado en el entorno del servidor.",
-		});
-	}
-	if (adminToken === "admin-secret-token") {
-		// Insecure default token should not be used
-		return res.status(500).json({
-			error:
-				"ADMIN_TOKEN tiene un valor inseguro por defecto. Cambie la configuración.",
-		});
-	}
-	if (!authHeader || authHeader !== `Bearer ${adminToken}`) {
-		return res.status(401).json({
-			error: "No autorizado. Se requiere autenticación de administrador.",
-		});
-	}
-
-	next();
-};
+// Usar sistema de autenticación JWT moderno
+const authAdmin = authJWT;
 
 app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });

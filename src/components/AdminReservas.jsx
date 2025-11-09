@@ -2,6 +2,7 @@
 import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
 import { useAuth } from "../contexts/AuthContext";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -76,23 +77,9 @@ const normalizeDestino = (value) =>
 	(value || "").toString().trim().toLowerCase();
 
 function AdminReservas() {
-	// Estado para cambio masivo de estado de pago
-	// Eliminado bulkEstadoPago y setBulkEstadoPago por no usarse
-	// Eliminado showBulkPaymentDialog por no usarse
-
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
-
-	// Token de administrador (con compatibilidad backward)
-	// Prioriza el nuevo sistema (accessToken) sobre el legacy (localStorage)
-	const ADMIN_TOKEN =
-		accessToken ||
-		import.meta.env.VITE_ADMIN_TOKEN ||
-		(typeof window !== "undefined"
-			? localStorage.getItem("adminToken") ||
-			  localStorage.getItem("adminAccessToken") ||
-			  ""
-			: "");
+	const { authenticatedFetch } = useAuthenticatedFetch();
 
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
