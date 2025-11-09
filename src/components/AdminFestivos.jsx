@@ -64,16 +64,13 @@ function AdminFestivos() {
 				? `${API_BASE_URL}/api/festivos/${festivo.id}`
 				: `${API_BASE_URL}/api/festivos`;
 
-			const response = await fetch(url, {
-				method: festivo.id ? "PUT" : "POST",
-				headers: {
-					"Content-Type": "application/json",
-					,
-				},
-				body: JSON.stringify(festivo),
-			});
-
-			if (!response.ok) throw new Error("Error al guardar festivo");
+		const response = await fetch(url, {
+			method: festivo.id ? "PUT" : "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(festivo),
+		});			if (!response.ok) throw new Error("Error al guardar festivo");
 
 			setSuccess("Festivo guardado correctamente");
 			setEditingFestivo(null);
@@ -93,9 +90,6 @@ function AdminFestivos() {
 			setSaving(true);
 			const response = await authenticatedFetch(`/api/festivos/${id}`, {
 				method: "DELETE",
-				headers: {
-					,
-				},
 			});
 			if (!response.ok) throw new Error("Error al eliminar festivo");
 			setSuccess("Festivo eliminado correctamente");
