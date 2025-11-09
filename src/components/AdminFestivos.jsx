@@ -64,13 +64,14 @@ function AdminFestivos() {
 				? `${API_BASE_URL}/api/festivos/${festivo.id}`
 				: `${API_BASE_URL}/api/festivos`;
 
-		const response = await fetch(url, {
-			method: festivo.id ? "PUT" : "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(festivo),
-		});			if (!response.ok) throw new Error("Error al guardar festivo");
+			const response = await fetch(url, {
+				method: festivo.id ? "PUT" : "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(festivo),
+			});
+			if (!response.ok) throw new Error("Error al guardar festivo");
 
 			setSuccess("Festivo guardado correctamente");
 			setEditingFestivo(null);
@@ -218,7 +219,9 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 	const formatearFecha = (fecha) => {
 		// Analizar la fecha como UTC para evitar problemas de zona horaria
 		const [year, month, day] = fecha.split("-");
-		const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+		const d = new Date(
+			Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day))
+		);
 		return d.toLocaleDateString("es-CL", {
 			day: "2-digit",
 			month: "long",
@@ -238,9 +241,7 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 				<div className="flex items-center gap-3">
 					<h4 className="font-semibold text-white">{festivo.nombre}</h4>
 					<Badge variant="outline">{getTipoLabel(festivo.tipo)}</Badge>
-					{festivo.recurrente && (
-						<Badge variant="secondary">Recurrente</Badge>
-					)}
+					{festivo.recurrente && <Badge variant="secondary">Recurrente</Badge>}
 					{festivo.porcentajeRecargo && (
 						<Badge className="bg-orange-900/50 text-orange-200">
 							+{festivo.porcentajeRecargo}%
@@ -248,9 +249,7 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 					)}
 					<Badge
 						variant={festivo.activo ? "default" : "secondary"}
-						className={
-							festivo.activo ? "bg-green-900/50 text-green-200" : ""
-						}
+						className={festivo.activo ? "bg-green-900/50 text-green-200" : ""}
 					>
 						{festivo.activo ? "Activo" : "Inactivo"}
 					</Badge>
@@ -282,7 +281,13 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 	);
 }
 
-function FormularioFestivo({ festivo, onChange, onGuardar, onCancelar, saving }) {
+function FormularioFestivo({
+	festivo,
+	onChange,
+	onGuardar,
+	onCancelar,
+	saving,
+}) {
 	return (
 		<div className="space-y-4 rounded-lg border-2 border-blue-500 bg-slate-900 p-4">
 			<h3 className="text-lg font-semibold text-white">
@@ -391,7 +396,10 @@ function FormularioFestivo({ festivo, onChange, onGuardar, onCancelar, saving })
 			</div>
 
 			<div className="flex gap-2">
-				<Button onClick={onGuardar} disabled={saving || !festivo.nombre || !festivo.fecha}>
+				<Button
+					onClick={onGuardar}
+					disabled={saving || !festivo.nombre || !festivo.fecha}
+				>
 					{saving ? (
 						<>
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
