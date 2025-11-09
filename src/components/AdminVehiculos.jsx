@@ -37,6 +37,7 @@ import {
 	AlertCircle,
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -51,6 +52,7 @@ import {
 const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function AdminVehiculos() {
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [vehiculos, setVehiculos] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
@@ -78,7 +80,9 @@ function AdminVehiculos() {
 	const fetchVehiculos = async () => {
 		try {
 			setLoading(true);
-			const response = await fetch(`${API_BASE_URL}/api/vehiculos`);
+			const response = await authenticatedFetch(`/api/vehiculos`, {
+				method: "GET",
+			});
 			const data = await response.json();
 			setVehiculos(data.vehiculos || []);
 		} catch (error) {
@@ -143,16 +147,13 @@ function AdminVehiculos() {
 			}
 
 			const url = selectedVehiculo
-				? `${API_BASE_URL}/api/vehiculos/${selectedVehiculo.id}`
-				: `${API_BASE_URL}/api/vehiculos`;
+				? `/api/vehiculos/${selectedVehiculo.id}`
+				: `/api/vehiculos`;
 
 			const method = selectedVehiculo ? "PUT" : "POST";
 
-			const response = await fetch(url, {
+			const response = await authenticatedFetch(url, {
 				method,
-				headers: {
-					"Content-Type": "application/json",
-				},
 				body: JSON.stringify({
 					...formData,
 					anio: formData.anio ? Number(formData.anio) : null,
@@ -176,14 +177,10 @@ function AdminVehiculos() {
 
 	const handleDelete = async () => {
 		try {
-			const ADMIN_TOKEN = localStorage.getItem("adminToken");
-			const response = await fetch(
-				`${API_BASE_URL}/api/vehiculos/${selectedVehiculo.id}`,
+			const response = await authenticatedFetch(
+				`/api/vehiculos/${selectedVehiculo.id}`,
 				{
 					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
-					},
 				}
 			);
 
