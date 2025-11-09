@@ -2,12 +2,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { Loader2, Calendar, Plus, Pencil, Trash2 } from "lucide-react";
 
 const API_BASE_URL =
 	import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
-
-const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || "admin-secret-token";
 
 const tiposFestivo = [
 	{ value: "feriado_nacional", label: "Feriado Nacional" },
@@ -16,6 +15,7 @@ const tiposFestivo = [
 ];
 
 function AdminFestivos() {
+	const { authenticatedFetch } = useAuthenticatedFetch();
 	const [festivos, setFestivos] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -41,7 +41,7 @@ function AdminFestivos() {
 	const cargarFestivos = async () => {
 		try {
 			setLoading(true);
-			const response = await fetch(`${API_BASE_URL}/api/festivos`);
+			const response = await authenticatedFetch(`/api/festivos`);
 
 			if (!response.ok) throw new Error("Error al cargar festivos");
 
@@ -68,7 +68,7 @@ function AdminFestivos() {
 				method: festivo.id ? "PUT" : "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
+					,
 				},
 				body: JSON.stringify(festivo),
 			});
@@ -91,10 +91,10 @@ function AdminFestivos() {
 
 		try {
 			setSaving(true);
-			const response = await fetch(`${API_BASE_URL}/api/festivos/${id}`, {
+			const response = await authenticatedFetch(`/api/festivos/${id}`, {
 				method: "DELETE",
 				headers: {
-					Authorization: `Bearer ${ADMIN_TOKEN}`,
+					,
 				},
 			});
 			if (!response.ok) throw new Error("Error al eliminar festivo");
