@@ -67,6 +67,8 @@ function HeroExpress({
 	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
 	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
+	const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
+	const [descuentoRetorno, setDescuentoRetorno] = useState(null); // Información de descuento por retorno
 
 	// Generar opciones de tiempo en intervalos de 15 minutos
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
@@ -165,8 +167,94 @@ function HeroExpress({
 		}
 	};
 
+	// Verificar disponibilidad y buscar oportunidades de retorno
+	const verificarDisponibilidadYRetorno = async () => {
+		if (!formData.destino || !formData.fecha || !formData.hora) {
+			return { disponible: true, descuento: null };
+		}
+
+		setVerificandoDisponibilidad(true);
+		try {
+			// Buscar el destino seleccionado para obtener la duración estimada
+			const destinoSeleccionado = destinos.find(
+				(d) => d.nombre === formData.destino
+			);
+			const duracionMinutos = destinoSeleccionado?.duracionIdaMinutos || 60;
+
+			// 1. Verificar disponibilidad de vehículos
+			const respDisponibilidad = await fetch(
+				`${getBackendUrl()}/api/disponibilidad/verificar`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						fecha: formData.fecha,
+						hora: formData.hora,
+						duracionMinutos: duracionMinutos,
+						pasajeros: formData.pasajeros || 1,
+					}),
+				}
+			);
+
+			if (!respDisponibilidad.ok) {
+				console.error("Error verificando disponibilidad");
+				return { disponible: true, descuento: null }; // Continuar en caso de error
+			}
+
+			const dataDisponibilidad = await respDisponibilidad.json();
+
+			if (!dataDisponibilidad.disponible) {
+				return {
+					disponible: false,
+					mensaje: dataDisponibilidad.mensaje,
+					descuento: null,
+				};
+			}
+
+			// 2. Buscar oportunidades de retorno
+			const respRetorno = await fetch(
+				`${getBackendUrl()}/api/disponibilidad/oportunidades-retorno`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						origen: formData.origen,
+						destino: formData.destino,
+						fecha: formData.fecha,
+						hora: formData.hora,
+					}),
+				}
+			);
+
+			if (respRetorno.ok) {
+				const dataRetorno = await respRetorno.json();
+				if (dataRetorno.hayOportunidad && dataRetorno.descuento > 0) {
+					return {
+						disponible: true,
+						descuento: {
+							porcentaje: dataRetorno.descuento,
+							mensaje: dataRetorno.mensaje,
+							detalles: dataRetorno.detalles,
+						},
+					};
+				}
+			}
+
+			return { disponible: true, descuento: null };
+		} catch (error) {
+			console.error("Error verificando disponibilidad y retorno:", error);
+			return { disponible: true, descuento: null }; // Continuar en caso de error
+		} finally {
+			setVerificandoDisponibilidad(false);
+		}
+	};
+
 	// Validaciones del primer paso (mínimas)
-	const handleStepOneNext = () => {
+	const handleStepOneNext = async () => {
 		if (!formData.origen?.trim()) {
 			setStepError("Selecciona el origen de tu viaje.");
 			return;
@@ -213,6 +301,24 @@ function HeroExpress({
 				);
 				return;
 			}
+		}
+
+		// Verificar disponibilidad de vehículos y buscar oportunidades de retorno
+		const resultado = await verificarDisponibilidadYRetorno();
+
+		if (!resultado.disponible) {
+			setStepError(
+				resultado.mensaje ||
+					"No hay vehículos disponibles en este horario. Por favor seleccione otro horario."
+			);
+			return;
+		}
+
+		// Si hay descuento por retorno, guardarlo para mostrarlo al usuario
+		if (resultado.descuento) {
+			setDescuentoRetorno(resultado.descuento);
+		} else {
+			setDescuentoRetorno(null);
 		}
 
 		setStepError("");
@@ -789,6 +895,67 @@ function HeroExpress({
 											</div>
 										)}
 
+										{/* Indicador de descuento por retorno */}
+										{descuentoRetorno && (
+											<div className="rounded-xl border-2 border-green-500 bg-green-50 p-6 space-y-3">
+												<div className="flex items-center gap-3">
+													<div className="flex-shrink-0 bg-green-500 text-white rounded-full p-3">
+														<svg
+															className="w-6 h-6"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M5 13l4 4L19 7"
+															/>
+														</svg>
+													</div>
+													<div className="flex-1">
+														<h4 className="font-bold text-green-800 text-lg">
+															¡Oportunidad de Retorno!
+														</h4>
+														<p className="text-green-700 text-sm">
+															{descuentoRetorno.mensaje}
+														</p>
+													</div>
+												</div>
+												<div className="bg-white rounded-lg p-4 space-y-2">
+													<div className="flex justify-between items-center">
+														<span className="text-sm text-gray-600">
+															Descuento aplicado:
+														</span>
+														<span className="text-2xl font-bold text-green-600">
+															{descuentoRetorno.porcentaje.toFixed(1)}%
+														</span>
+													</div>
+													{descuentoRetorno.detalles && (
+														<div className="text-xs text-gray-500 space-y-1">
+															<p>
+																🚐 Tiempo de espera:{" "}
+																{descuentoRetorno.detalles.tiempoEsperaMinutos} minutos
+															</p>
+															<p>
+																⏱️ Llegada del vehículo:{" "}
+																{descuentoRetorno.detalles.horaLlegadaVehiculo}
+															</p>
+															<p>
+																🚀 Tu salida:{" "}
+																{descuentoRetorno.detalles.horaSalidaSolicitada}
+															</p>
+														</div>
+													)}
+												</div>
+												<p className="text-xs text-green-700 italic">
+													Este descuento se aplicará automáticamente a tu reserva
+													porque aprovecharemos el regreso de otro viaje 🌱
+												</p>
+											</div>
+										)}
+
 										<div className="text-center">
 											<p className="text-sm text-muted-foreground mb-4">
 												💡 <strong>Tip:</strong> Podrás ajustar la hora exacta y
@@ -798,9 +965,11 @@ function HeroExpress({
 												type="button"
 												onClick={handleStepOneNext}
 												className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 py-3 text-lg font-semibold"
-												disabled={isSubmitting}
+												disabled={isSubmitting || verificandoDisponibilidad}
 											>
-												Continuar al pago →
+												{verificandoDisponibilidad
+													? "Verificando disponibilidad..."
+													: "Continuar al pago →"}
 											</Button>
 										</div>
 									</div>
