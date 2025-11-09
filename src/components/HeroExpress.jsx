@@ -67,7 +67,7 @@ function HeroExpress({
 	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
 	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
-	
+
 	// Generar opciones de tiempo en intervalos de 15 minutos
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
 

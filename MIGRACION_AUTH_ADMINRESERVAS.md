@@ -26,9 +26,9 @@ import { useAuth } from "../contexts/AuthContext";
 function AdminReservas() {
   // Sistema de autenticación moderno
   const { accessToken } = useAuth();
-  
+
   // Token con compatibilidad backward y prioridad al nuevo sistema
-  const ADMIN_TOKEN = 
+  const ADMIN_TOKEN =
     accessToken ||  // ✅ Primero: token del contexto (sistema moderno)
     import.meta.env.VITE_ADMIN_TOKEN ||  // Segundo: variable de entorno
     (typeof window !== "undefined"
@@ -41,6 +41,7 @@ function AdminReservas() {
 Se eliminaron **todas las redefiniciones locales** de `ADMIN_TOKEN` y `dynamicToken` en el componente (16 ocurrencias) para usar la constante global definida al inicio.
 
 **Antes** (❌):
+
 ```jsx
 const handleSave = async () => {
   try {
@@ -53,6 +54,7 @@ const handleSave = async () => {
 ```
 
 **Después** (✅):
+
 ```jsx
 const handleSave = async () => {
   try {
@@ -68,8 +70,8 @@ const handleSave = async () => {
 
 ## Archivos Modificados
 
-| Archivo | Cambios |
-|---------|---------|
+| Archivo                            | Cambios                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------- |
 | `src/components/AdminReservas.jsx` | Importar `useAuth`, usar `accessToken`, eliminar 16 redefiniciones de token |
 
 ---
@@ -77,26 +79,30 @@ const handleSave = async () => {
 ## Beneficios
 
 ### ✅ **Compatibilidad con Sistema Moderno**
+
 - Usa el token del `AuthContext` automáticamente
 - Se beneficia de la renovación automática de tokens (refresh)
 - Sigue las mejores prácticas del sistema de autenticación
 
 ### ✅ **Backward Compatibility**
+
 - Mantiene compatibilidad con `adminToken` (legacy)
 - Mantiene compatibilidad con variable de entorno `VITE_ADMIN_TOKEN`
 - No rompe instalaciones existentes
 
 ### ✅ **Código Limpio**
+
 - Una sola definición de `ADMIN_TOKEN`
 - No hay redefiniciones innecesarias
 - Más fácil de mantener
 
 ### ✅ **Flujo de Autenticación Completo**
+
 ```
-Usuario hace Login 
-  → AuthContext guarda accessToken 
-  → AdminReservas obtiene accessToken vía useAuth() 
-  → ADMIN_TOKEN usa accessToken 
+Usuario hace Login
+  → AuthContext guarda accessToken
+  → AdminReservas obtiene accessToken vía useAuth()
+  → ADMIN_TOKEN usa accessToken
   → Todas las peticiones HTTP funcionan ✅
 ```
 
@@ -160,11 +166,11 @@ localStorage.setItem("adminToken", "mi-token-legacy");
 
 ## Problemas Solucionados
 
-| Problema | Causa | Solución |
-|----------|-------|----------|
-| "No puedo editar reservas" | Buscaba `adminToken` en localStorage, pero el login guarda `adminAccessToken` | Usar `accessToken` del AuthContext |
-| Múltiples definiciones de token | 16 redefiniciones locales innecesarias | Una sola definición global |
-| Inconsistencia entre componentes | Unos usan AuthContext, otros localStorage | AdminReservas ahora usa AuthContext |
+| Problema                         | Causa                                                                         | Solución                            |
+| -------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------- |
+| "No puedo editar reservas"       | Buscaba `adminToken` en localStorage, pero el login guarda `adminAccessToken` | Usar `accessToken` del AuthContext  |
+| Múltiples definiciones de token  | 16 redefiniciones locales innecesarias                                        | Una sola definición global          |
+| Inconsistencia entre componentes | Unos usan AuthContext, otros localStorage                                     | AdminReservas ahora usa AuthContext |
 
 ---
 

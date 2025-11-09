@@ -79,19 +79,21 @@ function AdminReservas() {
 	// Estado para cambio masivo de estado de pago
 	// Eliminado bulkEstadoPago y setBulkEstadoPago por no usarse
 	// Eliminado showBulkPaymentDialog por no usarse
-	
+
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
-	
+
 	// Token de administrador (con compatibilidad backward)
 	// Prioriza el nuevo sistema (accessToken) sobre el legacy (localStorage)
-	const ADMIN_TOKEN = 
-		accessToken || 
+	const ADMIN_TOKEN =
+		accessToken ||
 		import.meta.env.VITE_ADMIN_TOKEN ||
 		(typeof window !== "undefined"
-			? localStorage.getItem("adminToken") || localStorage.getItem("adminAccessToken") || ""
+			? localStorage.getItem("adminToken") ||
+			  localStorage.getItem("adminAccessToken") ||
+			  ""
 			: "");
-	
+
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -1001,7 +1003,10 @@ function AdminReservas() {
 				if (tipo === "abono") {
 					const necesario = Math.max(umbralAbono - pagoPrevio, 0);
 					montoPagadoValue = necesario > 0 ? necesario : null;
-					if (estadoFinal === "pendiente" || estadoFinal === "pendiente_detalles") {
+					if (
+						estadoFinal === "pendiente" ||
+						estadoFinal === "pendiente_detalles"
+					) {
 						estadoFinal = "confirmada";
 					}
 					if (estadoPagoSolicitado === "pendiente") {
@@ -2544,13 +2549,17 @@ function AdminReservas() {
 										<p className="font-medium">{selectedReserva.destino}</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">Fecha del Viaje</Label>
+										<Label className="text-muted-foreground">
+											Fecha del Viaje
+										</Label>
 										<p className="font-medium">
 											{formatDate(selectedReserva.fecha)}
 										</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">Hora de Recogida</Label>
+										<Label className="text-muted-foreground">
+											Hora de Recogida
+										</Label>
 										<p className="font-medium">{selectedReserva.hora || "-"}</p>
 									</div>
 									<div>
@@ -2606,34 +2615,44 @@ function AdminReservas() {
 								</h3>
 								<div className="grid grid-cols-2 gap-4">
 									<div>
-										<Label className="text-muted-foreground">Fecha de Creación</Label>
+										<Label className="text-muted-foreground">
+											Fecha de Creación
+										</Label>
 										<p className="font-medium">
 											{selectedReserva.createdAt
-												? new Date(selectedReserva.createdAt).toLocaleString("es-CL", {
-														year: "numeric",
-														month: "2-digit",
-														day: "2-digit",
-														hour: "2-digit",
-														minute: "2-digit",
-														second: "2-digit",
-														hour12: false,
-												  })
+												? new Date(selectedReserva.createdAt).toLocaleString(
+														"es-CL",
+														{
+															year: "numeric",
+															month: "2-digit",
+															day: "2-digit",
+															hour: "2-digit",
+															minute: "2-digit",
+															second: "2-digit",
+															hour12: false,
+														}
+												  )
 												: "-"}
 										</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">Última Modificación</Label>
+										<Label className="text-muted-foreground">
+											Última Modificación
+										</Label>
 										<p className="font-medium">
 											{selectedReserva.updatedAt
-												? new Date(selectedReserva.updatedAt).toLocaleString("es-CL", {
-														year: "numeric",
-														month: "2-digit",
-														day: "2-digit",
-														hour: "2-digit",
-														minute: "2-digit",
-														second: "2-digit",
-														hour12: false,
-												  })
+												? new Date(selectedReserva.updatedAt).toLocaleString(
+														"es-CL",
+														{
+															year: "numeric",
+															month: "2-digit",
+															day: "2-digit",
+															hour: "2-digit",
+															minute: "2-digit",
+															second: "2-digit",
+															hour12: false,
+														}
+												  )
 												: "-"}
 										</p>
 									</div>

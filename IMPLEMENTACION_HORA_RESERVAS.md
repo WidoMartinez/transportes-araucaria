@@ -9,6 +9,7 @@ Se ha implementado exitosamente el campo de **hora de recogida** en el formulari
 ### 1. Frontend - HeroExpress.jsx
 
 #### Importaciones Actualizadas
+
 - Se agregó el componente `Select` de shadcn/ui
 - Se importó el ícono `Clock` de lucide-react
 - Se creó la función `generateTimeOptions()` para generar opciones de hora en intervalos de 15 minutos
@@ -30,6 +31,7 @@ const generateTimeOptions = () => {
 ```
 
 #### Campo de Hora Agregado
+
 - Se agregó un nuevo campo de selección de hora en el **Paso 1** del formulario
 - El campo usa el componente `Select` con opciones generadas dinámicamente
 - Se cambió el grid de 2 columnas a 3 columnas para acomodar: Fecha | Hora | Pasajeros
@@ -65,6 +67,7 @@ const generateTimeOptions = () => {
 ```
 
 #### Validación del Paso 1
+
 Se agregó validación de hora en la función `handleStepOneNext()`:
 
 ```javascript
@@ -77,14 +80,17 @@ if (!formData.hora) {
 ### 2. Backend - server-db.js
 
 #### Registro de Hora en Base de Datos
+
 El backend **ya estaba preparado** para recibir y guardar la hora:
 
 **En `/enviar-reserva-express` (línea 2522):**
+
 ```javascript
 hora: normalizeTimeGlobal(datosReserva.hora),
 ```
 
 **En actualización de reserva existente (línea 2422):**
+
 ```javascript
 hora: normalizeTimeGlobal(datosReserva.hora) || reservaExistente.hora,
 ```
@@ -92,9 +98,11 @@ hora: normalizeTimeGlobal(datosReserva.hora) || reservaExistente.hora,
 ### 3. Tarifa Dinámica
 
 #### Cálculo con Hora Incluida
+
 El sistema de tarifa dinámica **ya consideraba la hora** en sus cálculos:
 
 **En App.jsx (línea 933):**
+
 ```javascript
 body: JSON.stringify({
 	precioBase,
@@ -105,6 +113,7 @@ body: JSON.stringify({
 ```
 
 **useEffect que recalcula cuando cambia la hora (línea 1015):**
+
 ```javascript
 }, [
 	cotizacion.precio,
@@ -117,6 +126,7 @@ body: JSON.stringify({
 ```
 
 **En backend server-db.js (línea 5015):**
+
 ```javascript
 console.log("  Hora:", hora);
 ```
@@ -124,6 +134,7 @@ console.log("  Hora:", hora);
 ### 4. Timestamps de Creación
 
 El modelo `Reserva` ya tiene configurado `timestamps: true` (línea 283 de Reserva.js), lo que significa que **automáticamente** se registran:
+
 - `createdAt`: Fecha y hora de creación de la reserva
 - `updatedAt`: Fecha y hora de última modificación
 
@@ -132,22 +143,26 @@ Estos campos están disponibles en todas las respuestas de la API y se actualiza
 ## 🎯 Funcionalidades Implementadas
 
 ### ✅ Campo de Hora de Recogida
+
 - Selector visual con intervalos de 15 minutos
 - Rango de 6:00 AM a 8:00 PM
 - Validación obligatoria en el paso 1
 - Formato HH:MM
 
 ### ✅ Integración con Tarifa Dinámica
+
 - La hora seleccionada se considera en el cálculo de recargos/descuentos
 - Recálculo automático cuando se cambia la hora
 - Reglas de horario temprano/tardío se aplican correctamente
 
 ### ✅ Registro en Base de Datos
+
 - Campo `hora` se guarda correctamente en la tabla `reservas`
 - Normalización de formato de tiempo con `normalizeTimeGlobal()`
 - Campos `createdAt` y `updatedAt` automáticos
 
 ### ✅ Validaciones
+
 - Campo obligatorio en el formulario express
 - No permite avanzar al paso 2 sin seleccionar hora
 - Mensaje de error claro: "Selecciona la hora de recogida"
@@ -155,6 +170,7 @@ Estos campos están disponibles en todas las respuestas de la API y se actualiza
 ## 📊 Comparación Antes/Después
 
 ### Antes
+
 ```
 Paso 1 del formulario express:
 ├── Origen
@@ -164,6 +180,7 @@ Paso 1 del formulario express:
 ```
 
 ### Después
+
 ```
 Paso 1 del formulario express:
 ├── Origen
@@ -184,7 +201,9 @@ Paso 1 del formulario express:
 ## 📝 Notas Técnicas
 
 ### Intervalos de Tiempo
+
 Los intervalos de 15 minutos se generan con la siguiente lógica:
+
 ```javascript
 for (let hour = 6; hour <= 20; hour++) {
 	for (let minute = 0; minute < 60; minute += 15) {
@@ -194,14 +213,18 @@ for (let hour = 6; hour <= 20; hour++) {
 ```
 
 ### Normalización de Tiempo
+
 El backend usa `normalizeTimeGlobal()` para asegurar formato consistente:
+
 ```javascript
 // Acepta: "14:30", "2:30 PM", "14:30:00"
 // Devuelve: "14:30:00" (formato TIME de MySQL)
 ```
 
 ### Tarifa Dinámica
+
 La hora se usa para aplicar reglas como:
+
 - **Horario temprano (+15%)**: Antes de 9:00 AM
 - **Horario tardío**: Después de 8:00 PM
 - **Horarios peak**: Configurables por día y rango horario
