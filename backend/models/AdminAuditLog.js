@@ -61,7 +61,7 @@ const AdminAuditLog = sequelize.define(
 	{
 		tableName: "admin_audit_logs",
 		timestamps: true,
-		createdAt: "createdAt",
+		createdAt: "created_at",
 		updatedAt: false,
 		indexes: [
 			{
@@ -71,7 +71,7 @@ const AdminAuditLog = sequelize.define(
 				fields: ["accion"],
 			},
 			{
-				fields: ["createdAt"],
+				fields: ["created_at"],
 			},
 			{
 				fields: ["resultado"],
