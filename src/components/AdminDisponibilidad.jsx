@@ -6,11 +6,8 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Switch } from "./ui/switch";
-import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { AlertCircle, CheckCircle2, Save, Info } from "lucide-react";
-
-const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function AdminDisponibilidad() {
 	const { authenticatedFetch } = useAuthenticatedFetch();
@@ -30,7 +27,7 @@ function AdminDisponibilidad() {
 			setLoading(true);
 			setError("");
 			const response = await authenticatedFetch(
-				`${API_BASE_URL}/api/disponibilidad/configuracion`
+				`/api/disponibilidad/configuracion`
 			);
 
 			if (!response.ok) {
@@ -91,7 +88,7 @@ function AdminDisponibilidad() {
 		try {
 			setSaving(true);
 			const response = await authenticatedFetch(
-				`${API_BASE_URL}/api/disponibilidad/configuracion/${configuracion.id}`,
+				`/api/disponibilidad/configuracion/${configuracion.id}`,
 				{
 					method: "PUT",
 					headers: {
