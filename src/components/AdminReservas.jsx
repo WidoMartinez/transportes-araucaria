@@ -583,14 +583,14 @@ function AdminReservas() {
 
 		setLoadingAsignacion(true);
 		try {
-			// Usa el ADMIN_TOKEN definido al inicio del componente
+			// Usa el token de autenticación del contexto
 			const response = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
 				{
 					method: "PUT",
 					headers: {
 						"Content-Type": "application/json",
-						Authorization: `Bearer ${ADMIN_TOKEN}`,
+						Authorization: `Bearer ${accessToken}`,
 					},
 					body: JSON.stringify({
 						vehiculoId: parseInt(vehiculoSeleccionado),
@@ -611,12 +611,12 @@ function AdminReservas() {
 				if (showDetailDialog && selectedReserva?.id) {
 					setLoadingHistorial(true);
 					try {
-						// Usa el ADMIN_TOKEN definido al inicio del componente
+						// Usa el token de autenticación del contexto
 						const resp = await fetch(
 							`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`,
 							{
-								headers: ADMIN_TOKEN
-									? { Authorization: `Bearer ${ADMIN_TOKEN}` }
+								headers: accessToken
+									? { Authorization: `Bearer ${accessToken}` }
 									: {},
 							}
 						);
@@ -794,12 +794,12 @@ function AdminReservas() {
 
 		// Cargar historial de asignaciones (uso interno) usando token del contexto
 		try {
-			// Usa el ADMIN_TOKEN definido al inicio del componente
+			// Usa el token de autenticación del contexto
 			const resp = await fetch(
 				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
 				{
-					headers: ADMIN_TOKEN
-						? { Authorization: `Bearer ${ADMIN_TOKEN}` }
+					headers: accessToken
+						? { Authorization: `Bearer ${accessToken}` }
 						: {},
 				}
 			);
@@ -827,14 +827,14 @@ function AdminReservas() {
 		try {
 			// Actualizar datos generales de la reserva
 			try {
-				// Usa el ADMIN_TOKEN definido al inicio del componente
+				// Usa el token de autenticación del contexto
 				const generalResp = await fetch(
 					`${apiUrl}/api/reservas/${selectedReserva.id}`,
 					{
 						method: "PUT",
 						headers: {
 							"Content-Type": "application/json",
-							Authorization: `Bearer ${ADMIN_TOKEN}`,
+							Authorization: `Bearer ${accessToken}`,
 						},
 						body: JSON.stringify({
 							nombre: formData.nombre,
@@ -883,12 +883,12 @@ function AdminReservas() {
 					!destinoExiste(destinoFinalEdit)
 				) {
 					try {
-						// Usa el ADMIN_TOKEN definido al inicio del componente
+						// Usa el token de autenticación del contexto
 						await fetch(`${apiUrl}/api/destinos`, {
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json",
-								Authorization: `Bearer ${ADMIN_TOKEN}`,
+								Authorization: `Bearer ${accessToken}`,
 							},
 							body: JSON.stringify({
 								nombre: destinoFinalEdit,
@@ -909,12 +909,12 @@ function AdminReservas() {
 					!destinoExiste(origenFinalEdit)
 				) {
 					try {
-						// Usa el ADMIN_TOKEN definido al inicio del componente
+						// Usa el token de autenticación del contexto
 						await fetch(`${apiUrl}/api/destinos`, {
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json",
-								Authorization: `Bearer ${ADMIN_TOKEN}`,
+								Authorization: `Bearer ${accessToken}`,
 							},
 							body: JSON.stringify({
 								nombre: origenFinalEdit,
@@ -928,14 +928,14 @@ function AdminReservas() {
 						// Ignorar errores al guardar origen
 					}
 				}
-				// Actualizar ruta (usa el ADMIN_TOKEN definido al inicio del componente)
+				// Actualizar ruta (usa el token de autenticación del contexto)
 				const rutaResp = await fetch(
 					`${apiUrl}/api/reservas/${selectedReserva.id}/ruta`,
 					{
 						method: "PUT",
 						headers: {
 							"Content-Type": "application/json",
-							Authorization: `Bearer ${ADMIN_TOKEN}`,
+							Authorization: `Bearer ${accessToken}`,
 						},
 						body: JSON.stringify({
 							origen: origenFinalEdit,
@@ -1020,7 +1020,7 @@ function AdminReservas() {
 					method: "PUT",
 					headers: {
 						"Content-Type": "application/json",
-						...(ADMIN_TOKEN ? { Authorization: `Bearer ${ADMIN_TOKEN}` } : {}),
+						...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
 					},
 					body: JSON.stringify({
 						estadoPago: estadoPagoSolicitado,
@@ -1504,12 +1504,12 @@ function AdminReservas() {
 			// Crear destino si es 'otro' y no existe
 			if (destinoEsOtro && destinoFinal && !destinoExiste(destinoFinal)) {
 				try {
-					// Usa el ADMIN_TOKEN definido al inicio del componente
+					// Usa el token de autenticación del contexto
 					await fetch(`${apiUrl}/api/destinos`, {
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
-							Authorization: `Bearer ${ADMIN_TOKEN}`,
+							Authorization: `Bearer ${accessToken}`,
 						},
 						body: JSON.stringify({
 							nombre: destinoFinal,
@@ -1983,15 +1983,15 @@ function AdminReservas() {
 										onClick={async () => {
 											if (!selectedReserva) return;
 											try {
-												// Usa el ADMIN_TOKEN definido al inicio del componente
+												// Usa el accessToken definido al inicio del componente
 												const resp = await fetch(
 													`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,
 													{
 														method: "POST",
 														headers: {
 															"Content-Type": "application/json",
-															...(ADMIN_TOKEN
-																? { Authorization: `Bearer ${ADMIN_TOKEN}` }
+															...(accessToken
+																? { Authorization: `Bearer ${accessToken}` }
 																: {}),
 														},
 														body: JSON.stringify({
