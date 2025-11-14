@@ -1,6 +1,12 @@
 // src/components/AdminDisponibilidad.jsx
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -177,7 +183,9 @@ function AdminDisponibilidad() {
 					<CardContent>
 						<div className="flex items-center justify-between">
 							<div className="space-y-1">
-								<Label htmlFor="activo">Sistema de descuentos por retorno</Label>
+								<Label htmlFor="activo">
+									Sistema de descuentos por retorno
+								</Label>
 								<p className="text-sm text-gray-500">
 									Cuando está activo, el sistema calculará y aplicará descuentos
 									automáticamente
@@ -207,8 +215,8 @@ function AdminDisponibilidad() {
 							<Info className="h-4 w-4 text-blue-600" />
 							<AlertDescription className="text-blue-600">
 								<strong>Holgura mínima:</strong> 30 minutos (fijo, no
-								modificable). Es el tiempo mínimo obligatorio entre la llegada de
-								un viaje y la salida del siguiente.
+								modificable). Es el tiempo mínimo obligatorio entre la llegada
+								de un viaje y la salida del siguiente.
 							</AlertDescription>
 						</Alert>
 
@@ -230,9 +238,7 @@ function AdminDisponibilidad() {
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="holguraOptima">
-								Holgura óptima (minutos) *
-							</Label>
+							<Label htmlFor="holguraOptima">Holgura óptima (minutos) *</Label>
 							<Input
 								id="holguraOptima"
 								type="number"
@@ -293,9 +299,7 @@ function AdminDisponibilidad() {
 						</Alert>
 
 						<div className="space-y-2">
-							<Label htmlFor="descuentoMinimo">
-								Descuento mínimo (%) *
-							</Label>
+							<Label htmlFor="descuentoMinimo">Descuento mínimo (%) *</Label>
 							<Input
 								id="descuentoMinimo"
 								type="number"
@@ -304,7 +308,10 @@ function AdminDisponibilidad() {
 								step="0.01"
 								value={configuracion.descuentoMinimo}
 								onChange={(e) =>
-									handleInputChange("descuentoMinimo", parseFloat(e.target.value))
+									handleInputChange(
+										"descuentoMinimo",
+										parseFloat(e.target.value)
+									)
 								}
 								required
 							/>
@@ -315,9 +322,7 @@ function AdminDisponibilidad() {
 						</div>
 
 						<div className="space-y-2">
-							<Label htmlFor="descuentoMaximo">
-								Descuento máximo (%) *
-							</Label>
+							<Label htmlFor="descuentoMaximo">Descuento máximo (%) *</Label>
 							<Input
 								id="descuentoMaximo"
 								type="number"
@@ -326,13 +331,16 @@ function AdminDisponibilidad() {
 								step="0.01"
 								value={configuracion.descuentoMaximo}
 								onChange={(e) =>
-									handleInputChange("descuentoMaximo", parseFloat(e.target.value))
+									handleInputChange(
+										"descuentoMaximo",
+										parseFloat(e.target.value)
+									)
 								}
 								required
 							/>
 							<p className="text-sm text-gray-500">
-								Descuento aplicado cuando el tiempo de espera es igual o superior
-								a la holgura óptima.
+								Descuento aplicado cuando el tiempo de espera es igual o
+								superior a la holgura óptima.
 							</p>
 						</div>
 					</CardContent>
