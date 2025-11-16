@@ -59,13 +59,17 @@ ALLOWED_ORIGINS=https://tu-dominio-hostinger.com,https://transportes-araucaria.c
 ## 📊 Base de datos MySQL
 
 ### Opción 1: Base de datos de Hostinger
+
 Si Hostinger proporciona MySQL en el mismo plan:
+
 - Crear base de datos desde el panel de Hostinger
 - Obtener credenciales (host, usuario, contraseña)
 - Configurar en variables de entorno
 
 ### Opción 2: Mantener base de datos externa
+
 Si prefieres mantener la BD actual:
+
 - Asegurar que el host de BD permita conexiones desde IPs de Hostinger
 - Configurar firewall/whitelist si es necesario
 - Verificar latencia (puede afectar rendimiento)
@@ -75,11 +79,13 @@ Si prefieres mantener la BD actual:
 ## 🚀 Pasos de despliegue
 
 1. **Subir código a GitHub**:
+
    ```bash
    git push origin hostinger-backend
    ```
 
 2. **Configurar en Hostinger**:
+
    - Seleccionar repositorio: `transportes-araucaria`
    - Seleccionar rama: `hostinger-backend`
    - Marco: Vite
@@ -99,13 +105,13 @@ Si prefieres mantener la BD actual:
 
 ## 🔄 Diferencias con Render.com
 
-| Aspecto | Render.com | Hostinger |
-|---------|-----------|-----------|
-| Archivo config | `render.yaml` | Configuración en panel web |
-| Variables env | Panel Render | Panel Hostinger |
-| Logs | Dashboard Render | Panel Hostinger |
-| Dominio | Subdominio .onrender.com | Subdominio Hostinger |
-| Base de datos | Separada (configurar conexión) | Posiblemente integrada |
+| Aspecto        | Render.com                     | Hostinger                  |
+| -------------- | ------------------------------ | -------------------------- |
+| Archivo config | `render.yaml`                  | Configuración en panel web |
+| Variables env  | Panel Render                   | Panel Hostinger            |
+| Logs           | Dashboard Render               | Panel Hostinger            |
+| Dominio        | Subdominio .onrender.com       | Subdominio Hostinger       |
+| Base de datos  | Separada (configurar conexión) | Posiblemente integrada     |
 
 ---
 
@@ -142,6 +148,7 @@ curl https://tu-dominio-hostinger.com/api/disponibilidad?fecha=2025-11-20
 ## 📞 Soporte
 
 Si encuentras problemas:
+
 1. Revisar logs en panel de Hostinger
 2. Verificar variables de entorno
 3. Comprobar conexión a base de datos
