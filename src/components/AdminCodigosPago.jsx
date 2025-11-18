@@ -300,6 +300,7 @@ function AdminCodigosPago() {
 										<TableHead>Código</TableHead>
 										<TableHead>Ruta</TableHead>
 										<TableHead>Monto</TableHead>
+										<TableHead>Tipo</TableHead>
 										<TableHead>Estado</TableHead>
 										<TableHead>Usos</TableHead>
 										<TableHead>Vence</TableHead>
@@ -320,6 +321,15 @@ function AdminCodigosPago() {
 												</div>
 											</TableCell>
 											<TableCell>{formatCurrency(c.monto)}</TableCell>
+											<TableCell>
+												{c.idaVuelta ? (
+													<Badge className="bg-purple-600 text-white">
+														Ida y vuelta
+													</Badge>
+												) : (
+													<Badge variant="outline">Solo ida</Badge>
+												)}
+											</TableCell>
 											<TableCell>{getEstadoBadge(c.estado)}</TableCell>
 											<TableCell>
 												{c.usosActuales} / {c.usosMaximos}
@@ -441,6 +451,26 @@ function AdminCodigosPago() {
 									min="1"
 									max="15"
 								/>
+							</div>
+							<div className="space-y-2 md:col-span-2">
+								<Label htmlFor="idaVuelta">Tipo de viaje</Label>
+								<div className="flex items-start gap-3 rounded border p-3">
+									<input
+										type="checkbox"
+										id="idaVuelta"
+										name="idaVuelta"
+										checked={formData.idaVuelta}
+										onChange={handleInputChange}
+										className="mt-1 h-4 w-4"
+									/>
+									<div>
+										<p className="font-medium">Incluir viaje de regreso</p>
+										<p className="text-sm text-gray-500">
+											Los clientes seguiran el flujo completo de reservas e
+											ingresaran la fecha y hora del regreso al usar el codigo.
+										</p>
+									</div>
+								</div>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="usosMaximos">Usos Máximos</Label>

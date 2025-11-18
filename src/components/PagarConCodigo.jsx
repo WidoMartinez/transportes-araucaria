@@ -25,6 +25,8 @@ function PagarConCodigo() {
 		telefono: "",
 		fecha: "",
 		hora: "",
+		fechaRegreso: "",
+		horaRegreso: "",
 		numeroVuelo: "",
 		hotel: "",
 		mensaje: "",
@@ -52,6 +54,7 @@ function PagarConCodigo() {
 	const saldoPendiente = Math.max(montoTotal - abonoSugerido, 0);
 	const montoSeleccionado =
 		selectedPaymentType === "abono" ? abonoSugerido : montoTotal;
+	const esIdaVuelta = Boolean(codigoValidado?.idaVuelta);
 
 	// Validar el código de pago
 	const validarCodigo = async () => {
@@ -123,6 +126,30 @@ function PagarConCodigo() {
 			setError("Por favor selecciona la hora del servicio");
 			return false;
 		}
+		if (esIdaVuelta) {
+			if (!formData.fechaRegreso) {
+				setError("Por favor indica la fecha del viaje de regreso");
+				return false;
+			}
+			if (!formData.horaRegreso) {
+				setError("Por favor indica la hora del viaje de regreso");
+				return false;
+			}
+			const salida = new Date(`${formData.fecha}T${formData.hora}`);
+			const regreso = new Date(
+				`${formData.fechaRegreso}T${formData.horaRegreso}`
+			);
+			if (Number.isNaN(regreso.getTime())) {
+				setError("La fecha de regreso no es valida");
+				return false;
+			}
+			if (!Number.isNaN(salida.getTime()) && regreso <= salida) {
+				setError(
+					"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora ingresadas."
+				);
+				return false;
+			}
+		}
 		// Validar dirección obligatoria según sentido del viaje
 		if (codigoValidado) {
 			if (
@@ -174,6 +201,8 @@ function PagarConCodigo() {
 				telefono: formData.telefono,
 				origen: codigoValidado.origen,
 				destino: codigoValidado.destino,
+				direccionDestino: formData.direccionDestino,
+				direccionOrigen: formData.direccionOrigen,
 				// Estado inicial: pendiente hasta confirmar el pago
 				estado: "pendiente",
 				estadoPago: "pendiente",
@@ -187,7 +216,7 @@ function PagarConCodigo() {
 				numeroVuelo: formData.numeroVuelo,
 				hotel: formData.hotel,
 				mensaje: formData.mensaje,
-				idaVuelta: !!codigoValidado.idaVuelta,
+				idaVuelta: esIdaVuelta,
 				referenciaPago: codigoValidado.codigo,
 				source: "codigo_pago",
 				abonoSugerido: selectedPaymentType === "abono" ? abonoSugerido : 0,
@@ -199,6 +228,12 @@ function PagarConCodigo() {
 			// Añadir hora solo si el usuario la proporcionó
 			if (formData.hora && formData.hora.trim()) {
 				reservaPayload.hora = formData.hora;
+			}
+			if (esIdaVuelta && formData.fechaRegreso) {
+				reservaPayload.fechaRegreso = formData.fechaRegreso;
+			}
+			if (esIdaVuelta && formData.horaRegreso && formData.horaRegreso.trim()) {
+				reservaPayload.horaRegreso = formData.horaRegreso;
 			}
 
 			const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
@@ -384,7 +419,7 @@ function PagarConCodigo() {
 													{codigoValidado.pasajeros}
 												</span>
 											</div>
-											{codigoValidado.idaVuelta && (
+											{esIdaVuelta && (
 												<div className="flex justify-between">
 													<span className="text-gray-600">Tipo:</span>
 													<Badge variant="default" className="bg-blue-500">
@@ -418,6 +453,12 @@ function PagarConCodigo() {
 										<h4 className="font-semibold text-lg">
 											Completa tus datos
 										</h4>
+										{esIdaVuelta && (
+											<p className="text-sm text-purple-700">
+												Este servicio incluye ida y vuelta, por lo que
+												necesitamos la fecha y hora del tramo de regreso.
+											</p>
+										)}
 
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 											<div className="space-y-2">
@@ -512,6 +553,73 @@ function PagarConCodigo() {
 													})}
 												</select>
 											</div>
+											{esIdaVuelta && (
+												<>
+													<div className="space-y-2">
+														<Label htmlFor="fechaRegreso">
+															Fecha de regreso{" "}
+															<span className="text-red-500">*</span>
+														</Label>
+														<Input
+															id="fechaRegreso"
+															name="fechaRegreso"
+															type="date"
+															value={formData.fechaRegreso}
+															onChange={handleInputChange}
+															min={
+																formData.fecha ||
+																new Date().toISOString().split("T")[0]
+															}
+															required={esIdaVuelta}
+														/>
+													</div>
+													<div className="space-y-2">
+														<Label htmlFor="horaRegreso">
+															Hora de regreso{" "}
+															<span className="text-red-500">*</span>
+														</Label>
+														<select
+															id="horaRegreso"
+															name="horaRegreso"
+															value={formData.horaRegreso}
+															onChange={handleInputChange}
+															required={esIdaVuelta}
+															className="h-10 border rounded px-3 w-full"
+														>
+															<option value="">
+																Selecciona la hora de regreso
+															</option>
+															{Array.from(
+																{ length: (21 - 8) * 4 + 1 },
+																(_, i) => {
+																	const totalMinutes = 8 * 60 + i * 15;
+																	const horas = Math.floor(
+																		totalMinutes / 60
+																	);
+																	const minutos = totalMinutes % 60;
+																	const horaStr = `${String(
+																		horas
+																	).padStart(2, "0")}:${String(
+																		minutos
+																	).padStart(2, "0")}`;
+																	return (
+																		<option
+																			key={`regreso-${horaStr}`}
+																			value={horaStr}
+																		>
+																			{horaStr}
+																		</option>
+																	);
+																}
+															)}
+														</select>
+														<p className="text-xs text-gray-500">
+															Si tu regreso es el mismo dia, la hora debe
+															ser posterior al viaje de ida.
+														</p>
+													</div>
+												</>
+											)}
 
 											<div className="space-y-2">
 												<Label htmlFor="numeroVuelo">

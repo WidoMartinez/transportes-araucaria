@@ -1956,6 +1956,44 @@ app.post("/enviar-reserva", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 		const enviarCorreo = datosReserva.enviarCorreo !== false;
+		const limpiarTextoPlano = (valor) => {
+			if (valor === undefined || valor === null) return "";
+			return String(valor).trim();
+		};
+		const detallesDirecciones = [];
+		const direccionDestinoCliente = limpiarTextoPlano(
+			datosReserva.direccionDestino
+		);
+		if (direccionDestinoCliente) {
+			detallesDirecciones.push(
+				`Dirección destino: ${direccionDestinoCliente}`
+			);
+		}
+		const direccionOrigenCliente = limpiarTextoPlano(
+			datosReserva.direccionOrigen
+		);
+		if (direccionOrigenCliente) {
+			detallesDirecciones.push(`Dirección origen: ${direccionOrigenCliente}`);
+		}
+		const mensajeBaseCliente = limpiarTextoPlano(datosReserva.mensaje);
+		const mensajeDirecciones =
+			detallesDirecciones.length > 0
+				? `Direcciones confirmadas:\n${detallesDirecciones.join("\n")}`
+				: "";
+		const mensajeDetallado = [mensajeBaseCliente, mensajeDirecciones]
+			.filter((segmento) => segmento.length > 0)
+			.join("\n\n");
+		const mensajeParaGuardar =
+			mensajeDetallado.length > 0 ? mensajeDetallado : undefined;
+		const numeroVueloCliente = limpiarTextoPlano(datosReserva.numeroVuelo);
+		const hotelCliente = limpiarTextoPlano(datosReserva.hotel);
+		const equipajeEspecialCliente = limpiarTextoPlano(
+			datosReserva.equipajeEspecial
+		);
+		const sillaInfantilCliente =
+			datosReserva.sillaInfantil !== undefined
+				? Boolean(datosReserva.sillaInfantil)
+				: undefined;
 
 		// Se usa normalizeTimeGlobal definida en scope superior
 
@@ -2407,8 +2445,31 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
 				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 				vehiculo: datosReserva.vehiculo || "",
+				numeroVuelo:
+					datosReserva.numeroVuelo !== undefined
+						? numeroVueloCliente
+						: reservaExistente.numeroVuelo,
+				hotel:
+					datosReserva.hotel !== undefined
+						? hotelCliente
+						: reservaExistente.hotel,
+				equipajeEspecial:
+					datosReserva.equipajeEspecial !== undefined
+						? equipajeEspecialCliente
+						: reservaExistente.equipajeEspecial,
+				sillaInfantil:
+					datosReserva.sillaInfantil !== undefined
+						? Boolean(datosReserva.sillaInfantil)
+						: reservaExistente.sillaInfantil,
 				idaVuelta: Boolean(datosReserva.idaVuelta),
-				fechaRegreso: datosReserva.fechaRegreso || null,
+				fechaRegreso:
+					datosReserva.fechaRegreso !== undefined
+						? datosReserva.fechaRegreso || null
+						: reservaExistente.fechaRegreso,
+				horaRegreso:
+					datosReserva.horaRegreso !== undefined
+						? normalizeTimeGlobal(datosReserva.horaRegreso) || null
+						: reservaExistente.horaRegreso,
 				abonoSugerido: abonoCalculadoExistente,
 				saldoPendiente: saldoParaActualizarExistente,
 				descuentoBase: parsePositiveDecimal(
@@ -2436,7 +2497,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					"totalConDescuento",
 					0
 				),
-				mensaje: datosReserva.mensaje || reservaExistente.mensaje,
+				mensaje:
+					mensajeParaGuardar !== undefined
+						? mensajeParaGuardar
+						: reservaExistente.mensaje,
 				codigoDescuento:
 					datosReserva.codigoDescuento || reservaExistente.codigoDescuento,
 				// Mantener el código de reserva original
@@ -2516,13 +2580,14 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				referenciaPago: datosReserva.referenciaPago || null,
 
 				// Campos que se completarán después del pago (opcionales por ahora)
-				numeroVuelo: "",
-				hotel: "",
-				equipajeEspecial: "",
-				sillaInfantil: false,
+				numeroVuelo: numeroVueloCliente,
+				hotel: hotelCliente,
+				equipajeEspecial: equipajeEspecialCliente,
+				sillaInfantil:
+					sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
 				idaVuelta: Boolean(datosReserva.idaVuelta),
 				fechaRegreso: datosReserva.fechaRegreso || null,
-				horaRegreso: null,
+				horaRegreso: normalizeTimeGlobal(datosReserva.horaRegreso),
 
 				// Campos financieros con validación
 				abonoSugerido: abonoCalculadoExpress,
@@ -2552,7 +2617,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					"totalConDescuento",
 					0
 				),
-				mensaje: datosReserva.mensaje || "",
+				mensaje: mensajeParaGuardar ?? "",
 
 				// Metadata del sistema
 				source: datosReserva.source || "express_web",
