@@ -1028,6 +1028,16 @@ app.put("/pricing", async (req, res) => {
 					destino.precios?.auto?.base || destino.precioVuelta || 0;
 				const precioIdaVuelta =
 					destino.precios?.auto?.base || destino.precioIdaVuelta || 0;
+				const duracionIdaValor = Number(destino.duracionIdaMinutos);
+				const duracionVueltaValor = Number(destino.duracionVueltaMinutos);
+				const duracionIda =
+					Number.isFinite(duracionIdaValor) && duracionIdaValor > 0
+						? duracionIdaValor
+						: 60;
+				const duracionVuelta =
+					Number.isFinite(duracionVueltaValor) && duracionVueltaValor > 0
+						? duracionVueltaValor
+						: 60;
 
 				return Destino.upsert({
 					nombre: destino.nombre,
@@ -1041,6 +1051,8 @@ app.put("/pricing", async (req, res) => {
 					imagen: destino.imagen || "",
 					maxPasajeros: destino.maxPasajeros || 4,
 					minHorasAnticipacion: destino.minHorasAnticipacion || 5,
+					duracionIdaMinutos: duracionIda,
+					duracionVueltaMinutos: duracionVuelta,
 				});
 			})
 		);
