@@ -97,7 +97,7 @@ function ConsultarReserva() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					gateway: "flow",
-					amount,
+					amount: monto,
 					description,
 					email: reserva.email,
 					reservationId: reserva.id,
