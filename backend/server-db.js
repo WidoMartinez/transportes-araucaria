@@ -425,13 +425,15 @@ const normalizeUsuariosQueUsaron = (raw) => {
 // Nota: ampliamos headers permitidos y respondemos a preflight para evitar bloqueos desde el dominio público
 const corsOptions = {
 	origin: function (origin, callback) {
-		const allowedOrigins = [
-			"https://www.transportesaraucaria.cl",
-			"https://transportesaraucaria.cl",
-			"http://localhost:3000",
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
-		];
+	const allowedOrigins = [
+		"https://www.transportesaraucaria.cl",
+		"https://transportesaraucaria.cl",
+		"https://www.transportes-araucaria.cl",
+		"https://transportes-araucaria.cl",
+		"http://localhost:3000",
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+	];
 		
 		// Permitir peticiones sin origin (como Postman, curl, o server-to-server)
 		if (!origin) return callback(null, true);
