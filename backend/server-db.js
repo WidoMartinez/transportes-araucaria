@@ -1968,14 +1968,14 @@ app.post("/enviar-reserva", async (req, res) => {
 		);
 		if (direccionDestinoCliente) {
 			detallesDirecciones.push(
-				`Dirección destino: ${direccionDestinoCliente}`
+				`Direccion destino: ${direccionDestinoCliente}`
 			);
 		}
 		const direccionOrigenCliente = limpiarTextoPlano(
 			datosReserva.direccionOrigen
 		);
 		if (direccionOrigenCliente) {
-			detallesDirecciones.push(`Dirección origen: ${direccionOrigenCliente}`);
+			detallesDirecciones.push(`Direccion origen: ${direccionOrigenCliente}`);
 		}
 		const mensajeBaseCliente = limpiarTextoPlano(datosReserva.mensaje);
 		const mensajeDirecciones =
@@ -2299,6 +2299,44 @@ app.post("/enviar-reserva-express", async (req, res) => {
 	try {
 		const datosReserva = req.body || {};
 		const enviarCorreo = datosReserva.enviarCorreo !== false;
+		const limpiarTextoPlano = (valor) => {
+			if (valor === undefined || valor === null) return "";
+			return String(valor).trim();
+		};
+		const detallesDirecciones = [];
+		const direccionDestinoCliente = limpiarTextoPlano(
+			datosReserva.direccionDestino
+		);
+		if (direccionDestinoCliente) {
+			detallesDirecciones.push(
+				`Dirección destino: ${direccionDestinoCliente}`
+			);
+		}
+		const direccionOrigenCliente = limpiarTextoPlano(
+			datosReserva.direccionOrigen
+		);
+		if (direccionOrigenCliente) {
+			detallesDirecciones.push(`Dirección origen: ${direccionOrigenCliente}`);
+		}
+		const mensajeBaseCliente = limpiarTextoPlano(datosReserva.mensaje);
+		const mensajeDirecciones =
+			detallesDirecciones.length > 0
+				? `Direcciones confirmadas:\n${detallesDirecciones.join("\n")}`
+				: "";
+		const mensajeDetallado = [mensajeBaseCliente, mensajeDirecciones]
+			.filter((segmento) => segmento.length > 0)
+			.join("\n\n");
+		const mensajeParaGuardar =
+			mensajeDetallado.length > 0 ? mensajeDetallado : undefined;
+		const numeroVueloCliente = limpiarTextoPlano(datosReserva.numeroVuelo);
+		const hotelCliente = limpiarTextoPlano(datosReserva.hotel);
+		const equipajeEspecialCliente = limpiarTextoPlano(
+			datosReserva.equipajeEspecial
+		);
+		const sillaInfantilCliente =
+			datosReserva.sillaInfantil !== undefined
+				? Boolean(datosReserva.sillaInfantil)
+				: undefined;
 
 		// Formatear RUT si se proporciona
 		const rutFormateado = datosReserva.rut
