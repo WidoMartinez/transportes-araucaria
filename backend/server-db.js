@@ -5647,16 +5647,32 @@ app.post("/create-payment", async (req, res) => {
 		if (tipoPago) optionalPayload.tipoPago = tipoPago;
 		if (referenciaPago) optionalPayload.referenciaPago = referenciaPago;
 
-		const params = {
-			apiKey: process.env.FLOW_API_KEY,
-			commerceOrder,
-			subject: description,
-			currency: "CLP",
-			amount: Number(amount),
-			email: email,
-			urlConfirmation: `${backendBase}/api/flow-confirmation`,
-			urlReturn: `${frontendBase}/flow-return`,
-		};
+                const returnUrl = new URL(
+                        `${frontendBase.replace(/\/$/, "")}/flow-return`
+                );
+                returnUrl.searchParams.set("flow_payment", "success");
+
+                const reservaReferencia = reservaId || codigoReservaNormalizado;
+                if (reservaReferencia) {
+                        returnUrl.searchParams.set("reserva_id", reservaReferencia);
+                }
+                if (codigoReservaNormalizado) {
+                        returnUrl.searchParams.set(
+                                "codigo_reserva",
+                                codigoReservaNormalizado
+                        );
+                }
+
+                const params = {
+                        apiKey: process.env.FLOW_API_KEY,
+                        commerceOrder,
+                        subject: description,
+                        currency: "CLP",
+                        amount: Number(amount),
+                        email: email,
+                        urlConfirmation: `${backendBase}/api/flow-confirmation`,
+                        urlReturn: returnUrl.toString(),
+                };
 
 		if (Object.keys(optionalPayload).length > 0) {
 			optionalPayload.commerceOrder = commerceOrder;
