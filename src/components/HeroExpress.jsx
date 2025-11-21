@@ -327,34 +327,28 @@ function HeroExpress({
 	return (
 		<section id="inicio" className="flex flex-col lg:flex-row min-h-screen w-full bg-white overflow-hidden">
 			{/* Left Panel - Visual & Branding */}
-			<div className="relative w-full lg:w-5/12 h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
-				<div className="absolute inset-0 bg-zinc-900/40 z-10"></div>
+			<div className="relative w-full lg:w-1/3 h-32 lg:h-auto bg-zinc-900 flex-shrink-0">
+				<div className="absolute inset-0 bg-zinc-900/50 z-10"></div>
 				<img
 					src={heroVan}
 					alt="Transporte Privado"
-					className="absolute inset-0 w-full h-full object-cover opacity-80 grayscale-[30%]"
+					className="absolute inset-0 w-full h-full object-cover opacity-70 grayscale-[40%]"
 				/>
-				<div className="absolute inset-0 z-20 flex flex-col justify-center lg:justify-end p-6 lg:p-12 text-white">
-					<div className="max-w-md">
-						<h1 className="text-3xl lg:text-5xl font-bold tracking-tight mb-3 text-shadow">
+				<div className="absolute inset-0 z-20 flex flex-col justify-center lg:justify-center p-4 lg:p-8 text-white">
+					<div className="max-w-sm">
+						<h1 className="text-2xl lg:text-4xl font-bold tracking-tight mb-2 text-shadow">
 							Tu viaje comienza aquí.
 						</h1>
-						<p className="text-lg text-white/90 font-medium hidden lg:block">
-							Conecta con Pucón, Villarrica y toda la región. Sin esperas, sin escalas.
+						<p className="text-sm text-white/85 font-normal hidden lg:block">
+							Conecta con Pucón, Villarrica y toda la región.
 						</p>
-						<div className="flex gap-3 mt-6 lg:hidden">
-							{/* Mobile Quick Stats or badges could go here */}
-							<Badge variant="secondary" className="bg-white/20 backdrop-blur-md text-white border-0">
-								Disponible 24/7
-							</Badge>
-						</div>
 					</div>
 				</div>
 			</div>
 
 			{/* Right Panel - Booking Form */}
-			<div className="w-full lg:w-7/12 flex flex-col bg-white relative">
-				<div className="flex-1 p-6 md:p-12 lg:p-16 max-w-2xl mx-auto w-full flex flex-col justify-center">
+			<div className="w-full lg:w-2/3 flex flex-col bg-white relative">
+				<div className="flex-1 p-6 md:p-10 lg:p-12 max-w-2xl mx-auto w-full flex flex-col justify-center">
 
 					{/* Header Form */}
 					<div className="mb-8 space-y-2">
