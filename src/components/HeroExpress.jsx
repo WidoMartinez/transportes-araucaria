@@ -339,9 +339,9 @@ function HeroExpress({
 				<img
 					src={heroVan}
 					alt="Fondo transporte"
-					className="w-full h-full object-cover opacity-60 transition-all duration-700 hover:scale-105"
+					className="w-full h-full object-cover opacity-60"
 				/>
-				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/95 via-zinc-900/60 via-50% to-zinc-800/30 animate-gradient-shift" />
+				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/95 via-zinc-900/60 via-50% to-zinc-800/30" />
 				<div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/20" />
 			</div>
 
@@ -493,7 +493,7 @@ function HeroExpress({
 						className="w-full lg:w-auto h-12 lg:h-14 rounded-xl lg:rounded-full px-8 bg-gradient-to-r from-black to-zinc-800 hover:from-zinc-800 hover:to-black text-white font-semibold shadow-lg hover:shadow-2xl hover:shadow-black/40 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center justify-center gap-2 text-base group relative overflow-hidden"
 						disabled={isSubmitting || verificandoDisponibilidad}
 					>
-						<span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700" />
+						<span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
 						{verificandoDisponibilidad ? (
 							<LoaderCircle className="h-5 w-5 animate-spin" />
 						) : (
@@ -570,7 +570,7 @@ function HeroExpress({
 											<span>{formData.destino === "Otro" ? formData.otroDestino : formData.destino}</span>
 										</div>
 									</div>
-									<Button variant="ghost" size="icon" onClick={handleStepBack} className="text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 -mt-1 -mr-2 transition-all duration-200 hover:scale-110 active:scale-95 hover:rotate-12">
+									<Button variant="ghost" size="icon" onClick={handleStepBack} className="text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 -mt-1 -mr-2 transition-all duration-200 hover:scale-110 active:scale-95">
 										<span className="sr-only">Editar</span>
 										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil h-4 w-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
 									</Button>
