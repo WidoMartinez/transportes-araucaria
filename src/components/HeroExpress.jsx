@@ -326,7 +326,7 @@ function HeroExpress({
 	}, [currentStep, formData, paymentConsent]);
 
 	return (
-		<section id="inicio" className="flex flex-col lg:flex-row min-h-screen w-full bg-white overflow-hidden">
+		<section id="inicio" className="flex flex-col lg:flex-row min-h-screen w-full bg-zinc-900 overflow-hidden">
 			{/* Left Panel - Visual & Branding */}
 			<div className="relative w-full lg:w-5/12 h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
 				<div className="absolute inset-0 bg-zinc-900/40 z-10"></div>
@@ -354,7 +354,7 @@ function HeroExpress({
 			</div>
 
 			{/* Right Panel - Booking Form */}
-			<div className="w-full lg:w-7/12 flex flex-col bg-white relative">
+			<div className="w-full lg:w-7/12 flex flex-col bg-white/90 backdrop-blur-md relative">
 				<div className="flex-1 p-6 md:p-12 lg:p-16 max-w-2xl mx-auto w-full flex flex-col justify-center">
 
 					{/* Header Form */}
