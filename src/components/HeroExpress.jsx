@@ -327,7 +327,7 @@ function HeroExpress({
 	return (
 		<section id="inicio" className="flex flex-col lg:flex-row min-h-screen w-full bg-white overflow-hidden">
 			{/* Left Panel - Visual & Branding */}
-			<div className="relative w-full lg:w-5/12 h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
+			<div className="relative w-full lg:w-7/12 h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
 				<div className="absolute inset-0 bg-zinc-900/40 z-10"></div>
 				<img
 					src={heroVan}
@@ -353,20 +353,20 @@ function HeroExpress({
 			</div>
 
 			{/* Right Panel - Booking Form */}
-			<div className="w-full lg:w-7/12 flex flex-col bg-white relative">
-				<div className="flex-1 p-6 md:p-12 lg:p-16 max-w-2xl mx-auto w-full flex flex-col justify-center">
+			<div className="w-full lg:w-5/12 flex flex-col bg-white relative">
+				<div className="flex-1 p-4 md:p-8 lg:p-10 max-w-xl mx-auto w-full flex flex-col justify-center">
 
 					{/* Header Form */}
-					<div className="mb-8 space-y-2">
+					<div className="mb-5 space-y-2">
 						<div className="flex items-center justify-between">
-							<h2 className="text-2xl font-semibold text-zinc-900">
+							<h2 className="text-xl font-semibold text-zinc-900">
 								{currentStep === 0 ? "Reserva tu traslado" : "Finaliza tu reserva"}
 							</h2>
-							<div className="text-sm font-medium text-zinc-400">
+							<div className="text-xs font-medium text-zinc-400">
 								Paso {currentStep + 1} de 2
 							</div>
 						</div>
-						<div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
+						<div className="w-full h-0.5 bg-zinc-100 rounded-full overflow-hidden">
 							<div
 								className="h-full bg-zinc-900 transition-all duration-500 ease-out"
 								style={{ width: currentStep === 0 ? '50%' : '100%' }}
@@ -376,18 +376,18 @@ function HeroExpress({
 
 					{/* Form Step 1 */}
 					{currentStep === 0 && (
-						<div className="space-y-6 animate-fade-in-down">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-origen" className="text-zinc-600 font-normal">Origen</Label>
+						<div className="space-y-4 animate-fade-in-down">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+								<div className="space-y-1">
+									<Label htmlFor="hero-origen" className="text-xs text-zinc-600 font-normal">Origen</Label>
 									<div className="relative">
-										<MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+										<MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
 										<select
 											id="hero-origen"
 											name="origen"
 											value={formData.origen}
 											onChange={handleInputChange}
-											className="flex h-11 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-9 pr-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0 appearance-none"
+											className="flex h-9 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-8 pr-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0 appearance-none"
 										>
 											{origenes.map((origen) => (
 												<option key={origen} value={origen}>{origen}</option>
@@ -396,16 +396,16 @@ function HeroExpress({
 									</div>
 								</div>
 
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-destino" className="text-zinc-600 font-normal">Destino</Label>
+								<div className="space-y-1">
+									<Label htmlFor="hero-destino" className="text-xs text-zinc-600 font-normal">Destino</Label>
 									<div className="relative">
-										<MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+										<MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
 										<select
 											id="hero-destino"
 											name="destino"
 											value={formData.destino}
 											onChange={handleInputChange}
-											className="flex h-11 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-9 pr-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0 appearance-none"
+											className="flex h-9 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-8 pr-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0 appearance-none"
 										>
 											<option value="">Seleccionar destino</option>
 											{destinos.map((d) => (
@@ -415,8 +415,8 @@ function HeroExpress({
 									</div>
 								</div>
 
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-fecha" className="text-zinc-600 font-normal">Fecha</Label>
+								<div className="space-y-1">
+									<Label htmlFor="hero-fecha" className="text-xs text-zinc-600 font-normal">Fecha</Label>
 									<Input
 										id="hero-fecha"
 										type="date"
@@ -424,17 +424,17 @@ function HeroExpress({
 										value={formData.fecha}
 										onChange={handleInputChange}
 										min={minDateTime}
-										className="h-11 border-zinc-200 focus:ring-zinc-900 pl-3"
+										className="h-9 border-zinc-200 focus:ring-zinc-900 pl-3 text-sm"
 									/>
 								</div>
 
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-hora" className="text-zinc-600 font-normal">Hora</Label>
+								<div className="space-y-1">
+									<Label htmlFor="hero-hora" className="text-xs text-zinc-600 font-normal">Hora</Label>
 									<Select
 										value={formData.hora}
 										onValueChange={(value) => handleInputChange({ target: { name: "hora", value } })}
 									>
-										<SelectTrigger id="hero-hora" className="h-11 border-zinc-200 focus:ring-zinc-900">
+										<SelectTrigger id="hero-hora" className="h-9 border-zinc-200 focus:ring-zinc-900 text-sm">
 											<SelectValue placeholder="Seleccionar hora" />
 										</SelectTrigger>
 										<SelectContent>
@@ -447,14 +447,14 @@ function HeroExpress({
 									</Select>
 								</div>
 
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-pasajeros" className="text-zinc-600 font-normal">Pasajeros</Label>
+								<div className="space-y-1">
+									<Label htmlFor="hero-pasajeros" className="text-xs text-zinc-600 font-normal">Pasajeros</Label>
 									<select
 										id="hero-pasajeros"
 										name="pasajeros"
 										value={formData.pasajeros}
 										onChange={handleInputChange}
-										className="flex h-11 w-full items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0"
+										className="flex h-9 w-full items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0"
 									>
 										{[...Array(maxPasajeros)].map((_, i) => (
 											<option key={i + 1} value={i + 1}>
@@ -466,7 +466,7 @@ function HeroExpress({
 							</div>
 
 							{/* Round Trip Toggle */}
-							<div className="flex items-center space-x-3 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
+							<div className="flex items-center space-x-2.5 bg-zinc-50 p-3 rounded-lg border border-zinc-100">
 								<Checkbox
 									id="hero-idaVuelta"
 									checked={formData.idaVuelta}
@@ -483,7 +483,7 @@ function HeroExpress({
 										Añadir regreso
 									</label>
 									{formData.idaVuelta && (
-										<div className="mt-3">
+										<div className="mt-2">
 											<Label htmlFor="hero-fechaRegreso" className="sr-only">Fecha regreso</Label>
 											<Input
 												id="hero-fechaRegreso"
@@ -492,7 +492,7 @@ function HeroExpress({
 												value={formData.fechaRegreso}
 												onChange={handleInputChange}
 												min={formData.fecha || minDateTime}
-												className="h-10 bg-white border-zinc-200"
+												className="h-9 bg-white border-zinc-200 text-sm"
 											/>
 										</div>
 									)}
@@ -501,21 +501,21 @@ function HeroExpress({
 
 							{/* Dynamic Pricing Display */}
 							{mostrarPrecio && (
-								<div className="mt-6 p-5 bg-zinc-50 border border-zinc-100 rounded-xl flex items-center justify-between">
+								<div className="mt-4 p-3.5 bg-zinc-50 border border-zinc-100 rounded-lg flex items-center justify-between">
 									<div>
-										<p className="text-sm text-zinc-500">Total estimado</p>
+										<p className="text-xs text-zinc-500">Total estimado</p>
 										<div className="flex items-baseline gap-2">
-											<span className="text-3xl font-bold text-zinc-900 tracking-tight">
+											<span className="text-2xl font-bold text-zinc-900 tracking-tight">
 												{formatCurrency(pricing.totalConDescuento)}
 											</span>
 											{pricing.totalConDescuento < pricing.precioBase && (
-												<span className="text-sm text-zinc-400 line-through">
+												<span className="text-xs text-zinc-400 line-through">
 													{formatCurrency(pricing.precioBase)}
 												</span>
 											)}
 										</div>
 										{pricing.descuentoBase > 0 && (
-											<Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200 font-normal">
+											<Badge variant="outline" className="mt-1 text-xs bg-green-50 text-green-700 border-green-200 font-normal">
 												Ahorras {formatCurrency(pricing.precioBase - pricing.totalConDescuento)}
 											</Badge>
 										)}
@@ -523,7 +523,7 @@ function HeroExpress({
 									{/* Return Discount Alert */}
 									{descuentoRetorno && (
 										<div className="hidden sm:block text-right">
-											<Badge className="bg-green-600 hover:bg-green-700">
+											<Badge className="bg-green-600 hover:bg-green-700 text-xs">
 												¡Oportunidad de Retorno!
 											</Badge>
 										</div>
@@ -532,14 +532,14 @@ function HeroExpress({
 							)}
 
 							{stepError && (
-								<p className="text-sm text-red-500 font-medium bg-red-50 p-3 rounded-md">
+								<p className="text-xs text-red-500 font-medium bg-red-50 p-2.5 rounded-md">
 									{stepError}
 								</p>
 							)}
 
 							<Button
 								onClick={handleStepOneNext}
-								className="w-full h-12 text-base bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-900/10 transition-all duration-300"
+								className="w-full h-10 text-sm bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-900/10 transition-all duration-300"
 								disabled={isSubmitting || verificandoDisponibilidad}
 							>
 								{verificandoDisponibilidad ? (
@@ -555,9 +555,9 @@ function HeroExpress({
 
 					{/* Form Step 2 */}
 					{currentStep === 1 && (
-						<div className="space-y-6 animate-fade-in-down">
+						<div className="space-y-4 animate-fade-in-down">
 							{/* Summary Card */}
-							<div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100 text-sm text-zinc-600 flex justify-between items-start">
+							<div className="bg-zinc-50 p-3 rounded-lg border border-zinc-100 text-xs text-zinc-600 flex justify-between items-start">
 								<div>
 									<p className="font-medium text-zinc-900">
 										{formData.origen === "Otro" ? formData.otroOrigen : formData.origen} → {formData.destino === "Otro" ? formData.otroDestino : formData.destino}
@@ -569,27 +569,27 @@ function HeroExpress({
 										<p className="text-zinc-500 mt-1">+ Regreso el {new Date(formData.fechaRegreso).toLocaleDateString("es-CL")}</p>
 									)}
 								</div>
-								<Button variant="ghost" size="sm" onClick={handleStepBack} className="h-auto p-0 text-zinc-400 hover:text-zinc-900 hover:bg-transparent">
+								<Button variant="ghost" size="sm" onClick={handleStepBack} className="h-auto p-0 text-xs text-zinc-400 hover:text-zinc-900 hover:bg-transparent">
 									Editar
 								</Button>
 							</div>
 
-							<div className="grid gap-5">
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-nombre" className="text-zinc-600 font-normal">Nombre completo</Label>
+							<div className="grid gap-3">
+								<div className="space-y-1">
+									<Label htmlFor="hero-nombre" className="text-xs text-zinc-600 font-normal">Nombre completo</Label>
 									<Input
 										id="hero-nombre"
 										name="nombre"
 										value={formData.nombre}
 										onChange={handleInputChange}
-										className="h-11 border-zinc-200 focus:ring-zinc-900"
+										className="h-9 border-zinc-200 focus:ring-zinc-900 text-sm"
 										placeholder="Como aparece en tu ID"
 									/>
 								</div>
 
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-									<div className="space-y-1.5">
-										<Label htmlFor="hero-email" className="text-zinc-600 font-normal">Email</Label>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div className="space-y-1">
+										<Label htmlFor="hero-email" className="text-xs text-zinc-600 font-normal">Email</Label>
 										<Input
 											id="hero-email"
 											type="email"
@@ -597,18 +597,18 @@ function HeroExpress({
 											value={formData.email}
 											onChange={handleInputChange}
 											onBlur={(e) => verificarReservaActiva(e.target.value)}
-											className="h-11 border-zinc-200 focus:ring-zinc-900"
+											className="h-9 border-zinc-200 focus:ring-zinc-900 text-sm"
 										/>
 										{verificandoReserva && <span className="text-xs text-zinc-400">Verificando...</span>}
 									</div>
-									<div className="space-y-1.5">
-										<Label htmlFor="hero-telefono" className="text-zinc-600 font-normal">Teléfono</Label>
+									<div className="space-y-1">
+										<Label htmlFor="hero-telefono" className="text-xs text-zinc-600 font-normal">Teléfono</Label>
 										<Input
 											id="hero-telefono"
 											name="telefono"
 											value={formData.telefono}
 											onChange={handleInputChange}
-											className="h-11 border-zinc-200 focus:ring-zinc-900"
+											className="h-9 border-zinc-200 focus:ring-zinc-900 text-sm"
 											placeholder="+56 9 ..."
 										/>
 										{phoneError && <span className="text-xs text-red-500">{phoneError}</span>}
@@ -617,12 +617,12 @@ function HeroExpress({
 							</div>
 
 							{/* Payment Consent */}
-							<div className="flex items-start space-x-3 pt-2">
+							<div className="flex items-start space-x-2.5 pt-1">
 								<Checkbox
 									id="hero-payment-consent"
 									checked={paymentConsent}
 									onCheckedChange={(value) => setPaymentConsent(Boolean(value))}
-									className="mt-1 data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900"
+									className="mt-0.5 data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900"
 								/>
 								<label htmlFor="hero-payment-consent" className="text-xs text-zinc-500 leading-snug cursor-pointer">
 									Acepto recibir la confirmación y entiendo que podré ajustar detalles después del pago.
@@ -631,28 +631,28 @@ function HeroExpress({
 
 							{/* Action Buttons */}
 							{mostrarPrecio && !requiereCotizacionManual && todosLosCamposCompletos ? (
-								<div className="space-y-3 pt-2">
+								<div className="space-y-2.5 pt-1">
 									{!selectedPaymentType ? (
-										<div className="grid grid-cols-2 gap-3">
+										<div className="grid grid-cols-2 gap-2.5">
 											{paymentOptions.map((option) => (
 												<button
 													key={option.id}
 													type="button"
 													onClick={() => setSelectedPaymentType(option.type)}
-													className={`p-3 rounded-lg border text-left transition-all ${
+													className={`p-2.5 rounded-lg border text-left transition-all ${
 														option.recommended
 															? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900"
 															: "border-zinc-200 hover:border-zinc-400"
 													}`}
 												>
-													<div className="text-xs text-zinc-500 mb-1">{option.title}</div>
-													<div className="font-bold text-zinc-900">{formatCurrency(option.amount)}</div>
+													<div className="text-xs text-zinc-500 mb-0.5">{option.title}</div>
+													<div className="font-bold text-sm text-zinc-900">{formatCurrency(option.amount)}</div>
 												</button>
 											))}
 										</div>
 									) : (
-										<div className="space-y-3">
-											<div className="flex items-center justify-between text-sm bg-zinc-50 p-3 rounded-md">
+										<div className="space-y-2.5">
+											<div className="flex items-center justify-between text-xs bg-zinc-50 p-2.5 rounded-md">
 												<span>Pagar: <strong>{formatCurrency(selectedPaymentType === 'total' ? pricing.totalConDescuento : pricing.abono)}</strong></span>
 												<button onClick={() => setSelectedPaymentType(null)} className="text-zinc-500 underline text-xs">Cambiar</button>
 											</div>
@@ -660,25 +660,25 @@ function HeroExpress({
 												type="button"
 												onClick={() => handleProcesarPago("flow", selectedPaymentType)}
 												disabled={isSubmitting || !!loadingGateway}
-												className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 text-white"
+												className="w-full h-10 bg-zinc-900 hover:bg-zinc-800 text-white text-sm"
 											>
-												{loadingGateway ? <LoaderCircle className="animate-spin" /> : "Ir a Pagar (Webpay/Tarjetas)"}
+												{loadingGateway ? <LoaderCircle className="animate-spin h-4 w-4" /> : "Ir a Pagar (Webpay/Tarjetas)"}
 											</Button>
 										</div>
 									)}
 								</div>
 							) : (
-								<div className="space-y-3 pt-2">
+								<div className="space-y-2.5 pt-1">
 									{todosLosCamposCompletos ? (
 										<Button
 											onClick={handleGuardarReserva}
-											className="w-full h-12 bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"
+											className="w-full h-10 bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50 text-sm"
 											disabled={isSubmitting}
 										>
-											{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Guardar y Pagar Después"}
+											{isSubmitting ? <LoaderCircle className="animate-spin h-4 w-4" /> : "Guardar y Pagar Después"}
 										</Button>
 									) : (
-										<div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-md">
+										<div className="text-xs text-amber-600 bg-amber-50 p-2.5 rounded-md">
 											Completa todos los campos para ver opciones de pago.
 										</div>
 									)}
@@ -686,12 +686,12 @@ function HeroExpress({
 							)}
 
 							{stepError && (
-								<p className="text-sm text-red-500 font-medium bg-red-50 p-3 rounded-md">
+								<p className="text-xs text-red-500 font-medium bg-red-50 p-2.5 rounded-md">
 									{stepError}
 								</p>
 							)}
 
-							<Button variant="ghost" onClick={handleStepBack} className="w-full text-zinc-500 hover:text-zinc-900 hover:bg-transparent h-auto py-2">
+							<Button variant="ghost" onClick={handleStepBack} className="w-full text-zinc-500 hover:text-zinc-900 hover:bg-transparent h-auto py-1.5 text-sm">
 								<ArrowLeft className="mr-2 h-4 w-4" /> Volver
 							</Button>
 						</div>
