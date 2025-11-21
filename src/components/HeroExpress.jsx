@@ -11,9 +11,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { LoaderCircle, ArrowRight, ArrowLeft, MapPin } from "lucide-react";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetDescription,
+} from "./ui/sheet";
+import { LoaderCircle, ArrowRight, MapPin, Calendar, Clock, Users, ChevronRight } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
-import CodigoDescuento from "./CodigoDescuento";
 import { getBackendUrl } from "../lib/backend";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
@@ -326,136 +332,147 @@ function HeroExpress({
 	}, [currentStep, formData, paymentConsent]);
 
 	return (
-		<section id="inicio" className="flex flex-col lg:flex-row min-h-screen w-full bg-white overflow-hidden">
-			{/* Left Panel - Visual & Branding */}
-			<div className="relative w-full lg:w-5/12 h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
-				<div className="absolute inset-0 bg-zinc-900/40 z-10"></div>
+		<section id="inicio" className="relative w-full h-[600px] lg:h-[700px] flex flex-col justify-center items-center overflow-hidden bg-zinc-900">
+
+			{/* Background Image with Overlay */}
+			<div className="absolute inset-0 z-0">
 				<img
 					src={heroVan}
-					alt="Transporte Privado"
-					className="absolute inset-0 w-full h-full object-cover opacity-80 grayscale-[30%]"
+					alt="Fondo transporte"
+					className="w-full h-full object-cover opacity-60"
 				/>
-				<div className="absolute inset-0 z-20 flex flex-col justify-center lg:justify-end p-6 lg:p-12 text-white">
-					<div className="max-w-md">
-						<h1 className="text-3xl lg:text-5xl font-bold tracking-tight mb-3 text-shadow">
-							Tu viaje comienza aquí.
-						</h1>
-						<p className="text-lg text-white/90 font-medium hidden lg:block">
-							Conecta con Pucón, Villarrica y toda la región. Sin esperas, sin escalas.
-						</p>
-						<div className="flex gap-3 mt-6 lg:hidden">
-							{/* Mobile Quick Stats or badges could go here */}
-							<Badge variant="secondary" className="bg-white/20 backdrop-blur-md text-white border-0">
-								Disponible 24/7
-							</Badge>
-						</div>
-					</div>
-				</div>
+				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/40 to-transparent" />
 			</div>
 
-			{/* Right Panel - Booking Form */}
-			<div className="w-full lg:w-7/12 flex flex-col bg-white relative">
-				<div className="flex-1 p-6 md:p-12 lg:p-16 max-w-2xl mx-auto w-full flex flex-col justify-center">
+			{/* Hero Content */}
+			<div className="relative z-10 w-full max-w-6xl px-4 flex flex-col items-center text-center mb-10 lg:mb-16 animate-fade-in-up">
+				<h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-white mb-4 drop-shadow-lg">
+					Tu viaje comienza aquí.
+				</h1>
+				<p className="text-lg md:text-xl text-zinc-200 max-w-2xl font-medium drop-shadow-md">
+					Conecta con Pucón, Villarrica y toda la región. Sin esperas, sin escalas.
+				</p>
+			</div>
 
-					{/* Header Form */}
-					<div className="mb-8 space-y-2">
-						<div className="flex items-center justify-between">
-							<h2 className="text-2xl font-semibold text-zinc-900">
-								{currentStep === 0 ? "Reserva tu traslado" : "Finaliza tu reserva"}
-							</h2>
-							<div className="text-sm font-medium text-zinc-400">
-								Paso {currentStep + 1} de 2
-							</div>
-						</div>
-						<div className="w-full h-1 bg-zinc-100 rounded-full overflow-hidden">
-							<div
-								className="h-full bg-zinc-900 transition-all duration-500 ease-out"
-								style={{ width: currentStep === 0 ? '50%' : '100%' }}
-							></div>
-						</div>
-					</div>
+			{/* Floating Booking Bar (Step 1) */}
+			<div className="relative z-20 w-full max-w-5xl px-4 animate-fade-in-up animation-delay-200">
+				<div className="bg-white rounded-2xl lg:rounded-full shadow-2xl p-4 lg:p-2 lg:pl-6 border border-zinc-100 flex flex-col lg:flex-row items-center gap-4">
 
-					{/* Form Step 1 */}
-					{currentStep === 0 && (
-						<div className="space-y-6 animate-fade-in-down">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-origen" className="text-zinc-600 font-normal">Origen</Label>
-									<div className="relative">
-										<MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-										<select
-											id="hero-origen"
-											name="origen"
-											value={formData.origen}
-											onChange={handleInputChange}
-											className="flex h-11 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-9 pr-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0 appearance-none"
-										>
-											{origenes.map((origen) => (
-												<option key={origen} value={origen}>{origen}</option>
-											))}
-										</select>
-									</div>
-								</div>
+					{/* Horizontal Inputs Grid */}
+					<div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 w-full lg:items-center lg:divide-x lg:divide-zinc-100">
 
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-destino" className="text-zinc-600 font-normal">Destino</Label>
-									<div className="relative">
-										<MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-										<select
-											id="hero-destino"
-											name="destino"
-											value={formData.destino}
-											onChange={handleInputChange}
-											className="flex h-11 w-full items-center justify-between rounded-md border border-zinc-200 bg-white pl-9 pr-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0 appearance-none"
-										>
-											<option value="">Seleccionar destino</option>
-											{destinos.map((d) => (
-												<option key={d} value={d}>{d}</option>
-											))}
-										</select>
-									</div>
-								</div>
-
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-fecha" className="text-zinc-600 font-normal">Fecha</Label>
-									<Input
-										id="hero-fecha"
-										type="date"
-										name="fecha"
-										value={formData.fecha}
-										onChange={handleInputChange}
-										min={minDateTime}
-										className="h-11 border-zinc-200 focus:ring-zinc-900 pl-3"
-									/>
-								</div>
-
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-hora" className="text-zinc-600 font-normal">Hora</Label>
-									<Select
-										value={formData.hora}
-										onValueChange={(value) => handleInputChange({ target: { name: "hora", value } })}
+						{/* Origen */}
+						<div className="relative lg:pr-3 group">
+							<Label htmlFor="hero-origen" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Origen</Label>
+							<div className="flex items-center relative">
+								<MapPin className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
+								<div className="w-full">
+									<select
+										id="hero-origen"
+										name="origen"
+										value={formData.origen}
+										onChange={(e) => {
+											handleInputChange(e);
+											if (stepError) setStepError("");
+										}}
+										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base truncate cursor-pointer appearance-none py-2 lg:py-0"
 									>
-										<SelectTrigger id="hero-hora" className="h-11 border-zinc-200 focus:ring-zinc-900">
-											<SelectValue placeholder="Seleccionar hora" />
-										</SelectTrigger>
-										<SelectContent>
-											{timeOptions.map((option) => (
-												<SelectItem key={option.value} value={option.value}>
-													{option.label}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+										{origenes.map((origen) => (
+											<option key={origen} value={origen}>{origen}</option>
+										))}
+									</select>
 								</div>
+							</div>
+							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Origen</Label>
+						</div>
 
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-pasajeros" className="text-zinc-600 font-normal">Pasajeros</Label>
+						{/* Destino */}
+						<div className="relative lg:px-3 group">
+							<Label htmlFor="hero-destino" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Destino</Label>
+							<div className="flex items-center">
+								<MapPin className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
+								<div className="w-full">
+									<select
+										id="hero-destino"
+										name="destino"
+										value={formData.destino}
+										onChange={(e) => {
+											handleInputChange(e);
+											if (stepError) setStepError("");
+										}}
+										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base truncate cursor-pointer appearance-none py-2 lg:py-0"
+									>
+										<option value="">Seleccionar destino</option>
+										{destinos.map((d) => (
+											<option key={d} value={d}>{d}</option>
+										))}
+									</select>
+								</div>
+							</div>
+							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Destino</Label>
+						</div>
+
+						{/* Fecha */}
+						<div className="relative lg:px-3 group">
+							<Label htmlFor="hero-fecha" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Fecha</Label>
+							<div className="flex items-center">
+								<Calendar className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
+								<input
+									id="hero-fecha"
+									type="date"
+									name="fecha"
+									value={formData.fecha}
+									onChange={(e) => {
+										handleInputChange(e);
+										if (stepError) setStepError("");
+									}}
+									min={minDateTime}
+									className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base cursor-pointer py-2 lg:py-0"
+								/>
+							</div>
+							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Fecha</Label>
+						</div>
+
+						{/* Hora */}
+						<div className="relative lg:px-3 group">
+							<Label htmlFor="hero-hora" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Hora</Label>
+							<div className="flex items-center">
+								<Clock className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
+								<div className="w-full">
+									<select
+										id="hero-hora"
+										name="hora"
+										value={formData.hora}
+										onChange={(e) => {
+											handleInputChange({ target: { name: "hora", value: e.target.value } });
+											if (stepError) setStepError("");
+										}}
+										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base cursor-pointer appearance-none py-2 lg:py-0"
+									>
+										<option value="" disabled>Seleccionar</option>
+										{timeOptions.map((option) => (
+											<option key={option.value} value={option.value}>
+												{option.label}
+											</option>
+										))}
+									</select>
+								</div>
+							</div>
+							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Hora</Label>
+						</div>
+
+						{/* Pasajeros */}
+						<div className="relative lg:px-3 group">
+							<Label htmlFor="hero-pasajeros" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Pasajeros</Label>
+							<div className="flex items-center">
+								<Users className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
+								<div className="w-full">
 									<select
 										id="hero-pasajeros"
 										name="pasajeros"
 										value={formData.pasajeros}
 										onChange={handleInputChange}
-										className="flex h-11 w-full items-center justify-between rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-0"
+										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base cursor-pointer appearance-none py-2 lg:py-0"
 									>
 										{[...Array(maxPasajeros)].map((_, i) => (
 											<option key={i + 1} value={i + 1}>
@@ -465,251 +482,272 @@ function HeroExpress({
 									</select>
 								</div>
 							</div>
+							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Pasajeros</Label>
+						</div>
+					</div>
 
-							{/* Round Trip Toggle */}
-							<div className="flex items-center space-x-3 bg-zinc-50 p-4 rounded-lg border border-zinc-100">
-								<Checkbox
-									id="hero-idaVuelta"
-									checked={formData.idaVuelta}
-									onCheckedChange={(value) => {
-										const isRoundTrip = Boolean(value);
-										handleInputChange({ target: { name: "idaVuelta", value: isRoundTrip } });
-										if (!isRoundTrip) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
-										else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
-									}}
-									className="data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900"
-								/>
-								<div className="flex-1">
-									<label htmlFor="hero-idaVuelta" className="text-sm font-medium text-zinc-900 cursor-pointer select-none">
-										Añadir regreso
-									</label>
-									{formData.idaVuelta && (
-										<div className="mt-3">
-											<Label htmlFor="hero-fechaRegreso" className="sr-only">Fecha regreso</Label>
-											<Input
-												id="hero-fechaRegreso"
-												type="date"
-												name="fechaRegreso"
-												value={formData.fechaRegreso}
-												onChange={handleInputChange}
-												min={formData.fecha || minDateTime}
-												className="h-10 bg-white border-zinc-200"
-											/>
-										</div>
-									)}
-								</div>
-							</div>
+					{/* Search Button */}
+					<Button
+						onClick={handleStepOneNext}
+						className="w-full lg:w-auto h-12 lg:h-14 rounded-xl lg:rounded-full px-8 bg-black hover:bg-zinc-800 text-white font-semibold shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2 text-base"
+						disabled={isSubmitting || verificandoDisponibilidad}
+					>
+						{verificandoDisponibilidad ? (
+							<LoaderCircle className="h-5 w-5 animate-spin" />
+						) : (
+							<>
+								Buscar <ArrowRight className="h-5 w-5" />
+							</>
+						)}
+					</Button>
+				</div>
 
-							{/* Dynamic Pricing Display */}
-							{mostrarPrecio && (
-								<div className="mt-6 p-5 bg-zinc-50 border border-zinc-100 rounded-xl flex items-center justify-between">
-									<div>
-										<p className="text-sm text-zinc-500">Total estimado</p>
-										<div className="flex items-baseline gap-2">
-											<span className="text-3xl font-bold text-zinc-900 tracking-tight">
-												{formatCurrency(pricing.totalConDescuento)}
-											</span>
-											{pricing.totalConDescuento < pricing.precioBase && (
-												<span className="text-sm text-zinc-400 line-through">
-													{formatCurrency(pricing.precioBase)}
-												</span>
-											)}
-										</div>
-										{pricing.descuentoBase > 0 && (
-											<Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200 font-normal">
-												Ahorras {formatCurrency(pricing.precioBase - pricing.totalConDescuento)}
-											</Badge>
-										)}
-									</div>
-									{/* Return Discount Alert */}
-									{descuentoRetorno && (
-										<div className="hidden sm:block text-right">
-											<Badge className="bg-green-600 hover:bg-green-700">
-												¡Oportunidad de Retorno!
-											</Badge>
-										</div>
-									)}
-								</div>
-							)}
+				{/* Validation Messages & Return Toggle */}
+				<div className="mt-4 flex flex-col lg:flex-row justify-center items-center gap-4">
+					<div className="flex items-center space-x-2 bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-colors hover:bg-black/40">
+						<Checkbox
+							id="hero-idaVuelta"
+							checked={formData.idaVuelta}
+							onCheckedChange={(value) => {
+								const isRoundTrip = Boolean(value);
+								handleInputChange({ target: { name: "idaVuelta", value: isRoundTrip } });
+								if (!isRoundTrip) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
+								else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
+							}}
+							className="border-white data-[state=checked]:bg-white data-[state=checked]:text-black"
+						/>
+						<label htmlFor="hero-idaVuelta" className="text-sm font-medium text-white cursor-pointer select-none">
+							Necesito regreso
+						</label>
+					</div>
 
-							{stepError && (
-								<p className="text-sm text-red-500 font-medium bg-red-50 p-3 rounded-md">
-									{stepError}
-								</p>
-							)}
-
-							<Button
-								onClick={handleStepOneNext}
-								className="w-full h-12 text-base bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-900/10 transition-all duration-300"
-								disabled={isSubmitting || verificandoDisponibilidad}
-							>
-								{verificandoDisponibilidad ? (
-									<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-								) : (
-									<>
-										Continuar <ArrowRight className="ml-2 h-4 w-4" />
-									</>
-								)}
-							</Button>
+					{formData.idaVuelta && (
+						<div className="flex items-center bg-white rounded-full px-4 py-1.5 shadow-lg animate-fade-in">
+							<Label className="text-xs font-bold text-zinc-500 mr-2 uppercase">Regreso:</Label>
+							<input
+								type="date"
+								name="fechaRegreso"
+								value={formData.fechaRegreso}
+								onChange={handleInputChange}
+								min={formData.fecha || minDateTime}
+								className="bg-transparent border-none text-sm font-medium text-zinc-900 focus:ring-0 p-0 h-auto"
+							/>
 						</div>
 					)}
+				</div>
 
-					{/* Form Step 2 */}
-					{currentStep === 1 && (
-						<div className="space-y-6 animate-fade-in-down">
-							{/* Summary Card */}
-							<div className="bg-zinc-50 p-4 rounded-lg border border-zinc-100 text-sm text-zinc-600 flex justify-between items-start">
-								<div>
-									<p className="font-medium text-zinc-900">
-										{formData.origen === "Otro" ? formData.otroOrigen : formData.origen} → {formData.destino === "Otro" ? formData.otroDestino : formData.destino}
-									</p>
-									<p className="mt-1">
-										{fechaLegible} • {formData.hora} • {formData.pasajeros} pax
-									</p>
-									{formData.idaVuelta && (
-										<p className="text-zinc-500 mt-1">+ Regreso el {new Date(formData.fechaRegreso).toLocaleDateString("es-CL")}</p>
-									)}
+				{stepError && (
+					<div className="mt-4 text-center animate-bounce">
+						<Badge variant="destructive" className="px-4 py-1.5 text-sm font-normal">
+							{stepError}
+						</Badge>
+					</div>
+				)}
+			</div>
+
+			{/* Step 2: Details & Payment Drawer (Sidebar) */}
+			<Sheet open={currentStep === 1} onOpenChange={(open) => !open && handleStepBack()}>
+				<SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-0">
+					<div className="p-6">
+						<SheetHeader className="mb-6 text-left">
+							<SheetTitle className="text-3xl font-bold text-zinc-900">Resumen</SheetTitle>
+							<SheetDescription className="text-zinc-500">
+								Revisa los detalles de tu viaje y completa tu información.
+							</SheetDescription>
+						</SheetHeader>
+
+						<div className="space-y-8">
+							{/* Route Summary Card */}
+							<div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
+								<div className="flex items-start justify-between mb-4">
+									<div className="flex flex-col">
+										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1">Ruta</span>
+										<div className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
+											<span>{formData.origen === "Otro" ? formData.otroOrigen : formData.origen}</span>
+											<ArrowRight className="h-4 w-4 text-zinc-400" />
+											<span>{formData.destino === "Otro" ? formData.otroDestino : formData.destino}</span>
+										</div>
+									</div>
+									<Button variant="ghost" size="icon" onClick={handleStepBack} className="text-zinc-400 hover:text-zinc-900 -mt-1 -mr-2">
+										<span className="sr-only">Editar</span>
+										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil h-4 w-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+									</Button>
 								</div>
-								<Button variant="ghost" size="sm" onClick={handleStepBack} className="h-auto p-0 text-zinc-400 hover:text-zinc-900 hover:bg-transparent">
-									Editar
-								</Button>
+
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide block mb-1">Salida</span>
+										<p className="text-sm font-medium text-zinc-800">{fechaLegible}</p>
+										<p className="text-sm text-zinc-500">{formData.hora}</p>
+									</div>
+									<div>
+										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide block mb-1">Pasajeros</span>
+										<p className="text-sm font-medium text-zinc-800">{formData.pasajeros} personas</p>
+									</div>
+								</div>
+
+								{formData.idaVuelta && (
+									<div className="mt-4 pt-4 border-t border-zinc-200">
+										<span className="text-xs font-bold text-green-600 uppercase tracking-wide block mb-1">Regreso</span>
+										<p className="text-sm font-medium text-zinc-800">{new Date(formData.fechaRegreso).toLocaleDateString("es-CL")}</p>
+									</div>
+								)}
 							</div>
 
-							<div className="grid gap-5">
-								<div className="space-y-1.5">
-									<Label htmlFor="hero-nombre" className="text-zinc-600 font-normal">Nombre completo</Label>
+							{/* Pricing Display */}
+							{mostrarPrecio && (
+								<div className="space-y-2">
+									<div className="flex items-end justify-between">
+										<span className="text-sm font-medium text-zinc-500">Total estimado</span>
+										<span className="text-3xl font-bold text-zinc-900 tracking-tight">
+											{formatCurrency(pricing.totalConDescuento)}
+										</span>
+									</div>
+									{descuentoRetorno && (
+										<div className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
+											<span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+											¡Descuento por retorno aplicado!
+										</div>
+									)}
+								</div>
+							)}
+
+							{/* Form Fields */}
+							<div className="space-y-5">
+								<div className="space-y-2">
+									<Label htmlFor="hero-nombre" className="text-sm font-semibold text-zinc-700">Nombre completo</Label>
 									<Input
 										id="hero-nombre"
 										name="nombre"
 										value={formData.nombre}
 										onChange={handleInputChange}
-										className="h-11 border-zinc-200 focus:ring-zinc-900"
-										placeholder="Como aparece en tu ID"
+										placeholder="Como aparece en tu documento"
+										className="h-12 bg-zinc-50 border-zinc-200 focus:bg-white transition-all"
 									/>
 								</div>
 
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-									<div className="space-y-1.5">
-										<Label htmlFor="hero-email" className="text-zinc-600 font-normal">Email</Label>
-										<Input
-											id="hero-email"
-											type="email"
-											name="email"
-											value={formData.email}
-											onChange={handleInputChange}
-											onBlur={(e) => verificarReservaActiva(e.target.value)}
-											className="h-11 border-zinc-200 focus:ring-zinc-900"
-										/>
-										{verificandoReserva && <span className="text-xs text-zinc-400">Verificando...</span>}
+								<div className="grid grid-cols-1 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="hero-email" className="text-sm font-semibold text-zinc-700">Correo electrónico</Label>
+										<div className="relative">
+											<Input
+												id="hero-email"
+												type="email"
+												name="email"
+												value={formData.email}
+												onChange={handleInputChange}
+												onBlur={(e) => verificarReservaActiva(e.target.value)}
+												className="h-12 bg-zinc-50 border-zinc-200 focus:bg-white transition-all"
+												placeholder="ejemplo@correo.com"
+											/>
+											{verificandoReserva && (
+												<span className="absolute right-3 top-3.5 text-xs text-zinc-400">Verificando...</span>
+											)}
+										</div>
 									</div>
-									<div className="space-y-1.5">
-										<Label htmlFor="hero-telefono" className="text-zinc-600 font-normal">Teléfono</Label>
-										<Input
-											id="hero-telefono"
-											name="telefono"
-											value={formData.telefono}
-											onChange={handleInputChange}
-											className="h-11 border-zinc-200 focus:ring-zinc-900"
-											placeholder="+56 9 ..."
-										/>
-										{phoneError && <span className="text-xs text-red-500">{phoneError}</span>}
+									<div className="space-y-2">
+										<Label htmlFor="hero-telefono" className="text-sm font-semibold text-zinc-700">Teléfono móvil</Label>
+										<div className="relative">
+											<Input
+												id="hero-telefono"
+												name="telefono"
+												value={formData.telefono}
+												onChange={handleInputChange}
+												className={`h-12 bg-zinc-50 border-zinc-200 focus:bg-white transition-all ${phoneError ? "border-red-300 focus:ring-red-200" : ""}`}
+												placeholder="+56 9 ..."
+											/>
+										</div>
+										{phoneError && <span className="text-xs text-red-500 mt-1 block">{phoneError}</span>}
 									</div>
 								</div>
 							</div>
 
-							{/* Promo Code */}
-							<div className="pt-2">
-								<CodigoDescuento
-									codigoAplicado={codigoAplicado}
-									codigoError={codigoError}
-									validandoCodigo={validandoCodigo}
-									onAplicarCodigo={onAplicarCodigo}
-									onRemoverCodigo={onRemoverCodigo}
-								/>
-							</div>
-
-							{/* Payment Consent */}
-							<div className="flex items-start space-x-3 pt-2">
+							{/* Consent */}
+							<div className="flex items-start space-x-3 py-2">
 								<Checkbox
 									id="hero-payment-consent"
 									checked={paymentConsent}
 									onCheckedChange={(value) => setPaymentConsent(Boolean(value))}
-									className="mt-1 data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900"
+									className="mt-1 border-zinc-300"
 								/>
-								<label htmlFor="hero-payment-consent" className="text-xs text-zinc-500 leading-snug cursor-pointer">
-									Acepto recibir la confirmación y entiendo que podré ajustar detalles después del pago.
+								<label htmlFor="hero-payment-consent" className="text-sm text-zinc-500 leading-snug cursor-pointer">
+									Acepto los <span className="underline hover:text-zinc-800">términos y condiciones</span>.
 								</label>
 							</div>
 
-							{/* Action Buttons */}
-							{mostrarPrecio && !requiereCotizacionManual && todosLosCamposCompletos ? (
-								<div className="space-y-3 pt-2">
-									{!selectedPaymentType ? (
-										<div className="grid grid-cols-2 gap-3">
-											{paymentOptions.map((option) => (
-												<button
-													key={option.id}
-													type="button"
-													onClick={() => setSelectedPaymentType(option.type)}
-													className={`p-3 rounded-lg border text-left transition-all ${
-														option.recommended
-															? "border-zinc-900 bg-zinc-50 ring-1 ring-zinc-900"
-															: "border-zinc-200 hover:border-zinc-400"
-													}`}
-												>
-													<div className="text-xs text-zinc-500 mb-1">{option.title}</div>
-													<div className="font-bold text-zinc-900">{formatCurrency(option.amount)}</div>
-												</button>
-											))}
-										</div>
-									) : (
-										<div className="space-y-3">
-											<div className="flex items-center justify-between text-sm bg-zinc-50 p-3 rounded-md">
-												<span>Pagar: <strong>{formatCurrency(selectedPaymentType === 'total' ? pricing.totalConDescuento : pricing.abono)}</strong></span>
-												<button onClick={() => setSelectedPaymentType(null)} className="text-zinc-500 underline text-xs">Cambiar</button>
-											</div>
-											<Button
-												type="button"
-												onClick={() => handleProcesarPago("flow", selectedPaymentType)}
-												disabled={isSubmitting || !!loadingGateway}
-												className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 text-white"
-											>
-												{loadingGateway ? <LoaderCircle className="animate-spin" /> : "Ir a Pagar (Webpay/Tarjetas)"}
-											</Button>
-										</div>
-									)}
-								</div>
-							) : (
-								<div className="space-y-3 pt-2">
-									{todosLosCamposCompletos ? (
-										<Button
-											onClick={handleGuardarReserva}
-											className="w-full h-12 bg-white border border-zinc-300 text-zinc-900 hover:bg-zinc-50"
-											disabled={isSubmitting}
-										>
-											{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Guardar y Pagar Después"}
-										</Button>
-									) : (
-										<div className="text-xs text-amber-600 bg-amber-50 p-3 rounded-md">
-											Completa todos los campos para ver opciones de pago.
-										</div>
-									)}
-								</div>
-							)}
-
+							{/* Error Message */}
 							{stepError && (
-								<p className="text-sm text-red-500 font-medium bg-red-50 p-3 rounded-md">
+								<div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium text-center">
 									{stepError}
-								</p>
+								</div>
 							)}
 
-							<Button variant="ghost" onClick={handleStepBack} className="w-full text-zinc-500 hover:text-zinc-900 hover:bg-transparent h-auto py-2">
-								<ArrowLeft className="mr-2 h-4 w-4" /> Volver
-							</Button>
+							{/* Payment Actions */}
+							<div className="pt-4 pb-10">
+								{mostrarPrecio && !requiereCotizacionManual && todosLosCamposCompletos ? (
+									<div className="space-y-4">
+										{!selectedPaymentType ? (
+											<div className="grid grid-cols-2 gap-4">
+												{paymentOptions.map((option) => (
+													<button
+														key={option.id}
+														type="button"
+														onClick={() => setSelectedPaymentType(option.type)}
+														className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
+															option.recommended
+																? "border-black bg-zinc-900 text-white shadow-lg hover:bg-zinc-800"
+																: "border-zinc-200 hover:border-zinc-400 bg-white hover:bg-zinc-50"
+														}`}
+													>
+														{option.recommended && (
+															<div className="absolute top-0 right-0 bg-green-500 text-[10px] font-bold px-2 py-0.5 text-white rounded-bl-lg">
+																POPULAR
+															</div>
+														)}
+														<div className={`text-xs mb-1 ${option.recommended ? "text-zinc-400" : "text-zinc-500"}`}>{option.title}</div>
+														<div className={`font-bold text-lg ${option.recommended ? "text-white" : "text-zinc-900"}`}>{formatCurrency(option.amount)}</div>
+													</button>
+												))}
+											</div>
+										) : (
+											<div className="space-y-4 animate-fade-in">
+												<div className="flex items-center justify-between text-sm bg-zinc-100 p-4 rounded-xl">
+													<span className="text-zinc-600">Monto a pagar: <strong className="text-zinc-900">{formatCurrency(selectedPaymentType === 'total' ? pricing.totalConDescuento : pricing.abono)}</strong></span>
+													<button onClick={() => setSelectedPaymentType(null)} className="text-zinc-500 hover:text-black text-xs font-medium underline">Cambiar</button>
+												</div>
+												<Button
+													type="button"
+													onClick={() => handleProcesarPago("flow", selectedPaymentType)}
+													disabled={isSubmitting || !!loadingGateway}
+													className="w-full h-14 rounded-xl bg-black hover:bg-zinc-800 text-white font-bold text-lg shadow-lg"
+												>
+													{loadingGateway ? <LoaderCircle className="animate-spin" /> : "Ir a Pagar"}
+												</Button>
+											</div>
+										)}
+									</div>
+								) : (
+									<div>
+										{todosLosCamposCompletos ? (
+											<Button
+												onClick={handleGuardarReserva}
+												className="w-full h-14 rounded-xl bg-white border-2 border-zinc-200 text-zinc-900 hover:border-black hover:bg-zinc-50 font-bold text-lg"
+												disabled={isSubmitting}
+											>
+												{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Solicitar Reserva"}
+											</Button>
+										) : (
+											<div className="text-sm text-center text-zinc-400 py-2 italic">
+												Completa todos los campos para continuar
+											</div>
+										)}
+									</div>
+								)}
+							</div>
 						</div>
-					)}
-				</div>
-			</div>
+					</div>
+				</SheetContent>
+			</Sheet>
 		</section>
 	);
 }
