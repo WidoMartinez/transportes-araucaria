@@ -324,16 +324,19 @@ function HeroExpress({
 		);
 	}, [currentStep, formData, paymentConsent]);
 
-	return (
-		<section id="inicio" className="flex flex-col lg:flex-row min-h-screen w-full bg-white overflow-hidden">
-			{/* Left Panel - Visual & Branding */}
-			<div className="relative w-full lg:w-5/12 h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
-				<div className="absolute inset-0 bg-zinc-900/40 z-10"></div>
-				<img
-					src={heroVan}
-					alt="Transporte Privado"
-					className="absolute inset-0 w-full h-full object-cover opacity-80 grayscale-[30%]"
-				/>
+        return (
+                <section
+                        id="inicio"
+                        className="flex flex-col lg:flex-row min-h-screen w-full bg-white overflow-hidden lg:rounded-3xl shadow-xl xl:max-w-6xl xl:mx-auto"
+                >
+                        {/* Left Panel - Visual & Branding */}
+                        <div className="relative w-full lg:w-[36%] xl:w-[34%] lg:max-w-[520px] h-48 lg:h-auto bg-zinc-900 flex-shrink-0">
+                                <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/60 via-zinc-900/45 to-zinc-950/70 z-10"></div>
+                                <img
+                                        src={heroVan}
+                                        alt="Transporte Privado"
+                                        className="absolute inset-0 w-full h-full object-cover opacity-80 grayscale-[30%]"
+                                />
 				<div className="absolute inset-0 z-20 flex flex-col justify-center lg:justify-end p-6 lg:p-12 text-white">
 					<div className="max-w-md">
 						<h1 className="text-3xl lg:text-5xl font-bold tracking-tight mb-3 text-shadow">
@@ -352,9 +355,9 @@ function HeroExpress({
 				</div>
 			</div>
 
-			{/* Right Panel - Booking Form */}
-			<div className="w-full lg:w-7/12 flex flex-col bg-white relative">
-				<div className="flex-1 p-6 md:p-12 lg:p-16 max-w-2xl mx-auto w-full flex flex-col justify-center">
+                        {/* Right Panel - Booking Form */}
+                        <div className="w-full lg:w-[64%] xl:w-[66%] flex flex-col bg-white relative">
+                                <div className="flex-1 p-6 md:p-12 lg:p-16 max-w-2xl mx-auto w-full flex flex-col justify-center">
 
 					{/* Header Form */}
 					<div className="mb-8 space-y-2">
