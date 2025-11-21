@@ -347,17 +347,17 @@ function HeroExpress({
 
 			{/* Hero Content */}
 			<div className="relative z-10 w-full max-w-6xl px-4 flex flex-col items-center text-center mb-10 lg:mb-16 animate-fade-in-up">
-				<h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-white mb-4 drop-shadow-2xl transition-all duration-500 hover:scale-105 hover:drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+				<h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-white mb-4 drop-shadow-2xl transition-transform duration-500 hover:scale-105">
 					Tu viaje comienza aquí.
 				</h1>
-				<p className="text-lg md:text-xl text-zinc-200 max-w-2xl font-medium drop-shadow-lg transition-all duration-300 hover:text-white">
+				<p className="text-lg md:text-xl text-zinc-200 max-w-2xl font-medium drop-shadow-lg transition-colors duration-300 hover:text-white">
 					Conecta con Pucón, Villarrica y toda la región. Sin esperas, sin escalas.
 				</p>
 			</div>
 
 			{/* Floating Booking Bar (Step 1) */}
 			<div className="relative z-20 w-full max-w-5xl px-4 animate-fade-in-up animation-delay-200">
-				<div className="bg-white/95 backdrop-blur-xl rounded-2xl lg:rounded-full shadow-2xl shadow-black/20 hover:shadow-3xl hover:shadow-black/30 p-4 lg:p-2 lg:pl-6 border border-zinc-100 flex flex-col lg:flex-row items-center gap-4 transition-all duration-500 hover:scale-[1.01] hover:bg-white">
+				<div className="bg-white/95 backdrop-blur-md rounded-2xl lg:rounded-full shadow-2xl shadow-black/20 hover:shadow-3xl hover:shadow-black/30 p-4 lg:p-2 lg:pl-6 border border-zinc-100 flex flex-col lg:flex-row items-center gap-4 transition-all duration-500 hover:scale-[1.01] hover:bg-white">
 
 					{/* Horizontal Inputs Grid */}
 					<div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 w-full lg:items-center lg:divide-x lg:divide-zinc-100">

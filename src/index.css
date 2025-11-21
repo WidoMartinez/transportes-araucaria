@@ -100,7 +100,17 @@
 
   /* Efecto de shadow mejorado */
   .shadow-3xl {
-    box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 25px 40px -15px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Respeto a preferencias de movimiento reducido */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-up,
+    .animate-fade-in,
+    .animate-slide-in-right,
+    .animate-gradient-shift {
+      animation: none;
+    }
   }
 }
 
