@@ -334,8 +334,8 @@ function HeroExpress({
 					alt="Transporte Privado"
 					className="absolute inset-0 w-full h-full object-cover opacity-70 grayscale-[40%]"
 				/>
-				<div className="absolute inset-0 z-20 flex flex-col justify-center lg:justify-center p-4 lg:p-8 text-white">
-					<div className="max-w-sm">
+				<div className="absolute inset-0 z-20 flex flex-col justify-center p-4 lg:p-8 text-white">
+					<div className="max-w-md">
 						<h1 className="text-2xl lg:text-4xl font-bold tracking-tight mb-2 text-shadow">
 							Tu viaje comienza aquí.
 						</h1>
