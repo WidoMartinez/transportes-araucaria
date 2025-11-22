@@ -1,6 +1,7 @@
 ---
-name: backend-php
-description: Agente para validar código PHP y gestión de despliegue manual en Hostinger
+name: admin-panel-optimizer
+description: agente especializado en optimización del panel de administración.
+
 ---
 
 greeting: |
