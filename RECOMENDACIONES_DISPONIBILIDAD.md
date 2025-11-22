@@ -32,11 +32,11 @@ El sistema de disponibilidad y retornos está **80% implementado** pero tiene un
 **Agregar después de la línea 148:**
 ```javascript
 descuentoRetornoVacio: {
-  type: DataTypes.DECIMAL(5, 2),
+  type: DataTypes.DECIMAL(4, 2),
   allowNull: true,
   defaultValue: 0,
   field: "descuento_retorno_vacio",
-  comment: "Porcentaje de descuento por aprovechamiento de retorno vacío"
+  comment: "Porcentaje de descuento por aprovechamiento de retorno vacío (máx 99.99%)"
 },
 ```
 
@@ -55,13 +55,22 @@ const addDescuentoRetornoColumn = async () => {
   try {
     console.log("🔄 Ejecutando migración: agregar columna descuento_retorno_vacio...");
 
-    await sequelize.query(`
-      ALTER TABLE reservas 
-      ADD COLUMN IF NOT EXISTS descuento_retorno_vacio DECIMAL(5,2) DEFAULT 0 
-      COMMENT 'Porcentaje de descuento por aprovechamiento de retorno vacío'
-    `);
-
-    console.log("✅ Columna descuento_retorno_vacio agregada exitosamente");
+    const queryInterface = sequelize.getQueryInterface();
+    
+    // Verificar si la columna ya existe
+    const tableDescription = await queryInterface.describeTable('reservas');
+    
+    if (!tableDescription.descuento_retorno_vacio) {
+      await queryInterface.addColumn('reservas', 'descuento_retorno_vacio', {
+        type: Sequelize.DECIMAL(4, 2),
+        allowNull: true,
+        defaultValue: 0,
+        comment: 'Porcentaje de descuento por aprovechamiento de retorno vacío (máx 99.99%)'
+      });
+      console.log("✅ Columna descuento_retorno_vacio agregada exitosamente");
+    } else {
+      console.log("ℹ️ Columna descuento_retorno_vacio ya existe");
+    }
   } catch (error) {
     console.error("❌ Error en migración de descuento retorno:", error);
     // No lanzar error para evitar romper el inicio del servidor
@@ -94,9 +103,10 @@ const handleGuardarReserva = async () => {
   if (!validarDatosReserva()) return;
   
   // Agregar descuento de retorno a los datos
+  // Nota: Usar ?? en lugar de || para evitar problemas si porcentaje es 0
   const datosConRetorno = {
     ...formData,
-    descuentoRetornoVacio: descuentoRetorno?.porcentaje || 0
+    descuentoRetornoVacio: descuentoRetorno?.porcentaje ?? 0
   };
   
   const result = await onSubmitWizard(datosConRetorno);
@@ -111,9 +121,10 @@ const handleProcesarPago = async (gateway, type) => {
   if (!validarDatosReserva()) return;
   
   // Agregar descuento de retorno a los datos
+  // Nota: Usar ?? en lugar de || para evitar problemas si porcentaje es 0
   const datosConRetorno = {
     ...formData,
-    descuentoRetornoVacio: descuentoRetorno?.porcentaje || 0
+    descuentoRetornoVacio: descuentoRetorno?.porcentaje ?? 0
   };
   
   const result = await onSubmitWizard(datosConRetorno);
