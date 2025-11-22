@@ -1,6 +1,6 @@
 // src/components/admin/dashboard/DashboardHome.jsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Calendar, 
   DollarSign, 
@@ -82,14 +82,15 @@ function DashboardHome({ onNavigate }) {
     cargarEstadisticas();
   }, []);
 
-  // Formatear moneda CLP
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat("es-CL", {
+  // Formatear moneda CLP usando useMemo para optimizar
+  const formatCurrency = useMemo(() => {
+    const formatter = new Intl.NumberFormat("es-CL", {
       style: "currency",
       currency: "CLP",
       minimumFractionDigits: 0,
-    }).format(value);
-  };
+    });
+    return (value) => formatter.format(value);
+  }, []);
 
   // Componente de tarjeta de KPI
   const KPICard = ({ title, value, icon: Icon, color, trend, trendValue, onClick }) => {
