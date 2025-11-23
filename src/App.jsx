@@ -197,6 +197,7 @@ const resolveIsCompraProductosView = () => {
 };
 
 // Resolver si la URL es la página de retorno de Flow (confirmación de pago)
+// Soporta tanto path-based routing (/flow-return) como hash-based (#flow-return)
 const resolveIsFlowReturnView = () => {
 	const pathname = window.location.pathname.toLowerCase();
 	const hash = window.location.hash.toLowerCase();

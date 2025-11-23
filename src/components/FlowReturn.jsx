@@ -5,6 +5,9 @@ import { Button } from "./ui/button";
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import logo from "../assets/logo.png";
 
+// Configuración
+const PAYMENT_VERIFICATION_DELAY_MS = 1000; // Tiempo de espera antes de confirmar el pago
+
 /**
  * Componente FlowReturn
  * Página de retorno después de completar un pago con Flow
@@ -48,16 +51,22 @@ function FlowReturn() {
 			} catch (error) {
 				console.error("Error al disparar evento de conversión:", error);
 			}
-		}, 1000);
+		}, PAYMENT_VERIFICATION_DELAY_MS);
 	}, []);
 
 	const handleGoHome = () => {
+		// Usar window.location.href porque la app no usa React Router
+		// y necesitamos recargar la página principal
 		window.location.href = "/";
 	};
 
 	const handleContactSupport = () => {
-		// Redirigir a WhatsApp
-		window.location.href = "https://wa.me/56936643540?text=Hola,%20necesito%20ayuda%20con%20mi%20pago";
+		// Abrir WhatsApp en nueva pestaña para preservar el estado de la página
+		window.open(
+			"https://wa.me/56936643540?text=Hola,%20necesito%20ayuda%20con%20mi%20pago",
+			"_blank",
+			"noopener,noreferrer"
+		);
 	};
 
 	return (
