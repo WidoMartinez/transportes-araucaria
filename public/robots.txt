@@ -1,0 +1,52 @@
+# robots.txt para Transportes Araucaria
+# Optimizado para mejorar el crawling y indexación
+
+# Permitir acceso a todos los bots de búsqueda legítimos
+User-agent: *
+Allow: /
+
+# Bloquear acceso al panel de administración
+Disallow: /admin/
+Disallow: /*?admin=*
+Disallow: /*panel=admin*
+
+# Bloquear URLs de utilidad que no deben indexarse
+Disallow: /*?view=*
+Disallow: /*#admin*
+
+# Permitir explícitamente páginas importantes
+Allow: /
+Allow: /index.html
+Allow: /fletes
+Allow: /fletes/
+
+# Bloquear páginas de retorno de pagos (no relevantes para SEO)
+Disallow: /*flow-return*
+Disallow: /*?flow_payment=*
+
+# Ubicación del sitemap
+Sitemap: https://www.transportesaraucaria.cl/sitemap.xml
+
+# Reglas específicas para GoogleBot (permitir todo el contenido público)
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+
+# Reglas para Bingbot
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+
+# Bloquear bots maliciosos conocidos
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+# Tiempo de espera para crawlers (en segundos)
+# Ayuda a no sobrecargar el servidor
+Crawl-delay: 1

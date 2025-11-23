@@ -13,9 +13,32 @@ export default defineConfig({
 		tailwindcss(),
 		sitemap({
 			hostname: "https://www.transportesaraucaria.cl",
-			dynamicRoutes: ["/"],
+			// Rutas estáticas principales del sitio
+			dynamicRoutes: [
+				"/", // Página principal
+				"/fletes", // Página de fletes
+			],
+			// Excluir rutas que no deben indexarse
+			exclude: [
+				"/admin",
+				"/admin/*",
+				"/flow-return",
+				"/flow-return/*",
+			],
+			// Configuración de frecuencia de cambio y prioridad por ruta
 			changefreq: "weekly",
 			priority: 1.0,
+			lastmod: new Date().toISOString(),
+			// Generar sitemap en formato XML estándar
+			outDir: "dist",
+			// Opciones adicionales para mejorar SEO
+			robots: [
+				{
+					userAgent: "*",
+					allow: "/",
+					disallow: ["/admin", "/admin/*"],
+				},
+			],
 		}),
 	],
 	resolve: {
