@@ -12,7 +12,6 @@ import logo from "../assets/logo.png";
  */
 function FlowReturn() {
 	const [paymentStatus, setPaymentStatus] = useState("processing"); // processing, success, error
-	const [paymentInfo, setPaymentInfo] = useState(null);
 
 	useEffect(() => {
 		// Extraer token de Flow de los parámetros de URL
@@ -30,10 +29,6 @@ function FlowReturn() {
 		// Pero Flow ya envió el webhook, así que asumimos éxito si llegamos aquí
 		setTimeout(() => {
 			setPaymentStatus("success");
-			setPaymentInfo({
-				token: token,
-				timestamp: new Date().toISOString(),
-			});
 
 			// Disparar evento de conversión de Google Ads
 			// Solo se dispara cuando el pago es exitoso
