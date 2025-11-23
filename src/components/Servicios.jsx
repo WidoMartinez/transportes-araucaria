@@ -2,30 +2,31 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Car, Users, MapPin, Shield } from "lucide-react";
 
+// Servicios optimizados con keywords para SEO
 const servicios = [
 	{
 		icono: <Car className="h-8 w-8" />,
-		titulo: "Traslado Privado en Auto",
+		titulo: "Transfer Aeropuerto Temuco",
 		descripcion:
-			"Servicio exclusivo para ti y tu grupo (hasta 4 personas) en un moderno y confortable vehículo.",
+			"Servicio de transfer privado desde el Aeropuerto La Araucanía a Temuco, Pucón y Villarrica. Transporte exclusivo para hasta 4 personas en vehículos modernos y confortables.",
 	},
 	{
 		icono: <Users className="h-8 w-8" />,
-		titulo: "Disponibilidad para Grupos",
+		titulo: "Transporte Grupal en Van",
 		descripcion:
-			"¿Viajan más de 4 personas? Consulta por nuestras cómodas y seguras Vans de pasajeros.",
+			"¿Viajan más de 4 personas? Contamos con vans de pasajeros para grupos. Traslados cómodos y seguros para toda La Araucanía con conductores profesionales.",
 	},
 	{
 		icono: <Shield className="h-8 w-8" />,
-		titulo: "Puntualidad y Confianza",
+		titulo: "Servicio 24/7 Puntual",
 		descripcion:
-			"Monitoreamos tu vuelo y te esperamos a tiempo. Conductores profesionales para un viaje seguro.",
+			"Transporte disponible las 24 horas. Monitoreamos vuelos en tiempo real y garantizamos puntualidad. Conductores certificados para un viaje seguro y confiable.",
 	},
 	{
 		icono: <MapPin className="h-8 w-8" />,
-		titulo: "Tours a Medida",
+		titulo: "Tours Turísticos Privados",
 		descripcion:
-			"Descubre la Araucanía Andina con nuestros tours privados. Creamos una ruta perfecta para ti.",
+			"Descubre la Araucanía Andina con nuestros tours personalizados. Transporte turístico a volcanes, termas y parques nacionales. Creamos la ruta perfecta para tu aventura.",
 	},
 ];
 
@@ -34,12 +35,14 @@ function Servicios() {
 		<section id="servicios" className="py-20 bg-muted/40">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
+					{/* H2 optimizado con keywords principales */}
 					<h2 className="text-4xl font-bold mb-4">
-						Un Servicio Pensado para Tu Comodidad
+						Servicios de Transporte en La Araucanía
 					</h2>
+					{/* Descripción optimizada con keywords secundarias */}
 					<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-						Ofrecemos diferentes opciones de transporte para satisfacer tus
-						necesidades, con un enfoque en la calidad y el servicio privado.
+						Transfer aeropuerto, traslados turísticos y transporte privado en Temuco, Pucón y Villarrica. 
+						Calidad, seguridad y puntualidad garantizada las 24 horas del día.
 					</p>
 				</div>
 

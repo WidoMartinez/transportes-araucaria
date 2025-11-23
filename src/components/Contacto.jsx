@@ -75,13 +75,14 @@ function Contacto({
 		<section id="contacto" className="py-24 bg-gray-50/50">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
+					{/* H2 optimizado con CTA y keywords */}
 					<h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
-						Hablemos
+						Solicita tu Transfer Aeropuerto Ahora
 					</h2>
+					{/* Descripción optimizada con keywords de servicio rápido */}
 					<p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-						Completa el formulario y nuestro equipo se pondrá en contacto
-						contigo en menos de 30 minutos para entregarte una cotización a tu
-						medida.
+						Reserva tu transporte privado en La Araucanía. Completa el formulario y recibe 
+						una cotización personalizada en menos de 30 minutos. Disponible 24/7 con respuesta inmediata.
 					</p>
 				</div>
 

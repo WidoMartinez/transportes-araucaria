@@ -38,7 +38,13 @@ function Header() {
 			<div className="container mx-auto px-4">
 				<div className="flex justify-between items-center h-19">
 					<div className="flex items-center gap-4">
-						<img src={logo} alt="Transportes Araucaria Logo" className="h-28" />
+						{/* Logo optimizado con alt text descriptivo para SEO */}
+						<img 
+							src={logo} 
+							alt="Transportes Araucaria - Transfer Aeropuerto Temuco y Transporte Privado La Araucanía" 
+							className="h-28"
+							loading="eager"
+						/>
 						{/* Botón de actualización - visible al hacer hover */}
 						<button
 							onClick={handleUpdatePricing}

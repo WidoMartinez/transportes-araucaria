@@ -6,12 +6,14 @@ function PorQueElegirnos() {
 		<section className="py-20 bg-primary text-white">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
+					{/* H2 optimizado con valor diferencial y keywords */}
 					<h2 className="text-4xl font-bold mb-4">
-						¿Por qué elegir Transportes Araucaria?
+						Empresa Líder en Transfer y Transporte Privado en La Araucanía
 					</h2>
+					{/* Descripción con keywords de confianza y experiencia */}
 					<p className="text-xl opacity-90 max-w-2xl mx-auto">
-						Más de 10 años de experiencia brindando el mejor servicio de
-						traslados en La Araucanía
+						Más de 10 años conectando el Aeropuerto La Araucanía con Temuco, Pucón y Villarrica. 
+						El mejor servicio de traslados privados con cientos de clientes satisfechos.
 					</p>
 				</div>
 
@@ -19,67 +21,78 @@ function PorQueElegirnos() {
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
+							{/* H3 con keyword de beneficio */}
 							<h3 className="text-xl font-semibold mb-2">
-								Puntualidad Garantizada
+								Transfer Puntual Garantizado
 							</h3>
 							<p className="opacity-90">
-								Llegamos siempre a tiempo para que no pierdas tu vuelo o
-								conexión.
+								Llegamos siempre a tiempo. Monitoreamos tu vuelo en el Aeropuerto La Araucanía 
+								para que no pierdas tu conexión o llegues tarde a tu destino.
 							</p>
 						</div>
 					</div>
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
+							{/* H3 con keyword de servicio privado */}
 							<h3 className="text-xl font-semibold mb-2">
-								Confort y Privacidad
+								Transporte Privado Confortable
 							</h3>
 							<p className="opacity-90">
-								Nuestros vehículos privados te ofrecen un viaje cómodo, discreto
-								y con espacio suficiente para tu equipaje.
+								Vehículos modernos y exclusivos para tu comodidad. Viaje cómodo, discreto 
+								y con amplio espacio para equipaje. Sin compartir con otros pasajeros.
 							</p>
 						</div>
 					</div>
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
+							{/* H3 con keyword de seguridad */}
 							<h3 className="text-xl font-semibold mb-2">
-								Conductores Profesionales
+								Conductores Certificados
 							</h3>
 							<p className="opacity-90">
-								Personal capacitado, con licencia profesional y conocimiento
-								local.
+								Personal profesional capacitado con licencia clase A1. 
+								Conocimiento experto de las rutas de La Araucanía para un viaje seguro.
 							</p>
 						</div>
 					</div>
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
+							{/* H3 con keyword de precios */}
 							<h3 className="text-xl font-semibold mb-2">
-								Tarifas Competitivas
+								Precios Transparentes Online
 							</h3>
 							<p className="opacity-90">
-								Precios justos sin sorpresas, con descuentos para grupos.
+								Tarifas competitivas sin costos ocultos. Descuentos por reserva online, 
+								viajes de ida y vuelta, y grupos. Paga online o en efectivo.
 							</p>
 						</div>
 					</div>
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
-							<h3 className="text-xl font-semibold mb-2">Disponible 24/7</h3>
+							{/* H3 con keyword de disponibilidad */}
+							<h3 className="text-xl font-semibold mb-2">
+								Servicio 24 Horas Todos los Días
+							</h3>
 							<p className="opacity-90">
-								Servicio disponible todos los días, adaptándonos a tu horario.
+								Transfer disponible 24/7 los 365 días del año. Nos adaptamos a tu horario, 
+								incluso vuelos de madrugada o días festivos.
 							</p>
 						</div>
 					</div>
 					<div className="flex items-start space-x-4">
 						<CheckCircle className="h-8 w-8 text-accent flex-shrink-0 mt-1" />
 						<div>
+							{/* H3 con keyword de tecnología */}
 							<h3 className="text-xl font-semibold mb-2">
-								Seguimiento en Tiempo Real
+								Seguimiento de Vuelos en Tiempo Real
 							</h3>
 							<p className="opacity-90">
-								Monitoreo del vuelo y comunicación constante vía WhatsApp.
+								Monitoreo automático de tu vuelo y comunicación directa por WhatsApp. 
+								Te mantenemos informado durante todo el traslado.
 							</p>
 						</div>
 					</div>

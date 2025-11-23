@@ -33,16 +33,18 @@ function Destinos() {
 		<section id="destinos" className="py-20 bg-white">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
+					{/* H2 optimizado con keywords de destinos */}
 					<h2 className="text-4xl font-bold mb-4 text-gray-800">
-						Principales Destinos
+						Transfer a Temuco, Pucón, Villarrica y Más
 					</h2>
+					{/* Descripción optimizada con keywords locales */}
 					<p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-						Conectamos el aeropuerto con los destinos más populares de La
-						Araucanía.
+						Traslados desde el Aeropuerto La Araucanía a los principales destinos turísticos de la región. 
+						Transporte privado, seguro y puntual con tarifas competitivas.
 					</p>
 					<p className="text-sm text-muted-foreground max-w-2xl mx-auto mt-2">
-						Tarifas base para nuestro servicio exclusivo en auto (hasta 4
-						pasajeros). Consulta en el cotizador para Vans.
+						Tarifas para servicio exclusivo en auto privado (hasta 4 pasajeros). 
+						Disponemos de vans para grupos más grandes. Reserva online y obtén descuento.
 					</p>
 				</div>
 
