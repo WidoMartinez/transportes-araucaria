@@ -31,14 +31,6 @@ export default defineConfig({
 			lastmod: new Date().toISOString(),
 			// Generar sitemap en formato XML estándar
 			outDir: "dist",
-			// Opciones adicionales para mejorar SEO
-			robots: [
-				{
-					userAgent: "*",
-					allow: "/",
-					disallow: ["/admin", "/admin/*"],
-				},
-			],
 		}),
 	],
 	resolve: {

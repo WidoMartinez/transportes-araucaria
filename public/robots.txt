@@ -16,7 +16,6 @@ Disallow: /*#admin*
 
 # Permitir explícitamente páginas importantes
 Allow: /
-Allow: /index.html
 Allow: /fletes
 Allow: /fletes/
 
