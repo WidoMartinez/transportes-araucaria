@@ -197,12 +197,19 @@ const resolveIsCompraProductosView = () => {
 
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
-	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
-	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
-	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
-	const [isCompraProductosView, setIsCompraProductosView] = useState(
-		resolveIsCompraProductosView
-	);
+        const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
+        const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
+        const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
+        const [isCompraProductosView, setIsCompraProductosView] = useState(
+                resolveIsCompraProductosView
+        );
+        const [isFlowReturnView, setIsFlowReturnView] = useState(false);
+        const [flowReturnContext, setFlowReturnContext] = useState({
+                reservaId: null,
+                codigoReserva: null,
+                flowPayment: null,
+                token: null,
+        });
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -304,25 +311,47 @@ function App() {
 		};
 	}, []);
 
-	// --- LÓGICA PARA MANEJAR RETORNO DE PAGO ---
-	useEffect(() => {
-		const url = new URL(window.location.href);
-		const flowSuccess = url.searchParams.get("flow_payment") === "success";
-		const reservaId = url.searchParams.get("reserva_id");
+        // --- LÓGICA PARA MANEJAR RETORNO DE PAGO ---
+        useEffect(() => {
+                if (typeof window === "undefined") return;
 
-		if (flowSuccess && reservaId) {
-			console.log(
-				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}`
-			);
-			setVistaCompletarDetalles({
-				activo: true,
-				reservaId: reservaId,
-			});
+                const url = new URL(window.location.href);
+                const isFlowRoute = url.pathname.toLowerCase() === "/flow-return";
 
-			// Limpiar URL para evitar reactivación
-			window.history.replaceState(null, "", window.location.pathname);
-		}
-	}, []);
+                setIsFlowReturnView(isFlowRoute);
+
+                if (!isFlowRoute) {
+                        return;
+                }
+
+                const flowPayment = url.searchParams.get("flow_payment");
+                const reservaId = url.searchParams.get("reserva_id");
+                const codigoReserva = url.searchParams.get("codigo_reserva");
+                const flowToken = url.searchParams.get("token");
+
+                const reservaDestino = reservaId || codigoReserva;
+                const pagoExitoso = flowPayment === "success";
+
+                setFlowReturnContext({
+                        reservaId: reservaDestino,
+                        codigoReserva,
+                        flowPayment,
+                        token: flowToken,
+                });
+
+                if (pagoExitoso && reservaDestino) {
+                        console.log(
+                                `✅ Retorno de pago exitoso detectado para reserva: ${reservaDestino}`
+                        );
+                        setVistaCompletarDetalles({
+                                activo: true,
+                                reservaId: reservaDestino,
+                        });
+
+                        // Limpiar URL para evitar reactivación
+                        window.history.replaceState(null, "", window.location.pathname);
+                }
+        }, []);
 
 	// ID de la reserva para asociar pagos (webhook)
 	const [reservationId, setReservationId] = useState(null);
@@ -1637,14 +1666,47 @@ function App() {
 		return <PagarConCodigo />;
 	}
 
-	if (isCompraProductosView) {
-		return <CompraProductos />;
-	}
+        if (isCompraProductosView) {
+                return <CompraProductos />;
+        }
 
-	// Vista para completar detalles después del pago
-	if (vistaCompletarDetalles.activo) {
-		return (
-			<CompletarDetalles
+        if (isFlowReturnView && !vistaCompletarDetalles.activo) {
+                return (
+                        <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
+                                <div className="max-w-xl w-full space-y-4 text-center">
+                                        <h1 className="text-3xl font-bold text-green-600">
+                                                Verificando tu pago con Flow
+                                        </h1>
+                                        <p className="text-lg text-muted-foreground">
+                                                Estamos confirmando la información de tu pago. En cuanto
+                                                Flow envíe los datos, activaremos la vista para completar
+                                                los detalles de tu reserva.
+                                        </p>
+                                        {flowReturnContext.reservaId && (
+                                                <p className="text-sm text-foreground/80">
+                                                        Referencia detectada: {flowReturnContext.reservaId}
+                                                </p>
+                                        )}
+                                        {flowReturnContext.token && (
+                                                <p className="text-xs text-foreground/70">
+                                                        Token de Flow recibido, validando...
+                                                </p>
+                                        )}
+                                        {!flowReturnContext.reservaId && (
+                                                <p className="text-sm text-foreground/80">
+                                                        Si esta página no avanza, comunícate con soporte e
+                                                        indica tu código de reserva.
+                                                </p>
+                                        )}
+                                </div>
+                        </div>
+                );
+        }
+
+        // Vista para completar detalles después del pago
+        if (vistaCompletarDetalles.activo) {
+                return (
+                        <CompletarDetalles
 				reservaId={vistaCompletarDetalles.reservaId}
 				onComplete={() => {
 					console.log("✅ Detalles completados, volviendo al inicio.");
