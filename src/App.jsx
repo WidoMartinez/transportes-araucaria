@@ -37,6 +37,7 @@ import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
 import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
+import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -195,6 +196,18 @@ const resolveIsCompraProductosView = () => {
 	return hash.startsWith("#comprar-productos/");
 };
 
+// Resolver si la URL es la página de retorno de Flow (confirmación de pago)
+// Soporta tanto path-based routing (/flow-return) como hash-based (#flow-return)
+const resolveIsFlowReturnView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/flow-return" ||
+		pathname.startsWith("/flow-return/") ||
+		hash === "#flow-return"
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
@@ -202,6 +215,9 @@ function App() {
 	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
 	const [isCompraProductosView, setIsCompraProductosView] = useState(
 		resolveIsCompraProductosView
+	);
+	const [isFlowReturnView, setIsFlowReturnView] = useState(
+		resolveIsFlowReturnView
 	);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
@@ -301,6 +317,18 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncCompraProductos);
 			window.removeEventListener("popstate", syncCompraProductos);
+		};
+	}, []);
+
+	// Sincronizar vista de retorno de Flow (confirmación de pago)
+	useEffect(() => {
+		const syncFlowReturn = () =>
+			setIsFlowReturnView(resolveIsFlowReturnView());
+		window.addEventListener("hashchange", syncFlowReturn);
+		window.addEventListener("popstate", syncFlowReturn);
+		return () => {
+			window.removeEventListener("hashchange", syncFlowReturn);
+			window.removeEventListener("popstate", syncFlowReturn);
 		};
 	}, []);
 
@@ -1639,6 +1667,10 @@ function App() {
 
 	if (isCompraProductosView) {
 		return <CompraProductos />;
+	}
+
+	if (isFlowReturnView) {
+		return <FlowReturn />;
 	}
 
 	// Vista para completar detalles después del pago
