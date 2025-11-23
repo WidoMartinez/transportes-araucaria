@@ -31,15 +31,17 @@ function Footer() {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
 					{/* Columna 1: Logo y Descripción */}
 					<div className="space-y-4">
+						{/* Logo optimizado con alt text para SEO */}
 						<img
 							src={logoBlanco}
-                                                     alt="Transportes Araucaria Logo"
+							alt="Transportes Araucaria - Empresa de Transfer y Transporte Privado en La Araucanía"
 							className="h-20"
+							loading="lazy"
 						/>
+						{/* Descripción optimizada con keywords principales */}
 						<p className="text-muted-foreground">
-							Ofrecemos servicios de transporte privado de pasajeros con la más
-							alta calidad, seguridad y puntualidad en la Región de La
-							Araucanía.
+							Empresa líder en transfer aeropuerto y transporte privado de pasajeros en La Araucanía. 
+							Más de 10 años conectando Temuco, Pucón y Villarrica con calidad, seguridad y puntualidad garantizada.
 						</p>
 					</div>
 
