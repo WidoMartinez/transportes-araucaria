@@ -338,7 +338,7 @@ function HeroExpress({
 			<div className="absolute inset-0 z-0">
 				<img
 					src={heroVan}
-					alt="Fondo transporte"
+					alt="Transporte privado y transfer aeropuerto Temuco a Pucón y Villarrica"
 					className="w-full h-full object-cover opacity-60"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/40 to-transparent" />
@@ -346,11 +346,11 @@ function HeroExpress({
 
 			{/* Hero Content */}
 			<div className="relative z-10 w-full max-w-6xl px-4 flex flex-col items-center text-center mb-10 lg:mb-16 animate-fade-in-up">
-				<h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-white mb-4 drop-shadow-lg">
-					Tu viaje comienza aquí.
+				<h1 className="text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-zinc-100 to-zinc-400 mb-6 drop-shadow-2xl">
+					Transporte Exclusivo <br className="hidden md:block" /> y Transfer Aeropuerto Temuco
 				</h1>
-				<p className="text-lg md:text-xl text-zinc-200 max-w-2xl font-medium drop-shadow-md">
-					Conecta con Pucón, Villarrica y toda la región. Sin esperas, sin escalas.
+				<p className="text-lg md:text-xl text-zinc-300 max-w-3xl font-light leading-relaxed drop-shadow-md">
+					La forma más <span className="text-amber-100 font-semibold">segura y cómoda</span> de viajar. Conecta con <span className="text-amber-100 font-semibold">Pucón, Villarrica</span> y toda la región de la Araucanía. Ideal para <span className="text-amber-100 font-semibold">vacaciones, negocios</span> y traslados privados desde el <span className="text-amber-100 font-semibold">Aeropuerto de Temuco</span>.
 				</p>
 			</div>
 
