@@ -254,7 +254,7 @@ function App() {
 		numeroVuelo: "",
 		hotel: "",
 		equipajeEspecial: "",
-		sillaInfantil: "no",
+		sillaInfantil: false,
 		mensaje: "",
 		idaVuelta: false,
 		fechaRegreso: "",
@@ -1099,7 +1099,7 @@ function App() {
 			numeroVuelo: "",
 			hotel: "",
 			equipajeEspecial: "",
-			sillaInfantil: "no",
+			sillaInfantil: false,
 			mensaje: "",
 			idaVuelta: false,
 			fechaRegreso: "",
@@ -1183,7 +1183,8 @@ function App() {
 			descuentoMaximo
 		);
 
-		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0);
+		const costoSilla = formData.sillaInfantil ? 5000 : 0;
+		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
@@ -1243,6 +1244,7 @@ function App() {
 		onlineDiscountRate,
 		personalizedDiscountRate,
 		formData.idaVuelta,
+		formData.sillaInfantil,
 		codigoAplicado,
 	]);
 
