@@ -47,6 +47,18 @@ const Reserva = sequelize.define(
 			type: DataTypes.STRING(255),
 			allowNull: false,
 		},
+		direccionOrigen: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "direccion_origen",
+			comment: "Dirección específica de origen",
+		},
+		direccionDestino: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "direccion_destino",
+			comment: "Dirección específica de destino",
+		},
 		fecha: {
 			type: DataTypes.DATEONLY,
 			allowNull: false,
