@@ -34,6 +34,7 @@ import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
 import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
 import addFestivosTable from "./migrations/add-festivos-table.js";
 import addDisponibilidadConfig from "./migrations/add-disponibilidad-config.js";
+import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import { authJWT } from "./middleware/authJWT.js";
@@ -658,6 +659,7 @@ const initializeDatabase = async () => {
 		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
 		await addFestivosTable(); // Migración para tabla de festivos
 		await addDisponibilidadConfig(); // Migración para configuración de disponibilidad y descuentos por retorno
+		await addAddressColumns(); // Migración para columnas de dirección
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -2480,6 +2482,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				rut: rutFormateado,
 				origen: datosReserva.origen,
 				destino: datosReserva.destino,
+				direccionOrigen: direccionOrigenCliente,
+				direccionDestino: direccionDestinoCliente,
 				fecha: datosReserva.fecha,
 				hora: normalizeTimeGlobal(datosReserva.hora) || reservaExistente.hora,
 				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),

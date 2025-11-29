@@ -521,6 +521,20 @@ function HeroExpress({
 						</label>
 					</div>
 
+					<div className="flex items-center space-x-2 bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-colors hover:bg-black/40">
+						<Checkbox
+							id="hero-sillaInfantil"
+							checked={formData.sillaInfantil}
+							onCheckedChange={(value) => {
+								handleInputChange({ target: { name: "sillaInfantil", value: Boolean(value) } });
+							}}
+							className="border-white data-[state=checked]:bg-white data-[state=checked]:text-black"
+						/>
+						<label htmlFor="hero-sillaInfantil" className="text-sm font-medium text-white cursor-pointer select-none">
+							Silla de niño
+						</label>
+					</div>
+
 					{formData.idaVuelta && (
 						<div className="flex items-center bg-white rounded-full px-4 py-1.5 shadow-lg animate-fade-in">
 							<Label className="text-xs font-bold text-zinc-500 mr-2 uppercase">Regreso:</Label>
@@ -583,6 +597,12 @@ function HeroExpress({
 									<div>
 										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide block mb-1">Pasajeros</span>
 										<p className="text-sm font-medium text-zinc-800">{formData.pasajeros} personas</p>
+										{formData.sillaInfantil && (
+											<p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
+												<span className="h-1.5 w-1.5 rounded-full bg-black" />
+												Silla de niño
+											</p>
+										)}
 									</div>
 								</div>
 

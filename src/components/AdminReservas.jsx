@@ -287,6 +287,16 @@ function AdminReservas() {
 		{ key: "contacto", label: "Contacto", defaultVisible: true },
 		{ key: "rut", label: "RUT", defaultVisible: false },
 		{ key: "ruta", label: "Ruta", defaultVisible: true },
+		{
+			key: "direccionOrigen",
+			label: "Dir. Origen",
+			defaultVisible: false,
+		},
+		{
+			key: "direccionDestino",
+			label: "Dir. Destino",
+			defaultVisible: false,
+		},
 		{ key: "fechaHora", label: "Fecha/Hora Viaje", defaultVisible: true },
 		{ key: "fechaCreacion", label: "Fecha Creación", defaultVisible: false },
 		{ key: "pasajeros", label: "Pasajeros", defaultVisible: true },
@@ -2535,6 +2545,26 @@ function AdminReservas() {
 										<Label className="text-muted-foreground">Destino</Label>
 										<p className="font-medium">{selectedReserva.destino}</p>
 									</div>
+									{selectedReserva.direccionOrigen && (
+										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+											<Label className="text-yellow-800 font-semibold">
+												📍 Dirección de Origen (Específica)
+											</Label>
+											<p className="font-medium text-gray-900 mt-1">
+												{selectedReserva.direccionOrigen}
+											</p>
+										</div>
+									)}
+									{selectedReserva.direccionDestino && (
+										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+											<Label className="text-yellow-800 font-semibold">
+												📍 Dirección de Destino (Específica)
+											</Label>
+											<p className="font-medium text-gray-900 mt-1">
+												{selectedReserva.direccionDestino}
+											</p>
+										</div>
+									)}
 									<div>
 										<Label className="text-muted-foreground">
 											Fecha del Viaje
