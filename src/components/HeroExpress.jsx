@@ -66,7 +66,7 @@ function HeroExpress({
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
 	const [paymentConsent, setPaymentConsent] = useState(false);
-	const [selectedPaymentType, setSelectedPaymentType] = useState(null); // 'abono' o 'total'
+	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' por defecto
 	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
 	const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
@@ -304,20 +304,14 @@ function HeroExpress({
 	const paymentOptions = useMemo(
 		() => [
 			{
-				id: "abono",
-				type: "abono",
-				title: "Abonar 40%",
-				amount: pricing.abono,
-				recommended: true,
-			},
-			{
 				id: "total",
 				type: "total",
 				title: "Pagar 100%",
 				amount: pricing.totalConDescuento,
+				recommended: true,
 			},
 		],
-		[pricing.abono, pricing.totalConDescuento]
+		[pricing.totalConDescuento]
 	);
 
 	const todosLosCamposCompletos = useMemo(() => {

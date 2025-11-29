@@ -45,6 +45,7 @@ function AdminCodigosPago() {
 		vehiculo: "",
 		pasajeros: 1,
 		idaVuelta: false,
+		permitirAbono: false,
 		fechaVencimiento: "",
 		usosMaximos: 1,
 		observaciones: "",
@@ -201,6 +202,7 @@ function AdminCodigosPago() {
 				vehiculo: formData.vehiculo || "",
 				pasajeros: parseInt(formData.pasajeros) || 1,
 				idaVuelta: Boolean(formData.idaVuelta),
+				permitirAbono: Boolean(formData.permitirAbono),
 				fechaVencimiento: formData.fechaVencimiento || undefined,
 				usosMaximos: parseInt(formData.usosMaximos) || 1,
 				observaciones: formData.observaciones || "",
@@ -224,6 +226,7 @@ function AdminCodigosPago() {
 				vehiculo: "",
 				pasajeros: 1,
 				idaVuelta: false,
+				permitirAbono: false,
 				fechaVencimiento: "",
 				usosMaximos: 1,
 				observaciones: "",
@@ -468,6 +471,26 @@ function AdminCodigosPago() {
 										<p className="text-sm text-gray-500">
 											Los clientes seguiran el flujo completo de reservas e
 											ingresaran la fecha y hora del regreso al usar el codigo.
+										</p>
+									</div>
+								</div>
+							</div>
+							<div className="space-y-2 md:col-span-2">
+								<Label htmlFor="permitirAbono">Opciones de Pago</Label>
+								<div className="flex items-start gap-3 rounded border p-3">
+									<input
+										type="checkbox"
+										id="permitirAbono"
+										name="permitirAbono"
+										checked={formData.permitirAbono}
+										onChange={handleInputChange}
+										className="mt-1 h-4 w-4"
+									/>
+									<div>
+										<p className="font-medium">Permitir abono del 40%</p>
+										<p className="text-sm text-gray-500">
+											Si se activa, el cliente podrá optar por pagar solo el 40%
+											para reservar. Si no, deberá pagar el 100%.
 										</p>
 									</div>
 								</div>

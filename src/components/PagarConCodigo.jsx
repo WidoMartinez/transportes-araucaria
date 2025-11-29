@@ -711,28 +711,30 @@ function PagarConCodigo() {
 											Elige si deseas pagar la totalidad o abonar el 40% para
 											reservar tu traslado.
 										</p>
-										<div className="grid gap-3 md:grid-cols-2">
-											<Button
-												type="button"
-												variant="outline"
-												onClick={() => setSelectedPaymentType("abono")}
-												disabled={procesando || abonoSugerido <= 0}
-												className={`h-auto p-4 flex flex-col items-start gap-1 text-left transition-all ${
-													selectedPaymentType === "abono"
-														? "border-primary bg-primary/5 shadow-md"
-														: "border-gray-200"
-												}`}
-											>
-												<span className="text-sm font-semibold">
-													Abonar 40%
-												</span>
-												<span className="text-xl font-bold text-primary">
-													{formatCurrency(abonoSugerido)}
-												</span>
-												<span className="text-xs text-muted-foreground">
-													Reserva tu viaje pagando una parte ahora
-												</span>
-											</Button>
+										<div className={`grid gap-3 ${codigoValidado?.permitirAbono ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+											{codigoValidado?.permitirAbono && (
+												<Button
+													type="button"
+													variant="outline"
+													onClick={() => setSelectedPaymentType("abono")}
+													disabled={procesando || abonoSugerido <= 0}
+													className={`h-auto p-4 flex flex-col items-start gap-1 text-left transition-all ${
+														selectedPaymentType === "abono"
+															? "border-primary bg-primary/5 shadow-md"
+															: "border-gray-200"
+													}`}
+												>
+													<span className="text-sm font-semibold">
+														Abonar 40%
+													</span>
+													<span className="text-xl font-bold text-primary">
+														{formatCurrency(abonoSugerido)}
+													</span>
+													<span className="text-xs text-muted-foreground">
+														Reserva tu viaje pagando una parte ahora
+													</span>
+												</Button>
+											)}
 											<Button
 												type="button"
 												variant="outline"

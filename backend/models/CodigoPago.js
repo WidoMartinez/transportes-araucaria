@@ -53,6 +53,12 @@ const CodigoPago = sequelize.define(
 			defaultValue: false,
 			comment: "Si incluye ida y vuelta",
 		},
+		permitirAbono: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			field: "permitir_abono",
+			comment: "Si permite pagar solo el 40% como abono",
+		},
 		estado: {
 			type: DataTypes.ENUM("activo", "usado", "vencido", "cancelado"),
 			defaultValue: "activo",

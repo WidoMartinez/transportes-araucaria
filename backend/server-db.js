@@ -25,6 +25,7 @@ import ConfiguracionDisponibilidad from "./models/ConfiguracionDisponibilidad.js
 import Festivo from "./models/Festivo.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
+import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
 import CodigoPago from "./models/CodigoPago.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
@@ -2758,6 +2759,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 });
 
 // --- ENDPOINTS PARA CODIGOS DE PAGO ---
+
 // Crear código de pago (Admin)
 app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 	try {
@@ -2772,6 +2774,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 		const vehiculo = body.vehiculo || "";
 		const pasajeros = parsePositiveInteger(body.pasajeros, "pasajeros", 1);
 		const idaVuelta = Boolean(body.idaVuelta);
+		const permitirAbono = Boolean(body.permitirAbono); // Nuevo campo
 		const fechaVencimiento = body.fechaVencimiento
 			? new Date(body.fechaVencimiento)
 			: null;
@@ -2814,6 +2817,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			vehiculo,
 			pasajeros,
 			idaVuelta,
+			permitirAbono, // Nuevo campo
 			fechaVencimiento,
 			usosMaximos,
 			usosActuales: 0,
@@ -7791,6 +7795,7 @@ const PORT = process.env.PORT || 3001;
 
 const startServer = async () => {
 	try {
+		await addPermitirAbonoColumn();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 
