@@ -1,6 +1,0 @@
-														{p.source === "web" ? "Pago web" : "Pago manual"}
-													</div>
-													<div className="text-sm text-muted-foreground">
-														{p.metodo || "-"} · {p.referencia || "-"}
-													</div>
-											</div>

@@ -64,16 +64,26 @@ npm run preview
 ### Estructura del Proyecto
 ```
 transportes-araucaria/
-├── public/                 # Archivos estáticos
+├── backend/               # API y servidor Node.js (Render.com)
+├── docs/                  # Documentación del proyecto
+├── php/                   # Archivos PHP (despliegue manual en Hostinger)
+├── public/                # Archivos estáticos
 ├── src/
 │   ├── assets/            # Imágenes y recursos
 │   ├── components/        # Componentes React
-│   │   └── ui/           # Componentes de UI (shadcn)
-│   ├── App.jsx           # Componente principal
-│   ├── App.css           # Estilos personalizados
-│   └── main.jsx          # Punto de entrada
-├── package.json          # Dependencias del proyecto
-└── README.md            # Este archivo
+│   │   ├── admin/         # Componentes del panel de administración
+│   │   └── ui/            # Componentes de UI (shadcn)
+│   ├── contexts/          # Contextos de React
+│   ├── data/              # Datos estáticos
+│   ├── hooks/             # Custom hooks
+│   ├── lib/               # Utilidades
+│   ├── App.jsx            # Componente principal
+│   ├── App.css            # Estilos personalizados
+│   └── main.jsx           # Punto de entrada
+├── fletes/                # Página de fletes
+├── AGENTS.MD              # Reglas para agentes de IA
+├── package.json           # Dependencias del proyecto
+└── README.md              # Este archivo
 ```
 
 ## Funcionalidades de Generación de Leads
