@@ -655,7 +655,7 @@ function HeroExpress({
 			</div>
 
 			{/* Right Panel: Dynamic Visuals (Desktop) */}
-			<div className="relative hidden lg:block h-full overflow-hidden bg-primary sticky top-0">
+			<div className="relative hidden lg:block h-full overflow-hidden bg-accent sticky top-0">
 				<AnimatePresence mode="wait">
 					<motion.img
 						key={selectedDestinoImage}
@@ -669,7 +669,7 @@ function HeroExpress({
 					/>
 				</AnimatePresence>
 
-				<div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/20 to-transparent" />
+				<div className="absolute inset-0 bg-gradient-to-t from-accent/90 via-accent/20 to-transparent" />
 
 				<div className="absolute bottom-20 left-16 max-w-xl z-10">
 					<motion.div
