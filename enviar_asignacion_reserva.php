@@ -53,6 +53,20 @@ $pasajeros = $data['pasajeros'] ?? '';
 $conductorNombre = $data['conductorNombre'] ?? '';
 // Por privacidad, no mostraremos RUT del conductor en el correo
 
+// Verificar estado de pago - solo enviar correo a clientes que han pagado
+$estadoPago = $data['estadoPago'] ?? 'pendiente';
+$clienteHaPagado = in_array($estadoPago, ['aprobado', 'pagado', 'parcial']);
+
+// Si el cliente NO ha pagado, no enviar correo de asignación
+if (!$clienteHaPagado) {
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Correo de asignación omitido - cliente sin pago confirmado',
+        'razón' => 'El cliente no ha completado el pago del servicio'
+    ]);
+    exit;
+}
+
 // Cargar config correo
 $configFile = __DIR__ . '/config_reservas.php';
 if (!file_exists($configFile)) {
