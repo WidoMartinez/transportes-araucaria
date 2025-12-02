@@ -303,28 +303,28 @@ function HeroExpress({
 	);
 
 	return (
-		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-white">
+		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-background">
 
 			{/* Mobile Header (Visual) */}
-			<div className="lg:hidden relative h-[30vh] w-full overflow-hidden bg-zinc-900">
+			<div className="lg:hidden relative h-[30vh] w-full overflow-hidden bg-primary">
 				<img
 					src={selectedDestinoImage}
 					alt="Destino"
 					className="w-full h-full object-cover opacity-60"
 				/>
-				<div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/30" />
+				<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
 				<div className="absolute bottom-4 left-4 z-10">
-					<h1 className="text-2xl font-bold text-zinc-900 leading-tight">
+					<h1 className="text-2xl font-bold text-foreground leading-tight">
 						{visualText.title}
 					</h1>
-					<p className="text-sm text-zinc-700 font-medium">
+					<p className="text-sm text-muted-foreground font-medium">
 						{visualText.subtitle}
 					</p>
 				</div>
 			</div>
 
 			{/* Left Panel: Interaction (Form) */}
-			<div className="relative flex flex-col justify-start lg:justify-center px-6 py-8 lg:p-16 xl:p-24 overflow-y-auto bg-white z-10 -mt-6 rounded-t-[2rem] lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none">
+			<div className="relative flex flex-col justify-start lg:justify-center px-6 py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 -mt-6 rounded-t-[2rem] lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none">
 
 				<AnimatePresence mode="wait">
 					{currentStep === 0 && (
@@ -337,22 +337,22 @@ function HeroExpress({
 							className="space-y-6 w-full max-w-lg mx-auto"
 						>
 							<div className="mb-6 hidden lg:block">
-								<h2 className="text-4xl font-bold tracking-tight text-zinc-900 mb-2">{visualText.title}</h2>
-								<p className="text-zinc-500 text-lg">{visualText.subtitle}</p>
+								<h2 className="text-4xl font-bold tracking-tight text-foreground mb-2">{visualText.title}</h2>
+								<p className="text-muted-foreground text-lg">{visualText.subtitle}</p>
 							</div>
 
 							<div className="space-y-4">
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="origen" className="text-sm font-semibold text-zinc-700">Origen</Label>
+										<Label htmlFor="origen" className="text-sm font-semibold text-foreground">Origen</Label>
 										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<select
 												id="origen"
 												name="origen"
 												value={formData.origen}
 												onChange={handleInputChange}
-												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 											>
 												{origenes.map((o) => (
 													<option key={o} value={o}>{o}</option>
@@ -361,15 +361,15 @@ function HeroExpress({
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="destino" className="text-sm font-semibold text-zinc-700">Destino</Label>
+										<Label htmlFor="destino" className="text-sm font-semibold text-foreground">Destino</Label>
 										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<select
 												id="destino"
 												name="destino"
 												value={formData.destino}
 												onChange={handleInputChange}
-												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 											>
 												<option value="">Seleccionar...</option>
 												{destinos.map((d) => (
@@ -382,9 +382,9 @@ function HeroExpress({
 
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="fecha" className="text-sm font-semibold text-zinc-700">Fecha</Label>
+										<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">Fecha</Label>
 										<div className="relative">
-											<Calendar className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<input
 												id="fecha"
 												type="date"
@@ -392,20 +392,20 @@ function HeroExpress({
 												value={formData.fecha}
 												onChange={handleInputChange}
 												min={minDateTime}
-												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 											/>
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="hora" className="text-sm font-semibold text-zinc-700">Hora</Label>
+										<Label htmlFor="hora" className="text-sm font-semibold text-foreground">Hora</Label>
 										<div className="relative">
-											<Clock className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<select
 												id="hora"
 												name="hora"
 												value={formData.hora}
 												onChange={(e) => handleInputChange({ target: { name: "hora", value: e.target.value } })}
-												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 											>
 												<option value="" disabled>Seleccionar...</option>
 												{timeOptions.map((t) => (
@@ -417,15 +417,15 @@ function HeroExpress({
 								</div>
 
 								<div className="space-y-2">
-									<Label htmlFor="pasajeros" className="text-sm font-semibold text-zinc-700">Pasajeros</Label>
+									<Label htmlFor="pasajeros" className="text-sm font-semibold text-foreground">Pasajeros</Label>
 									<div className="relative">
-										<Users className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+										<Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 										<select
 											id="pasajeros"
 											name="pasajeros"
 											value={formData.pasajeros}
 											onChange={handleInputChange}
-											className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+											className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 										>
 											{[...Array(maxPasajeros)].map((_, i) => (
 												<option key={i + 1} value={i + 1}>
@@ -439,7 +439,7 @@ function HeroExpress({
 								{/* Checkboxes Row with improved mobile wrapping */}
 								<div className="flex flex-col sm:flex-row gap-3 pt-2">
 									<div
-										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.idaVuelta ? 'bg-zinc-50 border-black' : 'border-zinc-200 hover:bg-zinc-50'}`}
+										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.idaVuelta ? 'bg-muted border-primary' : 'border-border hover:bg-muted/50'}`}
 										onClick={() => {
 											const newValue = !formData.idaVuelta;
 											handleInputChange({ target: { name: "idaVuelta", value: newValue } });
@@ -450,21 +450,21 @@ function HeroExpress({
 										<Checkbox
 											id="idaVuelta"
 											checked={formData.idaVuelta}
-											className="data-[state=checked]:bg-black data-[state=checked]:text-white"
+											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
 										/>
-										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-zinc-700">Necesito regreso</Label>
+										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground">Necesito regreso</Label>
 									</div>
 
 									<div
-										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.sillaInfantil ? 'bg-zinc-50 border-black' : 'border-zinc-200 hover:bg-zinc-50'}`}
+										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.sillaInfantil ? 'bg-muted border-primary' : 'border-border hover:bg-muted/50'}`}
 										onClick={() => handleInputChange({ target: { name: "sillaInfantil", value: !formData.sillaInfantil } })}
 									>
 										<Checkbox
 											id="sillaInfantil"
 											checked={formData.sillaInfantil}
-											className="data-[state=checked]:bg-black data-[state=checked]:text-white"
+											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
 										/>
-										<Label htmlFor="sillaInfantil" className="cursor-pointer font-medium text-zinc-700">Silla de niño</Label>
+										<Label htmlFor="sillaInfantil" className="cursor-pointer font-medium text-foreground">Silla de niño</Label>
 									</div>
 								</div>
 
@@ -474,16 +474,16 @@ function HeroExpress({
 										animate={{ opacity: 1, height: "auto" }}
 										className="space-y-2 pt-2"
 									>
-										<Label className="text-sm font-semibold text-zinc-700">Fecha de Regreso</Label>
+										<Label className="text-sm font-semibold text-foreground">Fecha de Regreso</Label>
 										<div className="relative">
-											<Calendar className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<input
 												type="date"
 												name="fechaRegreso"
 												value={formData.fechaRegreso}
 												onChange={handleInputChange}
 												min={formData.fecha || minDateTime}
-												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 											/>
 										</div>
 									</motion.div>
@@ -491,14 +491,14 @@ function HeroExpress({
 							</div>
 
 							{stepError && (
-								<div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm text-center font-medium">
+								<div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center font-medium">
 									{stepError}
 								</div>
 							)}
 
 							<Button
 								onClick={handleStepOneNext}
-								className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-95"
+								className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-95"
 								disabled={isSubmitting || verificandoDisponibilidad}
 							>
 								{verificandoDisponibilidad ? (
@@ -522,38 +522,38 @@ function HeroExpress({
 							className="space-y-6 w-full max-w-lg mx-auto"
 						>
 							<div className="flex items-center gap-4 mb-2">
-								<Button variant="ghost" size="icon" onClick={handleStepBack} className="rounded-full hover:bg-zinc-100">
+								<Button variant="ghost" size="icon" onClick={handleStepBack} className="rounded-full hover:bg-muted">
 									<ArrowLeft className="h-5 w-5" />
 								</Button>
 								<div>
-									<h2 className="text-2xl font-bold text-zinc-900">Detalles y Pago</h2>
-									<p className="text-sm text-zinc-500">Completa tus datos para finalizar.</p>
+									<h2 className="text-2xl font-bold text-foreground">Detalles y Pago</h2>
+									<p className="text-sm text-muted-foreground">Completa tus datos para finalizar.</p>
 								</div>
 							</div>
 
-							<div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 space-y-3">
+							<div className="bg-muted/30 p-4 rounded-xl border border-border space-y-3">
 								<div className="flex justify-between items-start">
 									<div>
-										<p className="text-xs font-bold text-zinc-400 uppercase">Ruta</p>
-										<p className="font-semibold text-zinc-900 text-sm md:text-base">
+										<p className="text-xs font-bold text-muted-foreground uppercase">Ruta</p>
+										<p className="font-semibold text-foreground text-sm md:text-base">
 											{formData.origen === "Otro" ? formData.otroOrigen : formData.origen}
-											<span className="mx-2 text-zinc-400">→</span>
+											<span className="mx-2 text-muted-foreground">→</span>
 											{formData.destino === "Otro" ? formData.otroDestino : formData.destino}
 										</p>
 									</div>
 								</div>
 								<div className="flex justify-between">
 									<div>
-										<p className="text-xs font-bold text-zinc-400 uppercase">Fecha</p>
+										<p className="text-xs font-bold text-muted-foreground uppercase">Fecha</p>
 										<p className="font-medium text-sm">{fechaLegible} - {formData.hora}</p>
 									</div>
 									<div className="text-right">
-										<p className="text-xs font-bold text-zinc-400 uppercase">Total</p>
-										<p className="font-bold text-lg text-zinc-900">{formatCurrency(pricing.totalConDescuento)}</p>
+										<p className="text-xs font-bold text-muted-foreground uppercase">Total</p>
+										<p className="font-bold text-lg text-foreground">{formatCurrency(pricing.totalConDescuento)}</p>
 									</div>
 								</div>
 								{descuentoRetorno && (
-									<div className="flex items-center gap-2 text-xs font-medium text-green-700 bg-green-50 p-2 rounded-lg">
+									<div className="flex items-center gap-2 text-xs font-medium text-accent bg-accent/10 p-2 rounded-lg">
 										<CheckCircle2 className="h-4 w-4" />
 										¡Descuento por retorno aplicado!
 									</div>
@@ -562,19 +562,19 @@ function HeroExpress({
 
 							<div className="space-y-4">
 								<div className="space-y-2">
-									<Label htmlFor="nombre" className="font-semibold text-zinc-700">Nombre Completo</Label>
+									<Label htmlFor="nombre" className="font-semibold text-foreground">Nombre Completo</Label>
 									<Input
 										id="nombre"
 										name="nombre"
 										value={formData.nombre}
 										onChange={handleInputChange}
 										placeholder="Tu nombre completo"
-										className="bg-zinc-50 border-zinc-200 h-11"
+										className="bg-muted/50 border-input h-11"
 									/>
 								</div>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="email" className="font-semibold text-zinc-700">Email</Label>
+										<Label htmlFor="email" className="font-semibold text-foreground">Email</Label>
 										<div className="relative">
 											<Input
 												id="email"
@@ -584,40 +584,40 @@ function HeroExpress({
 												onChange={handleInputChange}
 												onBlur={(e) => verificarReservaActiva(e.target.value)}
 												placeholder="tu@email.com"
-												className="bg-zinc-50 border-zinc-200 h-11"
+												className="bg-muted/50 border-input h-11"
 											/>
-											{verificandoReserva && <span className="absolute right-3 top-3 text-xs text-zinc-400">...</span>}
+											{verificandoReserva && <span className="absolute right-3 top-3 text-xs text-muted-foreground">...</span>}
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="telefono" className="font-semibold text-zinc-700">Teléfono</Label>
+										<Label htmlFor="telefono" className="font-semibold text-foreground">Teléfono</Label>
 										<Input
 											id="telefono"
 											name="telefono"
 											value={formData.telefono}
 											onChange={handleInputChange}
 											placeholder="+56 9 1234 5678"
-											className={`bg-zinc-50 border-zinc-200 h-11 ${phoneError ? "border-red-300" : ""}`}
+											className={`bg-muted/50 border-input h-11 ${phoneError ? "border-destructive" : ""}`}
 										/>
-										{phoneError && <p className="text-xs text-red-500">{phoneError}</p>}
+										{phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
 									</div>
 								</div>
 							</div>
 
-							<div className="flex items-start gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-100">
+							<div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border">
 								<Checkbox
 									id="terms"
 									checked={paymentConsent}
 									onCheckedChange={(c) => setPaymentConsent(!!c)}
-									className="mt-1 data-[state=checked]:bg-black"
+									className="mt-1 data-[state=checked]:bg-primary"
 								/>
-								<Label htmlFor="terms" className="text-sm text-zinc-600 leading-snug cursor-pointer">
-									Acepto los <span className="underline font-medium text-zinc-900">términos y condiciones</span> y la política de privacidad.
+								<Label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+									Acepto los <span className="underline font-medium text-foreground">términos y condiciones</span> y la política de privacidad.
 								</Label>
 							</div>
 
 							{stepError && (
-								<div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm text-center">
+								<div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
 									{stepError}
 								</div>
 							)}
@@ -627,7 +627,7 @@ function HeroExpress({
 									<Button
 										onClick={() => handleProcesarPago("flow", "total")}
 										disabled={isSubmitting || !!loadingGateway}
-										className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2"
+										className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2"
 									>
 										{loadingGateway ? <LoaderCircle className="animate-spin" /> : (
 											<>
@@ -640,12 +640,12 @@ function HeroExpress({
 									<Button
 										onClick={handleGuardarReserva}
 										disabled={isSubmitting}
-										className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-xl text-lg font-bold shadow-lg"
+										className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg"
 									>
 										{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Solicitar Reserva"}
 									</Button>
 								)}
-								<p className="text-center text-xs text-zinc-400 mt-4 flex items-center justify-center gap-1">
+								<p className="text-center text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1">
 									<ShieldCheck className="h-3 w-3" /> Pago 100% seguro vía Flow
 								</p>
 							</div>
@@ -655,7 +655,7 @@ function HeroExpress({
 			</div>
 
 			{/* Right Panel: Dynamic Visuals (Desktop) */}
-			<div className="relative hidden lg:block h-full overflow-hidden bg-zinc-900 sticky top-0">
+			<div className="relative hidden lg:block h-full overflow-hidden bg-primary sticky top-0">
 				<AnimatePresence mode="wait">
 					<motion.img
 						key={selectedDestinoImage}
@@ -669,7 +669,7 @@ function HeroExpress({
 					/>
 				</AnimatePresence>
 
-				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/20 to-transparent" />
+				<div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/20 to-transparent" />
 
 				<div className="absolute bottom-20 left-16 max-w-xl z-10">
 					<motion.div
@@ -678,10 +678,10 @@ function HeroExpress({
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ delay: 0.2 }}
 					>
-						<h1 className="text-6xl font-bold text-white mb-4 tracking-tight leading-none">
+						<h1 className="text-6xl font-bold text-primary-foreground mb-4 tracking-tight leading-none">
 							{visualText.title}
 						</h1>
-						<p className="text-xl text-zinc-200 font-medium border-l-4 border-white pl-4">
+						<p className="text-xl text-primary-foreground/90 font-medium border-l-4 border-primary-foreground pl-4">
 							{visualText.subtitle}
 						</p>
 					</motion.div>
