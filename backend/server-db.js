@@ -2247,6 +2247,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		);
 
 		// Enviar email de confirmación llamando al PHP en Hostinger si corresponde
+		// El tipo de correo enviado al cliente dependerá del estado de pago
 		if (enviarCorreo) {
 			try {
 				const phpUrl =
@@ -2257,6 +2258,8 @@ app.post("/enviar-reserva", async (req, res) => {
 					...datosReserva,
 					codigoReserva: reservaGuardada.codigoReserva,
 					rut: rutFormateado,
+					// Incluir estado de pago para determinar tipo de correo al cliente
+					estadoPago: reservaGuardada.estadoPago || estadoPagoInicial,
 				};
 
 				console.log("📧 Enviando email de confirmación al PHP...");
@@ -2703,6 +2706,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		}
 
 		// Enviar notificación por email usando el PHP de Hostinger
+		// El correo enviado al cliente dependerá del estado de pago
 		if (enviarCorreo) {
 			try {
 				console.log("📧 Enviando email de notificación express...");
@@ -2712,6 +2716,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					precio: reservaExpress.precio,
 					totalConDescuento: reservaExpress.totalConDescuento,
 					source: reservaExpress.source || "express_web",
+					// Incluir estado de pago para determinar tipo de correo al cliente
+					estadoPago: reservaExpress.estadoPago || "pendiente",
 				};
 
 				const phpUrl =
@@ -4152,6 +4158,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 		}
 
 		// Intentar enviar notificación por email al pasajero
+		// Solo se envía si el cliente ha pagado (verificación en el PHP)
 		try {
 			const phpUrl =
 				process.env.PHP_ASIGNACION_URL ||
@@ -4171,6 +4178,8 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 				vehiculoTipo: vehiculoTipo,
 				vehiculoPatenteLast4: patenteLast4 || null,
 				conductorNombre: conductor?.nombre || null,
+				// Estado de pago para verificar si se debe enviar correo
+				estadoPago: reserva.estadoPago || "pendiente",
 				// No enviar RUT del conductor por privacidad
 			};
 
