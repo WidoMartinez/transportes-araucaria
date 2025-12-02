@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -11,16 +11,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-	SheetDescription,
-} from "./ui/sheet";
-import { LoaderCircle, ArrowRight, MapPin, Calendar, Clock, Users, ChevronRight } from "lucide-react";
+import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -44,6 +38,7 @@ function HeroExpress({
 	handleInputChange,
 	origenes,
 	destinos,
+	destinosData = [], // Data completa para imágenes
 	maxPasajeros,
 	minDateTime,
 	phoneError,
@@ -66,13 +61,12 @@ function HeroExpress({
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
 	const [paymentConsent, setPaymentConsent] = useState(false);
-	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' por defecto
-	const [reservaActiva, setReservaActiva] = useState(null); // Reserva activa sin pagar encontrada
+	const [selectedPaymentType, setSelectedPaymentType] = useState("total");
+	const [reservaActiva, setReservaActiva] = useState(null);
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
 	const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
-	const [descuentoRetorno, setDescuentoRetorno] = useState(null); // Información de descuento por retorno
+	const [descuentoRetorno, setDescuentoRetorno] = useState(null);
 
-	// Generar opciones de tiempo en intervalos de 15 minutos
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
 
 	const currencyFormatter = useMemo(
@@ -102,30 +96,47 @@ function HeroExpress({
 		(formData.destino && !tieneCotizacionAutomatica);
 	const mostrarPrecio = tieneCotizacionAutomatica;
 
-	// Verificar si el email tiene una reserva activa sin pagar
+	// Imagen dinámica basada en el destino seleccionado
+	const selectedDestinoImage = useMemo(() => {
+		// Prioridad: Destino seleccionado -> Origen seleccionado (si no es aeropuerto/otro) -> Default
+		const targetName = formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro"
+			? formData.destino
+			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
+
+		if (targetName && Array.isArray(destinosData)) {
+			const dest = destinosData.find(d => d.nombre === targetName);
+			if (dest && dest.imagen) return dest.imagen;
+		}
+		return heroVan;
+	}, [formData.destino, formData.origen, destinosData]);
+
+	// Texto dinámico para el panel visual
+	const visualText = useMemo(() => {
+		if (currentStep === 1) return { title: "Resumen de tu viaje", subtitle: "Estás a un paso de confirmar." };
+		if (formData.destino && formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro") {
+			return { title: `Viaja a ${formData.destino}`, subtitle: "Comodidad y seguridad garantizada." };
+		}
+		if (formData.origen && formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro") {
+			return { title: `Viaja desde ${formData.origen}`, subtitle: "Comenzamos el viaje donde tú estés." };
+		}
+		return { title: "Transporte Privado", subtitle: "Conecta con Pucón, Villarrica y toda la región." };
+	}, [formData.destino, formData.origen, currentStep]);
+
+
 	const verificarReservaActiva = async (email) => {
 		if (!email || !email.trim()) {
 			setReservaActiva(null);
 			return;
 		}
-
 		setVerificandoReserva(true);
 		try {
-			const apiUrl =
-				getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(
-				`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(
-					email.trim()
-				)}`
+				`${apiUrl}/api/reservas/verificar-activa/${encodeURIComponent(email.trim())}`
 			);
-
 			if (response.ok) {
 				const data = await response.json();
-				if (data.tieneReservaActiva) {
-					setReservaActiva(data.reserva);
-				} else {
-					setReservaActiva(null);
-				}
+				setReservaActiva(data.tieneReservaActiva ? data.reserva : null);
 			}
 		} catch (error) {
 			console.error("Error verificando reserva activa:", error);
@@ -135,28 +146,25 @@ function HeroExpress({
 		}
 	};
 
-	// Verificar disponibilidad y buscar oportunidades de retorno
 	const verificarDisponibilidadYRetorno = async () => {
 		if (!formData.destino || !formData.fecha || !formData.hora) {
 			return { disponible: true, descuento: null };
 		}
-
 		setVerificandoDisponibilidad(true);
 		try {
 			// Buscar el destino seleccionado para obtener la duración estimada
-			const destinoSeleccionado = destinos.find(
-				(d) => d.nombre === formData.destino
-			);
-			const duracionMinutos = destinoSeleccionado?.duracionIdaMinutos || 60;
+			// Si destinosData está disponible, usarlo para más precisión, sino fallback a default
+			const destinoObj = Array.isArray(destinosData)
+				? destinosData.find(d => d.nombre === formData.destino)
+				: null;
 
-			// 1. Verificar disponibilidad de vehículos
+			const duracionMinutos = destinoObj?.duracionIdaMinutos || 60;
+
 			const respDisponibilidad = await fetch(
 				`${getBackendUrl()}/api/disponibilidad/verificar`,
 				{
 					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						fecha: formData.fecha,
 						hora: formData.hora,
@@ -166,28 +174,18 @@ function HeroExpress({
 				}
 			);
 
-			if (!respDisponibilidad.ok) {
-				return { disponible: true, descuento: null };
-			}
+			if (!respDisponibilidad.ok) return { disponible: true, descuento: null };
 
 			const dataDisponibilidad = await respDisponibilidad.json();
-
 			if (!dataDisponibilidad.disponible) {
-				return {
-					disponible: false,
-					mensaje: dataDisponibilidad.mensaje,
-					descuento: null,
-				};
+				return { disponible: false, mensaje: dataDisponibilidad.mensaje, descuento: null };
 			}
 
-			// 2. Buscar oportunidades de retorno
 			const respRetorno = await fetch(
 				`${getBackendUrl()}/api/disponibilidad/oportunidades-retorno`,
 				{
 					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
+					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						origen: formData.origen,
 						destino: formData.destino,
@@ -210,7 +208,6 @@ function HeroExpress({
 					};
 				}
 			}
-
 			return { disponible: true, descuento: null };
 		} catch (error) {
 			console.error("Error verificando disponibilidad y retorno:", error);
@@ -220,7 +217,6 @@ function HeroExpress({
 		}
 	};
 
-	// Validaciones del primer paso
 	const handleStepOneNext = async () => {
 		if (!formData.origen?.trim()) return setStepError("Selecciona el origen.");
 		if (!formData.destino) return setStepError("Selecciona el destino.");
@@ -240,18 +236,11 @@ function HeroExpress({
 		}
 
 		const resultado = await verificarDisponibilidadYRetorno();
-
 		if (!resultado.disponible) {
 			setStepError(resultado.mensaje || "No hay vehículos disponibles.");
 			return;
 		}
-
-		if (resultado.descuento) {
-			setDescuentoRetorno(resultado.descuento);
-		} else {
-			setDescuentoRetorno(null);
-		}
-
+		setDescuentoRetorno(resultado.descuento || null);
 		setStepError("");
 		setCurrentStep(1);
 	};
@@ -260,18 +249,14 @@ function HeroExpress({
 		if (!formData.nombre?.trim()) return setStepError("Falta tu nombre.");
 		if (!formData.email?.trim()) return setStepError("Falta tu email.");
 		if (!formData.telefono?.trim()) return setStepError("Falta tu teléfono.");
-
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) return setStepError("Email inválido.");
-
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError("Formato inválido (ej: +56 9 1234 5678)");
-		} else {
-			setPhoneError("");
+			return false;
 		}
-
-		if (!paymentConsent) return setStepError("Acepta los términos.");
-
+		setPhoneError("");
+		if (!paymentConsent) return setStepError("Debes aceptar los términos.");
 		setStepError("");
 		return true;
 	};
@@ -283,7 +268,7 @@ function HeroExpress({
 			setStepError(result.message || "Error al guardar.");
 			return;
 		}
-		alert("✅ Reserva guardada. Revisa tu email para pagar después.");
+		// alert("✅ Reserva guardada."); // Esto lo maneja el App.jsx
 	};
 
 	const handleProcesarPago = async (gateway, type) => {
@@ -299,14 +284,17 @@ function HeroExpress({
 		});
 	};
 
-	const handleStepBack = () => setCurrentStep(0);
+	const handleStepBack = () => {
+		setStepError("");
+		setCurrentStep(0);
+	};
 
 	const paymentOptions = useMemo(
 		() => [
 			{
 				id: "total",
 				type: "total",
-				title: "Pagar 100%",
+				title: "Pagar Total",
 				amount: pricing.totalConDescuento,
 				recommended: true,
 			},
@@ -314,454 +302,391 @@ function HeroExpress({
 		[pricing.totalConDescuento]
 	);
 
-	const todosLosCamposCompletos = useMemo(() => {
-		if (currentStep !== 1) return false;
-		return (
-			formData.nombre?.trim().length > 0 &&
-			formData.email?.trim().length > 0 &&
-			/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
-			formData.telefono?.trim().length > 0 &&
-			paymentConsent
-		);
-	}, [currentStep, formData, paymentConsent]);
-
 	return (
-		<section id="inicio" className="relative w-full h-[600px] lg:h-[700px] flex flex-col justify-center items-center overflow-hidden bg-zinc-900">
+		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-white">
 
-			{/* Background Image with Overlay */}
-			<div className="absolute inset-0 z-0">
+			{/* Mobile Header (Visual) */}
+			<div className="lg:hidden relative h-[30vh] w-full overflow-hidden bg-zinc-900">
 				<img
-					src={heroVan}
-					alt="Fondo transporte"
+					src={selectedDestinoImage}
+					alt="Destino"
 					className="w-full h-full object-cover opacity-60"
 				/>
-				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/40 to-transparent" />
-			</div>
-
-			{/* Hero Content */}
-			<div className="relative z-10 w-full max-w-6xl px-4 flex flex-col items-center text-center mb-10 lg:mb-16 animate-fade-in-up">
-				<h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-white mb-4 drop-shadow-lg">
-					Tu viaje comienza aquí.
-				</h1>
-				<p className="text-lg md:text-xl text-zinc-200 max-w-2xl font-medium drop-shadow-md">
-					Conecta con Pucón, Villarrica y toda la región. Sin esperas, sin escalas.
-				</p>
-			</div>
-
-			{/* Floating Booking Bar (Step 1) */}
-			<div className="relative z-20 w-full max-w-5xl px-4 animate-fade-in-up animation-delay-200">
-				<div className="bg-white rounded-2xl lg:rounded-full shadow-2xl p-4 lg:p-2 lg:pl-6 border border-zinc-100 flex flex-col lg:flex-row items-center gap-4">
-
-					{/* Horizontal Inputs Grid */}
-					<div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 w-full lg:items-center lg:divide-x lg:divide-zinc-100">
-
-						{/* Origen */}
-						<div className="relative lg:pr-3 group">
-							<Label htmlFor="hero-origen" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Origen</Label>
-							<div className="flex items-center relative">
-								<MapPin className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
-								<div className="w-full">
-									<select
-										id="hero-origen"
-										name="origen"
-										value={formData.origen}
-										onChange={(e) => {
-											handleInputChange(e);
-											if (stepError) setStepError("");
-										}}
-										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base truncate cursor-pointer appearance-none py-2 lg:py-0"
-									>
-										{origenes.map((origen) => (
-											<option key={origen} value={origen}>{origen}</option>
-										))}
-									</select>
-								</div>
-							</div>
-							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Origen</Label>
-						</div>
-
-						{/* Destino */}
-						<div className="relative lg:px-3 group">
-							<Label htmlFor="hero-destino" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Destino</Label>
-							<div className="flex items-center">
-								<MapPin className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
-								<div className="w-full">
-									<select
-										id="hero-destino"
-										name="destino"
-										value={formData.destino}
-										onChange={(e) => {
-											handleInputChange(e);
-											if (stepError) setStepError("");
-										}}
-										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base truncate cursor-pointer appearance-none py-2 lg:py-0"
-									>
-										<option value="">Seleccionar destino</option>
-										{destinos.map((d) => (
-											<option key={d} value={d}>{d}</option>
-										))}
-									</select>
-								</div>
-							</div>
-							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Destino</Label>
-						</div>
-
-						{/* Fecha */}
-						<div className="relative lg:px-3 group">
-							<Label htmlFor="hero-fecha" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Fecha</Label>
-							<div className="flex items-center">
-								<Calendar className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
-								<input
-									id="hero-fecha"
-									type="date"
-									name="fecha"
-									value={formData.fecha}
-									onChange={(e) => {
-										handleInputChange(e);
-										if (stepError) setStepError("");
-									}}
-									min={minDateTime}
-									className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base cursor-pointer py-2 lg:py-0"
-								/>
-							</div>
-							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Fecha</Label>
-						</div>
-
-						{/* Hora */}
-						<div className="relative lg:px-3 group">
-							<Label htmlFor="hero-hora" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Hora</Label>
-							<div className="flex items-center">
-								<Clock className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
-								<div className="w-full">
-									<select
-										id="hero-hora"
-										name="hora"
-										value={formData.hora}
-										onChange={(e) => {
-											handleInputChange({ target: { name: "hora", value: e.target.value } });
-											if (stepError) setStepError("");
-										}}
-										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base cursor-pointer appearance-none py-2 lg:py-0"
-									>
-										<option value="" disabled>Seleccionar</option>
-										{timeOptions.map((option) => (
-											<option key={option.value} value={option.value}>
-												{option.label}
-											</option>
-										))}
-									</select>
-								</div>
-							</div>
-							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Hora</Label>
-						</div>
-
-						{/* Pasajeros */}
-						<div className="relative lg:px-3 group">
-							<Label htmlFor="hero-pasajeros" className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 block lg:hidden">Pasajeros</Label>
-							<div className="flex items-center">
-								<Users className="h-4 w-4 text-zinc-400 mr-2 lg:hidden" />
-								<div className="w-full">
-									<select
-										id="hero-pasajeros"
-										name="pasajeros"
-										value={formData.pasajeros}
-										onChange={handleInputChange}
-										className="w-full bg-transparent border-none text-zinc-900 font-medium focus:ring-0 p-0 text-sm lg:text-base cursor-pointer appearance-none py-2 lg:py-0"
-									>
-										{[...Array(maxPasajeros)].map((_, i) => (
-											<option key={i + 1} value={i + 1}>
-												{i + 1} {i === 0 ? "persona" : "personas"}
-											</option>
-										))}
-									</select>
-								</div>
-							</div>
-							<Label className="hidden lg:block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mt-1">Pasajeros</Label>
-						</div>
-					</div>
-
-					{/* Search Button */}
-					<Button
-						onClick={handleStepOneNext}
-						className="w-full lg:w-auto h-12 lg:h-14 rounded-xl lg:rounded-full px-8 bg-black hover:bg-zinc-800 text-white font-semibold shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2 text-base"
-						disabled={isSubmitting || verificandoDisponibilidad}
-					>
-						{verificandoDisponibilidad ? (
-							<LoaderCircle className="h-5 w-5 animate-spin" />
-						) : (
-							<>
-								Buscar <ArrowRight className="h-5 w-5" />
-							</>
-						)}
-					</Button>
+				<div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-black/30" />
+				<div className="absolute bottom-4 left-4 z-10">
+					<h1 className="text-2xl font-bold text-zinc-900 leading-tight">
+						{visualText.title}
+					</h1>
+					<p className="text-sm text-zinc-700 font-medium">
+						{visualText.subtitle}
+					</p>
 				</div>
-
-				{/* Validation Messages & Return Toggle */}
-				<div className="mt-4 flex flex-col lg:flex-row justify-center items-center gap-4">
-					<div className="flex items-center space-x-2 bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-colors hover:bg-black/40">
-						<Checkbox
-							id="hero-idaVuelta"
-							checked={formData.idaVuelta}
-							onCheckedChange={(value) => {
-								const isRoundTrip = Boolean(value);
-								handleInputChange({ target: { name: "idaVuelta", value: isRoundTrip } });
-								if (!isRoundTrip) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
-								else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
-							}}
-							className="border-white data-[state=checked]:bg-white data-[state=checked]:text-black"
-						/>
-						<label htmlFor="hero-idaVuelta" className="text-sm font-medium text-white cursor-pointer select-none">
-							Necesito regreso
-						</label>
-					</div>
-
-					<div className="flex items-center space-x-2 bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition-colors hover:bg-black/40">
-						<Checkbox
-							id="hero-sillaInfantil"
-							checked={formData.sillaInfantil}
-							onCheckedChange={(value) => {
-								handleInputChange({ target: { name: "sillaInfantil", value: Boolean(value) } });
-							}}
-							className="border-white data-[state=checked]:bg-white data-[state=checked]:text-black"
-						/>
-						<label htmlFor="hero-sillaInfantil" className="text-sm font-medium text-white cursor-pointer select-none">
-							Silla de niño
-						</label>
-					</div>
-
-					{formData.idaVuelta && (
-						<div className="flex items-center bg-white rounded-full px-4 py-1.5 shadow-lg animate-fade-in">
-							<Label className="text-xs font-bold text-zinc-500 mr-2 uppercase">Regreso:</Label>
-							<input
-								type="date"
-								name="fechaRegreso"
-								value={formData.fechaRegreso}
-								onChange={handleInputChange}
-								min={formData.fecha || minDateTime}
-								className="bg-transparent border-none text-sm font-medium text-zinc-900 focus:ring-0 p-0 h-auto"
-							/>
-						</div>
-					)}
-				</div>
-
-				{stepError && (
-					<div className="mt-4 text-center animate-bounce">
-						<Badge variant="destructive" className="px-4 py-1.5 text-sm font-normal">
-							{stepError}
-						</Badge>
-					</div>
-				)}
 			</div>
 
-			{/* Step 2: Details & Payment Drawer (Sidebar) */}
-			<Sheet open={currentStep === 1} onOpenChange={(open) => !open && handleStepBack()}>
-				<SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-0">
-					<div className="p-6">
-						<SheetHeader className="mb-6 text-left">
-							<SheetTitle className="text-3xl font-bold text-zinc-900">Resumen</SheetTitle>
-							<SheetDescription className="text-zinc-500">
-								Revisa los detalles de tu viaje y completa tu información.
-							</SheetDescription>
-						</SheetHeader>
+			{/* Left Panel: Interaction (Form) */}
+			<div className="relative flex flex-col justify-start lg:justify-center px-6 py-8 lg:p-16 xl:p-24 overflow-y-auto bg-white z-10 -mt-6 rounded-t-[2rem] lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none">
 
-						<div className="space-y-8">
-							{/* Route Summary Card */}
-							<div className="bg-zinc-50 p-5 rounded-2xl border border-zinc-100">
-								<div className="flex items-start justify-between mb-4">
-									<div className="flex flex-col">
-										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide mb-1">Ruta</span>
-										<div className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
-											<span>{formData.origen === "Otro" ? formData.otroOrigen : formData.origen}</span>
-											<ArrowRight className="h-4 w-4 text-zinc-400" />
-											<span>{formData.destino === "Otro" ? formData.otroDestino : formData.destino}</span>
+				<AnimatePresence mode="wait">
+					{currentStep === 0 && (
+						<motion.div
+							key="step0"
+							initial={{ opacity: 0, x: -20 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: -20 }}
+							transition={{ duration: 0.3 }}
+							className="space-y-6 w-full max-w-lg mx-auto"
+						>
+							<div className="mb-6 hidden lg:block">
+								<h2 className="text-4xl font-bold tracking-tight text-zinc-900 mb-2">{visualText.title}</h2>
+								<p className="text-zinc-500 text-lg">{visualText.subtitle}</p>
+							</div>
+
+							<div className="space-y-4">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="origen" className="text-sm font-semibold text-zinc-700">Origen</Label>
+										<div className="relative">
+											<MapPin className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<select
+												id="origen"
+												name="origen"
+												value={formData.origen}
+												onChange={handleInputChange}
+												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+											>
+												{origenes.map((o) => (
+													<option key={o} value={o}>{o}</option>
+												))}
+											</select>
 										</div>
 									</div>
-									<Button variant="ghost" size="icon" onClick={handleStepBack} className="text-zinc-400 hover:text-zinc-900 -mt-1 -mr-2">
-										<span className="sr-only">Editar</span>
-										<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil h-4 w-4"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-									</Button>
+									<div className="space-y-2">
+										<Label htmlFor="destino" className="text-sm font-semibold text-zinc-700">Destino</Label>
+										<div className="relative">
+											<MapPin className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<select
+												id="destino"
+												name="destino"
+												value={formData.destino}
+												onChange={handleInputChange}
+												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+											>
+												<option value="">Seleccionar...</option>
+												{destinos.map((d) => (
+													<option key={d} value={d}>{d}</option>
+												))}
+											</select>
+										</div>
+									</div>
 								</div>
 
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide block mb-1">Salida</span>
-										<p className="text-sm font-medium text-zinc-800">{fechaLegible}</p>
-										<p className="text-sm text-zinc-500">{formData.hora}</p>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="fecha" className="text-sm font-semibold text-zinc-700">Fecha</Label>
+										<div className="relative">
+											<Calendar className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<input
+												id="fecha"
+												type="date"
+												name="fecha"
+												value={formData.fecha}
+												onChange={handleInputChange}
+												min={minDateTime}
+												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+											/>
+										</div>
 									</div>
-									<div>
-										<span className="text-xs font-bold text-zinc-400 uppercase tracking-wide block mb-1">Pasajeros</span>
-										<p className="text-sm font-medium text-zinc-800">{formData.pasajeros} personas</p>
-										{formData.sillaInfantil && (
-											<p className="text-xs text-zinc-500 mt-1 flex items-center gap-1">
-												<span className="h-1.5 w-1.5 rounded-full bg-black" />
-												Silla de niño
-											</p>
-										)}
+									<div className="space-y-2">
+										<Label htmlFor="hora" className="text-sm font-semibold text-zinc-700">Hora</Label>
+										<div className="relative">
+											<Clock className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<select
+												id="hora"
+												name="hora"
+												value={formData.hora}
+												onChange={(e) => handleInputChange({ target: { name: "hora", value: e.target.value } })}
+												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+											>
+												<option value="" disabled>Seleccionar...</option>
+												{timeOptions.map((t) => (
+													<option key={t.value} value={t.value}>{t.label}</option>
+												))}
+											</select>
+										</div>
+									</div>
+								</div>
+
+								<div className="space-y-2">
+									<Label htmlFor="pasajeros" className="text-sm font-semibold text-zinc-700">Pasajeros</Label>
+									<div className="relative">
+										<Users className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+										<select
+											id="pasajeros"
+											name="pasajeros"
+											value={formData.pasajeros}
+											onChange={handleInputChange}
+											className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent appearance-none"
+										>
+											{[...Array(maxPasajeros)].map((_, i) => (
+												<option key={i + 1} value={i + 1}>
+													{i + 1} {i === 0 ? "persona" : "personas"}
+												</option>
+											))}
+										</select>
+									</div>
+								</div>
+
+								{/* Checkboxes Row with improved mobile wrapping */}
+								<div className="flex flex-col sm:flex-row gap-3 pt-2">
+									<div
+										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.idaVuelta ? 'bg-zinc-50 border-black' : 'border-zinc-200 hover:bg-zinc-50'}`}
+										onClick={() => {
+											const newValue = !formData.idaVuelta;
+											handleInputChange({ target: { name: "idaVuelta", value: newValue } });
+											if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
+											else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
+										}}
+									>
+										<Checkbox
+											id="idaVuelta"
+											checked={formData.idaVuelta}
+											className="data-[state=checked]:bg-black data-[state=checked]:text-white"
+										/>
+										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-zinc-700">Necesito regreso</Label>
+									</div>
+
+									<div
+										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.sillaInfantil ? 'bg-zinc-50 border-black' : 'border-zinc-200 hover:bg-zinc-50'}`}
+										onClick={() => handleInputChange({ target: { name: "sillaInfantil", value: !formData.sillaInfantil } })}
+									>
+										<Checkbox
+											id="sillaInfantil"
+											checked={formData.sillaInfantil}
+											className="data-[state=checked]:bg-black data-[state=checked]:text-white"
+										/>
+										<Label htmlFor="sillaInfantil" className="cursor-pointer font-medium text-zinc-700">Silla de niño</Label>
 									</div>
 								</div>
 
 								{formData.idaVuelta && (
-									<div className="mt-4 pt-4 border-t border-zinc-200">
-										<span className="text-xs font-bold text-green-600 uppercase tracking-wide block mb-1">Regreso</span>
-										<p className="text-sm font-medium text-zinc-800">{new Date(formData.fechaRegreso).toLocaleDateString("es-CL")}</p>
+									<motion.div
+										initial={{ opacity: 0, height: 0 }}
+										animate={{ opacity: 1, height: "auto" }}
+										className="space-y-2 pt-2"
+									>
+										<Label className="text-sm font-semibold text-zinc-700">Fecha de Regreso</Label>
+										<div className="relative">
+											<Calendar className="absolute left-3 top-3 h-5 w-5 text-zinc-400" />
+											<input
+												type="date"
+												name="fechaRegreso"
+												value={formData.fechaRegreso}
+												onChange={handleInputChange}
+												min={formData.fecha || minDateTime}
+												className="w-full h-11 pl-10 pr-4 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+											/>
+										</div>
+									</motion.div>
+								)}
+							</div>
+
+							{stepError && (
+								<div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm text-center font-medium">
+									{stepError}
+								</div>
+							)}
+
+							<Button
+								onClick={handleStepOneNext}
+								className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-95"
+								disabled={isSubmitting || verificandoDisponibilidad}
+							>
+								{verificandoDisponibilidad ? (
+									<LoaderCircle className="h-6 w-6 animate-spin" />
+								) : (
+									<span className="flex items-center gap-2">
+										Cotizar Viaje <ArrowRight className="h-5 w-5" />
+									</span>
+								)}
+							</Button>
+						</motion.div>
+					)}
+
+					{currentStep === 1 && (
+						<motion.div
+							key="step1"
+							initial={{ opacity: 0, x: 20 }}
+							animate={{ opacity: 1, x: 0 }}
+							exit={{ opacity: 0, x: 20 }}
+							transition={{ duration: 0.3 }}
+							className="space-y-6 w-full max-w-lg mx-auto"
+						>
+							<div className="flex items-center gap-4 mb-2">
+								<Button variant="ghost" size="icon" onClick={handleStepBack} className="rounded-full hover:bg-zinc-100">
+									<ArrowLeft className="h-5 w-5" />
+								</Button>
+								<div>
+									<h2 className="text-2xl font-bold text-zinc-900">Detalles y Pago</h2>
+									<p className="text-sm text-zinc-500">Completa tus datos para finalizar.</p>
+								</div>
+							</div>
+
+							<div className="bg-zinc-50 p-4 rounded-xl border border-zinc-100 space-y-3">
+								<div className="flex justify-between items-start">
+									<div>
+										<p className="text-xs font-bold text-zinc-400 uppercase">Ruta</p>
+										<p className="font-semibold text-zinc-900 text-sm md:text-base">
+											{formData.origen === "Otro" ? formData.otroOrigen : formData.origen}
+											<span className="mx-2 text-zinc-400">→</span>
+											{formData.destino === "Otro" ? formData.otroDestino : formData.destino}
+										</p>
+									</div>
+								</div>
+								<div className="flex justify-between">
+									<div>
+										<p className="text-xs font-bold text-zinc-400 uppercase">Fecha</p>
+										<p className="font-medium text-sm">{fechaLegible} - {formData.hora}</p>
+									</div>
+									<div className="text-right">
+										<p className="text-xs font-bold text-zinc-400 uppercase">Total</p>
+										<p className="font-bold text-lg text-zinc-900">{formatCurrency(pricing.totalConDescuento)}</p>
+									</div>
+								</div>
+								{descuentoRetorno && (
+									<div className="flex items-center gap-2 text-xs font-medium text-green-700 bg-green-50 p-2 rounded-lg">
+										<CheckCircle2 className="h-4 w-4" />
+										¡Descuento por retorno aplicado!
 									</div>
 								)}
 							</div>
 
-							{/* Pricing Display */}
-							{mostrarPrecio && (
+							<div className="space-y-4">
 								<div className="space-y-2">
-									<div className="flex items-end justify-between">
-										<span className="text-sm font-medium text-zinc-500">Total estimado</span>
-										<span className="text-3xl font-bold text-zinc-900 tracking-tight">
-											{formatCurrency(pricing.totalConDescuento)}
-										</span>
-									</div>
-									{descuentoRetorno && (
-										<div className="bg-green-50 text-green-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
-											<span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-											¡Descuento por retorno aplicado!
-										</div>
-									)}
-								</div>
-							)}
-
-							{/* Form Fields */}
-							<div className="space-y-5">
-								<div className="space-y-2">
-									<Label htmlFor="hero-nombre" className="text-sm font-semibold text-zinc-700">Nombre completo</Label>
+									<Label htmlFor="nombre" className="font-semibold text-zinc-700">Nombre Completo</Label>
 									<Input
-										id="hero-nombre"
+										id="nombre"
 										name="nombre"
 										value={formData.nombre}
 										onChange={handleInputChange}
-										placeholder="Como aparece en tu documento"
-										className="h-12 bg-zinc-50 border-zinc-200 focus:bg-white transition-all"
+										placeholder="Tu nombre completo"
+										className="bg-zinc-50 border-zinc-200 h-11"
 									/>
 								</div>
-
-								<div className="grid grid-cols-1 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="hero-email" className="text-sm font-semibold text-zinc-700">Correo electrónico</Label>
+										<Label htmlFor="email" className="font-semibold text-zinc-700">Email</Label>
 										<div className="relative">
 											<Input
-												id="hero-email"
+												id="email"
 												type="email"
 												name="email"
 												value={formData.email}
 												onChange={handleInputChange}
 												onBlur={(e) => verificarReservaActiva(e.target.value)}
-												className="h-12 bg-zinc-50 border-zinc-200 focus:bg-white transition-all"
-												placeholder="ejemplo@correo.com"
+												placeholder="tu@email.com"
+												className="bg-zinc-50 border-zinc-200 h-11"
 											/>
-											{verificandoReserva && (
-												<span className="absolute right-3 top-3.5 text-xs text-zinc-400">Verificando...</span>
-											)}
+											{verificandoReserva && <span className="absolute right-3 top-3 text-xs text-zinc-400">...</span>}
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="hero-telefono" className="text-sm font-semibold text-zinc-700">Teléfono móvil</Label>
-										<div className="relative">
-											<Input
-												id="hero-telefono"
-												name="telefono"
-												value={formData.telefono}
-												onChange={handleInputChange}
-												className={`h-12 bg-zinc-50 border-zinc-200 focus:bg-white transition-all ${phoneError ? "border-red-300 focus:ring-red-200" : ""}`}
-												placeholder="+56 9 ..."
-											/>
-										</div>
-										{phoneError && <span className="text-xs text-red-500 mt-1 block">{phoneError}</span>}
+										<Label htmlFor="telefono" className="font-semibold text-zinc-700">Teléfono</Label>
+										<Input
+											id="telefono"
+											name="telefono"
+											value={formData.telefono}
+											onChange={handleInputChange}
+											placeholder="+56 9 1234 5678"
+											className={`bg-zinc-50 border-zinc-200 h-11 ${phoneError ? "border-red-300" : ""}`}
+										/>
+										{phoneError && <p className="text-xs text-red-500">{phoneError}</p>}
 									</div>
 								</div>
 							</div>
 
-							{/* Consent */}
-							<div className="flex items-start space-x-3 py-2">
+							<div className="flex items-start gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-100">
 								<Checkbox
-									id="hero-payment-consent"
+									id="terms"
 									checked={paymentConsent}
-									onCheckedChange={(value) => setPaymentConsent(Boolean(value))}
-									className="mt-1 border-zinc-300"
+									onCheckedChange={(c) => setPaymentConsent(!!c)}
+									className="mt-1 data-[state=checked]:bg-black"
 								/>
-								<label htmlFor="hero-payment-consent" className="text-sm text-zinc-500 leading-snug cursor-pointer">
-									Acepto los <span className="underline hover:text-zinc-800">términos y condiciones</span>.
-								</label>
+								<Label htmlFor="terms" className="text-sm text-zinc-600 leading-snug cursor-pointer">
+									Acepto los <span className="underline font-medium text-zinc-900">términos y condiciones</span> y la política de privacidad.
+								</Label>
 							</div>
 
-							{/* Error Message */}
 							{stepError && (
-								<div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium text-center">
+								<div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm text-center">
 									{stepError}
 								</div>
 							)}
 
-							{/* Payment Actions */}
-							<div className="pt-4 pb-10">
-								{mostrarPrecio && !requiereCotizacionManual && todosLosCamposCompletos ? (
-									<div className="space-y-4">
-										{!selectedPaymentType ? (
-											<div className="grid grid-cols-2 gap-4">
-												{paymentOptions.map((option) => (
-													<button
-														key={option.id}
-														type="button"
-														onClick={() => setSelectedPaymentType(option.type)}
-														className={`p-4 rounded-xl border text-left transition-all relative overflow-hidden ${
-															option.recommended
-																? "border-black bg-zinc-900 text-white shadow-lg hover:bg-zinc-800"
-																: "border-zinc-200 hover:border-zinc-400 bg-white hover:bg-zinc-50"
-														}`}
-													>
-														{option.recommended && (
-															<div className="absolute top-0 right-0 bg-green-500 text-[10px] font-bold px-2 py-0.5 text-white rounded-bl-lg">
-																POPULAR
-															</div>
-														)}
-														<div className={`text-xs mb-1 ${option.recommended ? "text-zinc-400" : "text-zinc-500"}`}>{option.title}</div>
-														<div className={`font-bold text-lg ${option.recommended ? "text-white" : "text-zinc-900"}`}>{formatCurrency(option.amount)}</div>
-													</button>
-												))}
-											</div>
-										) : (
-											<div className="space-y-4 animate-fade-in">
-												<div className="flex items-center justify-between text-sm bg-zinc-100 p-4 rounded-xl">
-													<span className="text-zinc-600">Monto a pagar: <strong className="text-zinc-900">{formatCurrency(selectedPaymentType === 'total' ? pricing.totalConDescuento : pricing.abono)}</strong></span>
-													<button onClick={() => setSelectedPaymentType(null)} className="text-zinc-500 hover:text-black text-xs font-medium underline">Cambiar</button>
-												</div>
-												<Button
-													type="button"
-													onClick={() => handleProcesarPago("flow", selectedPaymentType)}
-													disabled={isSubmitting || !!loadingGateway}
-													className="w-full h-14 rounded-xl bg-black hover:bg-zinc-800 text-white font-bold text-lg shadow-lg"
-												>
-													{loadingGateway ? <LoaderCircle className="animate-spin" /> : "Ir a Pagar"}
-												</Button>
-											</div>
+							<div className="pt-2">
+								{mostrarPrecio && !requiereCotizacionManual ? (
+									<Button
+										onClick={() => handleProcesarPago("flow", "total")}
+										disabled={isSubmitting || !!loadingGateway}
+										className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2"
+									>
+										{loadingGateway ? <LoaderCircle className="animate-spin" /> : (
+											<>
+												<CreditCard className="h-5 w-5" />
+												Pagar {formatCurrency(pricing.totalConDescuento)}
+											</>
 										)}
-									</div>
+									</Button>
 								) : (
-									<div>
-										{todosLosCamposCompletos ? (
-											<Button
-												onClick={handleGuardarReserva}
-												className="w-full h-14 rounded-xl bg-white border-2 border-zinc-200 text-zinc-900 hover:border-black hover:bg-zinc-50 font-bold text-lg"
-												disabled={isSubmitting}
-											>
-												{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Solicitar Reserva"}
-											</Button>
-										) : (
-											<div className="text-sm text-center text-zinc-400 py-2 italic">
-												Completa todos los campos para continuar
-											</div>
-										)}
-									</div>
+									<Button
+										onClick={handleGuardarReserva}
+										disabled={isSubmitting}
+										className="w-full h-14 bg-black hover:bg-zinc-800 text-white rounded-xl text-lg font-bold shadow-lg"
+									>
+										{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Solicitar Reserva"}
+									</Button>
 								)}
+								<p className="text-center text-xs text-zinc-400 mt-4 flex items-center justify-center gap-1">
+									<ShieldCheck className="h-3 w-3" /> Pago 100% seguro vía Flow
+								</p>
 							</div>
-						</div>
-					</div>
-				</SheetContent>
-			</Sheet>
+						</motion.div>
+					)}
+				</AnimatePresence>
+			</div>
+
+			{/* Right Panel: Dynamic Visuals (Desktop) */}
+			<div className="relative hidden lg:block h-full overflow-hidden bg-zinc-900 sticky top-0">
+				<AnimatePresence mode="wait">
+					<motion.img
+						key={selectedDestinoImage}
+						src={selectedDestinoImage}
+						alt="Destino"
+						initial={{ opacity: 0, scale: 1.1 }}
+						animate={{ opacity: 0.6, scale: 1 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 1 }}
+						className="absolute inset-0 w-full h-full object-cover"
+					/>
+				</AnimatePresence>
+
+				<div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/20 to-transparent" />
+
+				<div className="absolute bottom-20 left-16 max-w-xl z-10">
+					<motion.div
+						key={visualText.title}
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.2 }}
+					>
+						<h1 className="text-6xl font-bold text-white mb-4 tracking-tight leading-none">
+							{visualText.title}
+						</h1>
+						<p className="text-xl text-zinc-200 font-medium border-l-4 border-white pl-4">
+							{visualText.subtitle}
+						</p>
+					</motion.div>
+				</div>
+			</div>
 		</section>
 	);
 }

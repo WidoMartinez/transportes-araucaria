@@ -1763,6 +1763,7 @@ function App() {
 					handleInputChange={handleInputChange}
 					origenes={todosLosTramos}
 					destinos={destinosDisponibles}
+					destinosData={destinosData}
 					maxPasajeros={maxPasajeros}
 					minDateTime={minDateTime}
 					phoneError={phoneError}
