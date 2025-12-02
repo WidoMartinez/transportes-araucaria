@@ -505,7 +505,7 @@ function HeroExpress({
 									<LoaderCircle className="h-6 w-6 animate-spin" />
 								) : (
 									<span className="flex items-center gap-2">
-										Cotizar Viaje <ArrowRight className="h-5 w-5" />
+										Reservar Ahora <ArrowRight className="h-5 w-5" />
 									</span>
 								)}
 							</Button>
