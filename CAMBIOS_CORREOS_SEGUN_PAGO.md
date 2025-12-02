@@ -21,7 +21,7 @@ Este documento describe las modificaciones realizadas en el sistema de envío de
 
 - Agregada variable `$estadoPago` para detectar el estado de pago del cliente
 - Agregada variable `$clienteHaPagado` que verifica si el cliente ha pagado (estados: `aprobado`, `pagado`, `parcial`)
-- Agregada constante `$DESCUENTO_OFERTA_ESPECIAL = 15` para configurar el porcentaje de descuento ofrecido
+- Agregada constante `$DESCUENTO_OFERTA_ESPECIAL = 10` para configurar el porcentaje de descuento ofrecido
 - Nueva lógica condicional para el envío de correo al cliente:
   - **Si el cliente HA PAGADO**: Se envía el correo de confirmación normal con los detalles de la reserva
   - **Si el cliente NO HA PAGADO**: Se envía un correo único ofreciendo un descuento (configurable) para incentivar el pago
@@ -97,7 +97,7 @@ Los archivos PHP modificados deben ser subidos manualmente al servidor de Hostin
               ▼                               ▼
     ┌─────────────────┐            ┌─────────────────┐
     │ CORREO NORMAL   │            │ CORREO DESCUENTO│
-    │ • Confirmación  │            │ • Oferta 15%    │
+    │ • Confirmación  │            │ • Oferta 10%    │
     │ • Detalles      │            │ • Precio esp.   │
     │ • Resumen       │            │ • CTA contacto  │
     └─────────────────┘            └─────────────────┘

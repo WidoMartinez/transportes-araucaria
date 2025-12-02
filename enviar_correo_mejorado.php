@@ -170,7 +170,7 @@ $estadoPago = htmlspecialchars($data['estadoPago'] ?? 'pendiente');
 $clienteHaPagado = in_array($estadoPago, ['aprobado', 'pagado', 'parcial']);
 
 // Configuración del descuento para clientes sin pago (porcentaje)
-$DESCUENTO_OFERTA_ESPECIAL = 15;
+$DESCUENTO_OFERTA_ESPECIAL = 10;
 
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 
