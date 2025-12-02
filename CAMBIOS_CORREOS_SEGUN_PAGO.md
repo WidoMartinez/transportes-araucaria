@@ -21,9 +21,10 @@ Este documento describe las modificaciones realizadas en el sistema de envío de
 
 - Agregada variable `$estadoPago` para detectar el estado de pago del cliente
 - Agregada variable `$clienteHaPagado` que verifica si el cliente ha pagado (estados: `aprobado`, `pagado`, `parcial`)
+- Agregada constante `$DESCUENTO_OFERTA_ESPECIAL = 15` para configurar el porcentaje de descuento ofrecido
 - Nueva lógica condicional para el envío de correo al cliente:
   - **Si el cliente HA PAGADO**: Se envía el correo de confirmación normal con los detalles de la reserva
-  - **Si el cliente NO HA PAGADO**: Se envía un correo único ofreciendo un 15% de descuento para incentivar el pago
+  - **Si el cliente NO HA PAGADO**: Se envía un correo único ofreciendo un descuento (configurable) para incentivar el pago
 
 **Plantilla del correo de descuento incluye:**
 - Header con gradiente verde atractivo
@@ -32,6 +33,8 @@ Este documento describe las modificaciones realizadas en el sistema de envío de
 - Detalles de la reserva
 - Información de contacto: contacto@transportesaraucaria.cl y +569 3664 3540
 - Nota de oferta por tiempo limitado
+
+**Nota de privacidad:** El log de errores ya no incluye datos personales del cliente.
 
 ### 2. `enviar_asignacion_reserva.php` (PHP - Hostinger)
 

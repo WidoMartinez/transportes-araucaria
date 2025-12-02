@@ -62,7 +62,7 @@ if (!$clienteHaPagado) {
     echo json_encode([
         'success' => true, 
         'message' => 'Correo de asignación omitido - cliente sin pago confirmado',
-        'razon' => 'El cliente no ha completado el pago del servicio'
+        'razón' => 'El cliente no ha completado el pago del servicio'
     ]);
     exit;
 }

@@ -169,6 +169,9 @@ $otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
 $estadoPago = htmlspecialchars($data['estadoPago'] ?? 'pendiente');
 $clienteHaPagado = in_array($estadoPago, ['aprobado', 'pagado', 'parcial']);
 
+// Configuración del descuento para clientes sin pago (porcentaje)
+$DESCUENTO_OFERTA_ESPECIAL = 15;
+
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 
 // Preparar datos completos para guardar
@@ -419,19 +422,19 @@ try {
                 $confirmacionEnviada = true;
             } else {
                 // Cliente NO HA PAGADO - Enviar correo único de descuento para captar atención
-                // Calcular descuento especial del 15% para incentivar el pago
-                $descuentoEspecial = 15;
-                $precioConDescuentoEspecial = $totalConDescuento > 0 
-                    ? round($totalConDescuento * (1 - $descuentoEspecial / 100)) 
+                // Usar el precio disponible (totalConDescuento o precio original como fallback)
+                $precioBase = $totalConDescuento > 0 ? $totalConDescuento : $precio;
+                $precioConDescuentoEspecial = $precioBase > 0 
+                    ? round($precioBase * (1 - $DESCUENTO_OFERTA_ESPECIAL / 100)) 
                     : 0;
                 $precioConDescuentoHtml = '$' . number_format($precioConDescuentoEspecial, 0, ',', '.') . ' CLP';
 
-                $mail->Subject = "🎉 ¡Oferta Exclusiva! {$descuentoEspecial}% de descuento en tu traslado - {$brandName}";
+                $mail->Subject = "🎉 ¡Oferta Exclusiva! {$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu traslado - {$brandName}";
 
                 $descuentoHtml = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
                     <div style='background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:#fff; padding:24px 22px; text-align:center;'>
                         <h2 style='margin:0; font-size:24px;'>🎉 ¡Oferta Exclusiva para Ti!</h2>
-                        <p style='margin:8px 0 0; font-size:16px; opacity:0.95;'>{$descuentoEspecial}% de descuento en tu próximo traslado</p>
+                        <p style='margin:8px 0 0; font-size:16px; opacity:0.95;'>{$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu próximo traslado</p>
                     </div>
                     <div style='padding:20px;'>
                         <p>Hola <strong>" . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
@@ -442,7 +445,7 @@ try {
                             <p style='margin:0; font-size:18px; text-decoration:line-through; color:#6b7280;'>{$totalHtml}</p>
                             <p style='margin:16px 0 8px; font-size:14px; color:#065f46;'>TU PRECIO ESPECIAL</p>
                             <p style='margin:0; font-size:32px; font-weight:bold; color:#059669;'>{$precioConDescuentoHtml}</p>
-                            <p style='margin:8px 0 0; font-size:12px; color:#059669;'>¡Ahorras {$descuentoEspecial}%!</p>
+                            <p style='margin:8px 0 0; font-size:12px; color:#059669;'>¡Ahorras {$DESCUENTO_OFERTA_ESPECIAL}%!</p>
                         </div>
 
                         <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin:12px 0;'>
@@ -474,8 +477,8 @@ try {
                 $mail->send();
                 $confirmacionEnviada = true;
 
-                // Registrar que se envió correo de descuento (no confirmación normal)
-                error_log("Correo de descuento enviado a cliente sin pago: {$email}");
+                // Registrar que se envió correo de descuento (sin datos personales por privacidad)
+                error_log("Correo de descuento enviado a cliente sin pago - Reserva: " . ($codigoReserva ?: 'N/A'));
             }
 
             // Actualizar flags en la reserva
