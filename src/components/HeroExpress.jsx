@@ -15,6 +15,8 @@ import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, Ch
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
+// Importar datos de destinos destacados para imágenes adicionales
+import { destacadosData } from "../data/destinos";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -117,9 +119,15 @@ function HeroExpress({
 			? formData.destino
 			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
 
-		if (targetName && Array.isArray(destinosData)) {
-			const dest = destinosData.find(d => d.nombre === targetName);
-			if (dest && dest.imagen) return dest.imagen;
+		if (targetName) {
+			// Primero buscar en destinosData (destinos principales)
+			if (Array.isArray(destinosData)) {
+				const dest = destinosData.find(d => d.nombre === targetName);
+				if (dest && dest.imagen) return dest.imagen;
+			}
+			// Si no se encuentra, buscar en destacadosData (destinos de temporada)
+			const destacado = destacadosData.find(d => d.nombre === targetName);
+			if (destacado && destacado.imagen) return destacado.imagen;
 		}
 		return heroVan;
 	}, [formData.destino, formData.origen, destinosData]);

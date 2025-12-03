@@ -8,6 +8,7 @@ import corralcoImg from "../assets/corralco.jpg";
 import icalmaImg from "../assets/icalma.jpg";
 import lonquimayImg from "../assets/lonquimay.jpg";
 import conguillioImg from "../assets/conguilllio.jpg";
+import malalcahuelloImg from "../assets/malalcahuello.jpg";
 
 /**
  * @typedef {object} PrecioVehiculo
@@ -83,6 +84,14 @@ export const destacadosData = [
 		descripcion:
 			"Disfruta de la majestuosa nieve en el centro de ski Corralco, a los pies del volcán Lonquimay. Ofrecemos traslados directos y seguros para que solo te preocupes de disfrutar las pistas y los paisajes.",
 		imagen: corralcoImg,
+	},
+	{
+		nombre: "Malalcahuello",
+		titulo: "Malalcahuello y Reserva Natural",
+		subtitulo: "Araucarias Milenarias y Volcanes Nevados",
+		descripcion:
+			"Descubre el encanto de Malalcahuello, una reserva natural donde las araucarias milenarias se alzan frente a volcanes nevados. Ideal para senderismo, fotografía y conexión con la naturaleza.",
+		imagen: malalcahuelloImg,
 	},
 	{
 		nombre: "Icalma",
