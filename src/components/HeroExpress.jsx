@@ -313,7 +313,7 @@ function HeroExpress({
 					className="w-full h-full object-cover opacity-60"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
-				<div className="absolute bottom-4 left-4 z-10">
+				<div className="absolute bottom-16 left-4 z-10">
 					<h1 className="text-2xl font-bold text-foreground leading-tight">
 						{visualText.title}
 					</h1>
