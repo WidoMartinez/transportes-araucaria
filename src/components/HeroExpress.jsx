@@ -15,6 +15,8 @@ import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, Ch
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
+// Importar datos de destinos destacados para imágenes adicionales
+import { destacadosData, destinosBase } from "../data/destinos";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -117,9 +119,25 @@ function HeroExpress({
 			? formData.destino
 			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
 
-		if (targetName && Array.isArray(destinosData)) {
-			const dest = destinosData.find(d => d.nombre === targetName);
-			if (dest && dest.imagen) return dest.imagen;
+		if (targetName) {
+			// Primero buscar en destacadosData (imágenes locales de alta calidad)
+			// Esto arregla el problema donde el backend envía una imagen placeholder y sobrescribe la local
+			const destacado = destacadosData.find(d => d.nombre === targetName);
+			if (destacado && destacado.imagen) return destacado.imagen;
+
+			// 2. Buscar en destinosBase (imágenes locales de alta calidad - base)
+			// Esto cubre Temuco, Villarrica, Pucón que no están en destacados
+			const destinoBase = destinosBase.find(d => d.nombre === targetName);
+			if (destinoBase && destinoBase.imagen) return destinoBase.imagen;
+
+			// 3. Si no se encuentra, buscar en destinosData (destinos principales/backend)
+			if (Array.isArray(destinosData)) {
+				const dest = destinosData.find(d => d.nombre === targetName);
+				// Validar que no sea una imagen placeholder si es que el backend la envía así
+				if (dest && dest.imagen && !dest.imagen.includes("URL_de_imagen_por_defecto")) {
+					return dest.imagen;
+				}
+			}
 		}
 		return heroVan;
 	}, [formData.destino, formData.origen, destinosData]);
