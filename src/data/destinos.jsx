@@ -75,6 +75,7 @@ export const destinosBase = [
 /**
  * @type {object[]}
  * Datos para la sección de destinos destacados o de temporada.
+ * También se usa para proporcionar imágenes a destinos adicionales que vienen del servidor.
  */
 export const destacadosData = [
 	{
@@ -116,5 +117,38 @@ export const destacadosData = [
 		descripcion:
 			"Explora uno de los parques nacionales más hermosos de Chile. Bosques de araucarias milenarias, lagos cristalinos y el volcán Llaima te ofrecen una experiencia natural incomparable.",
 		imagen: conguillioImg,
+	},
+	// Destinos adicionales con imágenes para el panel visual del módulo de reservas
+	{
+		nombre: "Lican Ray",
+		titulo: "Lican Ray - Playa del Lago Calafquén",
+		subtitulo: "Relax y Naturaleza Lacustre",
+		descripcion:
+			"Disfruta de las hermosas playas del Lago Calafquén en Lican Ray. Un destino ideal para el descanso, deportes acuáticos y disfrutar de la naturaleza del sur de Chile.",
+		imagen: villarricaImg, // Usa imagen de Villarrica (mismo lago)
+	},
+	{
+		nombre: "Melipeuco",
+		titulo: "Melipeuco - Puerta al Conguillío",
+		subtitulo: "Aventura y Naturaleza Volcánica",
+		descripcion:
+			"Melipeuco es la puerta de entrada al Parque Nacional Conguillío. Rodeado de volcanes y bosques nativos, ofrece una experiencia única en la Araucanía.",
+		imagen: conguillioImg, // Usa imagen de Conguillío (cercano)
+	},
+	{
+		nombre: "Curacautín",
+		titulo: "Curacautín - Valle de la Araucanía",
+		subtitulo: "Termas y Naturaleza",
+		descripcion:
+			"Curacautín ofrece acceso a termas naturales, senderos y la belleza del valle andino. Un destino perfecto para el turismo de bienestar.",
+		imagen: malalcahuelloImg, // Usa imagen de Malalcahuello (cercano)
+	},
+	{
+		nombre: "Huilo Huilo",
+		titulo: "Reserva Biológica Huilo Huilo",
+		subtitulo: "Bosque Mágico del Sur",
+		descripcion:
+			"La Reserva Biológica Huilo Huilo es un santuario de biodiversidad con bosques milenarios, cascadas espectaculares y una experiencia única en la naturaleza.",
+		imagen: conguillioImg, // Usa imagen de bosque similar
 	},
 ];
