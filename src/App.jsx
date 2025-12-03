@@ -45,16 +45,6 @@ import { getBackendUrl } from "./lib/backend";
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
 
-// Función para normalizar texto y hacer comparaciones insensibles a tildes/mayúsculas
-const normalizarTexto = (texto) => {
-	if (!texto || typeof texto !== "string") return "";
-	return texto
-		.toLowerCase()
-		.normalize("NFD")
-		.replace(/[\u0300-\u036f]/g, "")
-		.trim();
-};
-
 // Descuentos ahora se cargan dinámicamente desde descuentosGlobales
 // Eliminado: variable ROUND_TRIP_DISCOUNT no utilizada
 
@@ -376,11 +366,7 @@ function App() {
 		const destinosNormalizados =
 			Array.isArray(data.destinos) && data.destinos.length > 0
 				? data.destinos.map((d) => {
-						// Buscar destino base usando comparación normalizada para manejar tildes y mayúsculas
-						const nombreNormalizado = normalizarTexto(d.nombre);
-						const base = destinosBase.find(
-							(b) => normalizarTexto(b.nombre) === nombreNormalizado
-						);
+						const base = destinosBase.find((b) => b.nombre === d.nombre);
 						// Priorizar imagen del backend si existe, sino usar la local importada
 						// Esto corrige el problema de imágenes faltantes cuando el backend envía datos incompletos
 						const imagen =
