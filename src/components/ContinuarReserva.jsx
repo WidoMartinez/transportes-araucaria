@@ -5,14 +5,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogFooter,
-} from "./ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import {
 	Search,
 	LoaderCircle,
@@ -150,37 +143,65 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 	};
 
 	// Determinar el estado de la reserva
-	const getEstadoBadge = (estado) => {
-		const estados = {
-			pendiente: { color: "bg-yellow-500", text: "Pendiente" },
-			confirmada: { color: "bg-blue-500", text: "Confirmada" },
-			completada: { color: "bg-green-500", text: "Completada" },
-			cancelada: { color: "bg-red-500", text: "Cancelada" },
-		};
-		const info = estados[estado?.toLowerCase()] || {
-			color: "bg-gray-500",
-			text: estado || "Desconocido",
-		};
-		return (
-			<Badge className={`${info.color} text-white`}>{info.text}</Badge>
-		);
-	};
+        const getEstadoBadge = (estado) => {
+                const estados = {
+                        pendiente: {
+                                estilo: "bg-amber-100/80 text-amber-800 border border-amber-200",
+                                text: "Pendiente",
+                        },
+                        confirmada: {
+                                estilo: "bg-blue-100/80 text-blue-800 border border-blue-200",
+                                text: "Confirmada",
+                        },
+                        completada: {
+                                estilo: "bg-emerald-100/80 text-emerald-800 border border-emerald-200",
+                                text: "Completada",
+                        },
+                        cancelada: {
+                                estilo: "bg-rose-100/80 text-rose-800 border border-rose-200",
+                                text: "Cancelada",
+                        },
+                };
+                const info = estados[estado?.toLowerCase()] || {
+                        estilo: "bg-gray-100 text-gray-700 border border-gray-200",
+                        text: estado || "Desconocido",
+                };
+                return (
+                        <Badge className={`text-xs font-semibold px-3 py-1 rounded-full shadow-sm ${info.estilo}`}>
+                                {info.text}
+                        </Badge>
+                );
+        };
 
-	const getEstadoPagoBadge = (estadoPago) => {
-		const estados = {
-			pendiente: { color: "bg-orange-500", text: "Pago Pendiente" },
-			pagado: { color: "bg-green-500", text: "Pagado" },
-			parcial: { color: "bg-yellow-500", text: "Pago Parcial" },
-			reembolsado: { color: "bg-purple-500", text: "Reembolsado" },
-		};
-		const info = estados[estadoPago?.toLowerCase()] || {
-			color: "bg-gray-500",
-			text: estadoPago || "Sin info",
-		};
-		return (
-			<Badge className={`${info.color} text-white`}>{info.text}</Badge>
-		);
-	};
+        const getEstadoPagoBadge = (estadoPago) => {
+                const estados = {
+                        pendiente: {
+                                estilo: "bg-orange-100/80 text-orange-800 border border-orange-200",
+                                text: "Pago pendiente",
+                        },
+                        pagado: {
+                                estilo: "bg-emerald-100/80 text-emerald-800 border border-emerald-200",
+                                text: "Pagado",
+                        },
+                        parcial: {
+                                estilo: "bg-amber-100/80 text-amber-800 border border-amber-200",
+                                text: "Pago parcial",
+                        },
+                        reembolsado: {
+                                estilo: "bg-purple-100/80 text-purple-800 border border-purple-200",
+                                text: "Reembolsado",
+                        },
+                };
+                const info = estados[estadoPago?.toLowerCase()] || {
+                        estilo: "bg-gray-100 text-gray-700 border border-gray-200",
+                        text: estadoPago || "Sin info",
+                };
+                return (
+                        <Badge className={`text-xs font-semibold px-3 py-1 rounded-full shadow-sm ${info.estilo}`}>
+                                {info.text}
+                        </Badge>
+                );
+        };
 
 	return (
 		<div className="w-full">
@@ -248,193 +269,236 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 					if (!open) handleCerrar();
 				}}
 			>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-					<DialogHeader>
-						<DialogTitle className="text-2xl font-bold">
-							Reserva #{reservaEncontrada?.id}
-						</DialogTitle>
-						<DialogDescription>
-							Información detallada de tu reserva
-						</DialogDescription>
-					</DialogHeader>
+                                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader className="p-0">
+                                                <div className="rounded-2xl bg-gradient-to-r from-primary/15 via-white to-primary/15 border border-primary/10 p-5 shadow-inner">
+                                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                                <div>
+                                                                        <DialogTitle className="text-2xl font-bold text-gray-900">
+                                                                                Reserva #{reservaEncontrada?.id}
+                                                                        </DialogTitle>
+                                                                        <DialogDescription className="text-sm text-gray-600">
+                                                                                Resumen visual con los datos clave de tu reserva
+                                                                        </DialogDescription>
+                                                                </div>
+                                                                <div className="flex gap-2 flex-wrap">
+                                                                        {getEstadoBadge(reservaEncontrada?.estado)}
+                                                                        {getEstadoPagoBadge(reservaEncontrada?.estadoPago)}
+                                                                </div>
+                                                        </div>
+                                                </div>
+                                        </DialogHeader>
 
-					{reservaEncontrada && (
-						<div className="space-y-6">
-							{/* Estados */}
-							<div className="flex gap-2 flex-wrap">
-								{getEstadoBadge(reservaEncontrada.estado)}
-								{getEstadoPagoBadge(reservaEncontrada.estadoPago)}
-							</div>
+                                        {reservaEncontrada && (
+                                                <div className="grid gap-5 pt-4 lg:grid-cols-[2fr,1fr]">
+                                                        <div className="space-y-4">
+                                                                <Card className="bg-gradient-to-br from-primary/5 via-white to-primary/10 border border-primary/20 shadow-sm">
+                                                                        <CardHeader className="pb-2">
+                                                                                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                                                        <MapPin className="h-5 w-5 text-primary" />
+                                                                                        Ruta y fecha
+                                                                                </CardTitle>
+                                                                        </CardHeader>
+                                                                        <CardContent className="space-y-3 text-sm text-gray-800">
+                                                                                <div className="flex items-center gap-2">
+                                                                                        <span className="font-semibold">Trayecto:</span>
+                                                                                        <span className="font-medium text-gray-900">
+                                                                                                {reservaEncontrada.origen} → {reservaEncontrada.destino}
+                                                                                        </span>
+                                                                                </div>
+                                                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                                                                                <div>
+                                                                                                        <p className="text-xs text-muted-foreground">Fecha</p>
+                                                                                                        <p className="font-medium text-gray-900">{formatDate(reservaEncontrada.fecha)}</p>
+                                                                                                </div>
+                                                                                        </div>
+                                                                                        {reservaEncontrada.hora && (
+                                                                                                <div className="flex items-center gap-2">
+                                                                                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                                                                                        <div>
+                                                                                                                <p className="text-xs text-muted-foreground">Hora</p>
+                                                                                                                <p className="font-medium text-gray-900">{reservaEncontrada.hora}</p>
+                                                                                                        </div>
+                                                                                                </div>
+                                                                                        )}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                        <Users className="h-4 w-4 text-muted-foreground" />
+                                                                                        <div>
+                                                                                                <p className="text-xs text-muted-foreground">Pasajeros</p>
+                                                                                                <p className="font-medium text-gray-900">{reservaEncontrada.pasajeros}</p>
+                                                                                        </div>
+                                                                                        {reservaEncontrada.idaVuelta && (
+                                                                                                <Badge variant="outline" className="ml-auto bg-white/70 text-primary border-primary/30 px-3 py-1 text-xs rounded-full">
+                                                                                                        Viaje ida y vuelta
+                                                                                                </Badge>
+                                                                                        )}
+                                                                                </div>
+                                                                        </CardContent>
+                                                                </Card>
 
-							{/* Información del viaje */}
-							<Card className="bg-gray-50">
-								<CardHeader>
-									<CardTitle className="text-lg">Detalles del viaje</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-3">
-									<div className="flex items-center gap-2 text-sm">
-										<MapPin className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Ruta:</span>
-										<span>
-											{reservaEncontrada.origen} → {reservaEncontrada.destino}
-										</span>
-									</div>
-									<div className="flex items-center gap-2 text-sm">
-										<Calendar className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Fecha:</span>
-										<span>{formatDate(reservaEncontrada.fecha)}</span>
-									</div>
-									{reservaEncontrada.hora && (
-										<div className="flex items-center gap-2 text-sm">
-											<Clock className="h-4 w-4 text-muted-foreground" />
-											<span className="font-medium">Hora:</span>
-											<span>{reservaEncontrada.hora}</span>
-										</div>
-									)}
-									<div className="flex items-center gap-2 text-sm">
-										<Users className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Pasajeros:</span>
-										<span>{reservaEncontrada.pasajeros}</span>
-									</div>
-									{reservaEncontrada.idaVuelta && (
-										<div className="text-sm">
-											<Badge variant="secondary">Viaje ida y vuelta</Badge>
-										</div>
-									)}
-								</CardContent>
-							</Card>
+                                                                <Card className="bg-white/80 border border-slate-200 shadow-sm">
+                                                                        <CardHeader className="pb-2">
+                                                                                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                                                        <FileText className="h-5 w-5 text-primary" />
+                                                                                        Información de contacto
+                                                                                </CardTitle>
+                                                                        </CardHeader>
+                                                                        <CardContent className="space-y-2 text-sm text-gray-800">
+                                                                                <div className="flex items-center gap-2">
+                                                                                        <span className="font-semibold text-gray-900">Nombre:</span>
+                                                                                        <span>{reservaEncontrada.nombre}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                        <span className="font-semibold text-gray-900">Email:</span>
+                                                                                        <span>{reservaEncontrada.email}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                        <span className="font-semibold text-gray-900">Teléfono:</span>
+                                                                                        <span>{reservaEncontrada.telefono}</span>
+                                                                                </div>
+                                                                        </CardContent>
+                                                                </Card>
 
-							{/* Información del cliente */}
-							<Card className="bg-gray-50">
-								<CardHeader>
-									<CardTitle className="text-lg">
-										Información de contacto
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-2 text-sm">
-									<div>
-										<span className="font-medium">Nombre:</span>{" "}
-										{reservaEncontrada.nombre}
-									</div>
-									<div>
-										<span className="font-medium">Email:</span>{" "}
-										{reservaEncontrada.email}
-									</div>
-									<div>
-										<span className="font-medium">Teléfono:</span>{" "}
-										{reservaEncontrada.telefono}
-									</div>
-								</CardContent>
-							</Card>
+                                                                {reservaEncontrada.precioTotal && (
+                                                                        <Card className="bg-gradient-to-br from-emerald-50 via-white to-emerald-100/60 border border-emerald-200 shadow-sm">
+                                                                                <CardHeader className="pb-2">
+                                                                                        <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                                                                <CreditCard className="h-5 w-5 text-emerald-600" />
+                                                                                                Información de pago
+                                                                                        </CardTitle>
+                                                                                </CardHeader>
+                                                                                <CardContent className="space-y-3 text-sm text-gray-800">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                                <span className="font-semibold text-gray-900">Total</span>
+                                                                                                <span className="text-lg font-bold text-emerald-700">
+                                                                                                        {formatCurrency(reservaEncontrada.precioTotal)}
+                                                                                                </span>
+                                                                                        </div>
+                                                                                        {reservaEncontrada.metodoPago && (
+                                                                                                <div className="flex items-center gap-2 text-sm">
+                                                                                                        <span className="font-semibold text-gray-900">Método:</span>
+                                                                                                        <span>{reservaEncontrada.metodoPago}</span>
+                                                                                                </div>
+                                                                                        )}
+                                                                                </CardContent>
+                                                                        </Card>
+                                                                )}
 
-							{/* Información de pago */}
-							{reservaEncontrada.precioTotal && (
-								<Card className="bg-gray-50">
-									<CardHeader>
-										<CardTitle className="text-lg flex items-center gap-2">
-											<CreditCard className="h-5 w-5" />
-											Información de pago
-										</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-2 text-sm">
-										<div>
-											<span className="font-medium">Total:</span>{" "}
-											{formatCurrency(reservaEncontrada.precioTotal)}
-										</div>
-										{reservaEncontrada.metodoPago && (
-											<div>
-												<span className="font-medium">Método de pago:</span>{" "}
-												{reservaEncontrada.metodoPago}
-											</div>
-										)}
-									</CardContent>
-								</Card>
-							)}
+                                                                <Card className="bg-white/80 border border-slate-200 shadow-sm">
+                                                                        <CardHeader className="pb-2">
+                                                                                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                                                        <FileText className="h-5 w-5 text-primary" />
+                                                                                        Observaciones adicionales
+                                                                                </CardTitle>
+                                                                        </CardHeader>
+                                                                        <CardContent className="space-y-3">
+                                                                                <Textarea
+                                                                                        id="observaciones"
+                                                                                        placeholder="Agrega cualquier detalle adicional (equipaje especial, necesidades especiales, etc.)"
+                                                                                        value={observaciones}
+                                                                                        onChange={(e) => setObservaciones(e.target.value)}
+                                                                                        rows={4}
+                                                                                />
+                                                                                <p className="text-xs text-muted-foreground">
+                                                                                        Complementa tu reserva con indicaciones clave para el equipo de coordinación.
+                                                                                </p>
+                                                                                {observaciones.trim() !== (reservaEncontrada.observaciones || "") && (
+                                                                                        <Button
+                                                                                                onClick={guardarObservaciones}
+                                                                                                disabled={guardandoObservaciones || !observaciones.trim()}
+                                                                                                className="bg-blue-600 hover:bg-blue-700"
+                                                                                        >
+                                                                                                {guardandoObservaciones ? (
+                                                                                                        <>
+                                                                                                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                                                                                Guardando...
+                                                                                                        </>
+                                                                                                ) : (
+                                                                                                        <>
+                                                                                                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                                                                                                Guardar observaciones
+                                                                                                        </>
+                                                                                                )}
+                                                                                        </Button>
+                                                                                )}
+                                                                        </CardContent>
+                                                                </Card>
+                                                        </div>
 
-							{/* Sección de observaciones */}
-							<div className="space-y-3">
-								<div className="flex items-center gap-2">
-									<FileText className="h-5 w-5 text-muted-foreground" />
-									<Label htmlFor="observaciones" className="text-base font-medium">
-										Observaciones adicionales
-									</Label>
-								</div>
-								<Textarea
-									id="observaciones"
-									placeholder="Agrega cualquier detalle adicional (equipaje especial, necesidades especiales, etc.)"
-									value={observaciones}
-									onChange={(e) => setObservaciones(e.target.value)}
-									rows={4}
-								/>
-								<p className="text-xs text-muted-foreground">
-									Puedes agregar o actualizar información adicional sobre tu
-									reserva
-								</p>
-							</div>
+                                                        <div className="space-y-4">
+                                                                <Card className="h-full bg-white/80 border border-primary/10 shadow-lg">
+                                                                        <CardHeader className="pb-3">
+                                                                                <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                                                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                                                                                        Acciones principales
+                                                                                </CardTitle>
+                                                                        </CardHeader>
+                                                                        <CardContent className="space-y-4 text-sm text-gray-800">
+                                                                                <div className="rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 p-3 space-y-2">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                                <span className="text-xs uppercase tracking-wide text-muted-foreground">Estado</span>
+                                                                                                <div className="flex gap-2 flex-wrap justify-end">
+                                                                                                        {getEstadoBadge(reservaEncontrada.estado)}
+                                                                                                        {getEstadoPagoBadge(reservaEncontrada.estadoPago)}
+                                                                                                </div>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between">
+                                                                                                <span className="text-xs uppercase tracking-wide text-muted-foreground">Ruta</span>
+                                                                                                <span className="font-semibold text-gray-900">{reservaEncontrada.origen} → {reservaEncontrada.destino}</span>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between">
+                                                                                                <span className="text-xs uppercase tracking-wide text-muted-foreground">Fecha</span>
+                                                                                                <span className="font-medium text-gray-900">{formatDate(reservaEncontrada.fecha)}</span>
+                                                                                        </div>
+                                                                                </div>
 
-							{/* Acciones según el estado */}
-							<DialogFooter className="flex flex-col sm:flex-row gap-3">
-								<Button
-									variant="outline"
-									onClick={handleCerrar}
-									disabled={guardandoObservaciones}
-								>
-									Cerrar
-								</Button>
+                                                                                <div className="space-y-3">
+                                                                                        {reservaEncontrada.estadoPago?.toLowerCase() !== "pagado" && (
+                                                                                                <Button
+                                                                                                        onClick={handleContinuarPago}
+                                                                                                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700"
+                                                                                                >
+                                                                                                        <CreditCard className="mr-2 h-4 w-4" />
+                                                                                                        Continuar con el pago
+                                                                                                </Button>
+                                                                                        )}
 
-								{observaciones.trim() !== reservaEncontrada.observaciones && (
-									<Button
-										onClick={guardarObservaciones}
-										disabled={guardandoObservaciones || !observaciones.trim()}
-										className="bg-blue-600 hover:bg-blue-700"
-									>
-										{guardandoObservaciones ? (
-											<>
-												<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-												Guardando...
-											</>
-										) : (
-											<>
-												<CheckCircle2 className="mr-2 h-4 w-4" />
-												Guardar observaciones
-											</>
-										)}
-									</Button>
-								)}
+                                                                                        {reservaEncontrada.estadoPago?.toLowerCase() === "pagado" &&
+                                                                                                (!reservaEncontrada.hora || !reservaEncontrada.hotel) && (
+                                                                                                        <Button
+                                                                                                                onClick={() => {
+                                                                                                                        if (onComplete) {
+                                                                                                                                onComplete(reservaEncontrada.id);
+                                                                                                                        }
+                                                                                                                }}
+                                                                                                                className="w-full bg-primary hover:bg-primary/90"
+                                                                                                        >
+                                                                                                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                                                                                                Completar detalles
+                                                                                                        </Button>
+                                                                                                )}
 
-								{reservaEncontrada.estadoPago?.toLowerCase() !==
-									"pagado" && (
-									<Button
-										onClick={handleContinuarPago}
-										className="bg-green-600 hover:bg-green-700"
-									>
-										<CreditCard className="mr-2 h-4 w-4" />
-										Continuar con el pago
-									</Button>
-								)}
-
-								{reservaEncontrada.estadoPago?.toLowerCase() === "pagado" &&
-									(!reservaEncontrada.hora ||
-										!reservaEncontrada.hotel) && (
-										<Button
-											onClick={() => {
-												if (onComplete) {
-													onComplete(reservaEncontrada.id);
-												}
-											}}
-											className="bg-primary hover:bg-primary/90"
-										>
-											<CheckCircle2 className="mr-2 h-4 w-4" />
-											Completar detalles
-										</Button>
-									)}
-							</DialogFooter>
-						</div>
-					)}
-				</DialogContent>
-			</Dialog>
-		</div>
-	);
+                                                                                        <Button
+                                                                                                variant="outline"
+                                                                                                onClick={handleCerrar}
+                                                                                                disabled={guardandoObservaciones}
+                                                                                                className="w-full"
+                                                                                        >
+                                                                                                Cerrar
+                                                                                        </Button>
+                                                                                </div>
+                                                                        </CardContent>
+                                                                </Card>
+                                                        </div>
+                                                </div>
+                                        )}
+                                </DialogContent>
+                        </Dialog>
+                </div>
+        );
 }
 
 export default ContinuarReserva;
