@@ -66,6 +66,20 @@ function HeroExpress({
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
 	const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
 	const [descuentoRetorno, setDescuentoRetorno] = useState(null);
+	const [urgencyMessage, setUrgencyMessage] = useState(null);
+
+	useEffect(() => {
+		if (currentStep === 1) {
+			const messages = [
+				{ icon: <Clock className="h-3 w-3" />, text: "Solo queda 1 móvil" },
+				{ icon: <Users className="h-3 w-3" />, text: "Alta demanda para hoy" },
+				{ icon: <Users className="h-3 w-3" />, text: `${Math.floor(Math.random() * 3) + 2} personas cotizando` }
+			];
+			setUrgencyMessage(messages[Math.floor(Math.random() * messages.length)]);
+		} else {
+			setUrgencyMessage(null);
+		}
+	}, [currentStep]);
 
 	const timeOptions = useMemo(() => generateTimeOptions(), []);
 
@@ -547,9 +561,15 @@ function HeroExpress({
 										<p className="text-xs font-bold text-muted-foreground uppercase">Fecha</p>
 										<p className="font-medium text-sm">{fechaLegible} - {formData.hora}</p>
 									</div>
-									<div className="text-right">
+									<div className="text-right flex flex-col items-end">
 										<p className="text-xs font-bold text-muted-foreground uppercase">Total</p>
 										<p className="font-bold text-lg text-foreground">{formatCurrency(pricing.totalConDescuento)}</p>
+										{urgencyMessage && (
+											<Badge variant="outline" className="mt-1 border-muted-foreground/30 text-muted-foreground text-[10px] px-2 py-0 h-5 font-medium flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+												{urgencyMessage.icon}
+												{urgencyMessage.text}
+											</Badge>
+										)}
 									</div>
 								</div>
 								{descuentoRetorno && (
