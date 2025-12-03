@@ -366,16 +366,34 @@ function App() {
 		const destinosNormalizados =
 			Array.isArray(data.destinos) && data.destinos.length > 0
 				? data.destinos.map((d) => {
-						const base = destinosBase.find((b) => b.nombre === d.nombre);
-						// Priorizar imagen del backend si existe, sino usar la local importada
-						// Esto corrige el problema de imágenes faltantes cuando el backend envía datos incompletos
+						// Normalizar nombres para asegurar match (ignorar acentos y mayúsculas)
+						const normalize = (s) =>
+							s
+								? s
+										.toLowerCase()
+										.normalize("NFD")
+										.replace(/[\u0300-\u036f]/g, "")
+										.trim()
+								: "";
+
+						const base = destinosBase.find(
+							(b) => normalize(b.nombre) === normalize(d.nombre)
+						);
+
+						// Priorizar imagen del backend si existe y es válida, sino usar la local importada
 						const imagen =
 							d.imagen && d.imagen.trim() !== ""
 								? d.imagen
 								: base?.imagen || null;
 
+						// Si el backend envió el nombre sin acento (ej: Lican Ray), restaurar el nombre correcto desde local
+						// para que se vea bonito en el dropdown, a menos que el backend tenga un nombre "mejor" (?)
+						// Generalmente preferimos el nombre local si hay coincidencia para consistencia visual.
+						const nombre = base ? base.nombre : d.nombre;
+
 						return {
 							...d,
+							nombre, // Usar nombre formateado correctamente si existe
 							imagen,
 						};
 				  })
