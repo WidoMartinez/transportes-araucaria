@@ -108,6 +108,9 @@ try {
 
     // Remitente
     $mail->setFrom($emailConfig['username'], $emailConfig['from_name']);
+    
+    // Responder a (ayuda a la entregabilidad y permite responder directo al cliente)
+    $mail->addReplyTo($email, $nombre);
 
     // Destinatario principal (cliente)
     $mail->addAddress($email, $nombre);
@@ -116,6 +119,9 @@ try {
     if (!empty($emailConfig['to'])) {
         $mail->addBCC($emailConfig['to'], 'Admin');
     }
+
+    // Logging explícito del destinatario para debug
+    error_log("Preparando envío de confirmación de pago a: {$email} (Copia a: {$emailConfig['to']})");
 
     // Contenido del correo
     $mail->isHTML(true);
@@ -165,6 +171,14 @@ try {
                         </td>
                         <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#111827;font-size:14px'>
                             {$codigoReserva}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:14px'>
+                            <strong>Email Cliente:</strong>
+                        </td>
+                        <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#111827;font-size:14px'>
+                            {$email}
                         </td>
                     </tr>
                     <tr>
@@ -312,6 +326,7 @@ try {
     
     DETALLES DE TU RESERVA:
     - Código: {$codigoReserva}
+    - Email Cliente: {$email}
     - Origen: {$origen}
     - Destino: {$destino}
     - Fecha: {$fecha}
