@@ -365,7 +365,20 @@ function App() {
 
 		const destinosNormalizados =
 			Array.isArray(data.destinos) && data.destinos.length > 0
-				? data.destinos
+				? data.destinos.map((d) => {
+						const base = destinosBase.find((b) => b.nombre === d.nombre);
+						// Priorizar imagen del backend si existe, sino usar la local importada
+						// Esto corrige el problema de imágenes faltantes cuando el backend envía datos incompletos
+						const imagen =
+							d.imagen && d.imagen.trim() !== ""
+								? d.imagen
+								: base?.imagen || null;
+
+						return {
+							...d,
+							imagen,
+						};
+				  })
 				: destinosBase;
 
 		if (signal?.aborted) {
