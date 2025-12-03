@@ -8,6 +8,10 @@ import corralcoImg from "../assets/corralco.jpg";
 import icalmaImg from "../assets/icalma.jpg";
 import lonquimayImg from "../assets/lonquimay.jpg";
 import conguillioImg from "../assets/conguilllio.jpg";
+import licanrayImg from "../assets/licanray.jpg";
+import lautaroImg from "../assets/lautaro.jpg";
+import melipeucoImg from "../assets/melipeuco.jpg";
+import panguipulliImg from "../assets/panguipulli.jpg";
 
 /**
  * @typedef {object} PrecioVehiculo
@@ -46,6 +50,18 @@ export const destinosBase = [
 		},
 	},
 	{
+		nombre: "Lautaro",
+		descripcion: "Ciudad histórica y corazón de la Araucanía.",
+		tiempo: "45 min",
+		imagen: lautaroImg,
+		maxPasajeros: 7,
+		minHorasAnticipacion: 5,
+		precios: {
+			auto: { base: 25000, porcentajeAdicional: 0.1 },
+			van: { base: 50000, porcentajeAdicional: 0.1 },
+		},
+	},
+	{
 		nombre: "Villarrica",
 		descripcion: "Turismo y naturaleza junto al lago.",
 		tiempo: "1h 15min",
@@ -67,6 +83,54 @@ export const destinosBase = [
 		precios: {
 			auto: { base: 60000, porcentajeAdicional: 0.05 },
 			van: { base: 250000, porcentajeAdicional: 0.05 },
+		},
+	},
+	{
+		nombre: "Licán Ray",
+		descripcion: "Playas tranquilas y naturaleza familiar.",
+		tiempo: "1h 30min",
+		imagen: licanrayImg,
+		maxPasajeros: 7,
+		minHorasAnticipacion: 5,
+		precios: {
+			auto: { base: 65000, porcentajeAdicional: 0.05 },
+			van: { base: 220000, porcentajeAdicional: 0.05 },
+		},
+	},
+	{
+		nombre: "Panguipulli",
+		descripcion: "Ciudad de las rosas y lagos.",
+		tiempo: "1h 45min",
+		imagen: panguipulliImg,
+		maxPasajeros: 7,
+		minHorasAnticipacion: 5,
+		precios: {
+			auto: { base: 80000, porcentajeAdicional: 0.05 },
+			van: { base: 250000, porcentajeAdicional: 0.05 },
+		},
+	},
+	{
+		nombre: "Melipeuco",
+		descripcion: "Puerta de entrada al Conguillío.",
+		tiempo: "1h 45min",
+		imagen: melipeucoImg,
+		maxPasajeros: 7,
+		minHorasAnticipacion: 6,
+		precios: {
+			auto: { base: 80000, porcentajeAdicional: 0.05 },
+			van: { base: 250000, porcentajeAdicional: 0.05 },
+		},
+	},
+	{
+		nombre: "Corralco",
+		descripcion: "Centro de ski y montaña.",
+		tiempo: "2h 30min",
+		imagen: corralcoImg,
+		maxPasajeros: 7,
+		minHorasAnticipacion: 12,
+		precios: {
+			auto: { base: 120000, porcentajeAdicional: 0.05 },
+			van: { base: 300000, porcentajeAdicional: 0.05 },
 		},
 	},
 ];
