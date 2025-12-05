@@ -8,3 +8,13 @@ customize:
       - "Nunca eliminar ni mover archivos protegidos en .github/."
       - "Al editar archivos PHP, añadir comentario de aviso de despliegue manual en Hostinger."
       - "Commits y PRs deben estar en español siguiendo el formato 'tipo: resumen'."
+      - "Mantener actualizada la documentación Markdown en la raíz del proyecto."
+  project:
+    technologies:
+      - "React (Vite)"
+      - "Tailwind CSS"
+      - "PHP (Backend híbrido)"
+      - "npm (Package Manager)"
+    conventions:
+      - "Priorizar componentes funcionales y Hooks en React."
+      - "Usar `npm` para gestión de dependencias (no pnpm)."
