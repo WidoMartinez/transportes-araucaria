@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -13,7 +13,9 @@ import {
 	Calendar,
 	Clock,
 	ArrowRight,
-	Users,
+	User,
+	Phone,
+	Mail,
 	Plane,
 	Building2,
 	Shield
@@ -26,8 +28,8 @@ const CURRENCY_FORMATTER = new Intl.NumberFormat("es-CL", {
 	currency: "CLP",
 });
 
-// Genera opciones de hora en intervalos de 15 minutos (8:00 AM - 9:00 PM)
-const generateTimeOptions = () => {
+// Opciones de hora en intervalos de 15 minutos (8:00 AM - 9:00 PM) - constante estática
+const TIME_OPTIONS = (() => {
 	const options = [];
 	for (let hour = 8; hour <= 21; hour++) {
 		for (let minute = 0; minute < 60; minute += 15) {
@@ -36,7 +38,7 @@ const generateTimeOptions = () => {
 		}
 	}
 	return options;
-};
+})();
 
 // Componente para pagar usando un código de pago estandarizado
 function PagarConCodigo() {
@@ -46,9 +48,6 @@ function PagarConCodigo() {
 	const [error, setError] = useState("");
 	const [step, setStep] = useState(1); // 1: Validar código, 2: Completar datos y pagar
 	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' | 'abono'
-	
-	// Opciones de hora para selectores
-	const timeOptions = useMemo(() => generateTimeOptions(), []);
 
 	// Datos del cliente
 	const [formData, setFormData] = useState({
@@ -168,7 +167,7 @@ function PagarConCodigo() {
 				`${formData.fechaRegreso}T${formData.horaRegreso}`
 			);
 			if (Number.isNaN(regreso.getTime())) {
-				setError("La fecha de regreso no es valida");
+				setError("La fecha de regreso no es válida");
 				return false;
 			}
 			if (!Number.isNaN(salida.getTime()) && regreso <= salida) {
@@ -434,7 +433,7 @@ function PagarConCodigo() {
 										Nombre completo <span className="text-red-500">*</span>
 									</Label>
 									<div className="relative">
-										<Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+										<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 										<Input
 											id="nombre"
 											name="nombre"
@@ -453,7 +452,7 @@ function PagarConCodigo() {
 											Email <span className="text-red-500">*</span>
 										</Label>
 										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<Input
 												id="email"
 												name="email"
@@ -470,7 +469,7 @@ function PagarConCodigo() {
 											Teléfono <span className="text-red-500">*</span>
 										</Label>
 										<div className="relative">
-											<Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 											<Input
 												id="telefono"
 												name="telefono"
@@ -516,7 +515,7 @@ function PagarConCodigo() {
 												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 											>
 												<option value="">Seleccionar...</option>
-												{timeOptions.map((hora) => (
+												{TIME_OPTIONS.map((hora) => (
 													<option key={hora} value={hora}>{hora}</option>
 												))}
 											</select>
@@ -558,7 +557,7 @@ function PagarConCodigo() {
 													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 												>
 													<option value="">Seleccionar...</option>
-													{timeOptions.map((hora) => (
+													{TIME_OPTIONS.map((hora) => (
 														<option key={`regreso-${hora}`} value={hora}>{hora}</option>
 													))}
 												</select>
