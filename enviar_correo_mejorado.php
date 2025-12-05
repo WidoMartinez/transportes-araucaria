@@ -169,6 +169,9 @@ $otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
 $estadoPago = htmlspecialchars($data['estadoPago'] ?? 'pendiente');
 $clienteHaPagado = in_array($estadoPago, ['aprobado', 'pagado', 'parcial']);
 
+// NUEVO: Obtener la acción solicitada (por defecto 'normal' para compatibilidad)
+$action = $data['action'] ?? 'normal'; // 'normal', 'notify_admin_only', 'send_discount_offer'
+
 // Configuración del descuento para clientes sin pago (porcentaje)
 $DESCUENTO_OFERTA_ESPECIAL = 10;
 
@@ -209,7 +212,18 @@ $reservaCompleta = [
     // Flags iniciales de correo/pago
     'correo_admin_enviado' => false,
     'correo_cliente_enviado' => false,
-    'estado_pago' => 'sin_pago'
+    'estado_pago' => 'sin_pago',
+    'action_processed' => $action // Registrar qué acción se procesó
+];
+
+// --- LÓGICA DE ENVÍO SEGÚN ACCIÓN ---
+
+// 1. Si es 'send_discount_offer', saltamos directamente al envío de descuento
+if ($action === 'send_discount_offer') {
+    goto enviar_descuento;
+}
+
+// 2. Si es 'notify_admin_only' o 'normal', enviamos al admin primero
 ];
 
 // Intentar guardar la reserva ANTES de enviar el correo
@@ -421,6 +435,7 @@ try {
                 $mail->send();
                 $confirmacionEnviada = true;
             } else {
+                enviar_descuento:
                 // Cliente NO HA PAGADO - Enviar correo único de descuento para captar atención
                 // Usar el precio disponible (totalConDescuento o precio original como fallback)
                 $precioBase = $totalConDescuento > 0 ? $totalConDescuento : $precio;
@@ -438,7 +453,7 @@ try {
                     </div>
                     <div style='padding:20px;'>
                         <p>Hola <strong>" . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
-                        <p>Notamos que tu reserva aún está pendiente de pago. ¡Tenemos una oferta especial para ti!</p>
+                        <p>Notamos que tu reserva <strong>(Código: {$codigoReserva})</strong> aún está pendiente de pago. ¡Tenemos una oferta especial para <strong>esta misma reserva</strong>!</p>
 
                         <div style='background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:2px solid #10b981; border-radius:12px; padding:20px; margin:16px 0; text-align:center;'>
                             <p style='margin:0 0 8px; font-size:14px; color:#065f46;'>PRECIO ORIGINAL</p>
@@ -458,10 +473,13 @@ try {
                         </div>
 
                         <div style='text-align:center; margin:24px 0;'>
-                            <p style='margin:0 0 16px; font-size:14px; color:#374151;'>Para obtener este descuento, completa tu pago respondiendo a este correo o contáctanos:</p>
-                            <p style='margin:0; font-size:16px;'>
-                                📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#059669;'>contacto@transportesaraucaria.cl</a><br>
-                                📱 <a href='tel:+56936643540' style='color:#059669;'>+569 3664 3540</a>
+                            <p style='margin:0 0 16px; font-size:14px; color:#374151;'>Para obtener este descuento, completa tu pago respondiendo a este correo o contáctanos por WhatsApp:</p>
+                            <br>
+                            <a href='https://wa.me/56936643540?text=Hola,%20quiero%20confirmar%20mi%20reserva%20{$codigoReserva}%20con%20descuento' style='background-color:#25D366; color:white; padding:12px 24px; text-decoration:none; border-radius:50px; font-weight:bold; font-size:16px; display:inline-block;'>
+                                📱 Confirmar por WhatsApp
+                            </a>
+                            <p style='margin:16px 0 0; font-size:14px;'>
+                                O escríbenos a: <a href='mailto:contacto@transportesaraucaria.cl' style='color:#059669;'>contacto@transportesaraucaria.cl</a>
                             </p>
                         </div>
 
@@ -473,19 +491,6 @@ try {
                     </div>
                 </div>";
 
-                $mail->Body = $descuentoHtml;
-                $mail->send();
-                $confirmacionEnviada = true;
-
-                // Registrar que se envió correo de descuento (sin datos personales por privacidad)
-                error_log("Correo de descuento enviado a cliente sin pago - Reserva: " . ($codigoReserva ?: 'N/A'));
-            }
-
-            // Actualizar flags en la reserva
-            if (!empty($reservaCompleta['id'])) {
-                @actualizarFlagsCorreoReserva($reservasFile, $reservaCompleta['id'], [
-                    'correo_cliente_enviado' => true
-                ]);
             }
         } catch (Exception $e2) {
             // No interrumpir la respuesta por fallo en confirmación al cliente

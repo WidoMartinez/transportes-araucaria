@@ -23,6 +23,7 @@ import ProductoReserva from "./models/ProductoReserva.js";
 import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js";
 import ConfiguracionDisponibilidad from "./models/ConfiguracionDisponibilidad.js";
 import Festivo from "./models/Festivo.js";
+import PendingEmail from "./models/PendingEmail.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -47,6 +48,13 @@ dotenv.config();
 
 // Configurar asociaciones entre modelos para habilitar includes en consultas
 setupAssociations();
+
+// Importar procesador de correos
+import { processPendingEmails } from "./cron/emailProcessor.js";
+
+// Iniciar procesador de correos (cada 60 segundos)
+setInterval(processPendingEmails, 60000);
+console.log("🕒 Procesador de correos pendientes iniciado (intervalo: 60s)");
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -593,6 +601,7 @@ const initializeDatabase = async () => {
 			CodigoPago,
 			Promocion,
 			DescuentoGlobal,
+			PendingEmail,
 		]); // false = no forzar recreación
 
 		// Crear o actualizar usuario admin por defecto
@@ -2285,6 +2294,50 @@ app.post("/enviar-reserva", async (req, res) => {
 			console.log("ℹ️ Email de confirmación omitido (enviarCorreo = false)");
 		}
 
+		// --- LÓGICA DE CORREO DIFERIDO (DESCUENTO) ---
+		// Si la reserva está pendiente de pago, programar correo de descuento
+		if (
+			estadoPagoInicial === "pendiente" &&
+			datosReserva.source !== "codigo_pago" // No enviar descuento si paga con código (se asume proceso diferente)
+		) {
+			try {
+				// Calcular fecha de envío (30 minutos después)
+				const scheduledAt = new Date(Date.now() + 30 * 60 * 1000);
+				
+				await PendingEmail.create({
+					reservaId: reservaGuardada.id,
+					email: reservaGuardada.email,
+					type: "discount_offer",
+					status: "pending",
+					scheduledAt: scheduledAt
+				});
+				
+				console.log(`⏳ Correo de descuento programado para reserva ${reservaGuardada.codigoReserva} a las ${scheduledAt.toISOString()}`);
+				
+				// Enviar notificación SOLO al administrador inmediatamente
+				// Usamos action='notify_admin_only' para que el PHP sepa qué hacer
+				try {
+					const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+					await axios.post(phpUrl, {
+						...datosReserva,
+						codigoReserva: reservaGuardada.codigoReserva,
+						rut: rutFormateado,
+						estadoPago: "pendiente",
+						action: "notify_admin_only" // NUEVO PARÁMETRO
+					}, {
+						headers: { "Content-Type": "application/json" },
+						timeout: 10000
+					});
+					console.log("✅ Notificación al admin enviada correctamente");
+				} catch (adminEmailError) {
+					console.error("❌ Error enviando notificación al admin:", adminEmailError.message);
+				}
+
+			} catch (scheduleError) {
+				console.error("❌ Error programando correo de descuento:", scheduleError);
+			}
+		}
+
 		return res.json({
 			success: true,
 			message: "Reserva recibida y guardada correctamente",
@@ -2743,6 +2796,63 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			console.log(
 				"ℹ️ Email de notificación express omitido (enviarCorreo = false)"
 			);
+		}
+
+		// --- LÓGICA DE CORREO DIFERIDO (DESCUENTO) - EXPRESS ---
+		// Si la reserva está pendiente de pago, programar correo de descuento
+		if (
+			(reservaExpress.estadoPago === "pendiente") &&
+			datosReserva.source !== "codigo_pago"
+		) {
+			try {
+				// Verificar si ya existe un correo pendiente para esta reserva para no duplicar
+				const existingPending = await PendingEmail.findOne({
+					where: {
+						reservaId: reservaExpress.id,
+						status: "pending",
+						type: "discount_offer"
+					}
+				});
+
+				if (!existingPending) {
+					// Calcular fecha de envío (30 minutos después)
+					const scheduledAt = new Date(Date.now() + 30 * 60 * 1000);
+					
+					await PendingEmail.create({
+						reservaId: reservaExpress.id,
+						email: reservaExpress.email,
+						type: "discount_offer",
+						status: "pending",
+						scheduledAt: scheduledAt
+					});
+					
+					console.log(`⏳ Correo de descuento express programado para reserva ${reservaExpress.codigoReserva} a las ${scheduledAt.toISOString()}`);
+					
+					// Enviar notificación SOLO al administrador inmediatamente
+					if (enviarCorreo) {
+						try {
+							const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+							await axios.post(phpUrl, {
+								...datosReserva,
+								codigoReserva: reservaExpress.codigoReserva,
+								precio: reservaExpress.precio,
+								totalConDescuento: reservaExpress.totalConDescuento,
+								source: reservaExpress.source || "express_web",
+								estadoPago: "pendiente",
+								action: "notify_admin_only" // NUEVO PARÁMETRO
+							}, {
+								headers: { "Content-Type": "application/json" },
+								timeout: 10000
+							});
+							console.log("✅ Notificación express al admin enviada correctamente");
+						} catch (adminEmailError) {
+							console.error("❌ Error enviando notificación express al admin:", adminEmailError.message);
+						}
+					}
+				}
+			} catch (scheduleError) {
+				console.error("❌ Error programando correo de descuento express:", scheduleError);
+			}
 		}
 
 		return res.json({
@@ -6146,7 +6256,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			};
 
 			const phpUrl =
-				process.env.PHP_EMAIL_URL ||
+				process.env.PHP_PAYMENT_CONFIRMATION_URL ||
 				"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
 
 			const emailResponse = await axios.post(phpUrl, emailData, {
