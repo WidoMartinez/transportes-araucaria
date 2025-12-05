@@ -10,6 +10,7 @@ import Producto from "./Producto.js";
 import ProductoReserva from "./ProductoReserva.js";
 import AdminUser from "./AdminUser.js";
 import AdminAuditLog from "./AdminAuditLog.js";
+import PendingEmail from "./PendingEmail.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -124,6 +125,17 @@ export const setupAssociations = () => {
 	AdminAuditLog.belongsTo(AdminUser, {
 		foreignKey: "adminUserId",
 		as: "adminUser",
+	});
+
+	// Relación: Reserva -> PendingEmail (Una reserva puede tener correos pendientes)
+	Reserva.hasMany(PendingEmail, {
+		foreignKey: "reservaId",
+		as: "pendingEmails",
+	});
+
+	PendingEmail.belongsTo(Reserva, {
+		foreignKey: "reservaId",
+		as: "reserva",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
