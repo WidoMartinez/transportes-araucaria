@@ -54,14 +54,8 @@ const PendingEmail = sequelize.define(
 	{
 		tableName: "pending_emails",
 		timestamps: true,
-		indexes: [
-			{
-				fields: ["status", "scheduledAt"],
-			},
-			{
-				fields: ["reservaId"],
-			},
-		],
+		tableName: "pending_emails",
+		timestamps: true,
 	}
 );
 
