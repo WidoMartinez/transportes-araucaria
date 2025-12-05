@@ -9,6 +9,12 @@ customize:
       - "Al editar archivos PHP, añadir comentario de aviso de despliegue manual en Hostinger."
       - "Commits y PRs deben estar en español siguiendo el formato 'tipo: resumen'."
       - "Mantener actualizada la documentación Markdown en la raíz del proyecto."
+      - "SEGURIDAD: No exponer errores de PHP (`display_errors`) en producción; usar logs."
+      - "SEGURIDAD: Mantener credenciales en `.env`, nunca en código."
+      - "FRONTEND: Extraer lógica compleja de `App.jsx` a Hooks personalizados."
+      - "FRONTEND: Evitar manipulación manual del DOM/Window si existe `react-router`."
+      - "BACKEND: Endpoints deben retornar JSON estricto y códigos HTTP correctos."
+      - "BACKEND: Documentar cambios de API en `ARQUITECTURA_PANEL_ADMIN.md`."
   project:
     technologies:
       - "React (Vite)"
