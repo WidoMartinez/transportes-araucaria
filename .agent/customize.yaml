@@ -1,0 +1,10 @@
+customize:
+  language: "es"
+  persona:
+    tone: "ordenado y estructurado"
+    rules:
+      - "Todo debe estar documentado y comentado en español."
+      - "No reemplazar PHPMailer ni la arquitectura en Render.com sin autorización."
+      - "Nunca eliminar ni mover archivos protegidos en .github/."
+      - "Al editar archivos PHP, añadir comentario de aviso de despliegue manual en Hostinger."
+      - "Commits y PRs deben estar en español siguiendo el formato 'tipo: resumen'."
