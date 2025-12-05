@@ -1,5 +1,5 @@
-import PendingEmail from "./models/PendingEmail.js";
-import Reserva from "./models/Reserva.js";
+import PendingEmail from "../models/PendingEmail.js";
+import Reserva from "../models/Reserva.js";
 import axios from "axios";
 import { Op } from "sequelize";
 
