@@ -422,27 +422,27 @@ function PagarConCodigo() {
 		</div>
 	);
 
-	return (
-		<section className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/20 py-8 md:py-16">
-			<div className="container mx-auto px-4">
-				{/* Encabezado principal */}
-				<motion.div 
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.5 }}
-					className="text-center mb-8"
-				>
-					<div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
-						<CreditCard className="h-4 w-4" />
-						<span className="text-sm font-medium">Pago Seguro</span>
-					</div>
-					<h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-						Pagar con Código
-					</h1>
-					<p className="text-gray-600 max-w-md mx-auto">
-						Ingresa el código que recibiste por WhatsApp para completar tu reserva de traslado
-					</p>
-				</motion.div>
+        return (
+                <section className="min-h-screen bg-background py-8 md:py-16">
+                        <div className="container mx-auto px-4">
+                                {/* Encabezado principal */}
+                                <motion.div
+                                        initial={{ opacity: 0, y: -20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5 }}
+                                        className="text-center mb-8"
+                                >
+                                        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
+                                                <CreditCard className="h-4 w-4" />
+                                                <span className="text-sm font-medium">Pago Seguro</span>
+                                        </div>
+                                        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                                                Pagar con Código
+                                        </h1>
+                                        <p className="text-gray-600 max-w-md mx-auto">
+                                                Ingresa el código que recibiste por WhatsApp para completar tu reserva de traslado
+                                        </p>
+                                </motion.div>
 
 				{/* Indicador de progreso */}
 				<StepIndicator currentStep={step} />
@@ -458,8 +458,8 @@ function PagarConCodigo() {
 								exit={{ opacity: 0, x: 20 }}
 								transition={{ duration: 0.3 }}
 							>
-								<Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden">
-									<CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b">
+										<Card className="border shadow-lg bg-white overflow-hidden">
+											<CardHeader className="bg-white border-b">
 										<div className="flex items-center gap-3">
 											<div className="p-2 bg-primary/10 rounded-lg">
 												<Sparkles className="h-6 w-6 text-primary" />
@@ -546,7 +546,7 @@ function PagarConCodigo() {
 										</AnimatePresence>
 
 										{/* Sección de ayuda */}
-										<div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-5">
+<div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
 											<div className="flex gap-4">
 												<div className="p-2 bg-blue-100 rounded-lg h-fit">
 													<MessageSquare className="h-5 w-5 text-blue-600" />
@@ -591,9 +591,8 @@ function PagarConCodigo() {
 								transition={{ duration: 0.3 }}
 								className="space-y-6"
 							>
-								{/* Resumen del servicio - Tarjeta destacada */}
-								<Card className="border-0 shadow-xl bg-gradient-to-br from-emerald-50 to-green-50 overflow-hidden">
-									<div className="absolute top-0 right-0 w-32 h-32 bg-green-200/30 rounded-full -translate-y-16 translate-x-16" />
+																				{/* Resumen del servicio - Tarjeta destacada */}
+										<Card className="border shadow-lg bg-white overflow-hidden">
 									<CardContent className="p-6 relative">
 										<div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
 											<div className="flex items-start gap-4">
@@ -671,8 +670,8 @@ function PagarConCodigo() {
 								</Card>
 
 								{/* Formulario de datos del cliente */}
-								<Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-									<CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10">
+										<Card className="border shadow-lg bg-white">
+											<CardHeader className="border-b bg-white">
 										<div className="flex items-center gap-3">
 											<div className="p-2 bg-primary/10 rounded-lg">
 												<User className="h-6 w-6 text-primary" />
@@ -942,7 +941,7 @@ function PagarConCodigo() {
 
 								{/* Sección de pago */}
 								<Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-									<CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10">
+									<CardHeader className="border-b bg-white">
 										<div className="flex items-center gap-3">
 											<div className="p-2 bg-primary/10 rounded-lg">
 												<CreditCard className="h-6 w-6 text-primary" />
@@ -1060,7 +1059,7 @@ function PagarConCodigo() {
 											<Button
 												onClick={procesarPagoConCodigoFlow}
 												disabled={procesando || !montoSeleccionado || montoSeleccionado <= 0}
-												className="w-full h-16 text-lg font-semibold shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-primary/90"
+className="w-full h-16 text-lg font-semibold shadow-lg hover:shadow-xl transition-all bg-primary text-primary-foreground hover:bg-primary/90"
 												size="lg"
 											>
 												{loadingGateway === "flow" ? (
