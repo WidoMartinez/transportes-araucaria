@@ -12,6 +12,7 @@ const PendingEmail = sequelize.define(
 		reservaId: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
+			field: "reserva_id",
 			references: {
 				model: "reservas",
 				key: "id",
@@ -34,10 +35,12 @@ const PendingEmail = sequelize.define(
 		scheduledAt: {
 			type: DataTypes.DATE,
 			allowNull: false,
+			field: "scheduled_at",
 		},
 		sentAt: {
 			type: DataTypes.DATE,
 			allowNull: true,
+			field: "sent_at",
 		},
 		attempts: {
 			type: DataTypes.INTEGER,
