@@ -28,6 +28,19 @@ import flow from "../assets/formasPago/flow.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Formateador de moneda para pesos chilenos (constante a nivel de módulo)
+const CURRENCY_FORMATTER = new Intl.NumberFormat("es-CL", {
+	style: "currency",
+	currency: "CLP",
+});
+
+/**
+ * Formatea un valor numérico como moneda chilena (CLP)
+ * @param {number} value - Valor a formatear
+ * @returns {string} Valor formateado (ej: "$25.000")
+ */
+const formatCurrency = (value) => CURRENCY_FORMATTER.format(value || 0);
+
 /**
  * Componente PagarConCodigo
  * 
@@ -77,18 +90,6 @@ function PagarConCodigo() {
 	// URL del backend en Render.com
 	const backendUrl =
 		getBackendUrl() || "https://transportes-araucaria.onrender.com";
-
-	// Formateador de moneda para pesos chilenos
-	const currencyFormatter = useMemo(
-		() =>
-			new Intl.NumberFormat("es-CL", {
-				style: "currency",
-				currency: "CLP",
-			}),
-		[]
-	);
-
-	const formatCurrency = (value) => currencyFormatter.format(value || 0);
 
 	// Cálculos de montos basados en el código validado
 	const montoTotal = codigoValidado ? Number(codigoValidado.monto) || 0 : 0;
@@ -344,12 +345,9 @@ function PagarConCodigo() {
 				.toString()
 				.toUpperCase();
 			
-			if (reservaId) {
-				console.log(
-					"Reserva creada (detalles pendientes) ID:",
-					reservaId,
-					"- confirmación pendiente de pago vía webhook"
-				);
+			// Nota: El ID de reserva se registra solo en modo desarrollo para debugging
+			if (reservaId && import.meta.env.DEV) {
+				console.log("Reserva creada ID:", reservaId);
 			}
 
 			// Paso 2: Crear enlace de pago con Flow
