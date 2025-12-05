@@ -11,10 +11,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard } from "lucide-react";
+import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
+import { destinosInfo } from "../data/destinos";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -110,31 +111,65 @@ function HeroExpress({
 		(formData.destino && !tieneCotizacionAutomatica);
 	const mostrarPrecio = tieneCotizacionAutomatica;
 
+	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
+	const targetName = useMemo(() => {
+		const isCity = (name) => name && name !== "Aeropuerto La Araucanía" && name !== "Otro" && name !== "Seleccionar...";
+
+		// 1. Prioridad: Ciudad seleccionada en Destino
+		if (isCity(formData.destino)) return formData.destino;
+
+		// 2. Prioridad: Ciudad seleccionada en Origen
+		if (isCity(formData.origen)) return formData.origen;
+
+		// 3. Fallback: Aeropuerto si está presente (para mostrar info del aeropuerto por defecto)
+		if (formData.destino === "Aeropuerto La Araucanía") return "Aeropuerto La Araucanía";
+		if (formData.origen === "Aeropuerto La Araucanía") return "Aeropuerto La Araucanía";
+
+		return null;
+	}, [formData.destino, formData.origen]);
+
 	// Imagen dinámica basada en el destino seleccionado
 	const selectedDestinoImage = useMemo(() => {
-		// Prioridad: Destino seleccionado -> Origen seleccionado (si no es aeropuerto/otro) -> Default
-		const targetName = formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro"
-			? formData.destino
-			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
-
+		// 1. Buscar en destinosInfo (datos locales enriquecidos)
+		if (targetName && destinosInfo[targetName]?.imagen) {
+			return destinosInfo[targetName].imagen;
+		}
+		// 2. Fallback: Buscar en destinosData (backend/props)
 		if (targetName && Array.isArray(destinosData)) {
 			const dest = destinosData.find(d => d.nombre === targetName);
 			if (dest && dest.imagen) return dest.imagen;
 		}
+		// 3. Imagen por defecto
 		return heroVan;
-	}, [formData.destino, formData.origen, destinosData]);
+	}, [targetName, destinosData]);
 
-	// Texto dinámico para el panel visual
-	const visualText = useMemo(() => {
-		if (currentStep === 1) return { title: "Resumen de tu viaje", subtitle: "Estás a un paso de confirmar." };
+	// Texto e información dinámica para el panel visual
+	const richInfo = useMemo(() => {
+		// Prioridad: Info del paso 1 (Resumen)
+		if (currentStep === 1) return {
+			title: "Resumen de tu viaje",
+			subtitle: "Estás a un paso de confirmar.",
+			isSummary: true
+		};
+
+		// Prioridad: Info turística enriquecida
+		if (targetName && destinosInfo[targetName]) {
+			return {
+				...destinosInfo[targetName],
+				isRich: true
+			};
+		}
+
+		// Fallback: Textos genéricos basados en selección
 		if (formData.destino && formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro") {
 			return { title: `Viaja a ${formData.destino}`, subtitle: "Comodidad y seguridad garantizada." };
 		}
 		if (formData.origen && formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro") {
 			return { title: `Viaja desde ${formData.origen}`, subtitle: "Comenzamos el viaje donde tú estés." };
 		}
+
 		return { title: "Transporte Privado", subtitle: "Conecta con Pucón, Villarrica y toda la región." };
-	}, [formData.destino, formData.origen, currentStep]);
+	}, [targetName, currentStep, formData.destino, formData.origen]);
 
 
 	const verificarReservaActiva = async (email) => {
@@ -316,24 +351,60 @@ function HeroExpress({
 		[pricing.totalConDescuento]
 	);
 
+	// Variants for animations
+	const containerVariants = {
+		hidden: { opacity: 0 },
+		show: {
+			opacity: 1,
+			transition: {
+				staggerChildren: 0.1
+			}
+		}
+	};
+
+	const itemVariants = {
+		hidden: { opacity: 0, y: 20 },
+		show: { opacity: 1, y: 0 }
+	};
+
 	return (
 		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-background">
 
 			{/* Mobile Header (Visual) */}
-			<div className="lg:hidden relative h-[30vh] w-full overflow-hidden bg-primary">
+			<div className="lg:hidden relative h-[35vh] w-full overflow-hidden bg-primary">
 				<img
 					src={selectedDestinoImage}
 					alt="Destino"
 					className="w-full h-full object-cover opacity-60"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
-				<div className="absolute bottom-16 left-4 z-10">
-					<h1 className="text-2xl font-bold text-foreground leading-tight">
-						{visualText.title}
-					</h1>
-					<p className="text-sm text-muted-foreground font-medium">
-						{visualText.subtitle}
-					</p>
+				<div className="absolute bottom-16 left-4 right-4 z-10">
+					<motion.div
+						key={richInfo.title}
+						initial={{ opacity: 0, y: 10 }}
+						animate={{ opacity: 1, y: 0 }}
+					>
+						<h1 className="text-2xl font-bold text-foreground leading-tight drop-shadow-md">
+							{richInfo.isRich ? richInfo.titulo : richInfo.title}
+						</h1>
+						<p className="text-sm text-muted-foreground font-medium drop-shadow-sm mb-2">
+							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
+						</p>
+
+						{/* Mobile Summary Pill */}
+						{richInfo.isRich && (
+							<div className="flex flex-wrap gap-2 mt-2">
+								<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 h-6 flex items-center gap-1 border-primary/20">
+									<Plane className="w-3 h-3" /> {richInfo.distancia}
+								</Badge>
+								{richInfo.tiempo && (
+									<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 h-6 flex items-center gap-1 border-primary/20">
+										<Clock className="w-3 h-3" /> {richInfo.tiempo}
+									</Badge>
+								)}
+							</div>
+						)}
+					</motion.div>
 				</div>
 			</div>
 
@@ -351,8 +422,12 @@ function HeroExpress({
 							className="space-y-6 w-full max-w-lg mx-auto"
 						>
 							<div className="mb-6 hidden lg:block">
-								<h2 className="text-4xl font-bold tracking-tight text-foreground mb-2">{visualText.title}</h2>
-								<p className="text-muted-foreground text-lg">{visualText.subtitle}</p>
+								<h2 className="text-4xl font-bold tracking-tight text-foreground mb-2">
+									{richInfo.isRich ? richInfo.titulo : richInfo.title}
+								</h2>
+								<p className="text-muted-foreground text-lg">
+									{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
+								</p>
 							</div>
 
 							<div className="space-y-4">
@@ -689,21 +764,80 @@ function HeroExpress({
 					/>
 				</AnimatePresence>
 
-				<div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/20 to-transparent" />
+				<div className="absolute inset-0 bg-gradient-to-t from-primary/95 via-primary/50 to-primary/20" />
 
-				<div className="absolute bottom-20 left-16 max-w-xl z-10">
+				<div className="absolute bottom-0 left-0 w-full p-16 z-10 flex flex-col justify-end h-full">
 					<motion.div
-						key={visualText.title}
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.2 }}
+						key={richInfo.title}
+						variants={containerVariants}
+						initial="hidden"
+						animate="show"
+						className="space-y-8 max-w-xl"
 					>
-						<h1 className="text-6xl font-bold text-primary-foreground mb-4 tracking-tight leading-none">
-							{visualText.title}
-						</h1>
-						<p className="text-xl text-primary-foreground/90 font-medium border-l-4 border-primary-foreground pl-4">
-							{visualText.subtitle}
-						</p>
+						{/* Título y Bajada */}
+						<motion.div variants={itemVariants}>
+							<h1 className="text-6xl font-bold text-primary-foreground mb-4 tracking-tight leading-none drop-shadow-lg">
+								{richInfo.isRich ? richInfo.titulo : richInfo.title}
+							</h1>
+							<p className="text-xl text-primary-foreground/90 font-medium border-l-4 border-white/30 pl-4">
+								{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
+							</p>
+						</motion.div>
+
+						{/* Información de Viaje (Rich Data) */}
+						{richInfo.isRich && !richInfo.isSummary && (
+							<>
+								<motion.div variants={itemVariants} className="flex gap-4">
+									<div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 flex-1">
+										<div className="p-2 bg-white/20 rounded-full">
+											<Plane className="w-5 h-5 text-white" />
+										</div>
+										<div>
+											<p className="text-xs text-white/70 uppercase font-semibold">Distancia</p>
+											<p className="text-white font-bold">{richInfo.distancia}</p>
+										</div>
+									</div>
+									<div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 flex-1">
+										<div className="p-2 bg-white/20 rounded-full">
+											<Clock className="w-5 h-5 text-white" />
+										</div>
+										<div>
+											<p className="text-xs text-white/70 uppercase font-semibold">Tiempo Estimado</p>
+											<p className="text-white font-bold">{richInfo.tiempo}</p>
+										</div>
+									</div>
+								</motion.div>
+
+								<motion.div variants={itemVariants} className="space-y-4">
+									<div className="flex items-center gap-2">
+										<Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+										<h3 className="text-lg font-bold text-white">Imperdibles</h3>
+									</div>
+									<ul className="grid gap-3">
+										{richInfo.puntosInteres?.map((punto, i) => (
+											<li key={i} className="flex items-center gap-3 text-white/90 font-medium">
+												<CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+												{punto}
+											</li>
+										))}
+									</ul>
+								</motion.div>
+
+								{richInfo.datoCurioso && (
+									<motion.div variants={itemVariants} className="mt-6 bg-blue-900/40 backdrop-blur-md p-5 rounded-xl border border-blue-400/30">
+										<div className="flex gap-3">
+											<Lightbulb className="w-6 h-6 text-yellow-300 flex-shrink-0" />
+											<div>
+												<p className="text-sm font-bold text-yellow-300 mb-1">¿Sabías que?</p>
+												<p className="text-sm text-white/90 italic leading-relaxed">
+													"{richInfo.datoCurioso}"
+												</p>
+											</div>
+										</div>
+									</motion.div>
+								)}
+							</>
+						)}
 					</motion.div>
 				</div>
 			</div>
