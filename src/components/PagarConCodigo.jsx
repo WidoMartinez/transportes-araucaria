@@ -1,13 +1,44 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
-import { LoaderCircle, CheckCircle, AlertCircle } from "lucide-react";
-import flow from "../assets/formasPago/flow.png";
+import { 
+	LoaderCircle, 
+	CheckCircle, 
+	AlertCircle, 
+	CreditCard,
+	MapPin,
+	Calendar,
+	Clock,
+	ArrowRight,
+	User,
+	Phone,
+	Mail,
+	Plane,
+	Building2,
+	Shield
+} from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+
+// Formateador de moneda para pesos chilenos
+const CURRENCY_FORMATTER = new Intl.NumberFormat("es-CL", {
+	style: "currency",
+	currency: "CLP",
+});
+
+// Opciones de hora en intervalos de 15 minutos (8:00 AM - 9:00 PM) - constante estática
+const TIME_OPTIONS = (() => {
+	const options = [];
+	for (let hour = 8; hour <= 21; hour++) {
+		for (let minute = 0; minute < 60; minute += 15) {
+			const horaStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+			options.push(horaStr);
+		}
+	}
+	return options;
+})();
 
 // Componente para pagar usando un código de pago estandarizado
 function PagarConCodigo() {
@@ -15,7 +46,7 @@ function PagarConCodigo() {
 	const [validando, setValidando] = useState(false);
 	const [codigoValidado, setCodigoValidado] = useState(null);
 	const [error, setError] = useState("");
-	const [step, setStep] = useState(1); // 1: Validar código, 2: Completar datos, 3: Pagar
+	const [step, setStep] = useState(1); // 1: Validar código, 2: Completar datos y pagar
 	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' | 'abono'
 
 	// Datos del cliente
@@ -40,12 +71,8 @@ function PagarConCodigo() {
 	const backendUrl =
 		getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
-	const formatCurrency = (value) => {
-		return new Intl.NumberFormat("es-CL", {
-			style: "currency",
-			currency: "CLP",
-		}).format(value || 0);
-	};
+	// Función para formatear moneda usando el formateador a nivel de módulo
+	const formatCurrency = (value) => CURRENCY_FORMATTER.format(value || 0);
 
 	const montoTotal = codigoValidado ? Number(codigoValidado.monto) || 0 : 0;
 	const abonoSugerido = codigoValidado
@@ -140,7 +167,7 @@ function PagarConCodigo() {
 				`${formData.fechaRegreso}T${formData.horaRegreso}`
 			);
 			if (Number.isNaN(regreso.getTime())) {
-				setError("La fecha de regreso no es valida");
+				setError("La fecha de regreso no es válida");
 				return false;
 			}
 			if (!Number.isNaN(salida.getTime()) && regreso <= salida) {
@@ -298,533 +325,421 @@ function PagarConCodigo() {
 	};
 
 	return (
-		<section className="py-16 bg-gradient-to-b from-gray-50 to-white">
-			<div className="container mx-auto px-4">
-				<div className="max-w-3xl mx-auto">
-					<div className="text-center mb-8">
-						<h2 className="text-3xl font-bold text-gray-900 mb-3">
+		<section id="pagar-con-codigo" className="relative w-full min-h-screen flex flex-col lg:flex-row bg-background">
+			{/* Panel izquierdo: Formulario */}
+			<div className="relative flex flex-col justify-start lg:justify-center px-6 py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 w-full lg:w-1/2">
+				<div className="space-y-6 w-full max-w-lg mx-auto">
+					{/* Encabezado */}
+					<div className="mb-6">
+						<h2 className="text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-2">
 							Pagar con Código
 						</h2>
-						<p className="text-gray-600">
-							Ingresa el código que recibiste por WhatsApp para completar tu
-							pago
+						<p className="text-muted-foreground text-lg">
+							{step === 1 
+								? "Ingresa el código que recibiste por WhatsApp."
+								: `Código: ${codigoValidado?.codigo || ""}`
+							}
 						</p>
 					</div>
 
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								{step === 1 && "🔍 Paso 1: Validar Código"}
-								{step === 2 && "📋 Paso 2: Completar Datos"}
-								{step === 3 && "💳 Paso 3: Realizar Pago"}
-							</CardTitle>
-						</CardHeader>
-
-						<CardContent className="space-y-6">
-							{/* Paso 1: Validar código */}
-							{step === 1 && (
-								<div className="space-y-4">
-									<div>
-										<Label htmlFor="codigo" className="text-base font-medium">
-											Código de Pago
-										</Label>
-										<p className="text-sm text-gray-500 mb-2">
-											Ejemplo: A-TCO-25, P-VLL-30, etc.
-										</p>
-										<div className="flex gap-2">
-											<Input
-												id="codigo"
-												type="text"
-												value={codigo}
-												onChange={(e) =>
-													setCodigo(e.target.value.toUpperCase())
-												}
-												placeholder="Ingresa tu código"
-												className="text-lg font-mono uppercase"
-												disabled={validando}
-											/>
-											<Button
-												onClick={validarCodigo}
-												disabled={validando || !codigo.trim()}
-												className="px-6"
-											>
-												{validando ? (
-													<LoaderCircle className="h-5 w-5 animate-spin" />
-												) : (
-													"Validar"
-												)}
-											</Button>
-										</div>
-									</div>
-
-									{error && (
-										<Alert variant="destructive">
-											<AlertCircle className="h-4 w-4" />
-											<AlertDescription>{error}</AlertDescription>
-										</Alert>
-									)}
-
-									<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-										<p className="text-sm text-blue-900">
-											<strong>💡 ¿No tienes un código?</strong>
-											<br />
-											Contacta con nosotros por WhatsApp para obtener tu código
-											de pago personalizado.
-										</p>
-									</div>
+					{/* =============== PASO 1: VALIDAR CÓDIGO =============== */}
+					{step === 1 && (
+						<div className="space-y-4">
+							{/* Campo de código */}
+							<div className="space-y-2">
+								<Label htmlFor="codigo" className="text-sm font-semibold text-foreground">
+									Código de Pago
+								</Label>
+								<div className="relative">
+									<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+									<Input
+										id="codigo"
+										type="text"
+										value={codigo}
+										onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+										onKeyDown={(e) => e.key === 'Enter' && validarCodigo()}
+										placeholder="Ej: A-TCO-25"
+										className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-ring focus:border-transparent"
+										disabled={validando}
+									/>
 								</div>
+							</div>
+
+							{/* Mensaje de error */}
+							{error && (
+								<Alert variant="destructive">
+									<AlertCircle className="h-4 w-4" />
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
 							)}
 
-							{/* Paso 2: Mostrar resumen y completar datos */}
-							{step === 2 && codigoValidado && (
-								<div className="space-y-6">
-									{/* Resumen del servicio */}
-									<div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-										<div className="flex items-start justify-between mb-4">
-											<div>
-												<h3 className="text-lg font-semibold text-green-900 mb-1">
-													✅ Código Validado
-												</h3>
-												<Badge variant="default" className="text-sm">
-													{codigoValidado.codigo}
-												</Badge>
-											</div>
-											<CheckCircle className="h-8 w-8 text-green-600" />
-										</div>
+							{/* Botón validar */}
+							<Button
+								onClick={validarCodigo}
+								disabled={validando || !codigo.trim()}
+								className="w-full h-12 text-base font-semibold"
+								size="lg"
+							>
+								{validando ? (
+									<>
+										<LoaderCircle className="h-5 w-5 animate-spin mr-2" />
+										Validando...
+									</>
+								) : (
+									<>
+										Validar Código
+										<ArrowRight className="h-5 w-5 ml-2" />
+									</>
+								)}
+							</Button>
 
-										<div className="space-y-3">
-											<div className="flex justify-between">
-												<span className="text-gray-600">Origen:</span>
-												<span className="font-medium">
-													{codigoValidado.origen}
-												</span>
-											</div>
-											<div className="flex justify-between">
-												<span className="text-gray-600">Destino:</span>
-												<span className="font-medium">
-													{codigoValidado.destino}
-												</span>
-											</div>
-											{codigoValidado.vehiculo && (
-												<div className="flex justify-between">
-													<span className="text-gray-600">Vehículo:</span>
-													<span className="font-medium">
-														{codigoValidado.vehiculo}
-													</span>
-												</div>
-											)}
-											<div className="flex justify-between">
-												<span className="text-gray-600">Pasajeros:</span>
-												<span className="font-medium">
-													{codigoValidado.pasajeros}
-												</span>
-											</div>
-											{esIdaVuelta && (
-												<div className="flex justify-between">
-													<span className="text-gray-600">Tipo:</span>
-													<Badge variant="default" className="bg-blue-500">
-														🔄 Ida y vuelta
-													</Badge>
-												</div>
-											)}
-											<div className="pt-3 border-t border-green-200">
-												<div className="flex justify-between items-center">
-													<span className="text-lg font-semibold text-gray-900">
-														Total a Pagar:
-													</span>
-													<span className="text-2xl font-bold text-green-600">
-														{formatCurrency(codigoValidado.monto)}
-													</span>
-												</div>
-											</div>
-										</div>
+							{/* Texto de ayuda */}
+							<p className="text-sm text-muted-foreground text-center">
+								¿No tienes código? Contáctanos por WhatsApp.
+							</p>
+						</div>
+					)}
 
-										{codigoValidado.descripcion && (
-											<div className="mt-4 pt-4 border-t border-green-200">
-												<p className="text-sm text-gray-700">
-													{codigoValidado.descripcion}
-												</p>
-											</div>
-										)}
+					{/* =============== PASO 2: COMPLETAR DATOS Y PAGAR =============== */}
+					{step === 2 && codigoValidado && (
+						<div className="space-y-6">
+							{/* Resumen del viaje */}
+							<div className="bg-muted/50 rounded-lg p-4 space-y-3">
+								<div className="flex justify-between items-center">
+									<span className="text-sm text-muted-foreground">Ruta:</span>
+									<span className="font-medium">{codigoValidado.origen} → {codigoValidado.destino}</span>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-sm text-muted-foreground">Pasajeros:</span>
+									<span className="font-medium">{codigoValidado.pasajeros} persona(s)</span>
+								</div>
+								{esIdaVuelta && (
+									<div className="flex justify-between items-center">
+										<span className="text-sm text-muted-foreground">Tipo:</span>
+										<Badge variant="secondary">Ida y Vuelta</Badge>
 									</div>
+								)}
+								<div className="flex justify-between items-center pt-2 border-t">
+									<span className="text-sm font-semibold">Total:</span>
+									<span className="text-xl font-bold text-primary">{formatCurrency(montoTotal)}</span>
+								</div>
+							</div>
 
-									{/* Formulario de datos personales */}
-									<div className="space-y-4">
-										<h4 className="font-semibold text-lg">
-											Completa tus datos
-										</h4>
-										{esIdaVuelta && (
-											<p className="text-sm text-purple-700">
-												Este servicio incluye ida y vuelta, por lo que
-												necesitamos la fecha y hora del tramo de regreso.
-											</p>
-										)}
+							{/* Formulario de datos */}
+							<div className="space-y-4">
+								{/* Nombre */}
+								<div className="space-y-2">
+									<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
+										Nombre completo <span className="text-red-500">*</span>
+									</Label>
+									<div className="relative">
+										<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+										<Input
+											id="nombre"
+											name="nombre"
+											value={formData.nombre}
+											onChange={handleInputChange}
+											placeholder="Juan Pérez"
+											className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+										/>
+									</div>
+								</div>
 
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label htmlFor="nombre">
-													Nombre completo{" "}
-													<span className="text-red-500">*</span>
-												</Label>
+								{/* Email y Teléfono */}
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="email" className="text-sm font-semibold text-foreground">
+											Email <span className="text-red-500">*</span>
+										</Label>
+										<div className="relative">
+											<Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="email"
+												name="email"
+												type="email"
+												value={formData.email}
+												onChange={handleInputChange}
+												placeholder="tu@email.cl"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="telefono" className="text-sm font-semibold text-foreground">
+											Teléfono <span className="text-red-500">*</span>
+										</Label>
+										<div className="relative">
+											<Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="telefono"
+												name="telefono"
+												value={formData.telefono}
+												onChange={handleInputChange}
+												placeholder="+56 9 1234 5678"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
+										</div>
+									</div>
+								</div>
+
+								{/* Fecha y Hora */}
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
+											Fecha <span className="text-red-500">*</span>
+										</Label>
+										<div className="relative">
+											<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="fecha"
+												name="fecha"
+												type="date"
+												value={formData.fecha}
+												onChange={handleInputChange}
+												min={new Date().toISOString().split("T")[0]}
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="hora" className="text-sm font-semibold text-foreground">
+											Hora <span className="text-red-500">*</span>
+										</Label>
+										<div className="relative">
+											<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<select
+												id="hora"
+												name="hora"
+												value={formData.hora}
+												onChange={handleInputChange}
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+											>
+												<option value="">Seleccionar...</option>
+												{TIME_OPTIONS.map((hora) => (
+													<option key={hora} value={hora}>{hora}</option>
+												))}
+											</select>
+										</div>
+									</div>
+								</div>
+
+								{/* Campos de regreso para ida y vuelta */}
+								{esIdaVuelta && (
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div className="space-y-2">
+											<Label htmlFor="fechaRegreso" className="text-sm font-semibold text-foreground">
+												Fecha regreso <span className="text-red-500">*</span>
+											</Label>
+											<div className="relative">
+												<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 												<Input
-													id="nombre"
-													name="nombre"
-													value={formData.nombre}
-													onChange={handleInputChange}
-													placeholder="Juan Pérez"
-													required
-												/>
-											</div>
-
-											<div className="space-y-2">
-												<Label htmlFor="email">
-													Correo electrónico{" "}
-													<span className="text-red-500">*</span>
-												</Label>
-												<Input
-													id="email"
-													name="email"
-													type="email"
-													value={formData.email}
-													onChange={handleInputChange}
-													placeholder="tu@email.cl"
-													required
-												/>
-											</div>
-
-											<div className="space-y-2">
-												<Label htmlFor="telefono">
-													Teléfono <span className="text-red-500">*</span>
-												</Label>
-												<Input
-													id="telefono"
-													name="telefono"
-													value={formData.telefono}
-													onChange={handleInputChange}
-													placeholder="+56 9 1234 5678"
-													required
-												/>
-											</div>
-
-											{/* Fecha y hora del servicio */}
-											<div className="space-y-2">
-												<Label htmlFor="fecha">
-													Fecha del servicio{" "}
-													<span className="text-red-500">*</span>
-												</Label>
-												<Input
-													id="fecha"
-													name="fecha"
+													id="fechaRegreso"
+													name="fechaRegreso"
 													type="date"
-													value={formData.fecha}
+													value={formData.fechaRegreso}
 													onChange={handleInputChange}
-													min={new Date().toISOString().split("T")[0]}
-													required
+													min={formData.fecha || new Date().toISOString().split("T")[0]}
+													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 												/>
 											</div>
-
-											<div className="space-y-2">
-												<Label htmlFor="hora">
-													Hora del servicio{" "}
-													<span className="text-red-500">*</span>
-												</Label>
+										</div>
+										<div className="space-y-2">
+											<Label htmlFor="horaRegreso" className="text-sm font-semibold text-foreground">
+												Hora regreso <span className="text-red-500">*</span>
+											</Label>
+											<div className="relative">
+												<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 												<select
-													id="hora"
-													name="hora"
-													value={formData.hora}
+													id="horaRegreso"
+													name="horaRegreso"
+													value={formData.horaRegreso}
 													onChange={handleInputChange}
-													required
-													className="h-10 border rounded px-3 w-full"
+													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
 												>
-													<option value="">Selecciona la hora</option>
-													{Array.from({ length: (21 - 8) * 4 + 1 }, (_, i) => {
-														const totalMinutes = 8 * 60 + i * 15;
-														const horas = Math.floor(totalMinutes / 60);
-														const minutos = totalMinutes % 60;
-														const horaStr = `${String(horas).padStart(
-															2,
-															"0"
-														)}:${String(minutos).padStart(2, "0")}`;
-														return (
-															<option key={horaStr} value={horaStr}>
-																{horaStr}
-															</option>
-														);
-													})}
+													<option value="">Seleccionar...</option>
+													{TIME_OPTIONS.map((hora) => (
+														<option key={`regreso-${hora}`} value={hora}>{hora}</option>
+													))}
 												</select>
 											</div>
-											{esIdaVuelta && (
-												<>
-													<div className="space-y-2">
-														<Label htmlFor="fechaRegreso">
-															Fecha de regreso{" "}
-															<span className="text-red-500">*</span>
-														</Label>
-														<Input
-															id="fechaRegreso"
-															name="fechaRegreso"
-															type="date"
-															value={formData.fechaRegreso}
-															onChange={handleInputChange}
-															min={
-																formData.fecha ||
-																new Date().toISOString().split("T")[0]
-															}
-															required={esIdaVuelta}
-														/>
-													</div>
-													<div className="space-y-2">
-														<Label htmlFor="horaRegreso">
-															Hora de regreso{" "}
-															<span className="text-red-500">*</span>
-														</Label>
-														<select
-															id="horaRegreso"
-															name="horaRegreso"
-															value={formData.horaRegreso}
-															onChange={handleInputChange}
-															required={esIdaVuelta}
-															className="h-10 border rounded px-3 w-full"
-														>
-															<option value="">
-																Selecciona la hora de regreso
-															</option>
-															{Array.from(
-																{ length: (21 - 8) * 4 + 1 },
-																(_, i) => {
-																	const totalMinutes = 8 * 60 + i * 15;
-																	const horas = Math.floor(
-																		totalMinutes / 60
-																	);
-																	const minutos = totalMinutes % 60;
-																	const horaStr = `${String(
-																		horas
-																	).padStart(2, "0")}:${String(
-																		minutos
-																	).padStart(2, "0")}`;
-																	return (
-																		<option
-																			key={`regreso-${horaStr}`}
-																			value={horaStr}
-																		>
-																			{horaStr}
-																		</option>
-																	);
-																}
-															)}
-														</select>
-														<p className="text-xs text-gray-500">
-															Si tu regreso es el mismo dia, la hora debe
-															ser posterior al viaje de ida.
-														</p>
-													</div>
-												</>
-											)}
-
-											<div className="space-y-2">
-												<Label htmlFor="numeroVuelo">
-													Número de vuelo (opcional)
-												</Label>
-												<Input
-													id="numeroVuelo"
-													name="numeroVuelo"
-													value={formData.numeroVuelo}
-													onChange={handleInputChange}
-													placeholder="LA1234"
-												/>
-											</div>
-
-											{/* Dirección obligatoria según sentido del viaje */}
-											{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
-												<div className="space-y-2 md:col-span-2">
-													<Label htmlFor="direccionDestino">
-														Dirección de destino{" "}
-														<span className="text-red-500">*</span>
-													</Label>
-													<Input
-														id="direccionDestino"
-														name="direccionDestino"
-														value={formData.direccionDestino}
-														onChange={handleInputChange}
-														placeholder="Ej: Av. Alemania 1234, Temuco"
-														required
-													/>
-												</div>
-											)}
-											{codigoValidado?.destino ===
-												"Aeropuerto La Araucanía" && (
-												<div className="space-y-2 md:col-span-2">
-													<Label htmlFor="direccionOrigen">
-														Dirección de origen{" "}
-														<span className="text-red-500">*</span>
-													</Label>
-													<Input
-														id="direccionOrigen"
-														name="direccionOrigen"
-														value={formData.direccionOrigen}
-														onChange={handleInputChange}
-														placeholder="Ej: Av. O'Higgins 567, Temuco"
-														required
-													/>
-												</div>
-											)}
-											<div className="space-y-2 md:col-span-2">
-												<Label htmlFor="hotel">
-													Hotel o alojamiento (opcional)
-												</Label>
-												<Input
-													id="hotel"
-													name="hotel"
-													value={formData.hotel}
-													onChange={handleInputChange}
-													placeholder="Hotel Dreams Araucanía"
-												/>
-											</div>
-
-											<div className="space-y-2 md:col-span-2">
-												<Label htmlFor="mensaje">
-													Mensaje adicional (opcional)
-												</Label>
-												<textarea
-													id="mensaje"
-													name="mensaje"
-													value={formData.mensaje}
-													onChange={handleInputChange}
-													placeholder="Información adicional sobre tu viaje..."
-													className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-												/>
-											</div>
 										</div>
 									</div>
+								)}
 
-									{error && (
-										<Alert variant="destructive">
-											<AlertCircle className="h-4 w-4" />
-											<AlertDescription>{error}</AlertDescription>
-										</Alert>
-									)}
-
-									{/* Selección del monto a pagar */}
-									<div className="space-y-3">
-										<h4 className="font-semibold text-lg">Monto a pagar</h4>
-										<p className="text-sm text-muted-foreground">
-											Elige si deseas pagar la totalidad o abonar el 40% para
-											reservar tu traslado.
-										</p>
-										<div className={`grid gap-3 ${codigoValidado?.permitirAbono ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
-											{codigoValidado?.permitirAbono && (
-												<Button
-													type="button"
-													variant="outline"
-													onClick={() => setSelectedPaymentType("abono")}
-													disabled={procesando || abonoSugerido <= 0}
-													className={`h-auto p-4 flex flex-col items-start gap-1 text-left transition-all ${
-														selectedPaymentType === "abono"
-															? "border-primary bg-primary/5 shadow-md"
-															: "border-gray-200"
-													}`}
-												>
-													<span className="text-sm font-semibold">
-														Abonar 40%
-													</span>
-													<span className="text-xl font-bold text-primary">
-														{formatCurrency(abonoSugerido)}
-													</span>
-													<span className="text-xs text-muted-foreground">
-														Reserva tu viaje pagando una parte ahora
-													</span>
-												</Button>
-											)}
-											<Button
-												type="button"
-												variant="outline"
-												onClick={() => setSelectedPaymentType("total")}
-												disabled={procesando || montoTotal <= 0}
-												className={`h-auto p-4 flex flex-col items-start gap-1 text-left transition-all ${
-													selectedPaymentType === "total"
-														? "border-primary bg-primary/5 shadow-md"
-														: "border-gray-200"
-												}`}
-											>
-												<span className="text-sm font-semibold">
-													Pagar 100%
-												</span>
-												<span className="text-xl font-bold text-primary">
-													{formatCurrency(montoTotal)}
-												</span>
-												<span className="text-xs text-muted-foreground">
-													Completa el pago total del servicio
-												</span>
-											</Button>
-										</div>
-										<p className="text-sm text-muted-foreground">
-											Pagarás ahora:{" "}
-											<span className="font-semibold text-gray-900">
-												{formatCurrency(montoSeleccionado)}
-											</span>
-										</p>
-										{selectedPaymentType === "abono" && (
-											<p className="text-xs text-amber-600">
-												Saldo pendiente al momento del servicio:{" "}
-												{formatCurrency(saldoPendiente)}
-											</p>
-										)}
-									</div>
-
-									{/* Métodos de pago */}
-									<div className="space-y-4">
-										<h4 className="font-semibold text-lg">Método de pago</h4>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<Button
-												type="button"
-												variant="outline"
-												onClick={procesarPagoConCodigoFlow}
-												disabled={
-													procesando ||
-													!montoSeleccionado ||
-													montoSeleccionado <= 0
-												}
-												className="h-auto p-6 flex flex-col items-center gap-3 w-full"
-											>
-												{loadingGateway === "flow" ? (
-													<LoaderCircle className="h-8 w-8 animate-spin" />
-												) : (
-													<img
-														src={flow}
-														alt="Flow"
-														className="h-8 w-auto object-contain"
-													/>
-												)}
-												<span className="text-sm font-medium">Flow</span>
-												<span className="text-xs text-muted-foreground">
-													Webpay • Tarjetas • Transferencia
-												</span>
-												<span className="text-xs text-gray-600 font-semibold">
-													Monto: {formatCurrency(montoSeleccionado)}
-												</span>
-											</Button>
+								{/* Dirección (según sentido del viaje) */}
+								{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
+									<div className="space-y-2">
+										<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
+											Dirección de destino <span className="text-red-500">*</span>
+										</Label>
+										<div className="relative">
+											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="direccionDestino"
+												name="direccionDestino"
+												value={formData.direccionDestino}
+												onChange={handleInputChange}
+												placeholder="Av. Alemania 1234, Temuco"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
 										</div>
 									</div>
+								)}
+								{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
+									<div className="space-y-2">
+										<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
+											Dirección de origen <span className="text-red-500">*</span>
+										</Label>
+										<div className="relative">
+											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="direccionOrigen"
+												name="direccionOrigen"
+												value={formData.direccionOrigen}
+												onChange={handleInputChange}
+												placeholder="Av. O'Higgins 567, Temuco"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
+										</div>
+									</div>
+								)}
 
-									<div className="flex gap-3">
-										<Button
+								{/* Campos opcionales en fila */}
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="numeroVuelo" className="text-sm font-semibold text-foreground">
+											Nº de vuelo (opcional)
+										</Label>
+										<div className="relative">
+											<Plane className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="numeroVuelo"
+												name="numeroVuelo"
+												value={formData.numeroVuelo}
+												onChange={handleInputChange}
+												placeholder="LA1234"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
+										</div>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="hotel" className="text-sm font-semibold text-foreground">
+											Hotel (opcional)
+										</Label>
+										<div className="relative">
+											<Building2 className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Input
+												id="hotel"
+												name="hotel"
+												value={formData.hotel}
+												onChange={handleInputChange}
+												placeholder="Hotel Dreams"
+												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							{/* Mensaje de error */}
+							{error && (
+								<Alert variant="destructive">
+									<AlertCircle className="h-4 w-4" />
+									<AlertDescription>{error}</AlertDescription>
+								</Alert>
+							)}
+
+							{/* Selección de monto */}
+							{codigoValidado?.permitirAbono && (
+								<div className="space-y-3">
+									<Label className="text-sm font-semibold text-foreground">Monto a pagar</Label>
+									<div className="grid grid-cols-2 gap-3">
+										<button
 											type="button"
-											variant="outline"
-											onClick={() => {
-												setStep(1);
-												setCodigoValidado(null);
-												setError("");
-												setSelectedPaymentType("total");
-											}}
-											disabled={procesando}
+											onClick={() => setSelectedPaymentType("abono")}
+											className={`p-4 rounded-lg border-2 text-left transition-all ${
+												selectedPaymentType === "abono"
+													? "border-primary bg-primary/5"
+													: "border-input hover:border-primary/50"
+											}`}
 										>
-											← Cambiar código
-										</Button>
+											<p className="text-sm font-medium">Abono 40%</p>
+											<p className="text-lg font-bold">{formatCurrency(abonoSugerido)}</p>
+										</button>
+										<button
+											type="button"
+											onClick={() => setSelectedPaymentType("total")}
+											className={`p-4 rounded-lg border-2 text-left transition-all ${
+												selectedPaymentType === "total"
+													? "border-primary bg-primary/5"
+													: "border-input hover:border-primary/50"
+											}`}
+										>
+											<p className="text-sm font-medium">Pago Total</p>
+											<p className="text-lg font-bold">{formatCurrency(montoTotal)}</p>
+										</button>
 									</div>
 								</div>
 							)}
-						</CardContent>
-					</Card>
+
+							{/* Botón de pago */}
+							<Button
+								onClick={procesarPagoConCodigoFlow}
+								disabled={procesando || !montoSeleccionado || montoSeleccionado <= 0}
+								className="w-full h-12 text-base font-semibold"
+								size="lg"
+							>
+								{loadingGateway === "flow" ? (
+									<>
+										<LoaderCircle className="h-5 w-5 animate-spin mr-2" />
+										Procesando...
+									</>
+								) : (
+									<>
+										Pagar {formatCurrency(montoSeleccionado)}
+										<ArrowRight className="h-5 w-5 ml-2" />
+									</>
+								)}
+							</Button>
+
+							{/* Botón volver */}
+							<button
+								type="button"
+								onClick={() => {
+									setStep(1);
+									setCodigoValidado(null);
+									setError("");
+									setSelectedPaymentType("total");
+								}}
+								disabled={procesando}
+								className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+							>
+								← Usar otro código
+							</button>
+						</div>
+					)}
+				</div>
+			</div>
+
+			{/* Panel derecho: Visual (solo en desktop) */}
+			<div className="hidden lg:flex lg:w-1/2 relative bg-primary">
+				<div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80" />
+				<div className="relative z-10 flex flex-col items-center justify-center p-16 text-primary-foreground">
+					<CreditCard className="h-24 w-24 mb-8 opacity-90" />
+					<h2 className="text-4xl font-bold mb-4 text-center">Pago Seguro</h2>
+					<p className="text-xl opacity-90 text-center max-w-md">
+						Completa tu pago de forma rápida y segura con tu código de reserva.
+					</p>
+					<div className="mt-12 space-y-4 text-center">
+						<div className="flex items-center gap-3">
+							<CheckCircle className="h-6 w-6" />
+							<span className="text-lg">Confirmación inmediata</span>
+						</div>
+						<div className="flex items-center gap-3">
+							<Shield className="h-6 w-6" />
+							<span className="text-lg">Pago 100% seguro</span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</section>
