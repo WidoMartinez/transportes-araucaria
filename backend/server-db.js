@@ -36,6 +36,8 @@ import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
 import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
 import addFestivosTable from "./migrations/add-festivos-table.js";
 import addDisponibilidadConfig from "./migrations/add-disponibilidad-config.js";
+import addPendingEmailsTable from "./migrations/add-pending-emails-table.js";
+
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
@@ -589,6 +591,7 @@ const initializeDatabase = async () => {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
 		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
+		await addPendingEmailsTable();
 		await syncDatabase(false, [
 			AdminUser, // Primero los usuarios admin
 			AdminAuditLog, // Logs de auditoría de admin
