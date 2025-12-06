@@ -11,11 +11,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star } from "lucide-react";
+import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
 import { destinosInfo } from "../data/destinos";
+import AlertaDescuentoRetorno from "./AlertaDescuentoRetorno";
+import { calcularDescuentoEscalonado, generarOpcionesDescuento } from "../utils/descuentoRetorno";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -68,6 +70,9 @@ function HeroExpress({
 	const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
 	const [descuentoRetorno, setDescuentoRetorno] = useState(null);
 	const [urgencyMessage, setUrgencyMessage] = useState(null);
+	// Estado para alerta de descuento escalonado en reservas de retorno
+	const [descuentoEscalonadoInfo, setDescuentoEscalonadoInfo] = useState(null);
+	const [horaTerminoServicioActivo, setHoraTerminoServicioActivo] = useState(null);
 
 	useEffect(() => {
 		if (currentStep === 1) {
@@ -175,7 +180,23 @@ function HeroExpress({
 			);
 			if (response.ok) {
 				const data = await response.json();
-				setReservaActiva(data.tieneReservaActiva ? data.reserva : null);
+				const reserva = data.tieneReservaActiva ? data.reserva : null;
+				setReservaActiva(reserva);
+				
+				// Si hay reserva activa, calcular hora de término para descuentos escalonados
+				if (reserva && reserva.fecha && reserva.hora) {
+					const destinoObj = Array.isArray(destinosData)
+						? destinosData.find(d => d.nombre === reserva.destino)
+						: null;
+					const duracionMinutos = destinoObj?.duracionIdaMinutos || 90;
+					
+					// Calcular hora de término del servicio original
+					const [horas, minutos] = reserva.hora.split(":").map(Number);
+					const fechaHoraInicio = new Date(`${reserva.fecha}T00:00:00`);
+					fechaHoraInicio.setHours(horas, minutos, 0, 0);
+					const horaTermino = new Date(fechaHoraInicio.getTime() + duracionMinutos * 60 * 1000);
+					setHoraTerminoServicioActivo(horaTermino);
+				}
 			}
 		} catch (error) {
 			console.error("Error verificando reserva activa:", error);
@@ -184,6 +205,42 @@ function HeroExpress({
 			setVerificandoReserva(false);
 		}
 	};
+
+	// Efecto para calcular descuento escalonado cuando cambia la hora de retorno
+	useEffect(() => {
+		// Solo calcular si:
+		// 1. Hay una reserva activa (viaje de ida ya reservado)
+		// 2. El usuario está reservando un retorno (origen = destino anterior, destino = origen anterior)
+		// 3. Es la misma fecha o fecha cercana
+		// 4. Tiene hora seleccionada
+		if (!reservaActiva || !formData.hora || !formData.fecha) {
+			setDescuentoEscalonadoInfo(null);
+			return;
+		}
+
+		// Verificar si es un viaje de retorno (el destino actual es el origen del viaje previo)
+		const esViajeRetorno = 
+			formData.origen === reservaActiva.destino && 
+			formData.destino === reservaActiva.origen;
+
+		// También verificar si la fecha es la misma del servicio original
+		const mismaFecha = formData.fecha === reservaActiva.fecha;
+
+		if (!esViajeRetorno || !mismaFecha || !horaTerminoServicioActivo) {
+			setDescuentoEscalonadoInfo(null);
+			return;
+		}
+
+		// Calcular hora de retorno seleccionada
+		const [horasRetorno, minutosRetorno] = formData.hora.split(":").map(Number);
+		const horaRetorno = new Date(`${formData.fecha}T00:00:00`);
+		horaRetorno.setHours(horasRetorno, minutosRetorno, 0, 0);
+
+		// Calcular descuento escalonado
+		const descuento = calcularDescuentoEscalonado(horaTerminoServicioActivo, horaRetorno);
+		setDescuentoEscalonadoInfo(descuento);
+
+	}, [reservaActiva, formData.hora, formData.fecha, formData.origen, formData.destino, horaTerminoServicioActivo]);
 
 	const verificarDisponibilidadYRetorno = async () => {
 		if (!formData.destino || !formData.fecha || !formData.hora) {
@@ -514,6 +571,60 @@ function HeroExpress({
 										</select>
 									</div>
 								</div>
+
+								{/* Alerta de descuento escalonado por retorno */}
+								{descuentoEscalonadoInfo && reservaActiva && (
+									<AlertaDescuentoRetorno
+										descuentoInfo={descuentoEscalonadoInfo}
+										horaTerminoServicio={horaTerminoServicioActivo}
+										precioOriginal={cotizacion.precio}
+										mostrarOpciones={true}
+										onSeleccionarHorario={(horaSeleccionada) => {
+											// Formatear la hora seleccionada a HH:MM
+											const horaStr = horaSeleccionada.toLocaleTimeString("es-CL", {
+												hour: "2-digit",
+												minute: "2-digit",
+												hour12: false
+											});
+											handleInputChange({ target: { name: "hora", value: horaStr } });
+										}}
+									/>
+								)}
+
+								{/* Mensaje informativo cuando hay reserva activa y es viaje de retorno */}
+								{reservaActiva && !descuentoEscalonadoInfo && formData.origen === reservaActiva.destino && formData.destino === reservaActiva.origen && formData.fecha === reservaActiva.fecha && (
+									<div className="rounded-xl p-4 bg-blue-500/10 border border-blue-400/30">
+										<div className="flex items-start gap-3">
+											<Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
+											<div>
+												<h4 className="font-semibold text-blue-700 text-sm">
+													¡Viaje de retorno detectado!
+												</h4>
+												<p className="text-xs text-blue-600 mt-1">
+													Selecciona una hora cercana al término de tu viaje de ida 
+													(aproximadamente {horaTerminoServicioActivo?.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}) 
+													para obtener descuentos de hasta 50%.
+												</p>
+												{horaTerminoServicioActivo && (
+													<div className="mt-2 flex flex-wrap gap-2">
+														{generarOpcionesDescuento(horaTerminoServicioActivo).map((opcion, index) => (
+															<Badge
+																key={index}
+																variant="secondary"
+																className="cursor-pointer hover:bg-blue-200 transition-colors text-xs"
+																onClick={() => {
+																	handleInputChange({ target: { name: "hora", value: opcion.horaFormateada } });
+																}}
+															>
+																{opcion.horaFormateada} → {opcion.descuento}% dcto
+															</Badge>
+														))}
+													</div>
+												)}
+											</div>
+										</div>
+									</div>
+								)}
 
 								{/* Checkboxes Row with improved mobile wrapping */}
 								<div className="flex flex-col sm:flex-row gap-3 pt-2">
