@@ -613,11 +613,11 @@ export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
 				etiqueta: "Descuento",
 			});
 
-			opciones.push({
-				reservaReferencia: reservaContraria.codigoReserva || `#${reservaContraria.id}`,
-				origenReserva: reservaContraria.origen,
-				destinoReserva: reservaContraria.destino,
-				horaInicioReserva: reservaContraria.hora,
+			opcionesDisponibles.push({
+				reservaReferencia: reserva.codigoReserva || `#${reserva.id}`,
+				origenReserva: reserva.origen,
+				destinoReserva: reserva.destino,
+				horaInicioReserva: reserva.hora,
 				horaTerminoEstimada: horaTermino.toLocaleTimeString("es-CL", {
 					hour: "2-digit",
 					minute: "2-digit",
@@ -628,11 +628,11 @@ export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
 		}
 
 		return {
-			hayOportunidades: opciones.length > 0,
-			opciones: opciones,
+			hayOportunidades: opcionesDisponibles.length > 0,
+			opciones: opcionesDisponibles,
 			mensaje:
-				opciones.length > 0
-					? `${opciones.length} oportunidad(es) de retorno disponible(s)`
+				opcionesDisponibles.length > 0
+					? `${opcionesDisponibles.length} oportunidad(es) de retorno disponible(s)`
 					: "No hay oportunidades de retorno disponibles",
 		};
 	} catch (error) {
