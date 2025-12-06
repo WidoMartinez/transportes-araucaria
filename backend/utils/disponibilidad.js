@@ -532,13 +532,6 @@ export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
 					[Op.in]: ["confirmada", "pagado"],
 				},
 			},
-			include: [
-				{
-					model: Destino,
-					as: "destinoInfo",
-					required: false,
-				},
-			],
 		});
 
 		if (reservasContrarias.length === 0) {
