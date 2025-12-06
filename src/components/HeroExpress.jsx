@@ -73,6 +73,9 @@ function HeroExpress({
 	// Estado para alerta de descuento escalonado en reservas de retorno
 	const [descuentoEscalonadoInfo, setDescuentoEscalonadoInfo] = useState(null);
 	const [horaTerminoServicioActivo, setHoraTerminoServicioActivo] = useState(null);
+	// Estado para oportunidades de retorno universal (sin email)
+	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
+	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
 
 	useEffect(() => {
 		if (currentStep === 1) {
@@ -166,6 +169,58 @@ function HeroExpress({
 		return { title: "Transporte Privado", subtitle: "Conecta con Pucón, Villarrica y toda la región." };
 	}, [targetName, currentStep, formData.destino, formData.origen]);
 
+	// Buscar retornos disponibles universalmente (sin email)
+	const buscarRetornosUniversal = async () => {
+		// Solo buscar si tenemos origen, destino y fecha
+		if (!formData.origen || !formData.destino || !formData.fecha) {
+			setOportunidadesRetornoUniversal(null);
+			return;
+		}
+
+		// No buscar si es "Otro" en origen o destino
+		if (formData.origen === "Otro" || formData.destino === "Otro") {
+			setOportunidadesRetornoUniversal(null);
+			return;
+		}
+
+		setBuscandoRetornos(true);
+		try {
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const response = await fetch(
+				`${apiUrl}/api/disponibilidad/buscar-retornos-disponibles`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						origen: formData.origen,
+						destino: formData.destino,
+						fecha: formData.fecha,
+					}),
+				}
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				if (data.hayOportunidades && data.opciones?.length > 0) {
+					setOportunidadesRetornoUniversal(data);
+				} else {
+					setOportunidadesRetornoUniversal(null);
+				}
+			} else {
+				setOportunidadesRetornoUniversal(null);
+			}
+		} catch (error) {
+			console.error("Error buscando retornos universales:", error);
+			setOportunidadesRetornoUniversal(null);
+		} finally {
+			setBuscandoRetornos(false);
+		}
+	};
+
+	// useEffect para buscar retornos cuando cambia origen, destino o fecha
+	useEffect(() => {
+		buscarRetornosUniversal();
+	}, [formData.origen, formData.destino, formData.fecha]);
 
 	const verificarReservaActiva = async (email) => {
 		if (!email || !email.trim()) {
@@ -571,6 +626,59 @@ function HeroExpress({
 										</select>
 									</div>
 								</div>
+
+								{/* Alerta de oportunidades de retorno universal (sin email) */}
+								{oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones?.length > 0 && (
+									<div className="rounded-xl p-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-400/50 shadow-sm mt-4">
+										<div className="flex items-start gap-3">
+											<div className="p-2 rounded-full bg-emerald-500/10 text-emerald-500">
+												<Sparkles className="h-5 w-5" />
+											</div>
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center gap-2 flex-wrap">
+													<h4 className="font-bold text-emerald-700">
+														¡Aprovecha el Retorno Disponible!
+													</h4>
+													<Badge className="bg-emerald-500 text-white font-bold">
+														Hasta -50%
+													</Badge>
+												</div>
+												<p className="text-sm text-emerald-700 mt-1">
+													Hay {oportunidadesRetornoUniversal.opciones.length} vehículo(s) regresando. 
+													Selecciona un horario con descuento:
+												</p>
+												
+												{/* Mostrar opciones de horario */}
+												<div className="mt-3 grid grid-cols-3 gap-2">
+													{oportunidadesRetornoUniversal.opciones[0]?.opcionesRetorno.map((opcion, index) => (
+														<button
+															key={index}
+															type="button"
+															onClick={() => {
+																handleInputChange({ target: { name: "hora", value: opcion.hora } });
+															}}
+															className="p-2 rounded-lg border border-emerald-400/30 bg-white hover:bg-emerald-50 text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer"
+														>
+															<div className="font-bold text-sm text-emerald-700">
+																{opcion.hora}
+															</div>
+															<Badge variant="secondary" className="text-xs mt-1 bg-emerald-100 text-emerald-700">
+																-{opcion.descuento}%
+															</Badge>
+														</button>
+													))}
+												</div>
+												
+												<div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+													<Info className="h-3 w-3" />
+													<span>
+														Vehículo termina servicio ~{oportunidadesRetornoUniversal.opciones[0]?.horaTerminoEstimada}
+													</span>
+												</div>
+											</div>
+										</div>
+									</div>
+								)}
 
 								{/* Alerta de descuento escalonado por retorno */}
 								{descuentoEscalonadoInfo && reservaActiva && (
