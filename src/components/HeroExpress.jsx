@@ -591,40 +591,57 @@ function HeroExpress({
 									/>
 								)}
 
-								{/* Mensaje informativo cuando hay reserva activa y es viaje de retorno */}
-								{reservaActiva && !descuentoEscalonadoInfo && formData.origen === reservaActiva.destino && formData.destino === reservaActiva.origen && formData.fecha === reservaActiva.fecha && (
-									<div className="rounded-xl p-4 bg-blue-500/10 border border-blue-400/30">
-										<div className="flex items-start gap-3">
-											<Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
-											<div>
-												<h4 className="font-semibold text-blue-700 text-sm">
-													¡Viaje de retorno detectado!
-												</h4>
-												<p className="text-xs text-blue-600 mt-1">
-													Selecciona una hora cercana al término de tu viaje de ida 
-													(aproximadamente {horaTerminoServicioActivo?.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}) 
-													para obtener descuentos de hasta 50%.
-												</p>
-												{horaTerminoServicioActivo && (
-													<div className="mt-2 flex flex-wrap gap-2">
-														{generarOpcionesDescuento(horaTerminoServicioActivo).map((opcion, index) => (
-															<Badge
-																key={index}
-																variant="secondary"
-																className="cursor-pointer hover:bg-blue-200 transition-colors text-xs"
-																onClick={() => {
-																	handleInputChange({ target: { name: "hora", value: opcion.horaFormateada } });
-																}}
-															>
-																{opcion.horaFormateada} → {opcion.descuento}% dcto
-															</Badge>
-														))}
-													</div>
-												)}
+								{/* Mensaje informativo cuando hay reserva activa y es viaje de retorno sin descuento aún calculado */}
+								{(() => {
+									// Extraer la lógica de detección de viaje de retorno para mejor legibilidad
+									const esViajeRetornoSinDescuento = reservaActiva && 
+										!descuentoEscalonadoInfo && 
+										formData.origen === reservaActiva.destino && 
+										formData.destino === reservaActiva.origen && 
+										formData.fecha === reservaActiva.fecha;
+									
+									if (!esViajeRetornoSinDescuento) return null;
+									
+									// Formatear hora de término del servicio
+									const horaTerminoFormateada = horaTerminoServicioActivo?.toLocaleTimeString("es-CL", { 
+										hour: "2-digit", 
+										minute: "2-digit" 
+									});
+									
+									return (
+										<div className="rounded-xl p-4 bg-blue-500/10 border border-blue-400/30">
+											<div className="flex items-start gap-3">
+												<Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
+												<div>
+													<h4 className="font-semibold text-blue-700 text-sm">
+														¡Viaje de retorno detectado!
+													</h4>
+													<p className="text-xs text-blue-600 mt-1">
+														Selecciona una hora cercana al término de tu viaje de ida 
+														(aproximadamente {horaTerminoFormateada}) 
+														para obtener descuentos de hasta 50%.
+													</p>
+													{horaTerminoServicioActivo && (
+														<div className="mt-2 flex flex-wrap gap-2">
+															{generarOpcionesDescuento(horaTerminoServicioActivo).map((opcion, index) => (
+																<Badge
+																	key={index}
+																	variant="secondary"
+																	className="cursor-pointer hover:bg-blue-200 transition-colors text-xs"
+																	onClick={() => {
+																		handleInputChange({ target: { name: "hora", value: opcion.horaFormateada } });
+																	}}
+																>
+																	{opcion.horaFormateada} → {opcion.descuento}% dcto
+																</Badge>
+															))}
+														</div>
+													)}
+												</div>
 											</div>
 										</div>
-									</div>
-								)}
+									);
+								})()}
 
 								{/* Checkboxes Row with improved mobile wrapping */}
 								<div className="flex flex-col sm:flex-row gap-3 pt-2">

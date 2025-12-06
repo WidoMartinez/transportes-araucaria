@@ -23,6 +23,7 @@ export const calcularDescuentoEscalonado = (horaTerminoServicio, horaRetorno) =>
 	const diferenciaMinutos = Math.round(diferenciaMs / (1000 * 60));
 
 	// La holgura mínima es de 30 minutos para que aplique el descuento
+	// Rechazar si es menor a 30 minutos (el retorno sería muy pronto)
 	if (diferenciaMinutos < 30) {
 		return {
 			porcentajeDescuento: 0,
@@ -33,8 +34,12 @@ export const calcularDescuentoEscalonado = (horaTerminoServicio, horaRetorno) =>
 		};
 	}
 
-	// Descuentos escalonados según especificaciones del issue
-	if (diferenciaMinutos <= 30) {
+	// Descuentos escalonados según especificaciones del issue:
+	// - 30 min exactos → 50% descuento
+	// - 31-45 min → 30% descuento
+	// - 46-60 min → 20% descuento
+	// - >60 min → sin descuento
+	if (diferenciaMinutos === 30) {
 		return {
 			porcentajeDescuento: 50,
 			mensaje: "¡Descuento máximo! Aprovecha el retorno inmediato",

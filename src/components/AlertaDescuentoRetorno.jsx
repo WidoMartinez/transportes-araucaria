@@ -4,10 +4,7 @@ import React, { useMemo } from "react";
 import { Badge } from "./ui/badge";
 import { Sparkles, Clock, TrendingDown, AlertCircle, Gift } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-generarOpcionesDescuento, 
-getColorScheme 
-} from "../utils/descuentoRetorno";
+import { generarOpcionesDescuento, getColorScheme } from "../utils/descuentoRetorno";
 
 /**
  * Componente visual para mostrar la alerta de descuento por retorno
