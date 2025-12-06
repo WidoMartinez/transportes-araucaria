@@ -430,9 +430,9 @@ function HeroExpress({
 					alt={`Imagen del destino ${formData.destino || 'seleccionado'}`}
 					loading="eager"
 					decoding="async"
-					className="w-full h-full object-cover opacity-60 will-change-transform"
+					className="w-full h-full object-cover opacity-70 will-change-transform"
 				/>
-				<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
+				<div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-primary/20" />
 				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom">
 					<motion.div
 						key={richInfo.title}
@@ -440,21 +440,21 @@ function HeroExpress({
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3 }}
 					>
-						<h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight drop-shadow-md">
+						<h1 className="text-xl sm:text-2xl font-bold text-white leading-tight drop-shadow-lg">
 							{richInfo.isRich ? richInfo.titulo : richInfo.title}
 						</h1>
-						<p className="text-sm text-muted-foreground font-medium drop-shadow-sm mb-2 line-clamp-2">
+						<p className="text-sm text-white/90 font-medium drop-shadow-md mb-2 line-clamp-2">
 							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 						</p>
 
 						{/* Mobile Summary Pill - Tamaño táctil mejorado */}
 						{richInfo.isRich && (
 							<div className="flex flex-wrap gap-2 mt-2">
-								<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 border-primary/20">
+								<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
 									<Plane className="w-3 h-3" /> {richInfo.distancia}
 								</Badge>
 								{richInfo.tiempo && (
-									<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 border-primary/20">
+									<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
 										<Clock className="w-3 h-3" /> {richInfo.tiempo}
 									</Badge>
 								)}
