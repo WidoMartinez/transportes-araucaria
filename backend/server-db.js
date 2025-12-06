@@ -5658,6 +5658,37 @@ app.post("/api/disponibilidad/oportunidades-retorno", async (req, res) => {
 	}
 });
 
+// Buscar retornos disponibles (público, para formulario de reserva - NUEVO)
+// No requiere email ni hora, busca todas las reservas con retornos disponibles
+app.post("/api/disponibilidad/buscar-retornos-disponibles", async (req, res) => {
+	try {
+		const { origen, destino, fecha } = req.body;
+
+		if (!origen || !destino || !fecha) {
+			return res.status(400).json({
+				error: "Origen, destino y fecha son requeridos",
+			});
+		}
+
+		// Importar la función dinámicamente
+		const { buscarRetornosDisponibles } = await import("./utils/disponibilidad.js");
+
+		const resultado = await buscarRetornosDisponibles({
+			origen,
+			destino,
+			fecha,
+		});
+
+		res.json(resultado);
+	} catch (error) {
+		console.error("Error buscando retornos disponibles:", error);
+		res.status(500).json({
+			error: "Error interno del servidor",
+			mensaje: error.message,
+		});
+	}
+});
+
 // Validar horario mínimo (público, para formulario de reserva)
 app.post("/api/disponibilidad/validar-horario", async (req, res) => {
 	try {

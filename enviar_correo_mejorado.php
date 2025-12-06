@@ -224,7 +224,7 @@ if ($action === 'send_discount_offer') {
 }
 
 // 2. Si es 'notify_admin_only' o 'normal', enviamos al admin primero
-];
+
 
 // Intentar guardar la reserva ANTES de enviar el correo
 $reservaGuardada = false;

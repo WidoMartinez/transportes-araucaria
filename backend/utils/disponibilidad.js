@@ -510,3 +510,143 @@ export const validarHorarioMinimo = async ({
 		};
 	}
 };
+
+/**
+ * Busca retornos disponibles para cualquier cliente (sin requerir email)
+ * Genera opciones de horario con descuentos escalonados
+ * @param {string} origen - Origen del viaje solicitado
+ * @param {string} destino - Destino del viaje solicitado
+ * @param {Date} fecha - Fecha del viaje solicitado
+ * @returns {Object} { hayOportunidades: boolean, opciones: Array }
+ */
+export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
+	try {
+		// Buscar reservas confirmadas que vayan en sentido contrario
+		// (del destino solicitado al origen solicitado)
+		const reservasContrarias = await Reserva.findAll({
+			where: {
+				fecha: fecha,
+				origen: destino, // Invertido: origen de la solicitud es destino de reserva existente
+				destino: origen, // Invertido: destino de la solicitud es origen de reserva existente
+				estado: {
+					[Op.in]: ["confirmada", "pagado"],
+				},
+			},
+			include: [
+				{
+					model: Destino,
+					as: "destinoInfo",
+					required: false,
+				},
+			],
+		});
+
+		if (reservasContrarias.length === 0) {
+			return {
+				hayOportunidades: false,
+				opciones: [],
+				mensaje: "No hay viajes disponibles para optimizar",
+			};
+		}
+
+		// Obtener información de destinos
+		const destinosMap = {};
+		const destinos = await Destino.findAll();
+		destinos.forEach((d) => {
+			destinosMap[d.nombre] = {
+				duracionIda: d.duracionIdaMinutos || 90,
+				duracionVuelta: d.duracionVueltaMinutos || 90,
+			};
+		});
+
+		const opciones = [];
+
+		for (const reservaContraria of reservasContrarias) {
+			if (!reservaContraria.hora) continue;
+
+			const destinoInfo = destinosMap[reservaContraria.destino] || {
+				duracionIda: 90,
+				duracionVuelta: 90,
+			};
+
+			// Calcular hora de término del servicio de ida
+			const inicioReserva = combinarFechaHora(
+				reservaContraria.fecha,
+				reservaContraria.hora
+			);
+			const duracionReserva = destinoInfo.duracionIda;
+			const horaTermino = new Date(
+				inicioReserva.getTime() + duracionReserva * 60000
+			);
+
+			// Generar opciones de retorno con descuentos escalonados
+			const opcionesRetorno = [];
+
+			// Opción 1: 30 minutos después (50% descuento)
+			const hora30min = new Date(horaTermino.getTime() + 30 * 60000);
+			opcionesRetorno.push({
+				hora: hora30min.toLocaleTimeString("es-CL", {
+					hour: "2-digit",
+					minute: "2-digit",
+					hour12: false,
+				}),
+				descuento: 50,
+				etiqueta: "Mejor precio",
+			});
+
+			// Opción 2: 45 minutos después (30% descuento)
+			const hora45min = new Date(horaTermino.getTime() + 45 * 60000);
+			opcionesRetorno.push({
+				hora: hora45min.toLocaleTimeString("es-CL", {
+					hour: "2-digit",
+					minute: "2-digit",
+					hour12: false,
+				}),
+				descuento: 30,
+				etiqueta: "Buen precio",
+			});
+
+			// Opción 3: 60 minutos después (20% descuento)
+			const hora60min = new Date(horaTermino.getTime() + 60 * 60000);
+			opcionesRetorno.push({
+				hora: hora60min.toLocaleTimeString("es-CL", {
+					hour: "2-digit",
+					minute: "2-digit",
+					hour12: false,
+				}),
+				descuento: 20,
+				etiqueta: "Descuento",
+			});
+
+			opciones.push({
+				reservaReferencia: reservaContraria.codigoReserva || `#${reservaContraria.id}`,
+				origenReserva: reservaContraria.origen,
+				destinoReserva: reservaContraria.destino,
+				horaInicioReserva: reservaContraria.hora,
+				horaTerminoEstimada: horaTermino.toLocaleTimeString("es-CL", {
+					hour: "2-digit",
+					minute: "2-digit",
+					hour12: false,
+				}),
+				opcionesRetorno: opcionesRetorno,
+			});
+		}
+
+		return {
+			hayOportunidades: opciones.length > 0,
+			opciones: opciones,
+			mensaje:
+				opciones.length > 0
+					? `${opciones.length} oportunidad(es) de retorno disponible(s)`
+					: "No hay oportunidades de retorno disponibles",
+		};
+	} catch (error) {
+		console.error("Error buscando retornos disponibles:", error);
+		return {
+			hayOportunidades: false,
+			opciones: [],
+			mensaje: "Error buscando retornos disponibles",
+			error: error.message,
+		};
+	}
+};
