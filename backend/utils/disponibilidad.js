@@ -520,56 +520,58 @@ export const validarHorarioMinimo = async ({
  * @returns {Object} { hayOportunidades: boolean, opciones: Array }
  */
 export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
+	console.log("🔍 Buscando retornos:", { origen, destino, fecha });
 	try {
+		// Obtener información del destino (que es el origen de la solicitud actual)
+		// para saber la duración del viaje original
+		let destinoInfo = null;
+		try {
+			destinoInfo = await Destino.findOne({
+				where: { nombre: origen },
+			});
+		} catch (err) {
+			console.warn("⚠️ No se pudo obtener info destino:", err.message);
+		}
+
 		// Buscar reservas confirmadas que vayan en sentido contrario
-		// (del destino solicitado al origen solicitado)
 		const reservasContrarias = await Reserva.findAll({
 			where: {
 				fecha: fecha,
-				origen: destino, // Invertido: origen de la solicitud es destino de reserva existente
-				destino: origen, // Invertido: destino de la solicitud es origen de reserva existente
+				origen: destino, 
+				destino: origen, 
 				estado: {
 					[Op.in]: ["confirmada", "pagado"],
 				},
 			},
 		});
 
-		if (reservasContrarias.length === 0) {
-			return {
-				hayOportunidades: false,
-				opciones: [],
-				mensaje: "No hay viajes disponibles para optimizar",
-			};
+		console.log(`📊 Encontradas ${reservasContrarias?.length || 0} reservas potenciales`);
+		if (!reservasContrarias || reservasContrarias.length === 0) {
+			return { hayOportunidades: false, opciones: [] };
 		}
 
-		// Obtener información de destinos
-		const destinosMap = {};
-		const destinos = await Destino.findAll();
-		destinos.forEach((d) => {
-			destinosMap[d.nombre] = {
-				duracionIda: d.duracionIdaMinutos || 90,
-				duracionVuelta: d.duracionVueltaMinutos || 90,
-			};
-		});
+		console.log(
+			`Found ${reservasContrarias.length} potential return opportunities`
+		);
 
-		const opciones = [];
+		const opcionesDisponibles = [];
+		const ahora = new Date();
 
-		for (const reservaContraria of reservasContrarias) {
-			if (!reservaContraria.hora) continue;
+		for (const reserva of reservasContrarias) {
+			// Calcular hora de término del servicio original
+			// Si no hay info de destino, usar default de 90 mins
+			const duracionMinutos = destinoInfo?.duracionIdaMinutos || 90;
 
-			const destinoInfo = destinosMap[reservaContraria.destino] || {
-				duracionIda: 90,
-				duracionVuelta: 90,
-			};
+			// Parsear hora de inicio reserva
+			if (!reserva.hora) continue;
 
-			// Calcular hora de término del servicio de ida
-			const inicioReserva = combinarFechaHora(
-				reservaContraria.fecha,
-				reservaContraria.hora
-			);
-			const duracionReserva = destinoInfo.duracionIda;
+			const [horas, minutos] = reserva.hora.split(":").map(Number);
+			const fechaHoraInicio = new Date(`${reserva.fecha}T00:00:00`);
+			fechaHoraInicio.setHours(horas, minutos, 0, 0);
+
+			// Hora término estimada = Inicio + Duración
 			const horaTermino = new Date(
-				inicioReserva.getTime() + duracionReserva * 60000
+				fechaHoraInicio.getTime() + duracionMinutos * 60 * 1000
 			);
 
 			// Generar opciones de retorno con descuentos escalonados
