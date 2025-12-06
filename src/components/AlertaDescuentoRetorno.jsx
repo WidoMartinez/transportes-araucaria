@@ -9,12 +9,18 @@ import { generarOpcionesDescuento, getColorScheme } from "../utils/descuentoReto
 /**
  * Componente visual para mostrar la alerta de descuento por retorno
  */
+import { Info } from "lucide-react";
+
+/**
+ * Componente visual para mostrar la alerta de descuento por retorno
+ */
 function AlertaDescuentoRetorno({
-descuentoInfo,
-horaTerminoServicio,
-precioOriginal,
-onSeleccionarHorario,
-mostrarOpciones = false
+	descuentoInfo,
+	horaTerminoServicio,
+	precioOriginal,
+	onSeleccionarHorario,
+	mostrarOpciones = false,
+	oportunidadesRetorno = null // Nueva prop para sistema universal
 }) {
 // Calcular opciones de descuento disponibles
 const opcionesDescuento = useMemo(() => {
@@ -35,7 +41,65 @@ return null;
 
 const colors = getColorScheme(descuentoInfo.porcentajeDescuento);
 
-return (
+	// Si hay oportunidades de retorno universales (nuevo sistema), mostrar esa alerta
+	if (oportunidadesRetorno && oportunidadesRetorno.opciones?.length > 0) {
+		const oportunidad = oportunidadesRetorno.opciones[0];
+		return (
+			<motion.div
+				initial={{ opacity: 0, y: -10 }}
+				animate={{ opacity: 1, y: 0 }}
+				className="rounded-xl p-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-400/50 shadow-sm mt-4"
+			>
+				<div className="flex items-start gap-3">
+					<div className="p-2 rounded-full bg-emerald-500/10 text-emerald-500">
+						<Sparkles className="h-5 w-5" />
+					</div>
+					<div className="flex-1 min-w-0">
+						<div className="flex items-center gap-2 flex-wrap">
+							<h4 className="font-bold text-emerald-700">
+								¡Aprovecha el Retorno Disponible!
+							</h4>
+							<Badge className="bg-emerald-500 text-white font-bold">
+								Hasta -50%
+							</Badge>
+						</div>
+						<p className="text-sm text-emerald-700 mt-1">
+							Hay {oportunidadesRetorno.opciones.length} vehículo(s) regresando. 
+							Selecciona un horario con descuento:
+						</p>
+						
+						{/* Mostrar opciones de horario */}
+						<div className="mt-3 grid grid-cols-3 gap-2">
+							{oportunidad.opcionesRetorno.map((opcion, index) => (
+								<button
+									key={index}
+									type="button"
+									onClick={() => onSeleccionarHorario?.(opcion.hora)}
+									className="p-2 rounded-lg border border-emerald-400/30 bg-white hover:bg-emerald-50 text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer"
+								>
+									<div className="font-bold text-sm text-emerald-700">
+										{opcion.hora}
+									</div>
+									<Badge variant="secondary" className="text-xs mt-1 bg-emerald-100 text-emerald-700">
+										-{opcion.descuento}%
+									</Badge>
+								</button>
+							))}
+						</div>
+						
+						<div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+							<Info className="h-3 w-3" />
+							<span>
+								Vehículo termina servicio ~{oportunidad.horaTerminoEstimada}
+							</span>
+						</div>
+					</div>
+				</div>
+			</motion.div>
+		);
+	}
+
+	return (
 <AnimatePresence>
 {descuentoInfo.aplica ? (
 <motion.div
