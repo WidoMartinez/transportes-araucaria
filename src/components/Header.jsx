@@ -111,8 +111,8 @@ function Header() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent",
         isScrolled
-          ? "bg-white/90 backdrop-blur-md shadow-sm border-gray-200/50 py-2"
-          : "bg-white/80 backdrop-blur-sm py-4"
+          ? "bg-white/90 backdrop-blur-md shadow-sm border-gray-200/50 py-1 md:py-2"
+          : "bg-white/80 backdrop-blur-sm py-2 md:py-4"
       )}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -128,7 +128,7 @@ function Header() {
               alt="Transportes Araucaria"
               className={cn(
                 "transition-all duration-300 object-contain",
-                isScrolled ? "h-16" : "h-24 md:h-28"
+                isScrolled ? "h-12 md:h-16" : "h-14 md:h-20 lg:h-24"
               )}
               layout
             />
