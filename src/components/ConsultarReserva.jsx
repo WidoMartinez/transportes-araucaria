@@ -100,7 +100,9 @@ function ConsultarReserva() {
 					amount: monto,
 					description,
 					email: reserva.email,
-					reservationId: reserva.id,
+					reservaId: reserva.id,
+				codigoReserva: reserva.codigoReserva,
+				tipoPago: tipo,
 				}),
 			});
 			if (!resp.ok) {
