@@ -60,6 +60,7 @@ function HeroExpress({
 	validandoCodigo,
 	onAplicarCodigo,
 	onRemoverCodigo,
+	oportunidadesRetornoUniversal, // Recibido desde App.jsx
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
@@ -73,9 +74,7 @@ function HeroExpress({
 	// Estado para alerta de descuento escalonado en reservas de retorno
 	const [descuentoEscalonadoInfo, setDescuentoEscalonadoInfo] = useState(null);
 	const [horaTerminoServicioActivo, setHoraTerminoServicioActivo] = useState(null);
-	// Estado para oportunidades de retorno universal (sin email)
-	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
-	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
+	// Estado optimizado
 
 	useEffect(() => {
 		if (currentStep === 1) {
@@ -169,58 +168,8 @@ function HeroExpress({
 		return { title: "Transporte Privado", subtitle: "Conecta con Pucón, Villarrica y toda la región." };
 	}, [targetName, currentStep, formData.destino, formData.origen]);
 
-	// Buscar retornos disponibles universalmente (sin email)
-	const buscarRetornosUniversal = async () => {
-		// Solo buscar si tenemos origen, destino y fecha
-		if (!formData.origen || !formData.destino || !formData.fecha) {
-			setOportunidadesRetornoUniversal(null);
-			return;
-		}
+	// Lógica de retornos universales movida a App.jsx para centralizar precios
 
-		// No buscar si es "Otro" en origen o destino
-		if (formData.origen === "Otro" || formData.destino === "Otro") {
-			setOportunidadesRetornoUniversal(null);
-			return;
-		}
-
-		setBuscandoRetornos(true);
-		try {
-			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
-			const response = await fetch(
-				`${apiUrl}/api/disponibilidad/buscar-retornos-disponibles`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						origen: formData.origen,
-						destino: formData.destino,
-						fecha: formData.fecha,
-					}),
-				}
-			);
-
-			if (response.ok) {
-				const data = await response.json();
-				if (data.hayOportunidades && data.opciones?.length > 0) {
-					setOportunidadesRetornoUniversal(data);
-				} else {
-					setOportunidadesRetornoUniversal(null);
-				}
-			} else {
-				setOportunidadesRetornoUniversal(null);
-			}
-		} catch (error) {
-			console.error("Error buscando retornos universales:", error);
-			setOportunidadesRetornoUniversal(null);
-		} finally {
-			setBuscandoRetornos(false);
-		}
-	};
-
-	// useEffect para buscar retornos cuando cambia origen, destino o fecha
-	useEffect(() => {
-		buscarRetornosUniversal();
-	}, [formData.origen, formData.destino, formData.fecha]);
 
 	const verificarReservaActiva = async (email) => {
 		if (!email || !email.trim()) {

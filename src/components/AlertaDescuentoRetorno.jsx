@@ -2,14 +2,9 @@
 // Componente para mostrar alertas de descuentos escalonados en reservas de retorno
 import React, { useMemo } from "react";
 import { Badge } from "./ui/badge";
-import { Sparkles, Clock, TrendingDown, AlertCircle, Gift } from "lucide-react";
+import { Sparkles, Clock, TrendingDown, AlertCircle, Gift, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { generarOpcionesDescuento, getColorScheme } from "../utils/descuentoRetorno";
-
-/**
- * Componente visual para mostrar la alerta de descuento por retorno
- */
-import { Info } from "lucide-react";
 
 /**
  * Componente visual para mostrar la alerta de descuento por retorno
@@ -22,26 +17,7 @@ function AlertaDescuentoRetorno({
 	mostrarOpciones = false,
 	oportunidadesRetorno = null // Nueva prop para sistema universal
 }) {
-// Calcular opciones de descuento disponibles
-const opcionesDescuento = useMemo(() => {
-if (!horaTerminoServicio) return [];
-return generarOpcionesDescuento(horaTerminoServicio);
-}, [horaTerminoServicio]);
-
-// Calcular ahorro potencial
-const ahorroPotencial = useMemo(() => {
-if (!precioOriginal || !descuentoInfo?.porcentajeDescuento) return 0;
-return Math.round(precioOriginal * (descuentoInfo.porcentajeDescuento / 100));
-}, [precioOriginal, descuentoInfo?.porcentajeDescuento]);
-
-// Si no hay información de descuento, no mostrar nada
-if (!descuentoInfo || !horaTerminoServicio) {
-return null;
-}
-
-const colors = getColorScheme(descuentoInfo.porcentajeDescuento);
-
-	// Si hay oportunidades de retorno universales (nuevo sistema), mostrar esa alerta
+	// 1. PRIORIDAD: Si hay oportunidades de retorno universales (nuevo sistema), mostrar esa alerta INMEDIATAMENTE
 	if (oportunidadesRetorno && oportunidadesRetorno.opciones?.length > 0) {
 		const oportunidad = oportunidadesRetorno.opciones[0];
 		return (
@@ -98,6 +74,28 @@ const colors = getColorScheme(descuentoInfo.porcentajeDescuento);
 			</motion.div>
 		);
 	}
+
+	// 2. LÓGICA ANTIGUA (Legacy): Si no hay sistema universal, intentar mostrar alerta antigua
+	
+	// Si no hay información de descuento antigua, no mostrar nada
+	if (!descuentoInfo || !horaTerminoServicio) {
+		return null;
+	}
+
+	// Calcular opciones de descuento disponibles (solo si aplica lógica antigua)
+	const opcionesDescuento = useMemo(() => {
+		if (!horaTerminoServicio) return [];
+		return generarOpcionesDescuento(horaTerminoServicio);
+	}, [horaTerminoServicio]);
+
+	// Calcular ahorro potencial
+	const ahorroPotencial = useMemo(() => {
+		if (!precioOriginal || !descuentoInfo?.porcentajeDescuento) return 0;
+		return Math.round(precioOriginal * (descuentoInfo.porcentajeDescuento / 100));
+	}, [precioOriginal, descuentoInfo?.porcentajeDescuento]);
+
+	const colors = getColorScheme(descuentoInfo.porcentajeDescuento);
+
 
 	return (
 <AnimatePresence>

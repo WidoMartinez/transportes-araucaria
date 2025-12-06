@@ -274,6 +274,59 @@ function App() {
 		precioFinal: null,
 		cargando: false,
 	});
+	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
+	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
+
+	// --- LÓGICA DE RETORNOS UNIVERSALES (CENTRALIZADA) ---
+	const buscarRetornosUniversal = async (origen, destino, fecha) => {
+		if (!origen || !destino || !fecha || origen === "Otro" || destino === "Otro") {
+			setOportunidadesRetornoUniversal(null);
+			return;
+		}
+
+		// Evitar búsquedas innecesarias si faltan datos
+		if (origen === "Aeropuerto La Araucanía" && !destino) return;
+		if (destino === "Aeropuerto La Araucanía" && !origen) return;
+
+		setBuscandoRetornos(true);
+		try {
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const response = await fetch(
+				`${apiUrl}/api/disponibilidad/buscar-retornos-disponibles`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ origen, destino, fecha }),
+				}
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				if (data.hayOportunidades && data.opciones?.length > 0) {
+					console.log("✅ [App.jsx] Oportunidades de retorno encontradas:", data.opciones.length);
+					setOportunidadesRetornoUniversal(data);
+				} else {
+					setOportunidadesRetornoUniversal(null);
+				}
+			} else {
+				setOportunidadesRetornoUniversal(null);
+			}
+		} catch (error) {
+			console.error("Error buscando retornos universales:", error);
+			setOportunidadesRetornoUniversal(null);
+		} finally {
+			setBuscandoRetornos(false);
+		}
+	};
+
+	// Efecto para buscar retornos cuando cambian los datos del formulario
+	useEffect(() => {
+		// Debounce pequeño para evitar muchas peticiones mientras se escribe/selecciona
+		const timer = setTimeout(() => {
+			buscarRetornosUniversal(formData.origen, formData.destino, formData.fecha);
+		}, 500);
+		return () => clearTimeout(timer);
+	}, [formData.origen, formData.destino, formData.fecha]);
 
 	// Sincronizar vista de Fletes cuando cambia el hash o el historial
 	useEffect(() => {
@@ -1151,7 +1204,26 @@ function App() {
 			? Math.round(precioBase * (roundTripDiscountRate || 0))
 			: 0;
 
-		// 4. DESCUENTO POR CÓDIGO
+		// 4. DESCUENTO POR RETORNO UNIVERSAL (Nuevo Sistema)
+		let descuentoRetornoUniversal = 0;
+		if (oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones?.length > 0) {
+			const horaSeleccionada = formData.hora;
+			if (horaSeleccionada) {
+				for (const oportunidad of oportunidadesRetornoUniversal.opciones) {
+					const opcionCoincidente = oportunidad.opcionesRetorno.find(
+						(opt) => opt.hora === horaSeleccionada
+					);
+
+					if (opcionCoincidente) {
+						descuentoRetornoUniversal = Math.round(precioBase * (opcionCoincidente.descuento / 100));
+						console.log(`🤑 [App.jsx] Descuento retorno universal aplicado: ${opcionCoincidente.descuento}% ($${descuentoRetornoUniversal})`);
+						break; 
+					}
+				}
+			}
+		}
+
+		// 5. DESCUENTO POR CÓDIGO
 		let descuentoCodigo = 0;
 		if (codigoAplicado) {
 			if (codigoAplicado.tipo === "porcentaje") {
@@ -1159,13 +1231,6 @@ function App() {
 			} else {
 				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
 			}
-			// console.log("🎟️ DEBUG CÓDIGO APLICADO:", {
-			// 	codigoAplicado,
-			// 	precioBase,
-			// 	descuentoCodigo,
-			// 	tipo: codigoAplicado.tipo,
-			// 	valor: codigoAplicado.valor,
-			// });
 		}
 
 		// Calcular descuento total
@@ -1174,7 +1239,8 @@ function App() {
 			descuentoPromocion +
 			descuentoRoundTrip +
 			descuentosPersonalizados +
-			descuentoCodigo;
+			descuentoCodigo +
+			descuentoRetornoUniversal;
 
 		// Aplicar límite del 75% al precio base
 		const descuentoMaximo = Math.round(precioBase * 0.75);
@@ -1245,7 +1311,9 @@ function App() {
 		personalizedDiscountRate,
 		formData.idaVuelta,
 		formData.sillaInfantil,
+		formData.hora,
 		codigoAplicado,
+		oportunidadesRetornoUniversal,
 	]);
 
 	const { descuentoOnline, totalConDescuento, abono, saldoPendiente } = pricing;
@@ -1780,6 +1848,7 @@ function App() {
 					codigoAplicado={codigoAplicado}
 					codigoError={codigoError}
 					validandoCodigo={validandoCodigo}
+					oportunidadesRetornoUniversal={oportunidadesRetornoUniversal}
 					onAplicarCodigo={validarCodigo}
 					onRemoverCodigo={removerCodigo}
 				/>
