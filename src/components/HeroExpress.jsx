@@ -12,6 +12,7 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
+import { useIsMobile } from "../hooks/use-mobile";
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
@@ -74,7 +75,8 @@ function HeroExpress({
 	// Estado para alerta de descuento escalonado en reservas de retorno
 	const [descuentoEscalonadoInfo, setDescuentoEscalonadoInfo] = useState(null);
 	const [horaTerminoServicioActivo, setHoraTerminoServicioActivo] = useState(null);
-	// Estado optimizado
+	// Hook para detectar si es dispositivo móvil
+	const isMobile = useIsMobile();
 
 	useEffect(() => {
 		if (currentStep === 1) {
@@ -421,35 +423,38 @@ function HeroExpress({
 	return (
 		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-background">
 
-			{/* Mobile Header (Visual) */}
-			<div className="lg:hidden relative h-[35vh] w-full overflow-hidden bg-primary">
+			{/* Mobile Header (Visual) - Optimizado para rendimiento móvil */}
+			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-primary">
 				<img
 					src={selectedDestinoImage}
-					alt="Destino"
-					className="w-full h-full object-cover opacity-60"
+					alt={`Imagen del destino ${formData.destino || 'seleccionado'}`}
+					loading="eager"
+					decoding="async"
+					className="w-full h-full object-cover opacity-60 will-change-transform"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
-				<div className="absolute bottom-16 left-4 right-4 z-10">
+				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom">
 					<motion.div
 						key={richInfo.title}
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.3 }}
 					>
-						<h1 className="text-2xl font-bold text-foreground leading-tight drop-shadow-md">
+						<h1 className="text-xl sm:text-2xl font-bold text-foreground leading-tight drop-shadow-md">
 							{richInfo.isRich ? richInfo.titulo : richInfo.title}
 						</h1>
-						<p className="text-sm text-muted-foreground font-medium drop-shadow-sm mb-2">
+						<p className="text-sm text-muted-foreground font-medium drop-shadow-sm mb-2 line-clamp-2">
 							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 						</p>
 
-						{/* Mobile Summary Pill */}
+						{/* Mobile Summary Pill - Tamaño táctil mejorado */}
 						{richInfo.isRich && (
 							<div className="flex flex-wrap gap-2 mt-2">
-								<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 h-6 flex items-center gap-1 border-primary/20">
+								<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 border-primary/20">
 									<Plane className="w-3 h-3" /> {richInfo.distancia}
 								</Badge>
 								{richInfo.tiempo && (
-									<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2 py-0.5 h-6 flex items-center gap-1 border-primary/20">
+									<Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 border-primary/20">
 										<Clock className="w-3 h-3" /> {richInfo.tiempo}
 									</Badge>
 								)}
@@ -459,8 +464,8 @@ function HeroExpress({
 				</div>
 			</div>
 
-			{/* Left Panel: Interaction (Form) */}
-			<div className="relative flex flex-col justify-start lg:justify-center px-6 py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 -mt-6 rounded-t-[2rem] lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none">
+			{/* Left Panel: Interaction (Form) - Padding optimizado para móvil */}
+			<div className="relative flex flex-col justify-start lg:justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 -mt-6 rounded-t-[2rem] lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none">
 
 				<AnimatePresence mode="wait">
 					{currentStep === 0 && (
@@ -470,7 +475,7 @@ function HeroExpress({
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: -20 }}
 							transition={{ duration: 0.3 }}
-							className="space-y-6 w-full max-w-lg mx-auto"
+							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto"
 						>
 							<div className="mb-6 hidden lg:block">
 								<h2 className="text-4xl font-bold tracking-tight text-foreground mb-2">
@@ -481,50 +486,65 @@ function HeroExpress({
 								</p>
 							</div>
 
-							<div className="space-y-4">
+							<div className="space-y-5 md:space-y-4">
+								{/* Selectores de origen y destino - Optimizados para móvil */}
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="origen" className="text-sm font-semibold text-foreground">Origen</Label>
+										<Label htmlFor="origen" className="text-base md:text-sm font-semibold text-foreground">Origen</Label>
 										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<MapPin className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 											<select
 												id="origen"
 												name="origen"
 												value={formData.origen}
 												onChange={handleInputChange}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+												aria-label="Seleccionar origen del viaje"
+												className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
 											>
 												{origenes.map((o) => (
 													<option key={o} value={o}>{o}</option>
 												))}
 											</select>
+											{/* Flecha personalizada para mejor visibilidad móvil */}
+											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
+												<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												</svg>
+											</div>
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="destino" className="text-sm font-semibold text-foreground">Destino</Label>
+										<Label htmlFor="destino" className="text-base md:text-sm font-semibold text-foreground">Destino</Label>
 										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<MapPin className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 											<select
 												id="destino"
 												name="destino"
 												value={formData.destino}
 												onChange={handleInputChange}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+												aria-label="Seleccionar destino del viaje"
+												className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
 											>
 												<option value="">Seleccionar...</option>
 												{destinos.map((d) => (
 													<option key={d} value={d}>{d}</option>
 												))}
 											</select>
+											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
+												<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												</svg>
+											</div>
 										</div>
 									</div>
 								</div>
 
+								{/* Fecha y Hora - Optimizados para móvil */}
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">Fecha</Label>
+										<Label htmlFor="fecha" className="text-base md:text-sm font-semibold text-foreground">Fecha</Label>
 										<div className="relative">
-											<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Calendar className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 											<input
 												id="fecha"
 												type="date"
@@ -532,40 +552,49 @@ function HeroExpress({
 												value={formData.fecha}
 												onChange={handleInputChange}
 												min={minDateTime}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+												aria-label="Seleccionar fecha del viaje"
+												className="w-full h-12 md:h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent touch-manipulation"
 											/>
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="hora" className="text-sm font-semibold text-foreground">Hora</Label>
+										<Label htmlFor="hora" className="text-base md:text-sm font-semibold text-foreground">Hora</Label>
 										<div className="relative">
-											<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Clock className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 											<select
 												id="hora"
 												name="hora"
 												value={formData.hora}
 												onChange={(e) => handleInputChange({ target: { name: "hora", value: e.target.value } })}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+												aria-label="Seleccionar hora del viaje"
+												className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
 											>
 												<option value="" disabled>Seleccionar...</option>
 												{timeOptions.map((t) => (
 													<option key={t.value} value={t.value}>{t.label}</option>
 												))}
 											</select>
+											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
+												<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+												</svg>
+											</div>
 										</div>
 									</div>
 								</div>
 
+								{/* Selector de pasajeros - Optimizado para móvil */}
 								<div className="space-y-2">
-									<Label htmlFor="pasajeros" className="text-sm font-semibold text-foreground">Pasajeros</Label>
+									<Label htmlFor="pasajeros" className="text-base md:text-sm font-semibold text-foreground">Pasajeros</Label>
 									<div className="relative">
-										<Users className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+										<Users className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 										<select
 											id="pasajeros"
 											name="pasajeros"
 											value={formData.pasajeros}
 											onChange={handleInputChange}
-											className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+											aria-label="Seleccionar número de pasajeros"
+											className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
 										>
 											{[...Array(maxPasajeros)].map((_, i) => (
 												<option key={i + 1} value={i + 1}>
@@ -573,6 +602,11 @@ function HeroExpress({
 												</option>
 											))}
 										</select>
+										<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
+											<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+											</svg>
+										</div>
 									</div>
 								</div>
 
@@ -657,35 +691,56 @@ function HeroExpress({
 									);
 								})()}
 
-								{/* Checkboxes Row with improved mobile wrapping */}
-								<div className="flex flex-col sm:flex-row gap-3 pt-2">
+								{/* Checkboxes Row - Optimizados para interacción táctil móvil */}
+								<div className="flex flex-col sm:flex-row gap-3 pt-3 md:pt-2">
 									<div
-										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.idaVuelta ? 'bg-muted border-primary' : 'border-border hover:bg-muted/50'}`}
+										className={`flex items-center space-x-3 p-4 md:p-3 rounded-xl md:rounded-lg border-2 transition-all cursor-pointer touch-manipulation min-h-[52px] ${formData.idaVuelta ? 'bg-muted border-primary shadow-sm' : 'border-border hover:bg-muted/50 active:bg-muted/70'}`}
 										onClick={() => {
 											const newValue = !formData.idaVuelta;
 											handleInputChange({ target: { name: "idaVuelta", value: newValue } });
 											if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
 											else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
 										}}
+										role="checkbox"
+										aria-checked={formData.idaVuelta}
+										tabIndex={0}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												const newValue = !formData.idaVuelta;
+												handleInputChange({ target: { name: "idaVuelta", value: newValue } });
+												if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
+												else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
+											}
+										}}
 									>
 										<Checkbox
 											id="idaVuelta"
 											checked={formData.idaVuelta}
-											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-5 md:size-4"
 										/>
-										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground">Necesito regreso</Label>
+										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground text-base md:text-sm">Necesito regreso</Label>
 									</div>
 
 									<div
-										className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${formData.sillaInfantil ? 'bg-muted border-primary' : 'border-border hover:bg-muted/50'}`}
+										className={`flex items-center space-x-3 p-4 md:p-3 rounded-xl md:rounded-lg border-2 transition-all cursor-pointer touch-manipulation min-h-[52px] ${formData.sillaInfantil ? 'bg-muted border-primary shadow-sm' : 'border-border hover:bg-muted/50 active:bg-muted/70'}`}
 										onClick={() => handleInputChange({ target: { name: "sillaInfantil", value: !formData.sillaInfantil } })}
+										role="checkbox"
+										aria-checked={formData.sillaInfantil}
+										tabIndex={0}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												handleInputChange({ target: { name: "sillaInfantil", value: !formData.sillaInfantil } });
+											}
+										}}
 									>
 										<Checkbox
 											id="sillaInfantil"
 											checked={formData.sillaInfantil}
-											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-5 md:size-4"
 										/>
-										<Label htmlFor="sillaInfantil" className="cursor-pointer font-medium text-foreground">Silla de niño</Label>
+										<Label htmlFor="sillaInfantil" className="cursor-pointer font-medium text-foreground text-base md:text-sm">Silla de niño</Label>
 									</div>
 								</div>
 
@@ -695,16 +750,17 @@ function HeroExpress({
 										animate={{ opacity: 1, height: "auto" }}
 										className="space-y-2 pt-2"
 									>
-										<Label className="text-sm font-semibold text-foreground">Fecha de Regreso</Label>
+										<Label className="text-base md:text-sm font-semibold text-foreground">Fecha de Regreso</Label>
 										<div className="relative">
-											<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+											<Calendar className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 											<input
 												type="date"
 												name="fechaRegreso"
 												value={formData.fechaRegreso}
 												onChange={handleInputChange}
 												min={formData.fecha || minDateTime}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+												aria-label="Seleccionar fecha de regreso"
+												className="w-full h-12 md:h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent touch-manipulation"
 											/>
 										</div>
 									</motion.div>
@@ -712,15 +768,17 @@ function HeroExpress({
 							</div>
 
 							{stepError && (
-								<div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center font-medium">
+								<div className="p-4 md:p-3 rounded-xl md:rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-base md:text-sm text-center font-medium">
 									{stepError}
 								</div>
 							)}
 
+							{/* Botón principal de reserva - Optimizado para móvil con área táctil grande */}
 							<Button
 								onClick={handleStepOneNext}
-								className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-95"
+								className="w-full h-14 md:h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-[0.98] touch-manipulation min-h-[56px]"
 								disabled={isSubmitting || verificandoDisponibilidad}
+								aria-label="Reservar ahora"
 							>
 								{verificandoDisponibilidad ? (
 									<LoaderCircle className="h-6 w-6 animate-spin" />
@@ -740,25 +798,33 @@ function HeroExpress({
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: 20 }}
 							transition={{ duration: 0.3 }}
-							className="space-y-6 w-full max-w-lg mx-auto"
+							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto"
 						>
-							<div className="flex items-center gap-4 mb-2">
-								<Button variant="ghost" size="icon" onClick={handleStepBack} className="rounded-full hover:bg-muted">
+							{/* Header del paso 2 con botón volver optimizado para táctil */}
+							<div className="flex items-center gap-3 md:gap-4 mb-2">
+								<Button 
+									variant="ghost" 
+									size="icon" 
+									onClick={handleStepBack} 
+									className="rounded-full hover:bg-muted active:bg-muted/80 min-w-[44px] min-h-[44px] touch-manipulation"
+									aria-label="Volver al paso anterior"
+								>
 									<ArrowLeft className="h-5 w-5" />
 								</Button>
 								<div>
-									<h2 className="text-2xl font-bold text-foreground">Detalles y Pago</h2>
+									<h2 className="text-xl md:text-2xl font-bold text-foreground">Detalles y Pago</h2>
 									<p className="text-sm text-muted-foreground">Completa tus datos para finalizar.</p>
 								</div>
 							</div>
 
+							{/* Resumen del viaje - Optimizado para lectura móvil */}
 							<div className="bg-muted/30 p-4 rounded-xl border border-border space-y-3">
 								<div className="flex justify-between items-start">
-									<div>
-										<p className="text-xs font-bold text-muted-foreground uppercase">Ruta</p>
-										<p className="font-semibold text-foreground text-sm md:text-base">
+									<div className="flex-1 min-w-0">
+										<p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Ruta</p>
+										<p className="font-semibold text-foreground text-sm md:text-base break-words">
 											{formData.origen === "Otro" ? formData.otroOrigen : formData.origen}
-											<span className="mx-2 text-muted-foreground">→</span>
+											<span className="mx-1 md:mx-2 text-muted-foreground">→</span>
 											{formData.destino === "Otro" ? formData.otroDestino : formData.destino}
 										</p>
 									</div>
@@ -789,72 +855,95 @@ function HeroExpress({
 
 							<div className="space-y-4">
 								<div className="space-y-2">
-									<Label htmlFor="nombre" className="font-semibold text-foreground">Nombre Completo</Label>
+									<Label htmlFor="nombre" className="font-semibold text-foreground text-base">Nombre Completo</Label>
 									<Input
 										id="nombre"
 										name="nombre"
+										type="text"
+										inputMode="text"
+										autoComplete="name"
 										value={formData.nombre}
 										onChange={handleInputChange}
 										placeholder="Tu nombre completo"
-										className="bg-muted/50 border-input h-11"
+										className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
 									/>
 								</div>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-2">
-										<Label htmlFor="email" className="font-semibold text-foreground">Email</Label>
+										<Label htmlFor="email" className="font-semibold text-foreground text-base">Email</Label>
 										<div className="relative">
 											<Input
 												id="email"
 												type="email"
+												inputMode="email"
+												autoComplete="email"
 												name="email"
 												value={formData.email}
 												onChange={handleInputChange}
 												onBlur={(e) => verificarReservaActiva(e.target.value)}
 												placeholder="tu@email.com"
-												className="bg-muted/50 border-input h-11"
+												className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
 											/>
-											{verificandoReserva && <span className="absolute right-3 top-3 text-xs text-muted-foreground">...</span>}
+											{verificandoReserva && <span className="absolute right-3 top-3.5 text-xs text-muted-foreground">...</span>}
 										</div>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="telefono" className="font-semibold text-foreground">Teléfono</Label>
+										<Label htmlFor="telefono" className="font-semibold text-foreground text-base">Teléfono</Label>
 										<Input
 											id="telefono"
 											name="telefono"
+											type="tel"
+											inputMode="tel"
+											autoComplete="tel"
 											value={formData.telefono}
 											onChange={handleInputChange}
 											placeholder="+56 9 1234 5678"
-											className={`bg-muted/50 border-input h-11 ${phoneError ? "border-destructive" : ""}`}
+											className={`bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation ${phoneError ? "border-destructive" : ""}`}
 										/>
-										{phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
+										{phoneError && <p className="text-xs text-destructive mt-1">{phoneError}</p>}
 									</div>
 								</div>
 							</div>
 
-							<div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg border border-border">
+							{/* Checkbox de términos - Optimizado para área táctil móvil */}
+							<div 
+								className="flex items-start gap-3 p-4 md:p-3 bg-muted/30 rounded-xl md:rounded-lg border-2 border-border cursor-pointer touch-manipulation min-h-[52px] transition-colors hover:bg-muted/50 active:bg-muted/70"
+								onClick={() => setPaymentConsent(!paymentConsent)}
+								role="checkbox"
+								aria-checked={paymentConsent}
+								tabIndex={0}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.preventDefault();
+										setPaymentConsent(!paymentConsent);
+									}
+								}}
+							>
 								<Checkbox
 									id="terms"
 									checked={paymentConsent}
 									onCheckedChange={(c) => setPaymentConsent(!!c)}
-									className="mt-1 data-[state=checked]:bg-primary"
+									className="mt-0.5 data-[state=checked]:bg-primary size-5 md:size-4"
 								/>
-								<Label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+								<Label htmlFor="terms" className="text-sm md:text-sm text-muted-foreground leading-snug cursor-pointer select-none">
 									Acepto los <span className="underline font-medium text-foreground">términos y condiciones</span> y la política de privacidad.
 								</Label>
 							</div>
 
 							{stepError && (
-								<div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+								<div className="p-4 md:p-3 rounded-xl md:rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-base md:text-sm text-center">
 									{stepError}
 								</div>
 							)}
 
-							<div className="pt-2">
+							{/* Botones de pago - Optimizados para móvil */}
+							<div className="pt-2 space-y-3">
 								{mostrarPrecio && !requiereCotizacionManual ? (
 									<Button
 										onClick={() => handleProcesarPago("flow", "total")}
 										disabled={isSubmitting || !!loadingGateway}
-										className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2"
+										className="w-full h-14 md:h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] touch-manipulation min-h-[56px]"
+										aria-label={`Pagar ${formatCurrency(pricing.totalConDescuento)}`}
 									>
 										{loadingGateway ? <LoaderCircle className="animate-spin" /> : (
 											<>
@@ -867,13 +956,15 @@ function HeroExpress({
 									<Button
 										onClick={handleGuardarReserva}
 										disabled={isSubmitting}
-										className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg"
+										className="w-full h-14 md:h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-[0.98] touch-manipulation min-h-[56px]"
+										aria-label="Solicitar reserva"
 									>
 										{isSubmitting ? <LoaderCircle className="animate-spin" /> : "Solicitar Reserva"}
 									</Button>
 								)}
-								<p className="text-center text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1">
-									<ShieldCheck className="h-3 w-3" /> Pago 100% seguro vía Flow
+								{/* Indicador de seguridad - Visible y claro en móvil */}
+								<p className="text-center text-sm md:text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1.5">
+									<ShieldCheck className="h-4 w-4 md:h-3 md:w-3" /> Pago 100% seguro vía Flow
 								</p>
 							</div>
 						</motion.div>
@@ -888,6 +979,7 @@ function HeroExpress({
 						key={selectedDestinoImage}
 						src={selectedDestinoImage}
 						alt="Destino"
+						loading="lazy"
 						initial={{ opacity: 0, scale: 1.1 }}
 						animate={{ opacity: 0.6, scale: 1 }}
 						exit={{ opacity: 0 }}

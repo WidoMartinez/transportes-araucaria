@@ -120,6 +120,84 @@
 	}
 }
 
+/* ============================================
+   OPTIMIZACIONES MÓVILES - Módulo de Reservas
+   ============================================ */
+
+/* Mejora de interacciones táctiles para iOS/Android */
+.touch-manipulation {
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Prevenir zoom al enfocar inputs en iOS (mínimo 16px) */
+@media screen and (max-width: 767px) {
+	input[type="text"],
+	input[type="email"],
+	input[type="tel"],
+	input[type="date"],
+	select,
+	textarea {
+		font-size: 16px !important;
+	}
+}
+
+/* Mejora de rendimiento para animaciones */
+.will-change-transform {
+	will-change: transform;
+}
+
+/* Safe area para dispositivos con notch (iPhone X+) */
+.safe-area-inset-bottom {
+	padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Limitar líneas de texto en móvil */
+.line-clamp-2 {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Selectores nativos móviles - mejor interacción */
+@media screen and (max-width: 767px) {
+	select {
+		background-image: none;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+	}
+	
+	/* Mejorar espaciado táctil */
+	input[type="date"]::-webkit-calendar-picker-indicator {
+		padding: 8px;
+		cursor: pointer;
+	}
+}
+
+/* Animaciones suaves sin lag en móvil */
+@media (prefers-reduced-motion: no-preference) {
+	.transition-transform {
+		transition: transform 0.15s ease-out;
+	}
+}
+
+/* Reducir animaciones para usuarios que lo prefieran */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* ============================================
+   ANIMACIONES Y ESTILOS GENERALES
+   ============================================ */
+
 /* Animaciones */
 @keyframes fade-in-down {
 	from {
