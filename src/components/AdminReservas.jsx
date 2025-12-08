@@ -383,55 +383,6 @@ function AdminReservas() {
 	const [selectedReservas, setSelectedReservas] = useState([]);
 
 	// Función para exportar reservas seleccionadas a XLS
-	// Función para exportar todas las reservas (filtradas)
-	const exportarAExcel = useCallback(() => {
-		const columnasExportar = [
-			{ key: "id", label: "ID Reserva" },
-			{ key: "codigoReserva", label: "Código" },
-			{ key: "cliente", label: "Nombre" },
-			{ key: "email", label: "Correo" },
-			{ key: "telefono", label: "Teléfono" },
-			{ key: "rut", label: "RUT" },
-			{ key: "fecha", label: "Fecha" },
-			{ key: "hora", label: "Hora" },
-			{ key: "origen", label: "Origen" },
-			{ key: "destino", label: "Destino" },
-			{ key: "pasajeros", label: "Pasajeros" },
-			{ key: "totalConDescuento", label: "Total" },
-			{ key: "estado", label: "Estado" },
-			{ key: "estadoPago", label: "Estado Pago" },
-			{ key: "pagoMonto", label: "Monto Pagado" },
-			{ key: "saldoPendiente", label: "Saldo Pendiente" },
-		];
-
-		const headers = columnasExportar.map((c) => c.label);
-		const filas = reservasFiltradas.map((reserva) => {
-			return columnasExportar.map((col) => {
-				let val = reserva[col.key];
-				if (val === undefined || val === null) return "";
-				if (typeof val === "object") {
-					if (val.nombre) return String(val.nombre);
-					return String(val);
-				}
-				if (col.key === "fecha") {
-					try {
-						const d = new Date(val);
-						if (!isNaN(d)) return d.toLocaleDateString("es-CL");
-					} catch {
-						// ignore
-					}
-				}
-				return String(val);
-			});
-		});
-
-		const aoa = [headers, ...filas];
-		const ws = XLSX.utils.aoa_to_sheet(aoa);
-		const wb = XLSX.utils.book_new();
-		XLSX.utils.book_append_sheet(wb, ws, "Reservas");
-		XLSX.writeFile(wb, `reservas_${new Date().toISOString().split("T")[0]}.xlsx`);
-	}, [reservasFiltradas]);
-
 	const exportarSeleccionadosXLS = () => {
 		// Definir las columnas a exportar (etiquetas visibles en el Excel)
 		const columnasExportar = [
@@ -781,6 +732,79 @@ function AdminReservas() {
 		fetchEstadisticas();
 	}, [fetchReservas, fetchEstadisticas]);
 
+	// Filtrar reservas localmente por bÃºsqueda
+	const reservasFiltradas = useMemo(() => {
+		let filtered = reservas;
+
+		// Filtro de bÃºsqueda
+		if (searchTerm) {
+			const term = searchTerm.toLowerCase();
+			filtered = filtered.filter(
+				(r) =>
+					r.nombre?.toLowerCase().includes(term) ||
+					r.email?.toLowerCase().includes(term) ||
+					r.telefono?.toLowerCase().includes(term) ||
+					r.id?.toString().includes(term)
+			);
+		}
+
+		// Filtro de estado de pago
+		if (estadoPagoFiltro !== "todos") {
+			filtered = filtered.filter((r) => r.estadoPago === estadoPagoFiltro);
+		}
+
+		return filtered;
+	}, [reservas, searchTerm, estadoPagoFiltro]);
+
+	// Función para exportar todas las reservas (filtradas)
+	const exportarAExcel = useCallback(() => {
+		const columnasExportar = [
+			{ key: "id", label: "ID Reserva" },
+			{ key: "codigoReserva", label: "Código" },
+			{ key: "cliente", label: "Nombre" },
+			{ key: "email", label: "Correo" },
+			{ key: "telefono", label: "Teléfono" },
+			{ key: "rut", label: "RUT" },
+			{ key: "fecha", label: "Fecha" },
+			{ key: "hora", label: "Hora" },
+			{ key: "origen", label: "Origen" },
+			{ key: "destino", label: "Destino" },
+			{ key: "pasajeros", label: "Pasajeros" },
+			{ key: "totalConDescuento", label: "Total" },
+			{ key: "estado", label: "Estado" },
+			{ key: "estadoPago", label: "Estado Pago" },
+			{ key: "pagoMonto", label: "Monto Pagado" },
+			{ key: "saldoPendiente", label: "Saldo Pendiente" },
+		];
+
+		const headers = columnasExportar.map((c) => c.label);
+		const filas = reservasFiltradas.map((reserva) => {
+			return columnasExportar.map((col) => {
+				let val = reserva[col.key];
+				if (val === undefined || val === null) return "";
+				if (typeof val === "object") {
+					if (val.nombre) return String(val.nombre);
+					return String(val);
+				}
+				if (col.key === "fecha") {
+					try {
+						const d = new Date(val);
+						if (!isNaN(d)) return d.toLocaleDateString("es-CL");
+					} catch {
+						// ignore
+					}
+				}
+				return String(val);
+			});
+		});
+
+		const aoa = [headers, ...filas];
+		const ws = XLSX.utils.aoa_to_sheet(aoa);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Reservas");
+		XLSX.writeFile(wb, `reservas_${new Date().toISOString().split("T")[0]}.xlsx`);
+	}, [reservasFiltradas]);
+
 	// Atajos de teclado para mejorar la productividad
 	useEffect(() => {
 		const handleKeyDown = (e) => {
@@ -869,30 +893,6 @@ function AdminReservas() {
 		fetchEstadisticas,
 		exportarAExcel,
 	]);
-
-	// Filtrar reservas localmente por bÃºsqueda
-	const reservasFiltradas = useMemo(() => {
-		let filtered = reservas;
-
-		// Filtro de bÃºsqueda
-		if (searchTerm) {
-			const term = searchTerm.toLowerCase();
-			filtered = filtered.filter(
-				(r) =>
-					r.nombre?.toLowerCase().includes(term) ||
-					r.email?.toLowerCase().includes(term) ||
-					r.telefono?.toLowerCase().includes(term) ||
-					r.id?.toString().includes(term)
-			);
-		}
-
-		// Filtro de estado de pago
-		if (estadoPagoFiltro !== "todos") {
-			filtered = filtered.filter((r) => r.estadoPago === estadoPagoFiltro);
-		}
-
-		return filtered;
-	}, [reservas, searchTerm, estadoPagoFiltro]);
 
 	// Abrir modal de ediciÃ³n
 	const handleEdit = (reserva) => {
