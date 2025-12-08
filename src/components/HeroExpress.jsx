@@ -11,7 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { LoaderCircle, ArrowRight, ArrowLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
+import { LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
 import { useIsMobile } from "../hooks/use-mobile";
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
@@ -247,6 +247,14 @@ function HeroExpress({
 		setDescuentoEscalonadoInfo(descuento);
 
 	}, [reservaActiva, formData.hora, formData.fecha, formData.origen, formData.destino, horaTerminoServicioActivo]);
+
+	const handleSwap = () => {
+		if (formData.origen === "Aeropuerto La Araucanía") {
+			handleInputChange({ target: { name: "origen", value: formData.destino } });
+		} else {
+			handleInputChange({ target: { name: "destino", value: formData.origen } });
+		}
+	};
 
 	const verificarDisponibilidadYRetorno = async () => {
 		if (!formData.destino || !formData.fecha || !formData.hora) {
@@ -487,8 +495,8 @@ function HeroExpress({
 							</div>
 
 							<div className="space-y-5 md:space-y-4">
-								{/* Selectores de origen y destino - Optimizados para móvil */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								{/* Selectores de origen y destino - Con botón swap en desktop */}
+								<div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-3 md:items-end">
 									<div className="space-y-2">
 										<Label htmlFor="origen" className="text-base md:text-sm font-semibold text-foreground">Origen</Label>
 										<div className="relative">
@@ -499,7 +507,7 @@ function HeroExpress({
 												value={formData.origen}
 												onChange={handleInputChange}
 												aria-label="Seleccionar origen del viaje"
-												className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
+												className="w-full h-12 md:h-11 pl-10 pr-8 bg-gray-50 md:bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white appearance-none cursor-pointer touch-manipulation"
 											>
 												{origenes.map((o) => (
 													<option key={o} value={o}>{o}</option>
@@ -513,6 +521,21 @@ function HeroExpress({
 											</div>
 										</div>
 									</div>
+
+									{/* Swap Button - Hidden on mobile, visible on desktop */}
+									<div className="hidden md:flex items-end pb-1">
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											onClick={handleSwap}
+											className="rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 h-9 w-9 text-muted-foreground hover:text-primary transition-all"
+											title="Intercambiar Origen y Destino"
+										>
+											<ArrowRightLeft className="h-4 w-4" />
+										</Button>
+									</div>
+
 									<div className="space-y-2">
 										<Label htmlFor="destino" className="text-base md:text-sm font-semibold text-foreground">Destino</Label>
 										<div className="relative">
@@ -523,7 +546,7 @@ function HeroExpress({
 												value={formData.destino}
 												onChange={handleInputChange}
 												aria-label="Seleccionar destino del viaje"
-												className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
+												className="w-full h-12 md:h-11 pl-10 pr-8 bg-gray-50 md:bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white appearance-none cursor-pointer touch-manipulation"
 											>
 												<option value="">Seleccionar...</option>
 												{destinos.map((d) => (
@@ -553,7 +576,7 @@ function HeroExpress({
 												onChange={handleInputChange}
 												min={minDateTime}
 												aria-label="Seleccionar fecha del viaje"
-												className="w-full h-12 md:h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent touch-manipulation"
+												className="w-full h-12 md:h-11 pl-10 pr-4 bg-gray-50 md:bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white touch-manipulation"
 											/>
 										</div>
 									</div>
@@ -567,7 +590,7 @@ function HeroExpress({
 												value={formData.hora}
 												onChange={(e) => handleInputChange({ target: { name: "hora", value: e.target.value } })}
 												aria-label="Seleccionar hora del viaje"
-												className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
+												className="w-full h-12 md:h-11 pl-10 pr-8 bg-gray-50 md:bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white appearance-none cursor-pointer touch-manipulation"
 											>
 												<option value="" disabled>Seleccionar...</option>
 												{timeOptions.map((t) => (
@@ -594,7 +617,7 @@ function HeroExpress({
 											value={formData.pasajeros}
 											onChange={handleInputChange}
 											aria-label="Seleccionar número de pasajeros"
-											className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
+											className="w-full h-12 md:h-11 pl-10 pr-8 bg-gray-50 md:bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white appearance-none cursor-pointer touch-manipulation"
 										>
 											{[...Array(maxPasajeros)].map((_, i) => (
 												<option key={i + 1} value={i + 1}>
@@ -765,9 +788,7 @@ function HeroExpress({
 										</div>
 									</motion.div>
 								)}
-							</div>
-
-							{stepError && (
+							</div>							{stepError && (
 								<div className="p-4 md:p-3 rounded-xl md:rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-base md:text-sm text-center font-medium">
 									{stepError}
 								</div>
