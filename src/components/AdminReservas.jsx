@@ -2,7 +2,6 @@
 import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
 import { useAuth } from "../contexts/AuthContext";
-// import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch"; // No usado actualmente
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -94,7 +93,6 @@ const normalizeDestino = (value) =>
 function AdminReservas() {
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
-	// const { authenticatedFetch } = useAuthenticatedFetch(); // No usado actualmente
 
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -822,17 +820,6 @@ function AdminReservas() {
 			if ((e.ctrlKey || e.metaKey) && e.key === "e") {
 				e.preventDefault();
 				exportarAExcel();
-			}
-
-			// Escape: Cerrar diálogos abiertos
-			if (e.key === "Escape") {
-				setShowEditDialog(false);
-				setShowDetailDialog(false);
-				setShowNewDialog(false);
-				setShowAsignarDialog(false);
-				setShowHistorialDialog(false);
-				setShowKeyboardShortcuts(false);
-				setShowRegisterPayment(false);
 			}
 
 			// F o /: Focus en búsqueda
