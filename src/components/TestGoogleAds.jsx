@@ -23,7 +23,11 @@ import {
  * Este componente permite verificar que la etiqueta de conversión de Google Ads
  * se dispara correctamente sin necesidad de realizar pagos reales.
  * 
- * SOLO PARA DESARROLLO Y TESTING - No incluir en producción
+ * SOLO PARA DESARROLLO Y TESTING
+ * 
+ * Nota: Este componente está disponible en todas las builds para permitir verificación
+ * en staging/producción sin realizar pagos reales. El acceso puede controlarse mediante
+ * rutas protegidas o variables de entorno si se desea restricción adicional.
  */
 function TestGoogleAds() {
 	const [testToken, setTestToken] = useState("TEST_TOKEN_" + Date.now());
@@ -102,13 +106,18 @@ function TestGoogleAds() {
 		addLog(`🔄 Nuevo token generado: ${newToken}`, "info");
 	};
 
-	const copyToken = () => {
-		navigator.clipboard.writeText(testToken);
-		addLog(`📋 Token copiado al portapapeles: ${testToken}`, "success");
+	const copyToken = async () => {
+		try {
+			await navigator.clipboard.writeText(testToken);
+			addLog(`📋 Token copiado al portapapeles: ${testToken}`, "success");
+		} catch (error) {
+			addLog(`❌ Error al copiar: ${error.message}. Copia manualmente el token.`, "error");
+		}
 	};
 
 	const openFlowReturn = () => {
-		const url = `/flow-return?token=${testToken}`;
+		const encodedToken = encodeURIComponent(testToken);
+		const url = `/flow-return?token=${encodedToken}`;
 		addLog(`🔗 Abriendo FlowReturn con token: ${testToken}`, "info");
 		window.location.href = url;
 	};
