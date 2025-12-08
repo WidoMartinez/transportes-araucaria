@@ -152,24 +152,31 @@ function WizardReserva({ isOpen, onClose, onSuccess }) {
 		setPasoActual((prev) => Math.max(1, prev - 1));
 	};
 
+	// Constantes de configuración de precios (TODO: mover a configuración o backend)
+	const PRECIO_BASE = 30000;
+	const FACTOR_GRUPO_GRANDE = 1.5; // Pasajeros > 4
+	const FACTOR_IDA_VUELTA = 2;
+	const DESCUENTO_ROUND_TRIP_PCT = 0.1; // 10%
+	const DESCUENTO_ONLINE_PCT = 0.05; // 5%
+	
 	const calcularPrecio = () => {
 		// Precio base simplificado (en producción, esto vendría del backend)
-		let precio = 30000;
+		let precio = PRECIO_BASE;
 
 		// Ajuste por número de pasajeros
 		if (formData.pasajeros > 4) {
-			precio = precio * 1.5;
+			precio = precio * FACTOR_GRUPO_GRANDE;
 		}
 
-		// Descuento por ida y vuelta (10%)
+		// Descuento por ida y vuelta
 		let descuentoRoundTrip = 0;
 		if (formData.idaVuelta) {
-			precio = precio * 2;
-			descuentoRoundTrip = precio * 0.1;
+			precio = precio * FACTOR_IDA_VUELTA;
+			descuentoRoundTrip = precio * DESCUENTO_ROUND_TRIP_PCT;
 		}
 
-		// Descuento online (5%)
-		const descuentoOnline = precio * 0.05;
+		// Descuento online
+		const descuentoOnline = precio * DESCUENTO_ONLINE_PCT;
 
 		const total = precio - descuentoRoundTrip - descuentoOnline;
 

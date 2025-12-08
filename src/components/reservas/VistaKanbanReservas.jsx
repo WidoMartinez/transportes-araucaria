@@ -119,13 +119,21 @@ function VistaKanbanReservas({ reservas, onRecargar }) {
 				{columnas.map((columna) => {
 					const Icono = columna.icono;
 					const reservasColumna = reservasPorColumna[columna.id] || [];
+					
+					// Mapeo de colores para evitar generación dinámica de clases Tailwind
+					const iconoColorClasses = {
+						yellow: "text-yellow-600",
+						blue: "text-blue-600",
+						green: "text-green-600",
+						red: "text-red-600",
+					};
 
 					return (
 						<Card key={columna.id} className={columna.borderColor}>
 							<CardHeader className={`${columna.bgColor} border-b ${columna.borderColor}`}>
 								<CardTitle className="flex items-center justify-between">
 									<div className="flex items-center gap-2">
-										<Icono className={`h-5 w-5 text-${columna.color}-600`} />
+										<Icono className={`h-5 w-5 ${iconoColorClasses[columna.color]}`} />
 										<span className="text-lg">{columna.titulo}</span>
 									</div>
 									<Badge variant="secondary" className="font-bold">
