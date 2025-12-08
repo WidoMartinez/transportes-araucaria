@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useAuth } from "../contexts/AuthContext"; // Importar AuthContext
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -53,6 +54,7 @@ const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.
 
 function AdminConductores() {
 	const { authenticatedFetch } = useAuthenticatedFetch();
+	const { hasRole } = useAuth(); // Obtener hasRole para verificar permisos
 	const [conductores, setConductores] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
@@ -139,6 +141,15 @@ function AdminConductores() {
 			estado: "disponible",
 			observaciones: "",
 		});
+	};
+
+	// Verificar permisos de administrador
+	const requireAdmin = () => {
+		if (!hasRole(["admin", "superadmin"])) {
+			alert("Acceso denegado: Se requieren permisos de administrador");
+			return false;
+		}
+		return true;
 	};
 
 	const handleSave = async () => {
