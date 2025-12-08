@@ -159,7 +159,7 @@ function AdminReservas() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [totalReservas, setTotalReservas] = useState(0);
-	const itemsPerPage = 20;
+	const [itemsPerPage, setItemsPerPage] = useState(20);
 
 	// EstadÃ­sticas
 	const [estadisticas, setEstadisticas] = useState({
@@ -717,7 +717,7 @@ function AdminReservas() {
 		fetchReservas();
 		fetchEstadisticas();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta]);
+	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage]);
 
 	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
@@ -2400,9 +2400,32 @@ function AdminReservas() {
 
 					{/* PaginaciÃ³n */}
 					<div className="flex items-center justify-between mt-4">
-						<p className="text-sm text-muted-foreground">
+						<p className="text-sm text-muted-foreground mr-4">
 							Página {currentPage} de {totalPages}
 						</p>
+						<p className="text-sm text-muted-foreground mr-4">
+							Total: {totalReservas} registros
+						</p>
+						<div className="flex items-center gap-2 mr-4">
+							<span className="text-sm text-muted-foreground">Filas:</span>
+							<Select
+								value={String(itemsPerPage)}
+								onValueChange={(val) => {
+									setItemsPerPage(Number(val));
+									setCurrentPage(1);
+								}}
+							>
+								<SelectTrigger className="w-[80px] h-8">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="20">20</SelectItem>
+									<SelectItem value="50">50</SelectItem>
+									<SelectItem value="100">100</SelectItem>
+									<SelectItem value="-1">Todas</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 						<div className="flex gap-2">
 							<Button
 								variant="outline"

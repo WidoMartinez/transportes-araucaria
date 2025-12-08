@@ -3199,7 +3199,6 @@ app.get("/api/reservas", async (req, res) => {
 			fecha_desde,
 			fecha_hasta,
 		} = req.query;
-		const offset = (page - 1) * limit;
 
 		const whereClause = {};
 		if (estado) whereClause.estado = estado;
@@ -3209,11 +3208,10 @@ app.get("/api/reservas", async (req, res) => {
 			if (fecha_hasta) whereClause.fecha[Op.lte] = fecha_hasta;
 		}
 
-		const { count, rows: reservas } = await Reserva.findAndCountAll({
+		// Configurar opciones de consulta
+		const queryOptions = {
 			where: whereClause,
 			order: [["created_at", "DESC"]],
-			limit: parseInt(limit),
-			offset: parseInt(offset),
 			include: [
 				{
 					model: Cliente,
@@ -3229,15 +3227,28 @@ app.get("/api/reservas", async (req, res) => {
 					],
 				},
 			],
-		});
+		};
+
+		// Manejar paginación
+		const limitNum = parseInt(limit);
+		const pageNum = parseInt(page);
+		
+		// Solo aplicar límite y offset si limit > 0
+		// Si limit es -1, se devolverán todos los registros sin paginación
+		if (limitNum > 0) {
+			queryOptions.limit = limitNum;
+			queryOptions.offset = (pageNum - 1) * limitNum;
+		}
+
+		const { count, rows: reservas } = await Reserva.findAndCountAll(queryOptions);
 
 		res.json({
 			reservas,
 			pagination: {
 				total: count,
-				page: parseInt(page),
-				limit: parseInt(limit),
-				totalPages: Math.ceil(count / limit),
+				page: pageNum,
+				limit: limitNum,
+				totalPages: limitNum > 0 ? Math.ceil(count / limitNum) : 1,
 			},
 		});
 	} catch (error) {
