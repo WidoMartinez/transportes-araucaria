@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getBackendUrl } from "../../../lib/backend";
 import { useAuthenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 import {
@@ -44,22 +44,15 @@ import { es } from "date-fns/locale";
  * Drawer lateral para mostrar detalles completos de una reserva
  * Incluye información del cliente, viaje, vehículo, conductor, pagos, timeline y acciones
  */
-function DetallesReservaDrawer({ reserva, open, onClose, onUpdate }) {
+function DetallesReservaDrawer({ reserva, open, onClose }) {
 	const { authenticatedFetch } = useAuthenticatedFetch();
 
 	// Estados locales
 	const [timeline, setTimeline] = useState([]);
 	const [loadingTimeline, setLoadingTimeline] = useState(false);
 
-	// Cargar timeline cuando se abre el drawer
-	useEffect(() => {
-		if (open && reserva?.id) {
-			cargarTimeline();
-		}
-	}, [open, reserva?.id]);
-
 	// Cargar timeline de actividad
-	const cargarTimeline = async () => {
+	const cargarTimeline = useCallback(async () => {
 		if (!reserva?.id) return;
 
 		try {
@@ -76,7 +69,14 @@ function DetallesReservaDrawer({ reserva, open, onClose, onUpdate }) {
 		} finally {
 			setLoadingTimeline(false);
 		}
-	};
+	}, [authenticatedFetch, reserva?.id]);
+
+	// Cargar timeline cuando se abre el drawer
+	useEffect(() => {
+		if (open && reserva?.id) {
+			cargarTimeline();
+		}
+	}, [open, reserva?.id, cargarTimeline]);
 
 	// Formatear fecha
 	const formatearFecha = (fecha) => {

@@ -121,19 +121,6 @@ function DashboardMetricas({ metricas, alertas = [], onAlertaClick }) {
 		}
 	];
 
-	// Obtener clase de color para el badge
-	const getBadgeVariant = (color) => {
-		const variants = {
-			blue: "default",
-			green: "success",
-			orange: "warning",
-			red: "destructive",
-			purple: "secondary",
-			emerald: "success"
-		};
-		return variants[color] || "default";
-	};
-
 	// Obtener clase de color para el ícono
 	const getIconColor = (color) => {
 		const colors = {

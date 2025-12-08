@@ -48,7 +48,7 @@ function ReservaCard({ reserva, onClick, isDragging = false }) {
 				month: "short",
 				year: "numeric"
 			});
-		} catch (error) {
+		} catch {
 			return "Fecha inválida";
 		}
 	};
@@ -59,7 +59,7 @@ function ReservaCard({ reserva, onClick, isDragging = false }) {
 		try {
 			// Si viene como HH:MM:SS, tomar solo HH:MM
 			return hora.substring(0, 5);
-		} catch (error) {
+		} catch {
 			return hora;
 		}
 	};
@@ -91,7 +91,7 @@ function ReservaCard({ reserva, onClick, isDragging = false }) {
 			} else if (diferenciaDias <= 3) {
 				return "border-l-blue-500"; // Próximos días
 			}
-		} catch (error) {
+		} catch {
 			return null;
 		}
 		
