@@ -36,7 +36,7 @@ export function useGoogleMaps() {
 
 		// Cargar el script
 		const script = document.createElement("script");
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=es&region=CL`;
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places&language=es&region=CL`;
 		script.async = true;
 		script.defer = true;
 
