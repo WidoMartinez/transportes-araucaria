@@ -460,7 +460,7 @@ function HeroExpress({
 						transition={{ duration: 0.3 }}
 						className="flex flex-col items-center"
 					>
-						<h1 className="text-6xl sm:text-4xl font-bold text-white leading-tight drop-shadow-lg mb-1">
+						<h1 className="text-4xl lg:text-2xl font-bold text-white leading-tight drop-shadow-lg mb-1">
 							{richInfo.isRich ? richInfo.titulo : richInfo.title}
 						</h1>
 						<p className="text-base text-white/95 font-medium drop-shadow-md mb-2 line-clamp-2 max-w-[85%]">
