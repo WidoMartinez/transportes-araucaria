@@ -112,13 +112,13 @@ function Header() {
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent",
         isScrolled
           ? "bg-white/90 backdrop-blur-md shadow-sm border-gray-200/50 py-1 md:py-2"
-          : "bg-white/80 backdrop-blur-sm py-2 md:py-4"
+          : "bg-transparent md:bg-white/80 md:backdrop-blur-sm py-2 md:py-4"
       )}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="container mx-auto px-4 md:px-6">
+      <div className="container mx-auto px-4 md:px-6 relative">
         <div className="flex justify-between items-center">
 
           {/* LOGO SECTION */}
@@ -128,7 +128,7 @@ function Header() {
               alt="Transportes Araucaria"
               className={cn(
                 "transition-all duration-300 object-contain",
-                isScrolled ? "h-12 md:h-16" : "h-14 md:h-20 lg:h-24"
+                isScrolled ? "h-12 md:h-16" : "h-20 md:h-20 lg:h-24 brightness-0 invert md:brightness-100 md:invert-0" // White logo on mobile transparent, larger
               )}
               layout
             />
@@ -213,8 +213,17 @@ function Header() {
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-gray-100">
-                  <Menu className="w-7 h-7 text-gray-800" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn(
+                    "h-12 w-12 rounded-full transition-colors",
+                    isScrolled 
+                      ? "hover:bg-gray-100 text-gray-800" 
+                      : "hover:bg-white/20 text-white" // White icon on transparent
+                  )}
+                >
+                  <Menu className="w-7 h-7" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0 flex flex-col border-l-0 shadow-2xl">

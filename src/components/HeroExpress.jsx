@@ -75,8 +75,13 @@ function HeroExpress({
 	// Estado para alerta de descuento escalonado en reservas de retorno
 	const [descuentoEscalonadoInfo, setDescuentoEscalonadoInfo] = useState(null);
 	const [horaTerminoServicioActivo, setHoraTerminoServicioActivo] = useState(null);
+	// Estado para manejar error de carga de imagen
+	const [imageLoadError, setImageLoadError] = useState(false);
 	// Hook para detectar si es dispositivo móvil
 	const isMobile = useIsMobile();
+
+	// Resetear error de imagen cuando cambia el destino/imagen seleccionada
+
 
 	useEffect(() => {
 		if (currentStep === 1) {
@@ -141,6 +146,11 @@ function HeroExpress({
 		// 3. Imagen por defecto
 		return heroVan;
 	}, [targetName, destinosData]);
+
+	// Resetear error de imagen cuando cambia el destino/imagen seleccionada
+	useEffect(() => {
+		setImageLoadError(false);
+	}, [selectedDestinoImage]);
 
 	// Texto e información dinámica para el panel visual
 	const richInfo = useMemo(() => {
@@ -434,30 +444,32 @@ function HeroExpress({
 			{/* Mobile Header (Visual) - Optimizado para rendimiento móvil */}
 			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-primary">
 				<img
-					src={selectedDestinoImage}
+					src={imageLoadError ? heroVan : selectedDestinoImage}
+                    onError={() => setImageLoadError(true)}
 					alt={`Imagen del destino ${formData.destino || 'seleccionado'}`}
 					loading="eager"
 					decoding="async"
 					className="w-full h-full object-cover opacity-70 will-change-transform"
 				/>
 				<div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-primary/20" />
-				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom">
+				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom flex flex-col items-center text-center">
 					<motion.div
 						key={richInfo.title}
 						initial={{ opacity: 0, y: 10 }}
 						animate={{ opacity: 1, y: 0 }}
 						transition={{ duration: 0.3 }}
+						className="flex flex-col items-center"
 					>
-						<h1 className="text-xl sm:text-2xl font-bold text-white leading-tight drop-shadow-lg">
+						<h1 className="text-6xl sm:text-4xl font-bold text-white leading-tight drop-shadow-lg mb-1">
 							{richInfo.isRich ? richInfo.titulo : richInfo.title}
 						</h1>
-						<p className="text-sm text-white/90 font-medium drop-shadow-md mb-2 line-clamp-2">
+						<p className="text-base text-white/95 font-medium drop-shadow-md mb-2 line-clamp-2 max-w-[85%]">
 							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 						</p>
 
 						{/* Mobile Summary Pill - Tamaño táctil mejorado */}
 						{richInfo.isRich && (
-							<div className="flex flex-wrap gap-2 mt-2">
+							<div className="flex flex-wrap justify-center gap-2 mt-2">
 								<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
 									<Plane className="w-3 h-3" /> {richInfo.distancia}
 								</Badge>
@@ -473,7 +485,7 @@ function HeroExpress({
 			</div>
 
 			{/* Left Panel: Interaction (Form) - Padding optimizado para móvil */}
-			<div className="relative flex flex-col justify-start lg:justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 -mt-6 rounded-t-[2rem] lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none">
+			<div className="relative flex flex-col justify-start lg:justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 -mt-6 mx-4 sm:mx-6 lg:mx-0 rounded-t-3xl rounded-b-3xl lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none mb-6 lg:mb-0">
 
 				<AnimatePresence mode="wait">
 					{currentStep === 0 && (

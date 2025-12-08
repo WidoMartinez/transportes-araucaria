@@ -188,5 +188,14 @@ export const destinosInfo = {
 		puntosInteres: ["Conectividad Total", "Servicio 24/7", "Seguridad"],
 		datoCurioso: "Es el principal terminal aéreo de la región, inaugurado en 2014.",
 		imagen: heroVan
+	},
+	"Lautaro": {
+		titulo: "Viaja desde Lautaro",
+		bajada: "Servicio de transporte privado desde y hacia Lautaro.",
+		distancia: "A 45 km de Temuco",
+		tiempo: "45 min aprox.",
+		puntosInteres: ["Parque Isabel Riquelme", "Piscicultura", "Río Cautín"],
+		datoCurioso: "Cuna del Toqui Lautaro, líder mapuche.",
+		imagen: heroVan
 	}
 };
