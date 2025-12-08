@@ -1,7 +1,15 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Input } from "./input";
 import { useGoogleMaps } from "../../hooks/useGoogleMaps";
 import { MapPin, Loader2 } from "lucide-react";
+
+// Opciones por defecto para el autocompletado de Google Places
+// Definidas fuera del componente para evitar recreación en cada render
+const DEFAULT_AUTOCOMPLETE_OPTIONS = {
+	componentRestrictions: { country: "cl" },
+	fields: ["address_components", "formatted_address", "geometry", "name"],
+	types: ["address"],
+};
 
 /**
  * Componente de autocompletado de direcciones con Google Places
@@ -35,6 +43,12 @@ export function AddressAutocomplete({
 	const { isLoaded, isAvailable } = useGoogleMaps();
 	const [isInitializing, setIsInitializing] = useState(false);
 
+	// Memoizar las opciones para evitar recreación en cada render
+	const finalOptions = useMemo(() => ({
+		...DEFAULT_AUTOCOMPLETE_OPTIONS,
+		...autocompleteOptions,
+	}), [autocompleteOptions]);
+
 	useEffect(() => {
 		// Si no está disponible o no está cargado, no hacer nada
 		if (!isAvailable || !isLoaded || !inputRef.current) {
@@ -49,18 +63,10 @@ export function AddressAutocomplete({
 		setIsInitializing(true);
 
 		try {
-			// Configuración por defecto para Chile
-			const defaultOptions = {
-				componentRestrictions: { country: "cl" },
-				fields: ["address_components", "formatted_address", "geometry", "name"],
-				types: ["address"],
-				...autocompleteOptions,
-			};
-
 			// Crear instancia de autocomplete
 			const autocomplete = new window.google.maps.places.Autocomplete(
 				inputRef.current,
-				defaultOptions
+				finalOptions
 			);
 
 			// Manejar selección de lugar
@@ -106,7 +112,7 @@ export function AddressAutocomplete({
 				autocompleteRef.current = null;
 			}
 		};
-	}, [isLoaded, isAvailable, name, onChange, onPlaceSelected, autocompleteOptions]);
+	}, [isLoaded, isAvailable, name, onChange, onPlaceSelected, finalOptions]);
 
 	// Manejar cambios manuales del input
 	const handleChange = (e) => {

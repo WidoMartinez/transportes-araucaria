@@ -10,7 +10,6 @@ import {
 	CheckCircle, 
 	AlertCircle, 
 	CreditCard,
-	MapPin,
 	Calendar,
 	Clock,
 	ArrowRight,
