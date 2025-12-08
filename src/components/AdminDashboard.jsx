@@ -19,6 +19,7 @@ import AdminDisponibilidad from "./AdminDisponibilidad";
 import AdminFestivos from "./AdminFestivos";
 import AdminUsuarios from "./AdminUsuarios";
 import AdminPerfil from "./AdminPerfil";
+import GestionReservasIntegral from "./admin/operaciones/GestionReservasIntegral";
 
 /**
  * Panel de Administración Principal
@@ -133,6 +134,8 @@ function AdminDashboard() {
               <DashboardHome onNavigate={setPanel} />
             ) : active === "reservas" ? (
               <AdminReservas />
+            ) : active === "reservas-integral" ? (
+              <GestionReservasIntegral />
             ) : active === "vehiculos" ? (
               <AdminVehiculos />
             ) : active === "conductores" ? (
