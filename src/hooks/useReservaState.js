@@ -125,7 +125,8 @@ export const useReservaState = (reservaInicial = null) => {
 			estado_nuevo: nuevoEstado,
 			comentario,
 			timestamp: new Date().toISOString(),
-			usuario: 'Sistema' // TODO: Obtener usuario actual del contexto de auth
+			// TODO: Integrar con AuthContext en Fase 2 para obtener usuario real
+			usuario: 'Sistema'
 		};
 
 		setReserva(reservaActualizada);
@@ -171,7 +172,8 @@ export const useReservaState = (reservaInicial = null) => {
 			tipo: 'modificacion',
 			cambios: datosActualizados,
 			timestamp: new Date().toISOString(),
-			usuario: 'Sistema' // TODO: Obtener usuario actual del contexto de auth
+			// TODO: Integrar con AuthContext en Fase 2 para obtener usuario real
+			usuario: 'Sistema'
 		};
 
 		setHistorial(prev => [...prev, nuevaEntrada]);
@@ -186,7 +188,8 @@ export const useReservaState = (reservaInicial = null) => {
 			tipo: 'comentario',
 			comentario,
 			timestamp: new Date().toISOString(),
-			usuario: 'Sistema' // TODO: Obtener usuario actual del contexto de auth
+			// TODO: Integrar con AuthContext en Fase 2 para obtener usuario real
+			usuario: 'Sistema'
 		};
 
 		setHistorial(prev => [...prev, nuevaEntrada]);

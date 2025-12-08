@@ -317,7 +317,7 @@ const ReservasManager = () => {
 								Información del Sistema
 							</h4>
 							<div className="space-y-1 text-xs text-muted-foreground">
-								<p>• Vista actual: {ETIQUETAS_ESTADO[vistaActiva] || vistaActiva}</p>
+								<p>• Vista actual: {vistaActiva}</p>
 								<p>• Esta es la Fase 1 (estructura base)</p>
 								<p>• Los datos mostrados son de demostración</p>
 								<p>• La integración completa se hará en Fase 2</p>

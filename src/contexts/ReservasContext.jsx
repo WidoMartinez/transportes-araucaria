@@ -3,8 +3,7 @@ import {
 	createContext,
 	useContext,
 	useState,
-	useCallback,
-	useEffect
+	useCallback
 } from "react";
 import { getBackendUrl } from "../lib/backend";
 import { ESTADOS_RESERVA, VISTAS_GESTOR } from "../types/reservas";
