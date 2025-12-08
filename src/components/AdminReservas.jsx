@@ -2,7 +2,7 @@
 import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
 import { useAuth } from "../contexts/AuthContext";
-import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+// import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch"; // No usado actualmente
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -94,7 +94,7 @@ const normalizeDestino = (value) =>
 function AdminReservas() {
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
-	const { authenticatedFetch } = useAuthenticatedFetch();
+	// const { authenticatedFetch } = useAuthenticatedFetch(); // No usado actualmente
 
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -385,6 +385,55 @@ function AdminReservas() {
 	const [selectedReservas, setSelectedReservas] = useState([]);
 
 	// Función para exportar reservas seleccionadas a XLS
+	// Función para exportar todas las reservas (filtradas)
+	const exportarAExcel = useCallback(() => {
+		const columnasExportar = [
+			{ key: "id", label: "ID Reserva" },
+			{ key: "codigoReserva", label: "Código" },
+			{ key: "cliente", label: "Nombre" },
+			{ key: "email", label: "Correo" },
+			{ key: "telefono", label: "Teléfono" },
+			{ key: "rut", label: "RUT" },
+			{ key: "fecha", label: "Fecha" },
+			{ key: "hora", label: "Hora" },
+			{ key: "origen", label: "Origen" },
+			{ key: "destino", label: "Destino" },
+			{ key: "pasajeros", label: "Pasajeros" },
+			{ key: "totalConDescuento", label: "Total" },
+			{ key: "estado", label: "Estado" },
+			{ key: "estadoPago", label: "Estado Pago" },
+			{ key: "pagoMonto", label: "Monto Pagado" },
+			{ key: "saldoPendiente", label: "Saldo Pendiente" },
+		];
+
+		const headers = columnasExportar.map((c) => c.label);
+		const filas = reservasFiltradas.map((reserva) => {
+			return columnasExportar.map((col) => {
+				let val = reserva[col.key];
+				if (val === undefined || val === null) return "";
+				if (typeof val === "object") {
+					if (val.nombre) return String(val.nombre);
+					return String(val);
+				}
+				if (col.key === "fecha") {
+					try {
+						const d = new Date(val);
+						if (!isNaN(d)) return d.toLocaleDateString("es-CL");
+					} catch {
+						// ignore
+					}
+				}
+				return String(val);
+			});
+		});
+
+		const aoa = [headers, ...filas];
+		const ws = XLSX.utils.aoa_to_sheet(aoa);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Reservas");
+		XLSX.writeFile(wb, `reservas_${new Date().toISOString().split("T")[0]}.xlsx`);
+	}, [reservasFiltradas]);
+
 	const exportarSeleccionadosXLS = () => {
 		// Definir las columnas a exportar (etiquetas visibles en el Excel)
 		const columnasExportar = [
@@ -469,7 +518,7 @@ function AdminReservas() {
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
 
 	// Cargar estadÃ­sticas
-	const fetchEstadisticas = async () => {
+	const fetchEstadisticas = useCallback(async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`);
 			if (response.ok) {
@@ -499,7 +548,7 @@ function AdminReservas() {
 				totalIngresos: 0,
 			});
 		}
-	};
+	}, [apiUrl]);
 
 	// Cargar vehÃ­culos disponibles
 	const fetchVehiculos = async () => {
@@ -670,7 +719,7 @@ function AdminReservas() {
 	};
 
 	// Cargar reservas
-	const fetchReservas = async () => {
+	const fetchReservas = useCallback(async () => {
 		setLoading(true);
 		setError(null);
 		try {
@@ -727,13 +776,12 @@ function AdminReservas() {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [apiUrl, currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage]);
 
 	useEffect(() => {
 		fetchReservas();
 		fetchEstadisticas();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage]);
+	}, [fetchReservas, fetchEstadisticas]);
 
 	// Atajos de teclado para mejorar la productividad
 	useEffect(() => {
@@ -751,7 +799,7 @@ function AdminReservas() {
 					setShowNewDialog(false);
 					setShowAsignarDialog(false);
 					setShowHistorialDialog(false);
-					setShowColumnasDialog(false);
+					setShowKeyboardShortcuts(false);
 					setShowRegisterPayment(false);
 				}
 				return;
@@ -783,7 +831,7 @@ function AdminReservas() {
 				setShowNewDialog(false);
 				setShowAsignarDialog(false);
 				setShowHistorialDialog(false);
-				setShowColumnasDialog(false);
+				setShowKeyboardShortcuts(false);
 				setShowRegisterPayment(false);
 			}
 
@@ -832,6 +880,7 @@ function AdminReservas() {
 		estadoPagoFiltro,
 		fetchReservas,
 		fetchEstadisticas,
+		exportarAExcel,
 	]);
 
 	// Filtrar reservas localmente por bÃºsqueda
@@ -1169,7 +1218,7 @@ function AdminReservas() {
 			let pagoData = null;
 			try {
 				pagoData = await pagoResponse.json();
-			} catch (parseError) {
+			} catch {
 				pagoData = null;
 			}
 			const estadoAplicadoBackend = pagoData?.reserva?.estado || null;
@@ -2190,7 +2239,7 @@ function AdminReservas() {
 									Columnas
 								</Button>
 							</DialogTrigger>
-						<DialogContent>
+							<DialogContent>
 							<DialogHeader>
 								<DialogTitle>Configurar Columnas Visibles</DialogTitle>
 								<DialogDescription>
@@ -2257,9 +2306,11 @@ function AdminReservas() {
 							</div>
 						</DialogContent>
 					</Dialog>
+				</div>
+			</CardHeader>
 
-					{/* Modal para registrar pago manual */}
-					<Dialog
+			{/* Modal para registrar pago manual */}
+			<Dialog
 						open={showRegisterPayment}
 						onOpenChange={setShowRegisterPayment}
 					>
@@ -2354,7 +2405,7 @@ function AdminReservas() {
 							</div>
 						</DialogContent>
 					</Dialog>
-				</CardHeader>
+
 				<CardContent>
 					{error && (
 						<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
