@@ -42,6 +42,7 @@ import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import { authJWT } from "./middleware/authJWT.js";
+import { apiLimiter, strictLimiter } from "./middleware/rateLimiter.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
@@ -3340,7 +3341,7 @@ app.get("/api/reservas/estadisticas", async (req, res) => {
 // ========== NUEVOS ENDPOINTS PARA SISTEMA INTEGRAL DE RESERVAS ==========
 
 // Obtener reservas agrupadas por estado para vista Kanban
-app.get("/api/reservas/kanban", authAdmin, async (req, res) => {
+app.get("/api/reservas/kanban", apiLimiter, authAdmin, async (req, res) => {
 	try {
 		const { fecha_desde, fecha_hasta, search } = req.query;
 
@@ -3444,7 +3445,7 @@ app.get("/api/reservas/kanban", authAdmin, async (req, res) => {
 });
 
 // Obtener métricas en tiempo real para dashboard
-app.get("/api/reservas/metricas", authAdmin, async (req, res) => {
+app.get("/api/reservas/metricas", apiLimiter, authAdmin, async (req, res) => {
 	try {
 		const hoy = new Date();
 		hoy.setHours(0, 0, 0, 0);
@@ -3600,7 +3601,7 @@ app.get("/api/reservas/metricas", authAdmin, async (req, res) => {
 });
 
 // Cambiar estado de una reserva (para drag & drop en Kanban)
-app.put("/api/reservas/:id/cambiar-estado", authAdmin, async (req, res) => {
+app.put("/api/reservas/:id/cambiar-estado", strictLimiter, authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { nuevoEstado, observaciones } = req.body;
@@ -3690,7 +3691,7 @@ app.put("/api/reservas/:id/cambiar-estado", authAdmin, async (req, res) => {
 });
 
 // Obtener timeline/historial de actividad de una reserva
-app.get("/api/reservas/:id/timeline", authAdmin, async (req, res) => {
+app.get("/api/reservas/:id/timeline", apiLimiter, authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
