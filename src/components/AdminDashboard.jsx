@@ -8,6 +8,7 @@ import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
 import AdminReservas from "./AdminReservas";
+import GestorIntegralReservas from "./GestorIntegralReservas";
 import AdminVehiculos from "./AdminVehiculos";
 import AdminConductores from "./AdminConductores";
 import AdminCodigosPago from "./AdminCodigosPago";
@@ -132,6 +133,8 @@ function AdminDashboard() {
             {active === "dashboard" ? (
               <DashboardHome onNavigate={setPanel} />
             ) : active === "reservas" ? (
+              <GestorIntegralReservas />
+            ) : active === "reservas-legacy" ? (
               <AdminReservas />
             ) : active === "vehiculos" ? (
               <AdminVehiculos />
