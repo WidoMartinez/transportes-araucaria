@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
+import { AddressAutocomplete } from "./ui/address-autocomplete";
 import { 
 	LoaderCircle, 
 	CheckCircle, 
@@ -572,17 +573,15 @@ function PagarConCodigo() {
 										<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
 											Dirección de destino <span className="text-red-500">*</span>
 										</Label>
-										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="direccionDestino"
-												name="direccionDestino"
-												value={formData.direccionDestino}
-												onChange={handleInputChange}
-												placeholder="Av. Alemania 1234, Temuco"
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
-										</div>
+										<AddressAutocomplete
+											id="direccionDestino"
+											name="direccionDestino"
+											value={formData.direccionDestino}
+											onChange={handleInputChange}
+											placeholder="Av. Alemania 1234, Temuco"
+											className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											required
+										/>
 									</div>
 								)}
 								{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
@@ -590,17 +589,15 @@ function PagarConCodigo() {
 										<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
 											Dirección de origen <span className="text-red-500">*</span>
 										</Label>
-										<div className="relative">
-											<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="direccionOrigen"
-												name="direccionOrigen"
-												value={formData.direccionOrigen}
-												onChange={handleInputChange}
-												placeholder="Av. O'Higgins 567, Temuco"
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
-										</div>
+										<AddressAutocomplete
+											id="direccionOrigen"
+											name="direccionOrigen"
+											value={formData.direccionOrigen}
+											onChange={handleInputChange}
+											placeholder="Av. O'Higgins 567, Temuco"
+											className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+											required
+										/>
 									</div>
 								)}
 

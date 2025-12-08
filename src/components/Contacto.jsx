@@ -17,6 +17,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import { AddressAutocomplete } from "./ui/address-autocomplete";
 import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 
@@ -198,7 +199,7 @@ function Contacto({
 										</div>
 										<div className="space-y-2">
 											<Label htmlFor="destino-form">Destino</Label>
-											<Input
+											<AddressAutocomplete
 												id="destino-form"
 												name="destino"
 												value={formData.destino}
