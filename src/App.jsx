@@ -38,6 +38,7 @@ import PagarConCodigo from "./components/PagarConCodigo";
 import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
+import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -208,6 +209,17 @@ const resolveIsFlowReturnView = () => {
 	);
 };
 
+// Resolver si la URL es la página de prueba de Google Ads
+const resolveIsTestGoogleAdsView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/test-google-ads" ||
+		pathname.startsWith("/test-google-ads/") ||
+		hash === "#test-google-ads"
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
@@ -218,6 +230,9 @@ function App() {
 	);
 	const [isFlowReturnView, setIsFlowReturnView] = useState(
 		resolveIsFlowReturnView
+	);
+	const [isTestGoogleAdsView, setIsTestGoogleAdsView] = useState(
+		resolveIsTestGoogleAdsView
 	);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
@@ -382,6 +397,18 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncFlowReturn);
 			window.removeEventListener("popstate", syncFlowReturn);
+		};
+	}, []);
+
+	// Sincronizar vista de prueba de Google Ads
+	useEffect(() => {
+		const syncTestGoogleAds = () =>
+			setIsTestGoogleAdsView(resolveIsTestGoogleAdsView());
+		window.addEventListener("hashchange", syncTestGoogleAds);
+		window.addEventListener("popstate", syncTestGoogleAds);
+		return () => {
+			window.removeEventListener("hashchange", syncTestGoogleAds);
+			window.removeEventListener("popstate", syncTestGoogleAds);
 		};
 	}, []);
 
@@ -1741,6 +1768,10 @@ function App() {
 
 	if (isFlowReturnView) {
 		return <FlowReturn />;
+	}
+
+	if (isTestGoogleAdsView) {
+		return <TestGoogleAds />;
 	}
 
 	// Vista para completar detalles después del pago
