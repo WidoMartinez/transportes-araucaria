@@ -3226,6 +3226,14 @@ app.get("/api/reservas", async (req, res) => {
 						"totalReservas",
 					],
 				},
+				{
+					model: Vehiculo,
+					as: "vehiculo_asignado",
+				},
+				{
+					model: Conductor,
+					as: "conductor_asignado", // Assuming this alias exists
+				},
 			],
 		};
 
@@ -7626,77 +7634,6 @@ app.get("/api/reservas/:id/productos", async (req, res) => {
 	}
 });
 
-
-/**
- * PUT /api/reservas/:id/asignar
- * Asignar vehículo y conductor a una reserva
- */
-app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { vehiculoId, conductorId } = req.body;
-
-		const reserva = await Reserva.findByPk(id);
-		if (!reserva) {
-			return res.status(404).json({
-				success: false,
-				error: "Reserva no encontrada",
-			});
-		}
-
-		const updates = {};
-		
-		// Actualizar Vehículo
-		if (vehiculoId) {
-			updates.vehiculoId = parseInt(vehiculoId);
-			const vehiculo = await Vehiculo.findByPk(vehiculoId);
-			if (vehiculo) {
-				// Actualizar campo de texto legacy si es necesario
-				updates.vehiculo = `${vehiculo.modelo} ${vehiculo.patente}`;
-			}
-		} else if (vehiculoId === null) {
-            updates.vehiculoId = null;
-            updates.vehiculo = null;
-        }
-
-		// Actualizar Conductor
-		if (conductorId) {
-			updates.conductorId = parseInt(conductorId);
-            // Si existiera campo de texto conductor, actualizarlo aquí
-            // Por ahora solo actualizamos el ID y confiamos en la asociación
-		} else if (conductorId === null) {
-            updates.conductorId = null;
-        }
-
-        // Si se asignan recursos, podemos asumir que la reserva se confirma (opcional)
-        // if (updates.vehiculoId && updates.conductorId && reserva.estado === 'pendiente') {
-        //    updates.estado = 'confirmada';
-        // }
-
-		await reserva.update(updates);
-
-        // Recargar reserva con asociaciones
-        const reservaActualizada = await Reserva.findByPk(id, {
-             include: [
-                { model: Vehiculo, as: 'vehiculo_asignado' }, // Asegurar que el alias coincida con asociaciones
-                // { model: Conductor, as: 'conductor_asignado' } // Si existe
-             ]
-        });
-
-		res.json({
-			success: true,
-			mensaje: "Asignación guardada exitosamente",
-			reserva: reservaActualizada
-		});
-
-	} catch (error) {
-		console.error("Error al asignar recursos:", error);
-		res.status(500).json({
-			success: false,
-			error: "Error interno al guardar asignación",
-		});
-	}
-});
 
 /**
  * POST /api/reservas/:id/productos

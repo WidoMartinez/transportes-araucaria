@@ -135,6 +135,8 @@ function AdminReservas() {
           telefono: cliente.telefono || reserva.telefono || "",
           clienteId: cliente.id || reserva.clienteId || null,
           totalReservas: cliente.totalReservas || 0,
+          conductor: reserva.conductor || (reserva.conductor_asignado ? reserva.conductor_asignado.nombre : null), // Normalize conductor name
+          vehiculo: reserva.vehiculo || (reserva.vehiculo_asignado ? `${reserva.vehiculo_asignado.marca} ${reserva.vehiculo_asignado.modelo} ${reserva.vehiculo_asignado.patente}` : null), // Normalize vehicle details
         };
       });
 
