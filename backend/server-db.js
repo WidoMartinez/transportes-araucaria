@@ -7118,6 +7118,563 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 });
 
 // ==========================================
+// ENDPOINTS DEL DASHBOARD PRINCIPAL
+// ==========================================
+
+/**
+ * GET /api/dashboard/stats
+ * Obtiene estadísticas en tiempo real para el dashboard principal del panel admin
+ * Integra datos de todos los módulos: reservas, vehículos, conductores, gastos, productos
+ */
+app.get("/api/dashboard/stats", async (req, res) => {
+	try {
+		const hoy = new Date();
+		const inicioHoy = new Date(hoy);
+		inicioHoy.setHours(0, 0, 0, 0);
+		const finHoy = new Date(hoy);
+		finHoy.setHours(23, 59, 59, 999);
+
+		// Calcular inicio y fin del mes actual
+		const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+		const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
+
+		// Calcular mes anterior para comparación
+		const inicioMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+		const finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0, 23, 59, 59, 999);
+
+		// Consultas paralelas para optimizar rendimiento
+		const [
+			reservasHoy,
+			reservasPendientes,
+			reservasMes,
+			reservasMesAnterior,
+			ingresosMes,
+			ingresosMesAnterior,
+			gastosMes,
+			vehiculosActivos,
+			vehiculosTotal,
+			conductoresDisponibles,
+			conductoresTotal,
+			productosMes,
+			codigosPagoActivos,
+			topDestinos,
+			reservasPorEstado
+		] = await Promise.all([
+			// Reservas de hoy
+			Reserva.count({
+				where: {
+					fecha: {
+						[Op.gte]: inicioHoy,
+						[Op.lte]: finHoy,
+					},
+				},
+			}),
+			// Reservas pendientes de pago
+			Reserva.count({
+				where: {
+					estadoPago: "pendiente",
+					estado: { [Op.ne]: "cancelada" },
+				},
+			}),
+			// Total reservas del mes
+			Reserva.count({
+				where: {
+					createdAt: {
+						[Op.gte]: inicioMes,
+						[Op.lte]: finMes,
+					},
+				},
+			}),
+			// Reservas mes anterior
+			Reserva.count({
+				where: {
+					createdAt: {
+						[Op.gte]: inicioMesAnterior,
+						[Op.lte]: finMesAnterior,
+					},
+				},
+			}),
+			// Ingresos del mes (reservas pagadas)
+			Reserva.sum("totalConDescuento", {
+				where: {
+					estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
+					createdAt: {
+						[Op.gte]: inicioMes,
+						[Op.lte]: finMes,
+					},
+				},
+			}),
+			// Ingresos mes anterior
+			Reserva.sum("totalConDescuento", {
+				where: {
+					estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
+					createdAt: {
+						[Op.gte]: inicioMesAnterior,
+						[Op.lte]: finMesAnterior,
+					},
+				},
+			}),
+			// Gastos del mes
+			Gasto.sum("monto", {
+				where: {
+					fecha: {
+						[Op.gte]: inicioMes,
+						[Op.lte]: finMes,
+					},
+				},
+			}),
+			// Vehículos activos
+			Vehiculo.count({
+				where: {
+					activo: true,
+					enMantenimiento: false,
+				},
+			}),
+			// Total vehículos
+			Vehiculo.count(),
+			// Conductores disponibles
+			Conductor.count({
+				where: {
+					activo: true,
+				},
+			}),
+			// Total conductores
+			Conductor.count(),
+			// Productos vendidos este mes
+			ProductoReserva.sum("cantidad", {
+				where: {
+					createdAt: {
+						[Op.gte]: inicioMes,
+						[Op.lte]: finMes,
+					},
+				},
+			}),
+			// Códigos de pago activos
+			CodigoPago.count({
+				where: {
+					estado: "activo",
+				},
+			}),
+			// Top 5 destinos del mes
+			Reserva.findAll({
+				attributes: [
+					"destino",
+					[sequelize.fn("COUNT", sequelize.col("destino")), "total"],
+					[sequelize.fn("SUM", sequelize.col("totalConDescuento")), "ingresos"],
+				],
+				where: {
+					createdAt: {
+						[Op.gte]: inicioMes,
+						[Op.lte]: finMes,
+					},
+				},
+				group: ["destino"],
+				order: [[sequelize.fn("COUNT", sequelize.col("destino")), "DESC"]],
+				limit: 5,
+				raw: true,
+			}),
+			// Reservas por estado
+			Reserva.findAll({
+				attributes: [
+					"estado",
+					[sequelize.fn("COUNT", sequelize.col("estado")), "total"],
+				],
+				where: {
+					createdAt: {
+						[Op.gte]: inicioMes,
+						[Op.lte]: finMes,
+					},
+				},
+				group: ["estado"],
+				raw: true,
+			}),
+		]);
+
+		// Calcular ocupación de vehículos (reservas de hoy con vehículo asignado / vehículos activos)
+		const reservasConVehiculo = await Reserva.count({
+			where: {
+				fecha: {
+					[Op.gte]: inicioHoy,
+					[Op.lte]: finHoy,
+				},
+				vehiculoId: { [Op.ne]: null },
+			},
+		});
+		const ocupacion = vehiculosActivos > 0 
+			? Math.round((reservasConVehiculo / vehiculosActivos) * 100) 
+			: 0;
+
+		// Calcular tendencias
+		const tendenciaReservas = reservasMesAnterior > 0
+			? Math.round(((reservasMes - reservasMesAnterior) / reservasMesAnterior) * 100)
+			: 0;
+		const tendenciaIngresos = ingresosMesAnterior > 0
+			? Math.round(((ingresosMes - ingresosMesAnterior) / ingresosMesAnterior) * 100)
+			: 0;
+
+		// Balance (ingresos - gastos)
+		const balance = (ingresosMes || 0) - (gastosMes || 0);
+
+		// Transformar reservas por estado a objeto
+		const estadosReservas = reservasPorEstado.reduce((acc, item) => {
+			acc[item.estado] = parseInt(item.total);
+			return acc;
+		}, {});
+
+		res.json({
+			success: true,
+			// Métricas principales
+			reservasHoy: reservasHoy || 0,
+			ingresosMes: parseFloat(ingresosMes) || 0,
+			ocupacion,
+			pendientes: reservasPendientes || 0,
+			
+			// Métricas secundarias
+			reservasTotales: reservasMes || 0,
+			vehiculosActivos: vehiculosActivos || 0,
+			vehiculosTotal: vehiculosTotal || 0,
+			conductoresDisponibles: conductoresDisponibles || 0,
+			conductoresTotal: conductoresTotal || 0,
+			productosVendidos: parseInt(productosMes) || 0,
+			codigosPagoActivos: codigosPagoActivos || 0,
+			
+			// Finanzas
+			gastosMes: parseFloat(gastosMes) || 0,
+			balance,
+			
+			// Tendencias
+			tendencias: {
+				reservas: {
+					valor: tendenciaReservas,
+					texto: tendenciaReservas >= 0 
+						? `+${tendenciaReservas}% vs mes anterior` 
+						: `${tendenciaReservas}% vs mes anterior`,
+					tipo: tendenciaReservas >= 0 ? "up" : "down",
+				},
+				ingresos: {
+					valor: tendenciaIngresos,
+					texto: tendenciaIngresos >= 0 
+						? `+${tendenciaIngresos}% vs mes anterior` 
+						: `${tendenciaIngresos}% vs mes anterior`,
+					tipo: tendenciaIngresos >= 0 ? "up" : "down",
+				},
+			},
+			
+			// Rankings y distribución
+			topDestinos: topDestinos.map(d => ({
+				destino: d.destino,
+				total: parseInt(d.total),
+				ingresos: parseFloat(d.ingresos) || 0,
+			})),
+			estadosReservas,
+			
+			// Metadatos
+			timestamp: new Date().toISOString(),
+			periodo: {
+				mes: hoy.toLocaleString("es-CL", { month: "long" }),
+				año: hoy.getFullYear(),
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas del dashboard:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas del dashboard",
+			details: error.message,
+		});
+	}
+});
+
+/**
+ * GET /api/dashboard/alertas
+ * Obtiene alertas y notificaciones pendientes para el dashboard
+ */
+app.get("/api/dashboard/alertas", authAdmin, async (req, res) => {
+	try {
+		const hoy = new Date();
+		const alertas = [];
+
+		// 1. Reservas pendientes de pago (más de 24 horas)
+		const hace24Horas = new Date(hoy.getTime() - 24 * 60 * 60 * 1000);
+		const reservasPendientesPago = await Reserva.findAll({
+			where: {
+				estadoPago: "pendiente",
+				estado: { [Op.ne]: "cancelada" },
+				createdAt: { [Op.lt]: hace24Horas },
+			},
+			attributes: ["id", "codigoReserva", "nombre", "totalConDescuento", "createdAt"],
+			limit: 5,
+		});
+
+		if (reservasPendientesPago.length > 0) {
+			alertas.push({
+				tipo: "warning",
+				titulo: "Reservas pendientes de pago",
+				mensaje: `Hay ${reservasPendientesPago.length} reserva(s) con más de 24 horas sin pago confirmado`,
+				detalle: reservasPendientesPago.map(r => ({
+					id: r.id,
+					codigo: r.codigoReserva,
+					cliente: r.nombre,
+					monto: r.totalConDescuento,
+				})),
+				accion: "reservas",
+			});
+		}
+
+		// 2. Reservas de hoy sin conductor asignado
+		const inicioHoy = new Date(hoy);
+		inicioHoy.setHours(0, 0, 0, 0);
+		const finHoy = new Date(hoy);
+		finHoy.setHours(23, 59, 59, 999);
+
+		const reservasSinConductor = await Reserva.count({
+			where: {
+				fecha: { [Op.gte]: inicioHoy, [Op.lte]: finHoy },
+				conductorId: null,
+				estado: { [Op.in]: ["confirmada", "pendiente"] },
+			},
+		});
+
+		if (reservasSinConductor > 0) {
+			alertas.push({
+				tipo: "critical",
+				titulo: "Reservas sin conductor",
+				mensaje: `${reservasSinConductor} reserva(s) de hoy sin conductor asignado`,
+				accion: "reservas",
+			});
+		}
+
+		// 3. Vehículos en mantenimiento
+		const vehiculosMantenimiento = await Vehiculo.count({
+			where: { enMantenimiento: true },
+		});
+
+		if (vehiculosMantenimiento > 0) {
+			alertas.push({
+				tipo: "info",
+				titulo: "Vehículos en mantenimiento",
+				mensaje: `${vehiculosMantenimiento} vehículo(s) actualmente en mantenimiento`,
+				accion: "vehiculos",
+			});
+		}
+
+		// 4. Licencias de conductores próximas a vencer (30 días)
+		const en30Dias = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
+		const licenciasPorVencer = await Conductor.count({
+			where: {
+				activo: true,
+				fechaVencimientoLicencia: {
+					[Op.lte]: en30Dias,
+					[Op.gte]: hoy,
+				},
+			},
+		});
+
+		if (licenciasPorVencer > 0) {
+			alertas.push({
+				tipo: "warning",
+				titulo: "Licencias por vencer",
+				mensaje: `${licenciasPorVencer} conductor(es) con licencia próxima a vencer (30 días)`,
+				accion: "conductores",
+			});
+		}
+
+		// 5. Códigos de pago próximos a vencer
+		const codigosPorVencer = await CodigoPago.count({
+			where: {
+				estado: "activo",
+				fechaExpiracion: {
+					[Op.lte]: new Date(hoy.getTime() + 24 * 60 * 60 * 1000),
+					[Op.gte]: hoy,
+				},
+			},
+		});
+
+		if (codigosPorVencer > 0) {
+			alertas.push({
+				tipo: "info",
+				titulo: "Códigos de pago por vencer",
+				mensaje: `${codigosPorVencer} código(s) de pago expiran en las próximas 24 horas`,
+				accion: "codigos-pago",
+			});
+		}
+
+		res.json({
+			success: true,
+			alertas,
+			totalAlertas: alertas.length,
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error("Error al obtener alertas del dashboard:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener alertas",
+			details: error.message,
+		});
+	}
+});
+
+/**
+ * GET /api/dashboard/actividad-reciente
+ * Obtiene la actividad reciente del sistema (últimas 24 horas)
+ */
+app.get("/api/dashboard/actividad-reciente", authAdmin, async (req, res) => {
+	try {
+		const hace24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+		// Obtener últimas reservas
+		const ultimasReservas = await Reserva.findAll({
+			where: {
+				createdAt: { [Op.gte]: hace24Horas },
+			},
+			attributes: ["id", "codigoReserva", "nombre", "destino", "totalConDescuento", "estado", "estadoPago", "createdAt"],
+			order: [["createdAt", "DESC"]],
+			limit: 10,
+		});
+
+		// Obtener últimos gastos
+		const ultimosGastos = await Gasto.findAll({
+			where: {
+				createdAt: { [Op.gte]: hace24Horas },
+			},
+			attributes: ["id", "tipoGasto", "monto", "descripcion", "createdAt"],
+			order: [["createdAt", "DESC"]],
+			limit: 5,
+		});
+
+		// Combinar y ordenar por fecha
+		const actividad = [
+			...ultimasReservas.map(r => ({
+				tipo: "reserva",
+				titulo: `Nueva reserva ${r.codigoReserva || '#' + r.id}`,
+				descripcion: `${r.nombre} - ${r.destino}`,
+				monto: parseFloat(r.totalConDescuento),
+				estado: r.estado,
+				estadoPago: r.estadoPago,
+				fecha: r.createdAt,
+			})),
+			...ultimosGastos.map(g => ({
+				tipo: "gasto",
+				titulo: `Gasto registrado`,
+				descripcion: g.descripcion || g.tipoGasto,
+				monto: -parseFloat(g.monto),
+				fecha: g.createdAt,
+			})),
+		].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 15);
+
+		res.json({
+			success: true,
+			actividad,
+			total: actividad.length,
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error("Error al obtener actividad reciente:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener actividad reciente",
+			details: error.message,
+		});
+	}
+});
+
+/**
+ * GET /api/dashboard/resumen-financiero
+ * Obtiene un resumen financiero detallado para el panel
+ */
+app.get("/api/dashboard/resumen-financiero", authAdmin, async (req, res) => {
+	try {
+		const hoy = new Date();
+		const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+		const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
+
+		// Ingresos del mes por estado de pago
+		const ingresosPorEstado = await Reserva.findAll({
+			attributes: [
+				"estadoPago",
+				[sequelize.fn("SUM", sequelize.col("totalConDescuento")), "total"],
+				[sequelize.fn("COUNT", sequelize.col("id")), "cantidad"],
+			],
+			where: {
+				createdAt: { [Op.gte]: inicioMes, [Op.lte]: finMes },
+			},
+			group: ["estadoPago"],
+			raw: true,
+		});
+
+		// Gastos del mes por tipo
+		const gastosPorTipo = await Gasto.findAll({
+			attributes: [
+				"tipoGasto",
+				[sequelize.fn("SUM", sequelize.col("monto")), "total"],
+				[sequelize.fn("COUNT", sequelize.col("id")), "cantidad"],
+			],
+			where: {
+				fecha: { [Op.gte]: inicioMes, [Op.lte]: finMes },
+			},
+			group: ["tipoGasto"],
+			raw: true,
+		});
+
+		// Ingresos por productos
+		const ingresosProductos = await ProductoReserva.sum("subtotal", {
+			where: {
+				createdAt: { [Op.gte]: inicioMes, [Op.lte]: finMes },
+			},
+		});
+
+		// Totales
+		const totalIngresos = ingresosPorEstado
+			.filter(i => ["pagado", "parcial", "aprobado"].includes(i.estadoPago))
+			.reduce((sum, i) => sum + parseFloat(i.total || 0), 0);
+		
+		const totalGastos = gastosPorTipo.reduce((sum, g) => sum + parseFloat(g.total || 0), 0);
+
+		res.json({
+			success: true,
+			resumen: {
+				ingresos: {
+					total: totalIngresos,
+					porEstado: ingresosPorEstado.map(i => ({
+						estado: i.estadoPago,
+						total: parseFloat(i.total) || 0,
+						cantidad: parseInt(i.cantidad),
+					})),
+					productos: parseFloat(ingresosProductos) || 0,
+				},
+				gastos: {
+					total: totalGastos,
+					porTipo: gastosPorTipo.map(g => ({
+						tipo: g.tipoGasto,
+						total: parseFloat(g.total) || 0,
+						cantidad: parseInt(g.cantidad),
+					})),
+				},
+				balance: totalIngresos - totalGastos,
+				margenOperativo: totalIngresos > 0 
+					? Math.round(((totalIngresos - totalGastos) / totalIngresos) * 100) 
+					: 0,
+			},
+			periodo: {
+				inicio: inicioMes.toISOString(),
+				fin: finMes.toISOString(),
+				mes: hoy.toLocaleString("es-CL", { month: "long" }),
+				año: hoy.getFullYear(),
+			},
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error("Error al obtener resumen financiero:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener resumen financiero",
+			details: error.message,
+		});
+	}
+});
+
+// ==========================================
 // ENDPOINTS DE PRODUCTOS
 // ==========================================
 
