@@ -7301,8 +7301,9 @@ app.get("/api/dashboard/stats", authAdmin, async (req, res) => {
 				vehiculoId: { [Op.ne]: null },
 			},
 		});
+		// Limitar ocupación al 100% máximo para evitar valores inconsistentes
 		const ocupacion = vehiculosActivos > 0 
-			? Math.round((reservasConVehiculo / vehiculosActivos) * 100) 
+			? Math.min(Math.round((reservasConVehiculo / vehiculosActivos) * 100), 100)
 			: 0;
 
 		// Calcular tendencias
@@ -7777,12 +7778,13 @@ app.get("/api/dashboard/grafico-tendencias", authAdmin, async (req, res) => {
 				const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0);
 				const mesStr = fecha.toLocaleDateString("es-CL", { month: "short", year: "2-digit" });
 				
-				// Sumar todos los días del mes
+				// Sumar todos los días del mes usando iteración segura
 				let ingresosMes = 0;
 				let gastosMes = 0;
 				let reservasMes = 0;
 				
-				for (let d = new Date(inicioMes); d <= finMes; d.setDate(d.getDate() + 1)) {
+				// Usar incremento por milisegundos para evitar problemas con cambios de mes
+				for (let d = new Date(inicioMes); d <= finMes; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
 					const fechaStr = d.toISOString().split("T")[0];
 					ingresosMes += ingresosMap.get(fechaStr) || 0;
 					gastosMes += gastosMap.get(fechaStr) || 0;
