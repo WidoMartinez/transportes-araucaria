@@ -19,6 +19,7 @@ import { ReservationFilters } from "./admin/reservas/ReservationFilters";
 import { ReservationTable } from "./admin/reservas/ReservationTable";
 import { ReservationForm } from "./admin/reservas/ReservationForm";
 import { AssignmentDialog } from "./admin/reservas/AssignmentDialog";
+import { ReservationDetail } from "./admin/reservas/ReservationDetail";
 
 const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
 const normalizeDestino = (value) =>
@@ -209,7 +210,7 @@ function AdminReservas() {
   const handleCreateReserva = async (formData) => {
     setSaving(true);
     try {
-      const resp = await authenticatedFetch(`${apiUrl}/api/reservas`, {
+      const resp = await authenticatedFetch(`/api/reservas`, {
         method: "POST",
         body: JSON.stringify(formData),
       });
@@ -234,7 +235,7 @@ function AdminReservas() {
     if (!selectedReserva) return;
     setSaving(true);
     try {
-      const resp = await authenticatedFetch(`${apiUrl}/api/reservas/${selectedReserva.id}`, {
+      const resp = await authenticatedFetch(`/api/reservas/${selectedReserva.id}`, {
         method: "PUT",
         body: JSON.stringify(formData),
       });
@@ -259,7 +260,7 @@ function AdminReservas() {
     if (!selectedReserva) return;
     setLoadingAsignacion(true);
     try {
-      const resp = await authenticatedFetch(`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`, {
+      const resp = await authenticatedFetch(`/api/reservas/${selectedReserva.id}/asignar`, {
         method: "PUT",
         body: JSON.stringify({
           vehiculoId: parseInt(vehiculoId),
@@ -324,7 +325,7 @@ function AdminReservas() {
     let successCount = 0;
     for (const id of selectedReservas) {
       try {
-        const resp = await authenticatedFetch(`${apiUrl}/api/reservas/${id}`, { method: "DELETE" });
+        const resp = await authenticatedFetch(`/api/reservas/${id}`, { method: "DELETE" });
         if (resp.ok) successCount++;
       } catch (e) {
         console.error(`Failed to delete ${id}`, e);
@@ -359,7 +360,7 @@ function AdminReservas() {
             const r = reservas.find(res => res.id === id);
             if (!r) continue; // Should be in current page at least
             
-            const resp = await authenticatedFetch(`${apiUrl}/api/reservas/${id}`, {
+            const resp = await authenticatedFetch(`/api/reservas/${id}`, {
                 method: "PUT",
                 body: JSON.stringify({ ...r, estado: newStatus })
             });
@@ -433,9 +434,7 @@ function AdminReservas() {
          }}
          onView={(reserva) => {
            setSelectedReserva(reserva);
-           // Logic to view details (could be dialog or reusing Edit in read-only)
-           // For now let's reuse edit for simplicity or just alert
-           setShowEditDialog(true); 
+           setShowDetailDialog(true); 
          }}
          onEdit={(reserva) => {
            setSelectedReserva(reserva);
@@ -487,6 +486,24 @@ function AdminReservas() {
              loading={loadingAsignacion}
           />
        )}
+
+       {/* Detail Dialog */}
+       <ReservationDetail 
+         isOpen={showDetailDialog}
+         onClose={() => {
+            setShowDetailDialog(false);
+            setSelectedReserva(null);
+         }}
+         reserva={selectedReserva}
+         onEdit={() => {
+            setShowDetailDialog(false);
+            setShowEditDialog(true);
+         }}
+         onAsignar={() => {
+            setShowDetailDialog(false);
+            setShowAsignarDialog(true);
+         }}
+       />
     </div>
   );
 }
