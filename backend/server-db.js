@@ -7678,142 +7678,142 @@ app.get("/api/dashboard/resumen-financiero", authAdmin, async (req, res) => {
 /**
  * GET /api/dashboard/grafico-tendencias
  * Obtiene datos para gráficos de tendencias (últimos 30 días o 12 meses)
+ * Optimizado: usa consultas agregadas en lugar de consultas secuenciales
  */
 app.get("/api/dashboard/grafico-tendencias", authAdmin, async (req, res) => {
 	try {
 		const { periodo = "30dias" } = req.query;
 		const hoy = new Date();
-		let datosIngresos = [];
-		let datosGastos = [];
-		let datosReservas = [];
-
+		
+		// Calcular rango de fechas
+		let fechaInicio;
+		let agrupacion;
+		
 		if (periodo === "30dias") {
-			// Últimos 30 días
+			fechaInicio = new Date(hoy);
+			fechaInicio.setDate(fechaInicio.getDate() - 29);
+			fechaInicio.setHours(0, 0, 0, 0);
+			agrupacion = "day";
+		} else {
+			fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - 11, 1);
+			agrupacion = "month";
+		}
+
+		// Consultas agregadas en paralelo (mucho más eficiente)
+		const [ingresosAggregated, gastosAggregated, reservasAggregated] = await Promise.all([
+			// Ingresos agrupados por fecha
+			Reserva.findAll({
+				attributes: [
+					[sequelize.fn("DATE", sequelize.col("created_at")), "fecha"],
+					[sequelize.fn("SUM", sequelize.col("totalConDescuento")), "total"],
+				],
+				where: {
+					estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
+					createdAt: { [Op.gte]: fechaInicio },
+				},
+				group: [sequelize.fn("DATE", sequelize.col("created_at"))],
+				raw: true,
+			}),
+			// Gastos agrupados por fecha
+			Gasto.findAll({
+				attributes: [
+					[sequelize.fn("DATE", sequelize.col("fecha")), "fecha"],
+					[sequelize.fn("SUM", sequelize.col("monto")), "total"],
+				],
+				where: {
+					fecha: { [Op.gte]: fechaInicio },
+				},
+				group: [sequelize.fn("DATE", sequelize.col("fecha"))],
+				raw: true,
+			}),
+			// Reservas agrupadas por fecha
+			Reserva.findAll({
+				attributes: [
+					[sequelize.fn("DATE", sequelize.col("created_at")), "fecha"],
+					[sequelize.fn("COUNT", sequelize.col("id")), "total"],
+				],
+				where: {
+					createdAt: { [Op.gte]: fechaInicio },
+				},
+				group: [sequelize.fn("DATE", sequelize.col("created_at"))],
+				raw: true,
+			}),
+		]);
+
+		// Convertir resultados a mapas para búsqueda rápida
+		const ingresosMap = new Map(ingresosAggregated.map(i => [i.fecha, parseFloat(i.total) || 0]));
+		const gastosMap = new Map(gastosAggregated.map(g => [g.fecha, parseFloat(g.total) || 0]));
+		const reservasMap = new Map(reservasAggregated.map(r => [r.fecha, parseInt(r.total) || 0]));
+
+		// Generar array de fechas con datos
+		const datosBalance = [];
+		
+		if (periodo === "30dias") {
+			// Generar últimos 30 días
 			for (let i = 29; i >= 0; i--) {
 				const fecha = new Date(hoy);
 				fecha.setDate(fecha.getDate() - i);
-				const inicioDia = new Date(fecha);
-				inicioDia.setHours(0, 0, 0, 0);
-				const finDia = new Date(fecha);
-				finDia.setHours(23, 59, 59, 999);
-
 				const fechaStr = fecha.toISOString().split("T")[0];
-
-				// Ingresos del día
-				const ingresos = await Reserva.sum("totalConDescuento", {
-					where: {
-						estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
-						createdAt: { [Op.gte]: inicioDia, [Op.lte]: finDia },
-					},
-				});
-
-				// Gastos del día
-				const gastos = await Gasto.sum("monto", {
-					where: {
-						fecha: { [Op.gte]: inicioDia, [Op.lte]: finDia },
-					},
-				});
-
-				// Reservas del día
-				const reservas = await Reserva.count({
-					where: {
-						createdAt: { [Op.gte]: inicioDia, [Op.lte]: finDia },
-					},
-				});
-
-				datosIngresos.push({
+				const label = fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" });
+				
+				const ingresos = ingresosMap.get(fechaStr) || 0;
+				const gastos = gastosMap.get(fechaStr) || 0;
+				const reservas = reservasMap.get(fechaStr) || 0;
+				
+				datosBalance.push({
 					fecha: fechaStr,
-					label: fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" }),
-					valor: parseFloat(ingresos) || 0,
-				});
-
-				datosGastos.push({
-					fecha: fechaStr,
-					label: fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" }),
-					valor: parseFloat(gastos) || 0,
-				});
-
-				datosReservas.push({
-					fecha: fechaStr,
-					label: fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" }),
-					valor: reservas || 0,
+					label,
+					ingresos,
+					gastos,
+					balance: ingresos - gastos,
+					reservas,
 				});
 			}
 		} else {
-			// Últimos 12 meses
+			// Generar últimos 12 meses
 			for (let i = 11; i >= 0; i--) {
 				const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
 				const inicioMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
-				const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0, 23, 59, 59, 999);
-
+				const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0);
 				const mesStr = fecha.toLocaleDateString("es-CL", { month: "short", year: "2-digit" });
-
-				// Ingresos del mes
-				const ingresos = await Reserva.sum("totalConDescuento", {
-					where: {
-						estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
-						createdAt: { [Op.gte]: inicioMes, [Op.lte]: finMes },
-					},
-				});
-
-				// Gastos del mes
-				const gastos = await Gasto.sum("monto", {
-					where: {
-						fecha: { [Op.gte]: inicioMes, [Op.lte]: finMes },
-					},
-				});
-
-				// Reservas del mes
-				const reservas = await Reserva.count({
-					where: {
-						createdAt: { [Op.gte]: inicioMes, [Op.lte]: finMes },
-					},
-				});
-
-				datosIngresos.push({
+				
+				// Sumar todos los días del mes
+				let ingresosMes = 0;
+				let gastosMes = 0;
+				let reservasMes = 0;
+				
+				for (let d = new Date(inicioMes); d <= finMes; d.setDate(d.getDate() + 1)) {
+					const fechaStr = d.toISOString().split("T")[0];
+					ingresosMes += ingresosMap.get(fechaStr) || 0;
+					gastosMes += gastosMap.get(fechaStr) || 0;
+					reservasMes += reservasMap.get(fechaStr) || 0;
+				}
+				
+				datosBalance.push({
 					fecha: inicioMes.toISOString().split("T")[0],
 					label: mesStr,
-					valor: parseFloat(ingresos) || 0,
-				});
-
-				datosGastos.push({
-					fecha: inicioMes.toISOString().split("T")[0],
-					label: mesStr,
-					valor: parseFloat(gastos) || 0,
-				});
-
-				datosReservas.push({
-					fecha: inicioMes.toISOString().split("T")[0],
-					label: mesStr,
-					valor: reservas || 0,
+					ingresos: ingresosMes,
+					gastos: gastosMes,
+					balance: ingresosMes - gastosMes,
+					reservas: reservasMes,
 				});
 			}
 		}
 
-		// Combinar datos para gráfico de balance
-		const datosBalance = datosIngresos.map((ing, idx) => ({
-			fecha: ing.fecha,
-			label: ing.label,
-			ingresos: ing.valor,
-			gastos: datosGastos[idx]?.valor || 0,
-			balance: ing.valor - (datosGastos[idx]?.valor || 0),
-			reservas: datosReservas[idx]?.valor || 0,
-		}));
+		// Calcular totales
+		const totales = datosBalance.reduce((acc, d) => ({
+			ingresos: acc.ingresos + d.ingresos,
+			gastos: acc.gastos + d.gastos,
+			reservas: acc.reservas + d.reservas,
+		}), { ingresos: 0, gastos: 0, reservas: 0 });
 
 		res.json({
 			success: true,
 			periodo,
 			datos: {
-				ingresos: datosIngresos,
-				gastos: datosGastos,
-				reservas: datosReservas,
 				balance: datosBalance,
 			},
-			totales: {
-				ingresos: datosIngresos.reduce((sum, d) => sum + d.valor, 0),
-				gastos: datosGastos.reduce((sum, d) => sum + d.valor, 0),
-				reservas: datosReservas.reduce((sum, d) => sum + d.valor, 0),
-			},
+			totales,
 			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {

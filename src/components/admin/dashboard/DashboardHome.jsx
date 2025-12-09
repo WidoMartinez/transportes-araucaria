@@ -77,6 +77,7 @@ function DashboardHome({ onNavigate }) {
   const [loadingGrafico, setLoadingGrafico] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Cargar estadísticas del dashboard
   const cargarEstadisticas = useCallback(async () => {
@@ -92,6 +93,7 @@ function DashboardHome({ onNavigate }) {
         if (data.success) {
           setStats(data);
           setLastUpdate(new Date());
+          setInitialLoadComplete(true);
         } else {
           throw new Error(data.error || "Error al cargar estadísticas");
         }
@@ -101,6 +103,7 @@ function DashboardHome({ onNavigate }) {
     } catch (err) {
       console.error("Error cargando estadísticas:", err);
       setError("No se pudieron cargar las estadísticas. Por favor, intenta de nuevo.");
+      setInitialLoadComplete(true); // Marcar como completada aunque haya error
     } finally {
       setLoading(false);
     }
@@ -308,7 +311,8 @@ function DashboardHome({ onNavigate }) {
     );
   };
 
-  if (loading && !stats.reservasHoy) {
+  // Mostrar spinner solo durante la carga inicial
+  if (!initialLoadComplete && loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
