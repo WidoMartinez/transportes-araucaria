@@ -26,7 +26,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
 import { Progress } from "../../ui/progress";
-import { getBackendUrl } from "../../../lib/backend";
 import { useAuthenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
 import {
   AreaChart,
@@ -36,8 +35,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
   Legend
 } from "recharts";
 
@@ -81,15 +78,14 @@ function DashboardHome({ onNavigate }) {
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
 
-  const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
-
   // Cargar estadísticas del dashboard
   const cargarEstadisticas = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${apiUrl}/api/dashboard/stats`);
+      // Usar fetch autenticado para datos sensibles del dashboard
+      const response = await authenticatedFetch("/api/dashboard/stats");
       
       if (response.ok) {
         const data = await response.json();
@@ -108,7 +104,7 @@ function DashboardHome({ onNavigate }) {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl]);
+  }, [authenticatedFetch]);
 
   // Cargar alertas del dashboard
   const cargarAlertas = useCallback(async () => {
@@ -220,10 +216,29 @@ function DashboardHome({ onNavigate }) {
     return new Date(fecha).toLocaleDateString("es-CL");
   };
 
+  // Función para obtener clase de borde según color
+  const getBorderColorClass = (color) => {
+    if (color.includes("blue")) return "border-l-blue-500";
+    if (color.includes("green")) return "border-l-green-500";
+    if (color.includes("orange")) return "border-l-orange-500";
+    if (color.includes("red")) return "border-l-red-500";
+    return "border-l-gray-500";
+  };
+
+  // Formatear moneda abreviada (sin símbolo CLP)
+  const formatCurrencyShort = (value) => {
+    const numero = Number(value) || 0;
+    return new Intl.NumberFormat("es-CL", {
+      style: "decimal",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(numero);
+  };
+
   // Componente de tarjeta de KPI
   const KPICard = ({ title, value, icon: Icon, color, bgColor, trend, trendValue, onClick, subtitle }) => {
     return (
-      <Card className="hover:shadow-lg transition-all cursor-pointer border-l-4" style={{ borderLeftColor: color.replace("text-", "").includes("blue") ? "#3B82F6" : color.includes("green") ? "#10B981" : color.includes("orange") ? "#F59E0B" : color.includes("red") ? "#EF4444" : "#6B7280" }} onClick={onClick}>
+      <Card className={`hover:shadow-lg transition-all cursor-pointer border-l-4 ${getBorderColorClass(color)}`} onClick={onClick}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-gray-600">{title}</CardTitle>
           <div className={`p-2 rounded-lg ${bgColor || "bg-gray-100"}`}>
@@ -581,7 +596,7 @@ function DashboardHome({ onNavigate }) {
         </Card>
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNavigate("gastos")}>
           <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{formatCurrency(stats.gastosMes).replace("CLP", "").trim()}</div>
+            <div className="text-2xl font-bold">${formatCurrencyShort(stats.gastosMes)}</div>
             <p className="text-xs text-gray-500">Gastos del mes</p>
           </CardContent>
         </Card>

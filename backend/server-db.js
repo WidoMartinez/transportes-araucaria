@@ -7125,8 +7125,9 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
  * GET /api/dashboard/stats
  * Obtiene estadísticas en tiempo real para el dashboard principal del panel admin
  * Integra datos de todos los módulos: reservas, vehículos, conductores, gastos, productos
+ * Requiere autenticación para proteger datos sensibles
  */
-app.get("/api/dashboard/stats", async (req, res) => {
+app.get("/api/dashboard/stats", authAdmin, async (req, res) => {
 	try {
 		const hoy = new Date();
 		const inicioHoy = new Date(hoy);
@@ -7483,7 +7484,7 @@ app.get("/api/dashboard/alertas", authAdmin, async (req, res) => {
 		const codigosPorVencer = await CodigoPago.count({
 			where: {
 				estado: "activo",
-				fechaExpiracion: {
+				fechaVencimiento: {
 					[Op.lte]: new Date(hoy.getTime() + 24 * 60 * 60 * 1000),
 					[Op.gte]: hoy,
 				},
