@@ -19,7 +19,8 @@ import {
   CreditCard,
   CheckCircle2,
   XCircle,
-  Activity
+  Activity,
+  BarChart3
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { Button } from "../../ui/button";
@@ -27,6 +28,18 @@ import { Badge } from "../../ui/badge";
 import { Progress } from "../../ui/progress";
 import { getBackendUrl } from "../../../lib/backend";
 import { useAuthenticatedFetch } from "../../../hooks/useAuthenticatedFetch";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend
+} from "recharts";
 
 /**
  * Componente de Dashboard principal del panel administrativo
@@ -59,9 +72,12 @@ function DashboardHome({ onNavigate }) {
   });
   const [alertas, setAlertas] = useState([]);
   const [actividad, setActividad] = useState([]);
+  const [datosGrafico, setDatosGrafico] = useState([]);
+  const [periodoGrafico, setPeriodoGrafico] = useState("30dias");
   const [loading, setLoading] = useState(true);
   const [loadingAlertas, setLoadingAlertas] = useState(true);
   const [loadingActividad, setLoadingActividad] = useState(true);
+  const [loadingGrafico, setLoadingGrafico] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
 
@@ -132,11 +148,31 @@ function DashboardHome({ onNavigate }) {
     }
   }, [authenticatedFetch]);
 
+  // Cargar datos del gráfico de tendencias
+  const cargarDatosGrafico = useCallback(async (periodo = "30dias") => {
+    try {
+      setLoadingGrafico(true);
+      const response = await authenticatedFetch(`/api/dashboard/grafico-tendencias?periodo=${periodo}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.datos?.balance) {
+          setDatosGrafico(data.datos.balance);
+        }
+      }
+    } catch (err) {
+      console.error("Error cargando datos del gráfico:", err);
+    } finally {
+      setLoadingGrafico(false);
+    }
+  }, [authenticatedFetch]);
+
   // Cargar datos iniciales
   useEffect(() => {
     cargarEstadisticas();
     cargarAlertas();
     cargarActividad();
+    cargarDatosGrafico(periodoGrafico);
 
     // Actualizar cada 2 minutos
     const interval = setInterval(() => {
@@ -145,13 +181,20 @@ function DashboardHome({ onNavigate }) {
     }, 120000);
 
     return () => clearInterval(interval);
-  }, [cargarEstadisticas, cargarAlertas, cargarActividad]);
+  }, [cargarEstadisticas, cargarAlertas, cargarActividad, cargarDatosGrafico, periodoGrafico]);
+
+  // Cambiar periodo del gráfico
+  const handleCambioPeriodoGrafico = (nuevoPeriodo) => {
+    setPeriodoGrafico(nuevoPeriodo);
+    cargarDatosGrafico(nuevoPeriodo);
+  };
 
   // Refrescar todos los datos
   const handleRefresh = () => {
     cargarEstadisticas();
     cargarAlertas();
     cargarActividad();
+    cargarDatosGrafico(periodoGrafico);
   };
 
   // Formatear moneda CLP
@@ -401,6 +444,108 @@ function DashboardHome({ onNavigate }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráfico de Tendencias de Ingresos y Gastos */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Tendencias de Ingresos y Gastos
+              </CardTitle>
+              <CardDescription>
+                {periodoGrafico === "30dias" ? "Últimos 30 días" : "Últimos 12 meses"}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant={periodoGrafico === "30dias" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleCambioPeriodoGrafico("30dias")}
+              >
+                30 días
+              </Button>
+              <Button 
+                variant={periodoGrafico === "12meses" ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleCambioPeriodoGrafico("12meses")}
+              >
+                12 meses
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingGrafico ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : datosGrafico.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={datosGrafico} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="label" 
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e0e0e0' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  }}
+                  formatter={(value, name) => [
+                    formatCurrency(value), 
+                    name === "ingresos" ? "Ingresos" : name === "gastos" ? "Gastos" : "Balance"
+                  ]}
+                  labelFormatter={(label) => `Fecha: ${label}`}
+                />
+                <Legend 
+                  formatter={(value) => value === "ingresos" ? "Ingresos" : value === "gastos" ? "Gastos" : "Balance"}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="ingresos" 
+                  stroke="#10B981" 
+                  fillOpacity={1} 
+                  fill="url(#colorIngresos)" 
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="gastos" 
+                  stroke="#EF4444" 
+                  fillOpacity={1} 
+                  fill="url(#colorGastos)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              <p>No hay datos disponibles para el periodo seleccionado</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Métricas Secundarias */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">

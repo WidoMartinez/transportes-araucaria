@@ -7674,6 +7674,157 @@ app.get("/api/dashboard/resumen-financiero", authAdmin, async (req, res) => {
 	}
 });
 
+/**
+ * GET /api/dashboard/grafico-tendencias
+ * Obtiene datos para gráficos de tendencias (últimos 30 días o 12 meses)
+ */
+app.get("/api/dashboard/grafico-tendencias", authAdmin, async (req, res) => {
+	try {
+		const { periodo = "30dias" } = req.query;
+		const hoy = new Date();
+		let datosIngresos = [];
+		let datosGastos = [];
+		let datosReservas = [];
+
+		if (periodo === "30dias") {
+			// Últimos 30 días
+			for (let i = 29; i >= 0; i--) {
+				const fecha = new Date(hoy);
+				fecha.setDate(fecha.getDate() - i);
+				const inicioDia = new Date(fecha);
+				inicioDia.setHours(0, 0, 0, 0);
+				const finDia = new Date(fecha);
+				finDia.setHours(23, 59, 59, 999);
+
+				const fechaStr = fecha.toISOString().split("T")[0];
+
+				// Ingresos del día
+				const ingresos = await Reserva.sum("totalConDescuento", {
+					where: {
+						estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
+						createdAt: { [Op.gte]: inicioDia, [Op.lte]: finDia },
+					},
+				});
+
+				// Gastos del día
+				const gastos = await Gasto.sum("monto", {
+					where: {
+						fecha: { [Op.gte]: inicioDia, [Op.lte]: finDia },
+					},
+				});
+
+				// Reservas del día
+				const reservas = await Reserva.count({
+					where: {
+						createdAt: { [Op.gte]: inicioDia, [Op.lte]: finDia },
+					},
+				});
+
+				datosIngresos.push({
+					fecha: fechaStr,
+					label: fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" }),
+					valor: parseFloat(ingresos) || 0,
+				});
+
+				datosGastos.push({
+					fecha: fechaStr,
+					label: fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" }),
+					valor: parseFloat(gastos) || 0,
+				});
+
+				datosReservas.push({
+					fecha: fechaStr,
+					label: fecha.toLocaleDateString("es-CL", { day: "2-digit", month: "short" }),
+					valor: reservas || 0,
+				});
+			}
+		} else {
+			// Últimos 12 meses
+			for (let i = 11; i >= 0; i--) {
+				const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+				const inicioMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+				const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0, 23, 59, 59, 999);
+
+				const mesStr = fecha.toLocaleDateString("es-CL", { month: "short", year: "2-digit" });
+
+				// Ingresos del mes
+				const ingresos = await Reserva.sum("totalConDescuento", {
+					where: {
+						estadoPago: { [Op.in]: ["pagado", "parcial", "aprobado"] },
+						createdAt: { [Op.gte]: inicioMes, [Op.lte]: finMes },
+					},
+				});
+
+				// Gastos del mes
+				const gastos = await Gasto.sum("monto", {
+					where: {
+						fecha: { [Op.gte]: inicioMes, [Op.lte]: finMes },
+					},
+				});
+
+				// Reservas del mes
+				const reservas = await Reserva.count({
+					where: {
+						createdAt: { [Op.gte]: inicioMes, [Op.lte]: finMes },
+					},
+				});
+
+				datosIngresos.push({
+					fecha: inicioMes.toISOString().split("T")[0],
+					label: mesStr,
+					valor: parseFloat(ingresos) || 0,
+				});
+
+				datosGastos.push({
+					fecha: inicioMes.toISOString().split("T")[0],
+					label: mesStr,
+					valor: parseFloat(gastos) || 0,
+				});
+
+				datosReservas.push({
+					fecha: inicioMes.toISOString().split("T")[0],
+					label: mesStr,
+					valor: reservas || 0,
+				});
+			}
+		}
+
+		// Combinar datos para gráfico de balance
+		const datosBalance = datosIngresos.map((ing, idx) => ({
+			fecha: ing.fecha,
+			label: ing.label,
+			ingresos: ing.valor,
+			gastos: datosGastos[idx]?.valor || 0,
+			balance: ing.valor - (datosGastos[idx]?.valor || 0),
+			reservas: datosReservas[idx]?.valor || 0,
+		}));
+
+		res.json({
+			success: true,
+			periodo,
+			datos: {
+				ingresos: datosIngresos,
+				gastos: datosGastos,
+				reservas: datosReservas,
+				balance: datosBalance,
+			},
+			totales: {
+				ingresos: datosIngresos.reduce((sum, d) => sum + d.valor, 0),
+				gastos: datosGastos.reduce((sum, d) => sum + d.valor, 0),
+				reservas: datosReservas.reduce((sum, d) => sum + d.valor, 0),
+			},
+			timestamp: new Date().toISOString(),
+		});
+	} catch (error) {
+		console.error("Error al obtener datos de tendencias:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener datos de tendencias",
+			details: error.message,
+		});
+	}
+});
+
 // ==========================================
 // ENDPOINTS DE PRODUCTOS
 // ==========================================
