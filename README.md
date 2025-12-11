@@ -168,6 +168,13 @@ Reemplazar archivos en `src/assets/`:
 - Tasa de rebote
 - Origen del tráfico
 
+## Backend y Servicios Externos
+
+El proyecto cuenta con documentación detallada sobre subsistemas específicos:
+
+- **Correos Transaccionales**: La integración con scripts PHP legacy para envíos de correo se detalla en [INTEGRACION_EMAILS_PHP.md](./INTEGRACION_EMAILS_PHP.md).
+- **Códigos de Pago**: Ver [GUIA_USUARIO_CODIGOS_PAGO.md](./GUIA_USUARIO_CODIGOS_PAGO.md).
+
 ## Licencia
 Este proyecto es una plantilla personalizada para Transportes Araucaria.
 
