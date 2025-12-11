@@ -2,7 +2,6 @@
 import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
 import { useAuth } from "../contexts/AuthContext";
-import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -60,7 +59,22 @@ import {
 	Trash2,
 	CheckSquare,
 	Square,
+	MoreVertical,
+	Copy,
+	Ban,
+	CheckCheck,
+	Filter,
+	X,
+	Download,
 } from "lucide-react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -79,7 +93,6 @@ const normalizeDestino = (value) =>
 function AdminReservas() {
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
-	const { authenticatedFetch } = useAuthenticatedFetch();
 
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -155,6 +168,7 @@ function AdminReservas() {
 	const [estadoPagoFiltro, setEstadoPagoFiltro] = useState("todos");
 	const [fechaDesde, setFechaDesde] = useState("");
 	const [fechaHasta, setFechaHasta] = useState("");
+	const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
 	// PaginaciÃ³n
 	const [currentPage, setCurrentPage] = useState(1);
@@ -454,7 +468,7 @@ function AdminReservas() {
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
 
 	// Cargar estadÃ­sticas
-	const fetchEstadisticas = async () => {
+	const fetchEstadisticas = useCallback(async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`);
 			if (response.ok) {
@@ -484,7 +498,7 @@ function AdminReservas() {
 				totalIngresos: 0,
 			});
 		}
-	};
+	}, [apiUrl]);
 
 	// Cargar vehÃ­culos disponibles
 	const fetchVehiculos = async () => {
@@ -666,7 +680,7 @@ function AdminReservas() {
 	};
 
 	// Cargar reservas
-	const fetchReservas = async () => {
+	const fetchReservas = useCallback(async () => {
 		setLoading(true);
 		setError(null);
 		try {
@@ -723,13 +737,12 @@ function AdminReservas() {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [apiUrl, currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage]);
 
 	useEffect(() => {
 		fetchReservas();
 		fetchEstadisticas();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage]);
+	}, [fetchReservas, fetchEstadisticas]);
 
 	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
@@ -754,6 +767,144 @@ function AdminReservas() {
 
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
+
+	// Función para exportar todas las reservas (filtradas)
+	const exportarAExcel = useCallback(() => {
+		const columnasExportar = [
+			{ key: "id", label: "ID Reserva" },
+			{ key: "codigoReserva", label: "Código" },
+			{ key: "cliente", label: "Nombre" },
+			{ key: "email", label: "Correo" },
+			{ key: "telefono", label: "Teléfono" },
+			{ key: "rut", label: "RUT" },
+			{ key: "fecha", label: "Fecha" },
+			{ key: "hora", label: "Hora" },
+			{ key: "origen", label: "Origen" },
+			{ key: "destino", label: "Destino" },
+			{ key: "pasajeros", label: "Pasajeros" },
+			{ key: "totalConDescuento", label: "Total" },
+			{ key: "estado", label: "Estado" },
+			{ key: "estadoPago", label: "Estado Pago" },
+			{ key: "pagoMonto", label: "Monto Pagado" },
+			{ key: "saldoPendiente", label: "Saldo Pendiente" },
+		];
+
+		const headers = columnasExportar.map((c) => c.label);
+		const filas = reservasFiltradas.map((reserva) => {
+			return columnasExportar.map((col) => {
+				let val = reserva[col.key];
+				if (val === undefined || val === null) return "";
+				if (typeof val === "object") {
+					if (val.nombre) return String(val.nombre);
+					return String(val);
+				}
+				if (col.key === "fecha") {
+					try {
+						const d = new Date(val);
+						if (!isNaN(d)) return d.toLocaleDateString("es-CL");
+					} catch {
+						// ignore
+					}
+				}
+				return String(val);
+			});
+		});
+
+		const aoa = [headers, ...filas];
+		const ws = XLSX.utils.aoa_to_sheet(aoa);
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Reservas");
+		XLSX.writeFile(wb, `reservas_${new Date().toISOString().split("T")[0]}.xlsx`);
+	}, [reservasFiltradas]);
+
+	// Atajos de teclado para mejorar la productividad
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			// Ignorar si el usuario está escribiendo en un input
+			if (
+				e.target.tagName === "INPUT" ||
+				e.target.tagName === "TEXTAREA" ||
+				e.target.isContentEditable
+			) {
+				// Permitir Escape para cerrar diálogos
+				if (e.key === "Escape") {
+					setShowEditDialog(false);
+					setShowDetailDialog(false);
+					setShowNewDialog(false);
+					setShowAsignarDialog(false);
+					setShowHistorialDialog(false);
+					setShowKeyboardShortcuts(false);
+					setShowRegisterPayment(false);
+				}
+				return;
+			}
+
+			// Ctrl/Cmd + N: Nueva reserva
+			if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+				e.preventDefault();
+				setShowNewDialog(true);
+			}
+
+			// Ctrl/Cmd + R: Actualizar
+			if ((e.ctrlKey || e.metaKey) && e.key === "r") {
+				e.preventDefault();
+				fetchReservas();
+				fetchEstadisticas();
+			}
+
+			// Ctrl/Cmd + E: Exportar
+			if ((e.ctrlKey || e.metaKey) && e.key === "e") {
+				e.preventDefault();
+				exportarAExcel();
+			}
+
+			// F o /: Focus en búsqueda
+			if (e.key === "f" || e.key === "/") {
+				e.preventDefault();
+				document.querySelector('input[placeholder*="Buscar"]')?.focus();
+			}
+
+			// ?: Mostrar atajos de teclado
+			if (e.key === "?") {
+				e.preventDefault();
+				setShowKeyboardShortcuts(true);
+			}
+
+			// Números 1-4 para filtros rápidos
+			if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+				if (e.key === "1") {
+					setEstadoFiltro(
+						estadoFiltro === "pendiente" ? "todos" : "pendiente"
+					);
+					setCurrentPage(1);
+				} else if (e.key === "2") {
+					setEstadoFiltro(
+						estadoFiltro === "confirmada" ? "todos" : "confirmada"
+					);
+					setCurrentPage(1);
+				} else if (e.key === "3") {
+					setEstadoPagoFiltro(
+						estadoPagoFiltro === "pendiente" ? "todos" : "pendiente"
+					);
+					setCurrentPage(1);
+				} else if (e.key === "4") {
+					setEstadoPagoFiltro(
+						estadoPagoFiltro === "pagado" ? "todos" : "pagado"
+					);
+					setCurrentPage(1);
+				}
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [
+		estadoFiltro,
+		estadoPagoFiltro,
+		fetchReservas,
+		fetchEstadisticas,
+		exportarAExcel,
+	]);
 
 	// Abrir modal de ediciÃ³n
 	const handleEdit = (reserva) => {
@@ -1066,7 +1217,7 @@ function AdminReservas() {
 			let pagoData = null;
 			try {
 				pagoData = await pagoResponse.json();
-			} catch (parseError) {
+			} catch {
 				pagoData = null;
 			}
 			const estadoAplicadoBackend = pagoData?.reserva?.estado || null;
@@ -1845,10 +1996,91 @@ function AdminReservas() {
 						</div>
 					</div>
 
+					{/* Filtros Rápidos (Chips) */}
+					<div className="mt-4 flex flex-wrap gap-2">
+						<Button
+							variant={estadoFiltro === "pendiente" ? "default" : "outline"}
+							size="sm"
+							onClick={() => {
+								setEstadoFiltro(
+									estadoFiltro === "pendiente" ? "todos" : "pendiente"
+								);
+								setCurrentPage(1);
+							}}
+						>
+							<Clock className="w-3 h-3 mr-1" />
+							Pendientes
+							{estadoFiltro === "pendiente" && (
+								<X className="w-3 h-3 ml-1" />
+							)}
+						</Button>
+						<Button
+							variant={estadoFiltro === "confirmada" ? "default" : "outline"}
+							size="sm"
+							onClick={() => {
+								setEstadoFiltro(
+									estadoFiltro === "confirmada" ? "todos" : "confirmada"
+								);
+								setCurrentPage(1);
+							}}
+						>
+							<CheckCircle2 className="w-3 h-3 mr-1" />
+							Confirmadas
+							{estadoFiltro === "confirmada" && (
+								<X className="w-3 h-3 ml-1" />
+							)}
+						</Button>
+						<Button
+							variant={estadoPagoFiltro === "pendiente" ? "default" : "outline"}
+							size="sm"
+							onClick={() => {
+								setEstadoPagoFiltro(
+									estadoPagoFiltro === "pendiente" ? "todos" : "pendiente"
+								);
+								setCurrentPage(1);
+							}}
+						>
+							<DollarSign className="w-3 h-3 mr-1" />
+							Sin Pagar
+							{estadoPagoFiltro === "pendiente" && (
+								<X className="w-3 h-3 ml-1" />
+							)}
+						</Button>
+						<Button
+							variant={estadoPagoFiltro === "pagado" ? "default" : "outline"}
+							size="sm"
+							onClick={() => {
+								setEstadoPagoFiltro(
+									estadoPagoFiltro === "pagado" ? "todos" : "pagado"
+								);
+								setCurrentPage(1);
+							}}
+						>
+							<CheckCheck className="w-3 h-3 mr-1" />
+							Pagadas
+							{estadoPagoFiltro === "pagado" && (
+								<X className="w-3 h-3 ml-1" />
+							)}
+						</Button>
+					</div>
+
 					<div className="mt-4 flex justify-between items-center">
-						<p className="text-sm text-muted-foreground">
-							Mostrando {reservasFiltradas.length} de {totalReservas} reservas
-						</p>
+						<div className="flex items-center gap-4">
+							<p className="text-sm text-muted-foreground">
+								Mostrando {reservasFiltradas.length} de {totalReservas} reservas
+							</p>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setShowKeyboardShortcuts(true)}
+								className="text-muted-foreground hover:text-foreground"
+							>
+								<kbd className="px-1.5 py-0.5 text-xs font-mono bg-muted rounded mr-1">
+									?
+								</kbd>
+								Atajos de teclado
+							</Button>
+						</div>
 						<Button
 							variant="outline"
 							size="sm"
@@ -1868,18 +2100,145 @@ function AdminReservas() {
 				</CardContent>
 			</Card>
 
+			{/* Modal de Atajos de Teclado */}
+			<Dialog
+				open={showKeyboardShortcuts}
+				onOpenChange={setShowKeyboardShortcuts}
+			>
+				<DialogContent className="max-w-2xl">
+					<DialogHeader>
+						<DialogTitle>⌨️ Atajos de Teclado</DialogTitle>
+						<DialogDescription>
+							Usa estos atajos para trabajar más rápido
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid grid-cols-2 gap-4">
+						<div className="space-y-3">
+							<h4 className="font-semibold text-sm">Acciones Generales</h4>
+							<div className="space-y-2 text-sm">
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">Nueva reserva</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										Ctrl + N
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">Actualizar</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										Ctrl + R
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">Exportar</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										Ctrl + E
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">
+										Cerrar modal abierto
+									</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										Esc
+									</kbd>
+								</div>
+							</div>
+						</div>
+						<div className="space-y-3">
+							<h4 className="font-semibold text-sm">Navegación</h4>
+							<div className="space-y-2 text-sm">
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">Buscar</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										F o /
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">
+										Filtro: Pendientes
+									</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										1
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">
+										Filtro: Confirmadas
+									</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										2
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">
+										Filtro: Sin pagar
+									</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										3
+									</kbd>
+								</div>
+								<div className="flex justify-between items-center">
+									<span className="text-muted-foreground">Filtro: Pagadas</span>
+									<kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">
+										4
+									</kbd>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+						<p className="text-sm text-blue-900">
+							💡 <strong>Tip:</strong> Presiona <kbd className="px-1 py-0.5 bg-white rounded text-xs font-mono mx-1">?</kbd> en cualquier momento para ver estos atajos
+						</p>
+					</div>
+				</DialogContent>
+			</Dialog>
+
 			{/* Tabla de Reservas */}
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Lista de Reservas</CardTitle>
-					<Dialog>
-						<DialogTrigger asChild>
-							<Button variant="outline" size="sm">
-								<Settings2 className="w-4 h-4 mr-2" />
-								Columnas
-							</Button>
-						</DialogTrigger>
-						<DialogContent>
+					<div className="flex gap-2">
+						{/* Botón de nueva reserva */}
+						<Button
+							size="sm"
+							onClick={() => setShowNewDialog(true)}
+						>
+							<Plus className="w-4 h-4 mr-2" />
+							Nueva Reserva
+						</Button>
+						{/* Botón de exportar */}
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={exportarAExcel}
+							title="Exportar todas las reservas a Excel"
+						>
+							<Download className="w-4 h-4 mr-2" />
+							Exportar
+						</Button>
+						{/* Botón de actualizar */}
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								fetchReservas();
+								fetchEstadisticas();
+							}}
+							disabled={loading}
+							title="Actualizar datos"
+						>
+							<RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+						</Button>
+						{/* Botón de columnas */}
+						<Dialog>
+							<DialogTrigger asChild>
+								<Button variant="outline" size="sm">
+									<Settings2 className="w-4 h-4 mr-2" />
+									Columnas
+								</Button>
+							</DialogTrigger>
+							<DialogContent>
 							<DialogHeader>
 								<DialogTitle>Configurar Columnas Visibles</DialogTitle>
 								<DialogDescription>
@@ -1946,9 +2305,11 @@ function AdminReservas() {
 							</div>
 						</DialogContent>
 					</Dialog>
+				</div>
+			</CardHeader>
 
-					{/* Modal para registrar pago manual */}
-					<Dialog
+			{/* Modal para registrar pago manual */}
+			<Dialog
 						open={showRegisterPayment}
 						onOpenChange={setShowRegisterPayment}
 					>
@@ -2043,7 +2404,7 @@ function AdminReservas() {
 							</div>
 						</DialogContent>
 					</Dialog>
-				</CardHeader>
+
 				<CardContent>
 					{error && (
 						<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -2366,40 +2727,132 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.acciones && (
 												<TableCell>
-													<div className="flex gap-2">
+													<div className="flex gap-1">
+														{/* Botón Ver - siempre visible para acceso rápido */}
 														<Button
-															variant="outline"
+															variant="ghost"
 															size="sm"
 															onClick={() => handleViewDetails(reserva)}
+															title="Ver detalles"
 														>
 															<Eye className="w-4 h-4" />
 														</Button>
+														{/* Botón Editar - siempre visible para acceso rápido */}
 														<Button
-															variant="default"
+															variant="ghost"
 															size="sm"
 															onClick={() => handleEdit(reserva)}
+															title="Editar reserva"
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
-														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
-														{reserva?.estado === "confirmada" && (
-															<Button
-																variant={
-																	isAsignada(reserva) ? "outline" : "secondary"
-																}
-																size="sm"
-																onClick={() => handleAsignar(reserva)}
-																title={
-																	isAsignada(reserva)
-																		? "Reasignar vehículo y conductor"
-																		: "Asignar vehículo y conductor"
-																}
-															>
-																<span role="img" aria-label="auto">
-																	🚗
-																</span>
-															</Button>
-														)}
+														{/* Menú de acciones adicionales */}
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="sm"
+																	title="Más acciones"
+																>
+																	<MoreVertical className="w-4 h-4" />
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end" className="w-48">
+																<DropdownMenuLabel>Acciones Rápidas</DropdownMenuLabel>
+																<DropdownMenuSeparator />
+																{/* Asignar/Reasignar vehículo - solo si está confirmada */}
+																{reserva?.estado === "confirmada" && (
+																	<DropdownMenuItem
+																		onClick={() => handleAsignar(reserva)}
+																	>
+																		<span className="mr-2">🚗</span>
+																		{isAsignada(reserva)
+																			? "Reasignar Vehículo"
+																			: "Asignar Vehículo"}
+																	</DropdownMenuItem>
+																)}
+																{/* Copiar ID de reserva */}
+																<DropdownMenuItem
+																	onClick={() => {
+																		navigator.clipboard.writeText(
+																			reserva.codigoReserva || `#${reserva.id}`
+																		);
+																		alert("Código copiado al portapapeles");
+																	}}
+																>
+																	<Copy className="w-4 h-4 mr-2" />
+																	Copiar Código
+																</DropdownMenuItem>
+																{/* Cambio rápido de estado */}
+																{reserva.estado !== "confirmada" && (
+																	<DropdownMenuItem
+																		onClick={async () => {
+																			try {
+																				await fetch(
+																					`${apiUrl}/api/reservas/${reserva.id}/estado`,
+																					{
+																						method: "PUT",
+																						headers: {
+																							"Content-Type": "application/json",
+																							Authorization: `Bearer ${accessToken}`,
+																						},
+																						body: JSON.stringify({
+																							estado: "confirmada",
+																						}),
+																					}
+																				);
+																				await fetchReservas();
+																				alert("Reserva confirmada");
+																			} catch (e) {
+																				alert("Error al confirmar: " + e.message);
+																			}
+																		}}
+																	>
+																		<CheckCircle2 className="w-4 h-4 mr-2" />
+																		Confirmar Reserva
+																	</DropdownMenuItem>
+																)}
+																{/* Cancelar reserva */}
+																{reserva.estado !== "cancelada" && (
+																	<>
+																		<DropdownMenuSeparator />
+																		<DropdownMenuItem
+																			className="text-red-600"
+																			onClick={async () => {
+																				if (
+																					!confirm(
+																						"¿Estás seguro de cancelar esta reserva?"
+																					)
+																				)
+																					return;
+																				try {
+																					await fetch(
+																						`${apiUrl}/api/reservas/${reserva.id}/estado`,
+																						{
+																							method: "PUT",
+																							headers: {
+																								"Content-Type": "application/json",
+																								Authorization: `Bearer ${accessToken}`,
+																							},
+																							body: JSON.stringify({
+																								estado: "cancelada",
+																							}),
+																						}
+																					);
+																					await fetchReservas();
+																					alert("Reserva cancelada");
+																				} catch (e) {
+																					alert("Error al cancelar: " + e.message);
+																				}
+																			}}
+																		>
+																			<Ban className="w-4 h-4 mr-2" />
+																			Cancelar Reserva
+																		</DropdownMenuItem>
+																	</>
+																)}
+															</DropdownMenuContent>
+														</DropdownMenu>
 													</div>
 												</TableCell>
 											)}
