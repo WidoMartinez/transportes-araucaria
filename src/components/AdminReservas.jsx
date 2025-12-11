@@ -514,8 +514,17 @@ function AdminReservas() {
 	// Abrir diÃ¡logo de asignaciÃ³n
 	const handleAsignar = (reserva) => {
 		setSelectedReserva(reserva);
-		// Derivar patente del label "TIPO PATENTE"
-		const pat = (reserva.vehiculo || "").trim().split(" ").pop().toUpperCase();
+		// Derivar patente del label "TIPO PATENTE" o "TIPO (patente PATENTE)"
+		const vehiculoStr = (reserva.vehiculo || "").trim();
+		let pat = "";
+		// Intentar extraer del formato nuevo: "TIPO (patente XXXX)"
+		const matchNew = vehiculoStr.match(/\(patente\s+([^)]+)\)/i);
+		if (matchNew) {
+			pat = matchNew[1].toUpperCase();
+		} else {
+			// Formato antiguo: "TIPO PATENTE"
+			pat = vehiculoStr.split(" ").pop().toUpperCase();
+		}
 		setAssignedPatente(pat || "");
 		// Intentar extraer nombre de conductor desde observaciones
 		const obs = (reserva.observaciones || "").toString();
