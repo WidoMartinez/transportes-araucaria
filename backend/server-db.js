@@ -4060,7 +4060,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 
         await transaction.commit();
 
-        // Enviar notificación por correo si se solicitó
+        // Enviar notificación por correo al cliente si se solicitó
         if (sendEmail) {
             try {
                 // Preparar datos para el correo usando el script específico de asignación
@@ -4092,45 +4092,45 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     timeout: 10000
                 });
                 
-                console.log(`📧 Notificación de asignación enviada para reserva ${reserva.codigoReserva} vía ${phpUrl}`);
+                console.log(`📧 Notificación de asignación enviada al cliente para reserva ${reserva.codigoReserva}`);
             } catch (emailError) {
-                console.error("❌ Error enviando notificación de asignación:", emailError.message);
+                console.error("❌ Error enviando notificación al cliente:", emailError.message);
                 // No fallamos la request si el email falla
             }
+        }
 
-            // Enviar notificación al conductor si tiene email y el flag está activado
-            if (sendEmailDriver && conductor && conductor.email) {
-                try {
-                    const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
-                    
-                    const conductorPayload = {
-                        conductorEmail: conductor.email,
-                        conductorNombre: conductor.nombre,
-                        codigoReserva: reserva.codigoReserva,
-                        pasajeroNombre: reserva.nombre,
-                        pasajeroTelefono: reserva.telefono,
-                        origen: reserva.origen,
-                        destino: reserva.destino,
-                        direccionRecogida: reserva.direccionOrigen || reserva.origen,
-                        fecha: reserva.fecha,
-                        hora: reserva.hora,
-                        pasajeros: reserva.pasajeros,
-                        vehiculo: vehiculoStr,
-                        observaciones: reserva.observaciones || "",
-                        numeroVuelo: reserva.numeroVuelo || "",
-                        hotel: reserva.hotel || ""
-                    };
+        // Enviar notificación al conductor si tiene email y el flag está activado
+        if (sendEmailDriver && conductor && conductor.email) {
+            try {
+                const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
+                
+                const conductorPayload = {
+                    conductorEmail: conductor.email,
+                    conductorNombre: conductor.nombre,
+                    codigoReserva: reserva.codigoReserva,
+                    pasajeroNombre: reserva.nombre,
+                    pasajeroTelefono: reserva.telefono,
+                    origen: reserva.origen,
+                    destino: reserva.destino,
+                    direccionRecogida: reserva.direccionOrigen || reserva.origen,
+                    fecha: reserva.fecha,
+                    hora: reserva.hora,
+                    pasajeros: reserva.pasajeros,
+                    vehiculo: vehiculoStr,
+                    observaciones: reserva.observaciones || "",
+                    numeroVuelo: reserva.numeroVuelo || "",
+                    hotel: reserva.hotel || ""
+                };
 
-                    await axios.post(phpConductorUrl, conductorPayload, {
-                        headers: { "Content-Type": "application/json" },
-                        timeout: 10000
-                    });
+                await axios.post(phpConductorUrl, conductorPayload, {
+                    headers: { "Content-Type": "application/json" },
+                    timeout: 10000
+                });
 
-                    console.log(`📧 Notificación enviada al conductor ${conductor.nombre} (${conductor.email})`);
-                } catch (conductorEmailError) {
-                    console.error("❌ Error enviando notificación al conductor:", conductorEmailError.message);
-                    // No fallamos la request si el email al conductor falla
-                }
+                console.log(`📧 Notificación enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`);
+            } catch (conductorEmailError) {
+                console.error("❌ Error enviando notificación al conductor:", conductorEmailError.message);
+                // No fallamos la request si el email al conductor falla
             }
         }
 

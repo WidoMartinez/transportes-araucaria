@@ -128,6 +128,7 @@ try {
 
     $mail->setFrom($emailConfig['username'], $emailConfig['from_name']);
     $mail->addAddress($conductorEmail, $conductorNombre);
+    // Enviar copia al admin para que tenga registro de las asignaciones
     if (!empty($emailConfig['to'])) {
         $mail->addBCC($emailConfig['to'], 'Admin');
     }
