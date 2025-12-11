@@ -333,9 +333,6 @@ function AdminEstadisticas() {
 		setLoading(true);
 		try {
 			const query = construirQueryFechas();
-			console.log("🔍 [FRONTEND] Fetching detalle conductor:", conductorId);
-			console.log("   Query:", query);
-			console.log("   Rango aplicado:", rangoAplicado);
 			const response = await authenticatedFetch(
 				`/api/estadisticas/conductores/${conductorId}${query}`,
 				{
@@ -344,12 +341,6 @@ function AdminEstadisticas() {
 			);
 			if (response.ok) {
 				const data = await response.json();
-				console.log("✅ [FRONTEND] Datos recibidos:");
-				console.log("   Reservas:", data.conductor?.reservas?.length || 0);
-				console.log("   Gastos:", data.conductor?.gastos?.length || 0);
-				console.log("   Gastos por tipo:", data.conductor?.gastosPorTipo);
-				console.log("   Total ingresos:", data.conductor?.totalIngresos);
-				console.log("   Total gastos:", data.conductor?.totalGastos);
 				setConductorDetalle(data);
 				setShowDetalleDialog(true);
 			}
