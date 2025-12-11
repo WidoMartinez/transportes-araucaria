@@ -7228,6 +7228,12 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 		const fechaInicio = from ? new Date(from) : null;
 		const fechaFin = to ? new Date(to) : null;
 
+		console.log("🔍 [DETALLE-CONDUCTOR] ID:", id);
+		console.log("   from:", from);
+		console.log("   to:", to);
+		console.log("   fechaInicio:", fechaInicio);
+		console.log("   fechaFin:", fechaFin);
+
 		const filtroReservas = {};
 		if (fechaInicio) {
 			filtroReservas[Op.gte] = fechaInicio;
@@ -7239,6 +7245,8 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 			Object.keys(filtroReservas).length > 0
 				? { fecha: filtroReservas }
 				: undefined;
+
+		console.log("   whereReservas:", JSON.stringify(whereReservas, null, 2));
 
 		const conductor = await Conductor.findByPk(id, {
 			include: [
@@ -7282,11 +7290,20 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 		const reservas = conductor.reservas || [];
 		const todosLosGastos = conductor.gastos || [];
 
+		console.log("📊 [RESULTADO]");
+		console.log("   Reservas encontradas:", reservas.length);
+		if (reservas.length > 0) {
+			console.log("   Fechas de reservas:", reservas.map(r => r.fecha));
+		}
+		console.log("   Total gastos (sin filtrar):", todosLosGastos.length);
+
 		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
 		const reservaIds = new Set(reservas.map(r => r.id));
 		const gastos = todosLosGastos.filter(g => 
 			g.reservaId && reservaIds.has(g.reservaId)
 		);
+
+		console.log("   Gastos filtrados:", gastos.length);
 
 		// Agrupar gastos por tipo
 		const gastosPorTipo = gastos.reduce((acc, gasto) => {
