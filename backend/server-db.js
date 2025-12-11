@@ -4063,39 +4063,36 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
         // Enviar notificación por correo si se solicitó
         if (sendEmail) {
             try {
-                // Preparar datos para el correo (usando endpoint PHP existente)
-                const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+                // Preparar datos para el correo usando el script específico de asignación
+                // Asumimos que el script está en la raíz pública o accesible vía URL
+                const phpUrl = process.env.PHP_ASSIGNMENT_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
                 
-                // Construir mensaje de asignación con el formato solicitado por el usuario
-                // Nota: Usamos saltos de línea explícitos que el PHP debería respetar o convertir a HTML
-                const mensajeAsignacion = `Asignación Confirmada\n` +
-                    `Tu vehículo ha sido asignado\n\n` +
-                    `Estimad@ ${reserva.nombre || "Cliente"}, tu traslado ha sido programado con el siguiente vehículo.\n\n` +
-                    `Detalles de tu Viaje\n` +
-                    `Ruta: ${reserva.origen} → ${reserva.destino}\n` +
-                    `Fecha: ${reserva.fecha}\n` +
-                    `Hora: ${reserva.hora}\n` +
-                    `Pasajeros: ${reserva.pasajeros}\n` +
-                    `Vehículo: ${vehiculoStr.toUpperCase()}\n` +
-                    `Conductor: ${conductor ? conductor.nombre : "Por confirmar"}\n\n` +
-                    `Si necesitas actualizar algún detalle (número de vuelo, hotel, etc.), responde a este correo.\n\n` +
-                    `Gracias por elegir Transportes Araucaria.`;
-
-                // Enviar como actualización con el action "asignacion_vehiculo" que parece ser el específico
-                // Si no existe, al menos el mensaje lleva el contenido correcto
-                await axios.post(phpUrl, {
-                    ...reserva.toJSON(),
-                    action: "asignacion_vehiculo", // Cambiado a un nombre más específico para intentar trigger de plantilla
-                    vehiculo: vehiculoStr,
+                // Extraer patente (últimos 4 caracteres) y tipo para el formato del correo
+                const last4Patente = vehiculo.patente ? vehiculo.patente.slice(-4) : "";
+                
+                // Payload específico para enviar_asignacion_reserva.php
+                const emailPayload = {
+                    email: reserva.email,
+                    nombre: reserva.nombre,
+                    codigoReserva: reserva.codigoReserva,
+                    vehiculo: vehiculoStr, // String completo para fallback
+                    vehiculoTipo: vehiculo.tipo,
+                    vehiculoPatenteLast4: last4Patente,
+                    origen: reserva.origen,
+                    destino: reserva.destino,
+                    fecha: reserva.fecha,
+                    hora: reserva.hora,
+                    pasajeros: reserva.pasajeros,
                     conductorNombre: conductor ? conductor.nombre : "",
-                    conductorTelefono: conductor ? conductor.telefono : "",
-                    mensaje: mensajeAsignacion
-                }, {
+                    estadoPago: reserva.estadoPago || "pendiente" // CRÍTICO: El script PHP valida esto
+                };
+
+                await axios.post(phpUrl, emailPayload, {
                     headers: { "Content-Type": "application/json" },
                     timeout: 10000
                 });
                 
-                console.log(`📧 Notificación de asignación enviada para reserva ${reserva.codigoReserva}`);
+                console.log(`📧 Notificación de asignación enviada para reserva ${reserva.codigoReserva} vía ${phpUrl}`);
             } catch (emailError) {
                 console.error("❌ Error enviando notificación de asignación:", emailError.message);
                 // No fallamos la request si el email falla
