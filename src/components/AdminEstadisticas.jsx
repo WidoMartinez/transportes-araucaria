@@ -332,8 +332,9 @@ function AdminEstadisticas() {
 	const fetchDetalleConductor = async (conductorId) => {
 		setLoading(true);
 		try {
+			const query = construirQueryFechas();
 			const response = await authenticatedFetch(
-				`/api/estadisticas/conductores/${conductorId}`,
+				`/api/estadisticas/conductores/${conductorId}${query}`,
 				{
 					method: "GET",
 				}
