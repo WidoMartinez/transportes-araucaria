@@ -6870,7 +6870,7 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			Object.keys(filtroReservas).length > 0
+			(fechaInicio || fechaFin)
 				? { fecha: filtroReservas }
 				: undefined;
 
@@ -6997,7 +6997,7 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			Object.keys(filtroReservas).length > 0
+			(fechaInicio || fechaFin)
 				? { fecha: filtroReservas }
 				: undefined;
 
@@ -7242,7 +7242,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			Object.keys(filtroReservas).length > 0
+			(fechaInicio || fechaFin)
 				? { fecha: filtroReservas }
 				: undefined;
 
