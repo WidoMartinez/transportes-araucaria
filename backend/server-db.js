@@ -6886,59 +6886,67 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 				? { fecha: filtroGastos }
 				: undefined;
 
-		const conductores = await Conductor.findAll({
-			include: [
-				{
-					model: Reserva,
-					as: "reservas",
-					attributes: ["id", "totalConDescuento", "estado", "fecha"],
-					where: whereReservas,
-					required: false,
-				},
-				{
-					model: Gasto,
-					as: "gastos",
-					attributes: ["id", "monto", "tipoGasto", "fecha"],
-					where: whereGastos,
-					required: false,
-				},
-			],
-		});
+		// NO filtrar gastos por fecha aquí, ya que necesitamos filtrarlos por reservaId
+	// Los gastos deben corresponder a las reservas del período, no por su propia fecha
+	const conductores = await Conductor.findAll({
+		include: [
+			{
+				model: Reserva,
+				as: "reservas",
+				attributes: ["id", "totalConDescuento", "estado", "fecha"],
+				where: whereReservas,
+				required: false,
+			},
+			{
+				model: Gasto,
+				as: "gastos",
+				attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId"],
+				// NO aplicar filtro de fecha aquí
+				required: false,
+			},
+		],
+	});
 
-		const estadisticas = conductores.map((conductor) => {
-			const reservas = conductor.reservas || [];
-			const gastos = conductor.gastos || [];
+	const estadisticas = conductores.map((conductor) => {
+		const reservas = conductor.reservas || [];
+		const todosLosGastos = conductor.gastos || [];
+		
+		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
+		const reservaIds = new Set(reservas.map(r => r.id));
+		const gastos = todosLosGastos.filter(g => 
+			g.reservaId && reservaIds.has(g.reservaId)
+		);
 
-			const totalReservas = reservas.length;
-			const reservasCompletadas = reservas.filter(
-				(r) => r.estado === "completada"
-			).length;
-			const totalIngresos = reservas.reduce(
-				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-				0
-			);
-			const totalGastos = gastos.reduce(
-				(sum, g) => sum + parseFloat(g.monto || 0),
-				0
-			);
-			const pagosConductor = gastos
-				.filter((g) => g.tipoGasto === "pago_conductor")
-				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+		const totalReservas = reservas.length;
+		const reservasCompletadas = reservas.filter(
+			(r) => r.estado === "completada"
+		).length;
+		const totalIngresos = reservas.reduce(
+			(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+			0
+		);
+		const totalGastos = gastos.reduce(
+			(sum, g) => sum + parseFloat(g.monto || 0),
+			0
+		);
+		const pagosConductor = gastos
+			.filter((g) => g.tipoGasto === "pago_conductor")
+			.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
 
-			return {
-				id: conductor.id,
-				nombre: conductor.nombre,
-				rut: conductor.rut,
-				telefono: conductor.telefono,
-				email: conductor.email,
-				totalReservas,
-				reservasCompletadas,
-				totalIngresos,
-				totalGastos,
-				pagosConductor,
-				utilidad: totalIngresos - totalGastos,
-			};
-		});
+		return {
+			id: conductor.id,
+			nombre: conductor.nombre,
+			rut: conductor.rut,
+			telefono: conductor.telefono,
+			email: conductor.email,
+			totalReservas,
+			reservasCompletadas,
+			totalIngresos,
+			totalGastos,
+			pagosConductor,
+			utilidad: totalIngresos - totalGastos,
+		};
+	});
 
 		res.json({
 			success: true,
@@ -7005,64 +7013,72 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 				? { fecha: filtroGastos }
 				: undefined;
 
-		const vehiculos = await Vehiculo.findAll({
-			include: [
-				{
-					model: Reserva,
-					as: "reservas",
-					attributes: ["id", "totalConDescuento", "estado", "fecha"],
-					where: whereReservas,
-					required: false,
-				},
-				{
-					model: Gasto,
-					as: "gastos",
-					attributes: ["id", "monto", "tipoGasto", "fecha"],
-					where: whereGastos,
-					required: false,
-				},
-			],
-		});
+		// NO filtrar gastos por fecha aquí, ya que necesitamos filtrarlos por reservaId
+	// Los gastos deben corresponder a las reservas del período, no por su propia fecha
+	const vehiculos = await Vehiculo.findAll({
+		include: [
+			{
+				model: Reserva,
+				as: "reservas",
+				attributes: ["id", "totalConDescuento", "estado", "fecha"],
+				where: whereReservas,
+				required: false,
+			},
+			{
+				model: Gasto,
+				as: "gastos",
+				attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId"],
+				// NO aplicar filtro de fecha aquí
+				required: false,
+			},
+		],
+	});
 
-		const estadisticas = vehiculos.map((vehiculo) => {
-			const reservas = vehiculo.reservas || [];
-			const gastos = vehiculo.gastos || [];
+	const estadisticas = vehiculos.map((vehiculo) => {
+		const reservas = vehiculo.reservas || [];
+		const todosLosGastos = vehiculo.gastos || [];
+		
+		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
+		const reservaIds = new Set(reservas.map(r => r.id));
+		const gastos = todosLosGastos.filter(g => 
+			g.reservaId && reservaIds.has(g.reservaId)
+		);
 
-			const totalReservas = reservas.length;
-			const reservasCompletadas = reservas.filter(
-				(r) => r.estado === "completada"
-			).length;
-			const totalIngresos = reservas.reduce(
-				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-				0
-			);
-			const totalGastos = gastos.reduce(
-				(sum, g) => sum + parseFloat(g.monto || 0),
-				0
-			);
-			const gastoCombustible = gastos
-				.filter((g) => g.tipoGasto === "combustible")
-				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
-			const gastoMantenimiento = gastos
-				.filter((g) => g.tipoGasto === "mantenimiento")
-				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+		const totalReservas = reservas.length;
+		const reservasCompletadas = reservas.filter(
+			(r) => r.estado === "completada"
+		).length;
+		const totalIngresos = reservas.reduce(
+			(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+			0
+		);
+		const totalGastos = gastos.reduce(
+			(sum, g) => sum + parseFloat(g.monto || 0),
+			0
+		);
+		const gastoCombustible = gastos
+			.filter((g) => g.tipoGasto === "combustible")
+			.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+		const gastoMantenimiento = gastos
+			.filter((g) => g.tipoGasto === "mantenimiento")
+			.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
 
-			return {
-				id: vehiculo.id,
-				patente: vehiculo.patente,
-				marca: vehiculo.marca,
-				modelo: vehiculo.modelo,
-				tipo: vehiculo.tipo,
-				capacidad: vehiculo.capacidad,
-				totalReservas,
-				reservasCompletadas,
-				totalIngresos,
-				totalGastos,
-				gastoCombustible,
-				gastoMantenimiento,
-				utilidad: totalIngresos - totalGastos,
-			};
-		});
+		return {
+			id: vehiculo.id,
+			patente: vehiculo.patente,
+			marca: vehiculo.marca,
+			modelo: vehiculo.modelo,
+			tipo: vehiculo.tipo,
+			capacidad: vehiculo.capacidad,
+			totalReservas,
+			reservasCompletadas,
+			totalIngresos,
+			totalGastos,
+			gastoCombustible,
+			gastoMantenimiento,
+			utilidad: totalIngresos - totalGastos,
+		};
+	});
 
 		res.json({
 			success: true,
