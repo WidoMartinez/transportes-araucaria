@@ -42,6 +42,7 @@ import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import { authJWT } from "./middleware/authJWT.js";
+import { apiLimiter, strictLimiter } from "./middleware/rateLimiter.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
@@ -3336,6 +3337,454 @@ app.get("/api/reservas/estadisticas", async (req, res) => {
 		});
 	}
 });
+
+// ========== NUEVOS ENDPOINTS PARA SISTEMA INTEGRAL DE RESERVAS ==========
+
+// Obtener reservas agrupadas por estado para vista Kanban
+app.get("/api/reservas/kanban", apiLimiter, authAdmin, async (req, res) => {
+	try {
+		const { fecha_desde, fecha_hasta, search } = req.query;
+
+		// Construir el where clause
+		const whereClause = {};
+		
+		if (fecha_desde || fecha_hasta) {
+			whereClause.fecha = {};
+			if (fecha_desde) whereClause.fecha[Op.gte] = fecha_desde;
+			if (fecha_hasta) whereClause.fecha[Op.lte] = fecha_hasta;
+		}
+
+		// Búsqueda por texto
+		if (search && search.trim()) {
+			whereClause[Op.or] = [
+				{ nombre: { [Op.iLike]: `%${search.trim()}%` } },
+				{ email: { [Op.iLike]: `%${search.trim()}%` } },
+				{ telefono: { [Op.iLike]: `%${search.trim()}%` } },
+				{ codigoReserva: { [Op.iLike]: `%${search.trim()}%` } }
+			];
+		}
+
+		// Obtener todas las reservas con relaciones
+		const reservas = await Reserva.findAll({
+			where: whereClause,
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: ["id", "nombre", "email", "telefono", "esCliente", "clasificacion"]
+				},
+				{
+					model: Vehiculo,
+					as: "vehiculoAsignado",
+					attributes: ["id", "patente", "marca", "modelo", "tipo"]
+				},
+				{
+					model: Conductor,
+					as: "conductorAsignado",
+					attributes: ["id", "nombre", "telefono", "licencia"]
+				}
+			],
+			order: [["created_at", "DESC"]]
+		});
+
+		// Agrupar por estado según el nuevo sistema (5 estados)
+		const kanbanData = {
+			pendiente: [],
+			confirmada: [],
+			asignada: [],
+			en_progreso: [],
+			completada: []
+		};
+
+		reservas.forEach(reserva => {
+			const estado = reserva.estado || "pendiente";
+			
+			// Mapear estados antiguos a nuevos estados Kanban
+			let kanbanEstado = estado;
+			
+			// Si está confirmada y tiene vehículo/conductor asignado, va a "asignada"
+			if (estado === "confirmada" && (reserva.vehiculoId || reserva.conductorId)) {
+				kanbanEstado = "asignada";
+			}
+			// Si está cancelada, no la mostramos en Kanban (o podríamos crear una columna separada)
+			else if (estado === "cancelada") {
+				return; // Skip canceladas
+			}
+			// Mapear pendiente_detalles a pendiente
+			else if (estado === "pendiente_detalles") {
+				kanbanEstado = "pendiente";
+			}
+
+			// Agregar a la columna correspondiente
+			if (kanbanData[kanbanEstado]) {
+				kanbanData[kanbanEstado].push(reserva);
+			}
+		});
+
+		// Calcular estadísticas por columna
+		const estadisticas = {
+			pendiente: kanbanData.pendiente.length,
+			confirmada: kanbanData.confirmada.length,
+			asignada: kanbanData.asignada.length,
+			en_progreso: kanbanData.en_progreso.length,
+			completada: kanbanData.completada.length,
+			total: reservas.length
+		};
+
+		res.json({
+			kanban: kanbanData,
+			estadisticas
+		});
+	} catch (error) {
+		console.error("Error obteniendo vista Kanban:", error);
+		res.status(500).json({ 
+			error: "Error al obtener vista Kanban",
+			details: error.message 
+		});
+	}
+});
+
+// Obtener métricas en tiempo real para dashboard
+app.get("/api/reservas/metricas", apiLimiter, authAdmin, async (req, res) => {
+	try {
+		const hoy = new Date();
+		hoy.setHours(0, 0, 0, 0);
+		
+		const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+		const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999);
+
+		// Métricas generales
+		const [
+			totalReservas,
+			reservasHoy,
+			reservasMes,
+			reservasPendientes,
+			reservasConfirmadas,
+			reservasAsignadas,
+			reservasEnProgreso,
+			reservasCompletadas,
+			reservasPagadas,
+			reservasPendientesPago
+		] = await Promise.all([
+			Reserva.count(),
+			Reserva.count({ where: { fecha: { [Op.eq]: hoy } } }),
+			Reserva.count({ 
+				where: { 
+					created_at: { 
+						[Op.between]: [inicioMes, finMes] 
+					} 
+				} 
+			}),
+			Reserva.count({ where: { estado: "pendiente" } }),
+			Reserva.count({ where: { estado: "confirmada" } }),
+			Reserva.count({ 
+				where: { 
+					estado: "confirmada",
+					[Op.or]: [
+						{ vehiculoId: { [Op.ne]: null } },
+						{ conductorId: { [Op.ne]: null } }
+					]
+				} 
+			}),
+			Reserva.count({ where: { estado: "en_progreso" } }),
+			Reserva.count({ where: { estado: "completada" } }),
+			Reserva.count({ where: { estadoPago: "pagado" } }),
+			Reserva.count({ where: { estadoPago: "pendiente" } })
+		]);
+
+		// Ingresos
+		const reservasPagadasList = await Reserva.findAll({
+			where: { estadoPago: "pagado" },
+			attributes: ["totalConDescuento", "pagoMonto"]
+		});
+
+		const totalIngresos = reservasPagadasList.reduce((sum, r) => {
+			const monto = parseFloat(r.pagoMonto || r.totalConDescuento || 0);
+			return sum + monto;
+		}, 0);
+
+		const ingresosMes = reservasPagadasList
+			.filter(r => {
+				const fecha = new Date(r.pagoFecha || r.created_at);
+				return fecha >= inicioMes && fecha <= finMes;
+			})
+			.reduce((sum, r) => {
+				const monto = parseFloat(r.pagoMonto || r.totalConDescuento || 0);
+				return sum + monto;
+			}, 0);
+
+		// Alertas (reservas que requieren atención)
+		const alertas = [];
+
+		// Reservas pendientes de más de 2 días
+		const dosDiasAtras = new Date();
+		dosDiasAtras.setDate(dosDiasAtras.getDate() - 2);
+		
+		const reservasPendientesAntiguas = await Reserva.count({
+			where: {
+				estado: "pendiente",
+				created_at: { [Op.lt]: dosDiasAtras }
+			}
+		});
+
+		if (reservasPendientesAntiguas > 0) {
+			alertas.push({
+				tipo: "warning",
+				mensaje: `${reservasPendientesAntiguas} reserva(s) pendiente(s) de más de 2 días`,
+				count: reservasPendientesAntiguas
+			});
+		}
+
+		// Reservas confirmadas sin asignar conductor/vehículo próximas (menos de 2 días)
+		const dosDiasAdelante = new Date();
+		dosDiasAdelante.setDate(dosDiasAdelante.getDate() + 2);
+
+		const reservasSinAsignar = await Reserva.count({
+			where: {
+				estado: "confirmada",
+				fecha: { [Op.lte]: dosDiasAdelante },
+				[Op.and]: [
+					{ vehiculoId: null },
+					{ conductorId: null }
+				]
+			}
+		});
+
+		if (reservasSinAsignar > 0) {
+			alertas.push({
+				tipo: "error",
+				mensaje: `${reservasSinAsignar} reserva(s) confirmada(s) sin asignar y próximas a fecha`,
+				count: reservasSinAsignar
+			});
+		}
+
+		// Reservas con saldo pendiente
+		const reservasConSaldo = await Reserva.count({
+			where: {
+				saldoPendiente: { [Op.gt]: 0 },
+				estado: { [Op.notIn]: ["cancelada", "completada"] }
+			}
+		});
+
+		if (reservasConSaldo > 0) {
+			alertas.push({
+				tipo: "info",
+				mensaje: `${reservasConSaldo} reserva(s) con saldo pendiente`,
+				count: reservasConSaldo
+			});
+		}
+
+		res.json({
+			metricas: {
+				totalReservas,
+				reservasHoy,
+				reservasMes,
+				reservasPendientes,
+				reservasConfirmadas,
+				reservasAsignadas,
+				reservasEnProgreso,
+				reservasCompletadas,
+				reservasPagadas,
+				reservasPendientesPago,
+				totalIngresos: Math.round(totalIngresos),
+				ingresosMes: Math.round(ingresosMes)
+			},
+			alertas
+		});
+	} catch (error) {
+		console.error("Error obteniendo métricas:", error);
+		res.status(500).json({ 
+			error: "Error al obtener métricas",
+			details: error.message 
+		});
+	}
+});
+
+// Cambiar estado de una reserva (para drag & drop en Kanban)
+app.put("/api/reservas/:id/cambiar-estado", strictLimiter, authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { nuevoEstado, observaciones } = req.body;
+
+		// Validar estados permitidos
+		const estadosPermitidos = ["pendiente", "confirmada", "asignada", "en_progreso", "completada", "cancelada"];
+		if (!estadosPermitidos.includes(nuevoEstado)) {
+			return res.status(400).json({ 
+				error: "Estado no válido",
+				estadosPermitidos 
+			});
+		}
+
+		const reserva = await Reserva.findByPk(id, {
+			include: [
+				{ model: Vehiculo, as: "vehiculoAsignado" },
+				{ model: Conductor, as: "conductorAsignado" }
+			]
+		});
+
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Validaciones según el nuevo estado
+		if (nuevoEstado === "asignada") {
+			// Debe tener vehículo O conductor asignado
+			if (!reserva.vehiculoId && !reserva.conductorId) {
+				return res.status(400).json({ 
+					error: "No se puede marcar como 'Asignada' sin vehículo o conductor asignado" 
+				});
+			}
+		}
+
+		if (nuevoEstado === "en_progreso") {
+			// Debe estar asignada primero (tener vehículo y conductor)
+			if (!reserva.vehiculoId || !reserva.conductorId) {
+				return res.status(400).json({ 
+					error: "No se puede marcar como 'En Progreso' sin vehículo Y conductor asignados" 
+				});
+			}
+		}
+
+		if (nuevoEstado === "completada") {
+			// Verificar que el pago esté completo o al menos registrado
+			if (reserva.saldoPendiente > 0 && reserva.estadoPago === "pendiente") {
+				// Solo advertencia, permitir completar
+				console.warn(`Reserva ${id} completada con saldo pendiente: ${reserva.saldoPendiente}`);
+			}
+		}
+
+		const estadoAnterior = reserva.estado;
+
+		// Actualizar estado
+		await reserva.update({
+			estado: nuevoEstado,
+			observaciones: observaciones 
+				? `${reserva.observaciones || ""}\n[${new Date().toLocaleString('es-CL')}] Cambio de estado: ${estadoAnterior} → ${nuevoEstado}. ${observaciones}`
+				: reserva.observaciones
+		});
+
+		// Log de auditoría
+		console.log(`Reserva ${id} cambió de estado: ${estadoAnterior} → ${nuevoEstado}`);
+
+		// Recargar con relaciones
+		const reservaActualizada = await Reserva.findByPk(id, {
+			include: [
+				{ model: Cliente, as: "cliente" },
+				{ model: Vehiculo, as: "vehiculoAsignado" },
+				{ model: Conductor, as: "conductorAsignado" }
+			]
+		});
+
+		res.json({
+			success: true,
+			reserva: reservaActualizada,
+			mensaje: `Estado cambiado de ${estadoAnterior} a ${nuevoEstado}`
+		});
+
+	} catch (error) {
+		console.error("Error cambiando estado de reserva:", error);
+		res.status(500).json({ 
+			error: "Error al cambiar estado de reserva",
+			details: error.message 
+		});
+	}
+});
+
+// Obtener timeline/historial de actividad de una reserva
+app.get("/api/reservas/:id/timeline", apiLimiter, authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Construir timeline desde observaciones y datos de la reserva
+		const timeline = [];
+
+		// Evento: Creación
+		timeline.push({
+			tipo: "creacion",
+			fecha: reserva.created_at,
+			titulo: "Reserva creada",
+			descripcion: `Reserva creada vía ${reserva.source || "web"}`,
+			icono: "plus"
+		});
+
+		// Evento: Cambios de estado (parseando observaciones)
+		if (reserva.observaciones) {
+			const lineas = reserva.observaciones.split("\n");
+			lineas.forEach(linea => {
+				const match = linea.match(/\[(.+?)\] Cambio de estado: (.+?) → (.+?)\./);
+				if (match) {
+					timeline.push({
+						tipo: "cambio_estado",
+						fecha: new Date(match[1]),
+						titulo: `Estado: ${match[2]} → ${match[3]}`,
+						descripcion: linea.split(". ")[1] || "",
+						icono: "refresh"
+					});
+				}
+			});
+		}
+
+		// Evento: Pago registrado
+		if (reserva.pagoFecha) {
+			timeline.push({
+				tipo: "pago",
+				fecha: reserva.pagoFecha,
+				titulo: "Pago registrado",
+				descripcion: `Monto: $${reserva.pagoMonto || reserva.totalConDescuento} - Método: ${reserva.pagoGateway || reserva.metodoPago || "No especificado"}`,
+				icono: "dollar"
+			});
+		}
+
+		// Evento: Asignación de vehículo
+		if (reserva.vehiculoId) {
+			timeline.push({
+				tipo: "asignacion_vehiculo",
+				fecha: reserva.updated_at,
+				titulo: "Vehículo asignado",
+				descripcion: reserva.vehiculo || "Vehículo asignado",
+				icono: "car"
+			});
+		}
+
+		// Evento: Asignación de conductor
+		if (reserva.conductorId) {
+			timeline.push({
+				tipo: "asignacion_conductor",
+				fecha: reserva.updated_at,
+				titulo: "Conductor asignado",
+				descripcion: "Conductor asignado a la reserva",
+				icono: "user"
+			});
+		}
+
+		// Ordenar por fecha descendente
+		timeline.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+		res.json({
+			timeline,
+			reserva: {
+				id: reserva.id,
+				codigoReserva: reserva.codigoReserva,
+				estado: reserva.estado,
+				estadoPago: reserva.estadoPago
+			}
+		});
+
+	} catch (error) {
+		console.error("Error obteniendo timeline:", error);
+		res.status(500).json({ 
+			error: "Error al obtener timeline",
+			details: error.message 
+		});
+	}
+});
+
+// ========== FIN NUEVOS ENDPOINTS SISTEMA INTEGRAL ==========
 
 // Obtener una reserva específica
 app.get("/api/reservas/:id", async (req, res) => {

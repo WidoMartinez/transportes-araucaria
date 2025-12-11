@@ -21,7 +21,8 @@ import {
   CalendarDays,
   Percent,
   ChevronLeft,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  Kanban
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { cn } from "../../../lib/utils";
@@ -69,6 +70,7 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
       bgColor: "bg-green-50",
       items: [
         { id: "reservas", label: "Reservas", icon: Calendar },
+        { id: "reservas-integral", label: "Gestión Integral", icon: Kanban },
         { id: "vehiculos", label: "Vehículos", icon: Car },
         { id: "conductores", label: "Conductores", icon: Users }
       ]
