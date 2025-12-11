@@ -3930,6 +3930,179 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 	}
 });
 
+// --- ENDPOINTS DE DASHBOARD Y ASIGNACIONES ---
+
+// Obtener estadísticas para el dashboard
+app.get("/api/dashboard/stats", async (req, res) => {
+	try {
+        // Consultas paralelas para mayor eficiencia
+		const [
+            totalReservas, 
+            reservasPendientes, 
+            reservasConfirmadas, 
+            reservasPagadas,
+            ingresosResult
+        ] = await Promise.all([
+            Reserva.count(),
+            Reserva.count({ where: { estado: ['pendiente', 'pendiente_detalles'] } }),
+            Reserva.count({ where: { estado: 'confirmada' } }),
+            Reserva.count({ where: { estadoPago: 'pagado' } }),
+            Reserva.sum('totalConDescuento', { where: { estadoPago: 'pagado' } })
+        ]);
+
+		res.json({
+			totalReservas,
+			reservasPendientes,
+			reservasConfirmadas,
+			reservasPagadas,
+			totalIngresos: ingresosResult || 0,
+		});
+	} catch (error) {
+		console.error("Error obteniendo estadísticas:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener historial de asignaciones de una reserva
+app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		
+        // Verificar que la reserva existe
+        const reserva = await Reserva.findByPk(id);
+        if (!reserva) {
+            return res.status(404).json({ error: "Reserva no encontrada" });
+        }
+
+        // Obtener historial ordenado por fecha descendente
+		const historial = await sequelize.query(
+			"SELECT * FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY created_at DESC",
+			{ 
+                replacements: { id },
+                type: sequelize.QueryTypes.SELECT 
+            }
+		);
+
+		res.json({
+            success: true, 
+            historial: historial || [] 
+        });
+	} catch (error) {
+		console.error("Error obteniendo historial de asignaciones:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Asignar vehículo y conductor a una reserva
+app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
+    const transaction = await sequelize.transaction();
+	try {
+		const { id } = req.params;
+		const { vehiculoId, conductorId, sendEmail } = req.body;
+
+        console.log(`📝 Asignando recursos a reserva ${id}: Vehiculo=${vehiculoId}, Conductor=${conductorId}`);
+
+		const reserva = await Reserva.findByPk(id, { transaction });
+		if (!reserva) {
+            await transaction.rollback();
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+        // Obtener datos del vehículo
+        const vehiculo = await Vehiculo.findByPk(vehiculoId, { transaction });
+        if (!vehiculo) {
+            await transaction.rollback();
+            return res.status(400).json({ error: "Vehículo no encontrado" });
+        }
+
+        // Obtener datos del conductor (si se proporciona)
+        let conductor = null;
+        if (conductorId) {
+            conductor = await Conductor.findByPk(conductorId, { transaction });
+            if (!conductor) {
+                await transaction.rollback();
+                return res.status(400).json({ error: "Conductor no encontrado" });
+            }
+        }
+
+        // Construir string de vehículo (formato: "TIPO PATENTE")
+        const vehiculoStr = `${vehiculo.tipo} ${vehiculo.patente}`.trim();
+        
+        // Actualizar observaciones con el conductor
+        let nuevasObservaciones = reserva.observaciones || "";
+        // Eliminar asignación anterior de conductor si existe en observaciones
+        nuevasObservaciones = nuevasObservaciones.replace(/Conductor asignado:.*(\r\n|\n|\r)?/g, "").trim();
+        
+        if (conductor) {
+            if (nuevasObservaciones) nuevasObservaciones += "\n";
+            nuevasObservaciones += `Conductor asignado: ${conductor.nombre}`;
+        }
+
+        // Actualizar reserva
+        await reserva.update({
+            vehiculo: vehiculoStr,
+            observaciones: nuevasObservaciones
+        }, { transaction });
+
+        // Registrar en historial
+        await sequelize.query(
+            `INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor, created_at) 
+             VALUES (:reservaId, :vehiculo, :conductor, NOW())`,
+            {
+                replacements: {
+                    reservaId: id,
+                    vehiculo: vehiculoStr,
+                    conductor: conductor ? conductor.nombre : null
+                },
+                transaction
+            }
+        );
+
+        await transaction.commit();
+
+        // Enviar notificación por correo si se solicitó
+        if (sendEmail) {
+            try {
+                // Preparar datos para el correo (usando endpoint PHP existente)
+                const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+                
+                // Construir mensaje de asignación para el usuario
+                const mensajeAsignacion = `Su reserva ha sido asignada al vehículo ${vehiculoStr}` + 
+                                          (conductor ? ` conducido por ${conductor.nombre}.` : '.');
+
+                // Enviar como actualización (usando los datos de la reserva)
+                await axios.post(phpUrl, {
+                    ...reserva.toJSON(),
+                    action: "update_assignment", 
+                    vehiculo: vehiculoStr,
+                    conductorNombre: conductor ? conductor.nombre : "",
+                    conductorTelefono: conductor ? conductor.telefono : "",
+                    // Agregar información de asignación al mensaje
+                    mensaje: mensajeAsignacion
+                }, {
+                    headers: { "Content-Type": "application/json" },
+                    timeout: 10000
+                });
+                
+                console.log(`📧 Notificación de asignación enviada para reserva ${reserva.codigoReserva}`);
+            } catch (emailError) {
+                console.error("❌ Error enviando notificación de asignación:", emailError.message);
+                // No fallamos la request si el email falla
+            }
+        }
+
+		res.json({
+			success: true,
+			message: "Asignación realizada correctamente",
+            reserva
+		});
+	} catch (error) {
+        if (transaction) await transaction.rollback();
+		console.error("Error asignando recursos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // Asegurar tabla de historial de pagos y exponer endpoints para historial y registro manual
 const ensureReservaPagosTable = async () => {
 	await sequelize.query(`
