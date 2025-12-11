@@ -41,6 +41,35 @@ Maneja confirmaciones de reserva iniciales, correos de administrador y ofertas d
 - **Uso desde Node**: Creación de reservas (`POST /api/reservas`).
 - **Lógica Especial**: Si el estado es "pendiente", puede enviar una oferta de descuento en lugar de la confirmación estándar.
 
+### 3. `enviar_notificacion_conductor.php` (Nuevo)
+Notifica al conductor cuando se le asigna un servicio.
+- **Uso desde Node**: Endpoint `PUT /api/reservas/:id/asignar`
+- **Payload Esperado**:
+  ```json
+  {
+    "conductorEmail": "conductor@email.com",
+    "conductorNombre": "Nombre Conductor",
+    "codigoReserva": "AR-...",
+    "pasajeroNombre": "...",
+    "pasajeroTelefono": "...",
+    "origen": "...",
+    "destino": "...",
+    "direccionRecogida": "...",
+    "fecha": "YYYY-MM-DD",
+    "hora": "HH:MM",
+    "pasajeros": 1,
+    "vehiculo": "SEDAN (patente XXXX)",
+    "observaciones": "...",
+    "numeroVuelo": "...",
+    "hotel": "..."
+  }
+  ```
+- **Características**:
+  - Plantilla HTML profesional con todos los detalles del servicio
+  - Genera y adjunta archivo `.ics` para agregar al calendario
+  - Compatible con Google Calendar, Outlook, Apple Calendar, etc.
+  - Solo se envía si el conductor tiene email registrado
+
 ## Configuración en Backend (`server-db.js`)
 El backend utiliza variables de entorno para localizar los scripts, con fallbacks a URLs de producción:
 

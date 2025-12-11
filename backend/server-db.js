@@ -4097,6 +4097,41 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 console.error("❌ Error enviando notificación de asignación:", emailError.message);
                 // No fallamos la request si el email falla
             }
+
+            // Enviar notificación al conductor si tiene email
+            if (conductor && conductor.email) {
+                try {
+                    const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
+                    
+                    const conductorPayload = {
+                        conductorEmail: conductor.email,
+                        conductorNombre: conductor.nombre,
+                        codigoReserva: reserva.codigoReserva,
+                        pasajeroNombre: reserva.nombre,
+                        pasajeroTelefono: reserva.telefono,
+                        origen: reserva.origen,
+                        destino: reserva.destino,
+                        direccionRecogida: reserva.direccionOrigen || reserva.origen,
+                        fecha: reserva.fecha,
+                        hora: reserva.hora,
+                        pasajeros: reserva.pasajeros,
+                        vehiculo: vehiculoStr,
+                        observaciones: reserva.observaciones || "",
+                        numeroVuelo: reserva.numeroVuelo || "",
+                        hotel: reserva.hotel || ""
+                    };
+
+                    await axios.post(phpConductorUrl, conductorPayload, {
+                        headers: { "Content-Type": "application/json" },
+                        timeout: 10000
+                    });
+
+                    console.log(`📧 Notificación enviada al conductor ${conductor.nombre} (${conductor.email})`);
+                } catch (conductorEmailError) {
+                    console.error("❌ Error enviando notificación al conductor:", conductorEmailError.message);
+                    // No fallamos la request si el email al conductor falla
+                }
+            }
         }
 
 		res.json({
