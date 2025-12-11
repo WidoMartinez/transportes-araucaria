@@ -140,6 +140,7 @@ function AdminReservas() {
 	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
 	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
+	const [enviarNotificacionConductor, setEnviarNotificacionConductor] = useState(true);
 	// Estados para pre-cargar y validar contra asignaciÃ³n actual
 	const [assignedPatente, setAssignedPatente] = useState("");
 	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
@@ -555,6 +556,7 @@ function AdminReservas() {
 		setVehiculoSeleccionado(preVeh);
 		setConductorSeleccionado(preCon);
 		setEnviarNotificacion(true);
+		setEnviarNotificacionConductor(true);
 		setShowAsignarDialog(true);
 		// Cargar vehÃ­culos y conductores si aÃºn no se han cargado
 		if (vehiculos.length === 0) fetchVehiculos();
@@ -618,6 +620,7 @@ function AdminReservas() {
 								? parseInt(conductorSeleccionado)
 								: null,
 						sendEmail: Boolean(enviarNotificacion),
+						sendEmailDriver: Boolean(enviarNotificacionConductor),
 					}),
 				}
 			);
@@ -4470,7 +4473,7 @@ function AdminReservas() {
 
 						{/* Sin ediciÃ³n de ruta en reasignaciÃ³n */}
 
-						{/* Enviar notificaciÃ³n */}
+						{/* Enviar notificación */}
 						<div className="flex items-center gap-2 pt-2">
 							<Checkbox
 								id="enviar-notificacion"
@@ -4482,6 +4485,21 @@ function AdminReservas() {
 								className="text-sm text-muted-foreground cursor-pointer"
 							>
 								Enviar notificación por correo al cliente
+							</label>
+						</div>
+
+						{/* Enviar notificación al conductor */}
+						<div className="flex items-center gap-2">
+							<Checkbox
+								id="enviar-notificacion-conductor"
+								checked={enviarNotificacionConductor}
+								onCheckedChange={(v) => setEnviarNotificacionConductor(Boolean(v))}
+							/>
+							<label
+								htmlFor="enviar-notificacion-conductor"
+								className="text-sm text-muted-foreground cursor-pointer"
+							>
+								Enviar notificación por correo al conductor
 							</label>
 						</div>
 

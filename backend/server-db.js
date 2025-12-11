@@ -3998,7 +3998,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
     const transaction = await sequelize.transaction();
 	try {
 		const { id } = req.params;
-		const { vehiculoId, conductorId, sendEmail } = req.body;
+		const { vehiculoId, conductorId, sendEmail, sendEmailDriver } = req.body;
 
         console.log(`📝 Asignando recursos a reserva ${id}: Vehiculo=${vehiculoId}, Conductor=${conductorId}`);
 
@@ -4098,8 +4098,8 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 // No fallamos la request si el email falla
             }
 
-            // Enviar notificación al conductor si tiene email
-            if (conductor && conductor.email) {
+            // Enviar notificación al conductor si tiene email y el flag está activado
+            if (sendEmailDriver && conductor && conductor.email) {
                 try {
                     const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
                     
