@@ -4025,8 +4025,8 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
             }
         }
 
-        // Construir string de vehículo (formato: "TIPO PATENTE")
-        const vehiculoStr = `${vehiculo.tipo} ${vehiculo.patente}`.trim();
+        // Construir string de vehículo (formato: "TIPO (patente PATENTE)")
+        const vehiculoStr = `${vehiculo.tipo} (patente ${vehiculo.patente})`.trim();
         
         // Actualizar observaciones con el conductor
         let nuevasObservaciones = reserva.observaciones || "";
@@ -4066,18 +4066,29 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 // Preparar datos para el correo (usando endpoint PHP existente)
                 const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
                 
-                // Construir mensaje de asignación para el usuario
-                const mensajeAsignacion = `Su reserva ha sido asignada al vehículo ${vehiculoStr}` + 
-                                          (conductor ? ` conducido por ${conductor.nombre}.` : '.');
+                // Construir mensaje de asignación con el formato solicitado por el usuario
+                // Nota: Usamos saltos de línea explícitos que el PHP debería respetar o convertir a HTML
+                const mensajeAsignacion = `Asignación Confirmada\n` +
+                    `Tu vehículo ha sido asignado\n\n` +
+                    `Estimad@ ${reserva.nombre || "Cliente"}, tu traslado ha sido programado con el siguiente vehículo.\n\n` +
+                    `Detalles de tu Viaje\n` +
+                    `Ruta: ${reserva.origen} → ${reserva.destino}\n` +
+                    `Fecha: ${reserva.fecha}\n` +
+                    `Hora: ${reserva.hora}\n` +
+                    `Pasajeros: ${reserva.pasajeros}\n` +
+                    `Vehículo: ${vehiculoStr.toUpperCase()}\n` +
+                    `Conductor: ${conductor ? conductor.nombre : "Por confirmar"}\n\n` +
+                    `Si necesitas actualizar algún detalle (número de vuelo, hotel, etc.), responde a este correo.\n\n` +
+                    `Gracias por elegir Transportes Araucaria.`;
 
-                // Enviar como actualización (usando los datos de la reserva)
+                // Enviar como actualización con el action "asignacion_vehiculo" que parece ser el específico
+                // Si no existe, al menos el mensaje lleva el contenido correcto
                 await axios.post(phpUrl, {
                     ...reserva.toJSON(),
-                    action: "update_assignment", 
+                    action: "asignacion_vehiculo", // Cambiado a un nombre más específico para intentar trigger de plantilla
                     vehiculo: vehiculoStr,
                     conductorNombre: conductor ? conductor.nombre : "",
                     conductorTelefono: conductor ? conductor.telefono : "",
-                    // Agregar información de asignación al mensaje
                     mensaje: mensajeAsignacion
                 }, {
                     headers: { "Content-Type": "application/json" },
