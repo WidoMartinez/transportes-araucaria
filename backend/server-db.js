@@ -2040,6 +2040,25 @@ app.post("/enviar-reserva", async (req, res) => {
 			source: datosReserva.source || "web",
 		});
 
+
+		// Validar si la fecha está bloqueada
+		const validacionFecha = await verificarFechaBloqueada({
+			fecha: datosReserva.fecha,
+			hora: datosReserva.hora || null,
+			destino: datosReserva.destino || null,
+		});
+
+		if (validacionFecha.bloqueada) {
+			console.log("❌ Fecha bloqueada para reservas:", validacionFecha);
+			return res.status(400).json({
+				success: false,
+				error: "Fecha no disponible",
+				mensaje: validacionFecha.mensaje,
+				motivo: validacionFecha.motivo,
+				rangoHorario: validacionFecha.rangoHorario,
+			});
+		}
+
 		const normalizeEstado = (valor) =>
 			typeof valor === "string" ? valor.trim().toLowerCase() : "";
 
@@ -2421,6 +2440,25 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			totalConDescuento: datosReserva.totalConDescuento,
 			source: datosReserva.source || "express_web",
 		});
+
+
+		// Validar si la fecha está bloqueada
+		const validacionFecha = await verificarFechaBloqueada({
+			fecha: datosReserva.fecha,
+			hora: datosReserva.hora || null,
+			destino: datosReserva.destino || null,
+		});
+
+		if (validacionFecha.bloqueada) {
+			console.log("❌ Fecha bloqueada para reservas:", validacionFecha);
+			return res.status(400).json({
+				success: false,
+				error: "Fecha no disponible",
+				mensaje: validacionFecha.mensaje,
+				motivo: validacionFecha.motivo,
+				rangoHorario: validacionFecha.rangoHorario,
+			});
+		}
 
 		// Validar campos mínimos requeridos
 		const camposRequeridos = [
@@ -5730,6 +5768,7 @@ import {
 	buscarOportunidadesRetorno,
 	validarHorarioMinimo,
 	obtenerConfiguracionDisponibilidad,
+	verificarFechaBloqueada,
 } from "./utils/disponibilidad.js";
 
 // Obtener configuración de disponibilidad (para panel admin)
@@ -5937,6 +5976,34 @@ app.post("/api/disponibilidad/validar-horario", async (req, res) => {
 		res.json(resultado);
 	} catch (error) {
 		console.error("Error validando horario:", error);
+		res.status(500).json({
+			error: "Error interno del servidor",
+			mensaje: error.message,
+		});
+	}
+});
+
+
+// Validar si una fecha está bloqueada para reservas
+app.post("/api/disponibilidad/validar-fecha", async (req, res) => {
+	try {
+		const { fecha, hora, destino } = req.body;
+
+		if (!fecha) {
+			return res.status(400).json({
+				error: "Fecha es requerida",
+			});
+		}
+
+		const resultado = await verificarFechaBloqueada({
+			fecha,
+			hora: hora || null,
+			destino: destino || null,
+		});
+
+		res.json(resultado);
+	} catch (error) {
+		console.error("Error validando fecha bloqueada:", error);
 		res.status(500).json({
 			error: "Error interno del servidor",
 			mensaje: error.message,
