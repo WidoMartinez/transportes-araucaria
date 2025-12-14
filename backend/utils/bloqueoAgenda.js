@@ -2,6 +2,17 @@ import { Op } from "sequelize";
 import BloqueoAgenda from "../models/BloqueoAgenda.js";
 
 /**
+ * Normaliza una fecha a formato YYYY-MM-DD
+ * @param {Date|string} fecha - Fecha a normalizar
+ * @returns {string} Fecha en formato YYYY-MM-DD
+ */
+const normalizarFecha = (fecha) => {
+	return fecha instanceof Date 
+		? fecha.toISOString().split('T')[0] 
+		: fecha;
+};
+
+/**
  * Verifica si una fecha y hora están bloqueadas según los bloqueos de agenda configurados
  * @param {Date|string} fecha - Fecha a verificar (formato YYYY-MM-DD)
  * @param {string} hora - Hora a verificar (formato HH:MM:SS o HH:MM) - opcional
@@ -9,10 +20,8 @@ import BloqueoAgenda from "../models/BloqueoAgenda.js";
  */
 export const verificarBloqueoAgenda = async (fecha, hora = null) => {
 	try {
-		// Convertir fecha a formato YYYY-MM-DD si es objeto Date
-		const fechaStr = fecha instanceof Date 
-			? fecha.toISOString().split('T')[0] 
-			: fecha;
+		// Convertir fecha a formato YYYY-MM-DD
+		const fechaStr = normalizarFecha(fecha);
 
 		// Buscar bloqueos activos que apliquen a esta fecha
 		const bloqueos = await BloqueoAgenda.findAll({
@@ -70,9 +79,13 @@ export const verificarBloqueoAgenda = async (fecha, hora = null) => {
 		// Si ningún bloqueo aplica, no está bloqueado
 		return { bloqueado: false };
 	} catch (error) {
-		console.error("Error al verificar bloqueo de agenda:", error);
-		// En caso de error, por seguridad no bloqueamos (permitir la reserva)
-		return { bloqueado: false };
+		console.error("[CRITICAL] Error al verificar bloqueo de agenda:", error);
+		// IMPORTANTE: En caso de error, bloqueamos por seguridad
+		// Esto previene que se acepten reservas cuando el sistema de bloqueos falla
+		return { 
+			bloqueado: true,
+			motivo: "Sistema de validación temporalmente no disponible. Por favor, intente más tarde.",
+		};
 	}
 };
 
@@ -84,12 +97,8 @@ export const verificarBloqueoAgenda = async (fecha, hora = null) => {
  */
 export const obtenerBloqueosEnRango = async (fechaInicio, fechaFin) => {
 	try {
-		const fechaInicioStr = fechaInicio instanceof Date 
-			? fechaInicio.toISOString().split('T')[0] 
-			: fechaInicio;
-		const fechaFinStr = fechaFin instanceof Date 
-			? fechaFin.toISOString().split('T')[0] 
-			: fechaFin;
+		const fechaInicioStr = normalizarFecha(fechaInicio);
+		const fechaFinStr = normalizarFecha(fechaFin);
 
 		const bloqueos = await BloqueoAgenda.findAll({
 			where: {

@@ -2051,7 +2051,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		);
 
 		if (bloqueoResultado.bloqueado) {
-			console.log("❌ Reserva bloqueada:", {
+			console.log("RESERVA BLOQUEADA:", {
 				fecha: datosReserva.fecha,
 				hora: datosReserva.hora,
 				motivo: bloqueoResultado.motivo,
@@ -2482,7 +2482,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		);
 
 		if (bloqueoResultado.bloqueado) {
-			console.log("❌ Reserva express bloqueada:", {
+			console.log("RESERVA EXPRESS BLOQUEADA:", {
 				fecha: datosReserva.fecha,
 				hora: datosReserva.hora,
 				motivo: bloqueoResultado.motivo,

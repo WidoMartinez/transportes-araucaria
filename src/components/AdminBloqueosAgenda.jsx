@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -93,6 +94,7 @@ function AdminBloqueosAgenda() {
 			setBloqueos(data);
 		} catch (error) {
 			console.error("Error cargando bloqueos:", error);
+			toast.error("Error al cargar los bloqueos");
 		} finally {
 			setLoading(false);
 		}
@@ -149,12 +151,14 @@ function AdminBloqueosAgenda() {
 				await cargarBloqueos();
 				setShowDeleteDialog(false);
 				setBloqueoAEliminar(null);
+				toast.success("Bloqueo eliminado correctamente");
 			} else {
-				alert("Error al eliminar el bloqueo");
+				const errorData = await response.json();
+				toast.error(errorData.error || "Error al eliminar el bloqueo");
 			}
 		} catch (error) {
 			console.error("Error eliminando bloqueo:", error);
-			alert("Error al eliminar el bloqueo");
+			toast.error("Error al eliminar el bloqueo. Por favor, intente nuevamente.");
 		} finally {
 			setSaving(false);
 		}
@@ -183,12 +187,18 @@ function AdminBloqueosAgenda() {
 				await cargarBloqueos();
 				setShowDialog(false);
 				setBloqueoActual(null);
+				toast.success(
+					bloqueoActual 
+						? "Bloqueo actualizado correctamente" 
+						: "Bloqueo creado correctamente"
+				);
 			} else {
-				alert("Error al guardar el bloqueo");
+				const errorData = await response.json();
+				toast.error(errorData.error || "Error al guardar el bloqueo");
 			}
 		} catch (error) {
 			console.error("Error guardando bloqueo:", error);
-			alert("Error al guardar el bloqueo");
+			toast.error("Error al guardar el bloqueo. Por favor, intente nuevamente.");
 		} finally {
 			setSaving(false);
 		}
