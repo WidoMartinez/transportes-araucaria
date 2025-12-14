@@ -439,7 +439,7 @@ function HeroExpress({
 	};
 
 	return (
-		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-background">
+		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-background pt-20">
 
 			{/* Mobile Header (Visual) - Optimizado para rendimiento móvil */}
 			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-primary">

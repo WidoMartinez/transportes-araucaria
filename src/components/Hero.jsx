@@ -574,7 +574,7 @@ function Hero({
 			></div>
 			{/* Overlay que cubre toda la imagen de fondo */}
 			<div className="absolute inset-0 bg-black/50"></div>
-			<div className="relative container mx-auto px-4 text-center pt-4 md:pt-6 pb-16 md:pb-24">
+			<div className="relative container mx-auto px-4 text-center pt-36 md:pt-40 pb-16 md:pb-24">
 				{!showBookingModule && !showContinuarReserva && !showCompletarDetalles && (
 					<>
 						<h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-2xl">
