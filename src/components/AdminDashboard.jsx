@@ -17,6 +17,7 @@ import AdminProductos from "./AdminProductos";
 import AdminTarifaDinamica from "./AdminTarifaDinamica";
 import AdminDisponibilidad from "./AdminDisponibilidad";
 import AdminFestivos from "./AdminFestivos";
+import AdminBloqueosAgenda from "./AdminBloqueosAgenda";
 import AdminUsuarios from "./AdminUsuarios";
 import AdminPerfil from "./AdminPerfil";
 
@@ -149,6 +150,8 @@ function AdminDashboard() {
               <AdminDisponibilidad />
             ) : active === "festivos" ? (
               <AdminFestivos />
+            ) : active === "bloqueos" ? (
+              <AdminBloqueosAgenda />
             ) : active === "codigos" ? (
               <AdminCodigos />
             ) : active === "codigos-mejorado" ? (
