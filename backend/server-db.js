@@ -48,6 +48,7 @@ import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
 import { verificarBloqueoAgenda, obtenerBloqueosEnRango } from "./utils/bloqueoAgenda.js";
+import { apiLimiter } from "./middleware/rateLimiter.js";
 
 dotenv.config();
 
@@ -5833,7 +5834,7 @@ app.post("/api/bloqueos/rango", async (req, res) => {
 });
 
 // Crear nuevo bloqueo de agenda
-app.post("/api/bloqueos", authAdmin, async (req, res) => {
+app.post("/api/bloqueos", authAdmin, apiLimiter, async (req, res) => {
 	try {
 		const nuevoBloqueo = await BloqueoAgenda.create(req.body);
 		res.status(201).json(nuevoBloqueo);
@@ -5844,7 +5845,7 @@ app.post("/api/bloqueos", authAdmin, async (req, res) => {
 });
 
 // Actualizar bloqueo de agenda
-app.put("/api/bloqueos/:id", authAdmin, async (req, res) => {
+app.put("/api/bloqueos/:id", authAdmin, apiLimiter, async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -5863,7 +5864,7 @@ app.put("/api/bloqueos/:id", authAdmin, async (req, res) => {
 });
 
 // Eliminar bloqueo de agenda
-app.delete("/api/bloqueos/:id", authAdmin, async (req, res) => {
+app.delete("/api/bloqueos/:id", authAdmin, apiLimiter, async (req, res) => {
 	try {
 		const { id } = req.params;
 
