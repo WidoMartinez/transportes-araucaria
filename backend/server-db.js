@@ -3253,13 +3253,15 @@ app.get("/api/reservas", async (req, res) => {
 			estado,
 			fecha_desde,
 			fecha_hasta,
+			incluir_cerradas,
 		} = req.query;
 
 		const whereClause = {};
 		if (estado) {
 			whereClause.estado = estado;
 			// Si filtramos por completadas, excluir las que tienen gastos cerrados
-			if (estado === 'completada') {
+			// EXCEPTO si incluir_cerradas=true
+			if (estado === 'completada' && incluir_cerradas !== 'true') {
 				whereClause.gastosCerrados = false;
 			}
 		}

@@ -81,6 +81,7 @@ function AdminGastos() {
 	const [showEditDialog, setShowEditDialog] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [showCerrarDialog, setShowCerrarDialog] = useState(false);
+	const [mostrarCerradas, setMostrarCerradas] = useState(false);
 	const [gastoToDelete, setGastoToDelete] = useState(null);
 	const [conductores, setConductores] = useState([]);
 	const [vehiculos, setVehiculos] = useState([]);
@@ -106,6 +107,10 @@ function AdminGastos() {
 	}, []);
 
 	useEffect(() => {
+		fetchReservas();
+	}, [mostrarCerradas]);
+
+	useEffect(() => {
 		if (reservaSeleccionada) {
 			fetchGastos(reservaSeleccionada.id);
 		}
@@ -113,7 +118,11 @@ function AdminGastos() {
 
 	const fetchReservas = async () => {
 		try {
-			const response = await authenticatedFetch(`/api/reservas?estado=completada`, {
+			let url = `/api/reservas?estado=completada`;
+			if (mostrarCerradas) {
+				url += '&incluir_cerradas=true';
+			}
+			const response = await authenticatedFetch(url, {
 				method: "GET",
 			});
 			if (response.ok) {
