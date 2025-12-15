@@ -355,6 +355,32 @@ function HeroExpress({
 			if (fechaRegreso < fechaSeleccionada) return setStepError("La fecha de regreso no puede ser anterior a la ida.");
 		}
 
+		// Verificar si la fecha/hora está bloqueada
+		try {
+			const respBloqueo = await fetch(
+				`${getBackendUrl()}/api/bloqueos/verificar`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						fecha: formData.fecha,
+						hora: formData.hora,
+					}),
+				}
+			);
+			
+			if (respBloqueo.ok) {
+				const dataBloqueo = await respBloqueo.json();
+				if (dataBloqueo.bloqueado) {
+					setStepError(`Agenda completada. ${dataBloqueo.motivo || "Esta fecha/hora no está disponible para reservas."}`);
+					return;
+				}
+			}
+		} catch (error) {
+			console.error("Error verificando bloqueo:", error);
+			// Continuar si hay error en la verificación de bloqueo
+		}
+
 		const resultado = await verificarDisponibilidadYRetorno();
 		if (!resultado.disponible) {
 			setStepError(resultado.mensaje || "No hay vehículos disponibles.");
