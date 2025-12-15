@@ -799,31 +799,30 @@ function AdminReservas() {
 	const handleViewDetails = async (reserva) => {
 		// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
 		try {
-			const respReserva = await fetch(`${apiUrl}/api/reservas/${reserva.id}`);
-			if (respReserva.ok) {
-				const latest = await respReserva.json();
-				setSelectedReserva(latest);
-			} else {
-				// fallback a la reserva recibida si el GET falla
-				setSelectedReserva(reserva);
+			const response = await authenticatedFetch(
+				`${getBackendUrl()}/api/reservas/${reserva.id}`
+			);
+			if (!response.ok) {
+				throw new Error("Error al cargar la reserva");
 			}
-		} catch (e) {
-			console.warn("No se pudo recargar reserva (usar local):", e.message);
+			const reservaActualizada = await response.json();
+			setSelectedReserva(reservaActualizada);
+			setShowDetailsDialog(true);
+		} catch (error) {
+			console.error("Error al cargar detalles de la reserva:", error);
+			alert(
+				"No se pudieron cargar los detalles de la reserva. Inténtalo nuevamente."
+			);
+			// Fallback: mostrar la reserva que ya tenemos
 			setSelectedReserva(reserva);
+			setShowDetailsDialog(true);
 		}
 
-		setShowDetailDialog(true);
-
 		// Cargar historial de asignaciones (uso interno) usando token del contexto
+		setLoadingHistorial(true);
 		try {
-			// Usa el token de autenticación del contexto
-			const resp = await fetch(
-				`${apiUrl}/api/reservas/${reserva.id}/asignaciones`,
-				{
-					headers: accessToken
-						? { Authorization: `Bearer ${accessToken}` }
-						: {},
-				}
+			const resp = await authenticatedFetch(
+				`${getBackendUrl()}/api/reservas/${reserva.id}/asignaciones`
 			);
 			if (resp.ok) {
 				const data = await resp.json();
@@ -838,6 +837,39 @@ function AdminReservas() {
 			setHistorialAsignaciones([]);
 		} finally {
 			setLoadingHistorial(false);
+		}
+	};
+
+	// Completar reserva y redirigir a gastos
+	const handleCompletar = async (reserva) => {
+		if (!confirm(`¿Confirmar que deseas completar la reserva ${reserva.codigoReserva} y agregar gastos?`)) {
+			return;
+		}
+
+		try {
+			const response = await authenticatedFetch(
+				`${getBackendUrl()}/api/reservas/${reserva.id}/estado`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ estado: "completada" }),
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error("Error al completar la reserva");
+			}
+
+			// Actualizar la lista de reservas
+			await fetchReservas();
+
+			// Redirigir al panel de gastos
+			const url = new URL(window.location.href);
+			url.searchParams.set("panel", "gastos");
+			window.location.href = url.toString();
+		} catch (error) {
+			console.error("Error al completar la reserva:", error);
+			alert("No se pudo completar la reserva. Inténtalo nuevamente.");
 		}
 	};
 
@@ -2398,6 +2430,18 @@ function AdminReservas() {
 																<span role="img" aria-label="auto">
 																	🚗
 																</span>
+															</Button>
+														)}
+														{/* Botón para completar reserva y agregar gastos */}
+														{reserva?.estado === "confirmada" && (
+															<Button
+																variant="default"
+																size="sm"
+																onClick={() => handleCompletar(reserva)}
+																title="Completar reserva y agregar gastos"
+																className="bg-green-600 hover:bg-green-700"
+															>
+																<CheckCircle2 className="w-4 h-4" />
 															</Button>
 														)}
 													</div>

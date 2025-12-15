@@ -605,7 +605,19 @@ function AdminGastos() {
 				<CardHeader>
 					<CardTitle>Seleccionar Reserva</CardTitle>
 				</CardHeader>
-				<CardContent>
+				<CardContent className="space-y-4">
+					<div className="flex items-center gap-2">
+						<input
+							type="checkbox"
+							id="mostrar-cerradas"
+							checked={mostrarCerradas}
+							onChange={(e) => setMostrarCerradas(e.target.checked)}
+							className="w-4 h-4 rounded"
+						/>
+						<label htmlFor="mostrar-cerradas" className="text-sm cursor-pointer">
+							Mostrar también reservas con gastos cerrados
+						</label>
+					</div>
 					<Select
 						value={reservaSeleccionada?.id?.toString() || ""}
 						onValueChange={(value) => {
@@ -619,7 +631,7 @@ function AdminGastos() {
 						<SelectContent>
 							{reservas.map((reserva) => (
 								<SelectItem key={reserva.id} value={reserva.id.toString()}>
-									{reserva.codigoReserva} - {reserva.nombre} - {reserva.origen} → {reserva.destino} - ${reserva.totalConDescuento}
+									{reserva.codigoReserva} - {reserva.nombre} - {reserva.origen} → {reserva.destino} - ${reserva.totalConDescuento}{reserva.gastosCerrados ? " 🔒" : ""}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -907,12 +919,16 @@ function AdminGastos() {
 				<AlertDialogTrigger asChild>
 					<Button variant="outline">
 						<Archive className="w-4 h-4 mr-2" />
-						Cerrar Gastos
+						{reservaSeleccionada?.gastosCerrados ? "Reabrir Gastos" : "Cerrar Gastos"}
 					</Button>
 				</AlertDialogTrigger>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>¿Cerrar registro de gastos?</AlertDialogTitle>
+						<AlertDialogTitle>
+							{reservaSeleccionada?.gastosCerrados 
+								? "¿Reabrir registro de gastos?" 
+								: "¿Cerrar registro de gastos?"}
+						</AlertDialogTitle>
 						<AlertDialogDescription>
 							La reserva dejará de aparecer en la lista. 
 							Podrás reabrirla desde el panel de reservas si necesitas 
@@ -922,7 +938,7 @@ function AdminGastos() {
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancelar</AlertDialogCancel>
 						<AlertDialogAction onClick={handleToggleGastosCerrados}>
-							Cerrar
+							{reservaSeleccionada?.gastosCerrados ? "Reabrir" : "Cerrar"}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
