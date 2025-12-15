@@ -42,6 +42,7 @@ import {
 	Car,
 	Receipt,
 	AlertCircle,
+	Archive,
 } from "lucide-react";
 import {
 	AlertDialog,
@@ -78,6 +79,7 @@ function AdminGastos() {
 	const [savingBulk, setSavingBulk] = useState(false);
 	const [showEditDialog, setShowEditDialog] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+	const [showCerrarDialog, setShowCerrarDialog] = useState(false);
 	const [gastoToDelete, setGastoToDelete] = useState(null);
 	const [conductores, setConductores] = useState([]);
 	const [vehiculos, setVehiculos] = useState([]);
@@ -377,11 +379,7 @@ function AdminGastos() {
 		try {
 			const response = await authenticatedFetch(`/api/gastos/${editingGasto.id}`, {
 				method: "PUT",
-				body: JSON.stringify({
-					...formData,
-					conductorId: formData.conductorId || null,
-					vehiculoId: formData.vehiculoId || null,
-				}),
+				body: JSON.stringify(formData),
 			});
 
 			if (response.ok) {
@@ -426,6 +424,38 @@ function AdminGastos() {
 		}
 	};
 
+	const handleToggleGastosCerrados = async () => {
+		if (!reservaSeleccionada) return;
+		
+		setLoading(true);
+		try {
+			const response = await authenticatedFetch(
+				`/api/reservas/${reservaSeleccionada.id}/toggle-gastos`,
+				{ method: "PATCH" }
+			);
+			
+			if (response.ok) {
+				const data = await response.json();
+				// Recargar lista (la reserva desaparecerá si se cerró)
+				await fetchReservas();
+				setReservaSeleccionada(null);
+				setGastos([]);
+				setShowCerrarDialog(false);
+				
+				// Mensaje de confirmación
+				alert(data.message);
+			} else {
+				const error = await response.json();
+				alert(`Error: ${error.error}`);
+			}
+		} catch (error) {
+			console.error("Error:", error);
+			alert("Error al actualizar estado de gastos");
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	const openEditDialog = (gasto) => {
 		setEditingGasto(gasto);
 		setFormData({
@@ -456,19 +486,23 @@ function AdminGastos() {
 		});
 	};
 
-	const calcularMontoComisionFlow = () => {
-		if (formData.tipoGasto === "comision_flow" && reservaSeleccionada) {
+	const calcularMontoComisionFlow = useCallback(() => {
+		if (reservaSeleccionada) {
 			const porcentaje = 3.19;
 			const monto = (parseFloat(reservaSeleccionada.totalConDescuento) * porcentaje) / 100;
-			setFormData({ ...formData, porcentaje: porcentaje.toString(), monto: monto.toFixed(2) });
+			setFormData(prev => ({ 
+				...prev, 
+				porcentaje: porcentaje.toString(), 
+				monto: monto.toFixed(2) 
+			}));
 		}
-	};
+	}, [reservaSeleccionada]);
 
 	useEffect(() => {
 		if (formData.tipoGasto === "comision_flow") {
 			calcularMontoComisionFlow();
 		}
-	}, [formData.tipoGasto]);
+	}, [formData.tipoGasto, calcularMontoComisionFlow]);
 
 	const getTipoGastoLabel = (tipo) => {
 		const tipoObj = TIPOS_GASTO.find((t) => t.value === tipo);
@@ -857,6 +891,32 @@ function AdminGastos() {
 						</DialogFooter>
 					</DialogContent>
 				</Dialog>
+			
+			{/* Botón Cerrar Gastos */}
+			<AlertDialog open={showCerrarDialog} onOpenChange={setShowCerrarDialog}>
+				<AlertDialogTrigger asChild>
+					<Button variant="outline">
+						<Archive className="w-4 h-4 mr-2" />
+						Cerrar Gastos
+					</Button>
+				</AlertDialogTrigger>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>¿Cerrar registro de gastos?</AlertDialogTitle>
+						<AlertDialogDescription>
+							La reserva dejará de aparecer en la lista. 
+							Podrás reabrirla desde el panel de reservas si necesitas 
+							agregar más gastos después.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancelar</AlertDialogCancel>
+						<AlertDialogAction onClick={handleToggleGastosCerrados}>
+							Cerrar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 							</div>
 						</CardHeader>
 						<CardContent>
@@ -1005,79 +1065,19 @@ function AdminGastos() {
 							</Select>
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<Label>Monto *</Label>
-								<Input
-									type="number"
-									step="0.01"
-									value={formData.monto}
-									onChange={(e) =>
-										setFormData({ ...formData, monto: e.target.value })
-									}
-								/>
-							</div>
-							<div>
-								<Label>Fecha *</Label>
-								<Input
-									type="date"
-									value={formData.fecha}
-									onChange={(e) =>
-										setFormData({ ...formData, fecha: e.target.value })
-									}
-								/>
-							</div>
+						<div>
+							<Label>Monto *</Label>
+							<Input
+								type="number"
+								step="0.01"
+								value={formData.monto}
+								onChange={(e) =>
+									setFormData({ ...formData, monto: e.target.value })
+								}
+							/>
 						</div>
 
-						<div>
-							<Label>Conductor</Label>
-							<Select
-								value={formData.conductorId}
-								onValueChange={(value) =>
-									setFormData({ ...formData, conductorId: value })
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Selecciona un conductor (opcional)" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="">Ninguno</SelectItem>
-									{conductores.map((conductor) => (
-										<SelectItem
-											key={conductor.id}
-											value={conductor.id.toString()}
-										>
-											{conductor.nombre} {conductor.apellido}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
 
-						<div>
-							<Label>Vehículo</Label>
-							<Select
-								value={formData.vehiculoId}
-								onValueChange={(value) =>
-									setFormData({ ...formData, vehiculoId: value })
-								}
-							>
-								<SelectTrigger>
-									<SelectValue placeholder="Selecciona un vehículo (opcional)" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="">Ninguno</SelectItem>
-									{vehiculos.map((vehiculo) => (
-										<SelectItem
-											key={vehiculo.id}
-											value={vehiculo.id.toString()}
-										>
-											{vehiculo.patente} - {vehiculo.marca} {vehiculo.modelo}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
 
 						<div>
 							<Label>Descripción</Label>
@@ -1089,15 +1089,7 @@ function AdminGastos() {
 							/>
 						</div>
 
-						<div>
-							<Label>Comprobante</Label>
-							<Input
-								value={formData.comprobante}
-								onChange={(e) =>
-									setFormData({ ...formData, comprobante: e.target.value })
-								}
-							/>
-						</div>
+
 
 						<div>
 							<Label>Observaciones</Label>

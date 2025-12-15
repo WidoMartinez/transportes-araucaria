@@ -3246,7 +3246,13 @@ app.get("/api/reservas", async (req, res) => {
 		} = req.query;
 
 		const whereClause = {};
-		if (estado) whereClause.estado = estado;
+		if (estado) {
+			whereClause.estado = estado;
+			// Si filtramos por completadas, excluir las que tienen gastos cerrados
+			if (estado === 'completada') {
+				whereClause.gastosCerrados = false;
+			}
+		}
 		if (fecha_desde || fecha_hasta) {
 			whereClause.fecha = {};
 			if (fecha_desde) whereClause.fecha[Op.gte] = fecha_desde;
@@ -3626,6 +3632,34 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando estado de reserva:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Toggle estado de gastos cerrados (Admin)
+app.patch("/api/reservas/:id/toggle-gastos", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const reserva = await Reserva.findByPk(id);
+		
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+		
+		// Toggle el estado de gastosCerrados
+		const nuevoEstado = !reserva.gastosCerrados;
+		await reserva.update({ gastosCerrados: nuevoEstado });
+		
+		res.json({
+			success: true,
+			message: nuevoEstado 
+				? "Registro de gastos cerrado" 
+				: "Registro de gastos reabierto",
+			gastosCerrados: nuevoEstado,
+			reserva
+		});
+	} catch (error) {
+		console.error("Error al cambiar estado de gastos:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
