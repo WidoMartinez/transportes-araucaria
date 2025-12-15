@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
@@ -87,9 +86,7 @@ function AdminBloqueosAgenda() {
 	const cargarBloqueos = async () => {
 		try {
 			setLoading(true);
-			const response = await authenticatedFetch(
-				`${getBackendUrl()}/api/bloqueos`
-			);
+			const response = await authenticatedFetch("/api/bloqueos");
 			const data = await response.json();
 			setBloqueos(data);
 		} catch (error) {
@@ -141,7 +138,7 @@ function AdminBloqueosAgenda() {
 		try {
 			setSaving(true);
 			const response = await authenticatedFetch(
-				`${getBackendUrl()}/api/bloqueos/${bloqueoAEliminar.id}`,
+				`/api/bloqueos/${bloqueoAEliminar.id}`,
 				{
 					method: "DELETE",
 				}
@@ -170,8 +167,8 @@ function AdminBloqueosAgenda() {
 
 		try {
 			const url = bloqueoActual
-				? `${getBackendUrl()}/api/bloqueos/${bloqueoActual.id}`
-				: `${getBackendUrl()}/api/bloqueos`;
+				? `/api/bloqueos/${bloqueoActual.id}`
+				: `/api/bloqueos`;
 
 			const method = bloqueoActual ? "PUT" : "POST";
 
