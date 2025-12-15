@@ -1662,10 +1662,6 @@ function App() {
 			const result = await response.json();
 
 			if (!response.ok) {
-				// Si la respuesta indica que está bloqueado, mostrar mensaje específico
-				if (result.bloqueado || result.message === "Agenda completada") {
-					throw new Error("Agenda completada. " + (result.error || "Esta fecha/hora no está disponible para reservas."));
-				}
 				throw new Error(result.message || "Error en el servidor.");
 			}
 

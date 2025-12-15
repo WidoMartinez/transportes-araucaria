@@ -19,7 +19,6 @@ import {
   TrendingUp,
   Calendar,
   CalendarDays,
-  Ban,
   Percent,
   ChevronLeft,
   ChevronRight as ChevronRightIcon
@@ -97,8 +96,7 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
         { id: "tarifa-dinamica", label: "Tarifa Dinámica", icon: TrendingUp },
         { id: "productos", label: "Productos", icon: Package },
         { id: "disponibilidad", label: "Disponibilidad", icon: Calendar },
-        { id: "festivos", label: "Festivos", icon: CalendarDays },
-        { id: "bloqueos", label: "Bloqueos de Agenda", icon: Ban }
+        { id: "festivos", label: "Festivos", icon: CalendarDays }
       ]
     },
     {
