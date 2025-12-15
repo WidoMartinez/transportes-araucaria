@@ -24,6 +24,7 @@ import ConfiguracionTarifaDinamica from "./models/ConfiguracionTarifaDinamica.js
 import ConfiguracionDisponibilidad from "./models/ConfiguracionDisponibilidad.js";
 import Festivo from "./models/Festivo.js";
 import PendingEmail from "./models/PendingEmail.js";
+import BloqueoAgenda from "./models/BloqueoAgenda.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -37,6 +38,7 @@ import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js"
 import addFestivosTable from "./migrations/add-festivos-table.js";
 import addDisponibilidadConfig from "./migrations/add-disponibilidad-config.js";
 import addPendingEmailsTable from "./migrations/add-pending-emails-table.js";
+import addBloqueosAgendaTable from "./migrations/add-bloqueos-agenda-table.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -45,6 +47,8 @@ import { authJWT } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
+import { verificarBloqueoAgenda, obtenerBloqueosEnRango } from "./utils/bloqueoAgenda.js";
+import { apiLimiter } from "./middleware/rateLimiter.js";
 
 dotenv.config();
 
@@ -673,6 +677,7 @@ const initializeDatabase = async () => {
 		await addFestivosTable(); // Migración para tabla de festivos
 		await addDisponibilidadConfig(); // Migración para configuración de disponibilidad y descuentos por retorno
 		await addAddressColumns(); // Migración para columnas de dirección
+		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -2040,6 +2045,26 @@ app.post("/enviar-reserva", async (req, res) => {
 			source: datosReserva.source || "web",
 		});
 
+		// Verificar si la fecha/hora está bloqueada
+		const bloqueoResultado = await verificarBloqueoAgenda(
+			datosReserva.fecha,
+			datosReserva.hora
+		);
+
+		if (bloqueoResultado.bloqueado) {
+			console.log("RESERVA BLOQUEADA:", {
+				fecha: datosReserva.fecha,
+				hora: datosReserva.hora,
+				motivo: bloqueoResultado.motivo,
+			});
+			return res.status(400).json({
+				success: false,
+				message: "Agenda completada",
+				error: bloqueoResultado.motivo,
+				bloqueado: true,
+			});
+		}
+
 		const normalizeEstado = (valor) =>
 			typeof valor === "string" ? valor.trim().toLowerCase() : "";
 
@@ -2450,6 +2475,26 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		}
 
 		datosReserva.email = emailNormalizado;
+
+		// Verificar si la fecha/hora está bloqueada
+		const bloqueoResultado = await verificarBloqueoAgenda(
+			datosReserva.fecha,
+			datosReserva.hora
+		);
+
+		if (bloqueoResultado.bloqueado) {
+			console.log("RESERVA EXPRESS BLOQUEADA:", {
+				fecha: datosReserva.fecha,
+				hora: datosReserva.hora,
+				motivo: bloqueoResultado.motivo,
+			});
+			return res.status(400).json({
+				success: false,
+				message: "Agenda completada",
+				error: bloqueoResultado.motivo,
+				bloqueado: true,
+			});
+		}
 
 		const clienteAsociado = await obtenerClienteParaReservaExpress({
 			clienteId: datosReserva.clienteId,
@@ -5716,6 +5761,126 @@ app.delete("/api/festivos/:id", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error eliminando festivo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// ============================================
+// ENDPOINTS DE BLOQUEOS DE AGENDA
+// ============================================
+
+// Obtener todos los bloqueos de agenda
+app.get("/api/bloqueos", async (req, res) => {
+	try {
+		const bloqueos = await BloqueoAgenda.findAll({
+			order: [["fechaInicio", "ASC"]],
+		});
+
+		res.json(bloqueos);
+	} catch (error) {
+		console.error("Error obteniendo bloqueos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Verificar si una fecha/hora específica está bloqueada
+app.post("/api/bloqueos/verificar", async (req, res) => {
+	try {
+		const { fecha, hora } = req.body;
+
+		if (!fecha) {
+			return res.status(400).json({
+				success: false,
+				error: "La fecha es requerida",
+			});
+		}
+
+		const resultado = await verificarBloqueoAgenda(fecha, hora);
+
+		res.json({
+			success: true,
+			bloqueado: resultado.bloqueado,
+			motivo: resultado.motivo,
+			bloqueo: resultado.bloqueo,
+		});
+	} catch (error) {
+		console.error("Error verificando bloqueo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener bloqueos en un rango de fechas
+app.post("/api/bloqueos/rango", async (req, res) => {
+	try {
+		const { fechaInicio, fechaFin } = req.body;
+
+		if (!fechaInicio || !fechaFin) {
+			return res.status(400).json({
+				success: false,
+				error: "Las fechas de inicio y fin son requeridas",
+			});
+		}
+
+		const bloqueos = await obtenerBloqueosEnRango(fechaInicio, fechaFin);
+
+		res.json({
+			success: true,
+			bloqueos,
+		});
+	} catch (error) {
+		console.error("Error obteniendo bloqueos en rango:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Crear nuevo bloqueo de agenda
+app.post("/api/bloqueos", authAdmin, apiLimiter, async (req, res) => {
+	try {
+		const nuevoBloqueo = await BloqueoAgenda.create(req.body);
+		res.status(201).json(nuevoBloqueo);
+	} catch (error) {
+		console.error("Error creando bloqueo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Actualizar bloqueo de agenda
+app.put("/api/bloqueos/:id", authAdmin, apiLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const bloqueo = await BloqueoAgenda.findByPk(id);
+		if (!bloqueo) {
+			return res.status(404).json({ error: "Bloqueo no encontrado" });
+		}
+
+		await bloqueo.update(req.body);
+
+		res.json(bloqueo);
+	} catch (error) {
+		console.error("Error actualizando bloqueo:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Eliminar bloqueo de agenda
+app.delete("/api/bloqueos/:id", authAdmin, apiLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const bloqueo = await BloqueoAgenda.findByPk(id);
+		if (!bloqueo) {
+			return res.status(404).json({ error: "Bloqueo no encontrado" });
+		}
+
+		await bloqueo.destroy();
+
+		res.json({
+			success: true,
+			message: "Bloqueo eliminado exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando bloqueo:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
