@@ -53,6 +53,7 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
+	AlertDialogTrigger,
 } from "./ui/alert-dialog";
 
 const TIPOS_GASTO = [

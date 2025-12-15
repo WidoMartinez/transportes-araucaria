@@ -81,6 +81,14 @@ const app = express();
 // los headers X-Forwarded-For, X-Forwarded-Proto, etc.
 app.set("trust proxy", 1);
 
+// Configurar CORS para permitir todos los métodos (incluyendo PATCH)
+app.use(cors({
+	origin: true, // Permite cualquier origen (o especifica URLs específicas)
+	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+	credentials: true,
+	allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Middleware de autenticación para rutas administrativas
