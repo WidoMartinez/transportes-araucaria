@@ -205,14 +205,23 @@ function AdminGastos() {
 			});
 			if (response.ok) {
 				const data = await response.json();
-				if (data.success && data.reserva) {
+				// Support both wrapped response { success: true, reserva: ... } and direct object response
+				const reservaData = data.reserva || (data.id ? data : null);
+				
+				console.log("AdminGastos: Detalles de reserva actualizados:", reservaData);
+
+				if (reservaData) {
 					// Actualizar la reserva seleccionada con datos frescos (IDs de conductor/vehiculo)
 					setReservaSeleccionada(prev => {
                         // Solo actualizar si hay cambios criticos para evitar re-renders innecesarios
-                        if (prev && prev.id === data.reserva.id) {
-                            return { ...prev, ...data.reserva };
+                        if (prev && prev.id === reservaData.id) {
+                            console.log("AdminGastos: Actualizando estado con nuevos datos:", {
+                                conductorId: reservaData.conductorId,
+                                vehiculoId: reservaData.vehiculoId
+                            });
+                            return { ...prev, ...reservaData };
                         }
-                        return data.reserva;
+                        return reservaData;
                     });
 				}
 			}
