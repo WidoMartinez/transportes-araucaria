@@ -248,3 +248,9 @@
 .bg-white .btn-accent:hover {
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
+
+/* Fix for Google Maps Autocomplete in Modals */
+.pac-container {
+	z-index: 99999 !important; /* Ensure it's above Radix UI Dialogs (z-50) */
+	pointer-events: auto !important; /* Ensure it's clickable */
+}

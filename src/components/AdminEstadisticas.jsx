@@ -43,6 +43,10 @@ import {
 	Clock,
 	Calendar,
 	Users,
+	Archive,
+	AlertCircle,
+	CheckCircle,
+	ArrowRight,
 } from "lucide-react";
 import {
 	endOfDay,
@@ -77,6 +81,9 @@ function AdminEstadisticas() {
 		totalesPorTipo: {},
 		resumenPorFecha: [],
 	});
+	const [filtrosReservas, setFiltrosReservas] = useState([]);
+	const [reservasFiltradas, setReservasFiltradas] = useState([]);
+	const [loadingReservas, setLoadingReservas] = useState(false);
 	const [filtroFechas, setFiltroFechas] = useState("ultimos-30");
 	const [tipoGasto, setTipoGasto] = useState("todos");
 	const [rangoPersonalizado, setRangoPersonalizado] = useState({
@@ -417,6 +424,85 @@ function AdminEstadisticas() {
 		}
 	};
 
+	const fetchReservasEstadisticas = async () => {
+		setLoadingReservas(true);
+		try {
+			const params = new URLSearchParams();
+			if (rangoAplicado.fechaInicio) {
+				params.append("fecha_desde", rangoAplicado.fechaInicio.toISOString());
+			}
+			if (rangoAplicado.fechaFin) {
+				params.append("fecha_hasta", rangoAplicado.fechaFin.toISOString());
+			}
+			params.append("incluir_cerradas", "true");
+			params.append("limit", "100");
+
+			const response = await authenticatedFetch(
+				`/api/reservas?${params.toString()}`,
+				{ method: "GET" }
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				setReservasFiltradas(data.reservas || []);
+			}
+		} catch (error) {
+			console.error("Error al cargar reservas:", error);
+		} finally {
+			setLoadingReservas(false);
+		}
+	};
+
+	const handleCompletarReserva = async (reserva) => {
+		if (!window.confirm(`¿Marcar reserva ${reserva.codigoReserva} como completada e ir a registrar gastos?`)) {
+			return;
+		}
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${reserva.id}/estado`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ estado: "completada" }),
+			});
+
+			if (response.ok) {
+				// Redirigir a panel de gastos
+				window.location.href = "/admin?panel=gastos";
+			} else {
+				alert("Error al completar la reserva");
+			}
+		} catch (error) {
+			console.error("Error completando reserva:", error);
+			alert("Error de conexión");
+		}
+	};
+
+	const handleArchivarReserva = async (reserva) => {
+		if (!window.confirm(`¿${reserva.archivada ? "Desarchivar" : "Archivar"} reserva ${reserva.codigoReserva}?`)) {
+			return;
+		}
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${reserva.id}/archivar`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ archivada: !reserva.archivada }),
+			});
+
+			if (response.ok) {
+				fetchReservasEstadisticas();
+			} else {
+				alert("Error al cambiar estado de archivo");
+			}
+		} catch (error) {
+			console.error("Error archivando:", error);
+		}
+	};
+
+	useEffect(() => {
+		if (vistaActual === "reservas") {
+			fetchReservasEstadisticas();
+		}
+	}, [vistaActual, rangoAplicado]);
+
 	const calcularTotales = (estadisticas) => {
 		return estadisticas.reduce(
 			(acc, item) => ({
@@ -449,6 +535,12 @@ function AdminEstadisticas() {
 							<div className="flex items-center gap-2">
 								<User className="w-4 h-4" />
 								<span>Conductores</span>
+							</div>
+						</SelectItem>
+						<SelectItem value="reservas">
+							<div className="flex items-center gap-2">
+								<Receipt className="w-4 h-4" />
+								<span>Reservas</span>
 							</div>
 						</SelectItem>
 						<SelectItem value="vehiculos">
@@ -929,6 +1021,101 @@ function AdminEstadisticas() {
 						</CardContent>
 					</Card>
 				</>
+			)}
+
+			{vistaActual === "reservas" && (
+				<Card>
+					<CardHeader>
+						<CardTitle>Listado de Reservas ({reservasFiltradas.length})</CardTitle>
+					</CardHeader>
+					<CardContent>
+						{loadingReservas ? (
+							<div className="flex justify-center p-8">
+								<p>Cargando reservas...</p>
+							</div>
+						) : reservasFiltradas.length === 0 ? (
+							<div className="text-center p-8 text-muted-foreground">
+								No hay reservas en este periodo
+							</div>
+						) : (
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Fecha</TableHead>
+										<TableHead>Código</TableHead>
+										<TableHead>Cliente</TableHead>
+										<TableHead>Estado</TableHead>
+										<TableHead>Pagado</TableHead>
+										<TableHead>Acciones</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{reservasFiltradas.map((reserva) => {
+										// Lógica para determinar si faltan gastos
+										// Asumimos que "faltan gastos" si es completada y totalGastos es 0
+										// (Esto requiere que el endpoint devuelve gastos, verifiquemos si lo hace.
+										// Si no, esta columna será informativa básica).
+										// El endpoint GET /api/reservas NO parece devolver 'gastos' agregados.
+										// Por ahora mostramos alerta básica si es completada.
+										const esCompletada = reserva.estado === "completada";
+										
+										return (
+											<TableRow key={reserva.id}>
+												<TableCell>{formatearFecha(reserva.fecha)}</TableCell>
+												<TableCell className="font-mono">{reserva.codigoReserva}</TableCell>
+												<TableCell>{reserva.cliente?.nombre || reserva.nombre}</TableCell>
+												<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
+												<TableCell>{getEstadoPagoBadge(reserva)}</TableCell>
+												<TableCell>
+													<div className="flex items-center gap-2">
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => handleViewReservaDetail(reserva)}
+														>
+															<Eye className="w-4 h-4" />
+														</Button>
+
+														{reserva.estado === "confirmada" && (
+															<Button
+																variant="default"
+																size="sm"
+																className="bg-green-600 hover:bg-green-700 h-8 text-xs"
+																onClick={() => handleCompletarReserva(reserva)}
+															>
+																Completar y Gastos
+																<ArrowRight className="w-3 h-3 ml-1" />
+															</Button>
+														)}
+
+														{(reserva.estado === "cancelada" || reserva.estado === "pendiente") && (
+															<Button
+																variant="outline"
+																size="sm"
+																className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs"
+																onClick={() => handleArchivarReserva(reserva)}
+															>
+																<Archive className="w-3 h-3 mr-1" />
+																{reserva.archivada ? "Desarchivar" : "Archivar"}
+															</Button>
+														)}
+														
+														{esCompletada && (
+															<div className="flex items-center text-xs text-orange-600 font-medium ml-2">
+																<AlertCircle className="w-3 h-3 mr-1" />
+																Revisar gastos
+															</div>
+														)}
+													</div>
+												</TableCell>
+											</TableRow>
+										);
+									})}
+								</TableBody>
+							</Table>
+						)}
+					</CardContent>
+				</Card>
 			)}
 
 			<Dialog open={showDetalleDialog} onOpenChange={setShowDetalleDialog}>
