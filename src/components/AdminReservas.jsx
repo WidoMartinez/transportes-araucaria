@@ -1109,14 +1109,24 @@ function AdminReservas() {
 			}
 			const estadoAplicadoBackend = pagoData?.reserva?.estado || null;
 
-			// Aplicar finalmente el estado seleccionado por el usuario (incluye completada)
+			// Aplicar finalmente el estado seleccionado por el usuario.
+			// FIX: Si el backend sugiere "completada" (lógica antigua) pero el usuario
+			// explícitamente selecciona "confirmada", priorizar la selección del usuario.
+			const nuevoEstado =
+				estadoFinal === "confirmada" && estadoAplicadoBackend === "completada"
+					? "confirmada"
+					: estadoAplicadoBackend || estadoFinal;
+
 			const estadoResponse = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
 				{
 					method: "PUT",
-					headers: { "Content-Type": "application/json" },
+					headers: { 
+						"Content-Type": "application/json",
+						...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) // Asegurar auth en esta llamada tambien
+					},
 					body: JSON.stringify({
-						estado: estadoAplicadoBackend || estadoFinal,
+						estado: nuevoEstado,
 						observaciones: formData.observaciones,
 					}),
 				}
