@@ -2599,7 +2599,17 @@ function AdminReservas() {
 															variant="ghost"
 															size="icon"
 															onClick={() => handleArchivar(reserva)}
-															title={reserva.archivada ? "Desarchivar" : "Archivar"}
+															title={
+																reserva.archivada
+																	? "Desarchivar"
+																	: ["pendiente", "cancelada"].includes(reserva.estado)
+																	? "Archivar"
+																	: "Solo se pueden archivar reservas pendientes o canceladas"
+															}
+															disabled={
+																!reserva.archivada &&
+																!["pendiente", "cancelada"].includes(reserva.estado)
+															}
 														>
 															{reserva.archivada ? (
 																<RefreshCw className="h-4 w-4" />
