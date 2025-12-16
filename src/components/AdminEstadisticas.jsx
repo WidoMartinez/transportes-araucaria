@@ -866,14 +866,15 @@ function AdminEstadisticas() {
 			)}
 
 			<Dialog open={showDetalleDialog} onOpenChange={setShowDetalleDialog}>
-				<DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-					<DialogHeader>
+				<DialogContent className="sm:max-w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
+					<DialogHeader className="p-6 pb-2 shrink-0">
 						<DialogTitle>
 							Detalle del Conductor: {conductorDetalle?.conductor?.nombre}
 						</DialogTitle>
 					</DialogHeader>
 					{conductorDetalle && (
-						<div className="space-y-6">
+						<div className="flex-1 overflow-y-auto p-6 pt-2 space-y-6">
+							{/* Top Stats */}
 							<div className="grid grid-cols-4 gap-4">
 								<Card>
 									<CardHeader className="pb-2">
@@ -921,148 +922,160 @@ function AdminEstadisticas() {
 								</Card>
 							</div>
 
-							<Card>
-								<CardHeader>
-									<CardTitle>Gastos por Tipo</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<div className="grid grid-cols-2 gap-4">
-										{Object.entries(conductorDetalle.gastosPorTipo || {}).map(
-											([tipo, datos]) => (
-												<div
-													key={tipo}
-													className="p-4 border rounded-lg flex justify-between items-center"
-												>
-													<div>
-														<p className="text-sm text-muted-foreground capitalize">
-															{tipo.replace("_", " ")}
-														</p>
-														<p className="text-lg font-semibold">
-															${datos.total.toLocaleString("es-CL")}
-														</p>
-													</div>
-													<Badge>{datos.cantidad} registros</Badge>
-												</div>
-											)
-										)}
-									</div>
-								</CardContent>
-							</Card>
-
-							<Card>
-								<CardHeader>
-									<CardTitle>Vehículos Asociados</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<div className="grid grid-cols-3 gap-4">
-										{conductorDetalle.vehiculosAsociados?.map((vehiculo) => (
-											<div
-												key={vehiculo.id}
-												className="p-4 border rounded-lg flex items-center gap-3"
-											>
-												<Car className="w-8 h-8 text-blue-600" />
-												<div>
-													<p className="font-semibold">{vehiculo.patente}</p>
-													<p className="text-sm text-muted-foreground">
-														{vehiculo.marca} {vehiculo.modelo}
-													</p>
-												</div>
+							<div className="grid grid-cols-12 gap-6">
+								{/* Left Column: Expenses breakdown and Vehicles */}
+								<div className="col-span-4 space-y-6">
+									<Card className="h-fit">
+										<CardHeader>
+											<CardTitle>Gastos por Tipo</CardTitle>
+										</CardHeader>
+										<CardContent>
+											<div className="space-y-3">
+												{Object.entries(conductorDetalle.gastosPorTipo || {}).map(
+													([tipo, datos]) => (
+														<div
+															key={tipo}
+															className="p-3 border rounded-lg flex justify-between items-center"
+														>
+															<div>
+																<p className="text-sm text-muted-foreground capitalize">
+																	{tipo.replace("_", " ")}
+																</p>
+																<p className="text-base font-semibold">
+																	${datos.total.toLocaleString("es-CL")}
+																</p>
+															</div>
+															<Badge variant="secondary">{datos.cantidad}</Badge>
+														</div>
+													)
+												)}
 											</div>
-										))}
-									</div>
-								</CardContent>
-							</Card>
+										</CardContent>
+									</Card>
 
-							<Card>
-								<CardHeader>
-									<CardTitle>Historial de Reservas</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Código</TableHead>
-												<TableHead>Fecha</TableHead>
-												<TableHead>Ruta</TableHead>
-												<TableHead>Estado</TableHead>
-												<TableHead>Total</TableHead>
-												<TableHead>Vehículo</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{conductorDetalle.reservas?.map((reserva) => (
-												<TableRow key={reserva.id}>
-													<TableCell className="font-medium">
-														{reserva.codigoReserva}
-													</TableCell>
-													<TableCell>
-														{new Date(reserva.fecha).toLocaleDateString("es-CL")}
-													</TableCell>
-													<TableCell>
-														{reserva.origen} → {reserva.destino}
-													</TableCell>
-													<TableCell>
-														<Badge>{reserva.estado}</Badge>
-													</TableCell>
-													<TableCell className="font-semibold">
-														$
-														{parseFloat(
-															reserva.totalConDescuento
-														).toLocaleString("es-CL")}
-													</TableCell>
-													<TableCell>
-														{reserva.vehiculo
-															? `${reserva.vehiculo.patente}`
-															: "-"}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</CardContent>
-							</Card>
+									<Card className="h-fit">
+										<CardHeader>
+											<CardTitle>Vehículos Asociados</CardTitle>
+										</CardHeader>
+										<CardContent>
+											<div className="space-y-3">
+												{conductorDetalle.vehiculosAsociados?.map((vehiculo) => (
+													<div
+														key={vehiculo.id}
+														className="p-3 border rounded-lg flex items-center gap-3"
+													>
+														<Car className="w-6 h-6 text-blue-600" />
+														<div>
+															<p className="font-semibold text-sm">{vehiculo.patente}</p>
+															<p className="text-xs text-muted-foreground">
+																{vehiculo.marca} {vehiculo.modelo}
+															</p>
+														</div>
+													</div>
+												))}
+											</div>
+										</CardContent>
+									</Card>
+								</div>
 
-							<Card>
-								<CardHeader>
-									<CardTitle>Historial de Gastos</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Table>
-										<TableHeader>
-											<TableRow>
-												<TableHead>Fecha</TableHead>
-												<TableHead>Tipo</TableHead>
-												<TableHead>Monto</TableHead>
-												<TableHead>Reserva</TableHead>
-												<TableHead>Descripción</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{conductorDetalle.gastos?.map((gasto) => (
-												<TableRow key={gasto.id}>
-													<TableCell>
-														{new Date(gasto.fecha).toLocaleDateString("es-CL")}
-													</TableCell>
-													<TableCell>
-														<Badge variant="outline">
-															{gasto.tipoGasto.replace("_", " ")}
-														</Badge>
-													</TableCell>
-													<TableCell className="font-semibold">
-														${parseFloat(gasto.monto).toLocaleString("es-CL")}
-													</TableCell>
-													<TableCell>
-														{gasto.reserva?.codigoReserva || "-"}
-													</TableCell>
-													<TableCell className="max-w-xs truncate">
-														{gasto.descripcion || "-"}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
-								</CardContent>
-							</Card>
+								{/* Right Column: Histories */}
+								<div className="col-span-8 space-y-6">
+									<Card className="flex flex-col h-[400px]">
+										<CardHeader className="pb-2">
+											<CardTitle>Historial de Reservas</CardTitle>
+										</CardHeader>
+										<CardContent className="flex-1 overflow-hidden p-0">
+											<div className="h-full overflow-y-auto p-6 pt-0">
+												<Table>
+													<TableHeader className="sticky top-0 bg-background z-10">
+														<TableRow>
+															<TableHead>Código</TableHead>
+															<TableHead>Fecha</TableHead>
+															<TableHead>Ruta</TableHead>
+															<TableHead>Estado</TableHead>
+															<TableHead>Total</TableHead>
+															<TableHead>Vehículo</TableHead>
+														</TableRow>
+													</TableHeader>
+													<TableBody>
+														{conductorDetalle.reservas?.map((reserva) => (
+															<TableRow key={reserva.id}>
+																<TableCell className="font-medium">
+																	{reserva.codigoReserva}
+																</TableCell>
+																<TableCell>
+																	{new Date(reserva.fecha).toLocaleDateString("es-CL")}
+																</TableCell>
+																<TableCell className="max-w-[200px] truncate" title={`${reserva.origen} → ${reserva.destino}`}>
+																	{reserva.origen} → {reserva.destino}
+																</TableCell>
+																<TableCell>
+																	<Badge variant="outline" className="text-xs">{reserva.estado}</Badge>
+																</TableCell>
+																<TableCell className="font-semibold">
+																	$
+																	{parseFloat(
+																		reserva.totalConDescuento
+																	).toLocaleString("es-CL")}
+																</TableCell>
+																<TableCell className="text-xs">
+																	{reserva.vehiculo
+																		? `${reserva.vehiculo.patente}`
+																		: "-"}
+																</TableCell>
+															</TableRow>
+														))}
+													</TableBody>
+												</Table>
+											</div>
+										</CardContent>
+									</Card>
+
+									<Card className="flex flex-col h-[300px]">
+										<CardHeader className="pb-2">
+											<CardTitle>Historial de Gastos</CardTitle>
+										</CardHeader>
+										<CardContent className="flex-1 overflow-hidden p-0">
+											<div className="h-full overflow-y-auto p-6 pt-0">
+												<Table>
+													<TableHeader className="sticky top-0 bg-background z-10">
+														<TableRow>
+															<TableHead>Fecha</TableHead>
+															<TableHead>Tipo</TableHead>
+															<TableHead>Monto</TableHead>
+															<TableHead>Reserva</TableHead>
+															<TableHead>Descripción</TableHead>
+														</TableRow>
+													</TableHeader>
+													<TableBody>
+														{conductorDetalle.gastos?.map((gasto) => (
+															<TableRow key={gasto.id}>
+																<TableCell>
+																	{new Date(gasto.fecha).toLocaleDateString("es-CL")}
+																</TableCell>
+																<TableCell>
+																	<Badge variant="outline" className="text-xs">
+																		{gasto.tipoGasto.replace("_", " ")}
+																	</Badge>
+																</TableCell>
+																<TableCell className="font-semibold">
+																	${parseFloat(gasto.monto).toLocaleString("es-CL")}
+																</TableCell>
+																<TableCell>
+																	{gasto.reserva?.codigoReserva || "-"}
+																</TableCell>
+																<TableCell className="max-w-xs truncate text-xs" title={gasto.descripcion}>
+																	{gasto.descripcion || "-"}
+																</TableCell>
+															</TableRow>
+														))}
+													</TableBody>
+												</Table>
+											</div>
+										</CardContent>
+									</Card>
+								</div>
+							</div>
 						</div>
 					)}
 				</DialogContent>
