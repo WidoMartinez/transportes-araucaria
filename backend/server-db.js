@@ -3242,6 +3242,52 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 	}
 });
 
+// --- ENDPOINTS PARA GESTIONAR RECURSOS (CONDUCTORES/VEHICULOS) ---
+
+// Obtener lista de conductores (Admin)
+app.get("/api/conductores", authAdmin, async (req, res) => {
+	try {
+        const { estado } = req.query;
+        const whereClause = {};
+        
+        if (estado) {
+            whereClause.estado = estado;
+        }
+
+		const conductores = await Conductor.findAll({
+            where: whereClause,
+			order: [["nombre", "ASC"]],
+		});
+        
+		res.json({ success: true, conductores });
+	} catch (error) {
+		console.error("Error obteniendo conductores:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Obtener lista de vehiculos (Admin)
+app.get("/api/vehiculos", authAdmin, async (req, res) => {
+	try {
+        const { estado } = req.query;
+        const whereClause = {};
+        
+        if (estado) {
+            whereClause.estado = estado;
+        }
+
+		const vehiculos = await Vehiculo.findAll({
+            where: whereClause,
+			order: [["patente", "ASC"]],
+		});
+        
+		res.json({ success: true, vehiculos });
+	} catch (error) {
+		console.error("Error obteniendo vehiculos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // --- ENDPOINTS PARA GESTIONAR RESERVAS ---
 
 // Obtener estadísticas de reservas (MOVIDO ANTES DE :id y con AUTH)
