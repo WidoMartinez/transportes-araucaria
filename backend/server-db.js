@@ -4564,6 +4564,8 @@ app.put("/api/reservas/:id", authAdmin, async (req, res) => {
 			fechaRegreso,
 			horaRegreso,
 			mensaje,
+			direccionOrigen,
+			direccionDestino,
 		} = req.body || {};
 
 		await reserva.update({
@@ -4572,6 +4574,10 @@ app.put("/api/reservas/:id", authAdmin, async (req, res) => {
 			telefono: telefono !== undefined ? telefono : reserva.telefono,
 			fecha: fecha !== undefined ? fecha : reserva.fecha,
 			hora: hora !== undefined ? hora : reserva.hora,
+			direccionOrigen:
+				direccionOrigen !== undefined ? direccionOrigen : reserva.direccionOrigen,
+			direccionDestino:
+				direccionDestino !== undefined ? direccionDestino : reserva.direccionDestino,
 			pasajeros:
 				pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
 			numeroVuelo:

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import {
 	Select,
 	SelectContent,
@@ -26,6 +27,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
+	DialogDescription,
 } from "./ui/dialog";
 import {
 	User,
@@ -37,6 +39,10 @@ import {
 	Receipt,
 	Eye,
 	BarChart3,
+	MapPin,
+	Clock,
+	Calendar,
+	Users,
 } from "lucide-react";
 import {
 	endOfDay,
@@ -161,6 +167,66 @@ function AdminEstadisticas() {
 	const [conductorDetalle, setConductorDetalle] = useState(null);
 	const [showDetalleDialog, setShowDetalleDialog] = useState(false);
 	const [errorRango, setErrorRango] = useState("");
+	
+	// Estado para detalle de reserva individual
+	const [showReservaDetailDialog, setShowReservaDetailDialog] = useState(false);
+	const [selectedReservaDetail, setSelectedReservaDetail] = useState(null);
+
+	const getEstadoBadge = (estado) => {
+		switch (estado) {
+			case "pendiente":
+				return <Badge variant="secondary">Pendiente</Badge>;
+			case "pendiente_detalles":
+				return <Badge variant="warning">Pendiente Detalles</Badge>;
+			case "confirmada":
+				return <Badge className="bg-blue-600 hover:bg-blue-700">Confirmada</Badge>;
+			case "completada":
+				return <Badge className="bg-green-600 hover:bg-green-700">Completada</Badge>;
+			case "cancelada":
+				return <Badge variant="destructive">Cancelada</Badge>;
+			default:
+				return <Badge variant="outline">{estado}</Badge>;
+		}
+	};
+
+	const getEstadoPagoBadge = (reserva) => {
+		if (reserva.estadoPago === "pagado" || reserva.saldoPagado) {
+			return <Badge className="bg-green-600 hover:bg-green-700">Pagado</Badge>;
+		}
+		if (reserva.abonoPagado) {
+			return <Badge variant="outline" className="text-orange-600 border-orange-600">Abono pagado</Badge>;
+		}
+		if (reserva.estadoPago === "reembolsado") {
+			return <Badge variant="destructive">Reembolsado</Badge>;
+		}
+		return <Badge variant="secondary">Pendiente</Badge>;
+	};
+
+	const handleViewReservaDetail = async (reserva) => {
+		// Mostrar lo que tenemos mientras cargamos lo completo
+		setSelectedReservaDetail(reserva);
+		setShowReservaDetailDialog(true);
+		
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${reserva.id}`);
+			if (response.ok) {
+				const fullData = await response.json();
+				// Combinar con la data que ya teníamos por si acaso
+				const merged = { ...reserva, ...fullData };
+				
+				// Normalizar campos que podrían venir distintos
+				if (merged.cliente) {
+					merged.nombre = merged.cliente.nombre || merged.nombre;
+					merged.email = merged.cliente.email || merged.email;
+					merged.telefono = merged.cliente.telefono || merged.telefono;
+				}
+				
+				setSelectedReservaDetail(merged);
+			}
+		} catch (error) {
+			console.error("Error cargando detalle completo de reserva:", error);
+		}
+	};
 
 	const construirQueryFechas = (parametrosAdicionales = {}) => {
 		const params = new URLSearchParams();
@@ -999,7 +1065,11 @@ function AdminEstadisticas() {
 													</TableHeader>
 													<TableBody>
 														{conductorDetalle.reservas?.map((reserva) => (
-															<TableRow key={reserva.id}>
+															<TableRow 
+																key={reserva.id} 
+																className="cursor-pointer hover:bg-muted/50 transition-colors"
+																onClick={() => handleViewReservaDetail(reserva)}
+															>
 																<TableCell className="font-medium">
 																	{reserva.codigoReserva}
 																</TableCell>
@@ -1076,6 +1146,143 @@ function AdminEstadisticas() {
 									</Card>
 								</div>
 							</div>
+						</div>
+					)}
+				</DialogContent>
+			</Dialog>
+
+			{/* Modal de Detalle de Reserva (Nivel 2) */}
+			<Dialog open={showReservaDetailDialog} onOpenChange={setShowReservaDetailDialog}>
+				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto z-[60]">
+					<DialogHeader>
+						<DialogTitle>Detalles de Reserva #{selectedReservaDetail?.id}</DialogTitle>
+						<DialogDescription>
+							Información completa del viaje y cliente
+						</DialogDescription>
+					</DialogHeader>
+
+					{selectedReservaDetail && (
+						<div className="space-y-6">
+							{/* Encabezado con Código */}
+							<div className="flex justify-between items-start bg-muted p-4 rounded-lg">
+								<div>
+									<Label className="text-muted-foreground text-xs uppercase tracking-wider">Código de Reserva</Label>
+									<p className="text-2xl font-bold tracking-tight">{selectedReservaDetail.codigoReserva || "Sin código"}</p>
+								</div>
+								<div className="flex flex-col items-end gap-2">
+									{getEstadoBadge(selectedReservaDetail.estado)}
+									{getEstadoPagoBadge(selectedReservaDetail)}
+									<Button 
+										size="sm" 
+										variant="outline"
+										onClick={() => {
+											// Si AdminReservas tuviera una forma de abrirse con ID, podríamos redirigir
+											// Por ahora, solo notificaremos que se debe implementar la edición completa o 
+											// redirigir a la vista de reservas.
+											alert("Funcionalidad de edición rápida en construcción. Por favor ir a Reservas para editar.");
+										}}
+									>
+										<Eye className="w-4 h-4 mr-2" />
+										Editar
+									</Button>
+								</div>
+							</div>
+
+							<div className="grid md:grid-cols-2 gap-6">
+								{/* Información del Cliente */}
+								<div className="space-y-3">
+									<h4 className="font-semibold flex items-center gap-2">
+										<Users className="w-4 h-4" /> Cliente
+									</h4>
+									<div className="grid gap-2 text-sm border p-3 rounded-md">
+										<div>
+											<span className="text-muted-foreground mr-2">Nombre:</span>
+											<span className="font-medium">{selectedReservaDetail.nombre}</span>
+										</div>
+										<div>
+											<span className="text-muted-foreground mr-2">Email:</span>
+											<span>{selectedReservaDetail.email}</span>
+										</div>
+										<div>
+											<span className="text-muted-foreground mr-2">Teléfono:</span>
+											<span>{selectedReservaDetail.telefono}</span>
+										</div>
+									</div>
+								</div>
+
+								{/* Detalles del Viaje */}
+								<div className="space-y-3">
+									<h4 className="font-semibold flex items-center gap-2">
+										<MapPin className="w-4 h-4" /> Ruta
+									</h4>
+									<div className="grid gap-2 text-sm border p-3 rounded-md">
+										<div className="grid grid-cols-[auto_1fr] gap-2">
+											<Badge variant="outline" className="w-fit">Origen</Badge>
+											<span>{selectedReservaDetail.origen}</span>
+										</div>
+										<div className="grid grid-cols-[auto_1fr] gap-2">
+											<Badge variant="outline" className="w-fit">Destino</Badge>
+											<span>{selectedReservaDetail.destino}</span>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<div className="grid md:grid-cols-2 gap-6">
+								{/* Fecha y Hora */}
+								<div className="space-y-3">
+									<h4 className="font-semibold flex items-center gap-2">
+										<Calendar className="w-4 h-4" /> Fecha y Hora
+									</h4>
+									<div className="grid gap-2 text-sm border p-3 rounded-md">
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">Fecha:</span>
+											<span className="font-medium">{formatearFecha(selectedReservaDetail.fecha)}</span>
+										</div>
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">Hora:</span>
+											<span className="font-medium">{selectedReservaDetail.hora}</span>
+										</div>
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">Pasajeros:</span>
+											<span>{selectedReservaDetail.pasajeros}</span>
+										</div>
+									</div>
+								</div>
+
+								{/* Finanzas */}
+								<div className="space-y-3">
+									<h4 className="font-semibold flex items-center gap-2">
+										<DollarSign className="w-4 h-4" /> Finanzas
+									</h4>
+									<div className="grid gap-2 text-sm border p-3 rounded-md">
+										<div className="flex justify-between">
+											<span className="text-muted-foreground">Total:</span>
+											<span className="font-bold">{formatearMonto(selectedReservaDetail.totalConDescuento)}</span>
+										</div>
+										<div className="flex justify-between text-muted-foreground">
+											<span>Abono Sugerido:</span>
+											<span>{formatearMonto(selectedReservaDetail.abonoSugerido)}</span>
+										</div>
+										<div className="flex justify-between border-t pt-2 mt-1">
+											<span className="font-semibold">Saldo Pendiente:</span>
+											<span className={`${selectedReservaDetail.saldoPendiente > 0 ? "text-red-600" : "text-green-600"} font-bold`}>
+												{formatearMonto(selectedReservaDetail.saldoPendiente)}
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+							
+							{/* Información Adicional */}
+							{(selectedReservaDetail.observaciones || selectedReservaDetail.mensaje) && (
+								<div className="space-y-2">
+									<Label className="text-muted-foreground">Notas / Observaciones</Label>
+									<div className="bg-muted/50 p-3 rounded-md text-sm italic">
+										{selectedReservaDetail.observaciones || selectedReservaDetail.mensaje}
+									</div>
+								</div>
+							)}
 						</div>
 					)}
 				</DialogContent>

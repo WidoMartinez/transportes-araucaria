@@ -17,6 +17,7 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
+import { AddressAutocomplete } from "./ui/address-autocomplete";
 import {
 	Dialog,
 	DialogContent,
@@ -142,6 +143,7 @@ function AdminReservas() {
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
 	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
 	const [enviarNotificacionConductor, setEnviarNotificacionConductor] = useState(true);
+	const [enviarActualizacionConductor, setEnviarActualizacionConductor] = useState(false);
 	// Estados para pre-cargar y validar contra asignaciÃ³n actual
 	const [assignedPatente, setAssignedPatente] = useState("");
 	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
@@ -164,37 +166,51 @@ function AdminReservas() {
 	const handleRangoFechaChange = (valor) => {
 		setRangoFecha(valor);
 		const hoy = new Date();
+		
+		// Helper para formatear fecha localmente como YYYY-MM-DD
+		const formatDateLocal = (date) => {
+			const year = date.getFullYear();
+			const month = String(date.getMonth() + 1).padStart(2, "0");
+			const day = String(date.getDate()).padStart(2, "0");
+			return `${year}-${month}-${day}`;
+		};
+
 		let desde = "";
 		let hasta = "";
 
 		if (valor === "hoy") {
-			desde = hoy.toISOString().split("T")[0];
-			hasta = hoy.toISOString().split("T")[0];
+			const hoyStr = formatDateLocal(hoy);
+			desde = hoyStr;
+			hasta = hoyStr;
 		} else if (valor === "ayer") {
 			const ayer = new Date(hoy);
 			ayer.setDate(hoy.getDate() - 1);
-			desde = ayer.toISOString().split("T")[0];
-			hasta = ayer.toISOString().split("T")[0];
+			const ayerStr = formatDateLocal(ayer);
+			desde = ayerStr;
+			hasta = ayerStr;
 		} else if (valor === "semana") { // Últimos 7 días
 			const hace7 = new Date(hoy);
 			hace7.setDate(hoy.getDate() - 7);
-			desde = hace7.toISOString().split("T")[0];
-			hasta = hoy.toISOString().split("T")[0];
+			desde = formatDateLocal(hace7);
+			hasta = formatDateLocal(hoy);
 		} else if (valor === "quincena") { // Últimos 15 días
 			const hace15 = new Date(hoy);
 			hace15.setDate(hoy.getDate() - 15);
-			desde = hace15.toISOString().split("T")[0];
-			hasta = hoy.toISOString().split("T")[0];
+			desde = formatDateLocal(hace15);
+			hasta = formatDateLocal(hoy);
 		} else if (valor === "mes") { // Mes actual
+			// Primer día del mes actual
 			const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-			desde = primerDia.toISOString().split("T")[0];
+			desde = formatDateLocal(primerDia);
+			// Último día del mes actual (día 0 del mes siguiente)
 			const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-			hasta = ultimoDia.toISOString().split("T")[0];
+			hasta = formatDateLocal(ultimoDia);
 		} else if (valor === "todos") {
 			desde = "";
 			hasta = "";
 		}
-		// Si es 'personalizado', no cambiamos las fechas (el usuario las elige)
+		
+		// Si es 'personalizado', no cambiamos las fechas automÃ¡ticamente
 		if (valor !== "personalizado") {
 			setFechaDesde(desde);
 			setFechaHasta(hasta);
@@ -231,6 +247,8 @@ function AdminReservas() {
 		equipajeEspecial: "",
 		sillaInfantil: false,
 		horaRegreso: "",
+		direccionOrigen: "",
+		direccionDestino: "",
 	});
 
 	// Formulario de nueva reserva
@@ -747,6 +765,8 @@ function AdminReservas() {
 				params.append("archivadas", "true");
 			}
 
+			params.append("incluir_cerradas", "true");
+
 			const response = await fetch(`${apiUrl}/api/reservas?${params}`);
 
 			if (!response.ok) {
@@ -844,12 +864,15 @@ function AdminReservas() {
 			horaRegreso: reserva.horaRegreso || "",
 			idaVuelta: Boolean(reserva.idaVuelta),
 			fechaRegreso: (reserva.fechaRegreso || "").toString().substring(0, 10),
+			direccionOrigen: reserva.direccionOrigen || "",
+			direccionDestino: reserva.direccionDestino || "",
 		});
 		// Reset ediciÃ³n de ruta
 		setEditOrigenEsOtro(false);
 		setEditDestinoEsOtro(false);
 		setEditOtroOrigen("");
 		setEditOtroDestino("");
+		setEnviarActualizacionConductor(false);
 		// Cargar catÃ¡logo de destinos para selects
 		fetchDestinosCatalog();
 		setShowEditDialog(true);
@@ -967,12 +990,35 @@ function AdminReservas() {
 							fechaRegreso: formData.fechaRegreso || null,
 							horaRegreso: formData.horaRegreso || null,
 							mensaje: selectedReserva.mensaje,
+							direccionOrigen: formData.direccionOrigen,
+							direccionDestino: formData.direccionDestino,
 						}),
 					}
 				);
 				if (!generalResp.ok) {
 					const t = await generalResp.text();
 					console.warn("No se pudo actualizar datos generales:", t);
+				}
+
+				// Si se marcÃ³ enviar actualizaciÃ³n al conductor
+				if (enviarActualizacionConductor && isAsignada(selectedReserva)) {
+					// Re-enviar asignaciÃ³n (mismo vehÃ­culo y conductor) para disparar email
+					await fetch(
+						`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: `Bearer ${accessToken}`,
+							},
+							body: JSON.stringify({
+								vehiculoId: selectedReserva.vehiculoId,
+								conductorId: selectedReserva.conductorId,
+								sendEmail: false, // No reenviar al cliente por defecto aquÃ­
+								sendEmailDriver: true, // Forzar email al conductor
+							}),
+						}
+					);
 				}
 			} catch (e) {
 				console.warn(
@@ -2415,21 +2461,21 @@ function AdminReservas() {
 																: undefined
 														}
 													>
-														{reserva.esCliente ? (
-															<>
-																<Star className="w-3 h-3 mr-1" />
-																Cliente
-															</>
-														) : // Para reservas provenientes del sistema de pago con código,
-														// etiquetar como "Cliente con código" en vez de "Cotizador".
-														reserva?.source === "codigo_pago" ||
-														  (reserva?.referenciaPago &&
-																String(reserva.referenciaPago).trim().length >
-																	0) ? (
-															"Cliente con código"
-														) : (
-															"Cotizador"
-														)}
+														{
+															// Nueva lógica: Prioridad a "Cliente con código"
+															(reserva?.source === "codigo_pago" || 
+															(reserva?.referenciaPago && String(reserva.referenciaPago).trim().length > 0) ||
+															reserva?.metodoPago === "codigo") ? (
+																"Cliente con código"
+															) : reserva.esCliente ? (
+																<>
+																	<Star className="w-3 h-3 mr-1" />
+																	Cliente
+																</>
+															) : (
+																"Cotizador"
+															)
+														}
 													</Badge>
 													{reserva.clasificacionCliente &&
 														reserva.clasificacionCliente !==
@@ -3311,6 +3357,124 @@ function AdminReservas() {
 										}
 									/>
 								</div>
+							</div>
+
+							{/* Detalles del Trayecto */}
+							<div className="bg-muted p-4 rounded-lg space-y-4">
+								<h3 className="font-semibold border-b pb-2">Detalles del Trayecto</h3>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-1">
+										<Label>Origen General</Label>
+										<Select
+											value={formData.origen || ""}
+											onValueChange={(value) =>
+												setFormData({ ...formData, origen: value })
+											}
+										>
+											<SelectTrigger className="bg-white">
+												<SelectValue placeholder="Seleccionar origen" />
+											</SelectTrigger>
+											<SelectContent>
+												{destinosCatalog.map((destino, index) => (
+													<SelectItem key={`orig-${index}`} value={destino}>
+														{destino}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									<div className="space-y-1">
+										<Label>Destino General</Label>
+										<Select
+											value={formData.destino || ""}
+											onValueChange={(value) =>
+												setFormData({ ...formData, destino: value })
+											}
+										>
+											<SelectTrigger className="bg-white">
+												<SelectValue placeholder="Seleccionar destino" />
+											</SelectTrigger>
+											<SelectContent>
+												{destinosCatalog.map((destino, index) => (
+													<SelectItem key={`dest-${index}`} value={destino}>
+														{destino}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									{/* Lógica condicional de direcciones similar a PagarConCodigo */}
+									{(() => {
+										const isOrigenAeropuerto =
+											normalizeDestino(formData.origen) ===
+											normalizeDestino(AEROPUERTO_LABEL);
+										const isDestinoAeropuerto =
+											normalizeDestino(formData.destino) ===
+											normalizeDestino(AEROPUERTO_LABEL);
+
+										// Si no es aeropuerto en ninguno, mostramos ambos por precaución
+										const showOrigen = !isOrigenAeropuerto;
+										const showDestino = !isDestinoAeropuerto;
+
+										return (
+											<>
+												{showOrigen && (
+													<div className="space-y-1 md:col-span-2">
+														<Label>Dirección Específica de Origen</Label>
+														<AddressAutocomplete
+															name="direccionOrigen"
+															value={formData.direccionOrigen || ""}
+															placeholder="Ej: Av. Alemania 123, Depto 405"
+															onChange={(e) =>
+																setFormData({
+																	...formData,
+																	direccionOrigen: e.target.value,
+																})
+															}
+															className="bg-white"
+														/>
+													</div>
+												)}
+												{showDestino && (
+													<div className="space-y-1 md:col-span-2">
+														<Label>Dirección Específica de Destino</Label>
+														<AddressAutocomplete
+															name="direccionDestino"
+															value={formData.direccionDestino || ""}
+															placeholder="Ej: Hotel Dreams, Habitación 101"
+															onChange={(e) =>
+																setFormData({
+																	...formData,
+																	direccionDestino: e.target.value,
+																})
+															}
+															className="bg-white"
+														/>
+													</div>
+												)}
+											</>
+										);
+									})()}
+								</div>
+								
+								{/* Opción de notificar al conductor si hubo cambios importantes y ya tiene conductor */}
+								{hasConductorAsignado && (
+									<div className="pt-2 border-t mt-2">
+										<div className="flex items-center gap-2">
+											<Checkbox
+												id="enviarActualizacionConductor"
+												checked={enviarActualizacionConductor}
+												onCheckedChange={setEnviarActualizacionConductor}
+											/>
+											<label
+												htmlFor="enviarActualizacionConductor"
+												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+											>
+												Notificar actualización al conductor (Reenviar correo con nueva dirección)
+											</label>
+										</div>
+									</div>
+								)}
 							</div>
 
 							{/* Estado */}
@@ -4802,7 +4966,8 @@ function AdminReservas() {
 										disabled={
 											loadingAsignacion ||
 											!vehiculoSeleccionado ||
-											(sameAssignment && !missingIds)
+											// Permitir si hay ids faltantes O si se quiere notificar (checkboxes activos)
+											(sameAssignment && !missingIds && !enviarNotificacion && !enviarNotificacionConductor)
 										}
 									>
 										{loadingAsignacion ? (
