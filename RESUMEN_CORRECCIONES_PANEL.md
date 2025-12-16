@@ -16,18 +16,18 @@ El sistema de reservas ha sido revisado completamente. Se identificaron y corrig
 
 #### Endpoint `/api/reservas/:id/estado` (CRÍTICO)
 **Problema**: Endpoint definido dos veces en el archivo `backend/server-db.js`
-- Primera definición: línea 3630
-- Segunda definición: línea 6217
+- Primera definición: línea 3630 (ELIMINADA)
+- Segunda definición: línea 6031 (CONSERVADA)
 
 **Solución Aplicada**:
 ```javascript
 // Eliminado endpoint de línea 3630
-// Conservado endpoint de línea 6217 (versión mejorada)
+// Conservado endpoint de línea 6031 (versión mejorada)
 ```
 
 **Razón**: La segunda versión maneja mejor las observaciones vacías:
 ```javascript
-// Versión conservada (línea 6217)
+// Versión conservada (línea 6031)
 const obsValue =
     observaciones !== undefined
         ? typeof observaciones === "string" && observaciones.trim() === ""
@@ -38,12 +38,12 @@ const obsValue =
 
 #### Endpoint `/api/reservas/:id/asignar` (CRÍTICO)
 **Problema**: Endpoint definido dos veces en el archivo `backend/server-db.js`
-- Primera definición: línea 4118
-- Segunda definición: línea 4542
+- Primera definición: línea 4068 (CONSERVADA)
+- Segunda definición: línea 4542 (ELIMINADA)
 
 **Solución Aplicada**:
 ```javascript
-// Conservado endpoint de línea 4118 (versión completa)
+// Conservado endpoint de línea 4068 (versión completa)
 // Eliminado endpoint de línea 4542
 ```
 

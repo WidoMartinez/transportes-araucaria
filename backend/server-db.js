@@ -3626,7 +3626,7 @@ app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 	}
 });
 
-// NOTA: Endpoint de actualización de estado movido a línea ~6217 (versión mejorada)
+// NOTA: Endpoint de actualización de estado movido a línea 6031 (versión mejorada)
 
 // Toggle estado de gastos cerrados (Admin)
 app.patch("/api/reservas/:id/toggle-gastos", authAdmin, async (req, res) => {
@@ -4488,7 +4488,7 @@ app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
 	}
 });
 
-// NOTA: Endpoint de asignación movido a línea ~4118 (versión con transacciones y emails completos)
+// NOTA: Endpoint de asignación movido a línea 4068 (versión con transacciones y emails completos)
 
 // Obtener historial de asignaciones de una reserva (uso interno)
 app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {

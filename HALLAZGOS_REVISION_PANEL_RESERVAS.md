@@ -8,22 +8,22 @@
 ### 1. **CRÍTICO: Endpoints Duplicados en Backend**
 
 #### a) Endpoint `/api/reservas/:id/estado` (DUPLICADO)
-- **Ubicación 1**: `backend/server-db.js` línea 3630
-- **Ubicación 2**: `backend/server-db.js` línea 6217
+- **Ubicación 1**: `backend/server-db.js` línea 3630 (ELIMINADA)
+- **Ubicación 2**: `backend/server-db.js` línea 6031 (CONSERVADA)
 - **Impacto**: Puede causar comportamiento impredecible. Express ejecutará el primer endpoint encontrado.
 - **Diferencias**: 
   - Primer endpoint (3630): Sin autenticación, manejo básico de observaciones
   - Segundo endpoint (6217): Sin autenticación, manejo mejorado de observaciones vacías
-- **Solución**: Eliminar el primer endpoint y conservar el segundo (más robusto)
+- **Solución**: Eliminar el primer endpoint (línea 3630) y conservar el segundo (línea 6031, más robusto)
 
 #### b) Endpoint `/api/reservas/:id/asignar` (DUPLICADO)
-- **Ubicación 1**: `backend/server-db.js` línea 4118
-- **Ubicación 2**: `backend/server-db.js` línea 4542
+- **Ubicación 1**: `backend/server-db.js` línea 4068 (CONSERVADA)
+- **Ubicación 2**: `backend/server-db.js` línea 4542 (ELIMINADA)
 - **Impacto**: Confusión en la lógica de asignación, posible fallo en envío de emails
 - **Diferencias**:
   - Primer endpoint (4118): Usa transacciones, manejo completo de emails (cliente y conductor), más robusto
   - Segundo endpoint (4542): Sin transacciones, sin envío de email al conductor
-- **Solución**: Eliminar el segundo endpoint y conservar el primero (más completo)
+- **Solución**: Eliminar el segundo endpoint (línea 4542) y conservar el primero (línea 4068, más completo)
 
 ### 2. **Sistema de Estados y Pagos**
 
