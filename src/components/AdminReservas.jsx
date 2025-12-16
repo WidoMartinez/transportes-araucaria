@@ -457,7 +457,11 @@ function AdminReservas() {
 	// Cargar estadÃ­sticas
 	const fetchEstadisticas = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`);
+			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`, {
+				headers: accessToken
+					? { Authorization: `Bearer ${accessToken}` }
+					: {},
+			});
 			if (response.ok) {
 				const data = await response.json();
 				setEstadisticas(data);

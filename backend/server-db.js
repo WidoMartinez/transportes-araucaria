@@ -3244,6 +3244,86 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 
 // --- ENDPOINTS PARA GESTIONAR RESERVAS ---
 
+// Obtener estadísticas de reservas (MOVIDO ANTES DE :id y con AUTH)
+app.get("/api/reservas/estadisticas", authAdmin, async (req, res) => {
+	try {
+		// Usar consultas separadas con manejo de errores individual
+		let totalReservas = 0;
+		let reservasPendientes = 0;
+		let reservasConfirmadas = 0;
+		let reservasPagadas = 0;
+		let totalIngresos = 0;
+
+		try {
+			totalReservas = await Reserva.count();
+		} catch (error) {
+			console.error("Error contando total de reservas:", error.message);
+		}
+
+		try {
+			reservasPendientes = await Reserva.count({
+				where: { estado: "pendiente" },
+			});
+		} catch (error) {
+			console.error("Error contando reservas pendientes:", error.message);
+		}
+
+		try {
+			reservasConfirmadas = await Reserva.count({
+				where: { estado: "confirmada" },
+			});
+		} catch (error) {
+			console.error("Error contando reservas confirmadas:", error.message);
+		}
+
+		try {
+			reservasPagadas = await Reserva.count({
+				where: { estadoPago: "pagado" },
+			});
+		} catch (error) {
+			console.error("Error contando reservas pagadas:", error.message);
+		}
+
+		// Ingresos totales con manejo de errores mejorado
+		try {
+			// Usar método de Sequelize que maneja automáticamente los nombres de columnas
+			// Esto evita problemas con camelCase vs snake_case
+			const reservasPagadasList = await Reserva.findAll({
+				where: { estadoPago: "pagado" },
+				attributes: ["totalConDescuento"],
+			});
+
+			totalIngresos = reservasPagadasList.reduce((sum, reserva) => {
+				const monto = parseFloat(reserva.totalConDescuento) || 0;
+				return sum + monto;
+			}, 0);
+		} catch (error) {
+			console.error("Error calculando ingresos totales:", error.message);
+			// Continuar con totalIngresos = 0
+		}
+
+		res.json({
+			totalReservas,
+			reservasPendientes,
+			reservasConfirmadas,
+			reservasPagadas,
+			totalIngresos: totalIngresos || 0,
+		});
+	} catch (error) {
+		console.error("Error obteniendo estadísticas:", error);
+		console.error("Stack completo:", error.stack);
+		// Devolver valores por defecto en lugar de error
+		res.json({
+			totalReservas: 0,
+			reservasPendientes: 0,
+			reservasConfirmadas: 0,
+			reservasPagadas: 0,
+			totalIngresos: 0,
+			error: "Error al obtener estadísticas, mostrando valores por defecto",
+		});
+	}
+});
+
 // Obtener una una reserva específica
 app.get("/api/reservas/:id", authAdmin, async (req, res) => {
 	try {
@@ -3365,85 +3445,7 @@ app.get("/api/reservas", async (req, res) => {
 	}
 });
 
-// Obtener estadísticas de reservas
-app.get("/api/reservas/estadisticas", async (req, res) => {
-	try {
-		// Usar consultas separadas con manejo de errores individual
-		let totalReservas = 0;
-		let reservasPendientes = 0;
-		let reservasConfirmadas = 0;
-		let reservasPagadas = 0;
-		let totalIngresos = 0;
 
-		try {
-			totalReservas = await Reserva.count();
-		} catch (error) {
-			console.error("Error contando total de reservas:", error.message);
-		}
-
-		try {
-			reservasPendientes = await Reserva.count({
-				where: { estado: "pendiente" },
-			});
-		} catch (error) {
-			console.error("Error contando reservas pendientes:", error.message);
-		}
-
-		try {
-			reservasConfirmadas = await Reserva.count({
-				where: { estado: "confirmada" },
-			});
-		} catch (error) {
-			console.error("Error contando reservas confirmadas:", error.message);
-		}
-
-		try {
-			reservasPagadas = await Reserva.count({
-				where: { estadoPago: "pagado" },
-			});
-		} catch (error) {
-			console.error("Error contando reservas pagadas:", error.message);
-		}
-
-		// Ingresos totales con manejo de errores mejorado
-		try {
-			// Usar método de Sequelize que maneja automáticamente los nombres de columnas
-			// Esto evita problemas con camelCase vs snake_case
-			const reservasPagadasList = await Reserva.findAll({
-				where: { estadoPago: "pagado" },
-				attributes: ["totalConDescuento"],
-			});
-
-			totalIngresos = reservasPagadasList.reduce((sum, reserva) => {
-				const monto = parseFloat(reserva.totalConDescuento) || 0;
-				return sum + monto;
-			}, 0);
-		} catch (error) {
-			console.error("Error calculando ingresos totales:", error.message);
-			// Continuar con totalIngresos = 0
-		}
-
-		res.json({
-			totalReservas,
-			reservasPendientes,
-			reservasConfirmadas,
-			reservasPagadas,
-			totalIngresos: totalIngresos || 0,
-		});
-	} catch (error) {
-		console.error("Error obteniendo estadísticas:", error);
-		console.error("Stack completo:", error.stack);
-		// Devolver valores por defecto en lugar de error
-		res.json({
-			totalReservas: 0,
-			reservasPendientes: 0,
-			reservasConfirmadas: 0,
-			reservasPagadas: 0,
-			totalIngresos: 0,
-			error: "Error al obtener estadísticas, mostrando valores por defecto",
-		});
-	}
-});
 
 // Obtener una reserva específica
 app.get("/api/reservas/:id", async (req, res) => {
@@ -3790,10 +3792,15 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
 				// Pago completo
 				nuevoEstadoPago = "pagado";
-				nuevoEstadoReserva =
-					deseaCompletada || reserva.estado === "completada"
-						? "completada"
-						: "confirmada";
+				// Permitir establecer explícitamente "confirmada" incluso si previamente era "completada"
+				if (estadoReservaSolicitado === "confirmada") {
+					nuevoEstadoReserva = "confirmada";
+				} else {
+					nuevoEstadoReserva =
+						deseaCompletada || reserva.estado === "completada"
+							? "completada"
+							: "confirmada";
+				}
 				nuevoSaldoPendiente = 0;
 				abonoPagado = true;
 				saldoPagado = true;
