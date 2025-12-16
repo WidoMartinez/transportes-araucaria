@@ -111,10 +111,12 @@ function AdminGastos() {
 	}, [mostrarCerradas]);
 
 	useEffect(() => {
-		if (reservaSeleccionada) {
+		if (reservaSeleccionada?.id) {
 			fetchGastos(reservaSeleccionada.id);
+			// Refrescar datos de la reserva para asegurar que IDs de conductor/vehiculo esten actualizados
+			fetchReservaDetalle(reservaSeleccionada.id);
 		}
-	}, [reservaSeleccionada]);
+	}, [reservaSeleccionada?.id]);
 
 	// Leer parámetro reservaId de URL y seleccionar automáticamente
 	useEffect(() => {
@@ -193,6 +195,29 @@ function AdminGastos() {
 			console.error("Error al cargar gastos:", error);
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	const fetchReservaDetalle = async (reservaId) => {
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${reservaId}`, {
+				method: "GET",
+			});
+			if (response.ok) {
+				const data = await response.json();
+				if (data.success && data.reserva) {
+					// Actualizar la reserva seleccionada con datos frescos (IDs de conductor/vehiculo)
+					setReservaSeleccionada(prev => {
+                        // Solo actualizar si hay cambios criticos para evitar re-renders innecesarios
+                        if (prev && prev.id === data.reserva.id) {
+                            return { ...prev, ...data.reserva };
+                        }
+                        return data.reserva;
+                    });
+				}
+			}
+		} catch (error) {
+			console.error("Error al actualizar detalles de reserva:", error);
 		}
 	};
 

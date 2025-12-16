@@ -3244,6 +3244,36 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 
 // --- ENDPOINTS PARA GESTIONAR RESERVAS ---
 
+// Obtener una reserva específica
+app.get("/api/reservas/:id", authAdmin, async (req, res) => {
+	try {
+        // Verificar si es ID numerico valido antes de consultar
+        if (!req.params.id || isNaN(req.params.id)) {
+             // Si no es un numero, pasar al siguiente manejador (por si colisiona con otra ruta, aunque aqui es especifica)
+             // O retornar 400. En este caso retornamos 400.
+             return res.status(400).json({ success: false, message: "ID inválido" });
+        }
+
+		const reserva = await Reserva.findByPk(req.params.id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				message: "Reserva no encontrada",
+			});
+		}
+		return res.json({
+			success: true,
+			reserva,
+		});
+	} catch (error) {
+		console.error("Error obteniendo reserva:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
 // Obtener todas las reservas
 app.get("/api/reservas", async (req, res) => {
 	try {

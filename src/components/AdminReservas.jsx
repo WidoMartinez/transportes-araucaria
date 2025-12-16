@@ -60,6 +60,7 @@ import {
 	Trash2,
 	CheckSquare,
 	Square,
+	Car,
 } from "lucide-react";
 import {
 	AlertDialog,
@@ -3043,8 +3044,26 @@ function AdminReservas() {
 									</div>
 								</div>
 							</div>
-						</div>
-					)}
+						{/* Botón para asignar vehículo y conductor si no están asignados o faltan datos internos */}
+						{(!isAsignada(selectedReserva) || !selectedReserva.conductorId || !selectedReserva.vehiculoId) && (
+							<div className="mt-6 pt-4 border-t">
+								<Button
+									onClick={() => {
+										setShowDetailDialog(false);
+										handleAsignar(selectedReserva);
+									}}
+									className="w-full bg-blue-600 hover:bg-blue-700"
+									size="lg"
+								>
+									<Car className="w-4 h-4 mr-2" />
+									{isAsignada(selectedReserva) 
+										? "Corregir Asignación (Actualizar Datos)" 
+										: "Asignar Vehículo y Conductor"}
+								</Button>
+							</div>
+						)}
+					</div>
+				)}
 				</DialogContent>
 			</Dialog>
 
@@ -4602,13 +4621,17 @@ function AdminReservas() {
 									Number(vehiculoSeleccionado) === Number(assignedVehiculoId) &&
 									String(assignedConductorId ?? "none") ===
 										String(conductorSeleccionado || "none");
+								
+								// Permitir guardar si faltan los IDs internos aunque visualmente sea igual
+								const missingIds = !selectedReserva?.vehiculoId || (selectedReserva?.conductor && !selectedReserva?.conductorId);
+								
 								return (
 									<Button
 										onClick={handleGuardarAsignacion}
 										disabled={
 											loadingAsignacion ||
 											!vehiculoSeleccionado ||
-											sameAssignment
+											(sameAssignment && !missingIds)
 										}
 									>
 										{loadingAsignacion ? (
