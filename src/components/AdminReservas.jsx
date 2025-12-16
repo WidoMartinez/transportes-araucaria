@@ -156,6 +156,51 @@ function AdminReservas() {
 	const [estadoPagoFiltro, setEstadoPagoFiltro] = useState("todos");
 	const [fechaDesde, setFechaDesde] = useState("");
 	const [fechaHasta, setFechaHasta] = useState("");
+	// Nuevo selector de rango y filtros inteligentes
+	const [rangoFecha, setRangoFecha] = useState("todos"); // 'hoy', 'ayer', 'semana', 'mes', 'personalizado', 'todos'
+	const [filtroInteligente, setFiltroInteligente] = useState("todos"); // 'sin_asignacion', 'incompletas', 'archivadas'
+
+	// Manejar cambio de rango de fechas
+	const handleRangoFechaChange = (valor) => {
+		setRangoFecha(valor);
+		const hoy = new Date();
+		let desde = "";
+		let hasta = "";
+
+		if (valor === "hoy") {
+			desde = hoy.toISOString().split("T")[0];
+			hasta = hoy.toISOString().split("T")[0];
+		} else if (valor === "ayer") {
+			const ayer = new Date(hoy);
+			ayer.setDate(hoy.getDate() - 1);
+			desde = ayer.toISOString().split("T")[0];
+			hasta = ayer.toISOString().split("T")[0];
+		} else if (valor === "semana") { // Últimos 7 días
+			const hace7 = new Date(hoy);
+			hace7.setDate(hoy.getDate() - 7);
+			desde = hace7.toISOString().split("T")[0];
+			hasta = hoy.toISOString().split("T")[0];
+		} else if (valor === "quincena") { // Últimos 15 días
+			const hace15 = new Date(hoy);
+			hace15.setDate(hoy.getDate() - 15);
+			desde = hace15.toISOString().split("T")[0];
+			hasta = hoy.toISOString().split("T")[0];
+		} else if (valor === "mes") { // Mes actual
+			const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+			desde = primerDia.toISOString().split("T")[0];
+			const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+			hasta = ultimoDia.toISOString().split("T")[0];
+		} else if (valor === "todos") {
+			desde = "";
+			hasta = "";
+		}
+		// Si es 'personalizado', no cambiamos las fechas (el usuario las elige)
+		if (valor !== "personalizado") {
+			setFechaDesde(desde);
+			setFechaHasta(hasta);
+		}
+	};
+
 
 	// PaginaciÃ³n
 	const [currentPage, setCurrentPage] = useState(1);
@@ -684,12 +729,22 @@ function AdminReservas() {
 				params.append("estado", estadoFiltro);
 			}
 
-			if (fechaDesde) {
+			// Normalizar fechas para filtro
+			if (fechaDesde && String(fechaDesde).trim() !== "") {
 				params.append("fecha_desde", fechaDesde);
 			}
 
-			if (fechaHasta) {
+			if (fechaHasta && String(fechaHasta).trim() !== "") {
 				params.append("fecha_hasta", fechaHasta);
+			}
+
+			// Filtros Inteligentes
+			if (filtroInteligente === "sin_asignacion") {
+				params.append("sin_asignacion", "true");
+			} else if (filtroInteligente === "incompletas") {
+				params.append("estado_avanzado", "incompletas");
+			} else if (filtroInteligente === "archivadas") {
+				params.append("archivadas", "true");
 			}
 
 			const response = await fetch(`${apiUrl}/api/reservas?${params}`);
@@ -734,7 +789,7 @@ function AdminReservas() {
 		fetchReservas();
 		fetchEstadisticas();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage]);
+	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage, filtroInteligente]);
 
 	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
@@ -1711,6 +1766,42 @@ function AdminReservas() {
 
 	// Eliminada función handleBulkChangePayment por no usarse
 
+	// Función para archivar/desarchivar
+	const handleArchivar = async (reserva) => {
+		if (
+			!window.confirm(
+				`¿Estás seguro de que deseas ${
+					reserva.archivada ? "desarchivar" : "archivar"
+				} esta reserva?`
+			)
+		) {
+			return;
+		}
+
+		try {
+			const response = await fetch(
+				`${apiUrl}/api/reservas/${reserva.id}/archivar`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
+					},
+					body: JSON.stringify({ archivada: !reserva.archivada }),
+				}
+			);
+
+			if (response.ok) {
+				fetchReservas();
+			} else {
+				alert("Error al cambiar estado de archivado");
+			}
+		} catch (error) {
+			console.error("Error archivando reserva:", error);
+			alert("Error al conectar con el servidor");
+		}
+	};
+
 	if (loading && reservas.length === 0) {
 		return (
 			<div className="flex items-center justify-center h-64">
@@ -1822,77 +1913,121 @@ function AdminReservas() {
 					<CardTitle>Filtros de Búsqueda</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-						<div className="space-y-2">
-							<Label>Buscar</Label>
+					<div className="flex flex-col md:flex-row gap-4 mb-6">
+				<div className="flex-1">
+					<Label className="mb-2 block">Buscar</Label>
+					<div className="relative">
+						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+						<Input
+							placeholder="Nombre, email, teléfono, ID..."
+							className="pl-8"
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+						/>
+					</div>
+				</div>
+				<div className="w-full md:w-[180px]">
+					<Label className="mb-2 block">Rango Fechas</Label>
+					<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
+						<SelectTrigger>
+							<SelectValue placeholder="Seleccionar rango" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Todo el tiempo</SelectItem>
+							<SelectItem value="hoy">Hoy</SelectItem>
+							<SelectItem value="ayer">Ayer</SelectItem>
+							<SelectItem value="semana">Últimos 7 días</SelectItem>
+							<SelectItem value="quincena">Últimos 15 días</SelectItem>
+							<SelectItem value="mes">Este Mes</SelectItem>
+							<SelectItem value="personalizado">Personalizado</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				{rangoFecha === "personalizado" && (
+					<>
+						<div className="w-full md:w-[150px]">
+							<Label className="mb-2 block">Fecha Desde</Label>
 							<div className="relative">
-								<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 								<Input
-									placeholder="Nombre, email, teléfono, ID..."
-									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
+									type="date"
+									value={fechaDesde}
+									onChange={(e) => setFechaDesde(e.target.value)}
 									className="pl-8"
 								/>
+								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 							</div>
 						</div>
-
-						<div className="space-y-2">
-							<Label>Estado</Label>
-							<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="pendiente">Pendiente</SelectItem>
-									<SelectItem value="pendiente_detalles">
-										Pendiente Detalles
-									</SelectItem>
-									<SelectItem value="confirmada">Confirmada</SelectItem>
-									<SelectItem value="cancelada">Cancelada</SelectItem>
-									<SelectItem value="completada">Completada</SelectItem>
-								</SelectContent>
-							</Select>
+						<div className="w-full md:w-[150px]">
+							<Label className="mb-2 block">Fecha Hasta</Label>
+							<div className="relative">
+								<Input
+									type="date"
+									value={fechaHasta}
+									onChange={(e) => setFechaHasta(e.target.value)}
+									className="pl-8"
+								/>
+								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+							</div>
 						</div>
-
-						<div className="space-y-2">
-							<Label>Estado de Pago</Label>
-							<Select
-								value={estadoPagoFiltro}
-								onValueChange={setEstadoPagoFiltro}
-							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="pendiente">Pendiente</SelectItem>
-									<SelectItem value="pagado">Pagado</SelectItem>
-									<SelectItem value="fallido">Fallido</SelectItem>
-									<SelectItem value="reembolsado">Reembolsado</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-
-						<div className="space-y-2">
-							<Label>Fecha Desde</Label>
-							<Input
-								type="date"
-								value={fechaDesde}
-								onChange={(e) => setFechaDesde(e.target.value)}
-							/>
-						</div>
-
-						<div className="space-y-2">
-							<Label>Fecha Hasta</Label>
-							<Input
-								type="date"
-								value={fechaHasta}
-								onChange={(e) => setFechaHasta(e.target.value)}
-							/>
-						</div>
-					</div>
-
+					</>
+				)}
+				<div className="w-full md:w-[200px]">
+					<Label className="mb-2 block">Filtros Inteligentes</Label>
+					<Select
+						value={filtroInteligente}
+						onValueChange={setFiltroInteligente}
+					>
+						<SelectTrigger>
+							<SelectValue placeholder="Aplicar filtro..." />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Ninguno</SelectItem>
+							<SelectItem value="sin_asignacion">
+								⚠️ Sin Asignación
+							</SelectItem>
+							<SelectItem value="incompletas">
+								📋 Faltan Detalles
+							</SelectItem>
+							<SelectItem value="archivadas">
+								📦 Ver Archivadas
+							</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="w-full md:w-[150px]">
+					<Label className="mb-2 block">Estado</Label>
+					<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+						<SelectTrigger>
+							<SelectValue placeholder="Todos" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Todos</SelectItem>
+							<SelectItem value="pendiente">Pendiente</SelectItem>
+							<SelectItem value="confirmada">Confirmada</SelectItem>
+							<SelectItem value="completada">Completada</SelectItem>
+							<SelectItem value="cancelada">Cancelada</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="w-full md:w-[150px]">
+					<Label className="mb-2 block">Estado de Pago</Label>
+					<Select
+						value={estadoPagoFiltro}
+						onValueChange={setEstadoPagoFiltro}
+					>
+						<SelectTrigger>
+							<SelectValue placeholder="Todos" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Todos</SelectItem>
+							<SelectItem value="pendiente">Pendiente</SelectItem>
+							<SelectItem value="pagado">Pagado</SelectItem>
+							<SelectItem value="parcial">Parcial</SelectItem>
+							<SelectItem value="reembolsado">Reembolsado</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
 					<div className="mt-4 flex justify-between items-center">
 						<p className="text-sm text-muted-foreground">
 							Mostrando {reservasFiltradas.length} de {totalReservas} reservas
@@ -2460,6 +2595,18 @@ function AdminReservas() {
 																<CheckCircle2 className="w-4 h-4" />
 															</Button>
 														)}
+														<Button
+															variant="ghost"
+															size="icon"
+															onClick={() => handleArchivar(reserva)}
+															title={reserva.archivada ? "Desarchivar" : "Archivar"}
+														>
+															{reserva.archivada ? (
+																<RefreshCw className="h-4 w-4" />
+															) : (
+																<CheckSquare className="h-4 w-4" />
+															)}
+														</Button>
 													</div>
 												</TableCell>
 											)}

@@ -268,6 +268,12 @@ const Reserva = sequelize.define(
 			field: "gastos_cerrados",
 			comment: "Indica si el registro de gastos está cerrado para esta reserva",
 		},
+		archivada: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			allowNull: false,
+			comment: "Indica si la reserva ha sido archivada",
+		},
 		conductorId: {
 			type: DataTypes.INTEGER,
 			allowNull: true,

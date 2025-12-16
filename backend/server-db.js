@@ -3442,6 +3442,48 @@ app.get("/api/reservas", async (req, res) => {
 			if (fecha_hasta) whereClause.fecha[Op.lte] = fecha_hasta;
 		}
 
+		// Filtro: Sin Asignación (conductor o vehiculo faltante)
+		if (req.query.sin_asignacion === 'true') {
+			whereClause[Op.or] = [
+				{ conductorId: null },
+				{ vehiculoId: null }
+			];
+			// Excluir canceladas/completadas si no se especifica estado
+			if (!estado) {
+				whereClause.estado = {
+					[Op.notIn]: ['cancelada', 'completada']
+				};
+			}
+		}
+
+		// Filtro: Estado Avanzado (Incompletas)
+		if (req.query.estado_avanzado === 'incompletas') {
+			whereClause[Op.and] = [
+				{
+					[Op.or]: [
+						{ numeroVuelo: null },
+						{ numeroVuelo: '' },
+						{ hotel: null },
+						{ hotel: '' }
+					]
+				},
+				// Solo considerar reservas pendientes/confirmadas
+				{
+					estado: {
+						[Op.in]: ['pendiente', 'confirmada', 'pendiente_detalles']
+					}
+				}
+			];
+		}
+
+		// Filtro: Archivadas
+		// Por defecto archivada = false, salvo que se pida explicitamente
+		if (req.query.archivadas === 'true') {
+			whereClause.archivada = true;
+		} else {
+			whereClause.archivada = false;
+		}
+
 		// Configurar opciones de consulta
 		const queryOptions = {
 			where: whereClause,
@@ -3507,6 +3549,30 @@ app.get("/api/reservas/:id", async (req, res) => {
 	} catch (error) {
 		console.error("Error obteniendo reserva:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Archivar/Desarchivar reserva (Admin)
+app.put("/api/reservas/:id/archivar", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { archivada } = req.body;
+		
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ success: false, message: "Reserva no encontrada" });
+		}
+
+		await reserva.update({ archivada: Boolean(archivada) });
+		
+		return res.json({ 
+			success: true, 
+			message: archivada ? "Reserva archivada" : "Reserva restaurada",
+			reserva 
+		});
+	} catch (error) {
+		console.error("Error archivando reserva:", error);
+		return res.status(500).json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
