@@ -800,14 +800,14 @@ function AdminReservas() {
 		// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
 		try {
 			const response = await authenticatedFetch(
-				`${getBackendUrl()}/api/reservas/${reserva.id}`
+				`/api/reservas/${reserva.id}`
 			);
 			if (!response.ok) {
 				throw new Error("Error al cargar la reserva");
 			}
 			const reservaActualizada = await response.json();
 			setSelectedReserva(reservaActualizada);
-			setShowDetailsDialog(true);
+			setShowDetailDialog(true);
 		} catch (error) {
 			console.error("Error al cargar detalles de la reserva:", error);
 			alert(
@@ -815,14 +815,14 @@ function AdminReservas() {
 			);
 			// Fallback: mostrar la reserva que ya tenemos
 			setSelectedReserva(reserva);
-			setShowDetailsDialog(true);
+			setShowDetailDialog(true);
 		}
 
 		// Cargar historial de asignaciones (uso interno) usando token del contexto
 		setLoadingHistorial(true);
 		try {
 			const resp = await authenticatedFetch(
-				`${getBackendUrl()}/api/reservas/${reserva.id}/asignaciones`
+				`/api/reservas/${reserva.id}/asignaciones`
 			);
 			if (resp.ok) {
 				const data = await resp.json();
@@ -848,7 +848,7 @@ function AdminReservas() {
 
 		try {
 			const response = await authenticatedFetch(
-				`${getBackendUrl()}/api/reservas/${reserva.id}/estado`,
+				`/api/reservas/${reserva.id}/estado`,
 				{
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
@@ -863,9 +863,10 @@ function AdminReservas() {
 			// Actualizar la lista de reservas
 			await fetchReservas();
 
-			// Redirigir al panel de gastos
+			// Redirigir al panel de gastos con el ID de la reserva
 			const url = new URL(window.location.href);
 			url.searchParams.set("panel", "gastos");
+			url.searchParams.set("reservaId", reserva.id.toString());
 			window.location.href = url.toString();
 		} catch (error) {
 			console.error("Error al completar la reserva:", error);

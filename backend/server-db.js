@@ -4129,9 +4129,11 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
             nuevasObservaciones += `Conductor asignado: ${conductor.nombre}`;
         }
 
-        // Actualizar reserva
+        // Actualizar reserva con IDs para que AdminGastos pueda acceder a ellos
         await reserva.update({
             vehiculo: vehiculoStr,
+            vehiculoId: vehiculoId,
+            conductorId: conductorId || null,
             observaciones: nuevasObservaciones
         }, { transaction });
 

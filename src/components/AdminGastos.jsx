@@ -116,6 +116,22 @@ function AdminGastos() {
 		}
 	}, [reservaSeleccionada]);
 
+	// Leer parámetro reservaId de URL y seleccionar automáticamente
+	useEffect(() => {
+		const url = new URL(window.location.href);
+		const reservaIdParam = url.searchParams.get("reservaId");
+		
+		if (reservaIdParam && reservas.length > 0 && !reservaSeleccionada) {
+			const reserva = reservas.find(r => r.id.toString() === reservaIdParam);
+			if (reserva) {
+				setReservaSeleccionada(reserva);
+				// Limpiar el parámetro de la URL
+				url.searchParams.delete("reservaId");
+				window.history.replaceState({}, "", url.toString());
+			}
+		}
+	}, [reservas, reservaSeleccionada]);
+
 	const fetchReservas = async () => {
 		try {
 			let url = `/api/reservas?estado=completada`;
