@@ -494,7 +494,7 @@ function AdminReservas() {
 	// Cargar vehÃ­culos disponibles
 	const fetchVehiculos = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/vehiculos`);
+			const response = await authenticatedFetch(`/api/vehiculos`);
 			if (response.ok) {
 				const data = await response.json();
 				setVehiculos(data.vehiculos || []);
@@ -507,7 +507,7 @@ function AdminReservas() {
 	// Cargar conductores disponibles
 	const fetchConductores = async () => {
 		try {
-			const response = await fetch(`${apiUrl}/api/conductores`);
+			const response = await authenticatedFetch(`/api/conductores`);
 			if (response.ok) {
 				const data = await response.json();
 				setConductores(data.conductores || []);
