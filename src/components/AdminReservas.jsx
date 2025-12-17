@@ -2711,7 +2711,7 @@ function AdminReservas() {
 															reserva={reserva}
 															onVer={handleViewDetails}
 															onEditar={handleEdit}
-															onEliminar={() => console.log("Eliminar", reserva.id)}
+															onEliminar={handleArchivar}
 															onAgregarGasto={handleAgregarGasto}
 															onVerHistorial={handleVerHistorial}
 															onAsignar={handleAsignar}

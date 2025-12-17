@@ -6,6 +6,15 @@ import { toast, Toaster } from "sonner";
  * Proporciona feedback inmediato al usuario para todas las acciones
  */
 
+// Configuración centralizada del Toaster
+const TOASTER_CONFIG = {
+	position: "top-right",
+	expand: false,
+	richColors: true,
+	closeButton: true,
+	className: "font-sans",
+};
+
 const NotificationContext = createContext(null);
 
 export function useNotifications() {
@@ -75,12 +84,12 @@ export function NotificationProvider({ children }) {
 	return (
 		<NotificationContext.Provider value={value}>
 			<Toaster 
-				position="top-right"
-				expand={false}
-				richColors
-				closeButton
+				position={TOASTER_CONFIG.position}
+				expand={TOASTER_CONFIG.expand}
+				richColors={TOASTER_CONFIG.richColors}
+				closeButton={TOASTER_CONFIG.closeButton}
 				toastOptions={{
-					className: "font-sans",
+					className: TOASTER_CONFIG.className,
 				}}
 			/>
 			{children}

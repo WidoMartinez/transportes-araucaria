@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
@@ -52,15 +52,15 @@ export function ReservaAdvancedFilters({
 		rangoFecha: "todos",
 	};
 
-	// Contar filtros activos de forma declarativa
-	const getActiveFiltersCount = () => {
+	// Contar filtros activos de forma declarativa (memoizado para performance)
+	const activeFiltersCount = useMemo(() => {
 		return Object.keys(DEFAULT_FILTER_VALUES).reduce((count, key) => {
 			const currentValue = localFilters[key];
 			const defaultValue = DEFAULT_FILTER_VALUES[key];
 			// Contar si el valor difiere del valor por defecto
 			return currentValue !== defaultValue ? count + 1 : count;
 		}, 0);
-	};
+	}, [localFilters]);
 
 	const handleFilterChange = (key, value) => {
 		const newFilters = { ...localFilters, [key]: value };
@@ -80,8 +80,6 @@ export function ReservaAdvancedFilters({
 			onFiltersChange(DEFAULT_FILTER_VALUES);
 		}
 	};
-
-	const activeFiltersCount = getActiveFiltersCount();
 
 	return (
 		<Popover open={isOpen} onOpenChange={setIsOpen}>

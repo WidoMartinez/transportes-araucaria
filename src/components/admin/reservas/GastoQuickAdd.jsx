@@ -71,7 +71,7 @@ export function GastoQuickAdd({
 			const comision = (parseFloat(reserva.totalConDescuento || 0) * FLOW_COMMISSION_RATE) / 100;
 			setFormData(prev => ({ ...prev, monto: comision.toFixed(0) }));
 		}
-	}, [formData.tipoGasto, reserva]);
+	}, [formData.tipoGasto, reserva]); // Solo dependencias necesarias
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();

@@ -65,7 +65,13 @@ export function PagoQuickDialog({
 		setSaving(true);
 
 		try {
-			const url = new URL(`/api/reservas/${reserva.id}/pago`, apiUrl);
+			// Validar que reserva.id sea un número seguro
+			const reservaId = parseInt(reserva.id, 10);
+			if (isNaN(reservaId) || reservaId <= 0) {
+				throw new Error("ID de reserva inválido");
+			}
+
+			const url = new URL(`/api/reservas/${reservaId}/pago`, apiUrl);
 			const response = await authenticatedFetch(url.toString(), {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
