@@ -3489,6 +3489,18 @@ app.get("/api/reservas", async (req, res) => {
 		const queryOptions = {
 			where: whereClause,
 			order: [["created_at", "DESC"]],
+			attributes: {
+				include: [
+					[
+						sequelize.literal(`(
+							SELECT COALESCE(SUM(monto), 0)
+							FROM gastos AS g
+							WHERE g.reserva_id = Reserva.id
+						)`),
+						"totalGastos"
+					]
+				]
+			},
 			include: [
 				{
 					model: Cliente,
