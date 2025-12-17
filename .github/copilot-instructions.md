@@ -1,19 +1,38 @@
 ---
 applyTo: '**'
 ---
-todo lo que documentes debe estar en español
-todos los comentarios en el codigo deben estar en español
-siempre mantener el sistema de notificaciones por coorreo electronico basado en phpmailer y el backend de pagos y demas en render.com 
-preguntar si necesito hacer un commit y sugerir hacerlo y ademas cuando la respuesta sea afirmativa escribir el commit en español abreviado y conciso
-nunca eliminar el archivo .github/instructions/instrucciones.instructions.md
-sugiere hacer commits cada vez que se haga un cambio significativo
-sugiere hacer commits cada vez que se complete una tarea o funcionalidad
-sugiere hacer commits cada vez que se arregle un bug    
-sugiere hacer commints cuando hayan cambios pendientes de ser comiteados y sea necesario hacer un commit para continuar trabajando
-notificar cuando se realicen cambios en los archivos de .php ya que estos estan alojados en hostinger
-Todos los PR deben generarse en español, todos los campos posibles
-PULL REQUEST en español
-SI creas ramas para los PR procurar escribir en español
-Escribir los commits en español, todos los commits
-Siempre revisar documentacion de PR anteriores o que este relacionada con la modificacion en curso
-Cada vez que mencione a @copilot siempre contestar aunque sea para poner "leido" y señalar en cual commits se halla la respuesta, nunca dejar menciones sin respuesta
+# Instrucciones para Copilot y Agentes
+
+## Reglas Fundamentales (No negociables)
+
+1.  **Idioma Español Absoluto:**
+    - Todo lo que documentes debe estar en español.
+    - Todos los comentarios en el código deben estar en español.
+    - Todos los commits y Pull Requests deben estar en español.
+
+2.  **Contexto y Documentación:**
+    - Antes de intervenir el código, **revisar la documentación existente** para entender implementaciones antiguas.
+    - **Actualizar la documentación** si el cambio de código la deja obsoleta.
+
+3.  **Infraestructura Híbrida:**
+    - Mantener PHPMailer para correos.
+    - Backend Node/Pagos en Render.com.
+    - PHP Scripts en Hostinger.
+    - **Importante:** Al modificar archivos `.php`, notificar que requieren subida manual a Hostinger.
+
+## Flujo de Trabajo
+
+- **Commits:**
+  - Preguntar antes de commitear.
+  - Usar prefijos estándar (`feat`, `fix`, `docs`) + descripción en **español**.
+  - Sugerir commits al completar tareas, funcionalidades o arreglar bugs significativos.
+
+- **Pull Requests:**
+  - Generar PRs **completamente en español** (título, cuerpo, listas).
+  - Revisar documentación de PRs anteriores si es relevante.
+
+- **Archivos Protegidos:**
+  - Nunca eliminar `.github/instructions/instrucciones.instructions.md`.
+
+- **Interacción:**
+  - Contestar siempre a menciones de @copilot (aunque sea "leído").
