@@ -17,41 +17,59 @@ function FlowReturn() {
 	const [paymentStatus, setPaymentStatus] = useState("processing"); // processing, success, error
 
 	useEffect(() => {
-		// Extraer token de Flow de los parámetros de URL
+// Extraer token de Flow de los parámetros de URL
 		const urlParams = new URLSearchParams(window.location.search);
 		const token = urlParams.get("token");
 
 		if (!token) {
 			console.warn("No se recibió token de Flow en la URL de retorno");
-			setPaymentStatus("error");
-			return;
+			// No marcar error inmediatamente, permitir que la UI cargue y mostrar mensaje amigable
+			// Opcional: redirigir a una página de ayuda o home después de unos segundos
 		}
 
 		// Simular verificación del pago
 		// En un caso real, podrías consultar el backend para confirmar el estado
 		// Pero Flow ya envió el webhook, así que asumimos éxito si llegamos aquí
-		setTimeout(() => {
+// Simular verificación del pago
+		// En un caso real, podrías consultar el backend para confirmar el estado
+		// Pero Flow ya envió el webhook, así que asumimos éxito si llegamos aquí
+		const verifyPayment = async () => {
+			// Pequeño delay artificial para UX
+			await new Promise(resolve => setTimeout(resolve, PAYMENT_VERIFICATION_DELAY_MS));
+			
 			setPaymentStatus("success");
 
 			// Disparar evento de conversión de Google Ads
 			// Solo se dispara cuando el pago es exitoso
 			try {
-				if (typeof gtag === "function") {
-					// Usar el token de Flow como transaction_id para evitar duplicados
-					gtag("event", "conversion", {
-						send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
-						value: 1.0,
-						currency: "CLP",
-						transaction_id: token, // Token único de Flow como identificador
-					});
-					console.log("✅ Evento de conversión Google Ads disparado:", token);
+				if (typeof window.gtag === "function") {
+					const transactionId = token || `manual_${Date.now()}`;
+					
+					// Usar sessionStorage para evitar duplicados en recargas
+					const conversionKey = `flow_conversion_${transactionId}`;
+					
+					if (!sessionStorage.getItem(conversionKey)) {
+						window.gtag("event", "conversion", {
+							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
+							value: 1.0,
+							currency: "CLP",
+							transaction_id: transactionId,
+						});
+						sessionStorage.setItem(conversionKey, 'true');
+						console.log("✅ Evento de conversión Google Ads disparado:", transactionId);
+					} else {
+						console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
+					}
 				} else {
 					console.warn("gtag no está disponible para tracking de conversión");
 				}
 			} catch (error) {
 				console.error("Error al disparar evento de conversión:", error);
 			}
-		}, PAYMENT_VERIFICATION_DELAY_MS);
+		};
+
+		verifyPayment();
+		// Removed timeout wrapper to verify payment immediately after delay
 	}, []);
 
 	const handleGoHome = () => {
@@ -116,15 +134,15 @@ function FlowReturn() {
 						{paymentStatus === "error" && (
 							<>
 								<div className="flex justify-center mb-4">
-									<div className="rounded-full bg-red-100 p-4">
-										<AlertCircle className="h-16 w-16 text-red-600" />
+									<div className="rounded-full bg-yellow-100 p-4">
+										<AlertCircle className="h-16 w-16 text-yellow-600" />
 									</div>
 								</div>
-								<CardTitle className="text-2xl text-red-600">
-									Error en el Pago
+								<CardTitle className="text-2xl text-yellow-600">
+									¿Hubo un problema?
 								</CardTitle>
 								<p className="text-gray-600 mt-2">
-									No pudimos procesar tu pago correctamente
+									No pudimos verificar la información de tu pago automáticamente.
 								</p>
 							</>
 						)}
@@ -172,10 +190,9 @@ function FlowReturn() {
 						)}
 
 						{paymentStatus === "error" && (
-							<div className="bg-red-50 border border-red-200 rounded-lg p-4">
-								<p className="text-sm text-red-900">
-									Si crees que esto es un error o necesitas ayuda, contáctanos
-									de inmediato por WhatsApp y te asistiremos.
+							<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+								<p className="text-sm text-yellow-900">
+									Si realizaste el pago y ves este mensaje, por favor contáctanos por WhatsApp enviando tu comprobante y te ayudaremos de inmediato.
 								</p>
 							</div>
 						)}

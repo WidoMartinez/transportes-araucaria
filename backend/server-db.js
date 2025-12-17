@@ -6279,7 +6279,9 @@ app.post("/create-payment", async (req, res) => {
 			amount: Number(amount),
 			email: email,
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
-			urlReturn: `${frontendBase}/flow-return`,
+			// Modificado: Flow hace un POST al retorno. React no puede leer el body del POST desde la navegación.
+			// Solución: Retornar a un endpoint del backend que reciba el POST y redirija al frontend con GET.
+			urlReturn: `${backendBase}/api/payment-result`,
 		};
 
 		if (Object.keys(optionalPayload).length > 0) {
@@ -6324,6 +6326,35 @@ app.post("/create-payment", async (req, res) => {
 	}
 
 	return res.status(400).json({ message: "Pasarela de pago no válida." });
+});
+
+// Endpoint para manejar el retorno de Flow (POST -> GET Redirect)
+// Flow envía el token por POST. Este endpoint lo captura y redirige al frontend via GET.
+app.use("/api/payment-result", express.urlencoded({ extended: true }));
+app.post("/api/payment-result", (req, res) => {
+	console.log("🔄 Recibiendo retorno de Flow via POST (Redirigiendo a Frontend)...");
+	
+	try {
+		let token = req.body.token;
+		// Soporte para variaciones
+		if (!token && req.body.Token) token = req.body.Token;
+
+		if (!token) {
+			console.warn("⚠️ No se recibió token en /api/payment-result body:", req.body);
+			// Intentar redirigir al frontend de todas formas, el frontend manejará la ausencia de token
+			const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+			return res.redirect(303, `${frontendBase}/flow-return?error=missing_token`);
+		}
+
+		console.log("✅ Token capturado, redirigiendo a /flow-return con token:", token);
+		
+		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+		// Redirección 303 See Other obliga a usar GET en el destino
+		res.redirect(303, `${frontendBase}/flow-return?token=${token}`);
+	} catch (error) {
+		console.error("❌ Error en redirección de pago:", error);
+		res.status(500).send("Error procesando retorno de pago");
+	}
 });
 
 // --- ENDPOINT DE PAGO FLOW ---

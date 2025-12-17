@@ -100,7 +100,26 @@ function CompletarDetalles({ reservaId, onComplete, onCancel }) {
 			}
 		};
 
+
 		cargarReserva();
+	}, [reservaId]);
+
+	// Tracking de conversión como respaldo (por si FlowReturn falló)
+	useEffect(() => {
+		if (reservaId && typeof window.gtag === 'function') {
+			// Usar un flag en sessionStorage para evitar duplicar el evento en la misma sesión
+			const conversionKey = `conversion_sent_${reservaId}`;
+			if (!sessionStorage.getItem(conversionKey)) {
+				console.log("📊 Disparando conversión de respaldo en CompletarDetalles");
+				window.gtag('event', 'conversion', {
+					'send_to': 'AW-17529712870/yZz-CJqiicUbEObh6KZB',
+					'value': 1.0,
+					'currency': 'CLP',
+					'transaction_id': reservaId.toString()
+				});
+				sessionStorage.setItem(conversionKey, 'true');
+			}
+		}
 	}, [reservaId]);
 
 	const handleInputChange = (field, value) => {
