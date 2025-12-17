@@ -78,6 +78,7 @@ import { GastoQuickAdd } from "./admin/reservas/GastoQuickAdd";
 import { ReservaActionsMenu } from "./admin/reservas/ReservaActionsMenu";
 import { ReservaTimeline, buildReservaTimeline } from "./admin/reservas/ReservaTimeline";
 import { ReservaAdvancedFilters } from "./admin/reservas/ReservaAdvancedFilters";
+import { PagoQuickDialog } from "./admin/reservas/PagoQuickDialog";
 import { useReservaNotifications, useGastoNotifications } from "../contexts/NotificationContext";
 
 const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
@@ -170,6 +171,7 @@ function AdminReservas() {
 	
 	// Estados para nuevas funcionalidades
 	const [showGastoDialog, setShowGastoDialog] = useState(false);
+	const [showPagoDialog, setShowPagoDialog] = useState(false);
 	const [showTimelineDialog, setShowTimelineDialog] = useState(false);
 	const [gastosReserva, setGastosReserva] = useState([]);
 	const [advancedFilters, setAdvancedFilters] = useState({});
@@ -995,34 +997,15 @@ function AdminReservas() {
 	};
 
 	// Nueva función: Marcar como pagada desde menú de acciones
-	const handleMarcarPagada = async (reserva) => {
-		const monto = prompt("Ingrese el monto pagado:", reserva.totalConDescuento);
-		if (!monto) return;
+	const handleMarcarPagada = (reserva) => {
+		setSelectedReserva(reserva);
+		setShowPagoDialog(true);
+	};
 
-		try {
-			const response = await authenticatedFetch(
-				`/api/reservas/${reserva.id}/pago`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						estadoPago: "pagado",
-						pagoMonto: parseFloat(monto),
-						metodoPago: "efectivo",
-					}),
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error("Error al registrar pago");
-			}
-
-			reservaNotifications.paid(reserva.codigoReserva);
-			fetchReservas();
-		} catch (error) {
-			console.error("Error al registrar pago:", error);
-			reservaNotifications.error("Error al registrar el pago");
-		}
+	// Nueva función: Callback cuando se registra un pago
+	const handlePagoRegistrado = () => {
+		reservaNotifications.paid(selectedReserva.codigoReserva);
+		fetchReservas();
 	};
 
 	// Nueva función: Manejar filtros avanzados
@@ -5066,6 +5049,16 @@ function AdminReservas() {
 				open={showGastoDialog}
 				onOpenChange={setShowGastoDialog}
 				onGastoCreado={handleGastoCreado}
+				apiUrl={apiUrl}
+				authenticatedFetch={authenticatedFetch}
+			/>
+
+			{/* Dialog para registrar pago rápidamente */}
+			<PagoQuickDialog
+				reserva={selectedReserva}
+				open={showPagoDialog}
+				onOpenChange={setShowPagoDialog}
+				onPagoRegistrado={handlePagoRegistrado}
 				apiUrl={apiUrl}
 				authenticatedFetch={authenticatedFetch}
 			/>

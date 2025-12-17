@@ -34,9 +34,12 @@ import {
  * Se integra como modal inline para agregar gastos asociados a una reserva específica
  */
 
+// Constante para la tasa de comisión de Flow
+const FLOW_COMMISSION_RATE = 3.19; // Porcentaje
+
 const TIPOS_GASTO = [
 	{ value: "combustible", label: "Combustible", icon: Fuel },
-	{ value: "comision_flow", label: "Comisión Flow (3.19%)", icon: CreditCard },
+	{ value: "comision_flow", label: `Comisión Flow (${FLOW_COMMISSION_RATE}%)`, icon: CreditCard },
 	{ value: "pago_conductor", label: "Pago al Conductor", icon: User },
 	{ value: "peaje", label: "Peaje", icon: Receipt },
 	{ value: "mantenimiento", label: "Mantenimiento", icon: Car },
@@ -65,7 +68,7 @@ export function GastoQuickAdd({
 	// Calcular comisión Flow automáticamente
 	useEffect(() => {
 		if (formData.tipoGasto === "comision_flow" && reserva) {
-			const comision = (parseFloat(reserva.totalConDescuento || 0) * 3.19) / 100;
+			const comision = (parseFloat(reserva.totalConDescuento || 0) * FLOW_COMMISSION_RATE) / 100;
 			setFormData(prev => ({ ...prev, monto: comision.toFixed(0) }));
 		}
 	}, [formData.tipoGasto, reserva]);
@@ -95,7 +98,9 @@ export function GastoQuickAdd({
 				vehiculoId: reserva.vehiculoId || null,
 			};
 
-			const response = await authenticatedFetch(`${apiUrl}/api/gastos`, {
+			// Construir URL de forma segura
+			const url = new URL('/api/gastos', apiUrl);
+			const response = await authenticatedFetch(url.toString(), {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(payload),
@@ -204,7 +209,7 @@ export function GastoQuickAdd({
 						/>
 						{formData.tipoGasto === "comision_flow" && (
 							<p className="text-xs text-muted-foreground">
-								Calculado automáticamente: 3.19% de ${reserva?.totalConDescuento || 0}
+								Calculado automáticamente: {FLOW_COMMISSION_RATE}% de ${reserva?.totalConDescuento || 0}
 							</p>
 						)}
 					</div>

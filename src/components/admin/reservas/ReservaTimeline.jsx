@@ -53,7 +53,9 @@ const EventItem = ({ event }) => {
 			return format(new Date(date), "d 'de' MMMM, yyyy 'a las' HH:mm", {
 				locale: es,
 			});
-		} catch (e) {
+		} catch (error) {
+			console.warn("Error al formatear fecha:", error, "fecha:", date);
+			// Fallback a formato nativo
 			return new Date(date).toLocaleString("es-CL");
 		}
 	};
@@ -107,22 +109,23 @@ export function ReservaTimeline({ eventos = [] }) {
 		);
 	}
 
-	// Ordenar eventos por fecha (más reciente primero)
-	const sortedEventos = [...eventos].sort(
-		(a, b) => new Date(b.date) - new Date(a.date)
-	);
-
-	// Marcar el último evento
-	const eventosWithLast = sortedEventos.map((evento, index) => ({
-		...evento,
-		isLast: index === sortedEventos.length - 1,
-	}));
+	// Pre-parsear fechas y ordenar (más eficiente para arrays grandes)
+	const sortedEventos = [...eventos]
+		.map(evento => ({
+			...evento,
+			parsedDate: new Date(evento.date)
+		}))
+		.sort((a, b) => b.parsedDate - a.parsedDate)
+		.map((evento, index, array) => ({
+			...evento,
+			isLast: index === array.length - 1
+		}));
 
 	return (
 		<Card>
 			<CardContent className="pt-6">
 				<div className="space-y-2">
-					{eventosWithLast.map((evento, index) => (
+					{sortedEventos.map((evento, index) => (
 						<EventItem key={`${evento.type}-${evento.date}-${index}`} event={evento} />
 					))}
 				</div>

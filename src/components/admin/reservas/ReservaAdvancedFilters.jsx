@@ -42,16 +42,24 @@ export function ReservaAdvancedFilters({
 	const [localFilters, setLocalFilters] = useState(filters);
 	const [isOpen, setIsOpen] = useState(false);
 
-	// Contar filtros activos
+	// Valores por defecto para filtros
+	const DEFAULT_FILTER_VALUES = {
+		estado: "todos",
+		estadoPago: "todos",
+		conductorId: "",
+		vehiculoId: "",
+		tieneGastos: undefined,
+		rangoFecha: "todos",
+	};
+
+	// Contar filtros activos de forma declarativa
 	const getActiveFiltersCount = () => {
-		let count = 0;
-		if (localFilters.estado && localFilters.estado !== "todos") count++;
-		if (localFilters.estadoPago && localFilters.estadoPago !== "todos") count++;
-		if (localFilters.conductorId) count++;
-		if (localFilters.vehiculoId) count++;
-		if (localFilters.tieneGastos !== undefined) count++;
-		if (localFilters.rangoFecha && localFilters.rangoFecha !== "todos") count++;
-		return count;
+		return Object.keys(DEFAULT_FILTER_VALUES).reduce((count, key) => {
+			const currentValue = localFilters[key];
+			const defaultValue = DEFAULT_FILTER_VALUES[key];
+			// Contar si el valor difiere del valor por defecto
+			return currentValue !== defaultValue ? count + 1 : count;
+		}, 0);
 	};
 
 	const handleFilterChange = (key, value) => {
@@ -67,17 +75,9 @@ export function ReservaAdvancedFilters({
 	};
 
 	const handleReset = () => {
-		const resetFilters = {
-			estado: "todos",
-			estadoPago: "todos",
-			conductorId: "",
-			vehiculoId: "",
-			tieneGastos: undefined,
-			rangoFecha: "todos",
-		};
-		setLocalFilters(resetFilters);
+		setLocalFilters(DEFAULT_FILTER_VALUES);
 		if (onFiltersChange) {
-			onFiltersChange(resetFilters);
+			onFiltersChange(DEFAULT_FILTER_VALUES);
 		}
 	};
 
