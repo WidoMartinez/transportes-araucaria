@@ -91,6 +91,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Middleware de autenticación para rutas administrativas
 // Usar sistema de autenticación JWT moderno
@@ -6279,7 +6280,7 @@ app.post("/create-payment", async (req, res) => {
 			amount: Number(amount),
 			email: email,
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
-			urlReturn: `${frontendBase}/flow-return`,
+			urlReturn: `${backendBase}/api/payment-return`, // Redirigir al backend para manejar POST
 		};
 
 		if (Object.keys(optionalPayload).length > 0) {
@@ -6324,6 +6325,40 @@ app.post("/create-payment", async (req, res) => {
 	}
 
 	return res.status(400).json({ message: "Pasarela de pago no válida." });
+});
+
+// Endpoint intermedio para manejar retorno de Flow (POST/GET) y redirigir al frontend (GET)
+// Esto soluciona el problema de "Method Not Allowed" o tokens perdidos en POST directo a React
+app.all("/api/payment-return", (req, res) => {
+	try {
+		// Log para depuración
+		console.log("🔄 Retorno de pago recibido en backend:", {
+			method: req.method,
+			body: req.body,
+			query: req.query
+		});
+
+		// Extraer token de body (POST) o query (GET)
+		const token = req.body.token || req.query.token;
+
+		if (!token) {
+			console.warn("⚠️ Retorno de pago sin token");
+			// Redirigir al frontend con error genérico
+			const frontendUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+			return res.redirect(`${frontendUrl}/flow-return?error=missing_token`);
+		}
+
+		// Construir URL de retorno al frontend con el token como query param
+		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+		const redirectUrl = `${frontendBase}/flow-return?token=${encodeURIComponent(token)}`;
+
+		console.log(`➡️ Redirigiendo cliente a: ${redirectUrl}`);
+		return res.redirect(redirectUrl);
+	} catch (error) {
+		console.error("❌ Error en endpoint de retorno de pago:", error);
+		const frontendUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+		return res.redirect(`${frontendUrl}/flow-return?error=server_error`);
+	}
 });
 
 // --- ENDPOINT DE PAGO FLOW ---
