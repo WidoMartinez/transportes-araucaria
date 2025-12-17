@@ -34,6 +34,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "./ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import {
 	Search,
 	ChevronLeft,
@@ -73,6 +74,7 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "./ui/alert-dialog";
+import { GastosTab } from "./admin/GastosTab";
 
 const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
 const normalizeDestino = (value) =>
@@ -366,6 +368,7 @@ function AdminReservas() {
 		{ key: "fechaCreacion", label: "Fecha Creación", defaultVisible: false },
 		{ key: "pasajeros", label: "Pasajeros", defaultVisible: true },
 		{ key: "total", label: "Total", defaultVisible: true },
+		{ key: "utilidad", label: "Utilidad", defaultVisible: true },
 		{ key: "estado", label: "Estado", defaultVisible: true },
 		{ key: "pago", label: "Pago", defaultVisible: true },
 		{ key: "saldo", label: "Saldo", defaultVisible: true },
@@ -448,6 +451,8 @@ function AdminReservas() {
 			{ key: "origen", label: "Origen" },
 			{ key: "destino", label: "Destino" },
 			{ key: "totalConDescuento", label: "Total" },
+			{ key: "totalGastos", label: "Gastos" },
+			{ key: "utilidad", label: "Utilidad" },
 			{ key: "estado", label: "Estado" },
 			{ key: "pagoMonto", label: "Monto Pagado" },
 			{ key: "saldoPendiente", label: "Saldo Pendiente" },
@@ -468,6 +473,12 @@ function AdminReservas() {
 			seleccionObjs.forEach((reserva) => {
 				const fila = columnasExportar.map((col) => {
 					let val = reserva[col.key];
+					// Calcular utilidad en tiempo de exportación si no existe
+					if (col.key === "utilidad") {
+						val =
+							(Number(reserva.totalConDescuento) || 0) -
+							(Number(reserva.totalGastos) || 0);
+					}
 					if (val === undefined || val === null) return "";
 					// Si el valor es un objeto, intentar extraer campos comunes
 					if (typeof val === "object") {
@@ -1777,6 +1788,43 @@ function AdminReservas() {
 		}
 	};
 
+	// Archivar reservas seleccionadas masivamente
+	const handleBulkArchive = async () => {
+		if (
+			!window.confirm(
+				`¿Estás seguro de que deseas archivar ${selectedReservas.length} reserva(s)? Solo se archivarán si están completadas o canceladas.`
+			)
+		) {
+			return;
+		}
+
+		setProcessingBulk(true);
+		try {
+			const promises = selectedReservas.map((id) =>
+				fetch(`${apiUrl}/api/reservas/${id}/archivar`, {
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
+					},
+					body: JSON.stringify({ archivada: true }),
+				})
+			);
+
+			await Promise.all(promises);
+
+			await fetchReservas();
+			await fetchEstadisticas();
+			setSelectedReservas([]);
+			alert(`${selectedReservas.length} reserva(s) procesada(s) para archivar`);
+		} catch (error) {
+			console.error("Error archivando reservas:", error);
+			alert("Error al archivar algunas reservas");
+		} finally {
+			setProcessingBulk(false);
+		}
+	};
+
 	// Cambiar estado de reservas seleccionadas
 	const handleBulkChangeStatus = async () => {
 		if (!bulkEstado) {
@@ -2308,6 +2356,14 @@ function AdminReservas() {
 									</Button>
 									{/* Botón Cambiar Estado Pago eliminado por limpieza de código */}
 									<Button
+										variant="secondary"
+										size="sm"
+										onClick={handleBulkArchive}
+									>
+										<Archive className="w-4 h-4 mr-1" />
+										Archivar
+									</Button>
+									<Button
 										variant="destructive"
 										size="sm"
 										onClick={() => setShowBulkDeleteDialog(true)}
@@ -2359,6 +2415,7 @@ function AdminReservas() {
 										<TableHead>Pasajeros</TableHead>
 									)}
 									{columnasVisibles.total && <TableHead>Total</TableHead>}
+									{columnasVisibles.utilidad && <TableHead>Utilidad</TableHead>}
 									{columnasVisibles.estado && <TableHead>Estado</TableHead>}
 									{columnasVisibles.pago && <TableHead>Pago</TableHead>}
 									{columnasVisibles.saldo && <TableHead>Saldo</TableHead>}
@@ -2574,6 +2631,28 @@ function AdminReservas() {
 													{formatCurrency(reserva.totalConDescuento)}
 												</TableCell>
 											)}
+											{columnasVisibles.utilidad && (
+												<TableCell>
+													{(() => {
+														const utilidad =
+															(Number(reserva.totalConDescuento) || 0) -
+															(Number(reserva.totalGastos) || 0);
+														return (
+															<span
+																className={`font-semibold ${
+																	utilidad < 0
+																		? "text-red-600"
+																		: utilidad > 0
+																		? "text-green-600"
+																		: "text-gray-500"
+																}`}
+															>
+																{formatCurrency(utilidad)}
+															</span>
+														);
+													})()}
+												</TableCell>
+											)}
 											{columnasVisibles.estado && (
 												<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
 											)}
@@ -2729,9 +2808,9 @@ function AdminReservas() {
 
 			{/* Modal de Detalles */}
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<div className="flex justify-between items-center">
+						<div className="flex justify-between items-center mr-8">
 							<div>
 								<DialogTitle>
 									Detalles de Reserva #{selectedReserva?.id}
@@ -2740,24 +2819,35 @@ function AdminReservas() {
 									Información completa de la reserva
 								</DialogDescription>
 							</div>
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									const link = `${window.location.origin}/#comprar-productos/${selectedReserva.codigoReserva}`;
-									navigator.clipboard.writeText(link);
-									alert(`Enlace copiado al portapapeles: ${link}`);
-								}}
-							>
-								Generar Link de Compra
-							</Button>
+							<div className="flex gap-2">
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => {
+										const link = `${window.location.origin}/#comprar-productos/${selectedReserva.codigoReserva}`;
+										navigator.clipboard.writeText(link);
+										alert(`Enlace copiado al portapapeles: ${link}`);
+									}}
+								>
+									Link Compra
+								</Button>
+							</div>
 						</div>
 					</DialogHeader>
 
 					{selectedReserva && (
-						<div className="space-y-6">
-							{/* Código de Reserva */}
-							{selectedReserva.codigoReserva && (
+						<Tabs defaultValue="detalles" className="w-full">
+							<TabsList className="grid w-full grid-cols-2">
+								<TabsTrigger value="detalles">Detalles</TabsTrigger>
+								<TabsTrigger value="gastos">
+									Gastos{" "}
+									{selectedReserva.totalGastos > 0 &&
+										`(${formatCurrency(selectedReserva.totalGastos)})`}
+								</TabsTrigger>
+							</TabsList>
+							<TabsContent value="detalles" className="space-y-6 mt-4">
+								{/* Código de Reserva */}
+								{selectedReserva.codigoReserva && (
 								<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
 									<div className="flex items-center justify-between">
 										<div>
@@ -3279,8 +3369,21 @@ function AdminReservas() {
 								</Button>
 							</div>
 						)}
-					</div>
-				)}
+							</TabsContent>
+							<TabsContent value="gastos" className="mt-4">
+								<GastosTab
+									reserva={selectedReserva}
+									onGastosUpdate={() => {
+										// Actualizar la lista principal para reflejar cambios en utilidad
+										fetchReservas();
+										// Actualizar el objeto seleccionado para que el tab muestre el nuevo total
+										// (Opcional, si el backend devuelve el total en el endpoint de gastos,
+										// pero aquí estamos actualizando el padre)
+									}}
+								/>
+							</TabsContent>
+						</Tabs>
+					)}
 				</DialogContent>
 			</Dialog>
 
