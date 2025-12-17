@@ -6331,29 +6331,66 @@ app.post("/create-payment", async (req, res) => {
 // Endpoint para manejar el retorno de Flow (POST -> GET Redirect)
 // Flow envía el token por POST. Este endpoint lo captura y redirige al frontend via GET.
 app.use("/api/payment-result", express.urlencoded({ extended: true }));
-app.post("/api/payment-result", (req, res) => {
-	console.log("🔄 Recibiendo retorno de Flow via POST (Redirigiendo a Frontend)...");
+app.post("/api/payment-result", async (req, res) => {
+	console.log("🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)...");
 	
 	try {
 		let token = req.body.token;
 		// Soporte para variaciones
 		if (!token && req.body.Token) token = req.body.Token;
 
+		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+
 		if (!token) {
 			console.warn("⚠️ No se recibió token en /api/payment-result body:", req.body);
-			// Intentar redirigir al frontend de todas formas, el frontend manejará la ausencia de token
-			const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 			return res.redirect(303, `${frontendBase}/flow-return?error=missing_token`);
 		}
 
-		console.log("✅ Token capturado, redirigiendo a /flow-return con token:", token);
+		console.log("✅ Token capturado:", token);
+
+		// Intentar obtener el ID de reserva desde Flow para redirigir a la vista de detalles
+		try {
+			const params = {
+				apiKey: process.env.FLOW_API_KEY,
+				token: token,
+			};
+			params.s = signParams(params);
+
+			const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+			const statusResponse = await axios.get(`${flowApiUrl}/payment/getStatus`, {
+				params: params
+			});
+
+			const flowData = statusResponse.data;
+			
+			// Intentar extraer reservaId de los datos opcionales
+			let reservaId = null;
+			if (flowData.optional) {
+				try {
+					const optionalData = JSON.parse(flowData.optional);
+					reservaId = optionalData.reservaId;
+				} catch (e) {
+					console.warn("Error parseando optional data de Flow:", e);
+				}
+			}
+
+			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
+			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
+				console.log(`✅ Redirigiendo a Completar Detalles para reserva ${reservaId}`);
+				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}`);
+			}
+		} catch (flowError) {
+			console.error("⚠️ Error consultando estado en Flow (usando fallback):", flowError.message);
+			// Continuar al fallback
+		}
 		
-		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
-		// Redirección 303 See Other obliga a usar GET en el destino
+		// Fallback: Redirigir a la página genérica de retorno
+		console.log("ℹ️ Usando fallback de redirección a /flow-return");
 		res.redirect(303, `${frontendBase}/flow-return?token=${token}`);
 	} catch (error) {
 		console.error("❌ Error en redirección de pago:", error);
-		res.status(500).send("Error procesando retorno de pago");
+		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+		res.redirect(303, `${frontendBase}/flow-return?error=server_error`);
 	}
 });
 
