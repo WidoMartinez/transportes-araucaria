@@ -20,6 +20,8 @@ function FlowReturn() {
 // Extraer token de Flow de los parámetros de URL
 		const urlParams = new URLSearchParams(window.location.search);
 		const token = urlParams.get("token");
+		const amountParam = urlParams.get("amount");
+		const reservaIdParam = urlParams.get("reserva_id");
 
 		if (!token) {
 			console.warn("No se recibió token de Flow en la URL de retorno");
@@ -28,9 +30,6 @@ function FlowReturn() {
 		}
 
 		// Simular verificación del pago
-		// En un caso real, podrías consultar el backend para confirmar el estado
-		// Pero Flow ya envió el webhook, así que asumimos éxito si llegamos aquí
-// Simular verificación del pago
 		// En un caso real, podrías consultar el backend para confirmar el estado
 		// Pero Flow ya envió el webhook, así que asumimos éxito si llegamos aquí
 		const verifyPayment = async () => {
@@ -43,7 +42,9 @@ function FlowReturn() {
 			// Solo se dispara cuando el pago es exitoso
 			try {
 				if (typeof window.gtag === "function") {
-					const transactionId = token || `manual_${Date.now()}`;
+					const transactionId = reservaIdParam || token || `manual_${Date.now()}`;
+					// Usar el monto real si viene en la URL, sino 1.0 por defecto
+					const conversionValue = amountParam ? Number(amountParam) : 1.0;
 					
 					// Usar sessionStorage para evitar duplicados en recargas
 					const conversionKey = `flow_conversion_${transactionId}`;
@@ -51,12 +52,12 @@ function FlowReturn() {
 					if (!sessionStorage.getItem(conversionKey)) {
 						window.gtag("event", "conversion", {
 							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
-							value: 1.0,
+							value: conversionValue,
 							currency: "CLP",
 							transaction_id: transactionId,
 						});
 						sessionStorage.setItem(conversionKey, 'true');
-						console.log("✅ Evento de conversión Google Ads disparado:", transactionId);
+						console.log(`✅ Evento de conversión Google Ads disparado (ID: ${transactionId}, Valor: ${conversionValue})`);
 					} else {
 						console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
 					}

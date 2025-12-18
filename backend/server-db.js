@@ -6376,7 +6376,21 @@ app.post("/api/payment-result", async (req, res) => {
 
 			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
 			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
-				console.log(`✅ Redirigiendo a Completar Detalles para reserva ${reservaId}`);
+				// Buscar la reserva en la base de datos para determinar el flujo de redirección
+				const reserva = await Reserva.findByPk(reservaId);
+				
+				if (reserva && reserva.source === "codigo_pago") {
+					// Caso: Pagar con Código
+					// Redirigir a la página de éxito estándar (FlowReturn)
+					// Pasar parámetros adicionales para el tracking preciso
+					console.log(`✅ Pago con código detectado (Reserva ${reservaId}). Redirigiendo a FlowReturn.`);
+					const total = reserva.totalConDescuento || reserva.precio || 0;
+					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}`);
+				}
+
+				// Caso: Reserva Express (flujo normal)
+				// Redirigir a Completar Detalles
+				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
 				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}`);
 			}
 		} catch (flowError) {

@@ -106,21 +106,26 @@ function CompletarDetalles({ reservaId, onComplete, onCancel }) {
 
 	// Tracking de conversión como respaldo (por si FlowReturn falló)
 	useEffect(() => {
-		if (reservaId && typeof window.gtag === 'function') {
+		// Esperar a que la reserva esté cargada para tener el valor real
+		if (reservaId && reserva && typeof window.gtag === 'function') {
 			// Usar un flag en sessionStorage para evitar duplicar el evento en la misma sesión
 			const conversionKey = `conversion_sent_${reservaId}`;
 			if (!sessionStorage.getItem(conversionKey)) {
-				console.log("📊 Disparando conversión de respaldo en CompletarDetalles");
+				// Determinar el valor de la conversión
+				// Preferir totalConDescuento, o precio, o abonoSugerido según lo que esté disponible
+				const value = Number(reserva.totalConDescuento || reserva.precio || reserva.abonoSugerido || 0);
+				
+				console.log("📊 Disparando conversión de respaldo en CompletarDetalles con valor:", value);
 				window.gtag('event', 'conversion', {
 					'send_to': 'AW-17529712870/yZz-CJqiicUbEObh6KZB',
-					'value': 1.0,
+					'value': value,
 					'currency': 'CLP',
 					'transaction_id': reservaId.toString()
 				});
 				sessionStorage.setItem(conversionKey, 'true');
 			}
 		}
-	}, [reservaId]);
+	}, [reservaId, reserva]);
 
 	const handleInputChange = (field, value) => {
 		setDetalles((prev) => ({
