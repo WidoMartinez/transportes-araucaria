@@ -13,6 +13,9 @@ const PAYMENT_VERIFICATION_DELAY_MS = 1000; // Tiempo de espera antes de confirm
  * Formato E.164: +[código país][número]
  * Ejemplo: +56987654321 (Chile)
  * 
+ * NOTA: Esta función asume números chilenos por defecto.
+ * Para un sistema multi-país, se requeriría detección de código de país.
+ * 
  * @param {string} phone - Número de teléfono en cualquier formato
  * @returns {string} - Número en formato E.164 o string vacío si no es válido
  */
@@ -37,7 +40,8 @@ function normalizePhoneToE164(phone) {
 		return '+56' + cleaned;
 	}
 	
-	// Si no cumple ningún caso, asumir que es chileno y agregar +56
+	// Fallback: Asumir que es chileno y agregar +56 (válido para sistema Chile-only)
+	// Para soporte multi-país, retornar '' o implementar detección de código de área
 	return '+56' + cleaned;
 }
 
@@ -116,12 +120,18 @@ function FlowReturn() {
 							try {
 								const decodedData = atob(encodedData); // Decodificar Base64
 								const userData = JSON.parse(decodedData);
-								userEmail = userData.email || '';
-								userName = userData.nombre || '';
-								userPhone = userData.telefono || '';
-								console.log('✅ Datos de usuario decodificados desde parámetro Base64');
+								
+								// Validar que el objeto decodificado tenga la estructura esperada
+								if (userData && typeof userData === 'object') {
+									userEmail = userData.email || '';
+									userName = userData.nombre || '';
+									userPhone = userData.telefono || '';
+									console.log('✅ Datos de usuario decodificados desde parámetro Base64');
+								} else {
+									throw new Error('Estructura de datos inválida');
+								}
 							} catch (error) {
-								console.warn('⚠️ Error decodificando datos de usuario:', error);
+								console.warn('⚠️ Error decodificando datos de usuario:', error.message);
 								// Fallback a parámetros individuales (compatibilidad con URLs antiguas)
 								userEmail = urlParams.get('email') || '';
 								userName = urlParams.get('nombre') || '';
