@@ -90,21 +90,25 @@ function FlowReturn() {
 
 						if (telefono) {
 							// Normalizar teléfono: eliminar espacios y caracteres especiales
-							const phoneNormalized = telefono.replace(/[\s\-\(\)]/g, '');
+							// Mantener solo números y el símbolo + para código de país
+							const phoneNormalized = telefono.replace(/[\s\-\(\)\.\[\]]/g, '');
 							conversionData.phone_number = phoneNormalized;
 						}
 
 						if (nombre) {
 							// Separar nombre completo en first_name y last_name
-							const nameParts = nombre.trim().split(' ');
-							const firstName = nameParts[0] || '';
-							const lastName = nameParts.slice(1).join(' ') || '';
+							const nameParts = nombre.trim().split(/\s+/); // Dividir por uno o más espacios
+							const firstName = (nameParts[0] || '').trim();
+							const lastName = nameParts.slice(1).join(' ').trim();
 							
-							conversionData.address = {
-								first_name: firstName.toLowerCase(),
-								last_name: lastName.toLowerCase(),
-								country: 'CL' // Chile
-							};
+							// Solo agregar address si hay al menos un nombre válido
+							if (firstName) {
+								conversionData.address = {
+									first_name: firstName.toLowerCase(),
+									last_name: lastName.toLowerCase(),
+									country: 'CL' // Chile
+								};
+							}
 						}
 
 						window.gtag("event", "conversion", conversionData);

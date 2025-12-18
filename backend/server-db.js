@@ -6403,12 +6403,21 @@ app.post("/api/payment-result", async (req, res) => {
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
 					const total = reserva.totalConDescuento || reserva.precio || 0;
 					
-					// Codificar datos de usuario para URL (conversiones avanzadas de Google Ads)
-					const emailEncoded = encodeURIComponent(reserva.email || '');
-					const nombreEncoded = encodeURIComponent(reserva.nombre || '');
-					const telefonoEncoded = encodeURIComponent(reserva.telefono || '');
+					// Construir URL con parámetros base
+					let returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}`;
 					
-					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}&email=${emailEncoded}&nombre=${nombreEncoded}&telefono=${telefonoEncoded}`);
+					// Agregar datos de usuario solo si existen (conversiones avanzadas de Google Ads)
+					if (reserva.email) {
+						returnUrl += `&email=${encodeURIComponent(reserva.email)}`;
+					}
+					if (reserva.nombre) {
+						returnUrl += `&nombre=${encodeURIComponent(reserva.nombre)}`;
+					}
+					if (reserva.telefono) {
+						returnUrl += `&telefono=${encodeURIComponent(reserva.telefono)}`;
+					}
+					
+					return res.redirect(303, returnUrl);
 				}
 
 				// Caso: Reserva Express (flujo normal)
