@@ -22,70 +22,64 @@ function FlowReturn() {
 		const token = urlParams.get("token");
 		const amountParam = urlParams.get("amount");
 		const reservaIdParam = urlParams.get("reserva_id");
-		const statusParam = urlParams.get("status"); // Nuevo parámetro de estado
-		const errorParam = urlParams.get("error"); // Parámetro de error explícito
-		const flowStatusParam = urlParams.get("flow_status"); // Estado interno de Flow (debugging)
 
-		if (!token) {
-			console.warn("No se recibió token de Flow en la URL de retorno");
+		const statusParam = urlParams.get("status");
+		const errorParam = urlParams.get("error");
+
+		if (!token && !statusParam) {
+			console.warn("No se recibió token ni estado en la URL de retorno");
 			// No marcar error inmediatamente, permitir que la UI cargue y mostrar mensaje amigable
-			// Opcional: redirigir a una página de ayuda o home después de unos segundos
 		}
 
-		// LOGICA DE VERIFICACIÓN
+		// Verificar el estado del pago basado en los parámetros de la URL
+		// El backend ahora redirige con ?status=success o ?status=error explícitamente
 		const verifyPayment = async () => {
 			// Pequeño delay artificial para UX
 			await new Promise(resolve => setTimeout(resolve, PAYMENT_VERIFICATION_DELAY_MS));
 			
-			// Si el backend nos dice explícitamente que hubo error
 			if (statusParam === "error" || errorParam) {
-				console.warn(`❌ Error en pago detectado. Status: ${statusParam}, Error: ${errorParam}, FlowStatus: ${flowStatusParam}`);
+				console.warn("❌ Estado de error detectado en parámetros URL");
 				setPaymentStatus("error");
 				return;
 			}
 
-			// Si el backend nos dice que fue exitoso
-			if (statusParam === "success") {
+			// Solo marcar como éxito si hay un indicador explícito o un token sin errores
+			if (statusParam === "success" || (token && !errorParam)) {
 				setPaymentStatus("success");
-				// Disparar evento de conversión
-				triggerConversion(amountParam, reservaIdParam, token);
-				return;
-			}
 
-			// Fallback (status unknown o legacy): Asumimos éxito por ahora (comportamiento original)
-			// O idealmente deberíamos consultar al backend nuevamente si es 'unknown'
-			// Para mantener compatibilidad si no hay params, lo dejamos en success pero solo si no es error explícito
-			setPaymentStatus("success");
-			triggerConversion(amountParam, reservaIdParam, token);
-		};
+				// Disparar evento de conversión de Google Ads
+				// Solo se dispara cuando el pago es exitoso
+				try {
+					if (typeof window.gtag === "function") {
+						const transactionId = reservaIdParam || token || `manual_${Date.now()}`;
+						// Usar el monto real si viene en la URL, sino 1.0 por defecto
+						const conversionValue = amountParam ? Number(amountParam) : 1.0;
 
-		const triggerConversion = (amount, id, tkn) => {
-			try {
-				if (typeof window.gtag === "function") {
-					const transactionId = id || tkn || `manual_${Date.now()}`;
-					// Usar el monto real si viene en la URL, sino 1.0 por defecto
-					const conversionValue = amount ? Number(amount) : 1.0;
-					
-					// Usar sessionStorage para evitar duplicados en recargas
-					const conversionKey = `flow_conversion_${transactionId}`;
-					
-					if (!sessionStorage.getItem(conversionKey)) {
-						window.gtag("event", "conversion", {
-							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
-							value: conversionValue,
-							currency: "CLP",
-							transaction_id: transactionId,
-						});
-						sessionStorage.setItem(conversionKey, 'true');
-						console.log(`✅ Evento de conversión Google Ads disparado (ID: ${transactionId}, Valor: ${conversionValue})`);
+						// Usar sessionStorage para evitar duplicados en recargas
+						const conversionKey = `flow_conversion_${transactionId}`;
+
+						if (!sessionStorage.getItem(conversionKey)) {
+							window.gtag("event", "conversion", {
+								send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
+								value: conversionValue,
+								currency: "CLP",
+								transaction_id: transactionId,
+							});
+							sessionStorage.setItem(conversionKey, 'true');
+							console.log(`✅ Evento de conversión Google Ads disparado (ID: ${transactionId}, Valor: ${conversionValue})`);
+						} else {
+							console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
+						}
 					} else {
-						console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
+						console.warn("gtag no está disponible para tracking de conversión");
 					}
-				} else {
-					console.warn("gtag no está disponible para tracking de conversión");
+				} catch (error) {
+					console.error("Error al disparar evento de conversión:", error);
 				}
-			} catch (error) {
-				console.error("Error al disparar evento de conversión:", error);
+			} else {
+				// Fallback si no hay estado claro ni token
+				console.warn("⚠️ Estado indeterminado, marcando como error por seguridad");
+				setPaymentStatus("error");
 			}
 		};
 

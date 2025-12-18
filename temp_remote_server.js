@@ -6287,17 +6287,13 @@ app.post("/create-payment", async (req, res) => {
 		if (Object.keys(optionalPayload).length > 0) {
 			optionalPayload.commerceOrder = commerceOrder;
 			try {
-				const jsonOptional = JSON.stringify(optionalPayload);
-				params.optional = jsonOptional;
-				console.log("📦 Metadata optional para Flow:", jsonOptional);
+				params.optional = JSON.stringify(optionalPayload);
 			} catch (optionalError) {
 				console.warn(
-					"⚠️ No se pudo serializar la metadata optional para Flow:",
+					"No se pudo serializar la metadata optional para Flow:",
 					optionalError.message
 				);
 			}
-		} else {
-			console.log("ℹ️ No hay metadata optional para enviar a Flow");
 		}
 
 		params.s = signParams(params);
@@ -6366,25 +6362,31 @@ app.post("/api/payment-result", async (req, res) => {
 			});
 
 			const flowData = statusResponse.data;
+			const status = flowData.status; // 1: Pendiente, 2: Pagada, 3: Rechazada, 4: Anulada
+
+			// Validar estado del pago
+			if (status !== 1 && status !== 2) {
+				console.warn(`❌ Pago no exitoso (Status: ${status}). Redirigiendo a pantalla de error.`);
+				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=error&flow_status=${status}`);
+			}
 			
 			// Intentar extraer reservaId de los datos opcionales
 			let reservaId = null;
 			if (flowData.optional) {
 				try {
 					// Verificar si ya es un objeto (axios podría haberlo parseado si Flow devolvió JSON)
-					// Esta lógica viene de la rama fix-flow-payment-error-handling y es más robusta
 					const optionalData = typeof flowData.optional === "string"
 						? JSON.parse(flowData.optional)
 						: flowData.optional;
 
 					reservaId = optionalData?.reservaId;
 				} catch (e) {
-					console.warn("⚠️ Error parseando optional data de Flow:", e.message, "Data:", flowData.optional);
+					console.warn("Error parseando optional data de Flow:", e);
 				}
 			}
 
 			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
-			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
+			if (reservaId) {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
 				
@@ -6401,21 +6403,17 @@ app.post("/api/payment-result", async (req, res) => {
 				// Redirigir a Completar Detalles
 				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
 				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}`);
-			} else if (flowData.status === 3 || flowData.status === 4) {
-				// Pago rechazado (3) o anulado (4)
-				console.warn(`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`);
-				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=error&flow_status=${flowData.status}`);
 			}
+
+			// Fallback para pago exitoso pero sin reservaId
+			console.log("ℹ️ Pago exitoso sin reservaId identificada. Redirigiendo a /flow-return (éxito).");
+			return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success`);
+
 		} catch (flowError) {
-			console.error("⚠️ Error consultando estado en Flow (usando fallback):", flowError.message);
-			// Continuar al fallback
+			console.error("⚠️ Error consultando estado en Flow (usando fallback de error):", flowError.message);
+			// Si falla la verificación, redirigir con error para evitar falsos positivos
+			return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=error&error=verification_failed`);
 		}
-		
-		// Fallback: Redirigir a la página genérica de retorno (Asumir éxito si no podemos verificar, o manejar como pendiente)
-		// IMPORTANTE: Si llegamos aquí es porque falló la consulta a Flow o no hay reservaId, pero Flow nos redirigió.
-		// Para seguridad, pasamos status=unknown para que el frontend decida o muestre "Verificando..."
-		console.log("ℹ️ Usando fallback de redirección a /flow-return");
-		res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=unknown`);
 	} catch (error) {
 		console.error("❌ Error en redirección de pago:", error);
 		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
