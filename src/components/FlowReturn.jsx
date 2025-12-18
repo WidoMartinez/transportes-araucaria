@@ -70,14 +70,56 @@ function FlowReturn() {
 					const conversionKey = `flow_conversion_${transactionId}`;
 					
 					if (!sessionStorage.getItem(conversionKey)) {
-						window.gtag("event", "conversion", {
+						// Extraer datos de usuario de los parámetros URL para conversiones avanzadas
+						const urlParams = new URLSearchParams(window.location.search);
+						const userEmail = urlParams.get('email');
+						const userName = urlParams.get('nombre');
+						const userPhone = urlParams.get('telefono');
+
+						// Preparar datos de conversión básicos
+						const conversionData = {
 							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
 							value: conversionValue,
 							currency: "CLP",
 							transaction_id: transactionId,
-						});
+						};
+
+						// Agregar datos de usuario si están disponibles (Google los hashea automáticamente)
+						if (userEmail) {
+							conversionData.email = userEmail.toLowerCase().trim();
+						}
+
+						if (userPhone) {
+							// Normalizar teléfono: eliminar espacios y caracteres especiales
+							const phoneNormalized = userPhone.replace(/[\s\-\(\)]/g, '');
+							conversionData.phone_number = phoneNormalized;
+						}
+
+						if (userName && userName.trim()) {
+							// Separar nombre completo en first_name y last_name
+							const nameParts = userName.trim().split(' ');
+							const firstName = nameParts[0] || '';
+							const lastName = nameParts.slice(1).join(' ') || '';
+							
+							conversionData.address = {
+								first_name: firstName.toLowerCase(),
+								last_name: lastName.toLowerCase(),
+								country: 'CL' // Chile
+							};
+						}
+
+						window.gtag("event", "conversion", conversionData);
 						sessionStorage.setItem(conversionKey, 'true');
+						
+						// Log mejorado mostrando datos adicionales
 						console.log(`✅ Evento de conversión Google Ads disparado (ID: ${transactionId}, Valor: ${conversionValue})`);
+						if (userEmail) console.log(`   - email: ${conversionData.email}`);
+						if (userPhone) console.log(`   - phone_number: ${conversionData.phone_number}`);
+						if (userName) {
+							console.log(`   - address.first_name: ${conversionData.address.first_name}`);
+							console.log(`   - address.last_name: ${conversionData.address.last_name}`);
+							console.log(`   - address.country: ${conversionData.address.country}`);
+						}
 					} else {
 						console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
 					}

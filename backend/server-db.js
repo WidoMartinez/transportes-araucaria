@@ -6402,7 +6402,22 @@ app.post("/api/payment-result", async (req, res) => {
 					// Pasar parámetros adicionales para el tracking preciso
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
 					const total = reserva.totalConDescuento || reserva.precio || 0;
-					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}`);
+					
+					// Construir URL base con parámetros obligatorios
+					let returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}`;
+					
+					// Agregar datos de usuario para conversiones avanzadas de Google Ads (solo si existen)
+					if (reserva.email) {
+						returnUrl += `&email=${encodeURIComponent(reserva.email)}`;
+					}
+					if (reserva.nombre) {
+						returnUrl += `&nombre=${encodeURIComponent(reserva.nombre)}`;
+					}
+					if (reserva.telefono) {
+						returnUrl += `&telefono=${encodeURIComponent(reserva.telefono)}`;
+					}
+					
+					return res.redirect(303, returnUrl);
 				}
 
 				// Caso: Reserva Express (flujo normal)
