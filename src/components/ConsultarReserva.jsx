@@ -101,8 +101,9 @@ function ConsultarReserva() {
 					description,
 					email: reserva.email,
 					reservaId: reserva.id,
-				codigoReserva: reserva.codigoReserva,
-				tipoPago: tipo,
+					codigoReserva: reserva.codigoReserva,
+					tipoPago: tipo,
+					paymentOrigin: "consultar_reserva",
 				}),
 			});
 			if (!resp.ok) {

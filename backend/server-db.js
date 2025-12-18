@@ -6230,7 +6230,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 // Endpoint para generar pagos desde el frontend
 app.post("/create-payment", async (req, res) => {
-	const {
+		const {
 		gateway,
 		amount,
 		description,
@@ -6239,6 +6239,7 @@ app.post("/create-payment", async (req, res) => {
 		codigoReserva,
 		tipoPago,
 		referenciaPago,
+		paymentOrigin, // Nuevo: Identifica el origen del pago (consultar_reserva, compra_productos, etc.)
 	} = req.body || {};
 
 	if (!gateway || !amount || !description || !email) {
@@ -6270,6 +6271,7 @@ app.post("/create-payment", async (req, res) => {
 			optionalPayload.codigoReserva = codigoReservaNormalizado;
 		if (tipoPago) optionalPayload.tipoPago = tipoPago;
 		if (referenciaPago) optionalPayload.referenciaPago = referenciaPago;
+		if (paymentOrigin) optionalPayload.paymentOrigin = paymentOrigin;
 
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
@@ -6388,11 +6390,17 @@ app.post("/api/payment-result", async (req, res) => {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
 				
-				if (reserva && reserva.source === "codigo_pago") {
-					// Caso: Pagar con Código
+				// Determinar el origen del pago (desde DB o desde metadata optional)
+				const paymentOrigin = optionalData?.paymentOrigin;
+				const isCodigoPago = reserva && reserva.source === "codigo_pago";
+				const isConsultaReserva = paymentOrigin === "consultar_reserva";
+				const isCompraProductos = paymentOrigin === "compra_productos";
+
+				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
+					// Caso: Pagar con Código, Consultar Reserva o Compra Productos
 					// Redirigir a la página de éxito estándar (FlowReturn)
 					// Pasar parámetros adicionales para el tracking preciso
-					console.log(`✅ Pago con código detectado (Reserva ${reservaId}). Redirigiendo a FlowReturn.`);
+					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
 					const total = reserva.totalConDescuento || reserva.precio || 0;
 					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}`);
 				}

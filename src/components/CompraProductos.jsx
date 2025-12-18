@@ -76,6 +76,7 @@ function CompraProductos() {
 					description,
 					email: reserva.email,
 					reservationId: reserva.id,
+					paymentOrigin: "compra_productos",
 				}),
 			});
 			if (!resp.ok) {
