@@ -25,6 +25,12 @@ import {
  * 
  * SOLO PARA DESARROLLO Y TESTING
  * 
+ * Características:
+ * - Dispara eventos de conversión con datos de prueba
+ * - Incluye normalización de teléfono a formato E.164 (+56...)
+ * - Soporta datos codificados en Base64 (parámetro 'd' en URL)
+ * - Compatible con formato antiguo de parámetros individuales
+ * 
  * Nota: Este componente está disponible en todas las builds para permitir verificación
  * en staging/producción sin realizar pagos reales. El acceso puede controlarse mediante
  * rutas protegidas o variables de entorno si se desea restricción adicional.
@@ -75,9 +81,9 @@ function TestGoogleAds() {
 				value: 1.0,
 				currency: "CLP",
 				transaction_id: testToken,
-				// NUEVO: Datos de prueba para conversiones avanzadas
+				// Datos de prueba para conversiones avanzadas (formato E.164 para teléfono)
 				email: 'test@example.com',
-				phone_number: '+1234567890',
+				phone_number: '+56987654321', // Formato E.164: +56 (Chile) + número móvil
 				address: {
 					first_name: 'usuario',
 					last_name: 'prueba',

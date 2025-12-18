@@ -9,6 +9,39 @@ import logo from "../assets/logo.png";
 const PAYMENT_VERIFICATION_DELAY_MS = 1000; // Tiempo de espera antes de confirmar el pago
 
 /**
+ * Normaliza un número de teléfono al formato E.164 internacional
+ * Formato E.164: +[código país][número]
+ * Ejemplo: +56987654321 (Chile)
+ * 
+ * @param {string} phone - Número de teléfono en cualquier formato
+ * @returns {string} - Número en formato E.164 o string vacío si no es válido
+ */
+function normalizePhoneToE164(phone) {
+	if (!phone) return '';
+	
+	// Limpiar espacios, guiones, paréntesis y otros caracteres especiales
+	let cleaned = phone.replace(/[\s\-()]/g, '');
+	
+	// Si ya tiene +56 al inicio, retornar
+	if (cleaned.startsWith('+56')) {
+		return cleaned;
+	}
+	
+	// Si empieza con 56 (sin +), agregar +
+	if (cleaned.startsWith('56')) {
+		return '+' + cleaned;
+	}
+	
+	// Si empieza con 9 (número chileno móvil), agregar +56
+	if (cleaned.startsWith('9') && cleaned.length >= 9) {
+		return '+56' + cleaned;
+	}
+	
+	// Si no cumple ningún caso, asumir que es chileno y agregar +56
+	return '+56' + cleaned;
+}
+
+/**
  * Componente FlowReturn
  * Página de retorno después de completar un pago con Flow
  * Dispara el evento de conversión de Google Ads una sola vez por transacción exitosa
@@ -72,9 +105,34 @@ function FlowReturn() {
 					if (!sessionStorage.getItem(conversionKey)) {
 						// Extraer datos de usuario de los parámetros URL para conversiones avanzadas
 						const urlParams = new URLSearchParams(window.location.search);
-						const userEmail = urlParams.get('email');
-						const userName = urlParams.get('nombre');
-						const userPhone = urlParams.get('telefono');
+						
+						let userEmail = '';
+						let userName = '';
+						let userPhone = '';
+
+						// Intentar decodificar datos codificados en Base64 (nuevo formato seguro)
+						const encodedData = urlParams.get('d');
+						if (encodedData) {
+							try {
+								const decodedData = atob(encodedData); // Decodificar Base64
+								const userData = JSON.parse(decodedData);
+								userEmail = userData.email || '';
+								userName = userData.nombre || '';
+								userPhone = userData.telefono || '';
+								console.log('✅ Datos de usuario decodificados desde parámetro Base64');
+							} catch (error) {
+								console.warn('⚠️ Error decodificando datos de usuario:', error);
+								// Fallback a parámetros individuales (compatibilidad con URLs antiguas)
+								userEmail = urlParams.get('email') || '';
+								userName = urlParams.get('nombre') || '';
+								userPhone = urlParams.get('telefono') || '';
+							}
+						} else {
+							// Fallback: Leer parámetros individuales (compatibilidad con URLs antiguas)
+							userEmail = urlParams.get('email') || '';
+							userName = urlParams.get('nombre') || '';
+							userPhone = urlParams.get('telefono') || '';
+						}
 
 						// Preparar datos de conversión básicos
 						const conversionData = {
@@ -90,8 +148,8 @@ function FlowReturn() {
 						}
 
 						if (userPhone) {
-							// Normalizar teléfono: eliminar espacios y caracteres especiales
-							const phoneNormalized = userPhone.replace(/[\s\-\(\)]/g, '');
+							// Normalizar teléfono al formato E.164 (+56...)
+							const phoneNormalized = normalizePhoneToE164(userPhone);
 							conversionData.phone_number = phoneNormalized;
 						}
 
