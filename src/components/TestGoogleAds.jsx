@@ -75,6 +75,14 @@ function TestGoogleAds() {
 				value: 1.0,
 				currency: "CLP",
 				transaction_id: testToken,
+				// NUEVO: Datos de prueba para conversiones avanzadas
+				email: 'test@transportesaraucaria.cl',
+				phone_number: '+56936643540',
+				address: {
+					first_name: 'usuario',
+					last_name: 'prueba',
+					country: 'CL'
+				}
 			};
 
 			addLog(`📦 Datos de conversión preparados:`, "info");
@@ -82,6 +90,11 @@ function TestGoogleAds() {
 			addLog(`   - value: ${conversionData.value}`, "info");
 			addLog(`   - currency: ${conversionData.currency}`, "info");
 			addLog(`   - transaction_id: ${conversionData.transaction_id}`, "info");
+			addLog(`   - email: ${conversionData.email}`, "info");
+			addLog(`   - phone_number: ${conversionData.phone_number}`, "info");
+			addLog(`   - address.first_name: ${conversionData.address.first_name}`, "info");
+			addLog(`   - address.last_name: ${conversionData.address.last_name}`, "info");
+			addLog(`   - address.country: ${conversionData.address.country}`, "info");
 
 			gtag("event", "conversion", conversionData);
 			
