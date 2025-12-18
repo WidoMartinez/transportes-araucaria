@@ -209,8 +209,8 @@ const conversionData = {
   currency: "CLP",
   transaction_id: testToken,
   // Datos de prueba para conversiones avanzadas
-  email: 'test@transportesaraucaria.cl',
-  phone_number: '+56936643540',
+  email: 'test@example.com',
+  phone_number: '+1234567890',
   address: {
     first_name: 'usuario',
     last_name: 'prueba',
@@ -279,8 +279,8 @@ http://localhost:5173/flow-return?token=SALDO_TEST_003&status=success&reserva_id
 1. Ir a `http://localhost:5173/test-google-ads`
 2. Hacer clic en "Disparar Evento de Conversión"
 3. Verificar logs en el panel derecho:
-   - ✅ `email: test@transportesaraucaria.cl`
-   - ✅ `phone_number: +56936643540`
+   - ✅ `email: test@example.com`
+   - ✅ `phone_number: +1234567890`
    - ✅ `address.first_name: usuario`
    - ✅ `address.last_name: prueba`
    - ✅ `address.country: CL`

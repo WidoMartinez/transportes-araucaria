@@ -95,7 +95,7 @@ function FlowReturn() {
 							conversionData.phone_number = phoneNormalized;
 						}
 
-						if (userName) {
+						if (userName && userName.trim()) {
 							// Separar nombre completo en first_name y last_name
 							const nameParts = userName.trim().split(' ');
 							const firstName = nameParts[0] || '';

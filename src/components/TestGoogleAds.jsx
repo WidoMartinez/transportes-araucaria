@@ -76,8 +76,8 @@ function TestGoogleAds() {
 				currency: "CLP",
 				transaction_id: testToken,
 				// NUEVO: Datos de prueba para conversiones avanzadas
-				email: 'test@transportesaraucaria.cl',
-				phone_number: '+56936643540',
+				email: 'test@example.com',
+				phone_number: '+1234567890',
 				address: {
 					first_name: 'usuario',
 					last_name: 'prueba',
