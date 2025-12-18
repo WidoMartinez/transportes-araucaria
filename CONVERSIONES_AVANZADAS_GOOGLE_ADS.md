@@ -136,27 +136,96 @@ https://www.transportesaraucaria.cl/flow-return
 
 ## 📝 Implementación Técnica
 
+### Función de Normalización E.164 - `src/components/FlowReturn.jsx`
+
+Se agregó una función para normalizar números de teléfono al formato internacional E.164:
+
+```javascript
+/**
+ * Normaliza un número de teléfono al formato E.164 internacional
+ * Formato E.164: +[código país][número]
+ * Ejemplo: +56987654321 (Chile)
+ */
+function normalizePhoneToE164(phone) {
+  if (!phone) return '';
+  
+  // Limpiar espacios, guiones, paréntesis y otros caracteres especiales
+  let cleaned = phone.replace(/[\s\-()]/g, '');
+  
+  // Si ya tiene +56 al inicio, retornar
+  if (cleaned.startsWith('+56')) {
+    return cleaned;
+  }
+  
+  // Si empieza con 56 (sin +), agregar +
+  if (cleaned.startsWith('56')) {
+    return '+' + cleaned;
+  }
+  
+  // Si empieza con 9 (número chileno móvil), agregar +56
+  if (cleaned.startsWith('9') && cleaned.length >= 9) {
+    return '+56' + cleaned;
+  }
+  
+  // Si no cumple ningún caso, asumir que es chileno y agregar +56
+  return '+56' + cleaned;
+}
+```
+
+**Ejemplos de conversión:**
+- `'+56987654321'` → `'+56987654321'` ✅
+- `'56987654321'` → `'+56987654321'` ✅
+- `'987654321'` → `'+56987654321'` ✅
+- `'9 8765 4321'` → `'+56987654321'` ✅
+- `'(9) 8765-4321'` → `'+56987654321'` ✅
+
 ### Frontend - `src/components/FlowReturn.jsx`
 
-**Líneas modificadas:** ~62-90
+**Líneas modificadas:** ~104-150
 
 La función `triggerConversion` fue modificada para:
 
-1. **Extraer datos de URL:**
+1. **Decodificar datos desde Base64 (nuevo formato seguro):**
 ```javascript
+// Extraer datos de usuario de los parámetros URL para conversiones avanzadas
 const urlParams = new URLSearchParams(window.location.search);
-const userEmail = urlParams.get('email');
-const userName = urlParams.get('nombre');
-const userPhone = urlParams.get('telefono');
+
+let userEmail = '';
+let userName = '';
+let userPhone = '';
+
+// Intentar decodificar datos codificados en Base64 (nuevo formato seguro)
+const encodedData = urlParams.get('d');
+if (encodedData) {
+  try {
+    const decodedData = atob(encodedData); // Decodificar Base64
+    const userData = JSON.parse(decodedData);
+    userEmail = userData.email || '';
+    userName = userData.nombre || '';
+    userPhone = userData.telefono || '';
+    console.log('✅ Datos de usuario decodificados desde parámetro Base64');
+  } catch (error) {
+    console.warn('⚠️ Error decodificando datos de usuario:', error);
+    // Fallback a parámetros individuales (compatibilidad con URLs antiguas)
+    userEmail = urlParams.get('email') || '';
+    userName = urlParams.get('nombre') || '';
+    userPhone = urlParams.get('telefono') || '';
+  }
+} else {
+  // Fallback: Leer parámetros individuales (compatibilidad con URLs antiguas)
+  userEmail = urlParams.get('email') || '';
+  userName = urlParams.get('nombre') || '';
+  userPhone = urlParams.get('telefono') || '';
+}
 ```
 
-2. **Normalizar datos:**
+2. **Normalizar teléfono a formato E.164:**
 ```javascript
 // Email: lowercase y trim
 conversionData.email = userEmail.toLowerCase().trim();
 
-// Teléfono: eliminar espacios y caracteres especiales
-const phoneNormalized = userPhone.replace(/[\s\-\(\)]/g, '');
+// Teléfono: normalizar al formato E.164 (+56...)
+const phoneNormalized = normalizePhoneToE164(userPhone);
 conversionData.phone_number = phoneNormalized;
 ```
 
@@ -180,20 +249,56 @@ window.gtag("event", "conversion", conversionData);
 
 ### Backend - `backend/server-db.js`
 
-**Líneas modificadas:** ~6399-6411
+**Líneas modificadas:** ~6398-6420
 
-El endpoint `/api/payment-result` fue modificado para agregar datos de usuario a la URL de retorno:
+El endpoint `/api/payment-result` fue modificado para codificar datos de usuario en Base64:
 
 ```javascript
-// Extraer datos de la reserva
-const emailEncoded = encodeURIComponent(reserva.email || '');
-const nombreEncoded = encodeURIComponent(reserva.nombre || '');
-const telefonoEncoded = encodeURIComponent(reserva.telefono || '');
+// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
+const userData = {
+  email: reserva.email || '',
+  nombre: reserva.nombre || '',
+  telefono: reserva.telefono || ''
+};
 
-// Redirigir con datos
-return res.redirect(303, 
-  `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}&email=${emailEncoded}&nombre=${nombreEncoded}&telefono=${telefonoEncoded}`
-);
+// Codificar datos de usuario en Base64 para mayor privacidad
+const userDataEncoded = Buffer.from(JSON.stringify(userData)).toString('base64');
+
+// Construir URL con datos codificados
+const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}&d=${userDataEncoded}`;
+
+return res.redirect(303, returnUrl);
+```
+
+**Ejemplo de URL generada:**
+
+```
+https://www.transportesaraucaria.cl/flow-return
+  ?token=ABC123
+  &status=success
+  &reserva_id=456
+  &amount=75000
+  &d=eyJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJub21icmUiOiJKdWFuIFDDqXJleiIsInRlbGVmb25vIjoiOTg3NjU0MzIxIn0=
+```
+
+**Decodificación del parámetro `d`:**
+```bash
+echo "eyJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJub21icmUiOiJKdWFuIFDDqXJleiIsInRlbGVmb25vIjoiOTg3NjU0MzIxIn0=" | base64 -d
+# Resultado: {"email":"juan@example.com","nombre":"Juan Pérez","telefono":"987654321"}
+```
+
+### Compatibilidad con URLs Antiguas
+
+El frontend mantiene compatibilidad con URLs que usen parámetros individuales:
+
+```javascript
+// URL nueva (con Base64):
+/flow-return?token=ABC&d=eyJlbWFpbCI6...
+
+// URL antigua (sin Base64):
+/flow-return?token=ABC&email=juan@test.com&nombre=Juan&telefono=987654321
+
+// ✅ Ambas funcionan correctamente gracias al fallback
 ```
 
 ### Componente de Prueba - `src/components/TestGoogleAds.jsx`
@@ -208,9 +313,9 @@ const conversionData = {
   value: 1.0,
   currency: "CLP",
   transaction_id: testToken,
-  // Datos de prueba para conversiones avanzadas
+  // Datos de prueba para conversiones avanzadas (formato E.164 para teléfono)
   email: 'test@example.com',
-  phone_number: '+1234567890',
+  phone_number: '+56987654321', // Formato E.164: +56 (Chile) + número móvil
   address: {
     first_name: 'usuario',
     last_name: 'prueba',
@@ -223,7 +328,56 @@ const conversionData = {
 
 ## 🧪 Pruebas y Verificación
 
-### Prueba 1: Flujo HeroExpress (localhost)
+### Prueba 1: Normalización de Teléfono
+
+Probar diferentes formatos de entrada para verificar la normalización a E.164:
+
+```javascript
+// En la consola del navegador o en un test
+normalizePhoneToE164('+56987654321')    // → '+56987654321' ✅
+normalizePhoneToE164('56987654321')     // → '+56987654321' ✅
+normalizePhoneToE164('987654321')       // → '+56987654321' ✅
+normalizePhoneToE164('9 8765 4321')     // → '+56987654321' ✅
+normalizePhoneToE164('(9) 8765-4321')   // → '+56987654321' ✅
+normalizePhoneToE164('+56 9 8765 4321') // → '+56987654321' ✅
+```
+
+### Prueba 2: URL con Base64 (nuevo formato)
+
+```bash
+# URL nueva con datos codificados en Base64
+http://localhost:5173/flow-return?token=TEST&status=success&reserva_id=1&amount=50000&d=eyJlbWFpbCI6Imp1YW5AdGVzdC5jb20iLCJub21icmUiOiJKdWFuIFDDqXJleiIsInRlbGVmb25vIjoiOTg3NjU0MzIxIn0=
+
+# Decodificar para verificar (en bash):
+echo "eyJlbWFpbCI6Imp1YW5AdGVzdC5jb20iLCJub21icmUiOiJKdWFuIFDDqXJleiIsInRlbGVmb25vIjoiOTg3NjU0MzIxIn0=" | base64 -d
+# Resultado: {"email":"juan@test.com","nombre":"Juan Pérez","telefono":"987654321"}
+```
+
+**Verificar en DevTools Console:**
+```
+✅ Datos de usuario decodificados desde parámetro Base64
+✅ Evento de conversión Google Ads disparado
+   - email: juan@test.com
+   - phone_number: +56987654321  // ← Normalizado a E.164 desde "987654321"
+   - address: { first_name: 'juan', last_name: 'pérez', country: 'CL' }
+```
+
+### Prueba 3: Compatibilidad con URL Antigua (fallback)
+
+```bash
+# URL antigua con parámetros individuales (sin Base64)
+http://localhost:5173/flow-return?token=TEST&status=success&reserva_id=1&amount=50000&email=juan@test.com&nombre=Juan%20Pérez&telefono=987654321
+```
+
+**Verificar en DevTools Console:**
+```
+✅ Evento de conversión Google Ads disparado
+   - email: juan@test.com
+   - phone_number: +56987654321  // ← Normalizado desde "987654321"
+   - address: { first_name: 'juan', last_name: 'pérez', country: 'CL' }
+```
+
+### Prueba 4: Flujo HeroExpress (localhost)
 
 ```bash
 # Simular pago desde módulo principal
@@ -322,6 +476,67 @@ http://localhost:5173/flow-return?token=SALDO_TEST_003&status=success&reserva_id
 
 ---
 
+## 🔒 Seguridad de Datos en URL
+
+### ⚠️ Importante: Base64 es Codificación, NO Encriptación
+
+La codificación Base64 utilizada para los datos de usuario en la URL proporciona **ofuscación**, no **encriptación real**:
+
+```javascript
+// Base64 es REVERSIBLE - cualquiera puede decodificar
+const encoded = btoa(JSON.stringify({ email: 'juan@example.com' }));
+const decoded = atob(encoded); // ← Decodificación simple
+```
+
+### ✅ Beneficios de Base64 en URLs
+
+1. **Privacidad básica:** Datos no legibles a simple vista en URL
+2. **Historial del navegador:** Reduce exposición en capturas de pantalla
+3. **Logs del servidor:** Menos información sensible visible en texto plano
+4. **URL más corta:** Un solo parámetro en lugar de múltiples
+5. **Mantenibilidad:** Más fácil agregar nuevos campos sin cambiar la URL
+
+### ❌ Base64 NO protege contra:
+
+1. **Man-in-the-Middle (MITM):** Usar HTTPS para protección de tráfico
+2. **Análisis de tráfico:** Cualquiera que intercepte puede decodificar
+3. **Logs del servidor:** Los datos se decodifican en el servidor
+4. **Inspección deliberada:** No es encriptación, solo ofuscación
+
+### 🔐 Mejores Prácticas de Seguridad
+
+**Implementadas:**
+- ✅ HTTPS obligatorio en producción
+- ✅ Normalización de teléfono a formato estándar E.164
+- ✅ Validación de datos en frontend y backend
+- ✅ Google Ads hashea automáticamente los datos con SHA-256
+- ✅ Datos no persistidos en sessionStorage (solo flag de conversión)
+
+**Opcionales para mayor seguridad:**
+- 🔐 JWT (JSON Web Tokens) con firma HMAC
+- 🔐 Encriptación simétrica (AES) con clave secreta
+- 🔐 Tokens de un solo uso con TTL (Time To Live)
+- 🔐 Lookup tokens (ID que referencia datos en servidor)
+
+### Ejemplo de Mejora Futura (Opcional)
+
+Para mayor seguridad, se podría implementar un sistema de tokens:
+
+```javascript
+// Backend: Generar token temporal
+const tempToken = crypto.randomUUID();
+await redis.setex(`flow_data_${tempToken}`, 300, JSON.stringify(userData)); // 5 min TTL
+
+// URL segura (sin datos sensibles)
+const returnUrl = `${frontendBase}/flow-return?token=${token}&dt=${tempToken}`;
+
+// Frontend: Consultar datos con token
+const response = await fetch(`/api/flow-data/${tempToken}`);
+const userData = await response.json();
+```
+
+---
+
 ## 🔒 Consideraciones de Privacidad
 
 ### Cumplimiento GDPR y Normativas
@@ -375,12 +590,43 @@ Los usuarios pueden:
 2. Verificar que el evento se dispare en DevTools → Network
 3. Confirmar que `gtag` esté disponible en la página
 
+### Problema: Teléfono no se normaliza correctamente
+
+**Solución:**
+1. Verificar que el número esté en un formato válido (debe empezar con 9 para Chile)
+2. Revisar console del navegador para ver el teléfono normalizado
+3. Usar formato E.164 directamente en la base de datos: `+56987654321`
+
+**Ejemplo de debug:**
+```javascript
+// En console del navegador
+const phone = '9 8765 4321';
+const normalized = normalizePhoneToE164(phone);
+console.log(normalized); // Debe mostrar: +56987654321
+```
+
+### Problema: Error decodificando datos Base64
+
+**Solución:**
+1. Verificar que el parámetro `d` esté presente en la URL
+2. Revisar console para mensaje: "⚠️ Error decodificando datos de usuario"
+3. Si hay error, el sistema usa fallback automático a parámetros individuales
+4. Verificar que el backend esté generando el Base64 correctamente:
+
+```javascript
+// En backend (Node.js)
+const userData = { email: 'test@example.com', nombre: 'Test', telefono: '987654321' };
+const encoded = Buffer.from(JSON.stringify(userData)).toString('base64');
+console.log(encoded); // Debe ser string válido Base64
+```
+
 ### Problema: Conversión funciona pero sin datos avanzados
 
 **Solución:**
 1. Verificar que los datos estén en la petición HTTP (DevTools → Network)
 2. Asegurarse de que el dominio tenga certificado SSL (HTTPS)
 3. Contactar soporte de Google Ads para verificar configuración
+4. Verificar que el teléfono esté en formato E.164 (+56...)
 
 ---
 
@@ -393,4 +639,4 @@ Para preguntas sobre esta implementación:
 ---
 
 **Última actualización:** Diciembre 2024
-**Versión:** 1.0.0
+**Versión:** 2.0.0 - Incluye normalización E.164 y codificación Base64
