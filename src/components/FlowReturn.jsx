@@ -25,6 +25,11 @@ function FlowReturn() {
 		const statusParam = urlParams.get("status"); // Nuevo parámetro de estado
 		const errorParam = urlParams.get("error"); // Parámetro de error explícito
 		const flowStatusParam = urlParams.get("flow_status"); // Estado interno de Flow (debugging)
+		
+		// Extraer datos de usuario para conversiones avanzadas de Google Ads
+		const userEmail = urlParams.get("email");
+		const userName = urlParams.get("nombre");
+		const userPhone = urlParams.get("telefono");
 
 		if (!token) {
 			console.warn("No se recibió token de Flow en la URL de retorno");
@@ -47,8 +52,8 @@ function FlowReturn() {
 			// Si el backend nos dice que fue exitoso
 			if (statusParam === "success") {
 				setPaymentStatus("success");
-				// Disparar evento de conversión
-				triggerConversion(amountParam, reservaIdParam, token);
+				// Disparar evento de conversión con datos de usuario
+				triggerConversion(amountParam, reservaIdParam, token, userEmail, userName, userPhone);
 				return;
 			}
 
@@ -56,10 +61,10 @@ function FlowReturn() {
 			// O idealmente deberíamos consultar al backend nuevamente si es 'unknown'
 			// Para mantener compatibilidad si no hay params, lo dejamos en success pero solo si no es error explícito
 			setPaymentStatus("success");
-			triggerConversion(amountParam, reservaIdParam, token);
+			triggerConversion(amountParam, reservaIdParam, token, userEmail, userName, userPhone);
 		};
 
-		const triggerConversion = (amount, id, tkn) => {
+		const triggerConversion = (amount, id, tkn, email, nombre, telefono) => {
 			try {
 				if (typeof window.gtag === "function") {
 					const transactionId = id || tkn || `manual_${Date.now()}`;
@@ -70,14 +75,50 @@ function FlowReturn() {
 					const conversionKey = `flow_conversion_${transactionId}`;
 					
 					if (!sessionStorage.getItem(conversionKey)) {
-						window.gtag("event", "conversion", {
+						// Preparar datos de conversión avanzada
+						const conversionData = {
 							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
 							value: conversionValue,
 							currency: "CLP",
 							transaction_id: transactionId,
-						});
+						};
+
+						// Agregar datos de usuario para conversiones avanzadas (Google los hashea automáticamente)
+						if (email) {
+							conversionData.email = email.toLowerCase().trim();
+						}
+
+						if (telefono) {
+							// Normalizar teléfono: eliminar espacios y caracteres especiales
+							const phoneNormalized = telefono.replace(/[\s\-\(\)]/g, '');
+							conversionData.phone_number = phoneNormalized;
+						}
+
+						if (nombre) {
+							// Separar nombre completo en first_name y last_name
+							const nameParts = nombre.trim().split(' ');
+							const firstName = nameParts[0] || '';
+							const lastName = nameParts.slice(1).join(' ') || '';
+							
+							conversionData.address = {
+								first_name: firstName.toLowerCase(),
+								last_name: lastName.toLowerCase(),
+								country: 'CL' // Chile
+							};
+						}
+
+						window.gtag("event", "conversion", conversionData);
 						sessionStorage.setItem(conversionKey, 'true');
 						console.log(`✅ Evento de conversión Google Ads disparado (ID: ${transactionId}, Valor: ${conversionValue})`);
+						
+						// Log de datos de usuario agregados (sin mostrar datos sensibles completos)
+						if (email || telefono || nombre) {
+							console.log('📊 Conversión avanzada: Datos de usuario incluidos', {
+								hasEmail: !!email,
+								hasPhone: !!telefono,
+								hasName: !!nombre
+							});
+						}
 					} else {
 						console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
 					}

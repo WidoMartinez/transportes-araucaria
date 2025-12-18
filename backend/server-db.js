@@ -6399,10 +6399,16 @@ app.post("/api/payment-result", async (req, res) => {
 				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
 					// Caso: Pagar con Código, Consultar Reserva o Compra Productos
 					// Redirigir a la página de éxito estándar (FlowReturn)
-					// Pasar parámetros adicionales para el tracking preciso
+					// Pasar parámetros adicionales para el tracking preciso y conversiones avanzadas
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
 					const total = reserva.totalConDescuento || reserva.precio || 0;
-					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}`);
+					
+					// Codificar datos de usuario para URL (conversiones avanzadas de Google Ads)
+					const emailEncoded = encodeURIComponent(reserva.email || '');
+					const nombreEncoded = encodeURIComponent(reserva.nombre || '');
+					const telefonoEncoded = encodeURIComponent(reserva.telefono || '');
+					
+					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}&email=${emailEncoded}&nombre=${nombreEncoded}&telefono=${telefonoEncoded}`);
 				}
 
 				// Caso: Reserva Express (flujo normal)
