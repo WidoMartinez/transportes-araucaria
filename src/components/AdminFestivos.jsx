@@ -61,10 +61,10 @@ function AdminFestivos() {
 			setSuccess("");
 
 			const url = festivo.id
-				? `${API_BASE_URL}/api/festivos/${festivo.id}`
-				: `${API_BASE_URL}/api/festivos`;
+				? `/api/festivos/${festivo.id}`
+				: `/api/festivos`;
 
-			const response = await fetch(url, {
+			const response = await authenticatedFetch(url, {
 				method: festivo.id ? "PUT" : "POST",
 				headers: {
 					"Content-Type": "application/json",

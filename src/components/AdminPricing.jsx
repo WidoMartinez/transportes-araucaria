@@ -142,7 +142,7 @@ function AdminPricing() {
     const fetchInactiveDestinos = useCallback(async () => {
         try {
             setLoadingInactive(true);
-            const resp = await fetch(`${API_BASE_URL}/api/destinos?activos=false`);
+            const resp = await authenticatedFetch(`/api/destinos?activos=false`);
             if (resp.ok) {
                 const data = await resp.json();
                 setInactiveDestinos(Array.isArray(data.destinos) ? data.destinos : []);
@@ -152,13 +152,13 @@ function AdminPricing() {
         } finally {
             setLoadingInactive(false);
         }
-    }, []);
+    }, [authenticatedFetch]);
 
 	const fetchPricing = useCallback(async () => {
 		setLoading(true);
 		setError("");
 		try {
-			const response = await fetch(`${API_BASE_URL}/pricing`);
+			const response = await authenticatedFetch(`/pricing`);
 			if (!response.ok) {
 				throw new Error(
 					"No se pudo obtener la configuración de precios del servidor."
@@ -226,7 +226,7 @@ function AdminPricing() {
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [authenticatedFetch]);
 
 	useEffect(() => {
 		fetchPricing();
@@ -704,7 +704,7 @@ function AdminPricing() {
 				};
 			});
 
-			const response = await fetch(`${API_BASE_URL}/pricing`, {
+			const response = await authenticatedFetch(`/pricing`, {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
