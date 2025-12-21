@@ -100,8 +100,8 @@ function FlowReturn() {
 			try {
 				if (typeof window.gtag === "function") {
 					const transactionId = id || tkn || `manual_${Date.now()}`;
-					// Usar el monto real si viene en la URL, sino 1.0 por defecto
-					const conversionValue = amount ? Number(amount) : 1.0;
+					// Usar el monto real si viene en la URL. Permitir 0. Si es nulo/undefined, 1.0.
+					const conversionValue = (amount !== null && amount !== undefined && amount !== "") ? Number(amount) : 1.0;
 					
 					// Usar sessionStorage para evitar duplicados en recargas
 					const conversionKey = `flow_conversion_${transactionId}`;
