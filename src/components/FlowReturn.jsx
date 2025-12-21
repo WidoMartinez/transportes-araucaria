@@ -100,8 +100,23 @@ function FlowReturn() {
 			try {
 				if (typeof window.gtag === "function") {
 					const transactionId = id || tkn || `manual_${Date.now()}`;
-					// Usar el monto real si viene en la URL, sino 1.0 por defecto
-					const conversionValue = amount ? Number(amount) : 1.0;
+					// ESTRATEGIA B: amount contiene el valor TOTAL de la reserva
+					// Lógica robusta: asegurarse que no sea null, undefined ni string vacío antes de convertir
+					const parsedAmount = (amount !== null && amount !== undefined && amount !== "") 
+						? Number(amount) 
+						: 0;
+					const conversionValue = parsedAmount > 0 ? parsedAmount : 1.0;
+
+					// Log de advertencia
+					if (conversionValue === 1.0) {
+						console.warn(
+							'⚠️ No se recibió monto válido en la URL. Usando valor por defecto 1.0.',
+							'amount recibido:', amount,
+							'parsedAmount:', parsedAmount
+						);
+					} else {
+						console.log('✅ Valor total de conversión:', conversionValue);
+					}
 					
 					// Usar sessionStorage para evitar duplicados en recargas
 					const conversionKey = `flow_conversion_${transactionId}`;

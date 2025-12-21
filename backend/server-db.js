@@ -6390,8 +6390,22 @@ app.post("/api/payment-result", async (req, res) => {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
 				
+				// Re-parsear optional data para asegurar acceso en este scope
+				let optionalDataSafe = {};
+				try {
+					if (flowData.optional) {
+						optionalDataSafe = typeof flowData.optional === "string"
+							? JSON.parse(flowData.optional)
+							: flowData.optional;
+					}
+				} catch (e) {
+					console.warn("Error parsing optional data again:", e.message);
+				}
+
 				// Determinar el origen del pago (desde DB o desde metadata optional)
-				const paymentOrigin = optionalData?.paymentOrigin;
+				const paymentOrigin = optionalDataSafe?.paymentOrigin;
+				const tipoPago = optionalDataSafe?.tipoPago; // 'total', 'abono', 'saldo', 'saldo_total'
+
 				const isCodigoPago = reserva && reserva.source === "codigo_pago";
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
@@ -6401,8 +6415,14 @@ app.post("/api/payment-result", async (req, res) => {
 					// Redirigir a la página de éxito estándar (FlowReturn)
 					// Pasar parámetros adicionales para el tracking preciso
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
+					
+					// Lógica de valor de conversión (Estrategia B):
+					// Siempre enviar el TOTAL de la reserva.
+					// Google Ads se encarga de deduplicar si hay múltiples pagos para la misma reserva.
 					const total = reserva.totalConDescuento || reserva.precio || 0;
 					
+					console.log(`💰 Monto para conversión: ${total} (Estrategia B: Valor Total)`);
+
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
 					const userData = {
 						email: reserva.email || '',
