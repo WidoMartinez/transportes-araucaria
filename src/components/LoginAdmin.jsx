@@ -47,12 +47,12 @@ function LoginAdmin() {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+		<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-chocolate-50 via-white to-chocolate-50 p-4">
 			<Card className="w-full max-w-md shadow-lg">
 				<CardHeader className="space-y-1 text-center">
 					<div className="flex justify-center mb-4">
-						<div className="p-3 bg-blue-100 rounded-full">
-							<Lock className="h-8 w-8 text-blue-600" />
+						<div className="p-3 bg-chocolate-100 rounded-full">
+							<Lock className="h-8 w-8 text-chocolate-600" />
 						</div>
 					</div>
 					<CardTitle className="text-2xl font-bold">Panel Administrativo</CardTitle>
@@ -146,13 +146,13 @@ function LoginAdmin() {
 
 			{/* Información de seguridad */}
 			<div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md">
-				<Card className="bg-blue-50 border-blue-200">
+				<Card className="bg-chocolate-50 border-chocolate-200">
 					<CardContent className="p-4 text-sm space-y-2">
-						<h4 className="font-semibold text-blue-900 flex items-center gap-2">
+						<h4 className="font-semibold text-chocolate-900 flex items-center gap-2">
 							<Lock className="h-4 w-4" />
 							Características de Seguridad
 						</h4>
-						<ul className="text-blue-800 space-y-1 text-xs">
+						<ul className="text-chocolate-800 space-y-1 text-xs">
 							<li>✓ Contraseñas encriptadas con bcrypt</li>
 							<li>✓ Tokens JWT con expiración (8 horas)</li>
 							<li>✓ Bloqueo tras 5 intentos fallidos</li>

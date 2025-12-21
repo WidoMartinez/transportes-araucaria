@@ -1879,7 +1879,7 @@ function AdminReservas() {
 						</CardHeader>
 						<CardContent>
 							<div className="flex items-center gap-2">
-								<FileText className="w-4 h-4 text-blue-500" />
+								<FileText className="w-4 h-4 text-chocolate-500" />
 								<span className="text-2xl font-bold">
 									{estadisticas.totalReservas}
 								</span>
@@ -2283,11 +2283,11 @@ function AdminReservas() {
 
 					{/* Barra de acciones masivas */}
 					{selectedReservas.length > 0 && (
-						<div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md mb-4">
+						<div className="bg-chocolate-50 border border-chocolate-200 px-4 py-3 rounded-md mb-4">
 							<div className="flex items-center justify-between flex-wrap gap-2">
 								<div className="flex items-center gap-2">
-									<CheckSquare className="w-4 h-4 text-blue-600" />
-									<span className="font-medium text-blue-900">
+									<CheckSquare className="w-4 h-4 text-chocolate-600" />
+									<span className="font-medium text-chocolate-900">
 										{selectedReservas.length} reserva(s) seleccionada(s)
 									</span>
 								</div>
@@ -2397,7 +2397,7 @@ function AdminReservas() {
 													<div className="space-y-1">
 														<div>#{reserva.id}</div>
 														{reserva.codigoReserva && (
-															<div className="text-xs text-blue-600 font-mono">
+															<div className="text-xs text-chocolate-600 font-mono">
 																{reserva.codigoReserva}
 															</div>
 														)}
@@ -2758,19 +2758,19 @@ function AdminReservas() {
 						<div className="space-y-6">
 							{/* Código de Reserva */}
 							{selectedReserva.codigoReserva && (
-								<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+								<div className="bg-chocolate-50 border-2 border-chocolate-200 rounded-lg p-4">
 									<div className="flex items-center justify-between">
 										<div>
-											<Label className="text-blue-700 text-sm font-medium">
+											<Label className="text-chocolate-700 text-sm font-medium">
 												Código de Reserva
 											</Label>
-											<p className="text-2xl font-bold text-blue-900 tracking-wider">
+											<p className="text-2xl font-bold text-chocolate-900 tracking-wider">
 												{selectedReserva.codigoReserva}
 											</p>
 										</div>
-										<div className="bg-blue-100 p-2 rounded">
+										<div className="bg-chocolate-100 p-2 rounded">
 											<svg
-												className="w-6 h-6 text-blue-700"
+												className="w-6 h-6 text-chocolate-700"
 												fill="none"
 												stroke="currentColor"
 												viewBox="0 0 24 24"
@@ -3269,7 +3269,7 @@ function AdminReservas() {
 										setShowDetailDialog(false);
 										handleAsignar(selectedReserva);
 									}}
-									className="w-full bg-blue-600 hover:bg-blue-700"
+									className="w-full bg-chocolate-600 hover:bg-chocolate-700"
 									size="lg"
 								>
 									<Car className="w-4 h-4 mr-2" />
@@ -3797,8 +3797,8 @@ function AdminReservas() {
 							</div>
 
 							{/* Resumen Financiero */}
-							<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-								<h4 className="font-semibold mb-2 text-blue-900">
+							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
+								<h4 className="font-semibold mb-2 text-chocolate-900">
 									Resumen Financiero
 								</h4>
 								<div className="space-y-1 text-sm">
@@ -3814,7 +3814,7 @@ function AdminReservas() {
 											{formatCurrency(selectedReserva.abonoSugerido)}
 										</span>
 									</div>
-									<div className="flex justify-between border-t border-blue-300 pt-1">
+									<div className="flex justify-between border-t border-chocolate-300 pt-1">
 										<span className="font-semibold">Saldo Pendiente:</span>
 										<span
 											className={`font-bold ${
@@ -3898,7 +3898,7 @@ function AdminReservas() {
 
 							{/* Indicador de cliente existente */}
 							{clienteSeleccionado && (
-								<div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md">
+								<div className="bg-chocolate-50 border border-chocolate-200 text-chocolate-700 px-4 py-3 rounded-md">
 									<p className="font-medium">
 										âœ“ Cliente existente seleccionado
 									</p>
@@ -4343,7 +4343,7 @@ function AdminReservas() {
 									/>
 								</div>
 							</div>
-							<div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
 								<p className="text-sm">
 									<strong>Saldo Pendiente:</strong>{" "}
 									{formatCurrency(
@@ -4613,7 +4613,7 @@ function AdminReservas() {
 										<p className="text-sm text-muted-foreground">
 											Total Gastado
 										</p>
-										<p className="text-2xl font-bold text-blue-600">
+										<p className="text-2xl font-bold text-chocolate-600">
 											{formatCurrency(
 												historialCliente.estadisticas.totalGastado
 											)}
@@ -4905,7 +4905,7 @@ function AdminReservas() {
 						{/* Mostrar info de asignación solo si la reserva confirmada ya tiene vehículo */}
 						{selectedReserva?.estado === "confirmada" &&
 							hasVehiculoAsignado && (
-								<div className="bg-blue-50 p-3 rounded-lg space-y-1 text-sm">
+								<div className="bg-chocolate-50 p-3 rounded-lg space-y-1 text-sm">
 									<p className="font-semibold">Asignación actual:</p>
 									{selectedReserva.vehiculo_asignado ? (
 										<p>

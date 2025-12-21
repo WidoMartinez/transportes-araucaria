@@ -26,7 +26,7 @@ const SocialIcon = ({ href, icon: Icon }) => (
 
 function Footer() {
 	return (
-		<footer className="bg-gray-900 text-white">
+		<footer className="bg-chocolate-950 text-white">
 			<div className="container mx-auto px-4 py-16">
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
 					{/* Columna 1: Logo y Descripción */}
@@ -95,7 +95,7 @@ function Footer() {
 			</div>
 
 			{/* Barra inferior del Footer */}
-			<div className="border-t border-gray-800">
+			<div className="border-t border-chocolate-800">
 				<div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
 					<p>
                                             &copy; {new Date().getFullYear()} Transportes Araucaria. Todos los

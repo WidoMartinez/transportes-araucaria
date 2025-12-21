@@ -227,7 +227,7 @@ function AdminConductores() {
 	const getEstadoBadge = (estado) => {
 		const badges = {
 			disponible: "bg-green-500",
-			ocupado: "bg-blue-500",
+			ocupado: "bg-chocolate-500",
 			descanso: "bg-yellow-500",
 			inactivo: "bg-gray-500",
 		};

@@ -125,7 +125,7 @@ function AdminDisponibilidad() {
 		return (
 			<div className="flex items-center justify-center p-8">
 				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-chocolate-600 mx-auto mb-4"></div>
 					<p className="text-gray-600">Cargando configuración...</p>
 				</div>
 			</div>
@@ -211,9 +211,9 @@ function AdminDisponibilidad() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
-						<Alert className="border-blue-200 bg-blue-50">
-							<Info className="h-4 w-4 text-blue-600" />
-							<AlertDescription className="text-blue-600">
+						<Alert className="border-chocolate-200 bg-chocolate-50">
+							<Info className="h-4 w-4 text-chocolate-600" />
+							<AlertDescription className="text-chocolate-600">
 								<strong>Holgura mínima:</strong> 30 minutos (fijo, no
 								modificable). Es el tiempo mínimo obligatorio entre la llegada
 								de un viaje y la salida del siguiente.
@@ -289,9 +289,9 @@ function AdminDisponibilidad() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
-						<Alert className="border-blue-200 bg-blue-50">
-							<Info className="h-4 w-4 text-blue-600" />
-							<AlertDescription className="text-blue-600">
+						<Alert className="border-chocolate-200 bg-chocolate-50">
+							<Info className="h-4 w-4 text-chocolate-600" />
+							<AlertDescription className="text-chocolate-600">
 								El descuento se calcula gradualmente: desde el mínimo (para
 								holgura mínima de 30 min) hasta el máximo (para holgura óptima o
 								superior).
@@ -396,7 +396,7 @@ function AdminDisponibilidad() {
 							<Label htmlFor="descripcion">Descripción (opcional)</Label>
 							<textarea
 								id="descripcion"
-								className="w-full min-h-[100px] px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+								className="w-full min-h-[100px] px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-chocolate-500"
 								value={configuracion.descripcion || ""}
 								onChange={(e) =>
 									handleInputChange("descripcion", e.target.value)

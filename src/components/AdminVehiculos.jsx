@@ -218,7 +218,7 @@ function AdminVehiculos() {
 	const getEstadoBadge = (estado) => {
 		const badges = {
 			disponible: "bg-green-500",
-			en_uso: "bg-blue-500",
+			en_uso: "bg-chocolate-500",
 			mantenimiento: "bg-yellow-500",
 			inactivo: "bg-gray-500",
 		};

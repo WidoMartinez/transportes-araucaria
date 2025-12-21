@@ -149,7 +149,7 @@ function AdminTarifaDinamica() {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-8">
-				<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+				<Loader2 className="h-8 w-8 animate-spin text-chocolate-500" />
 			</div>
 		);
 	}
@@ -214,7 +214,7 @@ function AdminTarifaDinamica() {
 						className="rounded-lg border border-slate-700 bg-slate-900/50 p-6"
 					>
 						<div className="mb-4 flex items-center gap-3">
-							<Icon className="h-6 w-6 text-blue-400" />
+							<Icon className="h-6 w-6 text-chocolate-400" />
 							<h3 className="text-lg font-semibold text-white">{tipo.label}</h3>
 							<span className="rounded-full bg-slate-700 px-2 py-1 text-xs text-slate-300">
 								{configs.length} reglas
@@ -352,7 +352,7 @@ function FormularioConfig({
 	destinos,
 }) {
 	return (
-		<div className="space-y-4 rounded-lg border-2 border-blue-500 bg-slate-900 p-4">
+		<div className="space-y-4 rounded-lg border-2 border-chocolate-500 bg-slate-900 p-4">
 			<h3 className="text-lg font-semibold text-white">
 				{config.id ? "Editar Configuración" : "Nueva Configuración"}
 			</h3>

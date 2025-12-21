@@ -235,7 +235,7 @@ function FlowReturn() {
 						{paymentStatus === "processing" && (
 							<>
 								<div className="flex justify-center mb-4">
-									<Loader2 className="h-16 w-16 text-blue-500 animate-spin" />
+									<Loader2 className="h-16 w-16 text-chocolate-500 animate-spin" />
 								</div>
 								<CardTitle className="text-2xl">
 									Procesando tu pago...
@@ -310,8 +310,8 @@ function FlowReturn() {
 									</ul>
 								</div>
 
-								<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-									<p className="text-sm text-blue-900">
+								<div className="bg-chocolate-50 border border-chocolate-200 rounded-lg p-4">
+									<p className="text-sm text-chocolate-900">
 										<strong>💡 Importante:</strong> Si no recibes el correo en
 										los próximos minutos, revisa tu carpeta de spam o
 										contáctanos por WhatsApp.
@@ -379,13 +379,13 @@ function FlowReturn() {
 							<div className="flex justify-center gap-4 mt-2 text-sm">
 								<a
 									href="mailto:contacto@transportesaraucaria.cl"
-									className="text-blue-600 hover:underline"
+									className="text-chocolate-600 hover:underline"
 								>
 									📧 contacto@transportesaraucaria.cl
 								</a>
 								<a
 									href="tel:+56936643540"
-									className="text-blue-600 hover:underline"
+									className="text-chocolate-600 hover:underline"
 								>
 									📱 +569 3664 3540
 								</a>

@@ -105,7 +105,7 @@ function AdminFestivos() {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-8">
-				<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+				<Loader2 className="h-8 w-8 animate-spin text-chocolate-500" />
 			</div>
 		);
 	}
@@ -172,7 +172,7 @@ function AdminFestivos() {
 							className="rounded-lg border border-slate-700 bg-slate-900/50 p-6"
 						>
 							<div className="mb-4 flex items-center gap-3">
-								<Calendar className="h-6 w-6 text-blue-400" />
+								<Calendar className="h-6 w-6 text-chocolate-400" />
 								<h3 className="text-lg font-semibold text-white">Año {ano}</h3>
 								<Badge variant="secondary">{festivosAno.length} festivos</Badge>
 							</div>
@@ -289,7 +289,7 @@ function FormularioFestivo({
 	saving,
 }) {
 	return (
-		<div className="space-y-4 rounded-lg border-2 border-blue-500 bg-slate-900 p-4">
+		<div className="space-y-4 rounded-lg border-2 border-chocolate-500 bg-slate-900 p-4">
 			<h3 className="text-lg font-semibold text-white">
 				{festivo.id ? "Editar Festivo" : "Nuevo Festivo"}
 			</h3>

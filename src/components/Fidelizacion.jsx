@@ -10,7 +10,7 @@ const beneficios = [
 			"Cada traslado que realizas con nosotros te acerca más a beneficios exclusivos. ¡Tu lealtad tiene premio!",
 	},
 	{
-		icono: <Award className="h-10 w-10 text-blue-500" />,
+		icono: <Award className="h-10 w-10 text-chocolate-500" />,
 		titulo: "Tercer Viaje con Descuento",
 		descripcion:
 			"Al completar tu tercer viaje, obtienes automáticamente un 15% de descuento para tu próximo traslado.",

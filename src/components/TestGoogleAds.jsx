@@ -148,7 +148,7 @@ function TestGoogleAds() {
 			case "error":
 				return <AlertCircle className="w-4 h-4 text-red-600" />;
 			default:
-				return <Info className="w-4 h-4 text-blue-600" />;
+				return <Info className="w-4 h-4 text-chocolate-600" />;
 		}
 	};
 
@@ -159,7 +159,7 @@ function TestGoogleAds() {
 			case "error":
 				return "text-red-700 bg-red-50 border-red-200";
 			default:
-				return "text-blue-700 bg-blue-50 border-blue-200";
+				return "text-chocolate-700 bg-chocolate-50 border-chocolate-200";
 		}
 	};
 
