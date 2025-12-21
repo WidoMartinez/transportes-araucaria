@@ -6390,7 +6390,7 @@ app.post("/api/payment-result", async (req, res) => {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
 				
-				// Re-parsear optional data para asegurar acceso en este scope
+				// Re-parsear optional data para asegurar acceso en este scope (la variable anterior tiene alcance de bloque)
 				let optionalDataSafe = {};
 				try {
 					if (flowData.optional) {
