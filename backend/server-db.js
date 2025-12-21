@@ -6390,8 +6390,22 @@ app.post("/api/payment-result", async (req, res) => {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
 				
+				// Re-parsear optional data para asegurar acceso en este scope (la variable anterior tiene alcance de bloque)
+				let optionalDataSafe = {};
+				try {
+					if (flowData.optional) {
+						optionalDataSafe = typeof flowData.optional === "string"
+							? JSON.parse(flowData.optional)
+							: flowData.optional;
+					}
+				} catch (e) {
+					console.warn("Error parsing optional data again:", e.message);
+				}
+
 				// Determinar el origen del pago (desde DB o desde metadata optional)
-				const paymentOrigin = optionalData?.paymentOrigin;
+				const paymentOrigin = optionalDataSafe?.paymentOrigin;
+				const tipoPago = optionalDataSafe?.tipoPago; // 'total', 'abono', 'saldo', 'saldo_total'
+
 				const isCodigoPago = reserva && reserva.source === "codigo_pago";
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
@@ -6401,8 +6415,29 @@ app.post("/api/payment-result", async (req, res) => {
 					// Redirigir a la página de éxito estándar (FlowReturn)
 					// Pasar parámetros adicionales para el tracking preciso
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
-					const total = reserva.totalConDescuento || reserva.precio || 0;
 					
+					// Lógica de valor de conversión:
+					// 1. Si es pago de saldo (Consultar Reserva), el valor es 0 (ya se registró el total al reservar)
+					// 2. Si es pago inicial (Código/Nuevo), el valor es el TOTAL de la reserva
+					// 3. Fallback: Si no hay total en DB, usar el monto pagado en Flow
+
+					let total = 0;
+
+					if (tipoPago === 'saldo' || tipoPago === 'saldo_total') {
+						total = 0;
+						console.log(`ℹ️ Pago de saldo detectado. Conversión ajustada a 0.`);
+					} else {
+						// Usar totalConDescuento o precio. Si son 0/null, usar flowData.amount.
+						const montoFlow = flowData.amount ? Number(flowData.amount) : 0;
+						total = (reserva.totalConDescuento || reserva.precio || 0);
+
+						// Si el total es 0 (error de datos), usar el monto pagado como fallback
+						if (total <= 0 && montoFlow > 0) {
+							total = montoFlow;
+							console.log(`⚠️ Total reserva es 0. Usando monto Flow como fallback: ${total}`);
+						}
+					}
+
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
 					const userData = {
 						email: reserva.email || '',
