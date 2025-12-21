@@ -882,7 +882,7 @@ function AdminGastos() {
 											})()}
 
 											{draft.tipoGasto === "comision_flow" && (
-												<div className="rounded-md bg-blue-50 p-3 text-xs text-blue-800">
+												<div className="rounded-md bg-chocolate-50 p-3 text-xs text-chocolate-800">
 													<AlertCircle className="mr-2 inline h-4 w-4" />
 													El monto se calcula automaticamente como el 3.19% del total de la reserva.
 												</div>
@@ -1090,12 +1090,12 @@ function AdminGastos() {
 										${totalGastos.toLocaleString("es-CL")}
 									</p>
 								</div>
-								<div className="p-4 bg-blue-50 rounded-lg">
-									<p className="text-sm text-blue-800 font-medium">Utilidad del Negocio</p>
-									<p className="text-2xl font-bold text-blue-600">
+								<div className="p-4 bg-chocolate-50 rounded-lg">
+									<p className="text-sm text-chocolate-800 font-medium">Utilidad del Negocio</p>
+									<p className="text-2xl font-bold text-chocolate-600">
 										${utilidadNegocio.toLocaleString("es-CL")}
 									</p>
-									<p className="text-xs text-blue-700 mt-1">
+									<p className="text-xs text-chocolate-700 mt-1">
 										Ingresos menos todos los gastos asociados a la reserva.
 									</p>
 								</div>

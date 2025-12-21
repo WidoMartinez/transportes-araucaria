@@ -123,7 +123,7 @@ function CompraProductos() {
 					montoTotal
 				)}`,
 				variant: "default",
-				className: "bg-blue-600 hover:bg-blue-700",
+				className: "bg-chocolate-600 hover:bg-chocolate-700",
 			},
 		];
 	};

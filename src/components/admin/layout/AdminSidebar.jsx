@@ -56,8 +56,8 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
       id: "dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      color: "text-chocolate-600",
+      bgColor: "bg-chocolate-50",
       items: [
         { id: "dashboard", label: "Inicio", icon: LayoutDashboard }
       ]

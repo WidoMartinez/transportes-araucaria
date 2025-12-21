@@ -1028,7 +1028,7 @@ function AdminPricing() {
 											disabled={
 												!pricing.descuentosGlobales?.descuentoOnline?.activo
 											}
-											className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+											className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-chocolate-500 focus:outline-none focus:ring-1 focus:ring-chocolate-500 disabled:opacity-50"
 										/>
 										<span className="text-slate-300">%</span>
 									</div>
@@ -1082,7 +1082,7 @@ function AdminPricing() {
 											disabled={
 												!pricing.descuentosGlobales?.descuentoRoundTrip?.activo
 											}
-											className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+											className="flex-1 rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-chocolate-500 focus:outline-none focus:ring-1 focus:ring-chocolate-500 disabled:opacity-50"
 										/>
 										<span className="text-slate-300">%</span>
 									</div>
@@ -1141,7 +1141,7 @@ function AdminPricing() {
 																	)
 																}
 																placeholder="Ej: Descuento Estudiantes"
-																className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+																className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-chocolate-500 focus:outline-none focus:ring-1 focus:ring-chocolate-500"
 															/>
 														</div>
 														<div>
@@ -1162,7 +1162,7 @@ function AdminPricing() {
 																	)
 																}
 																disabled={!descuento.activo}
-																className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+																className="w-full rounded-md border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-400 focus:border-chocolate-500 focus:outline-none focus:ring-1 focus:ring-chocolate-500 disabled:opacity-50"
 															/>
 														</div>
 														<div className="flex items-end gap-2">
@@ -1301,7 +1301,7 @@ function AdminPricing() {
 							<button
 								type="button"
 								onClick={() => setNewDestino({ ...nuevoDestinoTemplate })}
-								className="inline-flex items-center rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+								className="inline-flex items-center rounded-md bg-chocolate-500 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-chocolate-400 focus:outline-none focus:ring-2 focus:ring-chocolate-500/60"
 								disabled={!!newDestino}
 							>
 								Añadir Nuevo Destino
@@ -1310,8 +1310,8 @@ function AdminPricing() {
 
 						<div className="space-y-6">
 							{newDestino && (
-								<div className="rounded-md border-2 border-dashed border-blue-500 bg-slate-950/80 p-4">
-									<h3 className="text-lg font-medium text-blue-400">
+								<div className="rounded-md border-2 border-dashed border-chocolate-500 bg-slate-950/80 p-4">
+									<h3 className="text-lg font-medium text-chocolate-400">
 										Nuevo Destino
 									</h3>
 									<div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1429,7 +1429,7 @@ function AdminPricing() {
 										<button
 											type="button"
 											onClick={handleAddNewDestino}
-											className="rounded-md bg-blue-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-blue-400"
+											className="rounded-md bg-chocolate-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-chocolate-400"
 										>
 											Guardar Destino
 										</button>

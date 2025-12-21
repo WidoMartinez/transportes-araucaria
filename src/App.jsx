@@ -1821,14 +1821,14 @@ function App() {
 					</DialogHeader>
 					<div className="space-y-4 py-4">
 						{codigoReservaCreada && (
-							<div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-								<p className="text-sm font-medium text-blue-700 mb-1">
+							<div className="bg-chocolate-50 border-2 border-chocolate-200 rounded-lg p-4">
+								<p className="text-sm font-medium text-chocolate-700 mb-1">
 									Código de Reserva
 								</p>
-								<p className="text-2xl font-bold text-blue-900 tracking-wider font-mono">
+								<p className="text-2xl font-bold text-chocolate-900 tracking-wider font-mono">
 									{codigoReservaCreada}
 								</p>
-								<p className="text-xs text-blue-600 mt-2">
+								<p className="text-xs text-chocolate-600 mt-2">
 									Guarda este código para consultar tu reserva
 								</p>
 							</div>

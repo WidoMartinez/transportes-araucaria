@@ -108,7 +108,7 @@ function Hero({
 	const handlePayReservation = (reserva) => {
 		// Cerrar el diálogo de continuar reserva
 		setShowContinuarReserva(false);
-		
+
 		// Pre-llenar el formulario con los datos de la reserva
 		setFormData({
 			nombre: reserva.nombre || "",
@@ -1442,10 +1442,10 @@ function Hero({
 											</div>
 
 											{formData.idaVuelta && (
-												<div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+												<div className="mt-6 p-4 bg-chocolate-50 rounded-lg border border-chocolate-200">
 													<div className="flex items-center gap-2 mb-2">
 														<svg
-															className="w-5 h-5 text-blue-600"
+															className="w-5 h-5 text-chocolate-600"
 															fill="none"
 															stroke="currentColor"
 															viewBox="0 0 24 24"
@@ -1457,11 +1457,11 @@ function Hero({
 																d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
 															/>
 														</svg>
-														<p className="font-semibold text-blue-900">
+														<p className="font-semibold text-chocolate-900">
 															Regreso incluido
 														</p>
 													</div>
-													<p className="text-sm text-blue-700">
+													<p className="text-sm text-chocolate-700">
 														{formData.fechaRegreso || "Por definir"} ·{" "}
 														{formData.horaRegreso || "Por definir"} hrs
 													</p>

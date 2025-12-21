@@ -718,14 +718,14 @@ function HeroExpress({
 									});
 									
 									return (
-										<div className="rounded-xl p-4 bg-blue-500/10 border border-blue-400/30">
+										<div className="rounded-xl p-4 bg-chocolate-500/10 border border-chocolate-400/30">
 											<div className="flex items-start gap-3">
-												<Sparkles className="h-5 w-5 text-blue-500 mt-0.5" />
+												<Sparkles className="h-5 w-5 text-chocolate-500 mt-0.5" />
 												<div>
-													<h4 className="font-semibold text-blue-700 text-sm">
+													<h4 className="font-semibold text-chocolate-700 text-sm">
 														¡Viaje de retorno detectado!
 													</h4>
-													<p className="text-xs text-blue-600 mt-1">
+													<p className="text-xs text-chocolate-600 mt-1">
 														Selecciona una hora cercana al término de tu viaje de ida 
 														(aproximadamente {horaTerminoFormateada}) 
 														para obtener descuentos de hasta 50%.
@@ -736,7 +736,7 @@ function HeroExpress({
 																<Badge
 																	key={index}
 																	variant="secondary"
-																	className="cursor-pointer hover:bg-blue-200 transition-colors text-xs"
+																	className="cursor-pointer hover:bg-chocolate-200 transition-colors text-xs"
 																	onClick={() => {
 																		handleInputChange({ target: { name: "hora", value: opcion.horaFormateada } });
 																	}}
@@ -1107,7 +1107,7 @@ function HeroExpress({
 								</motion.div>
 
 								{richInfo.datoCurioso && (
-									<motion.div variants={itemVariants} className="mt-6 bg-blue-900/40 backdrop-blur-md p-5 rounded-xl border border-blue-400/30">
+									<motion.div variants={itemVariants} className="mt-6 bg-chocolate-900/40 backdrop-blur-md p-5 rounded-xl border border-chocolate-400/30">
 										<div className="flex gap-3">
 											<Lightbulb className="w-6 h-6 text-yellow-300 flex-shrink-0" />
 											<div>

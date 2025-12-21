@@ -167,7 +167,7 @@ function DashboardHome({ onNavigate }) {
           title="Reservas Hoy"
           value={stats.reservasHoy}
           icon={Calendar}
-          color="text-blue-600"
+          color="text-chocolate-600"
           trend="up"
           trendValue="+2 respecto ayer"
           onClick={() => onNavigate("reservas")}
@@ -249,7 +249,7 @@ function DashboardHome({ onNavigate }) {
               title="Nueva Reserva"
               description="Crear una nueva reserva"
               icon={Calendar}
-              color="bg-blue-600"
+              color="bg-chocolate-600"
               onClick={() => onNavigate("reservas")}
             />
             <QuickAction

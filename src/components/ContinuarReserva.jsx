@@ -153,7 +153,7 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 	const getEstadoBadge = (estado) => {
 		const estados = {
 			pendiente: { color: "bg-yellow-500", text: "Pendiente" },
-			confirmada: { color: "bg-blue-500", text: "Confirmada" },
+			confirmada: { color: "bg-chocolate-500", text: "Confirmada" },
 			completada: { color: "bg-green-500", text: "Completada" },
 			cancelada: { color: "bg-red-500", text: "Cancelada" },
 		};
@@ -386,7 +386,7 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 									<Button
 										onClick={guardarObservaciones}
 										disabled={guardandoObservaciones || !observaciones.trim()}
-										className="bg-blue-600 hover:bg-blue-700"
+										className="bg-chocolate-600 hover:bg-chocolate-700"
 									>
 										{guardandoObservaciones ? (
 											<>

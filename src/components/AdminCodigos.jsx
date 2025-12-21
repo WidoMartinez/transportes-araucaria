@@ -358,7 +358,7 @@ function AdminCodigos() {
 							{error ? "Error de conexión" : "Conectado"}
 						</span>
 						{loading && (
-							<span className="text-sm text-blue-600">Cargando...</span>
+							<span className="text-sm text-chocolate-600">Cargando...</span>
 						)}
 					</div>
 				</div>
@@ -719,8 +719,8 @@ function AdminCodigos() {
 									{/* Información de usuarios que usaron el código */}
 									{codigo.usuariosQueUsaron &&
 										codigo.usuariosQueUsaron.length > 0 && (
-											<div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-												<p className="text-sm font-medium text-blue-800 mb-2">
+											<div className="mt-3 p-3 bg-chocolate-50 border border-chocolate-200 rounded-lg">
+												<p className="text-sm font-medium text-chocolate-800 mb-2">
 													Usuarios que han usado este código (
 													{codigo.usuariosQueUsaron?.length || 0}):
 												</p>
@@ -730,7 +730,7 @@ function AdminCodigos() {
 														.map((usuario, index) => (
 															<div
 																key={index}
-																className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
+																className="flex items-center gap-1 bg-chocolate-100 text-chocolate-800 px-2 py-1 rounded text-xs"
 															>
 																<span>{usuario.substring(0, 8)}...</span>
 																<button
@@ -748,7 +748,7 @@ function AdminCodigos() {
 															</div>
 														))}
 													{(codigo.usuariosQueUsaron?.length || 0) > 5 && (
-														<span className="text-xs text-blue-600">
+														<span className="text-xs text-chocolate-600">
 															+{(codigo.usuariosQueUsaron?.length || 0) - 5} más
 														</span>
 													)}

@@ -211,7 +211,7 @@ function ConsultarReserva() {
 						saldoTotalGeneral
 					)})`,
 					variant: "default",
-					className: "bg-blue-600 hover:bg-blue-700 animate-pulse",
+					className: "bg-chocolate-600 hover:bg-chocolate-700 animate-pulse",
 				},
 			];
 		}
@@ -339,14 +339,14 @@ function ConsultarReserva() {
 				{reserva && (
 					<div className="space-y-6">
 						{/* Código de Reserva Destacado */}
-						<Card className="border-2 border-blue-200 bg-blue-50">
+						<Card className="border-2 border-chocolate-200 bg-chocolate-50">
 							<CardContent className="pt-6">
 								<div className="flex items-center justify-between">
 									<div>
-										<Label className="text-blue-700 text-sm font-medium">
+										<Label className="text-chocolate-700 text-sm font-medium">
 											Código de Reserva
 										</Label>
-										<p className="text-3xl font-bold text-blue-900 tracking-wider font-mono">
+										<p className="text-3xl font-bold text-chocolate-900 tracking-wider font-mono">
 											{reserva.codigoReserva}
 										</p>
 									</div>

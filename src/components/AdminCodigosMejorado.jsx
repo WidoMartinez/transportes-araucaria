@@ -260,7 +260,7 @@ export default function AdminCodigosMejorado() {
 					<Card>
 						<CardContent className="p-4">
 							<div className="flex items-center space-x-2">
-								<BarChart3 className="w-5 h-5 text-blue-500" />
+								<BarChart3 className="w-5 h-5 text-chocolate-500" />
 								<div>
 									<p className="text-sm font-medium">Total Códigos</p>
 									<p className="text-2xl font-bold">

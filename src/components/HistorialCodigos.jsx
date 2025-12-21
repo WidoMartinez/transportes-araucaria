@@ -172,7 +172,7 @@ export default function HistorialCodigos() {
 					<Card>
 						<CardContent className="p-4">
 							<div className="flex items-center space-x-2">
-								<Users className="w-5 h-5 text-blue-500" />
+								<Users className="w-5 h-5 text-chocolate-500" />
 								<div>
 									<p className="text-sm font-medium">Total Usos</p>
 									<p className="text-2xl font-bold">{estadisticas.totalUsos}</p>

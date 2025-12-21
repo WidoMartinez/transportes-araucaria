@@ -186,7 +186,7 @@ function AdminEstadisticas() {
 			case "pendiente_detalles":
 				return <Badge variant="warning">Pendiente Detalles</Badge>;
 			case "confirmada":
-				return <Badge className="bg-blue-600 hover:bg-blue-700">Confirmada</Badge>;
+				return <Badge className="bg-chocolate-600 hover:bg-chocolate-700">Confirmada</Badge>;
 			case "completada":
 				return <Badge className="bg-green-600 hover:bg-green-700">Completada</Badge>;
 			case "cancelada":
@@ -654,7 +654,7 @@ function AdminEstadisticas() {
 						</CardHeader>
 						<CardContent>
 							<div className="flex items-center gap-2">
-								<Receipt className="w-5 h-5 text-blue-600" />
+								<Receipt className="w-5 h-5 text-chocolate-600" />
 								<span className="text-2xl font-bold">
 									{loading ? "..." : estadisticasGastos.totalRegistros}
 								</span>
@@ -759,7 +759,7 @@ function AdminEstadisticas() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex items-center gap-2">
-									<CalendarIcon className="w-5 h-5 text-blue-600" />
+									<CalendarIcon className="w-5 h-5 text-chocolate-600" />
 									<span className="text-2xl font-bold">
 										{totalesConductores.totalReservas}
 									</span>
@@ -804,8 +804,8 @@ function AdminEstadisticas() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex items-center gap-2">
-									<DollarSign className="w-5 h-5 text-blue-600" />
-									<span className="text-2xl font-bold text-blue-600">
+									<DollarSign className="w-5 h-5 text-chocolate-600" />
+									<span className="text-2xl font-bold text-chocolate-600">
 										${totalesConductores.utilidad.toLocaleString("es-CL")}
 									</span>
 								</div>
@@ -854,7 +854,7 @@ function AdminEstadisticas() {
 												<TableCell className="text-red-600 font-semibold">
 													${conductor.totalGastos.toLocaleString("es-CL")}
 												</TableCell>
-												<TableCell className="text-blue-600 font-semibold">
+												<TableCell className="text-chocolate-600 font-semibold">
 													${conductor.pagosConductor.toLocaleString("es-CL")}
 												</TableCell>
 												<TableCell>
@@ -897,7 +897,7 @@ function AdminEstadisticas() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex items-center gap-2">
-									<CalendarIcon className="w-5 h-5 text-blue-600" />
+									<CalendarIcon className="w-5 h-5 text-chocolate-600" />
 									<span className="text-2xl font-bold">
 										{totalesVehiculos.totalReservas}
 									</span>
@@ -942,8 +942,8 @@ function AdminEstadisticas() {
 							</CardHeader>
 							<CardContent>
 								<div className="flex items-center gap-2">
-									<DollarSign className="w-5 h-5 text-blue-600" />
-									<span className="text-2xl font-bold text-blue-600">
+									<DollarSign className="w-5 h-5 text-chocolate-600" />
+									<span className="text-2xl font-bold text-chocolate-600">
 										${totalesVehiculos.utilidad.toLocaleString("es-CL")}
 									</span>
 								</div>
@@ -1164,7 +1164,7 @@ function AdminEstadisticas() {
 										<CardTitle className="text-sm">Utilidad</CardTitle>
 									</CardHeader>
 									<CardContent>
-										<p className="text-2xl font-bold text-blue-600">
+										<p className="text-2xl font-bold text-chocolate-600">
 											$
 											{(
 												conductorDetalle.totalIngresos -
@@ -1217,7 +1217,7 @@ function AdminEstadisticas() {
 														key={vehiculo.id}
 														className="p-3 border rounded-lg flex items-center gap-3"
 													>
-														<Car className="w-6 h-6 text-blue-600" />
+														<Car className="w-6 h-6 text-chocolate-600" />
 														<div>
 															<p className="font-semibold text-sm">{vehiculo.patente}</p>
 															<p className="text-xs text-muted-foreground">
