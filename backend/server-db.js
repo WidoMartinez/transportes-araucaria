@@ -6371,11 +6371,13 @@ app.post("/api/payment-result", async (req, res) => {
 			
 			// Intentar extraer reservaId de los datos opcionales
 			let reservaId = null;
+			let optionalData = null; // Elevamos scope para evitar ReferenceError en logs posteriores
+			
 			if (flowData.optional) {
 				try {
 					// Verificar si ya es un objeto (axios podría haberlo parseado si Flow devolvió JSON)
 					// Esta lógica viene de la rama fix-flow-payment-error-handling y es más robusta
-					const optionalData = typeof flowData.optional === "string"
+					optionalData = typeof flowData.optional === "string"
 						? JSON.parse(flowData.optional)
 						: flowData.optional;
 
