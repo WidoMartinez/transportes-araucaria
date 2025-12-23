@@ -28,6 +28,7 @@ import BloqueoAgenda from "./models/BloqueoAgenda.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
+import addSillaInfantilToCodigosPago from "./migrations/add-silla-infantil-to-codigos-pago.js";
 import CodigoPago from "./models/CodigoPago.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
@@ -681,6 +682,7 @@ const initializeDatabase = async () => {
 		await addTipoPagoColumn();
 		await addAbonoFlags();
 		await addCodigosPagoTable();
+		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), sequelize);
 		await addGastosTable();
 		await addProductosTables(); // Migración para tablas de productos
 		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
@@ -2951,6 +2953,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 		const pasajeros = parsePositiveInteger(body.pasajeros, "pasajeros", 1);
 		const idaVuelta = Boolean(body.idaVuelta);
 		const permitirAbono = Boolean(body.permitirAbono); // Nuevo campo
+		const sillaInfantil = Boolean(body.sillaInfantil);
 		const fechaVencimiento = body.fechaVencimiento
 			? new Date(body.fechaVencimiento)
 			: null;
@@ -2994,6 +2997,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			pasajeros,
 			idaVuelta,
 			permitirAbono, // Nuevo campo
+			sillaInfantil,
 			fechaVencimiento,
 			usosMaximos,
 			usosActuales: 0,
@@ -3065,17 +3069,34 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 			});
 		}
 
+
 		// Verificar vencimiento
 		if (registro.fechaVencimiento) {
 			const now = new Date();
-			if (
-				new Date(registro.fechaVencimiento) < now &&
-				registro.estado === "activo"
-			) {
-				// Marcar como vencido si está activo y ya pasó la fecha
-				await registro.update({ estado: "vencido" }).catch(() => {});
+			const fechaVenc = new Date(registro.fechaVencimiento);
+			
+			if (fechaVenc < now) {
+				// Actualizar estado si aún está activo
+				if (registro.estado === "activo") {
+					await registro.update({ estado: "vencido" }).catch(() => {});
+				}
+				
+				// ✅ RETORNAR ERROR - No permitir uso de código vencido
+				return res.json({
+					success: false,
+					message: `El código venció el ${fechaVenc.toLocaleDateString('es-CL', {
+						year: 'numeric',
+						month: 'long',
+						day: 'numeric',
+						hour: '2-digit',
+						minute: '2-digit'
+					})}`,
+					estado: "vencido",
+					fechaVencimiento: registro.fechaVencimiento
+				});
 			}
 		}
+
 
 		// Verificar usos
 		if (registro.usosActuales >= registro.usosMaximos) {

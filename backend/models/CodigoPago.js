@@ -59,6 +59,12 @@ const CodigoPago = sequelize.define(
 			field: "permitir_abono",
 			comment: "Si permite pagar solo el 40% como abono",
 		},
+		sillaInfantil: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			field: "silla_infantil",
+			comment: "Si incluye silla de niño",
+		},
 		estado: {
 			type: DataTypes.ENUM("activo", "usado", "vencido", "cancelado"),
 			defaultValue: "activo",
