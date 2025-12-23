@@ -20,7 +20,7 @@ import {
 	DialogDescription,
 } from "./ui/dialog";
 import { Alert, AlertDescription } from "./ui/alert";
-import { LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { LoaderCircle, Plus, Trash2, Copy, MessageCircle } from "lucide-react";
 import { destinosBase } from "../data/destinos";
 import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
@@ -46,6 +46,7 @@ function AdminCodigosPago() {
 		pasajeros: 1,
 		idaVuelta: false,
 		permitirAbono: false,
+		sillaInfantil: false,
 		fechaVencimiento: "",
 		usosMaximos: 1,
 		observaciones: "",
@@ -159,6 +160,19 @@ function AdminCodigosPago() {
 		}
 		setFormData(nuevoForm);
 	};
+
+	// Efecto para establecer fecha de vencimiento por defecto al abrir el modal
+	useEffect(() => {
+		if (showCrearDialog && !formData.fechaVencimiento) {
+			// Por defecto 24 horas desde ahora
+			const manana = new Date();
+			manana.setHours(manana.getHours() + 24);
+			// Formato requerido para input datetime-local: YYYY-MM-DDTHH:mm
+			const fechaStr = manana.toISOString().slice(0, 16);
+			setFormData((prev) => ({ ...prev, fechaVencimiento: fechaStr }));
+		}
+	}, [showCrearDialog, formData.fechaVencimiento]);
+
 	const generarCodigoLocal = () => {
 		const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/1/O/I
 		const rand = Array.from(
@@ -166,6 +180,20 @@ function AdminCodigosPago() {
 			() => alphabet[Math.floor(Math.random() * alphabet.length)]
 		).join("");
 		return `PX-${rand}`;
+	};
+
+	const copiarAlPortapapeles = (texto) => {
+		navigator.clipboard.writeText(texto).then(() => {
+			// Idealmente mostrar un toast aquí
+			alert("Código copiado al portapapeles: " + texto);
+		});
+	};
+
+	const enviarPorWhatsApp = (codigo) => {
+		const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
+		const mensaje = `Hola, aquí tienes tu código de pago: *${codigo.codigo}*.\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+		const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+		window.open(url, "_blank");
 	};
 	const crearCodigo = async () => {
 		// Validaciones mínimas
@@ -203,6 +231,7 @@ function AdminCodigosPago() {
 				pasajeros: parseInt(formData.pasajeros) || 1,
 				idaVuelta: Boolean(formData.idaVuelta),
 				permitirAbono: Boolean(formData.permitirAbono),
+				sillaInfantil: Boolean(formData.sillaInfantil),
 				fechaVencimiento: formData.fechaVencimiento || undefined,
 				usosMaximos: parseInt(formData.usosMaximos) || 1,
 				observaciones: formData.observaciones || "",
@@ -227,6 +256,7 @@ function AdminCodigosPago() {
 				pasajeros: 1,
 				idaVuelta: false,
 				permitirAbono: false,
+				sillaInfantil: false,
 				fechaVencimiento: "",
 				usosMaximos: 1,
 				observaciones: "",
@@ -341,14 +371,32 @@ function AdminCodigosPago() {
 												{formatDate(c.fechaVencimiento)}
 											</TableCell>
 											<TableCell>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => eliminarCodigo(c.codigo)}
-													disabled={c.estado === "usado"}
-												>
-													<Trash2 className="h-4 w-4 text-red-500" />
-												</Button>
+												<div className="flex gap-1">
+													<Button
+														variant="ghost"
+														size="sm"
+														title="Copiar Código"
+														onClick={() => copiarAlPortapapeles(c.codigo)}
+													>
+														<Copy className="h-4 w-4 text-blue-500" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														title="Enviar por WhatsApp"
+														onClick={() => enviarPorWhatsApp(c)}
+													>
+														<MessageCircle className="h-4 w-4 text-green-500" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => eliminarCodigo(c.codigo)}
+														disabled={c.estado === "usado"}
+													>
+														<Trash2 className="h-4 w-4 text-red-500" />
+													</Button>
+												</div>
 											</TableCell>
 										</TableRow>
 									))}
@@ -477,21 +525,38 @@ function AdminCodigosPago() {
 							</div>
 							<div className="space-y-2 md:col-span-2">
 								<Label htmlFor="permitirAbono">Opciones de Pago</Label>
-								<div className="flex items-start gap-3 rounded border p-3">
-									<input
-										type="checkbox"
-										id="permitirAbono"
-										name="permitirAbono"
-										checked={formData.permitirAbono}
-										onChange={handleInputChange}
-										className="mt-1 h-4 w-4"
-									/>
-									<div>
-										<p className="font-medium">Permitir abono del 40%</p>
-										<p className="text-sm text-gray-500">
-											Si se activa, el cliente podrá optar por pagar solo el 40%
-											para reservar. Si no, deberá pagar el 100%.
-										</p>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="flex items-start gap-3 rounded border p-3">
+										<input
+											type="checkbox"
+											id="permitirAbono"
+											name="permitirAbono"
+											checked={formData.permitirAbono}
+											onChange={handleInputChange}
+											className="mt-1 h-4 w-4"
+										/>
+										<div>
+											<p className="font-medium">Permitir abono del 40%</p>
+											<p className="text-xs text-gray-500">
+												Cliente puede pagar solo el 40% para reservar.
+											</p>
+										</div>
+									</div>
+									<div className="flex items-start gap-3 rounded border p-3 bg-blue-50 border-blue-100">
+										<input
+											type="checkbox"
+											id="sillaInfantil"
+											name="sillaInfantil"
+											checked={formData.sillaInfantil}
+											onChange={handleInputChange}
+											className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500"
+										/>
+										<div>
+											<p className="font-medium text-blue-900">Incluir Silla de Niño</p>
+											<p className="text-xs text-blue-700">
+												Se marcará en la reserva que requiere silla.
+											</p>
+										</div>
 									</div>
 								</div>
 							</div>

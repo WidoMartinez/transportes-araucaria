@@ -19,7 +19,8 @@ import {
 	Mail,
 	Plane,
 	Building2,
-	Shield
+	Shield,
+	Baby
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 
@@ -83,6 +84,7 @@ function PagarConCodigo() {
 	const montoSeleccionado =
 		selectedPaymentType === "abono" ? abonoSugerido : montoTotal;
 	const esIdaVuelta = Boolean(codigoValidado?.idaVuelta);
+	const incluyeSillaInfantil = Boolean(codigoValidado?.sillaInfantil);
 
 	// Validar el código de pago
 	const validarCodigo = async () => {
@@ -245,6 +247,7 @@ function PagarConCodigo() {
 				hotel: formData.hotel,
 				mensaje: formData.mensaje,
 				idaVuelta: esIdaVuelta,
+				sillaInfantil: incluyeSillaInfantil,
 				referenciaPago: codigoValidado.codigo,
 				source: "codigo_pago",
 				abonoSugerido: selectedPaymentType === "abono" ? abonoSugerido : 0,
@@ -418,6 +421,14 @@ function PagarConCodigo() {
 									<div className="flex justify-between items-center">
 										<span className="text-sm text-muted-foreground">Tipo:</span>
 										<Badge variant="secondary">Ida y Vuelta</Badge>
+									</div>
+								)}
+								{incluyeSillaInfantil && (
+									<div className="flex justify-between items-center">
+										<span className="text-sm text-muted-foreground">Extras:</span>
+										<Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+											<Baby className="h-3 w-3 mr-1" /> Silla de Niño
+										</Badge>
 									</div>
 								)}
 								<div className="flex justify-between items-center pt-2 border-t">
