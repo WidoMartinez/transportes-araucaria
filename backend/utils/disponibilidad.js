@@ -437,10 +437,90 @@ export const buscarOportunidadesRetorno = async ({
 
 /**
  * Valida que el horario seleccionado cumple con el tiempo mínimo entre viajes
- * (Sin cambios, se mantiene igual)
  */
-// ... (se mantiene igual, no es necesario reescribirlo si no cambió, pero overwrite pisa todo)
-// Para overwrite debo incluir todo. Copio la función validarHorarioMinimo original.
+export const validarHorarioMinimo = async ({
+	fecha,
+	hora,
+	vehiculoId = null,
+	excludeReservaId = null,
+}) => {
+	try {
+		const config = await obtenerConfiguracionDisponibilidad();
+		const holguraMinima = config.holguraMinima || 30;
+
+		if (!vehiculoId) {
+			return {
+				valido: true,
+				mensaje: "Horario válido (pendiente asignación de vehículo)",
+			};
+		}
+
+		const inicioSolicitado = combinarFechaHora(fecha, hora);
+
+		const whereClause = {
+			vehiculoId: vehiculoId,
+			fecha: fecha,
+			estado: {
+				[Op.in]: ["pendiente", "pendiente_detalles", "confirmada"],
+			},
+		};
+
+		if (excludeReservaId) {
+			whereClause.id = { [Op.ne]: excludeReservaId };
+		}
+
+		const reservasVehiculo = await Reserva.findAll({
+			where: whereClause,
+		});
+
+		const destinosMap = {};
+		const destinos = await Destino.findAll();
+		destinos.forEach((d) => {
+			destinosMap[d.nombre] = {
+				duracionIda: d.duracionIdaMinutos || 60,
+				duracionVuelta: d.duracionVueltaMinutos || 60,
+			};
+		});
+
+		for (const reserva of reservasVehiculo) {
+			if (!reserva.hora) continue;
+
+			const destinoInfo = destinosMap[reserva.destino] || {
+				duracionIda: 60,
+				duracionVuelta: 60,
+			};
+
+			const inicioReserva = combinarFechaHora(reserva.fecha, reserva.hora);
+			const duracionReserva = destinoInfo.duracionIda;
+			const finReserva = new Date(
+				inicioReserva.getTime() + duracionReserva * 60000
+			);
+
+			const diferenciaMinutos = Math.abs(
+				(inicioSolicitado.getTime() - finReserva.getTime()) / 60000
+			);
+
+			if (diferenciaMinutos < holguraMinima) {
+				return {
+					valido: false,
+					mensaje: `El horario seleccionado no cumple con el tiempo mínimo de ${holguraMinima} minutos entre viajes. Diferencia actual: ${Math.round(diferenciaMinutos)} minutos.`,
+				};
+			}
+		}
+
+		return {
+			valido: true,
+			mensaje: "Horario válido",
+		};
+	} catch (error) {
+		console.error("Error validando horario mínimo:", error);
+		return {
+			valido: false,
+			mensaje: "Error validando horario",
+			error: error.message,
+		};
+	}
+};
 
 /**
  * Busca retornos disponibles para cualquier cliente (sin requerir email)
