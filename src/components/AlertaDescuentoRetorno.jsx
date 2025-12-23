@@ -40,7 +40,7 @@ function AlertaDescuentoRetorno({
 							</Badge>
 						</div>
 						<p className="text-sm text-emerald-700 mt-1">
-							Hay {oportunidadesRetorno.opciones.length} vehículo(s) regresando. 
+							Hay {oportunidadesRetorno.opciones.length} oportunidad(es) disponible(s).
 							Selecciona un horario con descuento:
 						</p>
 						
@@ -66,7 +66,7 @@ function AlertaDescuentoRetorno({
 						<div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
 							<Info className="h-3 w-3" />
 							<span>
-								Vehículo termina servicio ~{oportunidad.horaTerminoEstimada}
+								{oportunidad.etiquetaTiempo || "Vehículo termina servicio ~"}{oportunidad.horaTerminoEstimada}
 							</span>
 						</div>
 					</div>
