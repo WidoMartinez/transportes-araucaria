@@ -456,6 +456,7 @@ const corsOptions = {
 		"https://transportesaraucaria.cl",
 		"https://www.transportes-araucaria.cl",
 		"https://transportes-araucaria.cl",
+		"https://www.flow.cl", // Permitir peticiones desde Flow durante retorno de pago
 		"http://localhost:3000",
 		"http://localhost:5173",
 		"http://127.0.0.1:5173",
