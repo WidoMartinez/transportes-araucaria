@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { getBackendUrl } from "../lib/backend";
 
@@ -14,7 +15,7 @@ export const useAuthenticatedFetch = () => {
 	 * @param {object} options - Opciones de fetch (method, body, etc.)
 	 * @returns {Promise<Response>} - Respuesta de la petición
 	 */
-	const authenticatedFetch = async (url, options = {}) => {
+	const authenticatedFetch = useCallback(async (url, options = {}) => {
 		try {
 			// Obtener token válido (renovar si es necesario)
 			const token = await getValidToken();
@@ -47,24 +48,24 @@ export const useAuthenticatedFetch = () => {
 			console.error("Error en petición autenticada:", error);
 			throw error;
 		}
-	};
+	}, [getValidToken, logout]);
 
 	/**
 	 * GET autenticado
 	 */
-	const get = async (url) => {
+	const get = useCallback(async (url) => {
 		const response = await authenticatedFetch(url, { method: "GET" });
 		if (!response.ok) {
 			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
 			throw new Error(error.message || `HTTP ${response.status}`);
 		}
 		return response.json();
-	};
+	}, [authenticatedFetch]);
 
 	/**
 	 * POST autenticado
 	 */
-	const post = async (url, data) => {
+	const post = useCallback(async (url, data) => {
 		const response = await authenticatedFetch(url, {
 			method: "POST",
 			body: JSON.stringify(data),
@@ -74,12 +75,12 @@ export const useAuthenticatedFetch = () => {
 			throw new Error(error.message || `HTTP ${response.status}`);
 		}
 		return response.json();
-	};
+	}, [authenticatedFetch]);
 
 	/**
 	 * PUT autenticado
 	 */
-	const put = async (url, data) => {
+	const put = useCallback(async (url, data) => {
 		const response = await authenticatedFetch(url, {
 			method: "PUT",
 			body: JSON.stringify(data),
@@ -89,19 +90,19 @@ export const useAuthenticatedFetch = () => {
 			throw new Error(error.message || `HTTP ${response.status}`);
 		}
 		return response.json();
-	};
+	}, [authenticatedFetch]);
 
 	/**
 	 * DELETE autenticado
 	 */
-	const del = async (url) => {
+	const del = useCallback(async (url) => {
 		const response = await authenticatedFetch(url, { method: "DELETE" });
 		if (!response.ok) {
 			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
 			throw new Error(error.message || `HTTP ${response.status}`);
 		}
 		return response.json();
-	};
+	}, [authenticatedFetch]);
 
 	return {
 		authenticatedFetch,
