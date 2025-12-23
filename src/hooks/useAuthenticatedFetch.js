@@ -7,7 +7,7 @@ import { getBackendUrl } from "../lib/backend";
  * Maneja automáticamente los tokens JWT y su renovación
  */
 export const useAuthenticatedFetch = () => {
-	const { getValidToken, logout } = useAuth();
+	const { getValidToken, logout, renewToken } = useAuth();
 
 	/**
 	 * Realizar una petición autenticada
@@ -15,40 +15,57 @@ export const useAuthenticatedFetch = () => {
 	 * @param {object} options - Opciones de fetch (method, body, etc.)
 	 * @returns {Promise<Response>} - Respuesta de la petición
 	 */
-	const authenticatedFetch = useCallback(async (url, options = {}) => {
-		try {
-			// Obtener token válido (renovar si es necesario)
-			const token = await getValidToken();
+	const authenticatedFetch = useCallback(
+		async (url, options = {}) => {
+			try {
+				// Obtener token actual
+				const token = await getValidToken();
 
-			if (!token) {
-				throw new Error("No autenticado");
+				if (!token) {
+					throw new Error("No autenticado");
+				}
+
+				// Preparar headers y realizar petición
+				const getHeaders = (t) => ({
+					"Content-Type": "application/json",
+					...options.headers,
+					Authorization: `Bearer ${t}`,
+				});
+
+				let response = await fetch(`${getBackendUrl()}${url}`, {
+					...options,
+					headers: getHeaders(token),
+				});
+
+				// Si el token es inválido (401), intentar renovar una vez
+				if (response.status === 401) {
+					console.warn("Token expirado (401). Intentando renovar...");
+					const newToken = await renewToken();
+
+					if (newToken) {
+						console.log("Token renovado. Reintentando petición...");
+						response = await fetch(`${getBackendUrl()}${url}`, {
+							...options,
+							headers: getHeaders(newToken),
+						});
+					}
+
+					// Si después de intentar renovar sigue siendo 401 o no hay token nuevo, cerrar sesión
+					if (response.status === 401 || !newToken) {
+						console.error("Sesión expirada o no se pudo renovar el token.");
+						logout();
+						throw new Error("Sesión expirada");
+					}
+				}
+
+				return response;
+			} catch (error) {
+				console.error("Error en petición autenticada:", error);
+				throw error;
 			}
-
-			// Preparar headers
-			const headers = {
-				"Content-Type": "application/json",
-				...options.headers,
-				Authorization: `Bearer ${token}`,
-			};
-
-			// Realizar petición
-			const response = await fetch(`${getBackendUrl()}${url}`, {
-				...options,
-				headers,
-			});
-
-			// Si el token es inválido, cerrar sesión
-			if (response.status === 401) {
-				logout();
-				throw new Error("Sesión expirada");
-			}
-
-			return response;
-		} catch (error) {
-			console.error("Error en petición autenticada:", error);
-			throw error;
-		}
-	}, [getValidToken, logout]);
+		},
+		[getValidToken, logout, renewToken]
+	);
 
 	/**
 	 * GET autenticado

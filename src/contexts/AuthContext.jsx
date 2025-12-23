@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
 	/**
 	 * Iniciar sesión
 	 */
-	const login = async (username, password) => {
+	const login = useCallback(async (username, password) => {
 		try {
 			const response = await fetch(`${getBackendUrl()}/api/auth/login`, {
 				method: "POST",
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
 				message: error.message || "Error al iniciar sesión",
 			};
 		}
-	};
+	}, []);
 
 	/**
 	 * Cerrar sesión
@@ -216,28 +216,12 @@ export const AuthProvider = ({ children }) => {
 	/**
 	 * Obtener token válido (renovar si es necesario)
 	 */
-	const getValidToken = async () => {
-		if (!accessToken) return null;
-
-		// Intentar usar el token actual
-		try {
-			const response = await fetch(`${getBackendUrl()}/api/auth/verify`, {
-				headers: {
-					Authorization: `Bearer ${accessToken}`,
-				},
-			});
-
-			if (response.ok) {
-				return accessToken;
-			}
-
-			// Token expirado, renovar
-			return await renewToken();
-		} catch (error) {
-			console.error("Error al verificar token:", error);
-			return null;
-		}
-	};
+	const getValidToken = useCallback(async () => {
+		// Simplemente devolvemos el token actual para evitar un fetch innecesario a /verify
+		// antes de cada petición real. Si el token expiró, la petición real devolverá 
+		// un 401 y el useAuthenticatedFetch se encargará de manejarlo.
+		return accessToken;
+	}, [accessToken]);
 
 	/**
 	 * Cambiar contraseña
@@ -280,13 +264,13 @@ export const AuthProvider = ({ children }) => {
 	/**
 	 * Verificar si el usuario tiene un rol específico
 	 */
-	const hasRole = (role) => {
+	const hasRole = useCallback((role) => {
 		if (!user) return false;
 		if (Array.isArray(role)) {
 			return role.includes(user.rol);
 		}
 		return user.rol === role;
-	};
+	}, [user]);
 
 	const value = {
 		user,
