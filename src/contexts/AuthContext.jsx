@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }) => {
 	const [loading, setLoading] = useState(true);
 	const [accessToken, setAccessToken] = useState(null);
 	const [refreshToken, setRefreshToken] = useState(null);
+	const [refreshPromise, setRefreshPromise] = useState(null);
 
 	// Cargar usuario y tokens del localStorage al iniciar
 	useEffect(() => {
@@ -133,39 +134,63 @@ export const AuthProvider = ({ children }) => {
 	 */
 	const renewToken = useCallback(async () => {
 		if (!refreshToken) {
+			console.warn("No hay refresh token disponible.");
 			logout();
 			return null;
 		}
 
-		try {
-			const response = await fetch(`${getBackendUrl()}/api/auth/refresh`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ refreshToken }),
-			});
+		// Si ya hay una renovación en curso, devolver la misma promesa
+		if (refreshPromise) {
+			return refreshPromise;
+		}
 
-			const data = await response.json();
+		const performRefresh = async () => {
+			try {
+				console.log("🔄 Iniciando renovación de token...");
+				const response = await fetch(`${getBackendUrl()}/api/auth/refresh`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({ refreshToken }),
+				});
 
-			if (!response.ok) {
-				throw new Error("Error al renovar token");
+				const data = await response.json();
+
+				if (!response.ok) {
+					// Solo cerrar sesión si el token es explícitamente inválido (401 o 403)
+					if (response.status === 401 || response.status === 403) {
+						console.error("Refresh token inválido o expirado. Cerrando sesión.");
+						logout();
+					} else if (response.status === 429) {
+						console.warn("Rate limit alcanzado en renovación. No se cerrará sesión.");
+					}
+					throw new Error(data.message || "Error al renovar token");
+				}
+
+				const newAccessToken = data.data.accessToken;
+				setAccessToken(newAccessToken);
+				localStorage.setItem("adminAccessToken", newAccessToken);
+
+				console.log("✅ Token renovado exitosamente.");
+				return newAccessToken;
+			} catch (error) {
+				console.error("Error al renovar token:", error);
+				// No cerramos sesión aquí a menos que el error sea 401 handled arriba
+				return null;
+			} finally {
+				setRefreshPromise(null);
 			}
+		};
 
-			const newAccessToken = data.data.accessToken;
-			setAccessToken(newAccessToken);
-			localStorage.setItem("adminAccessToken", newAccessToken);
+		const promise = performRefresh();
+		setRefreshPromise(promise);
+		return promise;
+	}, [logout, refreshToken, refreshPromise]);
 
-			return newAccessToken;
-		} catch (error) {
-			console.error("Error al renovar token:", error);
-			logout();
-			return null;
-		}
-	}, [logout, refreshToken]);
-
-	// Verificar token periódicamente (cada 10 minutos) solo si hay actividad
+	// Verificar token periódicamente (Deshabilitado temporalmente para evitar 429)
 	useEffect(() => {
+		/*
 		if (!accessToken) return;
 
 		let lastActivity = Date.now();
@@ -211,6 +236,7 @@ export const AuthProvider = ({ children }) => {
 			window.removeEventListener("keydown", updateActivity);
 			window.removeEventListener("click", updateActivity);
 		};
+		*/
 	}, [accessToken, renewToken]);
 
 	/**
@@ -272,7 +298,7 @@ export const AuthProvider = ({ children }) => {
 		return user.rol === role;
 	}, [user]);
 
-	const value = {
+	const value = useMemo(() => ({
 		user,
 		loading,
 		accessToken,
@@ -283,7 +309,7 @@ export const AuthProvider = ({ children }) => {
 		getValidToken,
 		changePassword,
 		hasRole,
-	};
+	}), [user, loading, accessToken, login, logout, renewToken, getValidToken, hasRole]);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

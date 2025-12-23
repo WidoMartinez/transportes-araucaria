@@ -50,11 +50,16 @@ export const useAuthenticatedFetch = () => {
 						});
 					}
 
-					// Si después de intentar renovar sigue siendo 401 o no hay token nuevo, cerrar sesión
-					if (response.status === 401 || !newToken) {
-						console.error("Sesión expirada o no se pudo renovar el token.");
+					// Si después de intentar renovar sigue siendo 401 (o 403), cerrar sesión
+					if (response.status === 401 || response.status === 403) {
+						console.error("Sesión expirada o inválida después de intento de renovación.");
 						logout();
 						throw new Error("Sesión expirada");
+					}
+
+					// Si newToken es null por un error temporal (ej. 429), no cerrar sesión
+					if (!newToken) {
+						throw new Error("No se pudo renovar el token por un error temporal del servidor.");
 					}
 				}
 
