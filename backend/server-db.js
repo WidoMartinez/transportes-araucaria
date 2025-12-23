@@ -3068,17 +3068,34 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 			});
 		}
 
+
 		// Verificar vencimiento
 		if (registro.fechaVencimiento) {
 			const now = new Date();
-			if (
-				new Date(registro.fechaVencimiento) < now &&
-				registro.estado === "activo"
-			) {
-				// Marcar como vencido si está activo y ya pasó la fecha
-				await registro.update({ estado: "vencido" }).catch(() => {});
+			const fechaVenc = new Date(registro.fechaVencimiento);
+			
+			if (fechaVenc < now) {
+				// Actualizar estado si aún está activo
+				if (registro.estado === "activo") {
+					await registro.update({ estado: "vencido" }).catch(() => {});
+				}
+				
+				// ✅ RETORNAR ERROR - No permitir uso de código vencido
+				return res.json({
+					success: false,
+					message: `El código venció el ${fechaVenc.toLocaleDateString('es-CL', {
+						year: 'numeric',
+						month: 'long',
+						day: 'numeric',
+						hour: '2-digit',
+						minute: '2-digit'
+					})}`,
+					estado: "vencido",
+					fechaVencimiento: registro.fechaVencimiento
+				});
 			}
 		}
+
 
 		// Verificar usos
 		if (registro.usosActuales >= registro.usosMaximos) {
