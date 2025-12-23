@@ -96,7 +96,16 @@ function HeroExpress({
 		}
 	}, [currentStep]);
 
-	const timeOptions = useMemo(() => generateTimeOptions(), []);
+	const timeOptions = useMemo(() => {
+		const options = generateTimeOptions();
+		// Si la hora seleccionada no está en las opciones (ej: hora de descuento específica), agregarla
+		if (formData.hora && !options.some(opt => opt.value === formData.hora)) {
+			options.push({ value: formData.hora, label: formData.hora });
+			// Ordenar las opciones por hora
+			options.sort((a, b) => a.value.localeCompare(b.value));
+		}
+		return options;
+	}, [formData.hora]);
 
 	const currencyFormatter = useMemo(
 		() =>
