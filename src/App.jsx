@@ -1321,6 +1321,7 @@ function App() {
 
 		return {
 			precioBase,
+			totalNormal: precioBase, // Alias para usar en componentes que esperan totalNormal
 			descuentoBase: descuentoOnline, // Para mantener compatibilidad
 			descuentoPromocion,
 			descuentoRoundTrip,

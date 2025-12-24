@@ -783,7 +783,11 @@ function HeroExpress({
 								<div className="flex flex-col sm:flex-row gap-3 pt-3 md:pt-2">
 									<div
 										className={`flex items-center space-x-3 p-4 md:p-3 rounded-xl md:rounded-lg border-2 transition-all cursor-pointer touch-manipulation min-h-[52px] ${formData.idaVuelta ? 'bg-muted border-primary shadow-sm' : 'border-border hover:bg-muted/50 active:bg-muted/70'}`}
-										onClick={() => {
+										onClick={(e) => {
+											// Evitar doble toggle cuando se hace click en el Label (que dispara click en Checkbox)
+											// Si el click viene del label, lo ignoramos y dejamos que el evento del checkbox (sintetizado) lo maneje
+											if (e.target.tagName === 'LABEL') return;
+
 											const newValue = !formData.idaVuelta;
 											handleInputChange({ target: { name: "idaVuelta", value: newValue } });
 											if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
@@ -807,7 +811,14 @@ function HeroExpress({
 											checked={formData.idaVuelta}
 											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-5 md:size-4"
 										/>
-										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground text-base md:text-sm">Necesito regreso</Label>
+										<div className="flex flex-col">
+											<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground text-base md:text-sm leading-tight">Necesito regreso</Label>
+											{!formData.idaVuelta && tieneCotizacionAutomatica && (
+												<span className="text-[11px] md:text-xs text-emerald-600 font-medium animate-in fade-in slide-in-from-left-2 mt-0.5">
+													Precio especial si reservas ida y vuelta
+												</span>
+											)}
+										</div>
 									</div>
 
 									<div
@@ -919,10 +930,29 @@ function HeroExpress({
 									<div>
 										<p className="text-xs font-bold text-muted-foreground uppercase">Fecha</p>
 										<p className="font-medium text-sm">{fechaLegible} - {formData.hora}</p>
+										{formData.idaVuelta && formData.fechaRegreso && (
+											<p className="font-medium text-sm mt-1">
+												<span className="text-muted-foreground text-xs block">Retorno:</span>
+												{new Date(`${formData.fechaRegreso}T00:00:00`).toLocaleDateString("es-CL", { dateStyle: "long" })}
+											</p>
+										)}
 									</div>
 									<div className="text-right flex flex-col items-end">
 										<p className="text-xs font-bold text-muted-foreground uppercase">Total</p>
-										<p className="font-bold text-lg text-foreground">{formatCurrency(pricing.totalConDescuento)}</p>
+										{pricing.totalNormal > pricing.totalConDescuento ? (
+											<>
+												<p className="text-sm text-muted-foreground line-through decoration-destructive/60 decoration-1">
+													{formatCurrency(pricing.totalNormal)}
+												</p>
+												<p className="font-bold text-lg text-emerald-600">
+													{formatCurrency(pricing.totalConDescuento)}
+												</p>
+											</>
+										) : (
+											<p className="font-bold text-lg text-foreground">
+												{formatCurrency(pricing.totalConDescuento)}
+											</p>
+										)}
 										{urgencyMessage && (
 											<Badge variant="outline" className="mt-1 border-muted-foreground/30 text-muted-foreground text-[10px] px-2 py-0 h-5 font-medium flex items-center gap-1 animate-in fade-in zoom-in duration-300">
 												{urgencyMessage.icon}
