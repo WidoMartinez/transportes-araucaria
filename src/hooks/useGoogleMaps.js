@@ -16,42 +16,56 @@ export function useGoogleMaps() {
 			return;
 		}
 
-		// Si ya está cargado, no cargar de nuevo
+		// Si ya está cargado y disponible, no cargar de nuevo
 		if (window.google && window.google.maps && window.google.maps.places) {
 			setIsLoaded(true);
 			return;
 		}
 
-		// Si ya hay un script cargándose, esperar
+		// Función de callback global
+		window.googleMapsCallback = () => {
+			setIsLoaded(true);
+		};
+
+		// Si ya hay un script cargándose
 		const existingScript = document.querySelector(
 			'script[src*="maps.googleapis.com"]'
 		);
+		
 		if (existingScript) {
-			existingScript.addEventListener("load", () => setIsLoaded(true));
-			existingScript.addEventListener("error", (e) =>
-				setLoadError(e.message || "Error al cargar Google Maps")
-			);
+			// Si el script ya existe, comprobamos si ya terminó de cargar
+			if (window.google && window.google.maps && window.google.maps.places) {
+				setIsLoaded(true);
+			} else {
+				// Si no, esperamos un poco o reintentamos verificar
+				// Nota: Esto es un fallback por si el callback original ya se disparó
+				const interval = setInterval(() => {
+					if (window.google && window.google.maps && window.google.maps.places) {
+						setIsLoaded(true);
+						clearInterval(interval);
+					}
+				}, 100);
+				return () => clearInterval(interval);
+			}
 			return;
 		}
 
 		// Cargar el script
 		const script = document.createElement("script");
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places&language=es&region=CL`;
+		// Añadimos el callback a la URL
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places&language=es&region=CL&callback=googleMapsCallback`;
 		script.async = true;
 		script.defer = true;
 
-		script.addEventListener("load", () => {
-			setIsLoaded(true);
-		});
-
-		script.addEventListener("error", () => {
+		script.onerror = () => {
 			setLoadError("Error al cargar la API de Google Maps");
-		});
+		};
 
 		document.head.appendChild(script);
 
 		return () => {
-			// Cleanup: no removemos el script porque puede ser usado por otros componentes
+			// Cleanup
+			delete window.googleMapsCallback;
 		};
 	}, [apiKey]);
 
