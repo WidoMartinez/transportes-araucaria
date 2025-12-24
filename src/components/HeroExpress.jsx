@@ -98,14 +98,37 @@ function HeroExpress({
 
 	const timeOptions = useMemo(() => {
 		const options = generateTimeOptions();
+		
+		// Agregar horas de descuento de oportunidades de retorno universal
+		if (oportunidadesRetornoUniversal?.opciones?.length > 0) {
+			const horasDescuento = new Set();
+			oportunidadesRetornoUniversal.opciones.forEach(oportunidad => {
+				oportunidad.opcionesRetorno.forEach(opcion => {
+					horasDescuento.add(opcion.hora);
+				});
+			});
+			
+			// Agregar horas de descuento que no estén en las opciones regulares
+			horasDescuento.forEach(hora => {
+				if (!options.some(opt => opt.value === hora)) {
+					options.push({ 
+						value: hora, 
+						label: `${hora} ⭐ Descuento` 
+					});
+				}
+			});
+		}
+		
 		// Si la hora seleccionada no está en las opciones (ej: hora de descuento específica), agregarla
 		if (formData.hora && !options.some(opt => opt.value === formData.hora)) {
-			options.push({ value: formData.hora, label: formData.hora });
-			// Ordenar las opciones por hora
-			options.sort((a, b) => a.value.localeCompare(b.value));
+			options.push({ value: formData.hora, label: `${formData.hora} ⭐` });
 		}
+		
+		// Ordenar las opciones por hora
+		options.sort((a, b) => a.value.localeCompare(b.value));
+		
 		return options;
-	}, [formData.hora]);
+	}, [formData.hora, oportunidadesRetornoUniversal]);
 
 	const currencyFormatter = useMemo(
 		() =>
@@ -684,8 +707,27 @@ function HeroExpress({
 								{oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones?.length > 0 && (
 									<AlertaDescuentoRetorno
 										oportunidadesRetorno={oportunidadesRetornoUniversal}
+										horaSeleccionada={formData.hora}
 										onSeleccionarHorario={(horaSeleccionada) => {
-											handleInputChange({ target: { name: "hora", value: horaSeleccionada } });
+											// Asegurar que la hora está en formato HH:MM
+											const horaFormateada = horaSeleccionada.includes(':') 
+												? horaSeleccionada 
+												: horaSeleccionada;
+											
+											console.log('✅ [HeroExpress] Hora seleccionada desde alerta:', horaFormateada);
+											
+											// Actualizar el estado del formulario
+											handleInputChange({ target: { name: "hora", value: horaFormateada } });
+											
+											// Enfocar el select para dar feedback visual
+											const selectElement = document.getElementById('hora');
+											if (selectElement) {
+												selectElement.focus();
+												// Pequeño delay para asegurar que el valor se actualiza
+												setTimeout(() => {
+													selectElement.blur();
+												}, 100);
+											}
 										}}
 									/>
 								)}
