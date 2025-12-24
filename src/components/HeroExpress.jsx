@@ -98,14 +98,30 @@ function HeroExpress({
 
 	const timeOptions = useMemo(() => {
 		const options = generateTimeOptions();
+
+		// Incorporar opciones de oportunidades de retorno si existen
+		if (oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones) {
+			oportunidadesRetornoUniversal.opciones.forEach(oportunidad => {
+				if (oportunidad.opcionesRetorno) {
+					oportunidad.opcionesRetorno.forEach(opcion => {
+						if (!options.some(opt => opt.value === opcion.hora)) {
+							options.push({ value: opcion.hora, label: opcion.hora });
+						}
+					});
+				}
+			});
+		}
+
 		// Si la hora seleccionada no está en las opciones (ej: hora de descuento específica), agregarla
 		if (formData.hora && !options.some(opt => opt.value === formData.hora)) {
 			options.push({ value: formData.hora, label: formData.hora });
-			// Ordenar las opciones por hora
-			options.sort((a, b) => a.value.localeCompare(b.value));
 		}
+
+		// Ordenar las opciones por hora
+		options.sort((a, b) => a.value.localeCompare(b.value));
+
 		return options;
-	}, [formData.hora]);
+	}, [formData.hora, oportunidadesRetornoUniversal]);
 
 	const currencyFormatter = useMemo(
 		() =>
