@@ -1201,6 +1201,7 @@ function App() {
 				? tarifaDinamica.precioFinal
 				: precioIdaBase;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
+		const precioOriginal = formData.idaVuelta ? precioIdaBase * 2 : precioIdaBase;
 
 		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
 		// Descuento online por reservar (se aplica a cada tramo)
@@ -1319,7 +1320,8 @@ function App() {
 
 		return {
 			precioBase,
-			totalNormal: precioBase, // Alias para usar en componentes que esperan totalNormal
+			precioOriginal, // Precio sin tarifa dinámica
+			totalNormal: precioBase, // Alias para usar en componentes que esperan totalNormal (incluye dinámica)
 			descuentoBase: descuentoOnline, // Para mantener compatibilidad
 			descuentoPromocion,
 			descuentoRoundTrip,

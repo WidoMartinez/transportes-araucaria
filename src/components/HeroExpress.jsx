@@ -939,6 +939,15 @@ function HeroExpress({
 									</div>
 									<div className="text-right flex flex-col items-end">
 										<p className="text-xs font-bold text-muted-foreground uppercase">Total</p>
+
+										{/* desglose de tarifa dinámica si aplica */}
+										{pricing.totalNormal > pricing.precioOriginal && (
+											<div className="text-[10px] text-amber-600 mb-0.5 flex flex-col items-end">
+												<span>Base: {formatCurrency(pricing.precioOriginal)}</span>
+												<span>Alta Demanda: +{formatCurrency(pricing.totalNormal - pricing.precioOriginal)}</span>
+											</div>
+										)}
+
 										{pricing.totalNormal > pricing.totalConDescuento && formData.idaVuelta ? (
 											<>
 												<p className="text-sm text-muted-foreground line-through decoration-destructive/60 decoration-1">
@@ -947,6 +956,25 @@ function HeroExpress({
 												<p className="font-bold text-lg text-emerald-600">
 													{formatCurrency(pricing.totalConDescuento)}
 												</p>
+
+												{/* Desglose de descuentos */}
+												<div className="flex flex-col items-end mt-1 space-y-0.5">
+													{pricing.descuentoBase > 0 && (
+														<span className="text-[10px] text-emerald-600/80">
+															Online: -{formatCurrency(pricing.descuentoBase)}
+														</span>
+													)}
+													{pricing.descuentoRoundTrip > 0 && (
+														<span className="text-[10px] text-emerald-600/80">
+															Ida/Vuelta: -{formatCurrency(pricing.descuentoRoundTrip)}
+														</span>
+													)}
+													{pricing.descuentoPromocion > 0 && (
+														<span className="text-[10px] text-emerald-600/80">
+															Promo: -{formatCurrency(pricing.descuentoPromocion)}
+														</span>
+													)}
+												</div>
 											</>
 										) : (
 											<p className="font-bold text-lg text-foreground">
