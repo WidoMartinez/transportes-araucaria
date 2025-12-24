@@ -61,9 +61,35 @@ function Contacto({
 	phoneError,
 	isSubmitting,
 	setFormData,
+	oportunidadesRetornoUniversal,
 }) {
 	// Generar opciones de tiempo
-	const timeOptions = useMemo(() => generateTimeOptions(), []);
+	const timeOptions = useMemo(() => {
+		const options = generateTimeOptions();
+
+		// Incorporar opciones de oportunidades de retorno si existen
+		if (oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones) {
+			oportunidadesRetornoUniversal.opciones.forEach(oportunidad => {
+				if (oportunidad.opcionesRetorno) {
+					oportunidad.opcionesRetorno.forEach(opcion => {
+						if (!options.some(opt => opt.value === opcion.hora)) {
+							options.push({ value: opcion.hora, label: opcion.hora });
+						}
+					});
+				}
+			});
+		}
+
+		// Si la hora seleccionada no está en las opciones, agregarla para evitar reseteo
+		if (formData.hora && !options.some(opt => opt.value === formData.hora)) {
+			options.push({ value: formData.hora, label: formData.hora });
+		}
+
+		// Ordenar las opciones por hora
+		options.sort((a, b) => a.value.localeCompare(b.value));
+
+		return options;
+	}, [oportunidadesRetornoUniversal, formData.hora]);
 
 	// Función para manejar el cambio de hora
 	const handleTimeChange = (field, value) => {

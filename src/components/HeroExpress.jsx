@@ -651,7 +651,9 @@ function HeroExpress({
 												id="hora"
 												name="hora"
 												value={formData.hora}
-												onChange={(e) => handleInputChange({ target: { name: "hora", value: e.target.value } })}
+												onChange={(e) => {
+													handleInputChange({ target: { name: "hora", value: e.target.value } });
+												}}
 												aria-label="Seleccionar hora del viaje"
 												className="w-full h-12 md:h-11 pl-10 pr-8 bg-gray-50 md:bg-gray-50 border border-gray-200 rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white appearance-none cursor-pointer touch-manipulation"
 											>
