@@ -15,7 +15,8 @@ function AlertaDescuentoRetorno({
 	precioOriginal,
 	onSeleccionarHorario,
 	mostrarOpciones = false,
-	oportunidadesRetorno = null // Nueva prop para sistema universal
+	oportunidadesRetorno = null, // Nueva prop para sistema universal
+	horaSeleccionada = null // Nueva prop para resaltar la hora seleccionada
 }) {
 	// 1. PRIORIDAD: Si hay oportunidades de retorno universales (nuevo sistema), mostrar esa alerta INMEDIATAMENTE
 	if (oportunidadesRetorno && oportunidadesRetorno.opciones?.length > 0) {
@@ -46,21 +47,35 @@ function AlertaDescuentoRetorno({
 						
 						{/* Mostrar opciones de horario */}
 						<div className="mt-3 grid grid-cols-3 gap-2">
-							{oportunidad.opcionesRetorno.map((opcion, index) => (
-								<button
-									key={index}
-									type="button"
-									onClick={() => onSeleccionarHorario?.(opcion.hora)}
-									className="p-2 rounded-lg border border-emerald-400/30 bg-white hover:bg-emerald-50 text-center transition-all hover:scale-105 hover:shadow-md cursor-pointer"
-								>
-									<div className="font-bold text-sm text-emerald-700">
-										{opcion.hora}
-									</div>
-									<Badge variant="secondary" className="text-xs mt-1 bg-emerald-100 text-emerald-700">
-										-{opcion.descuento}%
-									</Badge>
-								</button>
-							))}
+							{oportunidad.opcionesRetorno.map((opcion, index) => {
+								const esSeleccionada = horaSeleccionada === opcion.hora;
+								return (
+									<button
+										key={index}
+										type="button"
+										onClick={() => onSeleccionarHorario?.(opcion.hora)}
+										className={`
+											p-2 rounded-lg border text-center transition-all 
+											hover:scale-105 hover:shadow-md cursor-pointer
+											${esSeleccionada 
+												? 'border-emerald-600 bg-emerald-100 shadow-lg ring-2 ring-emerald-400' 
+												: 'border-emerald-400/30 bg-white hover:bg-emerald-50'
+											}
+										`}
+									>
+										<div className={`font-bold text-sm ${esSeleccionada ? 'text-emerald-800' : 'text-emerald-700'}`}>
+											{opcion.hora}
+											{esSeleccionada && ' ✓'}
+										</div>
+										<Badge 
+											variant="secondary" 
+											className={`text-xs mt-1 ${esSeleccionada ? 'bg-emerald-200 text-emerald-800' : 'bg-emerald-100 text-emerald-700'}`}
+										>
+											-{opcion.descuento}%
+										</Badge>
+									</button>
+								);
+							})}
 						</div>
 						
 						<div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">

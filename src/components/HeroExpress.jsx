@@ -98,14 +98,37 @@ function HeroExpress({
 
 	const timeOptions = useMemo(() => {
 		const options = generateTimeOptions();
+		
+		// Agregar horas de descuento de oportunidades de retorno universal
+		if (oportunidadesRetornoUniversal?.opciones?.length > 0) {
+			const horasDescuento = new Set();
+			oportunidadesRetornoUniversal.opciones.forEach(oportunidad => {
+				oportunidad.opcionesRetorno.forEach(opcion => {
+					horasDescuento.add(opcion.hora);
+				});
+			});
+			
+			// Agregar horas de descuento que no estén en las opciones regulares
+			horasDescuento.forEach(hora => {
+				if (!options.some(opt => opt.value === hora)) {
+					options.push({ 
+						value: hora, 
+						label: `${hora} ⭐ Descuento` 
+					});
+				}
+			});
+		}
+		
 		// Si la hora seleccionada no está en las opciones (ej: hora de descuento específica), agregarla
 		if (formData.hora && !options.some(opt => opt.value === formData.hora)) {
-			options.push({ value: formData.hora, label: formData.hora });
-			// Ordenar las opciones por hora
-			options.sort((a, b) => a.value.localeCompare(b.value));
+			options.push({ value: formData.hora, label: `${formData.hora} ⭐` });
 		}
+		
+		// Ordenar las opciones por hora
+		options.sort((a, b) => a.value.localeCompare(b.value));
+		
 		return options;
-	}, [formData.hora]);
+	}, [formData.hora, oportunidadesRetornoUniversal]);
 
 	const currencyFormatter = useMemo(
 		() =>
@@ -684,8 +707,27 @@ function HeroExpress({
 								{oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones?.length > 0 && (
 									<AlertaDescuentoRetorno
 										oportunidadesRetorno={oportunidadesRetornoUniversal}
+										horaSeleccionada={formData.hora}
 										onSeleccionarHorario={(horaSeleccionada) => {
+											// Actualizar el estado del formulario
 											handleInputChange({ target: { name: "hora", value: horaSeleccionada } });
+											
+											// Usar requestAnimationFrame para asegurar que React actualice antes de enfocar
+											requestAnimationFrame(() => {
+												const selectElement = document.getElementById('hora');
+												if (selectElement) {
+													// Forzar el valor en el DOM
+													selectElement.value = horaSeleccionada;
+													// Disparar evento change manualmente
+													const event = new Event('change', { bubbles: true });
+													selectElement.dispatchEvent(event);
+													// Dar feedback visual
+													selectElement.focus();
+													setTimeout(() => {
+														selectElement.blur();
+													}, 200);
+												}
+											});
 										}}
 									/>
 								)}
