@@ -930,10 +930,29 @@ function HeroExpress({
 									<div>
 										<p className="text-xs font-bold text-muted-foreground uppercase">Fecha</p>
 										<p className="font-medium text-sm">{fechaLegible} - {formData.hora}</p>
+										{formData.idaVuelta && formData.fechaRegreso && (
+											<p className="font-medium text-sm mt-1">
+												<span className="text-muted-foreground text-xs block">Retorno:</span>
+												{new Date(`${formData.fechaRegreso}T00:00:00`).toLocaleDateString("es-CL", { dateStyle: "long" })}
+											</p>
+										)}
 									</div>
 									<div className="text-right flex flex-col items-end">
 										<p className="text-xs font-bold text-muted-foreground uppercase">Total</p>
-										<p className="font-bold text-lg text-foreground">{formatCurrency(pricing.totalConDescuento)}</p>
+										{pricing.totalNormal > pricing.totalConDescuento ? (
+											<>
+												<p className="text-sm text-muted-foreground line-through decoration-destructive/60 decoration-1">
+													{formatCurrency(pricing.totalNormal)}
+												</p>
+												<p className="font-bold text-lg text-emerald-600">
+													{formatCurrency(pricing.totalConDescuento)}
+												</p>
+											</>
+										) : (
+											<p className="font-bold text-lg text-foreground">
+												{formatCurrency(pricing.totalConDescuento)}
+											</p>
+										)}
 										{urgencyMessage && (
 											<Badge variant="outline" className="mt-1 border-muted-foreground/30 text-muted-foreground text-[10px] px-2 py-0 h-5 font-medium flex items-center gap-1 animate-in fade-in zoom-in duration-300">
 												{urgencyMessage.icon}
