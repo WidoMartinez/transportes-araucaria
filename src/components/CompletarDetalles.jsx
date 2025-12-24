@@ -41,7 +41,7 @@ const generateTimeOptions = () => {
 	return options;
 };
 
-function CompletarDetalles({ reservaId, onComplete, onCancel }) {
+function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 	const [reserva, setReserva] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
@@ -112,8 +112,20 @@ function CompletarDetalles({ reservaId, onComplete, onCancel }) {
 			const conversionKey = `conversion_sent_${reservaId}`;
 			if (!sessionStorage.getItem(conversionKey)) {
 				// Determinar el valor de la conversión
-				// Preferir totalConDescuento, o precio, o abonoSugerido según lo que esté disponible
-				const value = Number(reserva.totalConDescuento || reserva.precio || reserva.abonoSugerido || 0);
+				// Determinar el valor de la conversión
+				// FIXED: Priorizar initialAmount si existe (viene de la transacción real)
+				let value = Number(initialAmount);
+				
+				// Si no hay initialAmount, usar fallback de reserva
+				if (!value || value <= 0) {
+					value = Number(reserva.totalConDescuento || reserva.precio || reserva.abonoSugerido || 0);
+				}
+				
+				// Blindaje final: Nunca enviar 0 a Google Ads
+				if (value <= 0) { 
+					value = 1.0;
+					console.warn("⚠️ Valor de conversión era 0, ajustado a 1.0 para tracking");
+				}
 				
 				console.log("📊 Disparando conversión de respaldo en CompletarDetalles con valor:", value);
 				window.gtag('event', 'conversion', {

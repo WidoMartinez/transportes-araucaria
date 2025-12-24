@@ -6440,12 +6440,11 @@ app.post("/api/payment-result", async (req, res) => {
 					// Pasar parámetros adicionales para el tracking preciso
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
 					
-					// Lógica de valor de conversión (Estrategia B):
-					// Siempre enviar el TOTAL de la reserva.
-					// Google Ads se encarga de deduplicar si hay múltiples pagos para la misma reserva.
-					const total = reserva.totalConDescuento || reserva.precio || 0;
+					// FIXED: Usar montoActual (lo que realmente pagó en esta transacción) en lugar del total de la reserva
+					// Esto corrige el bug donde Google Ads registraba el valor total de la reserva en lugar del abono.
+					const montoParaConversion = montoActual > 0 ? montoActual : (reserva.totalConDescuento || reserva.precio || 0);
 					
-					console.log(`💰 Monto para conversión: ${total} (Estrategia B: Valor Total)`);
+					console.log(`💰 Monto para conversión: ${montoParaConversion} (Valor Real de Transacción)`);
 
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
 					const userData = {
@@ -6458,7 +6457,9 @@ app.post("/api/payment-result", async (req, res) => {
 					const userDataEncoded = Buffer.from(JSON.stringify(userData)).toString('base64');
 					
 					// Construir URL con datos codificados
-					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${total}&d=${userDataEncoded}`;
+					// Construir URL con datos codificados
+					// FIXED: Usamos montoParaConversion en lugar de 'total'
+					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${userDataEncoded}`;
 					
 					return res.redirect(303, returnUrl);
 				}
@@ -6466,7 +6467,9 @@ app.post("/api/payment-result", async (req, res) => {
 				// Caso: Reserva Express (flujo normal)
 				// Redirigir a Completar Detalles
 				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
-				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}`);
+				// FIXED: Agregar parámetro amount para que CompletarDetalles tenga el valor correcto para la conversión
+				const montoExpress = montoActual > 0 ? montoActual : (reserva.totalConDescuento || reserva.precio || 0);
+				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}`);
 			} else if (flowData.status === 3 || flowData.status === 4) {
 				// Pago rechazado (3) o anulado (4)
 				console.warn(`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`);

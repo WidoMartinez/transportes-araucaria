@@ -417,14 +417,16 @@ function App() {
 		const url = new URL(window.location.href);
 		const flowSuccess = url.searchParams.get("flow_payment") === "success";
 		const reservaId = url.searchParams.get("reserva_id");
+		const amount = url.searchParams.get("amount");
 
 		if (flowSuccess && reservaId) {
 			console.log(
-				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}`
+				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}, Monto: ${amount}`
 			);
 			setVistaCompletarDetalles({
 				activo: true,
 				reservaId: reservaId,
+				initialAmount: amount,
 			});
 
 			// Limpiar URL para evitar reactivación
@@ -1783,6 +1785,7 @@ function App() {
 		return (
 			<CompletarDetalles
 				reservaId={vistaCompletarDetalles.reservaId}
+				initialAmount={vistaCompletarDetalles.initialAmount}
 				onComplete={() => {
 					console.log("✅ Detalles completados, volviendo al inicio.");
 					setVistaCompletarDetalles({ activo: false, reservaId: null });
