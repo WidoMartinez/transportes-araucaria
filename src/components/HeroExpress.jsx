@@ -783,7 +783,11 @@ function HeroExpress({
 								<div className="flex flex-col sm:flex-row gap-3 pt-3 md:pt-2">
 									<div
 										className={`flex items-center space-x-3 p-4 md:p-3 rounded-xl md:rounded-lg border-2 transition-all cursor-pointer touch-manipulation min-h-[52px] ${formData.idaVuelta ? 'bg-muted border-primary shadow-sm' : 'border-border hover:bg-muted/50 active:bg-muted/70'}`}
-										onClick={() => {
+										onClick={(e) => {
+											// Evitar doble toggle cuando se hace click en el Label (que dispara click en Checkbox)
+											// Si el click viene del label, lo ignoramos y dejamos que el evento del checkbox (sintetizado) lo maneje
+											if (e.target.tagName === 'LABEL') return;
+
 											const newValue = !formData.idaVuelta;
 											handleInputChange({ target: { name: "idaVuelta", value: newValue } });
 											if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
@@ -807,7 +811,14 @@ function HeroExpress({
 											checked={formData.idaVuelta}
 											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-5 md:size-4"
 										/>
-										<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground text-base md:text-sm">Necesito regreso</Label>
+										<div className="flex flex-col">
+											<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground text-base md:text-sm leading-tight">Necesito regreso</Label>
+											{!formData.idaVuelta && tieneCotizacionAutomatica && (
+												<span className="text-[11px] md:text-xs text-emerald-600 font-medium animate-in fade-in slide-in-from-left-2 mt-0.5">
+													Precio especial si reservas ida y vuelta
+												</span>
+											)}
+										</div>
 									</div>
 
 									<div
