@@ -709,15 +709,8 @@ function HeroExpress({
 										oportunidadesRetorno={oportunidadesRetornoUniversal}
 										horaSeleccionada={formData.hora}
 										onSeleccionarHorario={(horaSeleccionada) => {
-											// Asegurar que la hora está en formato HH:MM
-											const horaFormateada = horaSeleccionada.includes(':') 
-												? horaSeleccionada 
-												: horaSeleccionada;
-											
-											console.log('✅ [HeroExpress] Hora seleccionada desde alerta:', horaFormateada);
-											
 											// Actualizar el estado del formulario
-											handleInputChange({ target: { name: "hora", value: horaFormateada } });
+											handleInputChange({ target: { name: "hora", value: horaSeleccionada } });
 											
 											// Enfocar el select para dar feedback visual
 											const selectElement = document.getElementById('hora');
