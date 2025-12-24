@@ -237,8 +237,8 @@ function App() {
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
-		descuentoOnline: { valor: 5, activo: true },
-		descuentoRoundTrip: { valor: 10, activo: true },
+		descuentoOnline: { valor: 0, activo: false },
+		descuentoRoundTrip: { valor: 0, activo: false },
 		descuentosPersonalizados: [],
 	});
 
@@ -491,7 +491,14 @@ function App() {
 				return true;
 			}
 			setDescuentosGlobales(nuevosDescuentos);
-		}
+		} else {
+            // Si no vienen descuentos globales, resetear a valores seguros
+            setDescuentosGlobales({
+                descuentoOnline: { valor: 0, activo: false },
+                descuentoRoundTrip: { valor: 0, activo: false },
+                descuentosPersonalizados: [],
+            });
+        }
 
 		return true;
 	}, []);
