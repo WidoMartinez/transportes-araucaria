@@ -712,15 +712,22 @@ function HeroExpress({
 											// Actualizar el estado del formulario
 											handleInputChange({ target: { name: "hora", value: horaSeleccionada } });
 											
-											// Enfocar el select para dar feedback visual
-											const selectElement = document.getElementById('hora');
-											if (selectElement) {
-												selectElement.focus();
-												// Pequeño delay para asegurar que el valor se actualiza
-												setTimeout(() => {
-													selectElement.blur();
-												}, 100);
-											}
+											// Usar requestAnimationFrame para asegurar que React actualice antes de enfocar
+											requestAnimationFrame(() => {
+												const selectElement = document.getElementById('hora');
+												if (selectElement) {
+													// Forzar el valor en el DOM
+													selectElement.value = horaSeleccionada;
+													// Disparar evento change manualmente
+													const event = new Event('change', { bubbles: true });
+													selectElement.dispatchEvent(event);
+													// Dar feedback visual
+													selectElement.focus();
+													setTimeout(() => {
+														selectElement.blur();
+													}, 200);
+												}
+											});
 										}}
 									/>
 								)}
