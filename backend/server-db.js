@@ -4352,6 +4352,16 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     hotel: reserva.hotel || ""
                 };
 
+                console.log("📧 [DEBUG] Enviando Notificación Conductor:", {
+                    reservaId: reserva.id,
+                    dbDireccionOrigen: reserva.direccionOrigen,
+                    dbDireccionDestino: reserva.direccionDestino,
+                    dbOrigen: reserva.origen,
+                    dbDestino: reserva.destino,
+                    payloadOrigen: conductorPayload.origen,
+                    payloadDestino: conductorPayload.destino
+                });
+
                 await axios.post(phpConductorUrl, conductorPayload, {
                     headers: { "Content-Type": "application/json" },
                     timeout: 10000
