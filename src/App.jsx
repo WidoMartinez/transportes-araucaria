@@ -237,8 +237,8 @@ function App() {
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
-		descuentoOnline: { valor: 5, activo: true },
-		descuentoRoundTrip: { valor: 10, activo: true },
+		descuentoOnline: { valor: 0, activo: false },
+		descuentoRoundTrip: { valor: 0, activo: false },
 		descuentosPersonalizados: [],
 	});
 
@@ -493,7 +493,14 @@ function App() {
 				return true;
 			}
 			setDescuentosGlobales(nuevosDescuentos);
-		}
+		} else {
+            // Si no vienen descuentos globales, resetear a valores seguros
+            setDescuentosGlobales({
+                descuentoOnline: { valor: 0, activo: false },
+                descuentoRoundTrip: { valor: 0, activo: false },
+                descuentosPersonalizados: [],
+            });
+        }
 
 		return true;
 	}, []);
@@ -1203,6 +1210,7 @@ function App() {
 				? tarifaDinamica.precioFinal
 				: precioIdaBase;
 		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
+		const precioOriginal = formData.idaVuelta ? precioIdaBase * 2 : precioIdaBase;
 
 		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
 		// Descuento online por reservar (se aplica a cada tramo)
@@ -1321,6 +1329,8 @@ function App() {
 
 		return {
 			precioBase,
+			precioOriginal, // Precio sin tarifa dinámica
+			totalNormal: precioBase, // Alias para usar en componentes que esperan totalNormal (incluye dinámica)
 			descuentoBase: descuentoOnline, // Para mantener compatibilidad
 			descuentoPromocion,
 			descuentoRoundTrip,
