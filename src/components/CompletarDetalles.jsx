@@ -72,7 +72,7 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 
 			try {
 				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
-				const response = await fetch(`${apiUrl}/api/reservas/${reservaId}`);
+				const response = await fetch(`${apiUrl}/api/reservas-public/${reservaId}`);
 
 				if (!response.ok) {
 					throw new Error("No se pudo cargar la información de la reserva");

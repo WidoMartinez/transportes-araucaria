@@ -3558,8 +3558,8 @@ app.get("/api/reservas", async (req, res) => {
 
 
 
-// Obtener una reserva específica
-app.get("/api/reservas/:id", async (req, res) => {
+// Obtener una reserva específica (Público)
+app.get("/api/reservas-public/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
 		const reserva = await Reserva.findByPk(id);
@@ -3568,9 +3568,9 @@ app.get("/api/reservas/:id", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		res.json(reserva);
+		res.json({ reserva }); // Envolver en objeto para mantener consistencia con CompletarDetalles.jsx que espera data.reserva
 	} catch (error) {
-		console.error("Error obteniendo reserva:", error);
+		console.error("Error obteniendo reserva pública:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -4340,8 +4340,8 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     codigoReserva: reserva.codigoReserva,
                     pasajeroNombre: reserva.nombre,
                     pasajeroTelefono: reserva.telefono,
-                    origen: reserva.origen,
-                    destino: reserva.destino,
+                    origen: reserva.direccionOrigen || reserva.origen,
+                    destino: reserva.direccionDestino || reserva.destino,
                     direccionRecogida: reserva.direccionOrigen || reserva.origen,
                     fecha: reserva.fecha,
                     hora: reserva.hora,
