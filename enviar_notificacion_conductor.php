@@ -78,7 +78,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 // Generar archivo .ics para calendario
-function generateICS($codigoReserva, $fecha, $hora, $pasajeroNombre, $origen, $destino, $direccionRecogida, $observaciones) {
+// Generar archivo .ics para calendario
+function generateICS($codigoReserva, $fecha, $hora, $pasajeroNombre, $origen, $destino, $location, $observaciones) {
     $fechaHora = $fecha . ' ' . $hora;
     $timestamp = strtotime($fechaHora);
     
@@ -106,7 +107,7 @@ function generateICS($codigoReserva, $fecha, $hora, $pasajeroNombre, $origen, $d
     $ics .= "DTEND:{$dtend}\r\n";
     $ics .= "SUMMARY:{$summary}\r\n";
     $ics .= "DESCRIPTION:{$description}\r\n";
-    $ics .= "LOCATION:{$direccionRecogida}\r\n";
+    $ics .= "LOCATION:{$location}\r\n";
     $ics .= "STATUS:CONFIRMED\r\n";
     $ics .= "SEQUENCE:0\r\n";
     $ics .= "END:VEVENT\r\n";
@@ -231,8 +232,11 @@ try {
     </body>
     </html>";
 
+    // Obtener ubicación para calendario (preferiblemente destino específico o recodiga)
+    $calendarLocation = htmlspecialchars($data['calendarLocation'] ?? $direccionRecogida);
+
     // Adjuntar archivo .ics
-    $icsContent = generateICS($codigoReserva, $fecha, $hora, $pasajeroNombre, $origen, $destino, $direccionRecogida, $observaciones);
+    $icsContent = generateICS($codigoReserva, $fecha, $hora, $pasajeroNombre, $origen, $destino, $calendarLocation, $observaciones);
     $mail->addStringAttachment($icsContent, "servicio-{$codigoReserva}.ics", 'base64', 'text/calendar');
 
     $mail->send();
