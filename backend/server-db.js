@@ -6409,6 +6409,9 @@ app.post("/api/payment-result", async (req, res) => {
 				}
 			}
 
+            // FIXED: Definir montoActual desde flowData para evitar ReferenceError
+            const montoActual = Number(flowData.amount) || 0;
+
 			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
 			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
