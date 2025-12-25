@@ -1584,6 +1584,12 @@ function App() {
 		}
 		setPhoneError("");
 
+		// Validar horario mínimo de anticipación
+		const validacionHorario = validarHorarioReserva();
+		if (!validacionHorario.esValido && formData.destino !== "Otro") {
+			return { success: false, error: "horario", message: validacionHorario.mensaje };
+		}
+
 		if (isSubmitting) return { success: false, error: "procesando" };
 		setIsSubmitting(true);
 
