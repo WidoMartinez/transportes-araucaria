@@ -61,6 +61,7 @@ import {
 	Trash2,
 	CheckSquare,
 	Square,
+	Printer,
 	Car,
 } from "lucide-react";
 import {
@@ -516,6 +517,187 @@ function AdminReservas() {
 
 	// Estado para mostrar el modal de registro de pago manual
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
+	
+	// Estado para modal de exportación de calendario
+	const [showCalendarDialog, setShowCalendarDialog] = useState(false);
+	const [calendarStartDate, setCalendarStartDate] = useState("");
+	const [calendarEndDate, setCalendarEndDate] = useState("");
+	const [generatingCalendar, setGeneratingCalendar] = useState(false);
+
+	const handleGenerarCalendario = async () => {
+		if (!calendarStartDate || !calendarEndDate) {
+			alert("Selecciona un rango de fechas válido");
+			return;
+		}
+
+		setGeneratingCalendar(true);
+		try {
+			const query = new URLSearchParams({
+				fechaInicio: calendarStartDate,
+				fechaFin: calendarEndDate,
+			});
+			const resp = await fetch(`${apiUrl}/api/reservas/calendario?${query}`, {
+				headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+			});
+			
+			if (resp.ok) {
+				const data = await resp.json();
+				const eventos = data.eventos || [];
+
+				// Generar HTML para impresión
+				const printWindow = window.open("", "_blank");
+				if (!printWindow) {
+					alert("Permite las ventanas emergentes para imprimir la planificación");
+					return;
+				}
+
+				// Agrupar por fecha
+				const eventosPorFecha = {};
+				eventos.forEach(evt => {
+					const fechaStr = evt.fecha; // YYYY-MM-DD
+					if (!eventosPorFecha[fechaStr]) eventosPorFecha[fechaStr] = [];
+					eventosPorFecha[fechaStr].push(evt);
+				});
+				
+				// Ordenar fechas
+				const fechasOrdenadas = Object.keys(eventosPorFecha).sort();
+
+				let htmlContent = `
+					<html>
+					<head>
+						<title>Planificación de Viajes</title>
+						<style>
+							body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+							h1 { text-align: center; margin-bottom: 20px; font-size: 18px; }
+							.dia-block { margin-bottom: 25px; page-break-inside: avoid; }
+							.dia-header { 
+								background-color: #f0f0f0; 
+								padding: 8px; 
+								font-weight: bold; 
+								font-size: 14px;
+								border-bottom: 2px solid #ccc;
+								margin-bottom: 10px;
+							}
+							table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+							th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+							th { background-color: #f9f9f9; width: 15%; }
+							.reserva-row { page-break-inside: avoid; }
+							.retorno-badge { 
+								background-color: #e6f7ff; 
+								color: #0050b3; 
+								border: 1px solid #91d5ff; 
+								padding: 2px 5px; 
+								border-radius: 4px; 
+								font-size: 10px; 
+								font-weight: bold;
+								display: inline-block;
+								margin-left: 5px;
+							}
+							.ida-badge { 
+								background-color: #f6ffed;
+								color: #389e0d;
+								border: 1px solid #b7eb8f;
+								padding: 2px 5px;
+								border-radius: 4px; 
+								font-size: 10px; 
+								font-weight: bold;
+								display: inline-block;
+								margin-left: 5px;
+							}
+							@media print {
+								.no-print { display: none; }
+								body { margin: 0; }
+							}
+						</style>
+					</head>
+					<body>
+						<h1>Planificación de Viajes: ${new Date(calendarStartDate).toLocaleDateString("es-CL")} - ${new Date(calendarEndDate).toLocaleDateString("es-CL")}</h1>
+				`;
+
+				if (fechasOrdenadas.length === 0) {
+					htmlContent += "<p style='text-align:center;'>No hay viajes programados en este período.</p>";
+				}
+
+				fechasOrdenadas.forEach(fecha => {
+					// Formatear fecha amigable (e.g. Lunes 25 de Diciembre)
+					const fechaObj = new Date(fecha + "T00:00:00");
+					const fechaTexto = fechaObj.toLocaleDateString("es-CL", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+					
+					htmlContent += `<div class="dia-block">
+						<div class="dia-header">${fechaTexto.toUpperCase()}</div>
+						<table>
+							<thead>
+								<tr>
+									<th style="width: 80px;">Hora</th>
+									<th>Cliente / Contacto</th>
+									<th>Ruta / Detalles</th>
+									<th style="width: 150px;">Vehículo / Conductor</th>
+								</tr>
+							</thead>
+							<tbody>`;
+					
+					eventosPorFecha[fecha].forEach(ev => {
+						const tipoBadge = ev.tipo === "RETORNO" 
+							? `<span class="retorno-badge">RETORNO</span>` 
+							: `<span class="ida-badge">IDA</span>`;
+						
+						const contacto = `
+							<b>${ev.cliente}</b><br>
+							${ev.telefono || '-'}<br>
+							<small>${ev.email || ''}</small>
+						`;
+
+						const ruta = `
+							<b>Origen:</b> ${ev.direccionOrigen || ev.origen}<br>
+							<b>Destino:</b> ${ev.direccionDestino || ev.destino}<br>
+							<div style="margin-top:4px;">
+								<small>Pax: ${ev.pasajeros} | ${ev.numeroVuelo ? "Vuelo: " + ev.numeroVuelo : ""} ${ev.observaciones ? "<br>Obs: " + ev.observaciones : ""}</small>
+							</div>
+						`;
+
+						let asignacion = `<span style="color:#999;">Sin asignar</span>`;
+						if (ev.vehiculo || ev.conductorId) {
+							asignacion = `
+								${ev.vehiculo || ''}<br>
+								${ev.conductorId ? '(Conductor asignado)' : ''}
+							`;
+						}
+
+						htmlContent += `
+							<tr class="reserva-row">
+								<td style="font-size:14px; font-weight:bold;">${ev.hora ? ev.hora.substring(0,5) : "--:--"} ${tipoBadge}</td>
+								<td>${contacto}</td>
+								<td>${ruta}</td>
+								<td>${asignacion}</td>
+							</tr>
+						`;
+					});
+
+					htmlContent += `</tbody></table></div>`;
+				});
+
+				htmlContent += `
+						<div class="no-print" style="margin-top:20px; text-align:center;">
+							<button onclick="window.print()" style="padding:10px 20px; font-size:16px; cursor:pointer;">IMPRIMIR</button>
+						</div>
+					</body>
+					</html>
+				`;
+
+				printWindow.document.write(htmlContent);
+				printWindow.document.close();
+				
+				setShowCalendarDialog(false);
+			} else {
+				alert("Error al cargar la planificación");
+			}
+		} catch (error) {
+			console.error(error);
+			alert("Error generando calendario");
+		} finally {
+			setGeneratingCalendar(false);
+		}
+	};
 
 	// Cargar estadÃ­sticas
 	const fetchEstadisticas = async () => {
@@ -2101,13 +2283,75 @@ function AdminReservas() {
 			<Card>
 				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Lista de Reservas</CardTitle>
-					<Dialog>
-						<DialogTrigger asChild>
-							<Button variant="outline" size="sm">
-								<Settings2 className="w-4 h-4 mr-2" />
-								Columnas
-							</Button>
-						</DialogTrigger>
+					<div className="flex gap-2">
+						<Dialog open={showCalendarDialog} onOpenChange={setShowCalendarDialog}>
+							<DialogTrigger asChild>
+								<Button variant="outline" size="sm">
+									<Printer className="w-4 h-4 mr-2" />
+									Planificación
+								</Button>
+							</DialogTrigger>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>Generar Planificación</DialogTitle>
+									<DialogDescription>
+										Selecciona el rango de fechas para generar la vista de impresión tipo calendario.
+									</DialogDescription>
+								</DialogHeader>
+								<div className="space-y-4 py-4">
+									<div className="flex flex-col gap-2">
+										<Label>Fecha Inicio</Label>
+										<Input 
+											type="date"
+											value={calendarStartDate}
+											onChange={(e) => setCalendarStartDate(e.target.value)} 
+										/>
+									</div>
+									<div className="flex flex-col gap-2">
+										<Label>Fecha Término</Label>
+										<Input 
+											type="date"
+											value={calendarEndDate}
+											onChange={(e) => setCalendarEndDate(e.target.value)} 
+										/>
+									</div>
+									<div className="flex gap-2 justify-center pt-2">
+										<Button variant="ghost" size="sm" onClick={() => {
+											const today = new Date();
+											const str = today.toISOString().split('T')[0];
+											setCalendarStartDate(str);
+											setCalendarEndDate(str);
+										}}>Hoy</Button>
+										<Button variant="ghost" size="sm" onClick={() => {
+											const today = new Date();
+											const tomorrow = new Date(today);
+											tomorrow.setDate(tomorrow.getDate() + 1);
+											setCalendarStartDate(today.toISOString().split('T')[0]);
+											setCalendarEndDate(tomorrow.toISOString().split('T')[0]);
+										}}>Mañana</Button>
+										<Button variant="ghost" size="sm" onClick={() => {
+											const today = new Date();
+											const nextWeek = new Date(today);
+											nextWeek.setDate(nextWeek.getDate() + 7);
+											setCalendarStartDate(today.toISOString().split('T')[0]);
+											setCalendarEndDate(nextWeek.toISOString().split('T')[0]);
+										}}>Próx. 7 días</Button>
+									</div>
+									<Button onClick={handleGenerarCalendario} disabled={generatingCalendar} className="w-full">
+										{generatingCalendar ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+										Generar Vista de Impresión
+									</Button>
+								</div>
+							</DialogContent>
+						</Dialog>
+
+						<Dialog>
+							<DialogTrigger asChild>
+								<Button variant="outline" size="sm">
+									<Settings2 className="w-4 h-4 mr-2" />
+									Columnas
+								</Button>
+							</DialogTrigger>
 						<DialogContent>
 							<DialogHeader>
 								<DialogTitle>Configurar Columnas Visibles</DialogTitle>
@@ -2175,6 +2419,7 @@ function AdminReservas() {
 							</div>
 						</DialogContent>
 					</Dialog>
+				</div>
 
 					{/* Modal para registrar pago manual */}
 					<Dialog

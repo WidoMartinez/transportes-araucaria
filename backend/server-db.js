@@ -747,6 +747,127 @@ const initializeDatabase = async () => {
 	}
 };
 
+// --- ENDPOINT PARA EXPORTAR CALENDARIO (PLANIFICACIÓN) ---
+app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
+	try {
+		const { fechaInicio, fechaFin } = req.query;
+
+		if (!fechaInicio || !fechaFin) {
+			return res.status(400).json({ error: "Faltan parámetros fechaInicio o fechaFin" });
+		}
+
+		console.log(`📅 Solicitud de calendario: ${fechaInicio} a ${fechaFin}`);
+
+		const startDate = new Date(fechaInicio);
+		const endDate = new Date(fechaFin);
+
+		// Ajustar endDate para incluir todo el día si es necesario (aunque el frontend suele mandar YYYY-MM-DD)
+		// Si vienen solo fechas YYYY-MM-DD, startDate es 00:00 y endDate es 00:00.
+		// Queremos incluir todo el endDate, así que le sumamos 1 día o lo seteamos a 23:59:59?
+		// Mejor asumimos que el frontend manda el rango correcto o usamos operador lte con fecha string si coincide.
+		// Para seguridad, usaremos strings directamente en la query si son YYYY-MM-DD compatiples,
+		// o objetos Date con hora fin.
+		// Vamos a asumir que fechaFin debe ser inclusiva al final del día.
+		const endDateInclusive = new Date(endDate);
+		endDateInclusive.setHours(23, 59, 59, 999);
+
+		// 1. Obtener reservas normales (IDA) en el rango
+		const reservasIda = await Reserva.findAll({
+			where: {
+				fecha: {
+					[Op.gte]: startDate,
+					[Op.lte]: endDateInclusive,
+				},
+				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+			},
+			order: [["fecha", "ASC"], ["hora", "ASC"]],
+		});
+
+		// 2. Obtener reservas de VUELTA (idaVuelta = true) cuya fechaRegreso caiga en el rango
+		const reservasVuelta = await Reserva.findAll({
+			where: {
+				idaVuelta: true,
+				fechaRegreso: {
+					[Op.gte]: startDate,
+					[Op.lte]: endDateInclusive,
+				},
+				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+			},
+			order: [["fechaRegreso", "ASC"], ["horaRegreso", "ASC"]],
+		});
+
+		// 3. Procesar y unificar
+		const eventos = [];
+
+		// Procesar IDAS
+		reservasIda.forEach((r) => {
+			eventos.push({
+				id: `ida-${r.id}`,
+				reservaId: r.id,
+				tipo: "IDA",
+				fecha: r.fecha,
+				hora: r.hora,
+				origen: r.origen,
+				destino: r.destino,
+				cliente: r.nombre,
+				telefono: r.telefono,
+				email: r.email,
+				pasajeros: r.pasajeros,
+				vehiculo: r.vehiculo,
+				conductorId: r.conductorId,
+				observaciones: r.observaciones,
+				numeroVuelo: r.numeroVuelo,
+				codigoReserva: r.codigoReserva,
+				direccionOrigen: r.direccionOrigen,
+				direccionDestino: r.direccionDestino,
+				totalConDescuento: r.totalConDescuento,
+				saldoPendiente: r.saldoPendiente,
+				abonoPagado: r.abonoPagado,
+				saldoPagado: r.saldoPagado
+			});
+		});
+
+		// Procesar VUELTAS (invertir origen/destino)
+		reservasVuelta.forEach((r) => {
+			eventos.push({
+				id: `vuelta-${r.id}`,
+				reservaId: r.id,
+				tipo: "RETORNO",
+				fecha: r.fechaRegreso,
+				hora: r.horaRegreso,
+				origen: r.destino, // Origen de la vuelta es el destino de la ida
+				destino: r.origen, // Destino de la vuelta es el origen de la ida
+				cliente: r.nombre,
+				telefono: r.telefono,
+				email: r.email,
+				pasajeros: r.pasajeros,
+				vehiculo: r.vehiculo,
+				conductorId: r.conductorId,
+				observaciones: r.observaciones ? `(RETORNO) ${r.observaciones}` : "(RETORNO)",
+				numeroVuelo: null, 
+				codigoReserva: r.codigoReserva,
+				direccionOrigen: r.direccionDestino, // Invertir direcciones
+				direccionDestino: r.direccionOrigen, // Invertir direcciones
+				totalConDescuento: 0, // Generalmente el cobro es único, o se divide. Mostramos 0 o indicamos "Incluido".
+				saldoPendiente: 0,
+				esRetorno: true
+			});
+		});
+
+		// 4. Ordenar cronológicamente
+		eventos.sort((a, b) => {
+			const dtA = new Date(`${a.fecha}T${a.hora || "00:00"}`);
+			const dtB = new Date(`${b.fecha}T${b.hora || "00:00"}`);
+			return dtA - dtB;
+		});
+
+		res.json({ eventos });
+	} catch (error) {
+		console.error("Error en exportación de calendario:", error);
+		res.status(500).json({ error: "Error al generar datos del calendario" });
+	}
+});
+
 // --- ENDPOINTS PARA CONFIGURACION DE PRECIOS ---
 const PRICING_CACHE_TTL_MS = Number(process.env.PRICING_CACHE_TTL_MS || 60000);
 let pricingCache = { payload: null, expiresAt: 0 };
