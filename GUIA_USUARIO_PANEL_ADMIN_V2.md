@@ -18,6 +18,7 @@ Vista principal con resumen y métricas
 
 ### 🚗 Operaciones
 - Reservas
+  - **Nuevo**: Planificación de Viajes (Vista Calendario)
 - Vehículos
 - Conductores
 
