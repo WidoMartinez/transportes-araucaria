@@ -19,6 +19,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { destinosInfo } from "../data/destinos";
 import AlertaDescuentoRetorno from "./AlertaDescuentoRetorno";
 import { calcularDescuentoEscalonado, generarOpcionesDescuento } from "../utils/descuentoRetorno";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "./ui/dialog";
+import { ScrollArea } from "./ui/scroll-area";
+import { TERMINOS_CONDICIONES, POLITICA_PRIVACIDAD } from "../data/legal";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
@@ -1042,7 +1052,87 @@ function HeroExpress({
 									className="mt-0.5 data-[state=checked]:bg-primary size-5 md:size-4"
 								/>
 								<Label htmlFor="terms" className="text-sm md:text-sm text-muted-foreground leading-snug cursor-pointer select-none">
-									Acepto los <span className="underline font-medium text-foreground">términos y condiciones</span> y la política de privacidad.
+									Acepto los
+									<Dialog>
+										<DialogTrigger asChild>
+											<span
+												className="underline font-medium text-foreground mx-1 hover:text-primary transition-colors"
+												onClick={(e) => e.stopPropagation()}
+												role="button"
+												tabIndex={0}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.stopPropagation();
+													}
+												}}
+											>
+												términos y condiciones
+											</span>
+										</DialogTrigger>
+										<DialogContent onClick={(e) => e.stopPropagation()}>
+											<DialogHeader>
+												<DialogTitle>Términos y Condiciones</DialogTitle>
+												<DialogDescription>
+													Por favor, lee atentamente nuestras condiciones de servicio.
+												</DialogDescription>
+											</DialogHeader>
+											<ScrollArea className="h-[60vh] pr-4">
+												<div className="space-y-4">
+													{TERMINOS_CONDICIONES.map((seccion, index) => (
+														<div key={index} className="space-y-2">
+															<h4 className="font-semibold text-foreground">{seccion.titulo}</h4>
+															{Array.isArray(seccion.contenido) ? (
+																<ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+																	{seccion.contenido.map((item, i) => (
+																		<li key={i}>{item}</li>
+																	))}
+																</ul>
+															) : (
+																<p className="text-sm text-muted-foreground">{seccion.contenido}</p>
+															)}
+														</div>
+													))}
+												</div>
+											</ScrollArea>
+										</DialogContent>
+									</Dialog>
+									y la
+									<Dialog>
+										<DialogTrigger asChild>
+											<span
+												className="underline font-medium text-foreground ml-1 hover:text-primary transition-colors"
+												onClick={(e) => e.stopPropagation()}
+												role="button"
+												tabIndex={0}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.stopPropagation();
+													}
+												}}
+											>
+												política de privacidad
+											</span>
+										</DialogTrigger>
+										<DialogContent onClick={(e) => e.stopPropagation()}>
+											<DialogHeader>
+												<DialogTitle>Política de Privacidad</DialogTitle>
+												<DialogDescription>
+													Tu privacidad es importante para nosotros.
+												</DialogDescription>
+											</DialogHeader>
+											<ScrollArea className="h-[60vh] pr-4">
+												<div className="space-y-4">
+													{POLITICA_PRIVACIDAD.map((seccion, index) => (
+														<div key={index} className="space-y-2">
+															<h4 className="font-semibold text-foreground">{seccion.titulo}</h4>
+															<p className="text-sm text-muted-foreground">{seccion.contenido}</p>
+														</div>
+													))}
+												</div>
+											</ScrollArea>
+										</DialogContent>
+									</Dialog>
+									.
 								</Label>
 							</div>
 
