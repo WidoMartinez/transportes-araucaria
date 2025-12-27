@@ -42,6 +42,7 @@ export function AddressAutocomplete({
 	const autocompleteRef = useRef(null);
 	const { isLoaded, isAvailable } = useGoogleMaps();
 	const [isInitializing, setIsInitializing] = useState(false);
+	const [loadError, setLoadError] = useState(null);
 
 	// Memoizar las opciones para evitar recreación en cada render
 	const finalOptions = useMemo(() => ({
@@ -63,7 +64,17 @@ export function AddressAutocomplete({
 		setIsInitializing(true);
 
 		try {
+			// Comprobar si la API está realmente disponible
+			if (!window.google || !window.google.maps || !window.google.maps.places) {
+				console.warn("Google Maps Places API no está disponible completamente.");
+				setLoadError("API no disponible");
+				return;
+			}
+
 			// Crear instancia de autocomplete
+			// Nota: Se usa la clase Autocomplete "legacy".
+			// Aunque hay advertencias de deprecación, es la única forma de mantener
+			// el estilo custom del input actual sin reescribir todo el CSS para Shadow DOM.
 			const autocomplete = new window.google.maps.places.Autocomplete(
 				inputRef.current,
 				finalOptions
@@ -99,6 +110,7 @@ export function AddressAutocomplete({
 			autocompleteRef.current = autocomplete;
 		} catch (error) {
 			console.error("Error al inicializar Google Places Autocomplete:", error);
+			// No bloqueamos la UI, el input queda como texto normal
 		} finally {
 			setIsInitializing(false);
 		}

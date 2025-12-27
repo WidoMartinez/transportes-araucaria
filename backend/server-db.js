@@ -2226,69 +2226,158 @@ app.post("/enviar-reserva", async (req, res) => {
 			saldoPagado = true;
 		}
 
-		// Guardar reserva en la base de datos con validaciones robustas
-		const reservaGuardada = await Reserva.create({
-			codigoReserva: codigoReserva,
-			nombre: datosReserva.nombre || "No especificado",
-			email: datosReserva.email || "",
-			telefono: datosReserva.telefono || "",
-			clienteId: datosReserva.clienteId || null,
-			rut: rutFormateado,
-			origen: datosReserva.origen || "",
-			destino: datosReserva.destino || "",
-			fecha: datosReserva.fecha || new Date(),
-			hora: datosReserva.hora || "00:00:00",
-			pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
-			precio: precioCalculado,
-			vehiculo: datosReserva.vehiculo || "",
-			numeroVuelo: datosReserva.numeroVuelo || "",
-			hotel: datosReserva.hotel || "",
-			equipajeEspecial: datosReserva.equipajeEspecial || "",
-			sillaInfantil: Boolean(
-				datosReserva.sillaInfantil === "si" ||
-					datosReserva.sillaInfantil === true
-			),
-			idaVuelta: Boolean(datosReserva.idaVuelta),
-			fechaRegreso: datosReserva.fechaRegreso || null,
-			horaRegreso: datosReserva.horaRegreso || null,
-			abonoSugerido: abonoCalculado,
-			saldoPendiente: saldoCalculado,
-			descuentoBase: parsePositiveDecimal(
-				datosReserva.descuentoBase,
-				"descuentoBase",
-				0
-			),
-			descuentoPromocion: parsePositiveDecimal(
-				datosReserva.descuentoPromocion,
-				"descuentoPromocion",
-				0
-			),
-			descuentoRoundTrip: parsePositiveDecimal(
-				datosReserva.descuentoRoundTrip,
-				"descuentoRoundTrip",
-				0
-			),
-			descuentoOnline: parsePositiveDecimal(
-				datosReserva.descuentoOnline,
-				"descuentoOnline",
-				0
-			),
-			totalConDescuento: totalCalculado,
-			mensaje: datosReserva.mensaje || "",
-			source: datosReserva.source || "web",
-			estado: estadoInicial,
-			ipAddress: req.ip || req.connection.remoteAddress || "",
-			userAgent: req.get("User-Agent") || "",
-			codigoDescuento: datosReserva.codigoDescuento || "",
-			estadoPago: estadoPagoInicial,
-			metodoPago: datosReserva.metodoPago || "",
-			referenciaPago: datosReserva.referenciaPago || "",
-			pagoGateway: datosReserva.metodoPago || null,
-			pagoMonto: montoPagadoCalculado > 0 ? montoPagadoCalculado : null,
-			pagoFecha: montoPagadoCalculado > 0 ? new Date() : null,
-			abonoPagado,
-			saldoPagado,
+// Normalizar email para búsqueda
+		const emailNormalizado = datosReserva.email ? String(datosReserva.email).trim().toLowerCase() : "";
+
+		// Verificar si existe una reserva activa sin pagar para este email
+		const reservaExistente = await Reserva.findOne({
+			where: {
+				email: emailNormalizado,
+				estado: {
+					[Op.in]: ["pendiente", "pendiente_detalles"],
+				},
+				estadoPago: "pendiente",
+			},
+			order: [["createdAt", "DESC"]],
 		});
+
+		let reservaGuardada;
+
+		if (reservaExistente) {
+			console.log(
+				`🔄 Modificando reserva existente ID: ${reservaExistente.id} (desde /enviar-reserva)`
+			);
+			// Actualizar reserva existente
+			await reservaExistente.update({
+				codigoReserva: reservaExistente.codigoReserva, // Mantener código original
+				nombre: datosReserva.nombre || "No especificado",
+				email: datosReserva.email || "",
+				telefono: datosReserva.telefono || "",
+				clienteId: datosReserva.clienteId || null,
+				rut: rutFormateado,
+				origen: datosReserva.origen || "",
+				destino: datosReserva.destino || "",
+				fecha: datosReserva.fecha || new Date(),
+				hora: datosReserva.hora || "00:00:00",
+				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+				precio: precioCalculado,
+				vehiculo: datosReserva.vehiculo || "",
+				numeroVuelo: datosReserva.numeroVuelo || "",
+				hotel: datosReserva.hotel || "",
+				equipajeEspecial: datosReserva.equipajeEspecial || "",
+				sillaInfantil: Boolean(
+					datosReserva.sillaInfantil === "si" ||
+						datosReserva.sillaInfantil === true
+				),
+				idaVuelta: Boolean(datosReserva.idaVuelta),
+				fechaRegreso: datosReserva.fechaRegreso || null,
+				horaRegreso: datosReserva.horaRegreso || null,
+				abonoSugerido: abonoCalculado,
+				saldoPendiente: saldoCalculado,
+				descuentoBase: parsePositiveDecimal(
+					datosReserva.descuentoBase,
+					"descuentoBase",
+					0
+				),
+				descuentoPromocion: parsePositiveDecimal(
+					datosReserva.descuentoPromocion,
+					"descuentoPromocion",
+					0
+				),
+				descuentoRoundTrip: parsePositiveDecimal(
+					datosReserva.descuentoRoundTrip,
+					"descuentoRoundTrip",
+					0
+				),
+				descuentoOnline: parsePositiveDecimal(
+					datosReserva.descuentoOnline,
+					"descuentoOnline",
+					0
+				),
+				totalConDescuento: totalCalculado,
+				mensaje: datosReserva.mensaje || "",
+				// source: datosReserva.source || "web", // No sobrescribir source original si ya existe? Mejor actualizarlo por si cambia el canal
+				source: datosReserva.source || reservaExistente.source || "web", 
+				estado: estadoInicial,
+				ipAddress: req.ip || req.connection.remoteAddress || "",
+				userAgent: req.get("User-Agent") || "",
+				codigoDescuento: datosReserva.codigoDescuento || "",
+				estadoPago: estadoPagoInicial,
+				metodoPago: datosReserva.metodoPago || "",
+				referenciaPago: datosReserva.referenciaPago || "",
+				pagoGateway: datosReserva.metodoPago || null,
+				pagoMonto: montoPagadoCalculado > 0 ? montoPagadoCalculado : null,
+				pagoFecha: montoPagadoCalculado > 0 ? new Date() : null,
+				abonoPagado,
+				saldoPagado,
+			});
+			reservaGuardada = reservaExistente;
+		} else {
+			// Crear nueva reserva
+			console.log(`➕ Creando nueva reserva (desde /enviar-reserva)`);
+			reservaGuardada = await Reserva.create({
+				codigoReserva: codigoReserva,
+				nombre: datosReserva.nombre || "No especificado",
+				email: datosReserva.email || "",
+				telefono: datosReserva.telefono || "",
+				clienteId: datosReserva.clienteId || null,
+				rut: rutFormateado,
+				origen: datosReserva.origen || "",
+				destino: datosReserva.destino || "",
+				fecha: datosReserva.fecha || new Date(),
+				hora: datosReserva.hora || "00:00:00",
+				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+				precio: precioCalculado,
+				vehiculo: datosReserva.vehiculo || "",
+				numeroVuelo: datosReserva.numeroVuelo || "",
+				hotel: datosReserva.hotel || "",
+				equipajeEspecial: datosReserva.equipajeEspecial || "",
+				sillaInfantil: Boolean(
+					datosReserva.sillaInfantil === "si" ||
+						datosReserva.sillaInfantil === true
+				),
+				idaVuelta: Boolean(datosReserva.idaVuelta),
+				fechaRegreso: datosReserva.fechaRegreso || null,
+				horaRegreso: datosReserva.horaRegreso || null,
+				abonoSugerido: abonoCalculado,
+				saldoPendiente: saldoCalculado,
+				descuentoBase: parsePositiveDecimal(
+					datosReserva.descuentoBase,
+					"descuentoBase",
+					0
+				),
+				descuentoPromocion: parsePositiveDecimal(
+					datosReserva.descuentoPromocion,
+					"descuentoPromocion",
+					0
+				),
+				descuentoRoundTrip: parsePositiveDecimal(
+					datosReserva.descuentoRoundTrip,
+					"descuentoRoundTrip",
+					0
+				),
+				descuentoOnline: parsePositiveDecimal(
+					datosReserva.descuentoOnline,
+					"descuentoOnline",
+					0
+				),
+				totalConDescuento: totalCalculado,
+				mensaje: datosReserva.mensaje || "",
+				source: datosReserva.source || "web",
+				estado: estadoInicial,
+				ipAddress: req.ip || req.connection.remoteAddress || "",
+				userAgent: req.get("User-Agent") || "",
+				codigoDescuento: datosReserva.codigoDescuento || "",
+				estadoPago: estadoPagoInicial,
+				metodoPago: datosReserva.metodoPago || "",
+				referenciaPago: datosReserva.referenciaPago || "",
+				pagoGateway: datosReserva.metodoPago || null,
+				pagoMonto: montoPagadoCalculado > 0 ? montoPagadoCalculado : null,
+				pagoFecha: montoPagadoCalculado > 0 ? new Date() : null,
+				abonoPagado,
+				saldoPagado,
+			});
+		}
 
 		console.log(
 			"✅ Reserva guardada en base de datos con ID:",

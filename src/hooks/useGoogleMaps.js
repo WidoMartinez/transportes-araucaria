@@ -52,8 +52,8 @@ export function useGoogleMaps() {
 
 		// Cargar el script
 		const script = document.createElement("script");
-		// Añadimos el callback a la URL
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places&language=es&region=CL&callback=googleMapsCallback`;
+		// Añadimos el callback a la URL - IMPORTANTE: Usar v=weekly para tener acceso a los nuevos Web Components
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places,marker&v=weekly&language=es&region=CL&callback=googleMapsCallback`;
 		script.async = true;
 		script.defer = true;
 
