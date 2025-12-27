@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
 	Card,
 	CardContent,
@@ -6,37 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "./ui/card";
-import { Label } from "./ui/label";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
-import { Button } from "./ui/button";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "./ui/select";
-import { AddressAutocomplete } from "./ui/address-autocomplete";
-import { Phone, Mail, MapPin, Clock, LoaderCircle } from "lucide-react";
-import { Checkbox } from "./ui/checkbox";
-
-// Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
-const generateTimeOptions = () => {
-	const options = [];
-	for (let hour = 6; hour <= 20; hour++) {
-		for (let minute = 0; minute < 60; minute += 15) {
-			const timeString = `${hour.toString().padStart(2, "0")}:${minute
-				.toString()
-				.padStart(2, "0")}`;
-			const displayTime = `${hour.toString().padStart(2, "0")}:${minute
-				.toString()
-				.padStart(2, "0")}`;
-			options.push({ value: timeString, label: displayTime });
-		}
-	}
-	return options;
-};
+import { Phone, Mail, MapPin, Clock } from "lucide-react";
 
 // Componente interno para reutilizar la lógica de mostrar información de contacto
 const InfoItem = ({ icon: Icon, title, children }) => (
@@ -51,53 +21,7 @@ const InfoItem = ({ icon: Icon, title, children }) => (
 	</div>
 );
 
-function Contacto({
-	formData,
-	handleInputChange,
-	handleSubmit,
-	origenes,
-	maxPasajeros,
-	minDateTime,
-	phoneError,
-	isSubmitting,
-	setFormData,
-	oportunidadesRetornoUniversal,
-}) {
-	// Generar opciones de tiempo
-	const timeOptions = useMemo(() => {
-		const options = generateTimeOptions();
-
-		// Incorporar opciones de oportunidades de retorno si existen
-		if (oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones) {
-			oportunidadesRetornoUniversal.opciones.forEach(oportunidad => {
-				if (oportunidad.opcionesRetorno) {
-					oportunidad.opcionesRetorno.forEach(opcion => {
-						if (!options.some(opt => opt.value === opcion.hora)) {
-							options.push({ value: opcion.hora, label: opcion.hora });
-						}
-					});
-				}
-			});
-		}
-
-		// Si la hora seleccionada no está en las opciones, agregarla para evitar reseteo
-		if (formData.hora && !options.some(opt => opt.value === formData.hora)) {
-			options.push({ value: formData.hora, label: formData.hora });
-		}
-
-		// Ordenar las opciones por hora
-		options.sort((a, b) => a.value.localeCompare(b.value));
-
-		return options;
-	}, [oportunidadesRetornoUniversal, formData.hora]);
-
-	// Función para manejar el cambio de hora
-	const handleTimeChange = (field, value) => {
-		setFormData((prev) => ({
-			...prev,
-			[field]: value,
-		}));
-	};
+function Contacto() {
 	return (
 		<section id="contacto" className="py-24 bg-gray-50/50">
 			<div className="container mx-auto px-4">
@@ -106,313 +30,46 @@ function Contacto({
 						Hablemos
 					</h2>
 					<p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-						Completa el formulario y nuestro equipo se pondrá en contacto
-						contigo en menos de 30 minutos para entregarte una cotización a tu
-						medida.
+						Estamos disponibles para atenderte 24/7 y responder a todas tus consultas sobre nuestros servicios de transporte.
 					</p>
 				</div>
 
-				<div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+				<div className="max-w-3xl mx-auto">
 					{/* Columna de Información de Contacto */}
-					<div className="lg:col-span-2">
-						<Card className="shadow-md border-transparent h-full bg-transparent">
-							<CardHeader>
-								<CardTitle className="text-2xl">
-									Información de Contacto
-								</CardTitle>
-								<CardDescription>
-									Estamos disponibles para atenderte 24/7.
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="space-y-8">
-								<InfoItem icon={Phone} title="Teléfono">
-									<a
-										href="tel:+56936643540"
-										className="hover:text-primary transition-colors duration-300"
-									>
-										+56 9 3664 3540
-									</a>
-								</InfoItem>
-								<InfoItem icon={Mail} title="Email">
-									<a
-										href="mailto:contacto@transportesaraucaria.cl"
-										className="hover:text-primary transition-colors duration-300"
-									>
-										contacto@transportesaraucaria.cl
-									</a>
-								</InfoItem>
-								<InfoItem icon={MapPin} title="Ubicación">
-									<p>Temuco, Región de La Araucanía</p>
-								</InfoItem>
-								<InfoItem icon={Clock} title="Horarios">
-									<p>Disponible 24 horas, 7 días a la semana.</p>
-								</InfoItem>
-							</CardContent>
-						</Card>
-					</div>
-
-					{/* Columna del Formulario */}
-					<div className="lg:col-span-3">
-						<Card className="shadow-md border">
-							<CardHeader>
-								<CardTitle className="text-2xl">
-									Solicita tu Cotización
-								</CardTitle>
-								<CardDescription>
-									Completa tus datos y te enviaremos una oferta personalizada.
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<form onSubmit={handleSubmit} className="space-y-6">
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-										<div className="space-y-2">
-											<Label htmlFor="nombre">Nombre completo</Label>
-											<Input
-												id="nombre"
-												name="nombre"
-												value={formData.nombre}
-												onChange={handleInputChange}
-												placeholder="Ej: Juan Pérez"
-												required
-											/>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="telefono-form">Teléfono</Label>
-											<Input
-												id="telefono-form"
-												name="telefono"
-												value={formData.telefono}
-												onChange={handleInputChange}
-												placeholder="+56 9 1234 5678"
-												required
-											/>
-											{phoneError && (
-												<p className="text-red-500 text-sm mt-1">
-													{phoneError}
-												</p>
-											)}
-										</div>
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="email">Email</Label>
-										<Input
-											id="email"
-											type="email"
-											name="email"
-											value={formData.email}
-											onChange={handleInputChange}
-											placeholder="tu@email.cl"
-											required
-										/>
-									</div>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-										<div className="space-y-2">
-											<Label htmlFor="origen">Origen</Label>
-											<select
-												id="origen"
-												name="origen"
-												value={formData.origen}
-												onChange={handleInputChange}
-												className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-												required
-											>
-												{origenes.map((origen) => (
-													<option key={origen} value={origen}>
-														{origen}
-													</option>
-												))}
-											</select>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="destino-form">Destino</Label>
-											<AddressAutocomplete
-												id="destino-form"
-												name="destino"
-												value={formData.destino}
-												onChange={handleInputChange}
-												placeholder="Ej: Pucón"
-												required
-											/>
-										</div>
-									</div>
-
-									{formData.origen === "Otro" && (
-										<div className="space-y-2">
-											<Label htmlFor="otroOrigen-form">
-												Especificar otro origen
-											</Label>
-											<Input
-												id="otroOrigen-form"
-												name="otroOrigen"
-												value={formData.otroOrigen}
-												onChange={handleInputChange}
-												placeholder="Ingresa el origen aquí"
-												required
-											/>
-										</div>
-									)}
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-										<div className="space-y-2">
-											<Label htmlFor="fecha-form">Fecha</Label>
-											<Input
-												type="date"
-												id="fecha-form"
-												name="fecha"
-												value={formData.fecha}
-												onChange={handleInputChange}
-												min={minDateTime}
-												required
-											/>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="hora-form">Hora</Label>
-											<Select
-												value={formData.hora}
-												onValueChange={(value) =>
-													handleTimeChange("hora", value)
-												}
-											>
-												<SelectTrigger>
-													<SelectValue placeholder="Selecciona la hora" />
-												</SelectTrigger>
-												<SelectContent>
-													{timeOptions.map((option) => (
-														<SelectItem key={option.value} value={option.value}>
-															{option.label}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</div>
-									</div>
-									<div className="rounded-lg border border-muted/40 bg-muted/10 p-4 space-y-4">
-										<div className="flex items-start gap-3">
-											<Checkbox
-												id="ida-vuelta-form"
-												checked={formData.idaVuelta}
-												onCheckedChange={(value) => {
-													const isRoundTrip = Boolean(value);
-													setFormData((prev) => {
-														if (isRoundTrip) {
-															return {
-																...prev,
-																idaVuelta: true,
-																fechaRegreso: prev.fechaRegreso || prev.fecha,
-																horaRegreso: prev.horaRegreso,
-															};
-														}
-														return {
-															...prev,
-															idaVuelta: false,
-															fechaRegreso: "",
-															horaRegreso: "",
-														};
-													});
-												}}
-											/>
-											<label
-												htmlFor="ida-vuelta-form"
-												className="text-sm text-muted-foreground"
-											>
-												¿También necesitas coordinar el regreso?
-											</label>
-										</div>
-										{formData.idaVuelta && (
-											<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-												<div className="space-y-2">
-													<Label htmlFor="fecha-regreso-form">
-														Fecha regreso
-													</Label>
-													<Input
-														id="fecha-regreso-form"
-														type="date"
-														name="fechaRegreso"
-														min={formData.fecha || minDateTime}
-														value={formData.fechaRegreso}
-														onChange={handleInputChange}
-														required={formData.idaVuelta}
-													/>
-												</div>
-												<div className="space-y-2">
-													<Label htmlFor="hora-regreso-form">
-														Hora regreso
-													</Label>
-													<Select
-														value={formData.horaRegreso}
-														onValueChange={(value) =>
-															handleTimeChange("horaRegreso", value)
-														}
-													>
-														<SelectTrigger>
-															<SelectValue placeholder="Selecciona la hora de regreso" />
-														</SelectTrigger>
-														<SelectContent>
-															{timeOptions.map((option) => (
-																<SelectItem
-																	key={option.value}
-																	value={option.value}
-																>
-																	{option.label}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-											</div>
-										)}
-										<p className="text-xs text-muted-foreground">
-											Coordinaremos ambos trayectos, te confirmaremos horarios y
-											obtendrás un 5% adicional por reservar ida y vuelta.
-										</p>
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="pasajeros-form">N° de Pasajeros</Label>
-										<select
-											id="pasajeros-form"
-											name="pasajeros"
-											value={formData.pasajeros}
-											onChange={handleInputChange}
-											className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-										>
-											{[...Array(maxPasajeros)].map((_, i) => (
-												<option key={i + 1} value={i + 1}>
-													{i + 1} pasajero(s)
-												</option>
-											))}
-										</select>
-									</div>
-
-									<div className="space-y-2">
-										<Label htmlFor="mensaje">
-											Mensaje adicional (opcional)
-										</Label>
-										<Textarea
-											id="mensaje"
-											name="mensaje"
-											value={formData.mensaje}
-											onChange={handleInputChange}
-											placeholder="Cuéntanos sobre equipaje especial, necesidades particulares, etc."
-										/>
-									</div>
-									<Button
-										type="submit"
-										size="lg"
-										className="w-full text-lg"
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<>
-												<LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
-												Enviando...
-											</>
-										) : (
-											"Enviar Solicitud"
-										)}
-									</Button>
-								</form>
-							</CardContent>
-						</Card>
-					</div>
+					<Card className="shadow-md border h-full">
+						<CardHeader>
+							<CardTitle className="text-2xl text-center">
+								Información de Contacto
+							</CardTitle>
+							<CardDescription className="text-center">
+								Contáctanos directamente por cualquiera de estos medios.
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
+							<InfoItem icon={Phone} title="Teléfono">
+								<a
+									href="tel:+56936643540"
+									className="hover:text-primary transition-colors duration-300"
+								>
+									+56 9 3664 3540
+								</a>
+							</InfoItem>
+							<InfoItem icon={Mail} title="Email">
+								<a
+									href="mailto:contacto@transportesaraucaria.cl"
+									className="hover:text-primary transition-colors duration-300"
+								>
+									contacto@transportesaraucaria.cl
+								</a>
+							</InfoItem>
+							<InfoItem icon={MapPin} title="Ubicación">
+								<p>Temuco, Región de La Araucanía</p>
+							</InfoItem>
+							<InfoItem icon={Clock} title="Horarios">
+								<p>Disponible 24 horas, 7 días a la semana.</p>
+							</InfoItem>
+						</CardContent>
+					</Card>
 				</div>
 			</div>
 		</section>

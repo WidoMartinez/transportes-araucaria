@@ -1912,18 +1912,7 @@ function App() {
 				<Fidelizacion />
 				<PorQueElegirnos />
 				<Testimonios />
-				<Contacto
-					formData={formData}
-					handleInputChange={handleInputChange}
-					handleSubmit={handleSubmit}
-					origenes={origenesContacto}
-					maxPasajeros={maxPasajeros}
-					minDateTime={minDateTime}
-					phoneError={phoneError}
-					isSubmitting={isSubmitting}
-					setFormData={setFormData}
-					oportunidadesRetornoUniversal={oportunidadesRetornoUniversal}
-				/>
+				<Contacto />
 			</main>
 
 			<Footer />
