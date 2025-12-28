@@ -136,6 +136,7 @@ Este documento establece **reglas y convenciones obligatorias** para agentes que
 ## 🧰 Notas para agentes
 
 - Antes de iniciar, **leer este AGENTS.md** y revisar `.github/` para políticas adicionales.
+- **CRÍTICO:** Siempre consultar `DOCUMENTACION_MAESTRA.md` y `GUIA_SOLUCION_PROBLEMAS.md` como contexto antes de proponer soluciones, especialmente ante errores de backend o despliegue.
 - Cuando completes una tarea:
   1. **Pregunta si se requiere commit.**
   2. Si la respuesta es sí, **sugiere un mensaje de commit breve en español** (ver formato).

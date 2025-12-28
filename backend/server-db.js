@@ -42,6 +42,7 @@ import addPendingEmailsTable from "./migrations/add-pending-emails-table.js";
 import addBloqueosAgendaTable from "./migrations/add-bloqueos-agenda-table.js";
 import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
+import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -689,6 +690,7 @@ const initializeDatabase = async () => {
 		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
 		await addFestivosTable(); // Migración para tabla de festivos
 		await addDisponibilidadConfig(); // Migración para configuración de disponibilidad y descuentos por retorno
+		await addPorcentajeAdicionalColumns(); // Migración para columnas de porcentaje adicional
 		await addAddressColumns(); // Migración para columnas de dirección
 		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 		await addGastosCerradosField(); // Migración para campo gastos_cerrados
