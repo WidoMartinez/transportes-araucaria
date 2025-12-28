@@ -1120,11 +1120,11 @@ const buildPricingPayload = async () => {
 		precios: {
 			auto: {
 				base: destino.precioIda,
-				porcentajeAdicional: 0.1,
+				porcentajeAdicional: destino.porcentajeAdicionalAuto || 0.1,
 			},
 			van: {
 				base: destino.precioIda * 1.8,
-				porcentajeAdicional: 0.1,
+				porcentajeAdicional: destino.porcentajeAdicionalVan || 0.1,
 			},
 		},
 		descripcion: destino.descripcion || "",
@@ -1195,6 +1195,10 @@ app.put("/pricing", async (req, res) => {
 					Number.isFinite(duracionVueltaValor) && duracionVueltaValor > 0
 						? duracionVueltaValor
 						: 60;
+				
+				// Extraer porcentajes adicionales
+				const porcentajeAdicionalAuto = Number(destino.precios?.auto?.porcentajeAdicional) || 0.1;
+				const porcentajeAdicionalVan = Number(destino.precios?.van?.porcentajeAdicional) || 0.05;
 
 				return Destino.upsert({
 					nombre: destino.nombre,
@@ -1210,6 +1214,8 @@ app.put("/pricing", async (req, res) => {
 					minHorasAnticipacion: destino.minHorasAnticipacion || 5,
 					duracionIdaMinutos: duracionIda,
 					duracionVueltaMinutos: duracionVuelta,
+					porcentajeAdicionalAuto,
+					porcentajeAdicionalVan,
 				});
 			})
 		);

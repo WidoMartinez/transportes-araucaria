@@ -68,6 +68,20 @@ const Destino = sequelize.define(
 			field: "duracion_vuelta_minutos",
 			comment: "Duración estimada del viaje de vuelta en minutos",
 		},
+		porcentajeAdicionalAuto: {
+			type: DataTypes.DECIMAL(5, 4),
+			allowNull: true,
+			defaultValue: 0.1,
+			field: "porcentaje_adicional_auto",
+			comment: "Porcentaje adicional por pasajero para autos (ej: 0.10 = 10%)",
+		},
+		porcentajeAdicionalVan: {
+			type: DataTypes.DECIMAL(5, 4),
+			allowNull: true,
+			defaultValue: 0.05,
+			field: "porcentaje_adicional_van",
+			comment: "Porcentaje adicional por pasajero para vans (ej: 0.05 = 5%)",
+		},
 	},
 	{
 		tableName: "destinos",
