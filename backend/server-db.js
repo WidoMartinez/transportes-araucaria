@@ -42,6 +42,7 @@ import addPendingEmailsTable from "./migrations/add-pending-emails-table.js";
 import addBloqueosAgendaTable from "./migrations/add-bloqueos-agenda-table.js";
 import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
+import seedCapacityUpdate from "./migrations/seed-capacity-update.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -692,6 +693,7 @@ const initializeDatabase = async () => {
 		await addAddressColumns(); // Migración para columnas de dirección
 		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 		await addGastosCerradosField(); // Migración para campo gastos_cerrados
+		await seedCapacityUpdate(); // Migración para asegurar capacidad de vehículos y destinos
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {

@@ -36,6 +36,7 @@ import heroVan from "../assets/hero-van.png"; // Fix: Import heroVan
 export const destinosBase = [
 	{
 		nombre: "Temuco",
+		// Capital regional
 		descripcion: "Centro comercial y administrativo de La Araucanía.",
 		tiempo: "45 min",
 		imagen: temucoImg,
@@ -54,8 +55,8 @@ export const destinosBase = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 55000, porcentajeAdicional: 0.05 },
-			van: { base: 200000, porcentajeAdicional: 0.05 },
+			auto: { base: 55000, porcentajeAdicional: 0.1 },
+			van: { base: 200000, porcentajeAdicional: 0.1 },
 		},
 	},
 	{
@@ -66,8 +67,8 @@ export const destinosBase = [
 		maxPasajeros: 7,
 		minHorasAnticipacion: 5,
 		precios: {
-			auto: { base: 60000, porcentajeAdicional: 0.05 },
-			van: { base: 250000, porcentajeAdicional: 0.05 },
+			auto: { base: 60000, porcentajeAdicional: 0.1 },
+			van: { base: 250000, porcentajeAdicional: 0.1 },
 		},
 	},
 ];
