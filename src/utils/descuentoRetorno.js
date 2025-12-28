@@ -1,6 +1,8 @@
 // src/utils/descuentoRetorno.js
 // Utilidades para cálculo de descuentos escalonados en reservas de retorno
 
+import { DESCUENTOS_RETORNO } from "../constants/tiempos";
+
 /**
  * Calcula el descuento escalonado según el tiempo transcurrido desde el término del servicio original
  * Según el issue:
@@ -24,7 +26,7 @@ export const calcularDescuentoEscalonado = (horaTerminoServicio, horaRetorno) =>
 
 	// La holgura mínima es de 30 minutos para que aplique el descuento
 	// Rechazar si es menor a 30 minutos (el retorno sería muy pronto)
-	if (diferenciaMinutos < 30) {
+	if (diferenciaMinutos < DESCUENTOS_RETORNO.MAXIMO.MINUTOS) {
 		return {
 			porcentajeDescuento: 0,
 			mensaje: "El retorno debe ser al menos 30 minutos después del término del servicio",
@@ -39,9 +41,9 @@ export const calcularDescuentoEscalonado = (horaTerminoServicio, horaRetorno) =>
 	// - 31-45 min → 30% descuento
 	// - 46-60 min → 20% descuento
 	// - >60 min → sin descuento
-	if (diferenciaMinutos === 30) {
+	if (diferenciaMinutos === DESCUENTOS_RETORNO.MAXIMO.MINUTOS) {
 		return {
-			porcentajeDescuento: 50,
+			porcentajeDescuento: DESCUENTOS_RETORNO.MAXIMO.PORCENTAJE,
 			mensaje: "¡Descuento máximo! Aprovecha el retorno inmediato",
 			aplica: true,
 			rangoMinutos: diferenciaMinutos,
@@ -49,9 +51,9 @@ export const calcularDescuentoEscalonado = (horaTerminoServicio, horaRetorno) =>
 		};
 	}
 
-	if (diferenciaMinutos <= 45) {
+	if (diferenciaMinutos <= DESCUENTOS_RETORNO.INTERMEDIO.MINUTOS_MAX) {
 		return {
-			porcentajeDescuento: 30,
+			porcentajeDescuento: DESCUENTOS_RETORNO.INTERMEDIO.PORCENTAJE,
 			mensaje: "Buen descuento por retorno cercano",
 			aplica: true,
 			rangoMinutos: diferenciaMinutos,
@@ -59,9 +61,9 @@ export const calcularDescuentoEscalonado = (horaTerminoServicio, horaRetorno) =>
 		};
 	}
 
-	if (diferenciaMinutos <= 60) {
+	if (diferenciaMinutos <= DESCUENTOS_RETORNO.BASICO.MINUTOS_MAX) {
 		return {
-			porcentajeDescuento: 20,
+			porcentajeDescuento: DESCUENTOS_RETORNO.BASICO.PORCENTAJE,
 			mensaje: "Descuento por retorno dentro de la hora",
 			aplica: true,
 			rangoMinutos: diferenciaMinutos,
@@ -90,31 +92,31 @@ export const generarOpcionesDescuento = (horaTerminoServicio) => {
 	const opciones = [];
 	
 	// Opción 1: 30 minutos después (50%)
-	const hora30min = new Date(horaTerminoServicio.getTime() + 30 * 60 * 1000);
+	const hora30min = new Date(horaTerminoServicio.getTime() + DESCUENTOS_RETORNO.MAXIMO.MINUTOS * 60 * 1000);
 	opciones.push({
 		hora: hora30min,
 		horaFormateada: formatearHora(hora30min),
-		descuento: 50,
+		descuento: DESCUENTOS_RETORNO.MAXIMO.PORCENTAJE,
 		etiqueta: "Mejor precio",
 		color: "green"
 	});
 
 	// Opción 2: 45 minutos después (30%)
-	const hora45min = new Date(horaTerminoServicio.getTime() + 45 * 60 * 1000);
+	const hora45min = new Date(horaTerminoServicio.getTime() + DESCUENTOS_RETORNO.INTERMEDIO.MINUTOS_MAX * 60 * 1000);
 	opciones.push({
 		hora: hora45min,
 		horaFormateada: formatearHora(hora45min),
-		descuento: 30,
+		descuento: DESCUENTOS_RETORNO.INTERMEDIO.PORCENTAJE,
 		etiqueta: "Buen precio",
 		color: "yellow"
 	});
 
 	// Opción 3: 60 minutos después (20%)
-	const hora60min = new Date(horaTerminoServicio.getTime() + 60 * 60 * 1000);
+	const hora60min = new Date(horaTerminoServicio.getTime() + DESCUENTOS_RETORNO.BASICO.MINUTOS_MAX * 60 * 1000);
 	opciones.push({
 		hora: hora60min,
 		horaFormateada: formatearHora(hora60min),
-		descuento: 20,
+		descuento: DESCUENTOS_RETORNO.BASICO.PORCENTAJE,
 		etiqueta: "Descuento",
 		color: "orange"
 	});
