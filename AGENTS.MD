@@ -14,6 +14,16 @@ Este documento establece **reglas y convenciones obligatorias** para agentes que
 
 ---
 
+## 📚 Documentación Primero (Documentation First)
+
+- **Consultar antes de actuar**: Antes de realizar cambios o preguntas, verificar si la respuesta existe en:
+  - `DOCUMENTACION_MAESTRA.md`: Para arquitectura y guías generales.
+  - `GUIA_SOLUCION_PROBLEMAS.md`: Para errores conocidos (500, migraciones, auth).
+- **Mantener actualizada**: Si realizas cambios que afecten flujos de trabajo, arquitectura o solución de problemas, **DEBES actualizar** la documentación correspondiente.
+- **Evitar duplicidad**: No crear nuevos archivos de documentación si se puede actualizar uno existente. Centralizar en la Documentación Maestra.
+
+---
+
 ## 📨 Notificaciones y pagos
 
 - **Sistema de notificaciones por correo electrónico:** mantener **PHPMailer**. No reemplazar por otras librerías sin autorización explícita.

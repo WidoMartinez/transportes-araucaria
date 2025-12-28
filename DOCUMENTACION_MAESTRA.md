@@ -19,7 +19,8 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Notificaciones](#53-notificaciones-via-email)
    - [Integraciones Externas](#54-integraciones-externas)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
-7. [Anexos Históricos](#7-anexos-históricos)
+7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
+8. [Anexos Históricos](#8-anexos-históricos)
 
 ---
 
@@ -158,7 +159,18 @@ La documentación antigua se ha archivado en `docs/legacy/` para referencia hist
 
 ---
 
-## 7. Anexos Históricos
+## 7. Solución de Problemas (Troubleshooting)
+
+Se ha compilado una guía específica para resolver problemas recurrentes como:
+- **Backend 500**: Errores de ruta o base de datos.
+- **Migraciones**: Cómo aplicar cambios de tabla de forma manual.
+- **Autenticación**: Solución al bloqueo de edición.
+
+👉 **Ver Guía Completa**: [GUIA_SOLUCION_PROBLEMAS.md](./GUIA_SOLUCION_PROBLEMAS.md)
+
+---
+
+## 8. Anexos Históricos
 
 Para consultar bitácoras de cambios específicas o guías visuales antiguas, revisar la carpeta `docs/legacy`. Archivos notables movidos allí:
 - `GUIA_USUARIO_PANEL_ADMIN_V2.md`
