@@ -1378,27 +1378,55 @@ function AdminPricing() {
 											/>
 										</label>
 										<label className="text-sm text-slate-300">
-											Precio Base (Auto)
-											<input
-												type="number"
-												value={newDestino.precios.auto.base}
-												onChange={(e) =>
-													setNewDestino((d) => ({
-														...d,
-														precios: {
-															...d.precios,
-															auto: {
-																...d.precios.auto,
-																base: Number(e.target.value),
-															},
-														},
-													}))
-												}
-												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-											/>
-										</label>
-										<label className="text-sm text-slate-300">
-											Precio Base (Van)
+													Precio Base (Auto)
+													<input
+														type="number"
+														min="0"
+														value={newDestino.precios.auto.base}
+														onChange={(e) =>
+															setNewDestino((d) => ({
+																...d,
+																precios: {
+																	...d.precios,
+																	auto: {
+																		...d.precios.auto,
+																		base: Number(e.target.value),
+																	},
+																},
+															}))
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+													/>
+												</label>
+												<label className="text-sm text-slate-300">
+													% Adicional por Pasajero (Auto)
+													<input
+														type="number"
+														min="0"
+														max="1"
+														step="0.01"
+														value={newDestino.precios.auto.porcentajeAdicional}
+														onChange={(e) =>
+															setNewDestino((d) => ({
+																...d,
+																precios: {
+																	...d.precios,
+																	auto: {
+																		...d.precios.auto,
+																		porcentajeAdicional: Number(e.target.value),
+																	},
+																},
+															}))
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+														placeholder="Ej: 0.10 para 10%"
+													/>
+													<p className="mt-1 text-xs text-slate-400">
+														Ej: 0.10 = 10% por cada pasajero adicional
+													</p>
+												</label>
+												<label className="text-sm text-slate-300">
+													Precio Base (Van)
 											<input
 												type="number"
 												value={newDestino.precios.van.base}
@@ -1416,6 +1444,33 @@ function AdminPricing() {
 												}
 												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 											/>
+										</label>
+										<label className="text-sm text-slate-300">
+											% Adicional por Pasajero (Van)
+											<input
+												type="number"
+												min="0"
+												max="1"
+												step="0.01"
+												value={newDestino.precios.van.porcentajeAdicional}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														precios: {
+															...d.precios,
+															van: {
+																...d.precios.van,
+																porcentajeAdicional: Number(e.target.value),
+															},
+														},
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="Ej: 0.05 para 5%"
+											/>
+											<p className="mt-1 text-xs text-slate-400">
+												Ej: 0.05 = 5% por cada pasajero adicional (a partir del 6to)
+											</p>
 										</label>
 									</div>
 									<div className="mt-4 flex justify-end gap-3">
@@ -1475,6 +1530,29 @@ function AdminPricing() {
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
 													/>
 												</label>
+												<label className="text-sm text-slate-300">
+													% Adicional por Pasajero (Auto)
+													<input
+														type="number"
+														min="0"
+														max="1"
+														step="0.01"
+														value={destino.precios.auto.porcentajeAdicional || 0.1}
+														onChange={(e) =>
+															handleDestinoChange(
+																destino.nombre,
+																"auto",
+																"porcentajeAdicional",
+																e.target.value
+															)
+														}
+														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+														placeholder="Ej: 0.10 para 10%"
+													/>
+													<p className="mt-1 text-xs text-slate-400">
+														Ej: 0.10 = 10% por cada pasajero adicional
+													</p>
+												</label>
 												<label
 													className={`text-sm ${
 														isVanDisabled ? "text-slate-500" : "text-slate-300"
@@ -1505,6 +1583,38 @@ function AdminPricing() {
 															Habilitado para más de 4 pasajeros.
 														</p>
 													)}
+												</label>
+												<label
+													className={`text-sm ${
+														isVanDisabled ? "text-slate-500" : "text-slate-300"
+													}`}
+												>
+													% Adicional por Pasajero (Van)
+													<input
+														type="number"
+														min="0"
+														max="1"
+														step="0.01"
+														value={destino.precios.van.porcentajeAdicional || 0.05}
+														onChange={(e) =>
+															handleDestinoChange(
+																destino.nombre,
+																"van",
+																"porcentajeAdicional",
+																e.target.value
+															)
+														}
+														disabled={isVanDisabled}
+														className={`mt-1 w-full rounded-md border px-3 py-2 text-sm text-white ${
+															isVanDisabled
+																? "border-slate-800 bg-slate-900/50 cursor-not-allowed"
+																: "border-slate-700 bg-slate-900"
+														}`}
+														placeholder="Ej: 0.05 para 5%"
+													/>
+													<p className="mt-1 text-xs text-slate-400">
+														Ej: 0.05 = 5% por cada pasajero adicional (a partir del 6to)
+													</p>
 												</label>
 												<label className="text-sm text-slate-300">
 													Máx. Pasajeros

@@ -108,6 +108,13 @@ graph TD
 3. **Calendario de Planificación**:
    - Vista visual de ocupación de vehículos.
    - Alertas de conflictos de horario.
+4. **Configuración de Precios por Pasajero**:
+   - Gestión de **porcentaje adicional** por cada pasajero extra.
+   - Configuración independiente para **Autos** (1-4 pasajeros) y **Vans** (5-7 pasajeros).
+   - Valores en formato decimal: `0.10` = 10% de incremento.
+   - **Fórmula Auto**: `Precio Final = Base + (Pasajeros - 1) × (Base × % Adicional)`
+   - **Fórmula Van**: `Precio Final = Base + (Pasajeros - 5) × (Base × % Adicional)`
+   - Ejemplo: Auto $30,000 con 10% adicional → 2 pax = $33,000, 3 pax = $36,000
 
 ### Solución de Problemas Comunes
 - **Error de Carga**: Si el panel no carga datos, verificar conexión a internet y estado de Render (puede "dormirse" en plan gratuito).

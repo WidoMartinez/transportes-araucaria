@@ -12,6 +12,7 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
+import WhatsAppButton from "./WhatsAppButton";
 import { useIsMobile } from "../hooks/use-mobile";
 import heroVan from "../assets/hero-van.png";
 import { getBackendUrl } from "../lib/backend";
@@ -75,6 +76,7 @@ function HeroExpress({
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
+	const [errorRequiereVan, setErrorRequiereVan] = useState(false); // Error específico para grupos de 5-7 sin Van
 	const [paymentConsent, setPaymentConsent] = useState(false);
 	const [selectedPaymentType, setSelectedPaymentType] = useState("total");
 	const [reservaActiva, setReservaActiva] = useState(null);
@@ -418,11 +420,20 @@ function HeroExpress({
 
 		const resultado = await verificarDisponibilidadYRetorno();
 		if (!resultado.disponible) {
-			setStepError(resultado.mensaje || "No hay vehículos disponibles.");
+			// Detectar si es un error por falta de vehículo Van para grupos grandes
+			const numPasajeros = Number(formData.pasajeros) || 1;
+			if (numPasajeros >= 5 && numPasajeros <= 7) {
+				setErrorRequiereVan(true);
+				setStepError("No hay vehículos Van disponibles para este horario con " + numPasajeros + " pasajeros.");
+			} else {
+				setErrorRequiereVan(false);
+				setStepError(resultado.mensaje || "No hay vehículos disponibles.");
+			}
 			return;
 		}
 		setDescuentoRetorno(resultado.descuento || null);
 		setStepError("");
+		setErrorRequiereVan(false);
 		setCurrentStep(1);
 	};
 
@@ -467,6 +478,7 @@ function HeroExpress({
 
 	const handleStepBack = () => {
 		setStepError("");
+		setErrorRequiereVan(false);
 		setCurrentStep(0);
 	};
 
@@ -875,8 +887,23 @@ function HeroExpress({
 									</motion.div>
 								)}
 							</div>							{stepError && (
-								<div className="p-4 md:p-3 rounded-xl md:rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-base md:text-sm text-center font-medium">
-									{stepError}
+								<div className="mt-4 p-4 md:p-3 bg-destructive/10 text-destructive rounded-xl md:rounded-lg text-sm animate-in fade-in space-y-3">
+									<p>{stepError}</p>
+									{errorRequiereVan && (
+										<div className="space-y-2">
+											<p className="text-xs">
+												Para grupos de 5 a 7 pasajeros necesitamos un vehículo Van. Contáctanos para verificar disponibilidad en otros horarios.
+											</p>
+											<WhatsAppButton
+												message={`Hola, necesito reservar un traslado para ${formData.pasajeros} pasajeros desde ${formData.origen} a ${formData.destino} el ${formData.fecha} aproximadamente a las ${formData.hora}. ¿Tienen disponibilidad?`}
+												variant="default"
+												size="sm"
+												className="w-full bg-green-600 hover:bg-green-700 text-white"
+											>
+												Consultar Disponibilidad por WhatsApp
+											</WhatsAppButton>
+										</div>
+									)}
 								</div>
 							)}
 

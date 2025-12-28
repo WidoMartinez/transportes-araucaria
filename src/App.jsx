@@ -981,6 +981,8 @@ function App() {
 
 	const calcularCotizacion = useCallback(
 		(origen, destino, pasajeros) => {
+			console.log("🔍 calcularCotizacion llamado con:", { origen, destino, pasajeros });
+			
 			const tramo = [origen, destino].find(
 				(lugar) => lugar !== "Aeropuerto La Araucanía"
 			);
@@ -991,6 +993,8 @@ function App() {
 			}
 
 			const numPasajeros = parseInt(pasajeros);
+			console.log("🔍 Número de pasajeros parseado:", numPasajeros);
+			
 			let vehiculoAsignado;
 			let precioFinal;
 
@@ -999,9 +1003,18 @@ function App() {
 				const precios = destinoInfo.precios.auto;
 				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
+				const precioBase = Number(precios.base);
 				const pasajerosAdicionales = numPasajeros - 1;
-				const costoAdicional = precios.base * precios.porcentajeAdicional;
-				precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
+				const costoAdicional = precioBase * precios.porcentajeAdicional;
+				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
+				
+				console.log("🔍 Cálculo Auto:", {
+					base: precioBase,
+					porcentajeAdicional: precios.porcentajeAdicional,
+					pasajerosAdicionales,
+					costoAdicional,
+					precioFinal
+				});
 			} else if (
 				numPasajeros >= 5 &&
 				numPasajeros <= destinoInfo.maxPasajeros
@@ -1010,17 +1023,30 @@ function App() {
 				const precios = destinoInfo.precios.van;
 				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
 
+				const precioBase = Number(precios.base);
 				const pasajerosAdicionales = numPasajeros - 5;
-				const costoAdicional = precios.base * precios.porcentajeAdicional;
-				precioFinal = precios.base + pasajerosAdicionales * costoAdicional;
+				const costoAdicional = precioBase * precios.porcentajeAdicional;
+				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
+				
+				console.log("🔍 Cálculo Van:", {
+					base: precioBase,
+					porcentajeAdicional: precios.porcentajeAdicional,
+					pasajerosAdicionales,
+					costoAdicional,
+					precioFinal
+				});
 			} else {
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
 			}
-			return {
+			
+			const resultado = {
 				precio: precioFinal !== null ? Math.round(precioFinal) : null,
 				vehiculo: vehiculoAsignado,
 			};
+			
+			console.log("🔍 Resultado final:", resultado);
+			return resultado;
 		},
 		[destinosData]
 	);
