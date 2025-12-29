@@ -147,6 +147,16 @@ Este documento establece **reglas y convenciones obligatorias** para agentes que
 
 ---
 
+## 📊 Conversiones y Analytics
+
+- **Robustez en el Monto**: Al implementar flujos de pago o redirecciones que activen eventos de conversión (Google Ads, Meta, etc.), **SIEMPRE asegurar que el monto (`amount`) se pase en la URL**, incluso en escenarios de error o fallback.
+  - **Nunca confiar solo en la sesión del cliente** o en re-consultas que pueden fallar.
+  - El backend debe recuperar el monto de la pasarela (Flow) y pasarlo explícitamente al frontend.
+- **Evitar Valor Cero**: Implementar lógicas defensivas para que, si el monto no está disponible, se use un valor por defecto sensato en lugar de `0` (que invalida la conversión).
+- **Parámetros URL**: Usar siempre `amount`, `reserva_id` y `status` como estándar para comunicar el estado del pago a la página de retorno.
+
+---
+
 ## 🧰 Notas para agentes
 
 - Antes de iniciar, **leer este AGENTS.md** y revisar `.github/` para políticas adicionales.

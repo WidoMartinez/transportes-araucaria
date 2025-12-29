@@ -312,6 +312,7 @@ function PagarConCodigo() {
 					codigoReserva: codigoReservaGenerado,
 					tipoPago: selectedPaymentType,
 					referenciaPago: codigoPagoNormalizado,
+					paymentOrigin: "pagar_con_codigo", // Identificador de flujo para redirección correcta
 				}),
 			});
 			const pj = await p.json();

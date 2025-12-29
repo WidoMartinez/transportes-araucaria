@@ -150,6 +150,7 @@ El sistema utiliza una arquitectura híbrida:
 
 ### 5.4 Integraciones Externas
 - **Google Ads**: Conversiones mejoradas implementadas en flujos de pago.
+  - **Tracking Robusto**: El backend (`/api/payment-result`) inyecta el monto real de la transacción en la URL de retorno, garantizando que el tag de conversión (`gtag`) reciba el valor correcto incluso si falla la consulta de base de datos local.
 - **Google Maps**: Autocomplete V2 (`PlaceAutocompleteElement`) para direcciones.
 
 ### 5.5 Lógica de Disponibilidad y Capacidad Extendida
@@ -194,7 +195,7 @@ La documentación antigua se ha archivado en `docs/legacy/` para referencia hist
 
 Se ha compilado una guía específica para resolver problemas recurrentes como:
 - **Backend 500**: Errores de ruta o base de datos.
-- **Migraciones**: Cómo aplicar cambios de tabla de forma manual.
+- **Migraciones**: Cómo aplicar cambios de tabla de forma manual. **IMPORTANTE**: Revisar `backend/MIGRATION_README.md` antes de crear nuevas migraciones para evitar errores de conexión.
 - **Autenticación**: Solución al bloqueo de edición.
 
 👉 **Ver Guía Completa**: [GUIA_SOLUCION_PROBLEMAS.md](./GUIA_SOLUCION_PROBLEMAS.md)

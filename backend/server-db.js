@@ -6602,12 +6602,12 @@ app.use("/api/payment-result", express.urlencoded({ extended: true }));
 app.post("/api/payment-result", async (req, res) => {
 	console.log("🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)...");
 	
+	const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+	let token = req.body.token;
+	
 	try {
-		let token = req.body.token;
 		// Soporte para variaciones
 		if (!token && req.body.Token) token = req.body.Token;
-
-		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 
 		if (!token) {
 			console.warn("⚠️ No se recibió token en /api/payment-result body:", req.body);
@@ -6616,7 +6616,7 @@ app.post("/api/payment-result", async (req, res) => {
 
 		console.log("✅ Token capturado:", token);
 
-		// Intentar obtener el ID de reserva desde Flow para redirigir a la vista de detalles
+		// Intentar obtener el ID de reserva y MONTO desde Flow para redirigir a la vista de detalles
 		try {
 			const params = {
 				apiKey: process.env.FLOW_API_KEY,
@@ -6633,12 +6633,11 @@ app.post("/api/payment-result", async (req, res) => {
 			
 			// Intentar extraer reservaId de los datos opcionales
 			let reservaId = null;
-			let optionalData = null; // Elevamos scope para evitar ReferenceError en logs posteriores
+			let optionalData = null; 
 			
 			if (flowData.optional) {
 				try {
 					// Verificar si ya es un objeto (axios podría haberlo parseado si Flow devolvió JSON)
-					// Esta lógica viene de la rama fix-flow-payment-error-handling y es más robusta
 					optionalData = typeof flowData.optional === "string"
 						? JSON.parse(flowData.optional)
 						: flowData.optional;
@@ -6650,7 +6649,8 @@ app.post("/api/payment-result", async (req, res) => {
 			}
 
             // FIXED: Definir montoActual desde flowData para evitar ReferenceError
-            const montoActual = Number(flowData.amount) || 0;
+            // Prioridad: monto pagado real > monto de la orden
+            const montoActual = Number(flowData.amount) || Number(flowData.requestAmount) || 0;
 
 			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
 			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
@@ -6658,50 +6658,36 @@ app.post("/api/payment-result", async (req, res) => {
 				const reserva = await Reserva.findByPk(reservaId);
 				
 				// Re-parsear optional data para asegurar acceso en este scope
-				let optionalDataSafe = {};
-				try {
-					if (flowData.optional) {
-						optionalDataSafe = typeof flowData.optional === "string"
-							? JSON.parse(flowData.optional)
-							: flowData.optional;
-					}
-				} catch (e) {
-					console.warn("Error parsing optional data again:", e.message);
-				}
+				let optionalDataSafe = optionalData || {};
 
 				// Determinar el origen del pago (desde DB o desde metadata optional)
 				const paymentOrigin = optionalDataSafe?.paymentOrigin;
-				const tipoPago = optionalDataSafe?.tipoPago; // 'total', 'abono', 'saldo', 'saldo_total'
+				const tipoPago = optionalDataSafe?.tipoPago; 
 
-				const isCodigoPago = reserva && reserva.source === "codigo_pago";
+				const isCodigoPago = (reserva && reserva.source === "codigo_pago") || paymentOrigin === "pagar_con_codigo"; // Añadido check explicito
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
 
 				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
 					// Caso: Pagar con Código, Consultar Reserva o Compra Productos
 					// Redirigir a la página de éxito estándar (FlowReturn)
-					// Pasar parámetros adicionales para el tracking preciso
-					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva.source}). Redirigiendo a FlowReturn.`);
+					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva?.source}). Redirigiendo a FlowReturn.`);
 					
-					// FIXED: Usar montoActual (lo que realmente pagó en esta transacción) en lugar del total de la reserva
-					// Esto corrige el bug donde Google Ads registraba el valor total de la reserva en lugar del abono.
-					const montoParaConversion = montoActual > 0 ? montoActual : (reserva.totalConDescuento || reserva.precio || 0);
+					// FIXED: Usar montoActual (lo que realmente pagó en esta transacción)
+					const montoParaConversion = montoActual > 0 ? montoActual : (reserva?.totalConDescuento || reserva?.precio || 0);
 					
 					console.log(`💰 Monto para conversión: ${montoParaConversion} (Valor Real de Transacción)`);
 
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
 					const userData = {
-						email: reserva.email || '',
-						nombre: reserva.nombre || '',
-						telefono: reserva.telefono || ''
+						email: reserva?.email || optionalDataSafe?.email || '',
+						nombre: reserva?.nombre || '',
+						telefono: reserva?.telefono || ''
 					};
 					
 					// Codificar datos de usuario en Base64 para mayor privacidad
 					const userDataEncoded = Buffer.from(JSON.stringify(userData)).toString('base64');
 					
-					// Construir URL con datos codificados
-					// Construir URL con datos codificados
-					// FIXED: Usamos montoParaConversion en lugar de 'total'
 					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${userDataEncoded}`;
 					
 					return res.redirect(303, returnUrl);
@@ -6710,27 +6696,37 @@ app.post("/api/payment-result", async (req, res) => {
 				// Caso: Reserva Express (flujo normal)
 				// Redirigir a Completar Detalles
 				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
-				// FIXED: Agregar parámetro amount para que CompletarDetalles tenga el valor correcto para la conversión
-				const montoExpress = montoActual > 0 ? montoActual : (reserva.totalConDescuento || reserva.precio || 0);
+				const montoExpress = montoActual > 0 ? montoActual : (reserva?.totalConDescuento || reserva?.precio || 0);
 				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}`);
 			} else if (flowData.status === 3 || flowData.status === 4) {
 				// Pago rechazado (3) o anulado (4)
 				console.warn(`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`);
 				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=error&flow_status=${flowData.status}`);
 			}
+			
+			// Si no hay reservaId pero el pago fue exitoso (caso raro o error de datos), redirigir a flow-return usando el monto de flowData
+			if ((!reservaId) && (flowData.status === 2 || flowData.status === 1)) {
+				console.warn("⚠️ Pago exitoso en Flow pero NO se encontró reservaId en metadata. Redirigiendo con monto de Flow.");
+				const montoFlow = Number(flowData.amount) || 0;
+				// Intento de recuperar email de flowData si existe
+				const userEmail = flowData.payerEmail || flowData.email || '';
+				const userDataEncoded = Buffer.from(JSON.stringify({ email: userEmail })).toString('base64');
+				
+				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${userDataEncoded}&warning=no_reserva_id`);
+			}
+
 		} catch (flowError) {
 			console.error("⚠️ Error consultando estado en Flow (usando fallback):", flowError.message);
 			// Continuar al fallback
 		}
 		
-		// Fallback: Redirigir a la página genérica de retorno (Asumir éxito si no podemos verificar, o manejar como pendiente)
-		// IMPORTANTE: Si llegamos aquí es porque falló la consulta a Flow o no hay reservaId, pero Flow nos redirigió.
-		// Para seguridad, pasamos status=unknown para que el frontend decida o muestre "Verificando..."
+		// Fallback: Redirigir a la página genérica de retorno
+		// IMPORTANTE: Pasamos status=unknown pero intentamos pasar el token. 
+		// Si hubieramos capturado el monto antes del error, lo pasariamos, pero si falló getStatus, no tenemos monto confiable.
 		console.log("ℹ️ Usando fallback de redirección a /flow-return");
 		res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=unknown`);
 	} catch (error) {
 		console.error("❌ Error en redirección de pago:", error);
-		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 		res.redirect(303, `${frontendBase}/flow-return?error=server_error`);
 	}
 });
