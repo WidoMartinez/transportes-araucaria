@@ -424,7 +424,7 @@ function HeroExpress({
 			const numPasajeros = Number(formData.pasajeros) || 1;
 			if (numPasajeros >= 5 && numPasajeros <= 7) {
 				setErrorRequiereVan(true);
-				setStepError("No hay vehículos Van disponibles para este horario con " + numPasajeros + " pasajeros.");
+				setStepError("Consulta disponibilidad por WhatsApp");
 			} else {
 				setErrorRequiereVan(false);
 				setStepError(resultado.mensaje || "No hay vehículos disponibles.");
@@ -891,8 +891,8 @@ function HeroExpress({
 									<p>{stepError}</p>
 									{errorRequiereVan && (
 										<div className="space-y-2">
-											<p className="text-xs">
-												Para grupos de 5 a 7 pasajeros necesitamos un vehículo Van. Contáctanos para verificar disponibilidad en otros horarios.
+											<p className="text-xs text-center">
+												Por favor comunícate con nosotros para coordinar tu viaje.
 											</p>
 											<WhatsAppButton
 												message={`Hola, necesito reservar un traslado para ${formData.pasajeros} pasajeros desde ${formData.origen} a ${formData.destino} el ${formData.fecha} aproximadamente a las ${formData.hora}. ¿Tienen disponibilidad?`}

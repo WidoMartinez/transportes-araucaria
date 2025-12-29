@@ -20,7 +20,7 @@ const WhatsAppButton = ({
 	children = "Contactar por WhatsApp",
 	...props
 }) => {
-	const phoneNumber = "56963146934"; // Número de WhatsApp de Transportes Araucaria
+	const phoneNumber = "56936643540"; // Número de WhatsApp de Transportes Araucaria
 
 	// Construir URL de WhatsApp con mensaje pre-cargado
 	const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;

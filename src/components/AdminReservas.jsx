@@ -5070,7 +5070,9 @@ function AdminReservas() {
 									<SelectValue placeholder="Selecciona un vehículo" />
 								</SelectTrigger>
 								<SelectContent>
-									{vehiculos.map((v) => (
+									{vehiculos
+										.filter((v) => v.capacidad >= (selectedReserva?.pasajeros || 1))
+										.map((v) => (
 										<SelectItem
 											key={v.id}
 											value={v.id.toString()}

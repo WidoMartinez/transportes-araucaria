@@ -115,6 +115,11 @@ graph TD
    - **Fórmula Auto**: `Precio Final = Base + (Pasajeros - 1) × (Base × % Adicional)`
    - **Fórmula Van**: `Precio Final = Base + (Pasajeros - 5) × (Base × % Adicional)`
    - Ejemplo: Auto $30,000 con 10% adicional → 2 pax = $33,000, 3 pax = $36,000
+5. **Gestión de Vehículos de Alta Capacidad (Vans)**:
+   - **Soporte extendido**: El sistema permite reservas de hasta 7 pasajeros.
+   - **Requisito de Flota**: Para aceptar reservas de 5-7 pasajeros, debe existir un vehículo tipo "Van" con capacidad 7 en `AdminVehiculos`.
+   - **Asignación Manual Segura**: El sistema filtra automáticamente los vehículos en el momento de la asignación, mostrando solo aquellos con capacidad suficiente para el grupo (ej: al asignar una reserva de 6 pax, solo se mostrarán Vans, ocultando los autos pequeños).
+   - **Fallback a WhatsApp**: Si un cliente intenta reservar para 5-7 pasajeros y no hay Vans disponibles, el sistema le redirige automáticamente a WhatsApp para gestión manual.
 
 ### Solución de Problemas Comunes
 - **Error de Carga**: Si el panel no carga datos, verificar conexión a internet y estado de Render (puede "dormirse" en plan gratuito).
@@ -146,6 +151,25 @@ El sistema utiliza una arquitectura híbrida:
 ### 5.4 Integraciones Externas
 - **Google Ads**: Conversiones mejoradas implementadas en flujos de pago.
 - **Google Maps**: Autocomplete V2 (`PlaceAutocompleteElement`) para direcciones.
+
+### 5.5 Lógica de Disponibilidad y Capacidad Extendida
+Se implementó soporte para hasta 7 pasajeros con una lógica de fallback híbrida:
+
+1.  **Backend (`/api/disponibilidad/verificar`)**:
+    - Recibe `pasajeros` y filtra vehículos con `capacidad >= pasajeros`.
+    - Retorna `disponible: false` si no encuentra vehículos adecuados en el horario.
+
+2.  **Frontend (`Hero.jsx` / `HeroExpress.jsx`)**:
+    - Consume el endpoint de verificación.
+    - **Lógica de Fallback**: Si el endpoint retorna `false` y el grupo es de 5-7 personas (Vans), se intercepta el bloqueo estándar y se muestra un componente `WhatsAppButton`.
+    - Esto permite capturar leads de grupos grandes incluso sin disponibilidad automática configurada.
+
+3.  **Componentes Reutilizables**:
+    - `WhatsAppButton.jsx`: Centraliza la lógica de contacto + Tracking de Google Ads. Usar este componente para cualquier nuevo punto de contacto.
+
+4.  **Panel de Administración**:
+    - En `AdminReservas`, el selector de vehículos filtra automáticamente por capacidad en el frontend: `vehiculos.filter(v => capacity >= required)`.
+    - Esto previene errores operativos de asignación de vehículos pequeños a grupos grandes.
 
 ---
 

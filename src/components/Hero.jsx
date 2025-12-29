@@ -15,6 +15,7 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
+import WhatsAppButton from "./WhatsAppButton";
 import heroVan from "../assets/hero-van.png";
 import flow from "../assets/formasPago/flow.png";
 import CodigoDescuento from "./CodigoDescuento";
@@ -76,6 +77,8 @@ function Hero({
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
+	const [errorRequiereVan, setErrorRequiereVan] = useState(false);
+	const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false);
 	const [selectedCharge, setSelectedCharge] = useState(null);
 	const [selectedMethod, setSelectedMethod] = useState(null);
 	const [showBookingModule, setShowBookingModule] = useState(false);
@@ -387,8 +390,71 @@ function Hero({
 			}
 		}
 
-		setStepError("");
-		setCurrentStep(1);
+		// Verificación de disponibilidad antes de avanzar
+		const verificarDisponibilidad = async () => {
+			setVerificandoDisponibilidad(true);
+			setStepError(""); // Limpiar error previo
+			setErrorRequiereVan(false);
+
+			try {
+				const destinoObj = Array.isArray(destinos)
+					? destinos.find((d) => d.nombre === formData.destino)
+					: null;
+
+				const duracionMinutos = destinoObj?.duracionIdaMinutos || 60;
+
+				const respDisponibilidad = await fetch(
+					`${getBackendUrl()}/api/disponibilidad/verificar`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							fecha: formData.fecha,
+							hora: formData.hora,
+							duracionMinutos: duracionMinutos,
+							pasajeros: formData.pasajeros || 1,
+						}),
+					}
+				);
+
+				if (!respDisponibilidad.ok) {
+					// Si falla la verificación, permitimos avanzar por precaución, 
+					// o manejamos el error. Por ahora permitimos avanzar (fallback).
+					console.warn("Error verificando disponibilidad, permitiendo avance");
+					return true;
+				}
+
+				const dataDisponibilidad = await respDisponibilidad.json();
+				if (!dataDisponibilidad.disponible) {
+					// Detectar si es un error por falta de vehículo Van para grupos grandes
+					const numPasajeros = Number(formData.pasajeros) || 1;
+					if (numPasajeros >= 5 && numPasajeros <= 7) {
+						setErrorRequiereVan(true);
+						setStepError("Consulta disponibilidad por WhatsApp");
+					} else {
+						setErrorRequiereVan(false);
+						setStepError(dataDisponibilidad.mensaje || "No hay vehículos disponibles.");
+					}
+					return false;
+				}
+				
+				return true;
+
+			} catch (error) {
+				console.error("Error verificando disponibilidad:", error);
+				return true; // Fallback en error de red
+			} finally {
+				setVerificandoDisponibilidad(false);
+			}
+		};
+
+		verificarDisponibilidad().then((disponible) => {
+			if (disponible) {
+				setStepError("");
+				setErrorRequiereVan(false);
+				setCurrentStep(1);
+			}
+		});
 	};
 
 	const handleStepTwoNext = async () => {
@@ -1149,6 +1215,27 @@ function Hero({
 												</p>
 											</div>
 										)}
+										
+										{stepError && (
+											<div className="p-4 rounded-lg bg-red-50 text-red-600 border border-red-200 animate-in fade-in space-y-3">
+												<p className="font-medium text-center">{stepError}</p>
+												{errorRequiereVan && (
+													<div className="space-y-2">
+														<p className="text-sm text-center text-red-700">
+															Por favor comunícate con nosotros para coordinar tu viaje.
+														</p>
+														<WhatsAppButton
+															message={`Hola, necesito reservar un traslado para ${formData.pasajeros} pasajeros desde ${formData.origen} a ${formData.destino} el ${formData.fecha} aproximadamente a las ${formData.hora}. ¿Tienen disponibilidad?`}
+															variant="default"
+															size="sm"
+															className="w-full bg-green-600 hover:bg-green-700 text-white"
+														>
+															Consultar Disponibilidad por WhatsApp
+														</WhatsAppButton>
+													</div>
+												)}
+											</div>
+										)}
 
 										<div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
 											<p className="text-sm text-muted-foreground">
@@ -1159,9 +1246,16 @@ function Hero({
 												type="button"
 												className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground focus-visible:ring-accent/30"
 												onClick={handleStepOneNext}
-												disabled={isSubmitting}
+												disabled={isSubmitting || verificandoDisponibilidad}
 											>
-												Continuar con mis datos
+												{verificandoDisponibilidad ? (
+													<>
+														<LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+														Verificando...
+													</>
+												) : (
+													"Continuar con mis datos"
+												)}
 											</Button>
 										</div>
 									</div>

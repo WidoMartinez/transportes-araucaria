@@ -20,6 +20,7 @@ Este documento establece **reglas y convenciones obligatorias** para agentes que
   - `DOCUMENTACION_MAESTRA.md`: Para arquitectura y guías generales.
   - `GUIA_SOLUCION_PROBLEMAS.md`: Para errores conocidos (500, migraciones, auth).
 - **Mantener actualizada**: Si realizas cambios que afecten flujos de trabajo, arquitectura o solución de problemas, **DEBES actualizar** la documentación correspondiente.
+- **Documentar cambios técnicos**: Al implementar nuevas funcionalidades, es **OBLIGATORIO** actualizar `DOCUMENTACION_MAESTRA.md` (sección "Sistemas Técnicos Detallados") describiendo la lógica implementada, endpoints creados y decisiones de arquitectura relevantes.
 - **Evitar duplicidad**: No crear nuevos archivos de documentación si se puede actualizar uno existente. Centralizar en la Documentación Maestra.
 
 ---
@@ -130,6 +131,19 @@ Este documento establece **reglas y convenciones obligatorias** para agentes que
 - Comentarios claros, en español, explicando _por qué_ y no solo _qué_.
 - Seguir las guías de estilo del lenguaje correspondiente en este repo.
 - Mantener consistencia con las convenciones existentes.
+
+---
+
+---
+
+## 🚐 Lógica de Reservas y Vehículos
+
+- **Capacidad de Vehículos**: El backend filtra estrictamente por capacidad (`capacidad >= pasajeros`).
+- **Validación Frontend**: 
+  - Para grupos de 1-4 pasajeros, el flujo es estándar.
+  - Para grupos de 5-7 pasajeros, se requiere un vehículo tipo "Van".
+  - Si `/api/disponibilidad/verificar` retorna falso para >4 pasajeros, **SIEMPRE derivar a WhatsApp** usando `WhatsAppButton.jsx`. No intentar forzar la reserva sin validación.
+- **Panel Administrativo**: Mantener siempre el filtrado visual en `AdminReservas` para evitar asignar vehículos pequeños a grupos grandes.
 
 ---
 
