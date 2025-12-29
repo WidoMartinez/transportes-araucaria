@@ -17,8 +17,6 @@ async function addPorcentajeAdicionalColumns() {
 	} catch (error) {
 		console.error("❌ Error agregando columnas:", error);
 		throw error;
-	} finally {
-		await sequelize.close();
 	}
 }
 
