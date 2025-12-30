@@ -172,6 +172,46 @@ Se implementó soporte para hasta 7 pasajeros con una lógica de fallback híbri
     - En `AdminReservas`, el selector de vehículos filtra automáticamente por capacidad en el frontend: `vehiculos.filter(v => capacity >= required)`.
     - Esto previene errores operativos de asignación de vehículos pequeños a grupos grandes.
 
+### 5.6 Estándares de Flujos de Pago y Notificaciones
+
+Para garantizar la consistencia operativa y del marketing (Google Ads), se han estandarizado los 3 flujos de reserva. Toda modificación futura **debe respetar estas directrices**:
+
+#### A. Módulo Principal (Express)
+*   **Ruta**: Home → Cotización → Pago → `CompletarDetalles.jsx`.
+*   **Captura de Dirección**: Obligatorio usar `AddressAutocomplete` en el campo `hotel` dentro de `CompletarDetalles.jsx`.
+*   **Notificaciones**:
+    1.  **Pago**: Webhook (`/api/flow-confirmation`) notifica el dinero recibido (Admin + Cliente).
+    2.  **Logística**: Al guardar detalles en `PUT /completar-reserva-detalles`, se dispara la notificación logística (Admin + Cliente).
+*   **Tracking**: La conversión se dispara en `App.jsx` al retornar de Flow, usando los parámetros `amount` y `d` (datos de usuario encriptados).
+
+#### B. Pagar con Código
+*   **Ruta**: Usuario ingresa código → Cotización + Detalles upfront → Pago → `FlowReturn.jsx`.
+*   **Captura de Dirección**: Obligatorio usar `AddressAutocomplete` en el formulario inicial de `PagarConCodigo.jsx`.
+*   **Notificaciones**:
+    1.  **Logística**: Ocurre al crear la reserva inicial (`POST /enviar-reserva-express`).
+    2.  **Pago**: Webhook (`/api/flow-confirmation`) notifica solo el pago (el sistema detecta que es flujo de código y evita duplicar la logística).
+*   **Tracking**: La conversión se dispara en `FlowReturn.jsx` usando los parámetros `amount` y `d`.
+
+#### C. Consultar Reserva / Pagos Pendientes
+*   **Ruta**: #consultar-reserva → Ver Estado → Pagar Saldo → `FlowReturn.jsx`.
+*   **Notificaciones**: Solo notificación de pago (Financiera).
+*   **Tracking**: Conversión en `FlowReturn.jsx` con monto del abono o saldo pagado.
+
+#### 🛠️ Directrices Técnicas Generales
+
+1.  **Regla de Oro: Dirección Inteligente (Smart Address)**:
+    - **Problema**: Nunca enviar la dirección del "Aeropuerto" en los enlaces de mapas o campos de "Dirección de Recogida" si existe una alternativa logística.
+    - **Lógica**: Si el Origen contiene "Aeropuerto", la dirección maestra para el mapa debe ser el Destino (o Hotel). Si el Destino es el Aeropuerto, la dirección maestra debe ser el Origen.
+    - **Prioridad de Campos**: `hotel` > `direccionOrigen` / `direccionDestino` (No aeropuerto) > `origen` / `destino` (No aeropuerto).
+    - **Implementación**: Esta lógica debe aplicarse en `direccionRecogida` y `calendarLocation` en todos los payloads de notificación.
+
+2.  **Google Ads (Conversiones Avanzadas)**:
+    - **Backend**: El endpoint de redirección (`/api/payment-result`) siempre debe inyectar el parámetro `d` en la URL de retorno. Este parámetro es un JSON Base64 con `{email, nombre, telefono}`.
+    - **Frontend**: El tag de conversión `gtag` debe incluir siempre `email`, `phone_number` y `address` (mapeado desde el nombre) para mejorar la precisión de Google Ads.
+2.  **Protección de Duplicados**: Usar siempre `sessionStorage` con una clave única (`flow_conversion_[transactionId]`) antes de disparar `gtag` para evitar conversiones dobles en recargas de página.
+3.  **Campo Maestro de Dirección**: El campo `hotel` en la base de datos es el contenedor para direcciones precisas capturadas por Google Maps. Nunca usar campos de texto simple para direcciones finales si el componente permite el autocomplete.
+4.  **PHP Integration**: Los scripts de Hostinger esperan `hotel`, `idaVuelta`, `fechaRegreso` y `horaRegreso` para una operación fluida. Asegurar que el backend siempre los propague en los payloads de `axios`.
+
 ---
 
 ## 6. Mantenimiento y Despliegue

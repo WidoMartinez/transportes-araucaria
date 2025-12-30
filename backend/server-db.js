@@ -4622,16 +4622,15 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
             try {
                 const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
                 
-                // Determinar la mejor ubicación para el enlace de calendario (ICS)
-                // Si el origen parece ser el Aeropuerto (genérico) y existe un destino específico,
-                // preferimos usar el destino para el mapa, ya que el conductor sabe llegar al aeropuerto.
-                let calendarLocation = reserva.direccionOrigen || reserva.origen;
-                const origenLower = (reserva.origen || "").toLowerCase();
-                const destinoEspecifico = reserva.direccionDestino;
-                
-                if (origenLower.includes("aeropuerto") && destinoEspecifico) {
-                    calendarLocation = destinoEspecifico;
-                }
+                // Lógica de Dirección Inteligente (Smart Address) para evitar enviar el aeropuerto
+                // Prioridad: 1. Hotel (Google Maps) > 2. Punto específico de origen/destino (No Aeropuerto)
+                const origenEsAeropuerto = (reserva.origen || "").toLowerCase().includes("aeropuerto");
+                const smartAddress = reserva.hotel || 
+                    (origenEsAeropuerto 
+                        ? (reserva.direccionDestino || reserva.destino) 
+                        : (reserva.direccionOrigen || reserva.origen));
+
+                let calendarLocation = smartAddress;
 
                 const conductorPayload = {
                     conductorEmail: conductor.email,
@@ -4641,8 +4640,8 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     pasajeroTelefono: reserva.telefono,
                     origen: reserva.direccionOrigen || reserva.origen,
                     destino: reserva.direccionDestino || reserva.destino,
-                    direccionRecogida: reserva.direccionOrigen || reserva.origen,
-                    calendarLocation: calendarLocation, // Nuevo campo para el ICS
+                    direccionRecogida: smartAddress,
+                    calendarLocation: smartAddress, // Consistente con el mapa del correo
                     fecha: reserva.fecha,
                     hora: reserva.hora,
                     pasajeros: reserva.pasajeros,
