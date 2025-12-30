@@ -3467,20 +3467,90 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 
 		await reserva.update(datosActualizados);
 
-		console.log(`✅ Detalles completados para reserva ${id}`);
+	console.log(`✅ Detalles completados para reserva ${id}`);
 
-		return res.json({
-			success: true,
-			message: "Detalles actualizados correctamente",
-			reserva: await Reserva.findByPk(id), // Devolver reserva actualizada
+	// Recargar la reserva con todas las relaciones para las notificaciones
+	const reservaCompleta = await Reserva.findByPk(id, {
+		include: [
+			{
+				model: Cliente,
+				as: "cliente",
+			},
+		],
+	});
+
+	// Enviar notificación de confirmación al cliente
+	try {
+		console.log("📧 Enviando confirmación de detalles completados al cliente...");
+		
+		const phpClienteUrl = process.env.PHP_CLIENT_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_confirmacion_reserva.php";
+		
+		const clientePayload = {
+			email: reservaCompleta.email,
+			nombre: reservaCompleta.nombre,
+			codigoReserva: reservaCompleta.codigoReserva,
+			origen: reservaCompleta.origen,
+			destino: reservaCompleta.destino,
+			fecha: reservaCompleta.fecha,
+			hora: reservaCompleta.hora,
+			pasajeros: reservaCompleta.pasajeros,
+			numeroVuelo: reservaCompleta.numeroVuelo || "",
+			hotel: reservaCompleta.hotel || "",
+			equipajeEspecial: reservaCompleta.equipajeEspecial || "",
+			sillaInfantil: reservaCompleta.sillaInfantil || "no",
+			idaVuelta: reservaCompleta.idaVuelta,
+			fechaRegreso: reservaCompleta.fechaRegreso || "",
+			horaRegreso: reservaCompleta.horaRegreso || "",
+		};
+
+		await axios.post(phpClienteUrl, clientePayload, {
+			headers: { "Content-Type": "application/json" },
+			timeout: 10000,
 		});
-	} catch (error) {
-		console.error("Error actualizando detalles de reserva:", error);
-		return res.status(500).json({
-			success: false,
-			message: "Error interno del servidor",
-		});
+
+		console.log(`📧 Confirmación enviada al cliente ${reservaCompleta.email}`);
+	} catch (emailError) {
+		console.error("❌ Error enviando confirmación al cliente:", emailError.message);
 	}
+
+	// NUEVO: Enviar notificación al administrador cuando se completan los detalles
+	try {
+		console.log("📧 Enviando notificación de detalles completados al administrador...");
+		const phpAdminUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+		
+		await axios.post(phpAdminUrl, {
+			action: "notify_admin_details_completed",
+			reservaId: reservaCompleta.id,
+			codigoReserva: reservaCompleta.codigoReserva,
+			nombre: reservaCompleta.nombre,
+			hotel: reservaCompleta.hotel,
+			numeroVuelo: reservaCompleta.numeroVuelo,
+			hora: reservaCompleta.hora,
+			idaVuelta: reservaCompleta.idaVuelta,
+			fechaRegreso: reservaCompleta.fechaRegreso,
+			horaRegreso: reservaCompleta.horaRegreso,
+			equipajeEspecial: reservaCompleta.equipajeEspecial
+		}, {
+			headers: { "Content-Type": "application/json" },
+			timeout: 10000
+		});
+		console.log("✅ Notificación de detalles al administrador enviada");
+	} catch (adminError) {
+		console.error("❌ Error enviando notificación de detalles al administrador:", adminError.message);
+	}
+
+	return res.json({
+		success: true,
+		message: "Detalles actualizados correctamente",
+		reserva: reservaCompleta,
+	});
+} catch (error) {
+	console.error("Error actualizando detalles de reserva:", error);
+	return res.status(500).json({
+		success: false,
+		message: "Error interno del servidor",
+	});
+}
 });
 
 // --- ENDPOINTS PARA GESTIONAR RECURSOS (CONDUCTORES/VEHICULOS) ---
@@ -6697,7 +6767,16 @@ app.post("/api/payment-result", async (req, res) => {
 				// Redirigir a Completar Detalles
 				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
 				const montoExpress = montoActual > 0 ? montoActual : (reserva?.totalConDescuento || reserva?.precio || 0);
-				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}`);
+
+				// FIXED: Pasar también datos del usuario (d) para conversiones en CompletarDetalles
+				const userDataExpress = {
+					email: reserva?.email || '',
+					nombre: reserva?.nombre || '',
+					telefono: reserva?.telefono || ''
+				};
+				const userDataEncodedExpress = Buffer.from(JSON.stringify(userDataExpress)).toString('base64');
+
+				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}&d=${userDataEncodedExpress}`);
 			} else if (flowData.status === 3 || flowData.status === 4) {
 				// Pago rechazado (3) o anulado (4)
 				console.warn(`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`);
@@ -7099,9 +7178,9 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			);
 		}
 
-		// Enviar correo de confirmación de pago
+		// Enviar correo de confirmación de pago al cliente
 		try {
-			console.log("📧 Enviando email de confirmación de pago...");
+			console.log("📧 Enviando email de confirmación de pago al cliente...");
 
 			const emailData = {
 				email: reserva.email,
@@ -7113,30 +7192,52 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				hora: reserva.hora,
 				pasajeros: reserva.pasajeros,
 				vehiculo: reserva.vehiculo,
+				hotel: reserva.hotel || "",
 				monto: payment.amount,
 				gateway: "Flow",
 				paymentId: payment.flowOrder.toString(),
 				estadoPago: "approved",
+				idaVuelta: reserva.idaVuelta
 			};
 
 			const phpUrl =
 				process.env.PHP_PAYMENT_CONFIRMATION_URL ||
 				"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
 
-			const emailResponse = await axios.post(phpUrl, emailData, {
+			await axios.post(phpUrl, emailData, {
 				headers: { "Content-Type": "application/json" },
 				timeout: 30000,
 			});
 
-			console.log(
-				"✅ Email de confirmación de pago Flow enviado:",
-				emailResponse.data
-			);
+			console.log(`✅ Email de confirmación de pago Flow enviado al cliente: ${reserva.email}`);
 		} catch (emailError) {
-			console.error(
-				"❌ Error al enviar email de confirmación (no crítico):",
-				emailError.message
-			);
+			console.error("❌ Error al enviar email de confirmación al cliente:", emailError.message);
+		}
+
+		// NUEVO: Enviar notificación al administrador sobre el pago recibido
+		try {
+			console.log("📧 Enviando notificación de pago al administrador...");
+			const phpAdminUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+			
+			await axios.post(phpAdminUrl, {
+				action: "notify_admin_payment",
+				reservaId: reserva.id,
+				codigoReserva: reserva.codigoReserva,
+				nombre: reserva.nombre,
+				monto: payment.amount,
+				metodo: "Flow",
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				idaVuelta: reserva.idaVuelta
+			}, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000
+			});
+			console.log("✅ Notificación de pago al administrador enviada");
+		} catch (adminError) {
+			console.error("❌ Error enviando notificación de pago al administrador:", adminError.message);
 		}
 
 		// Enviar notificación de productos si corresponde

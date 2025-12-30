@@ -418,11 +418,71 @@ function App() {
 		const flowSuccess = url.searchParams.get("flow_payment") === "success";
 		const reservaId = url.searchParams.get("reserva_id");
 		const amount = url.searchParams.get("amount");
+		const encodedData = url.searchParams.get("d");
 
 		if (flowSuccess && reservaId) {
 			console.log(
 				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}, Monto: ${amount}`
 			);
+			
+			// DISPARAR CONVERSIÓN DE GOOGLE ADS (Estandarización con FlowReturn)
+			if (typeof window.gtag === "function") {
+				try {
+					const transactionId = reservaId || `exp_${Date.now()}`;
+					const conversionKey = `flow_conversion_express_${transactionId}`;
+					
+					if (!sessionStorage.getItem(conversionKey)) {
+						const parsedAmount = (amount !== null && amount !== undefined && amount !== "") 
+							? Number(amount) 
+							: 0;
+						const conversionValue = parsedAmount > 0 ? parsedAmount : 1.0;
+
+						let userEmail = '';
+						let userName = '';
+						let userPhone = '';
+
+						// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
+						if (encodedData) {
+							try {
+								const decodedData = atob(encodedData);
+								const userData = JSON.parse(decodedData);
+								if (userData && typeof userData === 'object') {
+									userEmail = userData.email || '';
+									userName = userData.nombre || '';
+									userPhone = userData.telefono || '';
+								}
+							} catch (e) {
+								console.warn('⚠️ Error decodificando d-param:', e.message);
+							}
+						}
+
+						const conversionData = {
+							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB", // Etiqueta estándarizada
+							value: conversionValue,
+							currency: "CLP",
+							transaction_id: transactionId,
+						};
+
+						if (userEmail) conversionData.email = userEmail.toLowerCase().trim();
+						if (userPhone) conversionData.phone_number = userPhone.trim(); // Se puede mejorar con normalizador
+						if (userName) {
+							const nameParts = userName.trim().split(' ');
+							conversionData.address = {
+								first_name: nameParts[0]?.toLowerCase() || '',
+								last_name: nameParts.slice(1).join(' ')?.toLowerCase() || '',
+								country: 'CL'
+							};
+						}
+
+						window.gtag("event", "conversion", conversionData);
+						sessionStorage.setItem(conversionKey, 'true');
+						console.log(`✅ Evento de conversión express disparado (Valor: ${conversionValue})`);
+					}
+				} catch (conversionError) {
+					console.error("❌ Error disparando conversión en App.jsx:", conversionError);
+				}
+			}
+
 			setVistaCompletarDetalles({
 				activo: true,
 				reservaId: reservaId,

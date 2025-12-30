@@ -21,6 +21,7 @@ import {
 	Phone,
 	Mail,
 } from "lucide-react";
+import { AddressAutocomplete } from "./ui/address-autocomplete";
 
 import { getBackendUrl } from "../lib/backend";
 
@@ -414,11 +415,13 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 									<Label htmlFor="hotel" className="text-base font-medium">
 										Hotel o dirección final
 									</Label>
-									<Input
+									<AddressAutocomplete
 										id="hotel"
+										name="hotel"
 										value={detalles.hotel}
 										onChange={(e) => handleInputChange("hotel", e.target.value)}
 										placeholder="Ej: Hotel Antumalal, Calle Principal 123"
+										className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
 									/>
 									<p className="text-sm text-muted-foreground">
 										Dirección específica dentro del destino
