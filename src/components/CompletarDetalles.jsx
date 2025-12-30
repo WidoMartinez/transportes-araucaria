@@ -413,18 +413,21 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 
 								<div className="space-y-2">
 									<Label htmlFor="hotel" className="text-base font-medium">
-										Hotel o dirección final
+										<span className="flex items-center gap-2">
+											<MapPin className="h-4 w-4" />
+											Dirección Específica *
+										</span>
 									</Label>
 									<AddressAutocomplete
 										id="hotel"
 										name="hotel"
 										value={detalles.hotel}
 										onChange={(e) => handleInputChange("hotel", e.target.value)}
-										placeholder="Ej: Hotel Antumalal, Calle Principal 123"
+										placeholder="Ej: Condominio Los Ríos, Loteo 21, Malalcahuello"
 										className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
 									/>
 									<p className="text-sm text-muted-foreground">
-										Dirección específica dentro del destino
+										Dirección exacta de recogida o llegada (según tu ruta)
 									</p>
 								</div>
 							</div>

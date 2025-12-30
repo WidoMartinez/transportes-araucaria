@@ -3648,58 +3648,30 @@ function AdminReservas() {
 											</SelectContent>
 										</Select>
 									</div>
-									{/* Lógica condicional de direcciones similar a PagarConCodigo */}
-									{(() => {
-										const isOrigenAeropuerto =
-											normalizeDestino(formData.origen) ===
-											normalizeDestino(AEROPUERTO_LABEL);
-										const isDestinoAeropuerto =
-											normalizeDestino(formData.destino) ===
-											normalizeDestino(AEROPUERTO_LABEL);
-
-										// Si no es aeropuerto en ninguno, mostramos ambos por precaución
-										const showOrigen = !isOrigenAeropuerto;
-										const showDestino = !isDestinoAeropuerto;
-
-										return (
 											<>
-												{showOrigen && (
-													<div className="space-y-1 md:col-span-2">
-														<Label>Dirección Específica de Origen</Label>
-														<AddressAutocomplete
-															name="direccionOrigen"
-															value={formData.direccionOrigen || ""}
-															placeholder="Ej: Av. Alemania 123, Depto 405"
-															onChange={(e) =>
-																setFormData({
-																	...formData,
-																	direccionOrigen: e.target.value,
-																})
-															}
-															className="bg-white"
-														/>
-													</div>
-												)}
-												{showDestino && (
-													<div className="space-y-1 md:col-span-2">
-														<Label>Dirección Específica de Destino</Label>
-														<AddressAutocomplete
-															name="direccionDestino"
-															value={formData.direccionDestino || ""}
-															placeholder="Ej: Hotel Dreams, Habitación 101"
-															onChange={(e) =>
-																setFormData({
-																	...formData,
-																	direccionDestino: e.target.value,
-																})
-															}
-															className="bg-white"
-														/>
-													</div>
-												)}
+												<div className="space-y-1 md:col-span-2">
+													<Label className="flex items-center gap-2">
+														<MapPin className="h-4 w-4" />
+														Dirección Específica (Recogida o Llegada)
+													</Label>
+													<AddressAutocomplete
+														name="hotel"
+														value={formData.hotel || ""}
+														placeholder="Ej: Condominio Los Ríos, Loteo 21, Malalcahuello"
+														onChange={(e) =>
+															setFormData({
+																...formData,
+																hotel: e.target.value,
+															})
+														}
+														className="bg-white"
+													/>
+													<p className="text-xs text-muted-foreground mt-1">
+														Esta es la dirección única que verá el conductor para llegar al punto exacto.
+													</p>
+												</div>
 											</>
-										);
-									})()}
+
 								</div>
 								
 								{/* Opción de notificar al conductor si hubo cambios importantes y ya tiene conductor */}

@@ -46,7 +46,7 @@ $pasajeroNombre = htmlspecialchars($data['pasajeroNombre'] ?? 'No especificado')
 $pasajeroTelefono = htmlspecialchars($data['pasajeroTelefono'] ?? 'No especificado');
 $origen = htmlspecialchars($data['origen'] ?? 'No especificado');
 $destino = htmlspecialchars($data['destino'] ?? 'No especificado');
-$direccionRecogida = htmlspecialchars($data['direccionRecogida'] ?? $origen);
+$direccionEspecifica = htmlspecialchars($data['direccionEspecifica'] ?? $data['direccionRecogida'] ?? 'No especificada');
 $fecha = $data['fecha'];
 $hora = $data['hora'];
 $pasajeros = $data['pasajeros'] ?? 1;
@@ -195,8 +195,8 @@ try {
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$destino}</td>
                     </tr>
                     <tr>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Dirección Recogida:</strong></td>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$direccionRecogida}</td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Dirección Específica:</strong></td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$direccionEspecifica}</td>
                     </tr>
                     <tr>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Fecha:</strong></td>
@@ -232,8 +232,8 @@ try {
     </body>
     </html>";
 
-    // Obtener ubicación para calendario (preferiblemente destino específico o recodiga)
-    $calendarLocation = htmlspecialchars($data['calendarLocation'] ?? $direccionRecogida);
+    // Obtener ubicación para calendario (preferiblemente dirección específica)
+    $calendarLocation = htmlspecialchars($data['calendarLocation'] ?? $direccionEspecifica);
 
     // Adjuntar archivo .ics
     $icsContent = generateICS($codigoReserva, $fecha, $hora, $pasajeroNombre, $origen, $destino, $calendarLocation, $observaciones);

@@ -4638,10 +4638,10 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     codigoReserva: reserva.codigoReserva,
                     pasajeroNombre: reserva.nombre,
                     pasajeroTelefono: reserva.telefono,
-                    origen: reserva.direccionOrigen || reserva.origen,
-                    destino: reserva.direccionDestino || reserva.destino,
-                    direccionRecogida: smartAddress,
-                    calendarLocation: smartAddress, // Consistente con el mapa del correo
+                    origen: reserva.origen, // Referencia general
+                    destino: reserva.destino, // Referencia general
+                    direccionEspecifica: smartAddress, // LA ÚNICA dirección específica
+                    calendarLocation: smartAddress, // Consistente para el archivo ICS
                     fecha: reserva.fecha,
                     hora: reserva.hora,
                     pasajeros: reserva.pasajeros,

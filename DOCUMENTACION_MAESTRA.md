@@ -199,11 +199,15 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 
 #### 🛠️ Directrices Técnicas Generales
 
-1.  **Regla de Oro: Dirección Inteligente (Smart Address)**:
-    - **Problema**: Nunca enviar la dirección del "Aeropuerto" en los enlaces de mapas o campos de "Dirección de Recogida" si existe una alternativa logística.
-    - **Lógica**: Si el Origen contiene "Aeropuerto", la dirección maestra para el mapa debe ser el Destino (o Hotel). Si el Destino es el Aeropuerto, la dirección maestra debe ser el Origen.
-    - **Prioridad de Campos**: `hotel` > `direccionOrigen` / `direccionDestino` (No aeropuerto) > `origen` / `destino` (No aeropuerto).
-    - **Implementación**: Esta lógica debe aplicarse en `direccionRecogida` y `calendarLocation` en todos los payloads de notificación.
+1.  **Regla de Oro: Dirección Específica Única**:
+    - **Principio**: Existe UN SOLO campo de ubicación preciso para la logística (`direccionEspecifica`), que corresponde al punto que **NO** es el aeropuerto.
+    - **Frontend**: El cliente completa un solo campo "Dirección Específica *" (anteriormente `hotel`).
+    - **Backend**: El sistema determina inteligentemente si esta dirección corresponde a la *Recogida* (viajes AL aeropuerto) o *Llegada* (viajes DESDE el aeropuerto).
+    - **Notificación Conductor**: El correo debe mostrar SOLO:
+        - Origen (Referencia general)
+        - Destino (Referencia general)
+        - **Dirección Específica** (El dato exacto para GPS)
+    - **Evitar Redundancia**: No enviar `direccionRecogida`, `hotel` y `destino` por separado si representan lo mismo.
 
 2.  **Google Ads (Conversiones Avanzadas)**:
     - **Backend**: El endpoint de redirección (`/api/payment-result`) siempre debe inyectar el parámetro `d` en la URL de retorno. Este parámetro es un JSON Base64 con `{email, nombre, telefono}`.
