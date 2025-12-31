@@ -300,6 +300,25 @@ const Reserva = sequelize.define(
 			field: "detalle_ajustes_tarifa",
 			comment: "JSON con desglose de ajustes de tarifa dinámica aplicados",
 		},
+		// Nuevos campos para soporte de tramos vinculados (Opción 1)
+		tramoPadreId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "tramo_padre_id",
+			comment: "ID de la reserva principal (ida) si esta es una vuelta",
+		},
+		tramoHijoId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "tramo_hijo_id",
+			comment: "ID de la reserva vinculada (vuelta) si esta es una ida",
+		},
+		tipoTramo: {
+			type: DataTypes.ENUM("ida", "vuelta", "solo_ida"),
+			defaultValue: "solo_ida",
+			field: "tipo_tramo",
+			comment: "Tipo de tramo de la reserva",
+		},
 	},
 	{
 		tableName: "reservas",

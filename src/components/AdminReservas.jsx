@@ -2674,6 +2674,23 @@ function AdminReservas() {
 																{reserva.codigoReserva}
 															</div>
 														)}
+														{/* Badges de Tramos */}
+														{reserva.tipoTramo ? (
+															<div className="mt-1">
+																<Badge 
+																	variant={reserva.tipoTramo === 'vuelta' ? 'secondary' : 'outline'} 
+																	className={`text-[10px] px-1 py-0 h-4 ${reserva.tipoTramo === 'vuelta' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-green-50 text-green-700 border-green-200'}`}
+																>
+																	{reserva.tipoTramo === 'vuelta' ? 'RETORNO' : 'IDA'}
+																</Badge>
+															</div>
+														) : reserva.idaVuelta && (
+															<div className="mt-1">
+																<Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-purple-200 text-purple-700 bg-purple-50">
+																	IDA Y VUELTA
+																</Badge>
+															</div>
+														)}
 
 														{/* El botón de reasignar se muestra en el modal de detalle sólo si la reserva
 															está confirmada y ya tiene vehículo y conductor asignados. Se movió

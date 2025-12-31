@@ -41,6 +41,7 @@ import addDisponibilidadConfig from "./migrations/add-disponibilidad-config.js";
 import addPendingEmailsTable from "./migrations/add-pending-emails-table.js";
 import addBloqueosAgendaTable from "./migrations/add-bloqueos-agenda-table.js";
 import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
+import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
 
@@ -694,6 +695,7 @@ const initializeDatabase = async () => {
 		await addAddressColumns(); // Migración para columnas de dirección
 		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 		await addGastosCerradosField(); // Migración para campo gastos_cerrados
+		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -773,63 +775,65 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 		const endDateInclusive = new Date(endDate);
 		endDateInclusive.setHours(23, 59, 59, 999);
 
-		// 1. Obtener reservas normales (IDA) en el rango
-	// Solo incluir reservas confirmadas (con pago)
-	const reservasIda = await Reserva.findAll({
-		where: {
-			fecha: {
-				[Op.gte]: startDate,
-				[Op.lte]: endDateInclusive,
+		// 1. Obtener reservas directas por fecha (cubre 'solo_ida', 'ida' y nuevos 'vuelta' vinculados)
+		const reservasDirectas = await Reserva.findAll({
+			where: {
+				fecha: {
+					[Op.gte]: startDate,
+					[Op.lte]: endDateInclusive,
+				},
+				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+				// Filtrar solo reservas confirmadas
+				[Op.or]: [
+					{ abonoPagado: true },
+					{ saldoPagado: true }
+				]
 			},
-			estado: { [Op.notIn]: ["cancelada", "rechazada"] },
-			// Filtrar solo reservas confirmadas (con al menos abono pagado o saldo pagado)
-			[Op.or]: [
-				{ abonoPagado: true },
-				{ saldoPagado: true }
-			]
-		},
-		include: [
-			{ model: Conductor, as: 'conductor_asignado', required: false },
-			{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
-		],
-		order: [["fecha", "ASC"], ["hora", "ASC"]],
-	});
+			include: [
+				{ model: Conductor, as: 'conductor_asignado', required: false },
+				{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
+			],
+			order: [["fecha", "ASC"], ["hora", "ASC"]],
+		});
 
-		// 2. Obtener reservas de VUELTA (idaVuelta = true) cuya fechaRegreso caiga en el rango
-	// Solo incluir reservas confirmadas (con pago)
-	const reservasVuelta = await Reserva.findAll({
-		where: {
-			idaVuelta: true,
-			fechaRegreso: {
-				[Op.gte]: startDate,
-				[Op.lte]: endDateInclusive,
+		// 2. Obtener reservas de VUELTA LEGACY (idaVuelta = true) 
+		// Solo si no han sido migradas (es decir, idaVuelta sigue true)
+		const reservasVueltaLegacy = await Reserva.findAll({
+			where: {
+				idaVuelta: true, // Solo las que aún se marcan como round-trip monolítico
+				fechaRegreso: {
+					[Op.gte]: startDate,
+					[Op.lte]: endDateInclusive,
+				},
+				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+				[Op.or]: [
+					{ abonoPagado: true },
+					{ saldoPagado: true }
+				]
 			},
-			estado: { [Op.notIn]: ["cancelada", "rechazada"] },
-			// Filtrar solo reservas confirmadas (con al menos abono pagado o saldo pagado)
-			[Op.or]: [
-				{ abonoPagado: true },
-				{ saldoPagado: true }
-			]
-		},
-		include: [
-			{ model: Conductor, as: 'conductor_asignado', required: false },
-			{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
-		],
-		order: [["fechaRegreso", "ASC"], ["horaRegreso", "ASC"]],
-	});
+			include: [
+				{ model: Conductor, as: 'conductor_asignado', required: false },
+				{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
+			],
+			order: [["fechaRegreso", "ASC"], ["horaRegreso", "ASC"]],
+		});
 
 		// 3. Procesar y unificar
 		const eventos = [];
 
-		// Procesar IDAS
-		reservasIda.forEach((r) => {
+		// Procesar reservas directas
+		reservasDirectas.forEach((r) => {
+			const esVuelta = r.tipoTramo === 'vuelta';
+			const labelTipo = esVuelta ? "RETORNO" : "IDA";
+			
 			eventos.push({
-				id: `ida-${r.id}`,
+				id: `res-${r.id}`, // ID único para el frontend
 				reservaId: r.id,
-				tipo: "IDA",
+				tipo: labelTipo,
 				fecha: r.fecha,
 				hora: r.hora,
-				origen: r.origen,
+				// En el nuevo modelo, origen/destino ya están correctos en la BD para cada tramo
+				origen: r.origen, 
 				destino: r.destino,
 				cliente: r.nombre,
 				telefono: r.telefono,
@@ -837,50 +841,51 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				pasajeros: r.pasajeros,
 				vehiculo: r.vehiculo,
 				conductorId: r.conductorId,
-				// Datos detallados de asignación
 				conductorNombre: r.conductor_asignado?.nombre || null,
 				vehiculoPatente: r.vehiculo_asignado?.patente || null,
 				vehiculoTipo: r.vehiculo_asignado?.tipo || null,
 				observaciones: r.observaciones,
 				numeroVuelo: r.numeroVuelo,
 				codigoReserva: r.codigoReserva,
+				// Direcciones específicas también vienen correctas
 				direccionOrigen: r.direccionOrigen,
 				direccionDestino: r.direccionDestino,
 				totalConDescuento: r.totalConDescuento,
 				saldoPendiente: r.saldoPendiente,
 				abonoPagado: r.abonoPagado,
-				saldoPagado: r.saldoPagado
+				saldoPagado: r.saldoPagado,
+				tramoPadreId: r.tramoPadreId // Útil para agrupar visualmente
 			});
 		});
 
-		// Procesar VUELTAS (invertir origen/destino)
-		reservasVuelta.forEach((r) => {
+		// Procesar VUELTAS LEGACY (invertir origen/destino)
+		reservasVueltaLegacy.forEach((r) => {
 			eventos.push({
-				id: `vuelta-${r.id}`,
+				id: `vuelta-legacy-${r.id}`,
 				reservaId: r.id,
 				tipo: "RETORNO",
 				fecha: r.fechaRegreso,
 				hora: r.horaRegreso,
-				origen: r.destino, // Origen de la vuelta es el destino de la ida
-				destino: r.origen, // Destino de la vuelta es el origen de la ida
+				origen: r.destino, // Swapping necesario para legacy
+				destino: r.origen,
 				cliente: r.nombre,
 				telefono: r.telefono,
 				email: r.email,
 				pasajeros: r.pasajeros,
 				vehiculo: r.vehiculo,
 				conductorId: r.conductorId,
-				// Datos detallados de asignación
 				conductorNombre: r.conductor_asignado?.nombre || null,
 				vehiculoPatente: r.vehiculo_asignado?.patente || null,
 				vehiculoTipo: r.vehiculo_asignado?.tipo || null,
-				observaciones: r.observaciones ? `(RETORNO) ${r.observaciones}` : "(RETORNO)",
+				observaciones: r.observaciones ? `(RETORNO LEGACY) ${r.observaciones}` : "(RETORNO LEGACY)",
 				numeroVuelo: null, 
 				codigoReserva: r.codigoReserva,
-				direccionOrigen: r.direccionDestino, // Invertir direcciones
-				direccionDestino: r.direccionOrigen, // Invertir direcciones
-				totalConDescuento: 0, // Generalmente el cobro es único, o se divide. Mostramos 0 o indicamos "Incluido".
+				direccionOrigen: r.direccionDestino,
+				direccionDestino: r.direccionOrigen,
+				// Monto 0 para evitar duplicar en stats visuales si se suman
+				totalConDescuento: 0, 
 				saldoPendiente: 0,
-				esRetorno: true
+				esRetorno: true // Flag legacy
 			});
 		});
 
@@ -2534,6 +2539,114 @@ app.post("/enviar-reserva", async (req, res) => {
 				abonoPagado,
 				saldoPagado,
 			});
+		}
+
+		// --- LÓGICA DE TRAMOS VINCULADOS (OPCIÓN 1) ---
+		// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
+		if (!reservaExistente && datosReserva.idaVuelta) {
+			console.log("🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+
+			try {
+				// 1. Preparar datos para el tramo de vuelta
+				// Invertir origen/destino y direcciones
+				const origenVuelta = datosReserva.destino || "";
+				const destinoVuelta = datosReserva.origen || "";
+				const dirOrigenVuelta = datosReserva.direccionDestino || "";
+				const dirDestinoVuelta = datosReserva.direccionOrigen || "";
+				
+				// Generar nuevo código para la vuelta
+				const codigoVuelta = await generarCodigoReserva();
+				
+				// Dividir costos (50/50 para simplificar asignación inicial)
+				const precioIda = Number(reservaGuardada.precio) / 2;
+				const precioVuelta = Number(reservaGuardada.precio) / 2;
+				const totalIda = Number(reservaGuardada.totalConDescuento) / 2;
+				const totalVuelta = Number(reservaGuardada.totalConDescuento) / 2;
+
+				// 2. Crear reserva de VUELTA (Hijo)
+				const reservaVuelta = await Reserva.create({
+					// Copiar datos base del cliente/contacto
+					nombre: reservaGuardada.nombre,
+					email: reservaGuardada.email,
+					telefono: reservaGuardada.telefono,
+					clienteId: reservaGuardada.clienteId,
+					rut: reservaGuardada.rut,
+					pasajeros: reservaGuardada.pasajeros,
+					
+					// Datos específicos de la vuelta
+					codigoReserva: codigoVuelta,
+					origen: origenVuelta,
+					destino: destinoVuelta,
+					direccionOrigen: dirOrigenVuelta,
+					direccionDestino: dirDestinoVuelta,
+					fecha: datosReserva.fechaRegreso, // Fecha regresó original
+					hora: datosReserva.horaRegreso,   // Hora regreso original
+					
+					// Datos financieros (mitad del total)
+					precio: precioVuelta,
+					totalConDescuento: totalVuelta,
+					descuentoBase: Number(reservaGuardada.descuentoBase) / 2,
+					descuentoPromocion: Number(reservaGuardada.descuentoPromocion) / 2,
+					descuentoRoundTrip: Number(reservaGuardada.descuentoRoundTrip) / 2,
+					descuentoOnline: Number(reservaGuardada.descuentoOnline) / 2,
+					
+					// Datos operativos
+					vehiculo: reservaGuardada.vehiculo, // Copiar preferencia de vehículo
+					numeroVuelo: "", // El vuelo de vuelta suele ser diferente, mejor dejar en blanco o copiar si se asume mismo
+					hotel: reservaGuardada.hotel, // Asumir mismo hotel si aplica
+					equipajeEspecial: reservaGuardada.equipajeEspecial,
+					sillaInfantil: reservaGuardada.sillaInfantil,
+					mensaje: reservaGuardada.mensaje,
+					source: reservaGuardada.source,
+					
+					// Estado
+					estado: "pendiente", // Inicia pendiente
+					estadoPago: reservaGuardada.estadoPago, // Hereda estado de pago
+					metodoPago: reservaGuardada.metodoPago,
+					pagoId: reservaGuardada.pagoId, // Comparte ID de transacción si existe
+					pagoGateway: reservaGuardada.pagoGateway,
+					pagoMonto: Number(reservaGuardada.pagoMonto) / 2, // Asignar parte del pago
+					pagoFecha: reservaGuardada.pagoFecha,
+					abonoPagado: reservaGuardada.abonoPagado,
+					saldoPagado: reservaGuardada.saldoPagado,
+
+					// Vinculación y Flags
+					idaVuelta: false, // Ya no es ida y vuelta "per se", es un tramo
+					tipoTramo: "vuelta",
+					tramoPadreId: reservaGuardada.id,
+					tramoHijoId: null,
+					fechaRegreso: null, // Limpiar
+					horaRegreso: null
+				});
+
+				console.log(`✅ Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`);
+
+				// 3. Actualizar reserva de IDA (Padre)
+				await reservaGuardada.update({
+					precio: precioIda,
+					totalConDescuento: totalIda,
+					pagoMonto: Number(reservaGuardada.pagoMonto) / 2,
+					
+					// Vinculación y Flags
+					idaVuelta: false, // Convertir a tramo único
+					tipoTramo: "ida",
+					tramoHijoId: reservaVuelta.id,
+					
+					// Limpiar datos de regreso ya que ahora están en otra reserva
+					fechaRegreso: null,
+					horaRegreso: null
+				});
+				
+				console.log(`✅ Tramo de ida actualizado y vinculado: ${reservaGuardada.id}`);
+
+				// Nota: reservaGuardada sigue siendo el objeto que se usará para el email confirmación.
+				// Como el email usa 'datosReserva' (el input original), el cliente seguirá recibiendo 
+				// el resumen completo "Ida y Vuelta" con los totales correctos.
+				
+			} catch (errorSplit) {
+				console.error("❌ Error al dividir reserva ida y vuelta:", errorSplit);
+				// No fallar el request completo, pero loguear error crítico
+			}
 		}
 
 		console.log(
