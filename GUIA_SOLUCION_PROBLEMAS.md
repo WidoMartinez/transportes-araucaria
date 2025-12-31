@@ -77,5 +77,87 @@ if (isFlowReturnView) {
 
 Esto garantiza que la página de agradecimiento y el script de conversión (`gtag`) se ejecuten siempre, independientemente de la configuración del servidor o del enrutador cliente.
 
+## 6. Planificación Mostrando Reservas No Pagadas
+
+### Problema
+La vista de planificación (calendario) mostraba reservas que no habían sido pagadas, incluyendo aquellas en estado pendiente sin confirmación de pago.
+
+### Causa
+El endpoint `/api/reservas/calendario` solo filtraba por estado (`cancelada`, `rechazada`) pero no verificaba el estado de pago de las reservas.
+
+### Solución (Diciembre 2025)
+Se modificó el endpoint en `backend/server-db.js` para incluir filtros de pago:
+
+```javascript
+// Solo incluir reservas confirmadas (con pago)
+const reservasIda = await Reserva.findAll({
+  where: {
+    fecha: { [Op.gte]: startDate, [Op.lte]: endDateInclusive },
+    estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+    // Filtrar solo reservas confirmadas
+    [Op.or]: [
+      { abonoPagado: true },
+      { saldoPagado: true }
+    ]
+  },
+  order: [["fecha", "ASC"], ["hora", "ASC"]],
+});
+```
+
+Adicionalmente, se agregó la columna "Número de Reserva" en la tabla de planificación para facilitar la identificación de cada viaje.
+
+**Archivos modificados**:
+- `backend/server-db.js` (líneas 776-799)
+- `src/components/AdminReservas.jsx` (líneas 629-673)
+
+## 7. Planificación Mostrando Información Genérica de Asignación
+
+### Problema
+La vista de planificación imprimible mostraba información genérica como "Auto Privado" o "(Conductor asignado)" en lugar de los datos específicos del vehículo y conductor asignados (patente, nombre).
+
+### Causa
+El endpoint `/api/reservas/calendario` no incluía las relaciones con los modelos `Conductor` y `Vehiculo`, por lo que solo enviaba los campos básicos (`vehiculo` como texto genérico y `conductorId` como número).
+
+### Solución (Diciembre 2025)
+
+**Backend** - Se agregaron includes de Sequelize para obtener datos relacionados:
+
+```javascript
+// En ambas consultas (reservasIda y reservasVuelta)
+include: [
+  { model: Conductor, as: 'conductor_asignado', required: false },
+  { model: Vehiculo, as: 'vehiculo_asignado', required: false }
+]
+```
+
+Se agregaron nuevos campos en la respuesta del endpoint:
+- `conductorNombre`: Nombre completo del conductor
+- `vehiculoPatente`: Patente del vehículo (ej: "ABCD12")
+- `vehiculoTipo`: Tipo de vehículo (ej: "SUV", "Sedan")
+
+**Frontend** - Se mejoró la lógica de renderizado en `AdminReservas.jsx`:
+
+```javascript
+// Prioridad 1: Mostrar datos específicos si están disponibles
+if (ev.vehiculoPatente || ev.conductorNombre) {
+  asignacion = `
+    🚗 ${vehiculoTipo} (${vehiculoPatente})<br>
+    👤 ${conductorNombre}
+  `;
+}
+// Prioridad 2: Fallback a información genérica
+else if (ev.vehiculo || ev.conductorId) {
+  asignacion = `${ev.vehiculo}<br>(Conductor asignado)`;
+}
+```
+
+**Resultado**:
+- **Antes**: "Auto Privado" / "(Conductor asignado)"
+- **Ahora**: "🚗 SUV (ABCD12)" / "👤 Juan Pérez"
+
+**Archivos modificados**:
+- `backend/server-db.js` (líneas 789-869)
+- `src/components/AdminReservas.jsx` (líneas 659-690)
+
 ---
 **Nota**: Si el problema persiste, revisar la carpeta `docs/legacy/` para bitácoras históricas más específicas.

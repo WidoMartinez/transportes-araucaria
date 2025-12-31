@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: Diciembre 2025
-> **Versión**: 1.0 (Unificada)
+> **Última Actualización**: 31 Diciembre 2025
+> **Versión**: 1.1
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -74,7 +74,14 @@ El panel ha sido rediseñado (v2.0) para optimizar la operación:
 - **Operaciones**:
   - `AdminReservas`: Gestión central, vista calendario.
   - `AdminVehiculos` / `AdminConductores`: Gestión de flota y personal.
-- **Finanzas**: Control de gastos, estadísticas y códigos de pago.
+- **Finanzas**: 
+  - Control de gastos asociados a reservas.
+  - **Estadísticas**: Panel de métricas financieras y operativas.
+    - **Filtrado Inteligente**: Las estadísticas consideran **únicamente reservas completadas** para reflejar la realidad financiera.
+    - **Métricas Disponibles**: Total de reservas, ingresos, gastos y utilidad neta.
+    - **Filtros Temporales**: Últimos 15/30 días, mes actual, mes pasado, todo el historial o rango personalizado.
+    - **Vistas**: Por conductor, por vehículo, por tipo de gasto.
+  - Códigos de pago para facilitar cobros.
 - **Configuración**: Tarifas base, precios dinámicos, festivos y bloqueos.
 - **Marketing**: Gestión de códigos de descuento.
 
@@ -212,9 +219,60 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 2.  **Google Ads (Conversiones Avanzadas)**:
     - **Backend**: El endpoint de redirección (`/api/payment-result`) siempre debe inyectar el parámetro `d` en la URL de retorno. Este parámetro es un JSON Base64 con `{email, nombre, telefono}`.
     - **Frontend**: El tag de conversión `gtag` debe incluir siempre `email`, `phone_number` y `address` (mapeado desde el nombre) para mejorar la precisión de Google Ads.
-2.  **Protección de Duplicados**: Usar siempre `sessionStorage` con una clave única (`flow_conversion_[transactionId]`) antes de disparar `gtag` para evitar conversiones dobles en recargas de página.
-3.  **Campo Maestro de Dirección**: El campo `hotel` en la base de datos es el contenedor para direcciones precisas capturadas por Google Maps. Nunca usar campos de texto simple para direcciones finales si el componente permite el autocomplete.
-4.  **PHP Integration**: Los scripts de Hostinger esperan `hotel`, `idaVuelta`, `fechaRegreso` y `horaRegreso` para una operación fluida. Asegurar que el backend siempre los propague en los payloads de `axios`.
+3.  **Protección de Duplicados**: Usar siempre `sessionStorage` con una clave única (`flow_conversion_[transactionId]`) antes de disparar `gtag` para evitar conversiones dobles en recargas de página.
+4.  **Campo Maestro de Dirección**: El campo `hotel` en la base de datos es el contenedor para direcciones precisas capturadas por Google Maps. Nunca usar campos de texto simple para direcciones finales si el componente permite el autocomplete.
+5.  **PHP Integration**: Los scripts de Hostinger esperan `hotel`, `idaVuelta`, `fechaRegreso` y `horaRegreso` para una operación fluida. Asegurar que el backend siempre los propague en los payloads de `axios`.
+
+### 5.7 Sistema de Estadísticas Financieras
+
+El panel de estadísticas (`AdminEstadisticas.jsx`) proporciona métricas clave para la toma de decisiones operativas y financieras.
+
+#### Principio Fundamental: Solo Reservas Completadas
+
+**Desde Diciembre 2025**, el sistema filtra **únicamente reservas con estado `completada`** en todos los cálculos estadísticos. Esto garantiza que:
+
+- Los ingresos reflejen dinero realmente recibido
+- Los gastos correspondan a servicios ejecutados
+- La utilidad sea precisa y accionable
+
+#### Implementación Técnica
+
+**Backend** (`server-db.js`):
+- Endpoints modificados: `/api/estadisticas/conductores`, `/api/estadisticas/vehiculos`, `/api/estadisticas/conductores/:id`
+- Filtro aplicado: `{ estado: "completada" }` en todas las consultas de reservas
+- Líneas clave: 7587-7590, 7714-7717, 7953-7956
+
+```javascript
+const whereReservas =
+    (fechaInicio || fechaFin)
+        ? { fecha: filtroReservas, estado: "completada" }
+        : { estado: "completada" };
+```
+
+**Frontend** (`AdminEstadisticas.jsx`):
+- No requiere cambios, consume los datos filtrados del backend
+- Cálculo de totales: `calcularTotales()` suma métricas de conductores/vehículos
+- Visualización: Cards con Total Reservas, Total Ingresos, Total Gastos, Utilidad
+
+#### Métricas Disponibles
+
+| Vista | Métricas |
+|-------|----------|
+| **Conductores** | Reservas completadas, ingresos, gastos, pagos al conductor, utilidad |
+| **Vehículos** | Reservas completadas, ingresos, gastos de combustible, mantenimiento, utilidad |
+| **Gastos** | Total por período, registros, desglose por tipo (combustible, peajes, etc.) |
+
+#### Filtros Temporales
+
+- Últimos 15 días
+- Últimos 30 días (predeterminado)
+- Mes actual
+- Mes pasado
+- Todo el historial
+- Rango personalizado
+
+> [!IMPORTANT]
+> **Cambio de Comportamiento**: Antes de Diciembre 2025, las estadísticas incluían todas las reservas (pendientes, canceladas, etc.), lo que inflaba los números. Ahora solo se consideran reservas cerradas para reflejar la realidad operativa.
 
 ---
 

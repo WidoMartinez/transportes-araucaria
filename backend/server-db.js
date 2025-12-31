@@ -774,29 +774,49 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 		endDateInclusive.setHours(23, 59, 59, 999);
 
 		// 1. Obtener reservas normales (IDA) en el rango
-		const reservasIda = await Reserva.findAll({
-			where: {
-				fecha: {
-					[Op.gte]: startDate,
-					[Op.lte]: endDateInclusive,
-				},
-				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+	// Solo incluir reservas confirmadas (con pago)
+	const reservasIda = await Reserva.findAll({
+		where: {
+			fecha: {
+				[Op.gte]: startDate,
+				[Op.lte]: endDateInclusive,
 			},
-			order: [["fecha", "ASC"], ["hora", "ASC"]],
-		});
+			estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+			// Filtrar solo reservas confirmadas (con al menos abono pagado o saldo pagado)
+			[Op.or]: [
+				{ abonoPagado: true },
+				{ saldoPagado: true }
+			]
+		},
+		include: [
+			{ model: Conductor, as: 'conductor_asignado', required: false },
+			{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
+		],
+		order: [["fecha", "ASC"], ["hora", "ASC"]],
+	});
 
 		// 2. Obtener reservas de VUELTA (idaVuelta = true) cuya fechaRegreso caiga en el rango
-		const reservasVuelta = await Reserva.findAll({
-			where: {
-				idaVuelta: true,
-				fechaRegreso: {
-					[Op.gte]: startDate,
-					[Op.lte]: endDateInclusive,
-				},
-				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+	// Solo incluir reservas confirmadas (con pago)
+	const reservasVuelta = await Reserva.findAll({
+		where: {
+			idaVuelta: true,
+			fechaRegreso: {
+				[Op.gte]: startDate,
+				[Op.lte]: endDateInclusive,
 			},
-			order: [["fechaRegreso", "ASC"], ["horaRegreso", "ASC"]],
-		});
+			estado: { [Op.notIn]: ["cancelada", "rechazada"] },
+			// Filtrar solo reservas confirmadas (con al menos abono pagado o saldo pagado)
+			[Op.or]: [
+				{ abonoPagado: true },
+				{ saldoPagado: true }
+			]
+		},
+		include: [
+			{ model: Conductor, as: 'conductor_asignado', required: false },
+			{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
+		],
+		order: [["fechaRegreso", "ASC"], ["horaRegreso", "ASC"]],
+	});
 
 		// 3. Procesar y unificar
 		const eventos = [];
@@ -817,6 +837,10 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				pasajeros: r.pasajeros,
 				vehiculo: r.vehiculo,
 				conductorId: r.conductorId,
+				// Datos detallados de asignación
+				conductorNombre: r.conductor_asignado?.nombre || null,
+				vehiculoPatente: r.vehiculo_asignado?.patente || null,
+				vehiculoTipo: r.vehiculo_asignado?.tipo || null,
 				observaciones: r.observaciones,
 				numeroVuelo: r.numeroVuelo,
 				codigoReserva: r.codigoReserva,
@@ -845,6 +869,10 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				pasajeros: r.pasajeros,
 				vehiculo: r.vehiculo,
 				conductorId: r.conductorId,
+				// Datos detallados de asignación
+				conductorNombre: r.conductor_asignado?.nombre || null,
+				vehiculoPatente: r.vehiculo_asignado?.patente || null,
+				vehiculoTipo: r.vehiculo_asignado?.tipo || null,
 				observaciones: r.observaciones ? `(RETORNO) ${r.observaciones}` : "(RETORNO)",
 				numeroVuelo: null, 
 				codigoReserva: r.codigoReserva,
@@ -7574,8 +7602,8 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 		}
 		const whereReservas =
 			(fechaInicio || fechaFin)
-				? { fecha: filtroReservas }
-				: undefined;
+				? { fecha: filtroReservas, estado: "completada" }
+				: { estado: "completada" };
 
 		const filtroGastos = {};
 		if (fechaInicio) {
@@ -7701,8 +7729,8 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 		}
 		const whereReservas =
 			(fechaInicio || fechaFin)
-				? { fecha: filtroReservas }
-				: undefined;
+				? { fecha: filtroReservas, estado: "completada" }
+				: { estado: "completada" };
 
 		const filtroGastos = {};
 		if (fechaInicio) {
@@ -7940,8 +7968,8 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 		}
 		const whereReservas =
 			(fechaInicio || fechaFin)
-				? { fecha: filtroReservas }
-				: undefined;
+				? { fecha: filtroReservas, estado: "completada" }
+				: { estado: "completada" };
 
 		const conductor = await Conductor.findByPk(id, {
 			include: [

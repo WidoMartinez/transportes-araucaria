@@ -629,6 +629,7 @@ function AdminReservas() {
 							<thead>
 								<tr>
 									<th style="width: 80px;">Hora</th>
+									<th style="width: 120px;">Número Reserva</th>
 									<th>Cliente / Contacto</th>
 									<th>Ruta / Detalles</th>
 									<th style="width: 150px;">Vehículo / Conductor</th>
@@ -655,17 +656,44 @@ function AdminReservas() {
 							</div>
 						`;
 
-						let asignacion = `<span style="color:#999;">Sin asignar</span>`;
-						if (ev.vehiculo || ev.conductorId) {
-							asignacion = `
-								${ev.vehiculo || ''}<br>
-								${ev.conductorId ? '(Conductor asignado)' : ''}
-							`;
+	
+					let asignacion = `<span style="color:#999;">Sin asignar</span>`;
+					if (ev.vehiculoPatente || ev.conductorNombre) {
+						// Construir información del vehículo
+						let vehiculoInfo = '';
+						if (ev.vehiculoPatente) {
+							vehiculoInfo = ev.vehiculoTipo 
+								? `${ev.vehiculoTipo} (${ev.vehiculoPatente})`
+								: ev.vehiculoPatente;
+						} else if (ev.vehiculo) {
+							vehiculoInfo = ev.vehiculo;
 						}
+						
+						// Construir información del conductor
+						let conductorInfo = '';
+						if (ev.conductorNombre) {
+							conductorInfo = `👤 ${ev.conductorNombre}`;
+						} else if (ev.conductorId) {
+							conductorInfo = '(Conductor asignado)';
+						}
+						
+						asignacion = `
+							${vehiculoInfo ? `🚗 ${vehiculoInfo}` : ''}<br>
+							${conductorInfo}
+						`;
+					} else if (ev.vehiculo || ev.conductorId) {
+						// Fallback a información genérica si no hay datos específicos
+						asignacion = `
+							${ev.vehiculo || ''}<br>
+							${ev.conductorId ? '(Conductor asignado)' : ''}
+						`;
+					}
+	
 
 						htmlContent += `
 							<tr class="reserva-row">
 								<td style="font-size:14px; font-weight:bold;">${ev.hora ? ev.hora.substring(0,5) : "--:--"} ${tipoBadge}</td>
+								<td style="font-size:11px; color:#666;">${ev.codigoReserva || '-'}</td>
 								<td>${contacto}</td>
 								<td>${ruta}</td>
 								<td>${asignacion}</td>
