@@ -274,6 +274,33 @@ const whereReservas =
 > [!IMPORTANT]
 > **Cambio de Comportamiento**: Antes de Diciembre 2025, las estadísticas incluían todas las reservas (pendientes, canceladas, etc.), lo que inflaba los números. Ahora solo se consideran reservas cerradas para reflejar la realidad operativa.
 
+### 5.8 Sistema de Reservas Ida y Vuelta (Tramos Separados)
+
+**Implementado: Diciembre 2025**
+
+Para resolver problemas de asignación de conductores distintos para la ida y la vuelta, y permitir cierres de caja parciales, se implementó un cambio estructural en cómo se manejan los viajes redondos.
+
+#### Lógica de Negocio
+Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
+1.  **Backend**: El sistema intercepta la creación y genera **DOS** registros en la base de datos:
+    - **Registro A (Ida)**: Contiene los datos del viaje de ida.
+    - **Registro B (Vuelta)**: Contiene los datos de regreso (origen/destino invertidos).
+2.  **Vinculación**: Ambos registros quedan unidos mediante los campos `tramoPadreId` y `tramoHijoId`.
+3.  **División de Costos**: El precio total y los abonos se dividen **50/50** entre ambos tramos. 
+    - *Ejemplo*: Reserva de $40.000. Se crean dos reservas de $20.000 cada una.
+4.  **Independencia Operativa**:
+    - Cada tramo puede tener su propio **Conductor** y **Vehículo**.
+    - Cada tramo puede tener su propio estado de pago y estado de ejecución (`Confirmada` vs `Completada`).
+
+#### Impacto en Panel Admin (`AdminReservas`)
+- **Visualización**: Las reservas aparecen como filas separadas.
+- **Identificadores**:
+    - Badge **IDA** (Verde): Indica el primer tramo.
+    - Badge **RETORNO** (Azul): Indica el segundo tramo.
+- **Acciones**: Puede completar y cerrar la "Ida" (y registrar sus gastos) mientras la "Vuelta" permanece pendiente para días futuros.
+
+> **Nota**: Las reservas antiguas (creadas antes de este cambio) mantienen el comportamiento "Legacy" (una sola fila para todo el viaje) y se identifican con el badge **IDA Y VUELTA**.
+
 ---
 
 ## 6. Mantenimiento y Despliegue
