@@ -182,16 +182,23 @@ function AdminCodigosPago() {
 		return `PX-${rand}`;
 	};
 
-	const copiarAlPortapapeles = (texto) => {
+	const generarMensaje = (codigo) => {
+		const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
+		return `Hola, aquí tienes tu código de pago:\n\n${codigo.codigo}\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+	};
+
+	const copiarAlPortapapeles = (codigo) => {
+		// Si recibimos el objeto completo, generamos el mensaje. Si es solo string (legacy), lo usamos directo.
+		const texto = typeof codigo === "object" ? generarMensaje(codigo) : codigo;
+		
 		navigator.clipboard.writeText(texto).then(() => {
 			// Idealmente mostrar un toast aquí
-			alert("Código copiado al portapapeles: " + texto);
+			alert("Copiado al portapapeles:\n\n" + texto);
 		});
 	};
 
 	const enviarPorWhatsApp = (codigo) => {
-		const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
-		const mensaje = `Hola, aquí tienes tu código de pago: *${codigo.codigo}*.\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+		const mensaje = generarMensaje(codigo);
 		const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
 		window.open(url, "_blank");
 	};
@@ -376,7 +383,7 @@ function AdminCodigosPago() {
 														variant="ghost"
 														size="sm"
 														title="Copiar Código"
-														onClick={() => copiarAlPortapapeles(c.codigo)}
+														onClick={() => copiarAlPortapapeles(c)}
 													>
 														<Copy className="h-4 w-4 text-blue-500" />
 													</Button>
