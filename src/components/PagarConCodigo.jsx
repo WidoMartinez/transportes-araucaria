@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
+import WhatsAppButton from "./WhatsAppButton";
 import { 
 	LoaderCircle, 
 	CheckCircle, 
@@ -48,6 +49,7 @@ function PagarConCodigo() {
 	const [validando, setValidando] = useState(false);
 	const [codigoValidado, setCodigoValidado] = useState(null);
 	const [error, setError] = useState("");
+	const [showContactButton, setShowContactButton] = useState(false);
 	const [step, setStep] = useState(1); // 1: Validar código, 2: Completar datos y pagar
 	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' | 'abono'
 
@@ -94,7 +96,9 @@ function PagarConCodigo() {
 		}
 
 		setValidando(true);
+		setValidando(true);
 		setError("");
+		setShowContactButton(false);
 
 		try {
 			const response = await fetch(
@@ -103,8 +107,17 @@ function PagarConCodigo() {
 
 			const data = await response.json();
 
-			if (!response.ok) {
-				setError(data.message || "Código inválido");
+			if (!response.ok || data.success === false) {
+				const isExpiredOrUsed = data.estado === "vencido" || data.estado === "usado";
+				
+				if (isExpiredOrUsed) {
+					setError("Lo sentimos, debido a la alta demanda, este cupo ha sido reservado por otro pasajero.");
+					setShowContactButton(true);
+				} else {
+					setError(data.message || "Código inválido");
+					setShowContactButton(false);
+				}
+				
 				setCodigoValidado(null);
 				return;
 			}
@@ -372,9 +385,23 @@ function PagarConCodigo() {
 
 							{/* Mensaje de error */}
 							{error && (
-								<Alert variant="destructive">
-									<AlertCircle className="h-4 w-4" />
-									<AlertDescription>{error}</AlertDescription>
+								<Alert variant="destructive" className="flex flex-col gap-4">
+									<div className="flex items-center gap-2">
+										<AlertCircle className="h-4 w-4" />
+										<AlertDescription>{error}</AlertDescription>
+									</div>
+									{showContactButton && (
+										<div className="w-full flex justify-end">
+											<WhatsAppButton 
+												variant="outline" 
+												size="sm" 
+												className="bg-white/10 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+												message={`Hola, intenté pagar el código ${codigo} pero me indica que el cupo fue reservado. ¿Me pueden ayudar?`}
+											>
+												Contactar Soporte
+											</WhatsAppButton>
+										</div>
+									)}
 								</Alert>
 							)}
 
