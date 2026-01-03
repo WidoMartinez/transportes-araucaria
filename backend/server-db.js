@@ -44,6 +44,7 @@ import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
 import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
+import addColumnVan from "./migrations/add-column-van.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -1158,8 +1159,9 @@ const buildPricingPayload = async () => {
 				porcentajeAdicional: destino.porcentajeAdicionalAuto || 0.1,
 			},
 			van: {
-				base: destino.precioIda * 1.8,
-				porcentajeAdicional: destino.porcentajeAdicionalVan || 0.1,
+				// Si existe precioBaseVan, usarlo; de lo contrario fallback a lógica antigua
+				base: destino.precioBaseVan ? Number(destino.precioBaseVan) : (destino.precioIda * 1.8),
+				porcentajeAdicional: destino.porcentajeAdicionalVan || 0.1, // Era 0.05 por defecto
 			},
 		},
 		descripcion: destino.descripcion || "",
@@ -1234,6 +1236,9 @@ app.put("/pricing", async (req, res) => {
 				// Extraer porcentajes adicionales
 				const porcentajeAdicionalAuto = Number(destino.precios?.auto?.porcentajeAdicional) || 0.1;
 				const porcentajeAdicionalVan = Number(destino.precios?.van?.porcentajeAdicional) || 0.05;
+				
+				// Extraer precio base van
+				const precioBaseVan = Number(destino.precios?.van?.base) || 0;
 
 				return Destino.upsert({
 					nombre: destino.nombre,
@@ -1251,6 +1256,7 @@ app.put("/pricing", async (req, res) => {
 					duracionVueltaMinutos: duracionVuelta,
 					porcentajeAdicionalAuto,
 					porcentajeAdicionalVan,
+					precioBaseVan: precioBaseVan > 0 ? precioBaseVan : null,
 				});
 			})
 		);
@@ -9093,6 +9099,7 @@ const startServer = async () => {
 	try {
 		await addPermitirAbonoColumn();
 		await addArchivadaColumn();
+		await addColumnVan();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 
