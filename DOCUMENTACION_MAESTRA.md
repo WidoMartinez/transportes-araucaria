@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 31 Diciembre 2025
-> **Versión**: 1.1
+> **Última Actualización**: 3 Enero 2026
+> **Versión**: 1.2
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -414,6 +414,178 @@ Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar s
 > [!TIP]
 > **Para Futuros Desarrolladores**: Si agregas nuevos campos al modal de detalles, sigue el patrón de renderizado condicional mostrado arriba. Pregúntate: "¿Este campo puede estar vacío o en 0?" Si la respuesta es sí, envuélvelo en una condición.
 
+### 5.10 Sistema de Descuentos Personalizados
+
+**Implementado: Enero 2026**
+
+El sistema permite configurar descuentos adicionales por tramo/destino con restricciones específicas de días y horarios. Estos descuentos se **suman** a los descuentos globales (online, ida y vuelta, promociones) en el cálculo del precio final.
+
+#### Características Principales
+
+- **Múltiples descuentos simultáneos**: Se pueden configurar varios descuentos personalizados que se suman entre sí
+- **Aplicación por tramo**: Los descuentos se calculan sobre el precio de cada tramo individual
+- **Duplicación automática**: En viajes ida y vuelta, el descuento se aplica a ambos tramos
+- **Activación/desactivación**: Cada descuento puede activarse o desactivarse sin eliminarlo
+- **Restricciones opcionales**: Por días de la semana y rangos horarios
+
+#### Flujo de Datos Completo
+
+**1. Almacenamiento (Backend)**
+
+**Archivo**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js)  
+**Líneas**: 1114, 1130-1137, 1319-1335
+
+Los descuentos se almacenan en la tabla `DescuentoGlobal` con `tipo: "descuentoPersonalizado"`.
+
+```javascript
+// Formateo para envío al frontend
+descuentosFormatted.descuentosPersonalizados = [];
+
+descuentosGlobales.forEach((descuento) => {
+  if (descuento.tipo === "descuentoPersonalizado") {
+    descuentosFormatted.descuentosPersonalizados.push({
+      nombre: descuento.nombre,
+      valor: descuento.valor,        // Porcentaje (ej: 10 = 10%)
+      activo: descuento.activo,      // Boolean
+      descripcion: descuento.descripcion,
+    });
+  }
+});
+```
+
+**Endpoint**: `GET /pricing` retorna los descuentos en `descuentosGlobales.descuentosPersonalizados`
+
+**2. Cálculo del Porcentaje Total (Frontend)**
+
+**Archivo**: [`src/App.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/App.jsx)  
+**Líneas**: 1002-1006
+
+```javascript
+// Suma todos los descuentos personalizados activos
+const personalizedDiscountRate =
+  descuentosGlobales?.descuentosPersonalizados
+    ?.filter((desc) => desc.activo && desc.valor > 0)
+    .reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
+```
+
+**Ejemplo**: Si hay descuentos de 10% y 5% activos → `personalizedDiscountRate = 0.15`
+
+**3. Aplicación al Precio por Tramo**
+
+**Archivo**: [`src/App.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/App.jsx)  
+**Líneas**: 1308-1314
+
+```javascript
+// Calcular descuento sobre precio de un tramo
+const descuentosPersonalizadosPorTramo = Math.round(
+  precioIda * personalizedDiscountRate
+);
+
+// Duplicar si es ida y vuelta
+const descuentosPersonalizados = formData.idaVuelta
+  ? descuentosPersonalizadosPorTramo * 2
+  : descuentosPersonalizadosPorTramo;
+```
+
+**4. Inclusión en el Total Final**
+
+**Archivo**: [`src/App.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/App.jsx)  
+**Líneas**: 1360-1373
+
+```javascript
+// Suma de todos los descuentos
+const descuentoTotalSinLimite =
+  descuentoOnline +
+  descuentoPromocion +
+  descuentoRoundTrip +
+  descuentosPersonalizados +  // ← Incluido aquí
+  descuentoCodigo +
+  descuentoRetornoUniversal;
+
+// Límite máximo del 75% del precio base
+const descuentoMaximo = Math.round(precioBase * 0.75);
+const descuentoOnlineTotal = Math.min(descuentoTotalSinLimite, descuentoMaximo);
+
+// Precio final
+const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
+```
+
+#### Visualización en la Interfaz
+
+**Archivo**: [`src/components/Hero.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/components/Hero.jsx)
+
+Los descuentos personalizados se muestran en 3 ubicaciones:
+
+1. **Texto principal** (líneas 669-672): Descripción en el hero
+2. **Módulo de reserva** (líneas 759-764): Texto destacado en el formulario
+3. **Badge visual** (líneas 803-810): Etiqueta morada "Especial +X%"
+
+```jsx
+{personalizedDiscountPercentage > 0 && (
+  <Badge variant="default" className="bg-purple-500">
+    Especial +{personalizedDiscountPercentage}%
+  </Badge>
+)}
+```
+
+#### Ejemplo de Cálculo Completo
+
+```
+Escenario: Viaje ida y vuelta, Temuco → Aeropuerto
+Precio base por tramo: $30,000
+Descuentos configurados:
+  - Online: 5%
+  - Personalizado 1 (Temuco): 10%
+  - Ida y vuelta: 10%
+
+Cálculo:
+  Precio base total (ida + vuelta): $60,000
+  
+  Descuentos por tramo:
+    - Online (5% × $30,000 × 2): -$3,000
+    - Personalizado (10% × $30,000 × 2): -$6,000
+  
+  Descuentos sobre total:
+    - Ida y vuelta (10% × $60,000): -$6,000
+  
+  Total descuentos: $15,000 (25% del total)
+  Precio final: $45,000
+```
+
+#### Gestión en Panel Admin
+
+**Componente**: [`AdminPricing.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/components/AdminPricing.jsx)
+
+**Funciones clave**:
+- `addDescuentoPersonalizado()` (línea 477): Agregar nuevo descuento
+- `handleDescuentoPersonalizadoChange()` (línea 497): Editar descuento
+- `toggleDescuentoPersonalizado()` (línea 531): Activar/desactivar
+- `removeDescuentoPersonalizado()` (línea 518): Eliminar descuento
+
+**Campos configurables**:
+- `nombre`: Identificador del descuento
+- `valor`: Porcentaje (número entero, ej: 10 = 10%)
+- `activo`: Estado del descuento (boolean)
+- `descripcion`: Información adicional (opcional)
+
+> [!IMPORTANT]
+> **Límite de Descuentos**: El sistema aplica un límite máximo del **75%** sobre el precio base para evitar precios negativos o excesivamente bajos. Este límite se aplica a la suma de TODOS los descuentos (online + promociones + personalizados + códigos).
+
+> [!TIP]
+> **Debugging**: Para verificar que los descuentos se aplican correctamente, descomentar las líneas de debug en `App.jsx` (1391-1414) que muestran el desglose completo de descuentos en la consola del navegador.
+
+#### Referencias de Código
+
+| Archivo | Líneas | Descripción |
+|---------|--------|-------------|
+| `backend/server-db.js` | 1114, 1130-1137 | Formateo y envío de descuentos al frontend |
+| `backend/server-db.js` | 1319-1335 | Guardado de descuentos en base de datos |
+| `backend/models/DescuentoGlobal.js` | 16 | Definición del tipo "descuentoPersonalizado" |
+| `src/App.jsx` | 1002-1006 | Cálculo del porcentaje total de descuentos personalizados |
+| `src/App.jsx` | 1308-1314 | Aplicación al precio por tramo |
+| `src/App.jsx` | 1360-1373 | Suma en el descuento total final |
+| `src/components/Hero.jsx` | 529-531, 669-672, 759-764, 803-810 | Visualización en interfaz de usuario |
+| `src/components/AdminPricing.jsx` | 476-540, 1096-1114 | Gestión en panel administrativo |
 
 
 ---

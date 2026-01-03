@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/sheet";
 import logo from "../assets/logo.png";
 import { cn } from "@/lib/utils";
+import WhatsAppInterceptModal from "./WhatsAppInterceptModal";
+import { usePricingData } from "../hooks/usePricingData";
 
 // --- Trackers ---
 const trackWhatsAppClick = () => {
@@ -50,7 +52,9 @@ const MENU_ITEMS = [
 function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const { scrollY } = useScroll();
+  const { discountOnline } = usePricingData();
 
   // Detectar scroll para cambiar estilo
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -76,6 +80,26 @@ function Header() {
     } finally {
       setTimeout(() => setIsUpdating(false), 1000);
     }
+  };
+
+  // Handlers para modal de intercepción
+  const handleWhatsAppClick = (e) => {
+    e.preventDefault();
+    trackWhatsAppClick();
+    setShowModal(true);
+  };
+
+  const handleReserveFromModal = () => {
+    setShowModal(false);
+    // Scroll a la sección de reservas
+    const reservaSection = document.querySelector("#inicio");
+    if (reservaSection) {
+      reservaSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
   };
 
   // Variantes para animaciones
@@ -107,12 +131,13 @@ function Header() {
   };
 
   return (
+    <>
     <motion.header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b border-transparent",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
         isScrolled
-          ? "bg-white/90 backdrop-blur-md shadow-sm border-gray-200/50 py-1 md:py-2"
-          : "bg-transparent md:bg-white/80 md:backdrop-blur-sm py-2 md:py-4"
+          ? "bg-[#6B4423]/95 md:bg-white/90 backdrop-blur-md shadow-sm border-[#8B5A3C]/30 md:border-gray-200/50 py-1 md:py-2"
+          : "bg-[#6B4423] md:bg-transparent md:backdrop-blur-sm border-transparent md:border-transparent py-2 md:py-4"
       )}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -128,7 +153,9 @@ function Header() {
               alt="Transportes Araucaria"
               className={cn(
                 "transition-all duration-300 object-contain",
-                isScrolled ? "h-12 md:h-16" : "h-20 md:h-20 lg:h-24 brightness-0 invert md:brightness-100 md:invert-0" // White logo on mobile transparent, larger
+                isScrolled 
+                  ? "h-12 md:h-16 brightness-0 invert md:brightness-100 md:invert-0" 
+                  : "h-20 md:h-20 lg:h-24 brightness-0 invert md:brightness-100 md:invert-0"
               )}
               layout
             />
@@ -181,11 +208,8 @@ function Header() {
                 <Phone className="w-5 h-5" />
               </a>
 
-              <motion.a
-                href="https://wa.me/56936643540"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={trackWhatsAppClick}
+              <motion.button
+                onClick={handleWhatsAppClick}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -193,23 +217,20 @@ function Header() {
                   <MessageCircle className="w-4 h-4 mr-2" />
                   WhatsApp
                 </Button>
-              </motion.a>
+              </motion.button>
             </motion.div>
           </nav>
 
           {/* MOBILE MENU TRIGGER */}
           <div className="xl:hidden flex items-center gap-4">
-            <a
-              href="https://wa.me/56936643540"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={trackWhatsAppClick}
+            <button
+              onClick={handleWhatsAppClick}
               className="md:hidden"
             >
               <Button size="icon" className="bg-green-600 hover:bg-green-700 rounded-full h-10 w-10 shadow-md">
                 <MessageCircle className="w-5 h-5 text-white" />
               </Button>
-            </a>
+            </button>
 
             <Sheet>
               <SheetTrigger asChild>
@@ -217,10 +238,10 @@ function Header() {
                   variant="ghost" 
                   size="icon" 
                   className={cn(
-                    "h-12 w-12 rounded-full transition-colors",
+                    "h-12 w-12 rounded-full transition-colors text-white md:text-gray-800",
                     isScrolled 
-                      ? "hover:bg-gray-100 text-gray-800" 
-                      : "hover:bg-white/20 text-white" // White icon on transparent
+                      ? "hover:bg-white/20 md:hover:bg-gray-100" 
+                      : "hover:bg-white/20 md:hover:bg-gray-100"
                   )}
                 >
                   <Menu className="w-7 h-7" />
@@ -277,16 +298,13 @@ function Header() {
                     +56 9 3664 3540
                   </a>
 
-                  <a
-                    href="https://wa.me/56936643540"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={trackWhatsAppClick}
+                  <button
+                    onClick={handleWhatsAppClick}
                     className="flex items-center justify-center w-full gap-2 p-3 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all"
                   >
                     <MessageCircle className="w-5 h-5" />
                     Chatear por WhatsApp
-                  </a>
+                  </button>
                 </div>
 
               </SheetContent>
@@ -295,7 +313,17 @@ function Header() {
 
         </div>
       </div>
-    </motion.header>
+
+      </motion.header>
+
+      {/* Modal de Intercepción WhatsApp - Fuera del header para evitar problemas de stacking context por transform */}
+      <WhatsAppInterceptModal
+        isOpen={showModal}
+        onClose={handleCloseModal}
+        onReserve={handleReserveFromModal}
+        discountData={discountOnline}
+      />
+    </>
   );
 }
 
