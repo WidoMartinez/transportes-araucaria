@@ -29,7 +29,8 @@ const addColumnVan = async () => {
 };
 
 // Bloque para ejecución independiente (CLI)
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Verificación simplificada para Windows/Unix
+if (process.argv[1] && process.argv[1].includes('add-column-van.js')) {
 	addColumnVan()
 		.then(async () => {
 			console.log("🎉 Ejecución standalone finalizada");
