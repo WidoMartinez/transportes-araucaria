@@ -588,7 +588,62 @@ Cálculo:
 | `src/components/AdminPricing.jsx` | 476-540, 1096-1114 | Gestión en panel administrativo |
 
 
+
+### 5.11 Solución de UI/UX Crítica: Modal de Intercepción y Stacking Contexts
+
+**Documentado: 3 Enero 2026**
+
+Esta sección documenta la solución técnica definitiva aplicada al problema recurrente de visualización del "Modal de WhatsApp" en dispositivos de escritorio y móviles con pantallas pequeñas.
+
+#### Problema Identificado
+El modal de intercepción (que aparece al intentar ir a WhatsApp) presentaba dos fallos críticos:
+1.  **Corte Superior (Clipping)**: En pantallas con poca altura (laptops), la parte superior del modal desaparecía y no era accesible mediante scroll.
+2.  **Visualización Errática**: El modal se movía o cortaba inesperadamente dependiendo del scroll de la página.
+
+#### Causa Raíz Técnica
+El problema se debía a un conflicto de **Stacking Context (Contexto de Apilamiento)** en CSS:
+- El componente modal estaba anidado dentro de `<motion.header>` en `Header.jsx`.
+- `<motion.header>` aplica propiedades de transformación (`transform: translateY(...)`) para animar la entrada.
+- **Regla CSS Crítica**: Todo elemento con `position: fixed` que sea hijo de un elemento con `transform`, deja de comportarse como fijo respecto al viewport y pasa a comportarse como `absolute` respecto al padre transformado.
+- Esto "atrapaba" el modal dentro de las dimensiones del header, causando cortes y mal posicionamiento.
+
+#### Solución Implementada (Patrón de Referencia)
+
+Para evitar este problema en el futuro, se establecen las siguientes reglas de implementación para Modales:
+
+1.  **Arquitectura de Componentes**:
+    - **Nunca anidar modales dentro de componentes animados** (como navbars, headers, o cards con motion).
+    - Mover el componente modal al nivel más alto posible del árbol DOM, preferiblemente como hermano directo de los contenedores principales, o usar `React Portals` (`createPortal`) para renderizarlos directamente en `document.body`.
+    - En este caso, se movió `<WhatsAppInterceptModal />` fuera de `<motion.header>` en `Header.jsx`.
+
+2.  **Layout "Safe Scroll" (Prueba de Fallos)**:
+    Se reemplazó el centrado CSS tradicional por una estructura que garantiza scroll si el contenido excede la altura de la pantalla (Tailwind UI Pattern):
+    
+    ```jsx
+    {/* 1. Contenedor Padre fijo al viewport con scroll habilitado */}
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
+      
+      {/* 2. Contenedor Flex con altura mínima garantizada */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        
+        {/* 3. El Modal en sí (sin margin auto fijos que bloqueen scroll) */}
+        <div className="relative bg-white rounded-xl ...">
+          {/* Contenido */}
+        </div>
+      </div>
+    </div>
+    ```
+
+3.  **Colores Robustos**:
+    - Se eliminó la dependencia de variables CSS (`bg-primary`) que fallaban en ciertos contextos.
+    - Se usan códigos hexadecimales explícitos (`#6B4423`) para elementos críticos de marca como el header del modal.
+
+4.  **Tracking Unificado**:
+    - Se replicó el script de conversión de Google Ads (`gtag('event', 'conversion', ...)` con ID `AW-17529712870...`) en el botón "Continuar a WhatsApp" del modal.
+    - Esto asegura que la conversión se registre idénticamente si el usuario clickea en el header o pasa por el modal.
+
 ---
+
 
 ## 6. Mantenimiento y Despliegue
 
