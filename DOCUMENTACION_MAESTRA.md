@@ -334,6 +334,88 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
 
 > **Nota**: Las reservas antiguas (creadas antes de este cambio) mantienen el comportamiento "Legacy" (una sola fila para todo el viaje) y se identifican con el badge **IDA Y VUELTA**.
 
+### 5.9 Optimización del Modal de Detalles de Reserva
+
+**Implementado: 2 Enero 2026**
+
+Para mejorar la experiencia de usuario en el panel administrativo, se optimizó el modal "Ver Detalles" de reservas para ocultar campos vacíos y concentrar la información relevante.
+
+#### Problema Identificado
+El modal mostraba todos los campos posibles, incluso cuando estaban vacíos (con guiones "-" o valores en $0). Esto dificultaba la lectura rápida de información importante, especialmente en reservas con datos mínimos.
+
+#### Solución Implementada
+Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar solo campos con contenido real.
+
+#### Campos Optimizados
+
+**Detalles del Viaje:**
+- `vehiculo`: Solo se muestra si está asignado
+
+**Información Adicional:**
+- Sección completa se oculta si todos los campos están vacíos
+- `numeroVuelo`: Solo si tiene valor
+- `hotel`: Solo si tiene valor
+- `equipajeEspecial`: Solo si tiene valor
+- `sillaInfantil`: Solo si es `true` (muestra "Sí")
+
+**Información Financiera:**
+- `descuentoBase`: Solo si > 0
+- `descuentoPromocion`: Solo si > 0
+- `descuentoRoundTrip`: Solo si > 0
+- `descuentoOnline`: Solo si > 0
+- `codigoDescuento`: Solo si tiene valor
+
+**Estado y Pago:**
+- `metodoPago`: Solo si tiene valor
+- `referenciaPago`: Solo si tiene valor
+
+**Información Técnica:**
+- `ipAddress`: Solo si tiene valor
+
+#### Implementación Técnica
+
+**Archivo**: `src/components/AdminReservas.jsx`
+
+**Patrón de Código**:
+```jsx
+// Para campos de texto/string
+{selectedReserva.campo && (
+  <div>
+    <Label>Etiqueta</Label>
+    <p>{selectedReserva.campo}</p>
+  </div>
+)}
+
+// Para campos numéricos (descuentos)
+{selectedReserva.descuento > 0 && (
+  <div>
+    <Label>Descuento</Label>
+    <p>{formatCurrency(selectedReserva.descuento)}</p>
+  </div>
+)}
+
+// Para secciones completas
+{(campo1 || campo2 || campo3) && (
+  <div>
+    <h3>Sección</h3>
+    {/* Campos individuales con sus propias condiciones */}
+  </div>
+)}
+```
+
+**Líneas Modificadas**: 3173-3178, 3303-3348, 3354-3393, 3448-3455, 3477-3495, 3535-3540
+
+#### Beneficios
+- ✅ **Claridad Visual**: Solo información relevante
+- ✅ **Lectura Rápida**: Menos scroll, más concentración
+- ✅ **Profesionalismo**: Interfaz limpia y ordenada
+- ✅ **Mantenibilidad**: Patrón claro para futuros campos
+
+> [!TIP]
+> **Para Futuros Desarrolladores**: Si agregas nuevos campos al modal de detalles, sigue el patrón de renderizado condicional mostrado arriba. Pregúntate: "¿Este campo puede estar vacío o en 0?" Si la respuesta es sí, envuélvelo en una condición.
+
+
+
 ---
 
 ## 6. Mantenimiento y Despliegue

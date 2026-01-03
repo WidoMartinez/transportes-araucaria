@@ -3170,12 +3170,14 @@ function AdminReservas() {
 										<Label className="text-muted-foreground">Pasajeros</Label>
 										<p className="font-medium">{selectedReserva.pasajeros}</p>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">Vehículo</Label>
-										<p className="font-medium">
-											{selectedReserva.vehiculo || "-"}
-										</p>
-									</div>
+									{selectedReserva.vehiculo && (
+										<div>
+											<Label className="text-muted-foreground">Vehículo</Label>
+											<p className="font-medium">
+												{selectedReserva.vehiculo}
+											</p>
+										</div>
+									)}
 									{selectedReserva.idaVuelta && (
 										<>
 											<div>
@@ -3301,43 +3303,51 @@ function AdminReservas() {
 							</div>
 
 							{/* Información Adicional */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Información Adicional
-								</h3>
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">
-											Número de Vuelo
-										</Label>
-										<p className="font-medium">
-											{selectedReserva.numeroVuelo || "-"}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Hotel</Label>
-										<p className="font-medium">
-											{selectedReserva.hotel || "-"}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Equipaje Especial
-										</Label>
-										<p className="font-medium">
-											{selectedReserva.equipajeEspecial || "-"}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Silla Infantil
-										</Label>
-										<p className="font-medium">
-											{selectedReserva.sillaInfantil ? "Sí" : "No"}
-										</p>
+							{(selectedReserva.numeroVuelo || selectedReserva.hotel || selectedReserva.equipajeEspecial || selectedReserva.sillaInfantil) && (
+								<div>
+									<h3 className="font-semibold text-lg mb-3">
+										Información Adicional
+									</h3>
+									<div className="grid grid-cols-2 gap-4">
+										{selectedReserva.numeroVuelo && (
+											<div>
+												<Label className="text-muted-foreground">
+													Número de Vuelo
+												</Label>
+												<p className="font-medium">
+													{selectedReserva.numeroVuelo}
+												</p>
+											</div>
+										)}
+										{selectedReserva.hotel && (
+											<div>
+												<Label className="text-muted-foreground">Hotel</Label>
+												<p className="font-medium">
+													{selectedReserva.hotel}
+												</p>
+											</div>
+										)}
+										{selectedReserva.equipajeEspecial && (
+											<div>
+												<Label className="text-muted-foreground">
+													Equipaje Especial
+												</Label>
+												<p className="font-medium">
+													{selectedReserva.equipajeEspecial}
+												</p>
+											</div>
+										)}
+										{selectedReserva.sillaInfantil && (
+											<div>
+												<Label className="text-muted-foreground">
+													Silla Infantil
+												</Label>
+												<p className="font-medium">Sí</p>
+											</div>
+										)}
 									</div>
 								</div>
-							</div>
+							)}
 
 							{/* Información Financiera */}
 							<div>
@@ -3351,38 +3361,46 @@ function AdminReservas() {
 											{formatCurrency(selectedReserva.precio)}
 										</p>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Descuento Base
-										</Label>
-										<p className="font-medium">
-											{formatCurrency(selectedReserva.descuentoBase)}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Descuento Promoción
-										</Label>
-										<p className="font-medium">
-											{formatCurrency(selectedReserva.descuentoPromocion)}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Descuento Round Trip
-										</Label>
-										<p className="font-medium">
-											{formatCurrency(selectedReserva.descuentoRoundTrip)}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Descuento Online
-										</Label>
-										<p className="font-medium">
-											{formatCurrency(selectedReserva.descuentoOnline)}
-										</p>
-									</div>
+									{selectedReserva.descuentoBase > 0 && (
+										<div>
+											<Label className="text-muted-foreground">
+												Descuento Base
+											</Label>
+											<p className="font-medium">
+												{formatCurrency(selectedReserva.descuentoBase)}
+											</p>
+										</div>
+									)}
+									{selectedReserva.descuentoPromocion > 0 && (
+										<div>
+											<Label className="text-muted-foreground">
+												Descuento Promoción
+											</Label>
+											<p className="font-medium">
+												{formatCurrency(selectedReserva.descuentoPromocion)}
+											</p>
+										</div>
+									)}
+									{selectedReserva.descuentoRoundTrip > 0 && (
+										<div>
+											<Label className="text-muted-foreground">
+												Descuento Round Trip
+											</Label>
+											<p className="font-medium">
+												{formatCurrency(selectedReserva.descuentoRoundTrip)}
+											</p>
+										</div>
+									)}
+									{selectedReserva.descuentoOnline > 0 && (
+										<div>
+											<Label className="text-muted-foreground">
+												Descuento Online
+											</Label>
+											<p className="font-medium">
+												{formatCurrency(selectedReserva.descuentoOnline)}
+											</p>
+										</div>
+									)}
 									<div>
 										<Label className="text-muted-foreground">
 											Total con Descuento
@@ -3445,14 +3463,16 @@ function AdminReservas() {
 											</Badge>
 										</div>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Código de Descuento
-										</Label>
-										<p className="font-medium">
-											{selectedReserva.codigoDescuento || "-"}
-										</p>
-									</div>
+									{selectedReserva.codigoDescuento && (
+										<div>
+											<Label className="text-muted-foreground">
+												Código de Descuento
+											</Label>
+											<p className="font-medium">
+												{selectedReserva.codigoDescuento}
+											</p>
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -3474,22 +3494,26 @@ function AdminReservas() {
 											{getEstadoPagoBadge(selectedReserva)}
 										</div>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Método de Pago
-										</Label>
-										<p className="font-medium">
-											{selectedReserva.metodoPago || "-"}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Referencia de Pago
-										</Label>
-										<p className="font-medium">
-											{selectedReserva.referenciaPago || "-"}
-										</p>
-									</div>
+									{selectedReserva.metodoPago && (
+										<div>
+											<Label className="text-muted-foreground">
+												Método de Pago
+											</Label>
+											<p className="font-medium">
+												{selectedReserva.metodoPago}
+											</p>
+										</div>
+									)}
+									{selectedReserva.referenciaPago && (
+										<div>
+											<Label className="text-muted-foreground">
+												Referencia de Pago
+											</Label>
+											<p className="font-medium">
+												{selectedReserva.referenciaPago}
+											</p>
+										</div>
+									)}
 								</div>
 							</div>
 
@@ -3532,10 +3556,12 @@ function AdminReservas() {
 										<Label className="text-muted-foreground">Origen</Label>
 										<p>{selectedReserva.source || "web"}</p>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">IP</Label>
-										<p>{selectedReserva.ipAddress || "-"}</p>
-									</div>
+									{selectedReserva.ipAddress && (
+										<div>
+											<Label className="text-muted-foreground">IP</Label>
+											<p>{selectedReserva.ipAddress}</p>
+										</div>
+									)}
 									<div>
 										<Label className="text-muted-foreground">
 											Fecha de Creación
