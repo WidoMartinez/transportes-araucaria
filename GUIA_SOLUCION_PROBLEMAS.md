@@ -25,13 +25,14 @@ Error 500 al acceder a ciertos endpoints (ej. `/api/reservas/estadisticas`) o pa
 ### Problema
 Cambios en el esquema local (ej. nuevas columnas en `Reservas`) no se reflejan automáticamente en producción, causando errores de consulta.
 
-### Procedimiento de Migración
-No existe un sistema de migración automatizado (tipo Sequelize CLI) configurado completamente. Las migraciones se manejan así:
+### Procedimiento de Migración (Estándar 2026)
+El sistema utiliza un **sistema de auto-migración al inicio** (`server-db.js`).
 
-1. **Detectar el cambio**: Comparar el modelo Sequelize local (`models/Reserva.js`) con la estructura en Render.
-2. **Script de Migración**:
-   - Se han creado scripts PHP/SQL auxiliares en `backend/migrar_reservas.php` (legacy) o se debe ejecutar SQL directo en la base de datos de Render.
-3. **Verificación**: Usar endpoints de prueba o visualizar logs para confirmar que la columna ya es accesible.
+1.  **Crear Script**: Crear el archivo en `backend/migrations/nombre-migracion.js` siguiendo el patrón estándar (ver `MIGRATION_README.md`).
+2.  **Integrar**: Importar y ejecutar la función `await nombreMigracion()` dentro de la función `startServer()` en `backend/server-db.js`.
+3.  **Despliegue**: Al hacer push, Render reiniciará el servidor y ejecutará la migración automáticamente con las credenciales de producción.
+
+**Nota Importante**: No ejecutar scripts manualmente en local si no se tienen las credenciales de producción configuradas. Confiar en el ciclo de despliegue.
 
 ## 3. Problemas de Autenticación (Migración Auth)
 

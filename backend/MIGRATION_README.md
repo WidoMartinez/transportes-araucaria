@@ -24,66 +24,61 @@ El sistema utiliza las siguientes tablas en MySQL:
 - **`codigos_descuento`**: Códigos de descuento personalizados
 - **`reservas`**: Reservas realizadas por los clientes
 
-## 🚨 REGLAS CRÍTICAS PARA MIGRACIONES
+## 🚨 REGLAS CRÍTICAS PARA MIGRACIONES (Actualizado 2026)
 
-Para evitar errores de conexión (`ConnectionManager closed`) durante la inicialización del servidor:
+Para garantizar que los cambios de base de datos se apliquen correctamente en producción (Render):
 
-1.  **NUNCA uses `sequelize.close()` dentro de la función principal exportada.**
-    *   La misma instancia de conexión se comparte con el servidor principal. Si la cierras, el servidor fallará al arrancar.
-2.  **Usa bloques `try/catch` y propaga el error.**
-    *   Permite que el sistema de inicialización detecte fallos.
-3.  **Implementa el bloque `if (import.meta.url === ...)`**.
-    *   Esto permite ejecutar la migración manualmente desde CLI sin afectar la importación.
+1.  **Ubicación**: Guardar scripts en `backend/migrations/`.
+2.  **Formato**: Usar `export default async function`. **NO** incluir bloques CLI (`if (import.meta.url...)`) ni `sequelize.close()`, ya que la conexión es gestionada por el servidor principal.
+3.  **Integración Obligatoria**: La migración **DEBE** ser importada y llamada con `await` dentro de la función `startServer()` en `backend/server-db.js`.
 
 ### 📋 Plantilla Maestra de Migración
 
-Copia y pega esto para crear nuevas migraciones:
+Copia y pega esto para crear nuevas migraciones en `backend/migrations/`:
 
 ```javascript
+/* eslint-env node */
 import sequelize from "../config/database.js";
 
-/**
- * [NOMBRE_DE_TU_MIGRACION]
- * Descripción: [Breve descripción de qué cambios realiza este script]
- */
 const nombreMigracion = async () => {
 	try {
-		console.log("🔧 Ejecutando migración: [NOMBRE_MIGRACION]");
+		console.log("🔄 Verificando [CAMBIO_A_REALIZAR]...");
 
-		// --- TU LÓGICA AQUÍ ---
-		// Ejemplo: await sequelize.query("ALTER TABLE ...");
+		// Paso 1: Verificar si ya existe para ser idempotente
+		const [columns] = await sequelize.query("SHOW COLUMNS FROM tabla LIKE 'columna'");
 		
-		// Verificación opcional previa
-		// const [columns] = await sequelize.query("SHOW COLUMNS FROM ...");
-		
-		console.log("✅ Migración [NOMBRE_MIGRACION] completada exitosamente");
-		return true;
+		if (columns.length === 0) {
+			console.log("📋 Aplicando migración [NOMBRE]...");
+			
+            // Paso 2: Ejecutar cambio
+			await sequelize.query(`
+				ALTER TABLE tabla 
+				ADD COLUMN columna TIPO DEFAULT VALOR
+			`);
+			console.log("✅ Migración [NOMBRE] completada exitosamente");
+		} else {
+			console.log("✅ [NOMBRE] ya aplicado previamente");
+		}
 	} catch (error) {
-		console.error("❌ Error en migración [NOMBRE_MIGRACION]:", error);
-		// IMPORTANTE: Propagar error para detener inicialización si falla
-		throw error;
+        // Solo loguear error, no detener el servidor completo (salvo sea crítico)
+		console.error("❌ Error en migración [NOMBRE]:", error.message);
 	}
-	// ⚠️ IMPORTANTE: NO cerrar la conexión aquí (no usar finally { sequelize.close() })
 };
-
-// Bloque para ejecución independiente (CLI)
-// Permite correr: node backend/migrations/tu-archivo.js
-if (import.meta.url === `file://${process.argv[1]}`) {
-	nombreMigracion()
-		.then(async () => {
-			console.log("🎉 Ejecución standalone finalizada");
-			await sequelize.close(); // Solo cerrar si se ejecuta directamente
-			process.exit(0);
-		})
-		.catch(async (error) => {
-			console.error("💥 Error fatal en ejecución standalone:", error);
-			try { await sequelize.close(); } catch(e) {} 
-			process.exit(1);
-		});
-}
 
 export default nombreMigracion;
 ```
+
+### Pasos para Activar
+1. Crear el archivo `backend/migrations/mi-migracion.js` con la plantilla.
+2. Editar `backend/server-db.js`:
+   ```javascript
+   import miMigracion from "./migrations/mi-migracion.js";
+   
+   // ... dentro de startServer()
+   await miMigracion();
+   await initializeDatabase();
+   ```
+3. Hacer push a `main`. Render ejecutará la migración al iniciar.
 
 ## 🔧 Configuración
 
