@@ -159,6 +159,12 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 			return;
 		}
 
+		if (!detalles.hotel || !detalles.hotel.trim()) {
+			setError("Por favor, ingresa la dirección específica.");
+			setSubmitting(false);
+			return;
+		}
+
 		if (detalles.idaVuelta && !detalles.fechaRegreso) {
 			setError("Por favor, especifica la fecha de regreso.");
 			setSubmitting(false);

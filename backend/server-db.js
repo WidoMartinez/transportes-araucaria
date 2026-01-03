@@ -2790,6 +2790,28 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			mensajeDetallado.length > 0 ? mensajeDetallado : undefined;
 		const numeroVueloCliente = limpiarTextoPlano(datosReserva.numeroVuelo);
 		const hotelCliente = limpiarTextoPlano(datosReserva.hotel);
+		
+		// Determinar la dirección específica para guardar en el campo "hotel"
+		// Si el cliente no proporcionó "hotel" explícitamente, usar la dirección correspondiente
+		let direccionEspecifica = hotelCliente;
+		
+		if (!direccionEspecifica) {
+			// Determinar qué dirección usar según el sentido del viaje
+			const origenEsAeropuerto = datosReserva.origen === "Aeropuerto La Araucanía";
+			const destinoEsAeropuerto = datosReserva.destino === "Aeropuerto La Araucanía";
+			
+			if (origenEsAeropuerto && direccionDestinoCliente) {
+				// Viaje DESDE aeropuerto: la dirección específica es el destino
+				direccionEspecifica = direccionDestinoCliente;
+			} else if (destinoEsAeropuerto && direccionOrigenCliente) {
+				// Viaje HACIA aeropuerto: la dirección específica es el origen
+				direccionEspecifica = direccionOrigenCliente;
+			} else {
+				// Fallback: usar la que esté disponible
+				direccionEspecifica = direccionDestinoCliente || direccionOrigenCliente;
+			}
+		}
+
 		const equipajeEspecialCliente = limpiarTextoPlano(
 			datosReserva.equipajeEspecial
 		);
@@ -2973,7 +2995,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 						: reservaExistente.numeroVuelo,
 				hotel:
 					datosReserva.hotel !== undefined
-						? hotelCliente
+						? direccionEspecifica
 						: reservaExistente.hotel,
 				equipajeEspecial:
 					datosReserva.equipajeEspecial !== undefined
@@ -3103,7 +3125,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 				// Campos que se completarán después del pago (opcionales por ahora)
 				numeroVuelo: numeroVueloCliente,
-				hotel: hotelCliente,
+				hotel: direccionEspecifica,
 				equipajeEspecial: equipajeEspecialCliente,
 				sillaInfantil:
 					sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
@@ -3583,28 +3605,36 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			],
 		});
 		if (!reserva) {
-			return res.status(404).json({
-				success: false,
-				message: "Reserva no encontrada",
-			});
-		}
+		return res.status(404).json({
+			success: false,
+			message: "Reserva no encontrada",
+		});
+	}
 
-		// Actualizar con los detalles proporcionados
-		const datosActualizados = {
-			hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
-			// Permitir actualizar la fecha explicitamente si la envía el cliente
-			fecha: detalles.fecha || reserva.fecha,
-			numeroVuelo: detalles.numeroVuelo || "",
-			hotel: detalles.hotel || "",
-			equipajeEspecial: detalles.equipajeEspecial || "",
-			sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
-			idaVuelta: Boolean(detalles.idaVuelta),
-			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
-			horaRegreso:
-				normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
-			// No escribir campos virtuales; solo estado
-			estado: "confirmada",
-		};
+	// Validar que se proporcione la dirección específica (Regla de Oro)
+	if (!detalles.hotel || !detalles.hotel.trim()) {
+		return res.status(400).json({
+			success: false,
+			message: "La dirección específica es obligatoria para completar la reserva",
+		});
+	}
+
+	// Actualizar con los detalles proporcionados
+	const datosActualizados = {
+		hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
+		// Permitir actualizar la fecha explicitamente si la envía el cliente
+		fecha: detalles.fecha || reserva.fecha,
+		numeroVuelo: detalles.numeroVuelo || "",
+		hotel: detalles.hotel.trim(),
+		equipajeEspecial: detalles.equipajeEspecial || "",
+		sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
+		idaVuelta: Boolean(detalles.idaVuelta),
+		fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
+		horaRegreso:
+			normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
+		// No escribir campos virtuales; solo estado
+		estado: "confirmada",
+	};
 
 		await reserva.update(datosActualizados);
 
