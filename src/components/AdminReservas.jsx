@@ -1106,9 +1106,8 @@ function AdminReservas() {
 			alert(
 				"No se pudieron cargar los detalles de la reserva. Inténtalo nuevamente."
 			);
-			// Fallback: mostrar la reserva que ya tenemos
-			setSelectedReserva(reserva);
-			setShowDetailDialog(true);
+			// No abrir el modal si falló la carga para evitar mostrar datos desactualizados
+			return;
 		}
 
 		// Cargar historial de asignaciones (uso interno) usando token del contexto

@@ -185,7 +185,10 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 
 #### A. Módulo Principal (Express)
 *   **Ruta**: Home → Cotización → Pago → `CompletarDetalles.jsx`.
-*   **Captura de Dirección**: Obligatorio usar `AddressAutocomplete` en el campo `hotel` dentro de `CompletarDetalles.jsx`.
+*   **Captura de Dirección**: 
+    - Obligatorio usar `AddressAutocomplete` en el campo `hotel` dentro de `CompletarDetalles.jsx`.
+    - **Validación Frontend**: El componente valida que el campo no esté vacío antes de enviar (líneas 161-166).
+    - **Validación Backend**: El endpoint `/completar-reserva-detalles` retorna error HTTP 400 si falta la dirección.
 *   **Notificaciones**:
     1.  **Pago**: Webhook (`/api/flow-confirmation`) notifica el dinero recibido (Admin + Cliente).
     2.  **Logística**: Al guardar detalles en `PUT /completar-reserva-detalles`, se dispara la notificación logística (Admin + Cliente).
@@ -193,7 +196,11 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 
 #### B. Pagar con Código
 *   **Ruta**: Usuario ingresa código → Cotización + Detalles upfront → Pago → `FlowReturn.jsx`.
-*   **Captura de Dirección**: Obligatorio usar `AddressAutocomplete` en el formulario inicial de `PagarConCodigo.jsx`.
+*   **Captura de Dirección**: 
+    - Obligatorio usar `AddressAutocomplete` en el formulario inicial de `PagarConCodigo.jsx`.
+    - Campos condicionales: `direccionDestino` (viajes DESDE aeropuerto) o `direccionOrigen` (viajes HACIA aeropuerto).
+    - **Validación Frontend**: El componente valida según sentido del viaje (líneas 196-212).
+    - **Mapeo Inteligente Backend**: El endpoint `/enviar-reserva-express` determina automáticamente qué dirección usar y la guarda en el campo `hotel` (líneas 2793-2815).
 *   **Notificaciones**:
     1.  **Logística**: Ocurre al crear la reserva inicial (`POST /enviar-reserva-express`).
     2.  **Pago**: Webhook (`/api/flow-confirmation`) notifica solo el pago (el sistema detecta que es flujo de código y evita duplicar la logística).
@@ -222,6 +229,32 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 3.  **Protección de Duplicados**: Usar siempre `sessionStorage` con una clave única (`flow_conversion_[transactionId]`) antes de disparar `gtag` para evitar conversiones dobles en recargas de página.
 4.  **Campo Maestro de Dirección**: El campo `hotel` en la base de datos es el contenedor para direcciones precisas capturadas por Google Maps. Nunca usar campos de texto simple para direcciones finales si el componente permite el autocomplete.
 5.  **PHP Integration**: Los scripts de Hostinger esperan `hotel`, `idaVuelta`, `fechaRegreso` y `horaRegreso` para una operación fluida. Asegurar que el backend siempre los propague en los payloads de `axios`.
+
+#### 🔧 Implementación de Validación y Mapeo de Direcciones
+
+**Actualización: 2 Enero 2026**
+
+Se implementó validación obligatoria y mapeo inteligente de direcciones en ambos flujos principales:
+
+**Flujo A (Express)**:
+- **Frontend** (`CompletarDetalles.jsx` líneas 161-166): Validación antes de enviar formulario.
+- **Backend** (`/completar-reserva-detalles` línea 3614): Retorna HTTP 400 si falta dirección.
+- **Guardado**: Directo al campo `hotel` con `.trim()` para limpiar espacios.
+
+**Flujo B (Pagar con Código)**:
+- **Frontend** (`PagarConCodigo.jsx` líneas 196-212): Validación condicional según sentido del viaje.
+- **Backend** (`/enviar-reserva-express` líneas 2793-2815): Lógica inteligente de mapeo:
+  ```javascript
+  // Determina automáticamente la dirección específica
+  if (origenEsAeropuerto && direccionDestinoCliente) {
+      direccionEspecifica = direccionDestinoCliente; // Viaje DESDE aeropuerto
+  } else if (destinoEsAeropuerto && direccionOrigenCliente) {
+      direccionEspecifica = direccionOrigenCliente; // Viaje HACIA aeropuerto
+  }
+  ```
+- **Guardado**: Mapeo inteligente al campo `hotel` según sentido del viaje.
+
+**Resultado**: Ambos flujos garantizan que el campo `hotel` (Dirección Específica) esté siempre poblado antes de confirmar una reserva, cumpliendo con la "Regla de Oro".
 
 ### 5.7 Sistema de Estadísticas Financieras
 
