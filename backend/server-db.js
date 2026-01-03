@@ -44,7 +44,6 @@ import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
 import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
-import addColumnVan from "./migrations/add-column-van.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -9099,7 +9098,6 @@ const startServer = async () => {
 	try {
 		await addPermitirAbonoColumn();
 		await addArchivadaColumn();
-		await addColumnVan();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 
