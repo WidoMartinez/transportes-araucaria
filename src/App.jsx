@@ -1084,6 +1084,7 @@ function App() {
 				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
 
 				const precioBase = Number(precios.base);
+				// El aumento comienza desde el pasajero 6 (ej: 5 pax = base, 6 pax = base + 1 adicional)
 				const pasajerosAdicionales = numPasajeros - 5;
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;

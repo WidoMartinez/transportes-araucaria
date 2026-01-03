@@ -241,23 +241,27 @@ function AdminPricing() {
 	}, [success]);
 
 	const handleDestinoChange = (nombre, vehiculo, field, value) => {
-		setPricing((prev) => ({
-			...prev,
-			destinos: prev.destinos.map((dest) =>
-				dest.nombre === nombre
-					? {
-							...dest,
-							precios: {
-								...dest.precios,
-								[vehiculo]: {
-									...dest.precios[vehiculo],
-									[field]: Number(value) || 0,
-								},
+		console.log(`📝 Actualizando ${nombre} - ${vehiculo}.${field} = ${value}`);
+		setPricing((prev) => {
+			const nuevosDestinos = prev.destinos.map((dest) => {
+				if (dest.nombre === nombre) {
+					const updated = {
+						...dest,
+						precios: {
+							...dest.precios,
+							[vehiculo]: {
+								...dest.precios[vehiculo],
+								[field]: Number(value) || 0,
 							},
-					  }
-					: dest
-			),
-		}));
+						},
+					};
+					console.log("🔄 Nuevo estado para destino:", updated.nombre, updated.precios);
+					return updated;
+				}
+				return dest;
+			});
+			return { ...prev, destinos: nuevosDestinos };
+		});
 	};
 
 	const handleGeneralDestinoChange = (nombre, field, value) => {
@@ -659,6 +663,27 @@ function AdminPricing() {
 		setSuccess("");
 
 		try {
+			console.log("🚀 Preparando envío de datos...");
+			const destinosPayload = pricing.destinos.map(d => ({
+				...d,
+				precios: {
+					auto: {
+						base: Number(d.precios?.auto?.base) || 0,
+						porcentajeAdicional: Number(d.precios?.auto?.porcentajeAdicional) || 0
+					},
+					van: {
+						base: Number(d.precios?.van?.base) || 0,
+						porcentajeAdicional: Number(d.precios?.van?.porcentajeAdicional) || 0
+					}
+				}
+			}));
+			
+			console.log("📦 Payload de destinos a enviar:", JSON.stringify(destinosPayload, null, 2));
+
+			// Buscar Malalcahuello específicamente para debug
+			const malalcahuello = destinosPayload.find(d => d.nombre === "Malalcahuello");
+			console.log("🧐 Estado de Malalcahuello en payload:", malalcahuello ? malalcahuello.precios : "No encontrado");
+
 			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => {
 				const aplicaPorDias = Boolean(promo.aplicaPorDias);
 				const diasArray = Array.isArray(promo.dias)
@@ -708,7 +733,7 @@ function AdminPricing() {
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					destinos: pricing.destinos,
+					destinos: destinosPayload,
 					dayPromotions: formattedDayPromotions,
 					descuentosGlobales: pricing.descuentosGlobales,
 				}),
