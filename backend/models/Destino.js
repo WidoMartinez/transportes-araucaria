@@ -82,12 +82,6 @@ const Destino = sequelize.define(
 			field: "porcentaje_adicional_van",
 			comment: "Porcentaje adicional por pasajero para vans (ej: 0.05 = 5%)",
 		},
-		precioBaseVan: {
-			type: DataTypes.DECIMAL(10, 2),
-			allowNull: true,
-			field: "precio_base_van",
-			comment: "Precio base específico para vans",
-		},
 	},
 	{
 		tableName: "destinos",

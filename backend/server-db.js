@@ -1158,9 +1158,8 @@ const buildPricingPayload = async () => {
 				porcentajeAdicional: destino.porcentajeAdicionalAuto || 0.1,
 			},
 			van: {
-				// Si existe precioBaseVan, usarlo; de lo contrario fallback a lógica antigua
-				base: destino.precioBaseVan ? Number(destino.precioBaseVan) : (destino.precioIda * 1.8),
-				porcentajeAdicional: destino.porcentajeAdicionalVan || 0.1, // Era 0.05 por defecto
+				base: destino.precioIda * 1.8,
+				porcentajeAdicional: destino.porcentajeAdicionalVan || 0.1,
 			},
 		},
 		descripcion: destino.descripcion || "",
@@ -1235,9 +1234,6 @@ app.put("/pricing", async (req, res) => {
 				// Extraer porcentajes adicionales
 				const porcentajeAdicionalAuto = Number(destino.precios?.auto?.porcentajeAdicional) || 0.1;
 				const porcentajeAdicionalVan = Number(destino.precios?.van?.porcentajeAdicional) || 0.05;
-				
-				// Extraer precio base van
-				const precioBaseVan = Number(destino.precios?.van?.base) || 0;
 
 				return Destino.upsert({
 					nombre: destino.nombre,
@@ -1255,7 +1251,6 @@ app.put("/pricing", async (req, res) => {
 					duracionVueltaMinutos: duracionVuelta,
 					porcentajeAdicionalAuto,
 					porcentajeAdicionalVan,
-					precioBaseVan: precioBaseVan > 0 ? precioBaseVan : null,
 				});
 			})
 		);
