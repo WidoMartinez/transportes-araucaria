@@ -3702,12 +3702,26 @@ function AdminReservas() {
 														name="hotel"
 														value={formData.hotel || ""}
 														placeholder="Ej: Condominio Los Ríos, Loteo 21, Malalcahuello"
-														onChange={(e) =>
+														onChange={(e) => {
+															const newVal = e.target.value;
+															const isFromAirport =
+																formData.origen === "Aeropuerto La Araucanía";
+															const isToAirport =
+																formData.destino === "Aeropuerto La Araucanía";
+
 															setFormData({
 																...formData,
-																hotel: e.target.value,
-															})
-														}
+																hotel: newVal,
+																// Sincronizar direcciÃ³n especÃ­fica segÃºn el sentido del viaje
+																// para que coincida con lo que se muestra en el modal de detalles
+																direccionDestino: isFromAirport
+																	? newVal
+																	: formData.direccionDestino,
+																direccionOrigen: isToAirport
+																	? newVal
+																	: formData.direccionOrigen,
+															});
+														}}
 														className="bg-white"
 													/>
 													<p className="text-xs text-muted-foreground mt-1">
