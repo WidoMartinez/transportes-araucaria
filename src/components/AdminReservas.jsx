@@ -1093,7 +1093,7 @@ function AdminReservas() {
 		// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
 		try {
 			const response = await authenticatedFetch(
-				`/api/reservas/${reserva.id}`
+				`/api/reservas/${reserva.id}?t=${Date.now()}`
 			);
 			if (!response.ok) {
 				throw new Error("Error al cargar la reserva");
