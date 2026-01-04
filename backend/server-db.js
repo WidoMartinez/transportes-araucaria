@@ -61,12 +61,24 @@ dotenv.config();
 // Configurar asociaciones entre modelos para habilitar includes en consultas
 setupAssociations();
 
-// Importar procesador de correos
+// Importar procesador de correos y limpiador
 import { processPendingEmails } from "./cron/emailProcessor.js";
+import { cleanOldEmails, getEmailStats } from "./cron/cleanOldEmails.js";
 
 // Iniciar procesador de correos (cada 60 segundos)
 setInterval(processPendingEmails, 60000);
 console.log("🕒 Procesador de correos pendientes iniciado (intervalo: 60s)");
+
+// Iniciar limpiador de correos antiguos (cada 7 días = 604800000 ms)
+setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
+console.log("🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)");
+
+// Ejecutar limpieza inicial al arrancar (después de 5 minutos)
+setTimeout(async () => {
+    console.log("🔄 Ejecutando limpieza inicial de correos antiguos...");
+    await cleanOldEmails();
+    await getEmailStats();
+}, 5 * 60 * 1000);
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -2703,9 +2715,12 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		// --- LÓGICA DE CORREO DIFERIDO (DESCUENTO) ---
 		// Si la reserva está pendiente de pago, programar correo de descuento
+		// NOTA: El procesador verificará el estado de pago antes de enviar,
+		// por lo que si el cliente paga en los próximos 30 min, el correo se cancelará automáticamente
 		if (
 			estadoPagoInicial === "pendiente" &&
-			datosReserva.source !== "codigo_pago" // No enviar descuento si paga con código (se asume proceso diferente)
+			datosReserva.source !== "codigo_pago" && // No enviar descuento si paga con código
+			(!reservaGuardada.pagoMonto || reservaGuardada.pagoMonto === 0) // Verificar que no haya pago parcial
 		) {
 			try {
 				// Calcular fecha de envío (30 minutos después)
@@ -2743,6 +2758,12 @@ app.post("/enviar-reserva", async (req, res) => {
 			} catch (scheduleError) {
 				console.error("❌ Error programando correo de descuento:", scheduleError);
 			}
+		} else if (estadoPagoInicial === "pendiente") {
+			// Log para debugging de por qué no se programó
+			console.log(`ℹ️ Correo de descuento NO programado para ${reservaGuardada.codigoReserva}:`, {
+				source: datosReserva.source,
+				pagoMonto: reservaGuardada.pagoMonto
+			});
 		}
 
 		return res.json({
