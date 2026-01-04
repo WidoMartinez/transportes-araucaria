@@ -70,6 +70,8 @@ setInterval(processPendingEmails, 60000);
 console.log("🕒 Procesador de correos pendientes iniciado (intervalo: 60s)");
 
 // Iniciar limpiador de correos antiguos (cada 7 días = 604800000 ms)
+// NOTA: Se usa setInterval para simplicidad en un servidor continuo (Render.com)
+// En producción con múltiples instancias, considerar usar un cron job externo
 setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
 console.log("🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)");
 

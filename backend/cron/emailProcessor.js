@@ -69,6 +69,11 @@ export const processPendingEmails = async () => {
                 
                 const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
                 
+                // Advertencia si se usa el fallback (debería configurarse en producción)
+                if (!process.env.PHP_EMAIL_URL) {
+                    console.warn("⚠️ PHP_EMAIL_URL no configurado, usando URL por defecto");
+                }
+                
                 // Preparar datos para el PHP
                 const emailData = {
                     nombre: reserva.nombre,
@@ -126,6 +131,12 @@ export const processPendingEmails = async () => {
                     // Notificar al administrador sobre el fallo definitivo
                     try {
                         const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+                        
+                        // Advertencia si se usa el fallback
+                        if (!process.env.PHP_EMAIL_URL) {
+                            console.warn("⚠️ PHP_EMAIL_URL no configurado para notificación de fallos");
+                        }
+                        
                         await axios.post(phpUrl, {
                             action: "notify_admin_failed_email",
                             reservaId: reserva.id,
