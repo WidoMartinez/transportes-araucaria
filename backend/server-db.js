@@ -6877,6 +6877,14 @@ app.post("/api/payment-result", async (req, res) => {
 
 			const flowData = statusResponse.data;
 			
+			// ✅ MEJORA: Logs de depuración detallados para rastrear monto
+			console.log(`💰 [DEBUG] Datos de Flow recibidos:`, {
+				status: flowData.status,
+				amount: flowData.amount,
+				requestAmount: flowData.requestAmount,
+				flowOrder: flowData.flowOrder
+			});
+			
 			// Intentar extraer reservaId de los datos opcionales
 			let reservaId = null;
 			let optionalData = null; 
@@ -6894,9 +6902,11 @@ app.post("/api/payment-result", async (req, res) => {
 				}
 			}
 
-            // FIXED: Definir montoActual desde flowData para evitar ReferenceError
+            // ✅ MEJORA: Definir montoActual con validación robusta
             // Prioridad: monto pagado real > monto de la orden
-            const montoActual = Number(flowData.amount) || Number(flowData.requestAmount) || 0;
+            const montoFlowActual = Number(flowData.amount) || Number(flowData.requestAmount) || 0;
+            
+            console.log(`💰 [DEBUG] Monto parseado de Flow: ${montoFlowActual}`);
 
 			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
 			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
@@ -6919,10 +6929,44 @@ app.post("/api/payment-result", async (req, res) => {
 					// Redirigir a la página de éxito estándar (FlowReturn)
 					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva?.source}). Redirigiendo a FlowReturn.`);
 					
-					// FIXED: Usar montoActual (lo que realmente pagó en esta transacción)
-					const montoParaConversion = montoActual > 0 ? montoActual : (reserva?.totalConDescuento || reserva?.precio || 0);
+					// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks
+					let montoParaConversion = montoFlowActual;
 					
-					console.log(`💰 Monto para conversión: ${montoParaConversion} (Valor Real de Transacción)`);
+					// Validar y aplicar fallbacks en orden de prioridad
+					if (montoParaConversion <= 0) {
+						console.warn(`⚠️ [CONVERSIÓN GA] Monto de Flow es ${montoParaConversion}, aplicando fallbacks...`);
+						
+						// Fallback 1: pagoMonto acumulado en DB
+						if (reserva?.pagoMonto && Number(reserva.pagoMonto) > 0) {
+							montoParaConversion = Number(reserva.pagoMonto);
+							console.log(`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoParaConversion}`);
+						}
+						// Fallback 2: totalConDescuento
+						else if (reserva?.totalConDescuento && Number(reserva.totalConDescuento) > 0) {
+							montoParaConversion = Number(reserva.totalConDescuento);
+							console.log(`   ✅ Fallback 2: Usando totalConDescuento: ${montoParaConversion}`);
+						}
+						// Fallback 3: precio base
+						else if (reserva?.precio && Number(reserva.precio) > 0) {
+							montoParaConversion = Number(reserva.precio);
+							console.log(`   ✅ Fallback 3: Usando precio base: ${montoParaConversion}`);
+						}
+						// Error crítico - último recurso
+						else {
+							console.error(`❌ [CRÍTICO] No se pudo determinar monto para conversión GA - Reserva ID: ${reservaId}`);
+							console.error(`   - Flow amount: ${flowData.amount}`);
+							console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
+							console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
+							console.error(`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`);
+							console.error(`   - Reserva precio: ${reserva?.precio}`);
+							// Último recurso: monto simbólico para evitar cero (solo para que no falle la conversión)
+							montoParaConversion = 1000;
+							console.error(`   - Usando monto simbólico por defecto: ${montoParaConversion} CLP`);
+						}
+					}
+					
+					console.log(`💰 [CONVERSIÓN GA] Monto final para Google Ads: ${montoParaConversion} CLP (Valor Real de Transacción)`);
+					
 
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
 					const userData = {
@@ -6942,7 +6986,42 @@ app.post("/api/payment-result", async (req, res) => {
 				// Caso: Reserva Express (flujo normal)
 				// Redirigir a Completar Detalles
 				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
-				const montoExpress = montoActual > 0 ? montoActual : (reserva?.totalConDescuento || reserva?.precio || 0);
+				
+				// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks (igual que en flujo anterior)
+				let montoExpress = montoFlowActual;
+				
+				if (montoExpress <= 0) {
+					console.warn(`⚠️ [CONVERSIÓN GA - Express] Monto de Flow es ${montoExpress}, aplicando fallbacks...`);
+					
+					// Fallback 1: pagoMonto acumulado en DB
+					if (reserva?.pagoMonto && Number(reserva.pagoMonto) > 0) {
+						montoExpress = Number(reserva.pagoMonto);
+						console.log(`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoExpress}`);
+					}
+					// Fallback 2: totalConDescuento
+					else if (reserva?.totalConDescuento && Number(reserva.totalConDescuento) > 0) {
+						montoExpress = Number(reserva.totalConDescuento);
+						console.log(`   ✅ Fallback 2: Usando totalConDescuento: ${montoExpress}`);
+					}
+					// Fallback 3: precio base
+					else if (reserva?.precio && Number(reserva.precio) > 0) {
+						montoExpress = Number(reserva.precio);
+						console.log(`   ✅ Fallback 3: Usando precio base: ${montoExpress}`);
+					}
+					// Error crítico - último recurso
+					else {
+						console.error(`❌ [CRÍTICO] No se pudo determinar monto para conversión GA Express - Reserva ID: ${reservaId}`);
+						console.error(`   - Flow amount: ${flowData.amount}`);
+						console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
+						console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
+						console.error(`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`);
+						console.error(`   - Reserva precio: ${reserva?.precio}`);
+						montoExpress = 1000;
+						console.error(`   - Usando monto simbólico por defecto: ${montoExpress} CLP`);
+					}
+				}
+				
+				console.log(`💰 [CONVERSIÓN GA - Express] Monto final para Google Ads: ${montoExpress} CLP`);
 
 				// FIXED: Pasar también datos del usuario (d) para conversiones en CompletarDetalles
 				const userDataExpress = {
@@ -6962,7 +7041,20 @@ app.post("/api/payment-result", async (req, res) => {
 			// Si no hay reservaId pero el pago fue exitoso (caso raro o error de datos), redirigir a flow-return usando el monto de flowData
 			if ((!reservaId) && (flowData.status === 2 || flowData.status === 1)) {
 				console.warn("⚠️ Pago exitoso en Flow pero NO se encontró reservaId en metadata. Redirigiendo con monto de Flow.");
-				const montoFlow = Number(flowData.amount) || 0;
+				
+				// ✅ CORRECCIÓN: Usar el mismo monto validado de Flow
+				let montoFlow = montoFlowActual;
+				
+				if (montoFlow <= 0) {
+					console.error(`❌ [CRÍTICO] Monto cero en pago sin reservaId - Flow Order: ${flowData.flowOrder}`);
+					console.error(`   - Flow amount: ${flowData.amount}`);
+					console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
+					montoFlow = 1000; // Valor simbólico
+					console.error(`   - Usando monto simbólico: ${montoFlow} CLP`);
+				}
+				
+				console.log(`💰 [CONVERSIÓN GA - Sin Reserva] Monto final: ${montoFlow} CLP`);
+				
 				// Intento de recuperar email de flowData si existe
 				const userEmail = flowData.payerEmail || flowData.email || '';
 				const userDataEncoded = Buffer.from(JSON.stringify({ email: userEmail })).toString('base64');
