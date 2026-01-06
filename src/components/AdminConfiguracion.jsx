@@ -25,6 +25,7 @@ const [feedback, setFeedback] = useState(null);
 // Cargar configuración actual al montar el componente
 useEffect(() => {
 cargarConfiguracion();
+// eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
 const cargarConfiguracion = async () => {
@@ -38,7 +39,7 @@ if (!response.ok) {
 throw new Error("Error al cargar configuración");
 }
 
-const data = await response.json();
+await response.json();
 setWhatsappInterceptActivo(data.activo);
 } catch (error) {
 console.error("Error cargando configuración:", error);
@@ -71,7 +72,7 @@ if (!response.ok) {
 throw new Error("Error al guardar configuración");
 }
 
-const data = await response.json();
+await response.json();
 setWhatsappInterceptActivo(nuevoEstado);
 
 // Actualizar localStorage para caché en el frontend
