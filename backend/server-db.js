@@ -6848,6 +6848,9 @@ app.use("/api/payment-result", express.urlencoded({ extended: true }));
 app.post("/api/payment-result", async (req, res) => {
 	console.log("🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)...");
 	
+	// Monto simbólico usado como último recurso cuando no se puede determinar el monto real
+	const SYMBOLIC_AMOUNT_CLP = 1000;
+	
 	const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 	let token = req.body.token;
 	
@@ -6960,7 +6963,7 @@ app.post("/api/payment-result", async (req, res) => {
 							console.error(`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`);
 							console.error(`   - Reserva precio: ${reserva?.precio}`);
 							// Último recurso: monto simbólico para evitar cero (solo para que no falle la conversión)
-							montoParaConversion = 1000;
+							montoParaConversion = SYMBOLIC_AMOUNT_CLP;
 							console.error(`   - Usando monto simbólico por defecto: ${montoParaConversion} CLP`);
 						}
 					}
@@ -7016,7 +7019,7 @@ app.post("/api/payment-result", async (req, res) => {
 						console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
 						console.error(`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`);
 						console.error(`   - Reserva precio: ${reserva?.precio}`);
-						montoExpress = 1000;
+						montoExpress = SYMBOLIC_AMOUNT_CLP;
 						console.error(`   - Usando monto simbólico por defecto: ${montoExpress} CLP`);
 					}
 				}
@@ -7049,7 +7052,7 @@ app.post("/api/payment-result", async (req, res) => {
 					console.error(`❌ [CRÍTICO] Monto cero en pago sin reservaId - Flow Order: ${flowData.flowOrder}`);
 					console.error(`   - Flow amount: ${flowData.amount}`);
 					console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
-					montoFlow = 1000; // Valor simbólico
+					montoFlow = SYMBOLIC_AMOUNT_CLP; // Valor simbólico
 					console.error(`   - Usando monto simbólico: ${montoFlow} CLP`);
 				}
 				
