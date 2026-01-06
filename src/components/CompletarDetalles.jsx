@@ -109,8 +109,9 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 	useEffect(() => {
 		// Esperar a que la reserva esté cargada para tener el valor real
 		if (reservaId && reserva && typeof window.gtag === 'function') {
-			// Usar un flag en sessionStorage para evitar duplicar el evento en la misma sesión
-			const conversionKey = `conversion_sent_${reservaId}`;
+			// ✅ SINCRONIZACIÓN: Usar la misma clave que App.jsx para evitar duplicados
+			// Si la conversión ya se disparó en App.jsx (flujo Express), no volver a dispararla
+			const conversionKey = `flow_conversion_express_${reservaId}`;
 			if (!sessionStorage.getItem(conversionKey)) {
 				// Determinar el valor de la conversión
 				// Determinar el valor de la conversión
