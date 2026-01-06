@@ -7190,7 +7190,7 @@ app.get("/api/conductores/:id/estadisticas", async (req, res) => {
 });
 
 // GET /api/admin/evaluaciones - Listar todas las evaluaciones (requiere autenticación admin)
-app.get("/api/admin/evaluaciones", authJWT, async (req, res) => {
+app.get("/api/admin/evaluaciones", apiLimiter, authJWT, async (req, res) => {
 	try {
 		const { conductorId, desde, hasta, calificacionMin } = req.query;
 
