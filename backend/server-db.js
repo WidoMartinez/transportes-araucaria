@@ -3660,9 +3660,11 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 	try {
 		console.log("📧 Enviando confirmación de detalles completados al cliente...");
 		
-		const phpClienteUrl = process.env.PHP_CLIENT_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_confirmacion_reserva.php";
+		// ✅ CORRECCIÓN: Usar archivo PHP unificado existente
+		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
 		
 		const clientePayload = {
+			// Parámetros de la reserva
 			email: reservaCompleta.email,
 			nombre: reservaCompleta.nombre,
 			codigoReserva: reservaCompleta.codigoReserva,
@@ -3678,16 +3680,25 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			idaVuelta: reservaCompleta.idaVuelta,
 			fechaRegreso: reservaCompleta.fechaRegreso || "",
 			horaRegreso: reservaCompleta.horaRegreso || "",
+			
+			// ✅ NUEVO: Agregar acción específica para el PHP
+			action: "notify_client_details_completed"
 		};
 
-		await axios.post(phpClienteUrl, clientePayload, {
+		await axios.post(phpUrl, clientePayload, {
 			headers: { "Content-Type": "application/json" },
 			timeout: 10000,
 		});
 
-		console.log(`📧 Confirmación enviada al cliente ${reservaCompleta.email}`);
+		console.log(`✅ Confirmación enviada al cliente ${reservaCompleta.email}`);
 	} catch (emailError) {
 		console.error("❌ Error enviando confirmación al cliente:", emailError.message);
+		
+		// ✅ MEJORA: Log más detallado para depuración
+		if (emailError.response) {
+			console.error(`   - Status HTTP: ${emailError.response.status}`);
+			console.error(`   - Respuesta del servidor: ${JSON.stringify(emailError.response.data)}`);
+		}
 	}
 
 	// NUEVO: Enviar notificación al administrador cuando se completan los detalles
