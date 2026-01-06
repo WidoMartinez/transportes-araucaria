@@ -39,6 +39,7 @@ import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
+import Evaluar from "./pages/Evaluar"; // Página de evaluación de conductores
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -220,6 +221,20 @@ const resolveIsTestGoogleAdsView = () => {
 	);
 };
 
+const resolveIsEvaluarView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	const hash = window.location.hash.toLowerCase();
+	const search = window.location.search.toLowerCase();
+	return (
+		pathname === "/evaluar" ||
+		pathname.startsWith("/evaluar/") ||
+		pathname.startsWith("/evaluar?") ||
+		hash === "#evaluar" ||
+		hash.startsWith("#evaluar?") ||
+		search.includes("token=")
+	);
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
@@ -234,6 +249,7 @@ function App() {
 	const [isTestGoogleAdsView, setIsTestGoogleAdsView] = useState(
 		resolveIsTestGoogleAdsView
 	);
+	const [isEvaluarView, setIsEvaluarView] = useState(resolveIsEvaluarView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -409,6 +425,18 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncTestGoogleAds);
 			window.removeEventListener("popstate", syncTestGoogleAds);
+		};
+	}, []);
+
+	// Sincronizar vista de evaluación
+	useEffect(() => {
+		const syncEvaluar = () =>
+			setIsEvaluarView(resolveIsEvaluarView());
+		window.addEventListener("hashchange", syncEvaluar);
+		window.addEventListener("popstate", syncEvaluar);
+		return () => {
+			window.removeEventListener("hashchange", syncEvaluar);
+			window.removeEventListener("popstate", syncEvaluar);
 		};
 	}, []);
 
@@ -1881,6 +1909,10 @@ function App() {
 
 	if (isTestGoogleAdsView) {
 		return <TestGoogleAds />;
+	}
+
+	if (isEvaluarView) {
+		return <Evaluar />;
 	}
 
 	// Vista para completar detalles después del pago
