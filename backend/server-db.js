@@ -6823,7 +6823,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 // === ENDPOINTS DE EVALUACIÓN DE CONDUCTORES ===
 
 // GET /api/evaluaciones/validar-token/:token - Validar token de evaluación
-app.get("/api/evaluaciones/validar-token/:token", async (req, res) => {
+app.get("/api/evaluaciones/validar-token/:token", apiLimiter, async (req, res) => {
 	try {
 		const { token } = req.params;
 

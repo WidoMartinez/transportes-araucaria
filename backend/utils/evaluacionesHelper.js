@@ -5,6 +5,9 @@ import Reserva from "../models/Reserva.js";
 import EvaluacionConductor from "../models/EvaluacionConductor.js";
 import EstadisticasConductor from "../models/EstadisticasConductor.js";
 
+// Constantes del sistema
+const UMBRAL_5_ESTRELLAS = 4.75; // Promedio mínimo para considerar 5 estrellas
+
 /**
  * Genera un token único para evaluación
  * @returns {string} Token único de 64 caracteres
@@ -83,8 +86,8 @@ export const actualizarEstadisticasConductor = async (conductorId) => {
 			sumaComunicacion += evaluacion.calificacionComunicacion;
 			sumaGeneral += parseFloat(evaluacion.calificacionPromedio || 0);
 
-			// Contar evaluaciones de 5 estrellas (promedio >= 4.75)
-			if (evaluacion.calificacionPromedio >= 4.75) {
+			// Contar evaluaciones de 5 estrellas
+			if (evaluacion.calificacionPromedio >= UMBRAL_5_ESTRELLAS) {
 				cantidad5Estrellas++;
 			}
 
