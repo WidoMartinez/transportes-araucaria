@@ -39,7 +39,7 @@ if (!response.ok) {
 throw new Error("Error al cargar configuración");
 }
 
-await response.json();
+const data = await response.json();
 setWhatsappInterceptActivo(data.activo);
 } catch (error) {
 console.error("Error cargando configuración:", error);
