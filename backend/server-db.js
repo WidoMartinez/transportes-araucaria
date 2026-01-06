@@ -25,6 +25,8 @@ import ConfiguracionDisponibilidad from "./models/ConfiguracionDisponibilidad.js
 import Festivo from "./models/Festivo.js";
 import PendingEmail from "./models/PendingEmail.js";
 import BloqueoAgenda from "./models/BloqueoAgenda.js";
+import EvaluacionConductor from "./models/EvaluacionConductor.js";
+import EstadisticasConductor from "./models/EstadisticasConductor.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -45,6 +47,8 @@ import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
 import addColumnVan from "./migrations/add-column-van.js";
+import addEvaluacionesConductorTable from "./migrations/add-evaluaciones-conductor-table.js";
+import addEstadisticasConductorTable from "./migrations/add-estadisticas-conductor-table.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -55,6 +59,12 @@ import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
 import { verificarBloqueoAgenda, obtenerBloqueosEnRango } from "./utils/bloqueoAgenda.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
+import { 
+	generarTokenEvaluacion, 
+	calcularPromedioEvaluacion, 
+	actualizarEstadisticasConductor,
+	crearOrdenFlowPropina 
+} from "./utils/evaluacionesHelper.js";
 
 dotenv.config();
 
@@ -6736,6 +6746,69 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			"a:",
 			estado
 		);
+
+		// Si el estado cambió a "completada", crear solicitud de evaluación
+		if (estado === "completada" && reserva.conductorId) {
+			try {
+				// Verificar si ya existe una evaluación para esta reserva
+				const evaluacionExistente = await EvaluacionConductor.findOne({
+					where: { reservaId: id },
+				});
+
+				if (!evaluacionExistente) {
+					// Generar token único y fecha de expiración (72 horas)
+					const token = generarTokenEvaluacion();
+					const expiracion = new Date();
+					expiracion.setHours(expiracion.getHours() + 72);
+
+					// Crear registro de evaluación
+					const evaluacion = await EvaluacionConductor.create({
+						reservaId: id,
+						conductorId: reserva.conductorId,
+						clienteEmail: reserva.email,
+						clienteNombre: reserva.nombre,
+						tokenEvaluacion: token,
+						tokenExpiracion: expiracion,
+						evaluada: false,
+						calificacionPuntualidad: 0,
+						calificacionLimpieza: 0,
+						calificacionSeguridad: 0,
+						calificacionComunicacion: 0,
+					});
+
+					console.log(`✅ Solicitud de evaluación creada para reserva ${id}`);
+
+					// Enviar correo de solicitud de evaluación
+					try {
+						const phpMailerUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+						const frontendUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+						const enlaceEvaluacion = `${frontendUrl}/evaluar?token=${token}`;
+
+						const conductor = await Conductor.findByPk(reserva.conductorId);
+
+						await axios.post(`${phpMailerUrl}/enviar_correo_evaluacion.php`, {
+							email: reserva.email,
+							nombre: reserva.nombre,
+							codigoReserva: reserva.codigoReserva,
+							conductorNombre: conductor ? conductor.nombre : "Conductor",
+							enlaceEvaluacion,
+							fechaExpiracion: expiracion.toLocaleDateString('es-CL'),
+						});
+
+						console.log(`📧 Correo de evaluación enviado a ${reserva.email}`);
+					} catch (emailError) {
+						console.error("❌ Error enviando correo de evaluación:", emailError.message);
+						// No fallar la operación si el correo no se envía
+					}
+				} else {
+					console.log(`ℹ️ Evaluación ya existe para reserva ${id}`);
+				}
+			} catch (evalError) {
+				console.error("❌ Error creando solicitud de evaluación:", evalError.message);
+				// No fallar la operación principal si la evaluación no se crea
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Estado actualizado",
@@ -6744,6 +6817,467 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 	} catch (error) {
 		console.error("Error actualizando estado:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// === ENDPOINTS DE EVALUACIÓN DE CONDUCTORES ===
+
+// GET /api/evaluaciones/validar-token/:token - Validar token de evaluación
+app.get("/api/evaluaciones/validar-token/:token", async (req, res) => {
+	try {
+		const { token } = req.params;
+
+		if (!token) {
+			return res.status(400).json({
+				success: false,
+				message: "Token no proporcionado",
+			});
+		}
+
+		const evaluacion = await EvaluacionConductor.findOne({
+			where: { tokenEvaluacion: token },
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+				},
+				{
+					model: Conductor,
+					as: "conductor",
+				},
+			],
+		});
+
+		if (!evaluacion) {
+			return res.status(404).json({
+				success: false,
+				message: "Token inválido",
+				estado: "invalido",
+			});
+		}
+
+		// Verificar si ya fue evaluada
+		if (evaluacion.evaluada) {
+			return res.status(400).json({
+				success: false,
+				message: "Esta reserva ya fue evaluada",
+				estado: "evaluada",
+			});
+		}
+
+		// Verificar si el token expiró
+		const ahora = new Date();
+		if (evaluacion.tokenExpiracion && new Date(evaluacion.tokenExpiracion) < ahora) {
+			return res.status(400).json({
+				success: false,
+				message: "El token ha expirado (válido por 72 horas)",
+				estado: "expirado",
+			});
+		}
+
+		// Token válido - retornar datos de la reserva y conductor
+		return res.json({
+			success: true,
+			estado: "valido",
+			data: {
+				evaluacionId: evaluacion.id,
+				reserva: {
+					codigoReserva: evaluacion.reserva?.codigoReserva,
+					origen: evaluacion.reserva?.origen,
+					destino: evaluacion.reserva?.destino,
+					fecha: evaluacion.reserva?.fecha,
+				},
+				conductor: {
+					nombre: evaluacion.conductor?.nombre,
+				},
+				clienteNombre: evaluacion.clienteNombre,
+			},
+		});
+	} catch (error) {
+		console.error("❌ Error validando token de evaluación:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// POST /api/evaluaciones/guardar - Guardar evaluación y enviar notificaciones
+app.post("/api/evaluaciones/guardar", async (req, res) => {
+	try {
+		const {
+			token,
+			calificaciones,
+			comentario,
+			propinaMonto,
+		} = req.body;
+
+		if (!token || !calificaciones) {
+			return res.status(400).json({
+				success: false,
+				message: "Faltan datos requeridos",
+			});
+		}
+
+		// Validar calificaciones
+		const { puntualidad, limpieza, seguridad, comunicacion } = calificaciones;
+		if (!puntualidad || !limpieza || !seguridad || !comunicacion) {
+			return res.status(400).json({
+				success: false,
+				message: "Faltan calificaciones requeridas",
+			});
+		}
+
+		// Buscar evaluación
+		const evaluacion = await EvaluacionConductor.findOne({
+			where: { tokenEvaluacion: token },
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+				},
+				{
+					model: Conductor,
+					as: "conductor",
+				},
+			],
+		});
+
+		if (!evaluacion) {
+			return res.status(404).json({
+				success: false,
+				message: "Token inválido",
+			});
+		}
+
+		if (evaluacion.evaluada) {
+			return res.status(400).json({
+				success: false,
+				message: "Esta reserva ya fue evaluada",
+			});
+		}
+
+		// Calcular promedio
+		const promedio = calcularPromedioEvaluacion(calificaciones);
+
+		// Actualizar evaluación
+		await evaluacion.update({
+			calificacionPuntualidad: puntualidad,
+			calificacionLimpieza: limpieza,
+			calificacionSeguridad: seguridad,
+			calificacionComunicacion: comunicacion,
+			calificacionPromedio: promedio,
+			comentario: comentario || null,
+			propinaMonto: propinaMonto || 0,
+			evaluada: true,
+			fechaEvaluacion: new Date(),
+		});
+
+		console.log(`✅ Evaluación guardada para reserva ${evaluacion.reservaId}`);
+
+		// Actualizar estadísticas del conductor
+		try {
+			await actualizarEstadisticasConductor(evaluacion.conductorId);
+		} catch (statsError) {
+			console.error("❌ Error actualizando estadísticas:", statsError.message);
+		}
+
+		// Enviar notificaciones
+		const phpMailerUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+
+		// Notificación al conductor (SIN información de propinas)
+		try {
+			await axios.post(`${phpMailerUrl}/enviar_notificacion_evaluacion_conductor.php`, {
+				conductorEmail: evaluacion.conductor?.email,
+				conductorNombre: evaluacion.conductor?.nombre,
+				codigoReserva: evaluacion.reserva?.codigoReserva,
+				clienteNombre: evaluacion.clienteNombre,
+				calificaciones: {
+					puntualidad,
+					limpieza,
+					seguridad,
+					comunicacion,
+					promedio,
+				},
+				comentario: comentario || "",
+			});
+
+			await evaluacion.update({
+				notificacionConductorEnviada: true,
+				fechaNotificacionConductor: new Date(),
+			});
+
+			console.log(`📧 Notificación enviada al conductor ${evaluacion.conductor?.nombre}`);
+		} catch (emailError) {
+			console.error("❌ Error enviando notificación al conductor:", emailError.message);
+		}
+
+		// Notificación al admin (CON información de propinas)
+		try {
+			const adminEmail = process.env.ADMIN_EMAIL || "contacto@transportesaraucaria.cl";
+
+			await axios.post(`${phpMailerUrl}/enviar_notificacion_evaluacion_admin.php`, {
+				adminEmail,
+				codigoReserva: evaluacion.reserva?.codigoReserva,
+				conductorNombre: evaluacion.conductor?.nombre,
+				clienteNombre: evaluacion.clienteNombre,
+				clienteEmail: evaluacion.clienteEmail,
+				calificaciones: {
+					puntualidad,
+					limpieza,
+					seguridad,
+					comunicacion,
+					promedio,
+				},
+				comentario: comentario || "",
+				propinaMonto: propinaMonto || 0,
+			});
+
+			await evaluacion.update({
+				notificacionAdminEnviada: true,
+				fechaNotificacionAdmin: new Date(),
+			});
+
+			console.log(`📧 Notificación enviada al admin`);
+		} catch (emailError) {
+			console.error("❌ Error enviando notificación al admin:", emailError.message);
+		}
+
+		// Si hay propina, crear orden de pago
+		let paymentUrl = null;
+		if (propinaMonto && propinaMonto > 0) {
+			try {
+				const { params: flowParams } = await crearOrdenFlowPropina({
+					evaluacionId: evaluacion.id,
+					monto: propinaMonto,
+					email: evaluacion.clienteEmail,
+					conductorNombre: evaluacion.conductor?.nombre || "Conductor",
+					apiKey: process.env.FLOW_API_KEY,
+					secretKey: process.env.FLOW_SECRET_KEY,
+					backendUrl: process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com",
+				});
+
+				const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+				const response = await axios.post(
+					`${flowApiUrl}/payment/create`,
+					new URLSearchParams(flowParams).toString(),
+					{
+						headers: {
+							"Content-Type": "application/x-www-form-urlencoded",
+						},
+					}
+				);
+
+				const payment = response.data;
+				if (payment.url && payment.token) {
+					paymentUrl = `${payment.url}?token=${payment.token}`;
+
+					await evaluacion.update({
+						propinaFlowOrder: payment.flowOrder,
+						propinaFlowToken: payment.token,
+					});
+
+					console.log(`💳 Orden de pago de propina creada: ${payment.flowOrder}`);
+				}
+			} catch (paymentError) {
+				console.error("❌ Error creando orden de pago de propina:", paymentError.message);
+			}
+		}
+
+		return res.json({
+			success: true,
+			message: "Evaluación guardada exitosamente",
+			data: {
+				evaluacionId: evaluacion.id,
+				promedio,
+				paymentUrl,
+			},
+		});
+	} catch (error) {
+		console.error("❌ Error guardando evaluación:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// GET /api/conductores/:id/estadisticas - Obtener estadísticas de un conductor
+app.get("/api/conductores/:id/estadisticas", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const conductor = await Conductor.findByPk(id);
+		if (!conductor) {
+			return res.status(404).json({
+				success: false,
+				message: "Conductor no encontrado",
+			});
+		}
+
+		// Buscar o crear estadísticas
+		const [estadisticas] = await EstadisticasConductor.findOrCreate({
+			where: { conductorId: id },
+			defaults: {
+				conductorId: id,
+				promedioGeneral: 0,
+				promedioPuntualidad: 0,
+				promedioLimpieza: 0,
+				promedioSeguridad: 0,
+				promedioComunicacion: 0,
+				totalEvaluaciones: 0,
+				totalServiciosCompletados: 0,
+				porcentajeEvaluado: 0,
+				totalPropinasRecibidas: 0,
+				cantidadPropinas: 0,
+				promedioPropina: 0,
+				cantidad5Estrellas: 0,
+			},
+		});
+
+		// Obtener últimas evaluaciones
+		const ultimasEvaluaciones = await EvaluacionConductor.findAll({
+			where: {
+				conductorId: id,
+				evaluada: true,
+			},
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+					attributes: ["codigoReserva", "fecha"],
+				},
+			],
+			order: [["fechaEvaluacion", "DESC"]],
+			limit: 10,
+		});
+
+		return res.json({
+			success: true,
+			data: {
+				conductor: {
+					id: conductor.id,
+					nombre: conductor.nombre,
+				},
+				estadisticas: {
+					promedioGeneral: estadisticas.promedioGeneral,
+					promedioPuntualidad: estadisticas.promedioPuntualidad,
+					promedioLimpieza: estadisticas.promedioLimpieza,
+					promedioSeguridad: estadisticas.promedioSeguridad,
+					promedioComunicacion: estadisticas.promedioComunicacion,
+					totalEvaluaciones: estadisticas.totalEvaluaciones,
+					totalServiciosCompletados: estadisticas.totalServiciosCompletados,
+					porcentajeEvaluado: estadisticas.porcentajeEvaluado,
+					cantidad5Estrellas: estadisticas.cantidad5Estrellas,
+					mejorCalificadoEn: estadisticas.mejorCalificadoEn,
+				},
+				ultimasEvaluaciones: ultimasEvaluaciones.map((ev) => ({
+					id: ev.id,
+					fecha: ev.fechaEvaluacion,
+					codigoReserva: ev.reserva?.codigoReserva,
+					calificacionPromedio: ev.calificacionPromedio,
+					comentario: ev.comentario,
+				})),
+			},
+		});
+	} catch (error) {
+		console.error("❌ Error obteniendo estadísticas del conductor:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
+	}
+});
+
+// GET /api/admin/evaluaciones - Listar todas las evaluaciones (requiere autenticación admin)
+app.get("/api/admin/evaluaciones", authJWT, async (req, res) => {
+	try {
+		const { conductorId, desde, hasta, calificacionMin } = req.query;
+
+		const where = {
+			evaluada: true,
+		};
+
+		if (conductorId) {
+			where.conductorId = conductorId;
+		}
+
+		if (desde || hasta) {
+			where.fechaEvaluacion = {};
+			if (desde) {
+				where.fechaEvaluacion[Op.gte] = new Date(desde);
+			}
+			if (hasta) {
+				where.fechaEvaluacion[Op.lte] = new Date(hasta);
+			}
+		}
+
+		if (calificacionMin) {
+			where.calificacionPromedio = {
+				[Op.gte]: parseFloat(calificacionMin),
+			};
+		}
+
+		const evaluaciones = await EvaluacionConductor.findAll({
+			where,
+			include: [
+				{
+					model: Conductor,
+					as: "conductor",
+					attributes: ["id", "nombre"],
+				},
+				{
+					model: Reserva,
+					as: "reserva",
+					attributes: ["codigoReserva", "fecha", "origen", "destino"],
+				},
+			],
+			order: [["fechaEvaluacion", "DESC"]],
+		});
+
+		// Calcular métricas generales
+		const totalEvaluaciones = evaluaciones.length;
+		const promedioGlobal = totalEvaluaciones > 0
+			? evaluaciones.reduce((sum, ev) => sum + parseFloat(ev.calificacionPromedio), 0) / totalEvaluaciones
+			: 0;
+		const totalPropinas = evaluaciones
+			.filter((ev) => ev.propinaPagada)
+			.reduce((sum, ev) => sum + parseFloat(ev.propinaMonto || 0), 0);
+
+		return res.json({
+			success: true,
+			data: {
+				metricas: {
+					totalEvaluaciones,
+					promedioGlobal: Math.round(promedioGlobal * 100) / 100,
+					totalPropinas,
+				},
+				evaluaciones: evaluaciones.map((ev) => ({
+					id: ev.id,
+					fecha: ev.fechaEvaluacion,
+					conductor: ev.conductor,
+					reserva: ev.reserva,
+					clienteNombre: ev.clienteNombre,
+					clienteEmail: ev.clienteEmail,
+					calificaciones: {
+						puntualidad: ev.calificacionPuntualidad,
+						limpieza: ev.calificacionLimpieza,
+						seguridad: ev.calificacionSeguridad,
+						comunicacion: ev.calificacionComunicacion,
+						promedio: ev.calificacionPromedio,
+					},
+					comentario: ev.comentario,
+					propinaMonto: ev.propinaMonto,
+					propinaPagada: ev.propinaPagada,
+				})),
+			},
+		});
+	} catch (error) {
+		console.error("❌ Error listando evaluaciones:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
 	}
 });
 
@@ -7225,6 +7759,40 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			optionalMetadata.referenciaPago.trim().length > 0
 				? optionalMetadata.referenciaPago.trim().toUpperCase()
 				: null;
+		const paymentOrigin = optionalMetadata.paymentOrigin || null;
+
+		// Detectar si es un pago de propina
+		if (paymentOrigin === "propina" && optionalMetadata.evaluacionId) {
+			console.log(`💰 Detectado pago de propina para evaluación ${optionalMetadata.evaluacionId}`);
+
+			try {
+				const evaluacion = await EvaluacionConductor.findByPk(optionalMetadata.evaluacionId);
+
+				if (evaluacion) {
+					await evaluacion.update({
+						propinaPagada: true,
+						propinaPaymentId: payment.flowOrder.toString(),
+					});
+
+					console.log(`✅ Propina marcada como pagada para evaluación ${evaluacion.id}`);
+
+					// Actualizar estadísticas del conductor
+					try {
+						await actualizarEstadisticasConductor(evaluacion.conductorId);
+						console.log(`📊 Estadísticas actualizadas tras pago de propina`);
+					} catch (statsError) {
+						console.error("❌ Error actualizando estadísticas tras propina:", statsError.message);
+					}
+				} else {
+					console.warn(`⚠️ Evaluación ${optionalMetadata.evaluacionId} no encontrada`);
+				}
+			} catch (propinaError) {
+				console.error("❌ Error procesando pago de propina:", propinaError.message);
+			}
+
+			// No continuar procesando como reserva normal
+			return;
+		}
 
 		if (
 			!commerceOrder &&
@@ -9206,6 +9774,8 @@ const startServer = async () => {
 		await addPermitirAbonoColumn();
 		await addArchivadaColumn();
 		await addColumnVan();
+		await addEvaluacionesConductorTable();
+		await addEstadisticasConductorTable();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 
