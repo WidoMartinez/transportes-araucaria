@@ -25,6 +25,7 @@ import ConfiguracionDisponibilidad from "./models/ConfiguracionDisponibilidad.js
 import Festivo from "./models/Festivo.js";
 import PendingEmail from "./models/PendingEmail.js";
 import BloqueoAgenda from "./models/BloqueoAgenda.js";
+import Configuracion from "./models/Configuracion.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -45,6 +46,7 @@ import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
 import addColumnVan from "./migrations/add-column-van.js";
+import addConfiguracionTable from "./migrations/add-configuracion-table.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -1348,6 +1350,91 @@ app.put("/pricing", async (req, res) => {
 		console.error("Error al guardar la configuracion de precios:", error);
 		res.status(500).json({
 			message: "No se pudo guardar la configuracion de precios.",
+		});
+	}
+});
+
+// --- ENDPOINTS PARA CONFIGURACIÓN GENERAL ---
+
+/**
+ * GET /api/configuracion/whatsapp-intercept
+ * Obtiene el estado actual del modal de intercepción de WhatsApp
+ * Público - no requiere autenticación
+ */
+app.get("/api/configuracion/whatsapp-intercept", async (req, res) => {
+	try {
+		const activo = await Configuracion.getValorParseado(
+			"whatsapp_intercept_activo",
+			true // Por defecto activo
+		);
+
+		res.json({
+			activo,
+			mensaje: activo 
+				? "Modal de WhatsApp activo" 
+				: "Modal de WhatsApp desactivado"
+		});
+	} catch (error) {
+		console.error("Error obteniendo configuración WhatsApp intercept:", error);
+		res.status(500).json({
+			error: "Error al obtener configuración",
+			activo: true // Fallback a activo en caso de error
+		});
+	}
+});
+
+/**
+ * PUT /api/configuracion/whatsapp-intercept
+ * Actualiza el estado del modal de intercepción de WhatsApp
+ * Requiere autenticación de administrador
+ */
+app.put("/api/configuracion/whatsapp-intercept", authAdmin, async (req, res) => {
+	try {
+		const { activo } = req.body;
+
+		// Validar que activo sea un booleano
+		if (typeof activo !== "boolean") {
+			return res.status(400).json({
+				error: "El campo 'activo' debe ser un valor booleano (true/false)"
+			});
+		}
+
+		// Guardar configuración
+		await Configuracion.setValor(
+			"whatsapp_intercept_activo",
+			activo,
+			"boolean",
+			"Controla si el modal de intercepción de WhatsApp está activo"
+		);
+
+		console.log(`✅ Configuración WhatsApp intercept actualizada: ${activo}`);
+
+		// Registrar en audit log si está disponible
+		if (req.user) {
+			try {
+				await AdminAuditLog.create({
+					adminUserId: req.user.id,
+					action: "update_config",
+					resource: "whatsapp_intercept",
+					details: JSON.stringify({ 
+						activo,
+						usuario: req.user.nombre || req.user.usuario 
+					}),
+				});
+			} catch (auditError) {
+				console.error("Error registrando en audit log:", auditError);
+			}
+		}
+
+		res.json({
+			success: true,
+			activo,
+			mensaje: `Modal de WhatsApp ${activo ? "activado" : "desactivado"} correctamente`
+		});
+	} catch (error) {
+		console.error("Error actualizando configuración WhatsApp intercept:", error);
+		res.status(500).json({
+			error: "Error al actualizar configuración"
 		});
 	}
 });
@@ -9206,6 +9293,7 @@ const startServer = async () => {
 		await addPermitirAbonoColumn();
 		await addArchivadaColumn();
 		await addColumnVan();
+		await addConfiguracionTable();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 
