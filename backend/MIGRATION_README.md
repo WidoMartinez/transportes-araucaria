@@ -30,7 +30,10 @@ Para garantizar que los cambios de base de datos se apliquen correctamente en pr
 
 1.  **Ubicación**: Guardar scripts en `backend/migrations/`.
 2.  **Formato**: Usar `export default async function`. **NO** incluir bloques CLI (`if (import.meta.url...)`) ni `sequelize.close()`, ya que la conexión es gestionada por el servidor principal.
-3.  **Integración Obligatoria**: La migración **DEBE** ser importada y llamada con `await` dentro de la función `startServer()` en `backend/server-db.js`.
+3.  **Integración Obligatoria**: La migración **DEBE** ser importada y llamada con `await` dentro de la función `initializeDatabase()` en `backend/server-db.js`.
+
+> [!IMPORTANT]
+> **Sistema de Auto-Migraciones**: Las migraciones se ejecutan **automáticamente** al iniciar el servidor. NO es necesario ejecutarlas manualmente en producción. Para información completa, consultar la sección **5.13 Sistema de Migraciones** en [`DOCUMENTACION_MAESTRA.md`](../DOCUMENTACION_MAESTRA.md#513-sistema-de-migraciones-de-base-de-datos).
 
 ### 📋 Plantilla Maestra de Migración
 
@@ -68,17 +71,17 @@ const nombreMigracion = async () => {
 export default nombreMigracion;
 ```
 
-### Pasos para Activar
+### Pasos para Integrar una Nueva Migración
+
 1. Crear el archivo `backend/migrations/mi-migracion.js` con la plantilla.
 2. Editar `backend/server-db.js`:
    ```javascript
    import miMigracion from "./migrations/mi-migracion.js";
    
-   // ... dentro de startServer()
+   // ... dentro de initializeDatabase()
    await miMigracion();
-   await initializeDatabase();
    ```
-3. Hacer push a `main`. Render ejecutará la migración al iniciar.
+3. Hacer push a `main`. Render ejecutará la migración al iniciar el servidor.
 
 ## 🔧 Configuración
 

@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
 > **Última Actualización**: 7 Enero 2026
-> **Versión**: 1.3
+> **Versión**: 1.4
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -700,6 +700,7 @@ else if (numPasajeros >= 4 && numPasajeros <= destinoInfo.maxPasajeros) {  // An
 > **Configuración Recomendada**: El precio base de Van debería ser aproximadamente 1.5x - 1.7x el precio base de Auto para reflejar los costos operativos adicionales (combustible, mantenimiento, seguro).
 
 
+
 ### 5.12 Solución de UI/UX Crítica: Modal de Intercepción y Stacking Contexts
 
 
@@ -756,6 +757,186 @@ Para evitar este problema en el futuro, se establecen las siguientes reglas de i
 
 ---
 
+### 5.13 Sistema de Migraciones de Base de Datos
+
+**Actualizado: 7 Enero 2026**
+
+El sistema utiliza un enfoque de **auto-migraciones** donde los cambios de esquema se ejecutan automáticamente al iniciar el servidor. Este diseño garantiza que la base de datos esté siempre sincronizada con el código en producción (Render.com).
+
+#### Arquitectura del Sistema
+
+**Flujo de Ejecución:**
+
+```mermaid
+graph TD
+    A[Inicio del Servidor] --> B[startServer en server-db.js]
+    B --> C[Importar Migraciones]
+    C --> D[initializeDatabase]
+    D --> E[Ejecutar Migraciones en Orden]
+    E --> F[syncDatabase]
+    F --> G[Servidor Listo]
+```
+
+**Ubicación de Archivos:**
+- **Scripts de Migración**: `backend/migrations/*.js`
+- **Importación**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L29-L50) (líneas 29-50)
+- **Ejecución**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L630-L723) (líneas 630-723)
+
+#### Características Clave
+
+1. **Idempotencia**: Cada migración verifica si el cambio ya fue aplicado antes de ejecutarlo
+2. **Orden Garantizado**: Las migraciones se ejecutan en el orden de importación en `server-db.js`
+3. **Sin Intervención Manual**: No requiere ejecutar scripts manualmente en producción
+4. **Tolerancia a Fallos**: Errores no críticos se registran como advertencias sin detener el servidor
+
+#### Plantilla para Nuevas Migraciones
+
+Al crear una nueva migración, usar esta plantilla estándar:
+
+```javascript
+/* eslint-env node */
+import sequelize from "../config/database.js";
+
+const nombreMigracion = async () => {
+    try {
+        console.log("🔄 Verificando [DESCRIPCIÓN DEL CAMBIO]...");
+
+        // Paso 1: Verificar si ya existe (idempotencia)
+        const [columns] = await sequelize.query(
+            "SHOW COLUMNS FROM tabla LIKE 'columna'"
+        );
+        
+        if (columns.length === 0) {
+            console.log("📋 Aplicando migración [NOMBRE]...");
+            
+            // Paso 2: Ejecutar cambio
+            await sequelize.query(`
+                ALTER TABLE tabla 
+                ADD COLUMN columna TIPO DEFAULT VALOR
+            `);
+            
+            console.log("✅ Migración [NOMBRE] completada exitosamente");
+        } else {
+            console.log("✅ [NOMBRE] ya aplicado previamente");
+        }
+    } catch (error) {
+        // Solo loguear error, no detener el servidor (salvo sea crítico)
+        console.error("❌ Error en migración [NOMBRE]:", error.message);
+    }
+};
+
+export default nombreMigracion;
+```
+
+> [!IMPORTANT]
+> **Diferencias Críticas con Plantillas Obsoletas:**
+> - ✅ **NO incluir** `sequelize.close()` (la conexión es gestionada por el servidor)
+> - ✅ **NO incluir** bloques CLI como `if (import.meta.url === ...)` o `.catch()`
+> - ✅ **Exportar** como `export default` para importación ES6
+> - ✅ **Función async** sin auto-invocación
+
+#### Proceso de Integración
+
+Para agregar una nueva migración al sistema:
+
+**1. Crear el Archivo**
+
+```bash
+# Ubicación: backend/migrations/
+touch backend/migrations/add-nueva-funcionalidad.js
+```
+
+**2. Implementar la Migración**
+
+Copiar la plantilla anterior y adaptar según el cambio requerido.
+
+**3. Importar en server-db.js**
+
+```javascript
+// En backend/server-db.js (líneas 29-50)
+import addNuevaFuncionalidad from "./migrations/add-nueva-funcionalidad.js";
+```
+
+**4. Ejecutar en initializeDatabase**
+
+```javascript
+// En backend/server-db.js, dentro de initializeDatabase() (líneas 630-723)
+await addNuevaFuncionalidad();
+```
+
+**5. Commit y Deploy**
+
+```bash
+git add backend/migrations/add-nueva-funcionalidad.js backend/server-db.js
+git commit -m "feat: agregar migración para nueva funcionalidad"
+git push origin main
+```
+
+Render ejecutará automáticamente la migración al desplegar.
+
+#### Migraciones Existentes
+
+El sistema incluye las siguientes migraciones (en orden de ejecución):
+
+| Migración | Descripción | Línea en server-db.js |
+|-----------|-------------|----------------------|
+| `addPendingEmailsTable` | Tabla de correos pendientes | 630 |
+| `addCodigosPagoTable` | Tabla de códigos de pago | 633 |
+| `addSillaInfantilToCodigosPago` | Campo silla infantil en códigos | 634 |
+| `addClientDataToCodigosPago` | Datos de cliente en códigos | 635 |
+| `ejecutarMigracionCodigoReserva` | Código único de reserva | 706 |
+| `addPaymentFields` | Campos de pago en reservas | 707 |
+| `addTipoPagoColumn` | Tipo de pago | 708 |
+| `addAbonoFlags` | Flags de abono | 709-710 |
+| `addGastosTable` | Tabla de gastos | 712 |
+| `addProductosTables` | Tablas de productos | 713 |
+| `addTarifaDinamicaTable` | Configuración de tarifa dinámica | 714 |
+| `addTarifaDinamicaFields` | Campos de tarifa en reservas | 715 |
+| `addFestivosTable` | Tabla de festivos | 716 |
+| `addDisponibilidadConfig` | Configuración de disponibilidad | 717 |
+| `addPorcentajeAdicionalColumns` | Porcentaje adicional por pasajero | 718 |
+| `addAddressColumns` | Columnas de dirección | 719 |
+| `addBloqueosAgendaTable` | Bloqueos de agenda | 720 |
+| `addGastosCerradosField` | Campo gastos cerrados | 721 |
+| `addTramosFields` | Campos de tramos (ida/vuelta) | 722 |
+
+#### Buenas Prácticas
+
+1. **Verificación Previa**: Siempre verificar si el cambio ya existe antes de aplicarlo
+2. **Mensajes Claros**: Usar emojis y mensajes descriptivos en los logs
+3. **Manejo de Errores**: Capturar errores pero no detener el servidor (salvo cambios críticos)
+4. **Orden de Ejecución**: Agregar migraciones al final de la secuencia en `initializeDatabase()`
+5. **Testing Local**: Probar la migración localmente antes de hacer push a producción
+
+#### Troubleshooting
+
+**Error: "Column already exists"**
+- ✅ **Normal**: La migración es idempotente y detectó que el cambio ya existe
+- ✅ **Acción**: Ninguna, el sistema continuará normalmente
+
+**Error: "Cannot find module"**
+- ❌ **Causa**: Falta importar la migración en `server-db.js`
+- ✅ **Solución**: Agregar `import` en líneas 29-50
+
+**Error: "sequelize.close is not a function"**
+- ❌ **Causa**: Usando plantilla obsoleta con `sequelize.close()`
+- ✅ **Solución**: Eliminar `sequelize.close()` y bloques CLI del script
+
+**Migración no se ejecuta en Render**
+- ❌ **Causa**: No se agregó `await nombreMigracion()` en `initializeDatabase()`
+- ✅ **Solución**: Agregar llamada en líneas 630-723 de `server-db.js`
+
+> [!WARNING]
+> **Documentación Obsoleta**: Los archivos `backend/migrations/README.md` y `README_AUTH_MIGRATION.md` contienen instrucciones **incorrectas** sobre ejecución manual de migraciones. Han sido archivados en `docs/legacy/`. **NO seguir** esas instrucciones.
+
+#### Referencias
+
+- **Plantilla Maestra**: [`backend/MIGRATION_README.md`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/MIGRATION_README.md#L35-L69) (líneas 35-69)
+- **Código de Ejecución**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L623-L777) (función `initializeDatabase`)
+- **Ejemplo de Migración**: [`backend/migrations/add-codigo-reserva-column.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L536-L621) (implementado inline en server-db.js)
+
+
+
 
 ## 6. Mantenimiento y Despliegue
 
@@ -778,7 +959,7 @@ La documentación antigua se ha archivado en `docs/legacy/` para referencia hist
 
 Se ha compilado una guía específica para resolver problemas recurrentes como:
 - **Backend 500**: Errores de ruta o base de datos.
-- **Migraciones**: Cómo aplicar cambios de tabla de forma manual. **IMPORTANTE**: Revisar `backend/MIGRATION_README.md` antes de crear nuevas migraciones para evitar errores de conexión.
+- **Migraciones**: Cómo crear e integrar nuevas migraciones. **IMPORTANTE**: Revisar la sección [5.13 Sistema de Migraciones](#513-sistema-de-migraciones-de-base-de-datos) para entender el sistema de auto-migraciones.
 - **Autenticación**: Solución al bloqueo de edición.
 
 👉 **Ver Guía Completa**: [GUIA_SOLUCION_PROBLEMAS.md](./GUIA_SOLUCION_PROBLEMAS.md)
