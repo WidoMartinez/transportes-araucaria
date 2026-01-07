@@ -40,6 +40,7 @@ Para cada archivo `.md` encontrado (excepto los oficiales), determinar:
 - `README.md`
 - `DOCUMENTACION_MAESTRA.md`
 - `GUIA_SOLUCION_PROBLEMAS.md`
+- `GUIA_USUARIO.md`
 - `.agent/GUIA_AGENTE.md`
 - `.agent/workflows/*.md`
 - `docs/legacy/*` (archivos ya archivados)

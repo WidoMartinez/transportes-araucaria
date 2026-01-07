@@ -16,6 +16,7 @@
 |-----------|-----------|-------------------|
 | `DOCUMENTACION_MAESTRA.md` | Arquitectura, funcionalidades, flujos técnicos | Nuevas features, cambios arquitectónicos, modificaciones de API |
 | `GUIA_SOLUCION_PROBLEMAS.md` | Troubleshooting, errores y soluciones | Bugs resueltos, problemas recurrentes, errores de configuración |
+| `GUIA_USUARIO.md` | Guías de uso para administradores y usuarios | Nuevas funcionalidades de usuario, cambios en UI/UX, procedimientos operativos |
 
 ### Workflows Disponibles
 
