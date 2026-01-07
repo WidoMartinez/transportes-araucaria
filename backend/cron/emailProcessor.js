@@ -69,11 +69,6 @@ export const processPendingEmails = async () => {
                 
                 const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
                 
-                // Advertencia si se usa el fallback (debería configurarse en producción)
-                if (!process.env.PHP_EMAIL_URL) {
-                    console.warn("⚠️ PHP_EMAIL_URL no configurado, usando URL por defecto");
-                }
-                
                 // Preparar datos para el PHP
                 const emailData = {
                     nombre: reserva.nombre,
@@ -108,60 +103,15 @@ export const processPendingEmails = async () => {
                 }
 
             } catch (error) {
-                // Logging mejorado con contexto completo
-                console.error(`❌ Error procesando email ID ${emailTask.id}:`, {
-                    error: error.message,
-                    reservaId: emailTask.reservaId,
-                    codigoReserva: reserva?.codigoReserva,
-                    email: emailTask.email,
-                    attempts: emailTask.attempts + 1,
-                    scheduledAt: emailTask.scheduledAt,
-                    tipo: emailTask.type,
-                    stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-                });
+                console.error(`❌ Error procesando email ID ${emailTask.id}:`, error.message);
                 
                 // Incrementar intentos
                 const newAttempts = emailTask.attempts + 1;
                 const updateData = { attempts: newAttempts, lastError: error.message };
                 
-                // Si falla 3 veces, marcar como fallido y notificar al admin
+                // Si falla 3 veces, marcar como fallido
                 if (newAttempts >= 3) {
                     updateData.status = "failed";
-                    
-                    // Notificar al administrador sobre el fallo definitivo
-                    try {
-                        const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-                        
-                        // Advertencia si se usa el fallback
-                        if (!process.env.PHP_EMAIL_URL) {
-                            console.warn("⚠️ PHP_EMAIL_URL no configurado para notificación de fallos");
-                        }
-                        
-                        await axios.post(phpUrl, {
-                            action: "notify_admin_failed_email",
-                            reservaId: reserva.id,
-                            codigoReserva: reserva.codigoReserva,
-                            email: emailTask.email,
-                            attempts: newAttempts,
-                            lastError: error.message,
-                            tipo: emailTask.type,
-                            nombre: reserva.nombre,
-                            origen: reserva.origen,
-                            destino: reserva.destino,
-                            fecha: reserva.fecha
-                        }, {
-                            headers: { "Content-Type": "application/json" },
-                            timeout: 10000
-                        });
-                        console.log(`📧 Notificación de fallo enviada al admin para reserva ${reserva.codigoReserva}`);
-                    } catch (notifError) {
-                        console.error("❌ Error notificando fallo al admin:", notifError.message);
-                    }
-                } else {
-                    // Implementar exponential backoff: 2min, 4min, 8min...
-                    const delayMinutes = Math.pow(2, newAttempts);
-                    updateData.scheduledAt = new Date(Date.now() + delayMinutes * 60000);
-                    console.log(`⏰ Reintento ${newAttempts} programado en ${delayMinutes} minutos para email ID ${emailTask.id}`);
                 }
                 
                 await emailTask.update(updateData);
