@@ -628,6 +628,12 @@ const initializeDatabase = async () => {
 		}
 		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
 		await addPendingEmailsTable();
+		
+		// Migraciones CRÍTICAS de estructura (deben correr antes de syncDatabase)
+		await addCodigosPagoTable();
+		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), sequelize);
+		await addClientDataToCodigosPago();
+
 		await syncDatabase(false, [
 			AdminUser, // Primero los usuarios admin
 			AdminAuditLog, // Logs de auditoría de admin
@@ -701,8 +707,8 @@ const initializeDatabase = async () => {
 		await addPaymentFields();
 		await addTipoPagoColumn();
 		await addAbonoFlags();
-		await addCodigosPagoTable();
-		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), sequelize);
+		await addAbonoFlags();
+		// Migraciones de CodigosPago movidas al inicio
 		await addGastosTable();
 		await addProductosTables(); // Migración para tablas de productos
 		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
@@ -714,7 +720,7 @@ const initializeDatabase = async () => {
 		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 		await addGastosCerradosField(); // Migración para campo gastos_cerrados
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
-		await addClientDataToCodigosPago(); // Migración para datos de cliente en códigos de pago
+		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {

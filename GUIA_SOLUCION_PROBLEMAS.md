@@ -438,3 +438,48 @@ Contiene:
 > **Regla de Oro**: Siempre consultar documentación ANTES de intervenir. Si el problema ya está documentado aquí, seguir la solución establecida.
 
 ---
+
+## 10. Error de Sincronización de Base de Datos (Key column doesn't exist)
+
+### Problema
+Al iniciar el servidor, se detiene con un error crítico indicando que una columna clave no existe, generalmente al intentar crear un índice.
+
+**Error típico:**
+`Error: Key column 'codigo_reserva_vinculado' doesn't exist in table`
+
+### Causa
+Esto ocurre cuando hay un conflicto en el **orden de inicialización** en `backend/server-db.js`.
+1. El backend intenta ejecutar `syncDatabase()`, que lee el modelo (`CodigoPago.js`) donde se definen índices nuevos.
+2. Sequelize intenta crear esos índices en la tabla física.
+3. Si la migración que crea la columna (`addClientDataToCodigosPago`) está programada para ejecutarse **después** de `syncDatabase`, la columna aún no existe físicamente cuando Sequelize intenta indexarla.
+
+### Solución (Aplicada Enero 2026)
+Se debe modificar el orden de ejecución en `backend/server-db.js` para asegurar que las migraciones de estructura crítica ocurran **ANTES** de la sincronización de modelos.
+
+**Orden Incorrecto (Falla):**
+```javascript
+await syncDatabase(false, [AdminUser, CodigoPago, ...]);
+// ...
+await addClientDataToCodigosPago(); // Falla: la columna se crea muy tarde
+```
+
+**Orden Correcto (Solución):**
+```javascript
+// 1. Ejecutar migraciones estructurales primero
+await addCodigosPagoTable();
+await addClientDataToCodigosPago(); 
+
+// 2. Luego sincronizar modelos (los índices funcionarán porque la col ya existe)
+await syncDatabase(false, [AdminUser, CodigoPago, ...]);
+```
+
+### Prevención
+Cuando se agreguen columnas nuevas que tienen índices definidos en el modelo:
+1. Crear la migración correspondiente.
+2. Importarla en `server-db.js`.
+3. Colocar su ejecución (`await miMigracion()`) **ANTES** de `await syncDatabase()`.
+
+**Archivos afectados**:
+- `backend/server-db.js` (Reordenamiento de inicialización)
+- `backend/models/CodigoPago.js` (Definición de índices)
+- `backend/migrations/add-client-data-to-codigos-pago.js` (Script de migración)
