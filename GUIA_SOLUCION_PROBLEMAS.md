@@ -556,6 +556,132 @@ En `backend/server-db.js`, el endpoint `/api/payment-result` (línea 7059) acept
 
 ---
 
+## 13. Fechas Inválidas en Reservas Express (252026-01-09)
+
+**Implementado: 7 Enero 2026**
+
+### Problema
+Las reservas creadas desde el flujo de "Pagar con Código" se guardaban con fechas malformadas (ej: `'252026-01-09'` en lugar de `'2026-01-09'`), causando:
+- Error de Moment.js: `Deprecation warning: value provided is not in a recognized RFC2822 or ISO format`
+- La fecha se guardaba como `0000-00-00` en la base de datos
+- La interfaz mostraba `0000-00-00` en los detalles de la reserva
+
+### Síntomas
+```
+Deprecation warning: value provided is not in a recognized RFC2822 or ISO format.
+Reserva express recibida: {
+  fecha: '252026-01-09',  // ❌ Formato inválido
+  ...
+}
+Error
+    at hooks.createFromInputFallback (/opt/render/project/src/backend/node_modules/moment/moment.js:324:25)
+```
+
+### Causa
+El backend no validaba ni sanitizaba las fechas recibidas del frontend. Si por alguna razón (concatenación incorrecta, error de input, manipulación de datos) la fecha llegaba malformada, se guardaba directamente en la base de datos sin verificación.
+
+### Solución (Enero 2026)
+
+Se implementó una función de validación y sanitización de fechas en `backend/server-db.js`:
+
+**Función `validarYSanitizarFecha()`** (líneas 2881-2931):
+```javascript
+function validarYSanitizarFecha(fecha, nombreCampo = "fecha") {
+  // 1. Sanitizar: eliminar caracteres no válidos (solo dígitos y guiones)
+  let fechaStr = String(fecha).trim().replace(/[^0-9-]/g, "");
+  
+  // 2. Validar formato YYYY-MM-DD con regex
+  const formatoFechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!formatoFechaRegex.test(fechaStr)) {
+    throw new Error(`${nombreCampo} debe tener el formato YYYY-MM-DD`);
+  }
+  
+  // 3. Validar que sea una fecha real
+  const [year, month, day] = fechaStr.split("-").map(Number);
+  const fechaObj = new Date(year, month - 1, day);
+  
+  if (fechaObj.getFullYear() !== year || 
+      fechaObj.getMonth() !== month - 1 || 
+      fechaObj.getDate() !== day) {
+    throw new Error(`${nombreCampo} no es una fecha válida`);
+  }
+  
+  return fechaStr;
+}
+```
+
+**Aplicación en endpoint `/enviar-reserva-express`** (líneas 3050-3073):
+```javascript
+// Validar y sanitizar fechas
+try {
+  // Validar fecha principal (requerida)
+  datosReserva.fecha = validarYSanitizarFecha(
+    datosReserva.fecha,
+    "Fecha del servicio"
+  );
+  
+  // Validar fecha de regreso si existe (opcional)
+  if (datosReserva.fechaRegreso) {
+    datosReserva.fechaRegreso = validarYSanitizarFecha(
+      datosReserva.fechaRegreso,
+      "Fecha de regreso"
+    );
+  }
+} catch (errorFecha) {
+  return res.status(400).json({
+    success: false,
+    message: errorFecha.message,
+  });
+}
+```
+
+### Comportamiento Después de la Solución
+
+**Fecha válida**:
+```
+Input:  '2026-01-09'
+Output: '2026-01-09'
+Log:    ✅ Fecha del servicio validada correctamente: "2026-01-09"
+```
+
+**Fecha malformada (sanitizada)**:
+```
+Input:  '252026-01-09'
+Sanitizado: '252026-01-09'
+Error: ❌ Formato de Fecha del servicio inválido
+Respuesta: 400 Bad Request - "Fecha del servicio debe tener el formato YYYY-MM-DD"
+```
+
+**Fecha inválida (ej: 31 de febrero)**:
+```
+Input:  '2026-02-31'
+Error: ❌ Fecha del servicio no es una fecha válida: "2026-02-31"
+Respuesta: 400 Bad Request
+```
+
+### Prevención
+
+La validación previene:
+- ✅ Fechas con formato incorrecto (más o menos dígitos)
+- ✅ Fechas con caracteres extra (espacios, letras, símbolos)
+- ✅ Fechas inválidas (31 de febrero, 13 de mes, etc.)
+- ✅ Valores null, undefined o vacíos
+- ✅ Concatenaciones incorrectas que generen formatos raros
+
+### Archivos Modificados
+
+- `backend/server-db.js`:
+  - Función `validarYSanitizarFecha()` (líneas 2881-2931)
+  - Validación en `/enviar-reserva-express` (líneas 3050-3073)
+
+> [!NOTE]
+> Esta validación se aplica a **todas** las reservas express, incluyendo las creadas desde:
+> - Flujo de "Pagar con Código"
+> - Flujo de reserva express normal
+> - Cualquier otro flujo que use el endpoint `/enviar-reserva-express`
+
+---
+
 ## 13. Validación y Sanitización de Fechas en Reservas
 
 **Implementado: 7 Enero 2026**
