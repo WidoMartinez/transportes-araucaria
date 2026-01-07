@@ -21,6 +21,7 @@ import {
   CalendarDays,
   Ban,
   Percent,
+  Sliders,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
   Star
@@ -100,7 +101,8 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
         { id: "productos", label: "Productos", icon: Package },
         { id: "disponibilidad", label: "Disponibilidad", icon: Calendar },
         { id: "festivos", label: "Festivos", icon: CalendarDays },
-        { id: "bloqueos", label: "Bloqueos de Agenda", icon: Ban }
+        { id: "bloqueos", label: "Bloqueos de Agenda", icon: Ban },
+        { id: "configuracion", label: "Configuración General", icon: Sliders }
       ]
     },
     {
