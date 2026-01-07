@@ -106,7 +106,6 @@ DB_USER=u419311572_admin
 DB_PASSWORD=tu_password_aqui
 
 # Pagos
-MERCADOPAGO_ACCESS_TOKEN=tu_token_aqui
 FLOW_API_KEY=tu_api_key_aqui
 FLOW_SECRET_KEY=tu_secret_key_aqui
 ```
