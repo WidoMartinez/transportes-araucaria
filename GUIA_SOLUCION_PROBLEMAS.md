@@ -483,3 +483,26 @@ Cuando se agreguen columnas nuevas que tienen índices definidos en el modelo:
 - `backend/server-db.js` (Reordenamiento de inicialización)
 - `backend/models/CodigoPago.js` (Definición de índices)
 - `backend/migrations/add-client-data-to-codigos-pago.js` (Script de migración)
+ 
+ ---
+ 
+ ## 11. Error "Faltan campos requeridos: fecha" en Pagos de Diferencia
+ 
+ ### Problema
+ Al intentar pagar un código de diferencia vinculado a una reserva, el sistema arroja el error "Faltan campos requeridos: fecha" y no permite procesar el pago.
+ 
+ ### Causa
+ 1. **Inconsistencia en el Frontend**: La interfaz ocultaba los campos de fecha/hora para códigos vinculados (usando el código de texto `AR-...`), pero la lógica de envío (`procesarPagoConCodigoFlow`) solo saltaba la creación de la reserva si existía el ID numérico (`reservaVinculadaId`).
+ 2. **Datos faltantes**: Si el ID era nulo, el frontend intentaba crear una "reserva express" vacía (ya que los campos estaban ocultos y no se validaban), lo que el backend rechazaba por falta de `fecha`.
+ 3. **Error en Admin**: El panel de administración no estaba enviando el `reservaVinculadaId` al crear el código, solo el código de texto.
+ 
+ ### Solución (Enero 2026)
+ 1. **Admin**: Se actualizó `AdminCodigosPago.jsx` para incluir `reservaVinculadaId` en el payload de creación.
+ 2. **Bypass Robusto**: Se modificó `PagarConCodigo.jsx` para que el bypass de creación de reserva se active si existe **o bien el ID o bien el código de texto** (`AR-...`).
+ 3. **Consistencia**: Se unificaron los criterios de validación, renderizado y procesamiento bajo una misma lógica de vinculación.
+ 
+ **Archivos afectados**:
+ - `src/components/AdminCodigosPago.jsx` (Guardado de ID)
+ - `src/components/PagarConCodigo.jsx` (Lógica de bypass y validación)
+ - `backend/models/CodigoPago.js` (Estructura de datos)
+

@@ -56,6 +56,7 @@ function AdminCodigosPago() {
 		telefonoCliente: "",
 		direccionCliente: "",
 		codigoReservaVinculado: "",
+		reservaVinculadaId: null,
 	});
 	const backendUrl = getBackendUrl();
 	const { authenticatedFetch } = useAuthenticatedFetch();
@@ -102,22 +103,22 @@ function AdminCodigosPago() {
 					console.log("📍 Reserva vinculada encontrada:", r);
 					setFormData(prev => ({
 						...prev,
-						nombreCliente: r.nombre || prev.nombreCliente,
-						emailCliente: r.email || prev.emailCliente,
-						telefonoCliente: r.telefono || prev.telefonoCliente,
+						nombreCliente: r.nombre || prev.nombreCliente || "",
+						emailCliente: r.email || prev.emailCliente || "",
+						telefonoCliente: r.telefono || prev.telefonoCliente || "",
 						// Guardar el ID real para el backend
 						reservaVinculadaId: r.id || prev.reservaVinculadaId,
 						// Auto-completar origen, destino, pasajeros y vehículo
-						origen: r.origen || prev.origen,
-						destino: r.destino || prev.destino,
-						pasajeros: r.pasajeros || prev.pasajeros,
-						vehiculo: r.vehiculo || prev.vehiculo,
+						origen: r.origen || prev.origen || "",
+						destino: r.destino || prev.destino || "",
+						pasajeros: r.pasajeros || prev.pasajeros || 1,
+						vehiculo: r.vehiculo || prev.vehiculo || "",
 						// Lógica inteligente de dirección:
 						// Si el origen es aeropuerto, la dirección relevante es el destino.
 						// Si el destino es aeropuerto, la dirección relevante es el origen.
 						direccionCliente: (r.origen || "").includes("Aeropuerto") 
-							? r.direccionDestino 
-							: r.direccionOrigen
+							? (r.direccionDestino || prev.direccionCliente || "")
+							: (r.direccionOrigen || prev.direccionCliente || "")
 					}));
 				}
 			} catch (e) {
@@ -296,6 +297,7 @@ function AdminCodigosPago() {
 				telefonoCliente: formData.telefonoCliente.trim() || null,
 				direccionCliente: formData.direccionCliente.trim() || null,
 				codigoReservaVinculado: formData.codigoReservaVinculado.trim() || null,
+				reservaVinculadaId: formData.reservaVinculadaId || null,
 			};
 			const response = await authenticatedFetch(`/api/codigos-pago`, {
 				method: "POST",
@@ -327,6 +329,7 @@ function AdminCodigosPago() {
 				telefonoCliente: "",
 				direccionCliente: "",
 				codigoReservaVinculado: "",
+				reservaVinculadaId: null,
 			});
 			setShowCrearDialog(false);
 			cargarCodigos();

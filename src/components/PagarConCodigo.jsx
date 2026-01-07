@@ -181,15 +181,20 @@ function PagarConCodigo() {
 			setError("Por favor ingresa tu teléfono");
 			return false;
 		}
-		if (!formData.fecha) {
-			setError("Por favor selecciona la fecha del servicio");
-			return false;
+
+		// Si NO es un pago vinculado, validar fecha, hora y dirección
+		if (!codigoValidado?.codigoReservaVinculado) {
+			if (!formData.fecha) {
+				setError("Por favor selecciona la fecha del servicio");
+				return false;
+			}
+			if (!formData.hora) {
+				setError("Por favor selecciona la hora del servicio");
+				return false;
+			}
 		}
-		if (!formData.hora) {
-			setError("Por favor selecciona la hora del servicio");
-			return false;
-		}
-		if (esIdaVuelta) {
+
+		if (esIdaVuelta && !codigoValidado?.codigoReservaVinculado) {
 			if (!formData.fechaRegreso) {
 				setError("Por favor indica la fecha del viaje de regreso");
 				return false;
@@ -213,8 +218,8 @@ function PagarConCodigo() {
 				return false;
 			}
 		}
-		// Validar dirección obligatoria según sentido del viaje
-		if (codigoValidado) {
+		// Validar dirección obligatoria según sentido del viaje (solo si NO es pago vinculado)
+		if (codigoValidado && !codigoValidado.codigoReservaVinculado) {
 			if (
 				codigoValidado.origen === "Aeropuerto La Araucanía" &&
 				!formData.direccionDestino.trim()
@@ -303,11 +308,11 @@ function PagarConCodigo() {
 			let reservaId = null;
 			let codigoReservaGenerado = null;
 
-			// SI EL CÓDIGO YA ESTÁ VINCULADO A UNA RESERVA, NO CREAMOS UNA NUEVA
-			if (codigoValidado.reservaVinculadaId) {
+			// SI EL CÓDIGO YA ESTÁ VINCULADO A UNA RESERVA (POR ID O POR CÓDIGO AR-...), NO CREAMOS UNA NUEVA
+			if (codigoValidado.reservaVinculadaId || codigoValidado.codigoReservaVinculado) {
 				console.log("🔗 Pago vinculado detectado. Saltando creación de reserva express.");
-				reservaId = codigoValidado.reservaVinculadaId;
-				codigoReservaGenerado = codigoValidado.codigoReservaVinculado;
+				reservaId = codigoValidado.reservaVinculadaId || null;
+				codigoReservaGenerado = codigoValidado.codigoReservaVinculado || null;
 			} else {
 				// FLUJO NORMAL: Crear reserva express
 				const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
@@ -386,12 +391,18 @@ function PagarConCodigo() {
 						</p>
 						{codigoValidado?.codigoReservaVinculado && (
 							<div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-lg flex items-start gap-3">
-								<Info className="h-5 w-5 text-primary mt-0.5" />
-								<div>
+								<Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+								<div className="flex-1">
 									<p className="text-sm font-semibold text-primary">Pago de Diferencia</p>
-									<p className="text-xs text-primary/80">
+									<p className="text-xs text-primary/80 mt-1">
 										Este pago está vinculado a la reserva <strong>{codigoValidado.codigoReservaVinculado}</strong>. No se generará un nuevo viaje.
 									</p>
+									{codigoValidado.descripcion && (
+										<div className="mt-2 pt-2 border-t border-primary/20">
+											<p className="text-xs text-primary/70 font-medium">Motivo:</p>
+											<p className="text-sm text-primary font-semibold italic">"{codigoValidado.descripcion}"</p>
+										</div>
+									)}
 								</div>
 							</div>
 						)}
@@ -504,214 +515,254 @@ function PagarConCodigo() {
 
 							{/* Formulario de datos */}
 							<div className="space-y-4">
-								{/* Nombre */}
-								<div className="space-y-2">
-									<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
-										Nombre completo <span className="text-red-500">*</span>
-									</Label>
-									<div className="relative">
-										<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-										<Input
-											id="nombre"
-											name="nombre"
-											value={formData.nombre}
-											onChange={handleInputChange}
-											placeholder="Juan Pérez"
-											className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-										/>
-									</div>
-								</div>
-
-								{/* Email y Teléfono */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div className="space-y-2">
-										<Label htmlFor="email" className="text-sm font-semibold text-foreground">
-											Email <span className="text-red-500">*</span>
-										</Label>
-										<div className="relative">
-											<Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="email"
-												name="email"
-												type="email"
-												value={formData.email}
-												onChange={handleInputChange}
-												placeholder="tu@email.cl"
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
+								{codigoValidado?.codigoReservaVinculado ? (
+									/* Vista de Resumen para Pagos Vinculados */
+									<div className="bg-primary/5 border border-primary/10 rounded-lg p-4 space-y-4">
+										<p className="text-sm font-semibold text-primary border-b border-primary/10 pb-2">
+											Datos del Cliente (Asociados a la reserva)
+										</p>
+										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground block">Nombre</span>
+												<span className="text-sm font-medium flex items-center gap-2">
+													<User className="h-4 w-4 text-primary/60 flex-shrink-0" />
+													<span className="break-words">{formData.nombre}</span>
+												</span>
+											</div>
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground block">Email</span>
+												<span className="text-sm font-medium flex items-center gap-2">
+													<Mail className="h-4 w-4 text-primary/60 flex-shrink-0" />
+													<span className="break-all">{formData.email}</span>
+												</span>
+											</div>
+											<div className="space-y-1">
+												<span className="text-xs text-muted-foreground block">Teléfono</span>
+												<span className="text-sm font-medium flex items-center gap-2">
+													<Phone className="h-4 w-4 text-primary/60 flex-shrink-0" />
+													<span>{formData.telefono}</span>
+												</span>
+											</div>
 										</div>
 									</div>
-									<div className="space-y-2">
-										<Label htmlFor="telefono" className="text-sm font-semibold text-foreground">
-											Teléfono <span className="text-red-500">*</span>
-										</Label>
-										<div className="relative">
-											<Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="telefono"
-												name="telefono"
-												value={formData.telefono}
-												onChange={handleInputChange}
-												placeholder="+56 9 1234 5678"
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
-										</div>
-									</div>
-								</div>
-
-								{/* Fecha y Hora */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div className="space-y-2">
-										<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
-											Fecha <span className="text-red-500">*</span>
-										</Label>
-										<div className="relative">
-											<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="fecha"
-												name="fecha"
-												type="date"
-												value={formData.fecha}
-												onChange={handleInputChange}
-												min={new Date().toISOString().split("T")[0]}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
-										</div>
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="hora" className="text-sm font-semibold text-foreground">
-											Hora <span className="text-red-500">*</span>
-										</Label>
-										<div className="relative">
-											<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<select
-												id="hora"
-												name="hora"
-												value={formData.hora}
-												onChange={handleInputChange}
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
-											>
-												<option value="">Seleccionar...</option>
-												{TIME_OPTIONS.map((hora) => (
-													<option key={hora} value={hora}>{hora}</option>
-												))}
-											</select>
-										</div>
-									</div>
-								</div>
-
-								{/* Campos de regreso para ida y vuelta */}
-								{esIdaVuelta && (
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								) : (
+									/* Vista de Formulario para Códigos Normales */
+									<>
+										{/* Nombre */}
 										<div className="space-y-2">
-											<Label htmlFor="fechaRegreso" className="text-sm font-semibold text-foreground">
-												Fecha regreso <span className="text-red-500">*</span>
+											<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
+												Nombre completo <span className="text-red-500">*</span>
 											</Label>
 											<div className="relative">
-												<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+												<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 												<Input
-													id="fechaRegreso"
-													name="fechaRegreso"
-													type="date"
-													value={formData.fechaRegreso}
+													id="nombre"
+													name="nombre"
+													value={formData.nombre}
 													onChange={handleInputChange}
-													min={formData.fecha || new Date().toISOString().split("T")[0]}
+													placeholder="Juan Pérez"
 													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 												/>
 											</div>
 										</div>
-										<div className="space-y-2">
-											<Label htmlFor="horaRegreso" className="text-sm font-semibold text-foreground">
-												Hora regreso <span className="text-red-500">*</span>
-											</Label>
-											<div className="relative">
-												<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-												<select
-													id="horaRegreso"
-													name="horaRegreso"
-													value={formData.horaRegreso}
-													onChange={handleInputChange}
-													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
-												>
-													<option value="">Seleccionar...</option>
-													{TIME_OPTIONS.map((hora) => (
-														<option key={`regreso-${hora}`} value={hora}>{hora}</option>
-													))}
-												</select>
+
+										{/* Email y Teléfono */}
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-2">
+												<Label htmlFor="email" className="text-sm font-semibold text-foreground">
+													Email <span className="text-red-500">*</span>
+												</Label>
+												<div className="relative">
+													<Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+													<Input
+														id="email"
+														name="email"
+														type="email"
+														value={formData.email}
+														onChange={handleInputChange}
+														placeholder="tu@email.cl"
+														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													/>
+												</div>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="telefono" className="text-sm font-semibold text-foreground">
+													Teléfono <span className="text-red-500">*</span>
+												</Label>
+												<div className="relative">
+													<Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+													<Input
+														id="telefono"
+														name="telefono"
+														value={formData.telefono}
+														onChange={handleInputChange}
+														placeholder="+56 9 1234 5678"
+														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													/>
+												</div>
 											</div>
 										</div>
-									</div>
+									</>
 								)}
 
-								{/* Dirección (según sentido del viaje) */}
-								{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
-									<div className="space-y-2">
-										<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
-											Dirección de destino <span className="text-red-500">*</span>
-										</Label>
-										<AddressAutocomplete
-											id="direccionDestino"
-											name="direccionDestino"
-											value={formData.direccionDestino}
-											onChange={handleInputChange}
-											placeholder="Av. Alemania 1234, Temuco"
-											className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											required
-										/>
-									</div>
-								)}
-								{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
-									<div className="space-y-2">
-										<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
-											Dirección de origen <span className="text-red-500">*</span>
-										</Label>
-										<AddressAutocomplete
-											id="direccionOrigen"
-											name="direccionOrigen"
-											value={formData.direccionOrigen}
-											onChange={handleInputChange}
-											placeholder="Av. O'Higgins 567, Temuco"
-											className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											required
-										/>
-									</div>
-								)}
+								{/* Datos de viaje (Fecha, Hora, Dirección, etc.) - OCULTOS SI ES PAGO VINCULADO */}
+								{!codigoValidado?.codigoReservaVinculado && (
+									<>
+										{/* Fecha y Hora */}
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-2">
+												<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
+													Fecha <span className="text-red-500">*</span>
+												</Label>
+												<div className="relative">
+													<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+													<Input
+														id="fecha"
+														name="fecha"
+														type="date"
+														value={formData.fecha}
+														onChange={handleInputChange}
+														min={new Date().toISOString().split("T")[0]}
+														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													/>
+												</div>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="hora" className="text-sm font-semibold text-foreground">
+													Hora <span className="text-red-500">*</span>
+												</Label>
+												<div className="relative">
+													<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+													<select
+														id="hora"
+														name="hora"
+														value={formData.hora}
+														onChange={handleInputChange}
+														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+													>
+														<option value="">Seleccionar...</option>
+														{TIME_OPTIONS.map((hora) => (
+															<option key={hora} value={hora}>{hora}</option>
+														))}
+													</select>
+												</div>
+											</div>
+										</div>
 
-								{/* Campos opcionales en fila */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div className="space-y-2">
-										<Label htmlFor="numeroVuelo" className="text-sm font-semibold text-foreground">
-											Nº de vuelo (opcional)
-										</Label>
-										<div className="relative">
-											<Plane className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="numeroVuelo"
-												name="numeroVuelo"
-												value={formData.numeroVuelo}
-												onChange={handleInputChange}
-												placeholder="LA1234"
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
+										{/* Campos de regreso para ida y vuelta */}
+										{esIdaVuelta && (
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												<div className="space-y-2">
+													<Label htmlFor="fechaRegreso" className="text-sm font-semibold text-foreground">
+														Fecha regreso <span className="text-red-500">*</span>
+													</Label>
+													<div className="relative">
+														<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+														<Input
+															id="fechaRegreso"
+															name="fechaRegreso"
+															type="date"
+															value={formData.fechaRegreso}
+															onChange={handleInputChange}
+															min={formData.fecha || new Date().toISOString().split("T")[0]}
+															className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+														/>
+													</div>
+												</div>
+												<div className="space-y-2">
+													<Label htmlFor="horaRegreso" className="text-sm font-semibold text-foreground">
+														Hora regreso <span className="text-red-500">*</span>
+													</Label>
+													<div className="relative">
+														<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+														<select
+															id="horaRegreso"
+															name="horaRegreso"
+															value={formData.horaRegreso}
+															onChange={handleInputChange}
+															className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+														>
+															<option value="">Seleccionar...</option>
+															{TIME_OPTIONS.map((hora) => (
+																<option key={`regreso-${hora}`} value={hora}>{hora}</option>
+															))}
+														</select>
+													</div>
+												</div>
+											</div>
+										)}
+
+										{/* Dirección (según sentido del viaje) */}
+										{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
+											<div className="space-y-2">
+												<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
+													Dirección de destino <span className="text-red-500">*</span>
+												</Label>
+												<AddressAutocomplete
+													id="direccionDestino"
+													name="direccionDestino"
+													value={formData.direccionDestino}
+													onChange={handleInputChange}
+													placeholder="Av. Alemania 1234, Temuco"
+													className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													required
+												/>
+											</div>
+										)}
+										{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
+											<div className="space-y-2">
+												<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
+													Dirección de origen <span className="text-red-500">*</span>
+												</Label>
+												<AddressAutocomplete
+													id="direccionOrigen"
+													name="direccionOrigen"
+													value={formData.direccionOrigen}
+													onChange={handleInputChange}
+													placeholder="Av. O'Higgins 567, Temuco"
+													className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													required
+												/>
+											</div>
+										)}
+
+										{/* Campos opcionales en fila */}
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-2">
+												<Label htmlFor="numeroVuelo" className="text-sm font-semibold text-foreground">
+													Nº de vuelo (opcional)
+												</Label>
+												<div className="relative">
+													<Plane className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+													<Input
+														id="numeroVuelo"
+														name="numeroVuelo"
+														value={formData.numeroVuelo}
+														onChange={handleInputChange}
+														placeholder="LA1234"
+														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													/>
+												</div>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="hotel" className="text-sm font-semibold text-foreground">
+													Hotel (opcional)
+												</Label>
+												<div className="relative">
+													<Building2 className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+													<Input
+														id="hotel"
+														name="hotel"
+														value={formData.hotel}
+														onChange={handleInputChange}
+														placeholder="Hotel Dreams"
+														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+													/>
+												</div>
+											</div>
 										</div>
-									</div>
-									<div className="space-y-2">
-										<Label htmlFor="hotel" className="text-sm font-semibold text-foreground">
-											Hotel (opcional)
-										</Label>
-										<div className="relative">
-											<Building2 className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-											<Input
-												id="hotel"
-												name="hotel"
-												value={formData.hotel}
-												onChange={handleInputChange}
-												placeholder="Hotel Dreams"
-												className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-											/>
-										</div>
-									</div>
-								</div>
+									</>
+								)}
 							</div>
 
 							{/* Mensaje de error */}
