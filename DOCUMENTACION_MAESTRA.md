@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 3 Enero 2026
-> **Versión**: 1.2
+> **Última Actualización**: 7 Enero 2026
+> **Versión**: 1.3
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -62,6 +62,28 @@ VITE_API_URL=https://transportes-araucaria.onrender.com
 - **Idioma**: Todo en Español (código, commits, docs).
 - **Archivos Protegidos**: No modificar archivos en `.github/` sin autorización.
 - **PHP**: Los archivos PHP en Hostinger se despliegan **manualmente**. No sobrescribir lógica de correos sin verificar `INTEGRACION_EMAILS_PHP.md`.
+
+### Sistema de Documentación
+
+**Documentos Maestros Oficiales:**
+- **`DOCUMENTACION_MAESTRA.md`**: Funcionalidades, arquitectura, flujos de usuario y sistemas técnicos
+- **`GUIA_SOLUCION_PROBLEMAS.md`**: Troubleshooting, errores recurrentes y sus soluciones
+
+**Workflow de Documentación:**
+El proyecto incluye el workflow `/documentacion` que debe ejecutarse después de:
+- Resolver un bug complejo
+- Implementar una nueva funcionalidad mayor
+- Modificar la arquitectura del sistema
+- Detectar que la documentación está desactualizada
+
+**Reglas Críticas para Agentes:**
+1. **SIEMPRE consultar** `DOCUMENTACION_MAESTRA.md` y `GUIA_SOLUCION_PROBLEMAS.md` antes de intervenir el proyecto
+2. Si el problema ya está documentado en `GUIA_SOLUCION_PROBLEMAS.md`, seguir la solución establecida
+3. Después de resolver un problema nuevo, actualizar la documentación usando `/documentacion`
+4. **No crear documentos nuevos** innecesarios, editar y completar los existentes
+
+> [!IMPORTANT]
+> **Para Agentes IA**: La documentación contiene soluciones a problemas recurrentes. Consultarla antes de actuar evita errores iterativos y mantiene la consistencia del proyecto.
 
 ---
 

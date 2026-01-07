@@ -301,3 +301,140 @@ Para verificar que el sistema funciona correctamente:
 
 ---
 
+## 9. Sistema de Documentación y Workflow
+
+**Implementado: 7 Enero 2026**
+
+### Problema
+Los agentes IA y desarrolladores no consultaban la documentación antes de hacer cambios, resultando en:
+- Errores iterativos (resolver el mismo problema múltiples veces)
+- Soluciones inconsistentes con la arquitectura establecida
+- Documentación desactualizada y fragmentada
+- Pérdida de conocimiento sobre problemas ya resueltos
+
+### Causa
+- No había un sistema estructurado para consultar documentación
+- No existía un workflow estandarizado para actualizar documentación
+- Las reglas del agente no priorizaban la consulta de documentación
+- Información dispersa en múltiples archivos
+
+### Solución (Sistema Completo Implementado)
+
+#### 1. Documentos Maestros Oficiales
+
+**Solo estos dos documentos deben mantenerse**:
+- **`DOCUMENTACION_MAESTRA.md`**: Arquitectura, funcionalidades, flujos técnicos
+- **`GUIA_SOLUCION_PROBLEMAS.md`**: Troubleshooting, errores recurrentes (este documento)
+
+**Regla crítica**: NO crear documentos nuevos. Consolidar toda información en estos dos.
+
+#### 2. Guía Rápida para Agentes
+
+**Archivo**: `.agent/GUIA_AGENTE.md`
+
+Contiene:
+- Checklist pre-intervención
+- Mapa de dónde encontrar información específica
+- Reglas críticas de arquitectura
+- Referencias rápidas a secciones clave
+
+**Cuándo consultar**: SIEMPRE antes de hacer cualquier cambio en el proyecto.
+
+#### 3. Workflow de Documentación
+
+**Comando**: `/documentacion`
+
+**Archivo**: `.agent/workflows/documentacion.md`
+
+**Pasos del workflow**:
+1. Revisar cambios recientes
+2. Identificar qué documentar (funcionalidad vs problema)
+3. Actualizar `DOCUMENTACION_MAESTRA.md` (si es funcionalidad/arquitectura)
+4. Actualizar `GUIA_SOLUCION_PROBLEMAS.md` (si es bug/error)
+5. Verificar consistencia
+6. Commit de cambios (auto-ejecutable con turbo)
+
+**Cuándo ejecutar**:
+- Después de resolver un bug complejo
+- Al implementar una nueva funcionalidad mayor
+- Al modificar la arquitectura del sistema
+- Cuando se detecte documentación desactualizada
+
+#### 4. Configuración del Agente
+
+**Archivo**: `.agent/customize.yaml`
+
+**Reglas críticas agregadas**:
+```yaml
+# === DOCUMENTACIÓN OBLIGATORIA ===
+- "CRÍTICO: Antes de intervenir el proyecto, SIEMPRE consultar .agent/GUIA_AGENTE.md, DOCUMENTACION_MAESTRA.md y GUIA_SOLUCION_PROBLEMAS.md"
+- "Si el problema ya está documentado en GUIA_SOLUCION_PROBLEMAS.md, seguir la solución establecida sin inventar alternativas"
+- "Después de resolver un problema nuevo o implementar funcionalidad, actualizar la documentación usando /documentacion"
+```
+
+### Flujo de Trabajo Correcto
+
+**Para Agentes IA**:
+```
+1. Recibir tarea
+2. Consultar .agent/GUIA_AGENTE.md (visión general)
+3. Consultar DOCUMENTACION_MAESTRA.md (arquitectura/funcionalidad)
+4. Consultar GUIA_SOLUCION_PROBLEMAS.md (si es un error)
+5. ¿Problema ya documentado?
+   - SÍ → Seguir solución establecida
+   - NO → Implementar solución nueva
+6. Ejecutar cambios
+7. Ejecutar /documentacion
+8. Actualizar documentos maestros
+9. Commit
+```
+
+**Para Desarrolladores**:
+```
+1. Onboarding → Leer GUIA_AGENTE.md
+2. Desarrollo → Consultar DOCUMENTACION_MAESTRA.md
+3. Debugging → Consultar GUIA_SOLUCION_PROBLEMAS.md
+4. Después de cambios → Ejecutar /documentacion
+```
+
+### Verificación de Uso Correcto
+
+**Checklist antes de intervenir**:
+- [ ] ¿Consulté `.agent/GUIA_AGENTE.md`?
+- [ ] ¿Consulté `DOCUMENTACION_MAESTRA.md`?
+- [ ] ¿Consulté `GUIA_SOLUCION_PROBLEMAS.md`?
+- [ ] ¿El problema ya tiene solución documentada?
+- [ ] ¿Entiendo la arquitectura del sistema?
+
+**Checklist después de resolver**:
+- [ ] ¿Ejecuté `/documentacion`?
+- [ ] ¿Actualicé el documento correcto?
+- [ ] ¿Documenté archivos y líneas modificadas?
+- [ ] ¿Hice commit con mensaje descriptivo?
+
+### Beneficios Esperados
+
+✅ **Menos errores iterativos**: Problemas se resuelven una sola vez
+✅ **Consistencia**: Todos siguen la misma arquitectura
+✅ **Conocimiento centralizado**: Toda la información en 2 documentos
+✅ **Onboarding rápido**: Nuevos desarrolladores encuentran todo fácilmente
+✅ **Documentación actualizada**: Workflow automático mantiene docs al día
+
+### Archivos Modificados
+
+- `.agent/workflows/documentacion.md` (nuevo)
+- `.agent/GUIA_AGENTE.md` (nuevo)
+- `.agent/customize.yaml` (líneas 6-11)
+- `DOCUMENTACION_MAESTRA.md` (líneas 3-4, 66-88)
+
+### Referencias
+
+- **Guía rápida**: `.agent/GUIA_AGENTE.md`
+- **Workflow**: `.agent/workflows/documentacion.md`
+- **Documentación maestra**: `DOCUMENTACION_MAESTRA.md` (Sección 2)
+- **Configuración**: `.agent/customize.yaml`
+
+> [!IMPORTANT]
+> **Regla de Oro**: Siempre consultar documentación ANTES de intervenir. Si el problema ya está documentado aquí, seguir la solución establecida.
+
+---

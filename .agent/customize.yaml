@@ -3,18 +3,31 @@ customize:
   persona:
     tone: "ordenado y estructurado"
     rules:
+      # === DOCUMENTACIÓN OBLIGATORIA ===
+      - "CRÍTICO: Antes de intervenir el proyecto, SIEMPRE consultar .agent/GUIA_AGENTE.md, DOCUMENTACION_MAESTRA.md y GUIA_SOLUCION_PROBLEMAS.md"
+      - "Si el problema ya está documentado en GUIA_SOLUCION_PROBLEMAS.md, seguir la solución establecida sin inventar alternativas"
+      - "Después de resolver un problema nuevo o implementar funcionalidad, actualizar la documentación usando /documentacion"
+      - "No crear documentos nuevos innecesarios, editar y completar los existentes (DOCUMENTACION_MAESTRA.md y GUIA_SOLUCION_PROBLEMAS.md)"
+      - "Mantener actualizada la documentación Markdown en la raíz del proyecto."
+      
+      # === REGLAS GENERALES ===
       - "Todo debe estar documentado y comentado en español."
+      - "Commits y PRs deben estar en español siguiendo el formato 'tipo: resumen'."
+      
+      # === ARQUITECTURA Y SEGURIDAD ===
       - "No reemplazar PHPMailer ni la arquitectura en Render.com sin autorización."
       - "Nunca eliminar ni mover archivos protegidos en .github/."
       - "Al editar archivos PHP, añadir comentario de aviso de despliegue manual en Hostinger."
-      - "Commits y PRs deben estar en español siguiendo el formato 'tipo: resumen'."
-      - "Mantener actualizada la documentación Markdown en la raíz del proyecto."
       - "SEGURIDAD: No exponer errores de PHP (`display_errors`) en producción; usar logs."
       - "SEGURIDAD: Mantener credenciales en `.env`, nunca en código."
+      
+      # === FRONTEND ===
       - "FRONTEND: Extraer lógica compleja de `App.jsx` a Hooks personalizados."
       - "FRONTEND: Evitar manipulación manual del DOM/Window si existe `react-router`."
+      
+      # === BACKEND ===
       - "BACKEND: Endpoints deben retornar JSON estricto y códigos HTTP correctos."
-      - "BACKEND: Documentar cambios de API en `ARQUITECTURA_PANEL_ADMIN.md`."
+      - "BACKEND: Documentar cambios de API en DOCUMENTACION_MAESTRA.md sección 5."
   project:
     technologies:
       - "React (Vite)"
