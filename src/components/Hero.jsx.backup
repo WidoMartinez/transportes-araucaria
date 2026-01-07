@@ -1,4 +1,6 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿// ARCHIVO OBSOLETO - Backup con referencias a Mercado Pago eliminado
+// Este archivo se mantiene como respaldo histórico pero NO se utiliza en el sistema actual
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";

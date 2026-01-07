@@ -36,7 +36,6 @@ Ingresa tu información personal:
 #### Paso 5: Elige tu método de pago
 Puedes pagar con:
 - **Flow:** Webpay, Tarjetas, Transferencia
-- **Mercado Pago:** Tarjetas, Billetera digital
 
 #### Paso 6: Completa el pago
 Serás redirigido a la plataforma de pago segura. Sigue las instrucciones para completar tu pago.
@@ -69,7 +68,7 @@ Algunos códigos tienen fecha de vencimiento. Te lo indicaremos al enviártelo p
 No, el monto está fijado en el código. Si necesitas un servicio diferente, solicítanos un nuevo código.
 
 **¿Es seguro pagar en la web?**
-Sí, usamos plataformas de pago certificadas (Flow y Mercado Pago) con las máximas medidas de seguridad.
+Sí, usamos la plataforma de pago certificada Flow con las máximas medidas de seguridad.
 
 ---
 
@@ -251,7 +250,7 @@ Para pagar online:
 1️⃣ Visita: www.transportesaraucaria.cl/#pagar-codigo
 2️⃣ Ingresa tu código
 3️⃣ Completa tus datos
-4️⃣ Elige Flow o Mercado Pago
+4️⃣ Elige Flow como método de pago
 5️⃣ ¡Listo! Te confirmamos por email
 
 ¿Preguntas? ¡Escríbenos! 😊

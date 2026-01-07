@@ -47,7 +47,6 @@ Para probar el flujo de "Pagar con Código", sigue estos pasos manuales rápidos
 
 2.  **Verificar Redirección**:
     *   **Flow**: Selecciona Flow y verifica que redirige a la pasarela de sandbox/producción.
-    *   **MercadoPago**: Selecciona MP y verifica que abre el checkout.
 
 ## 4. Verificación PHP (Emails y Legado)
 

@@ -15,7 +15,7 @@ Se ha eliminado completamente el sistema alternativo basado en archivos JSON, ma
 - ✅ Base de datos MySQL en Hostinger (persistente)
 - ✅ Backend en Render.com usando `server-db.js`
 - ✅ Sistema de correos con phpmailer en Hostinger
-- ✅ Sistema de pagos (MercadoPago y Flow)
+- ✅ Sistema de pagos (Flow)
 
 ## 📊 Archivos Eliminados
 

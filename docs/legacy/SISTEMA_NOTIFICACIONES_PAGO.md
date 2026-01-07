@@ -2,7 +2,7 @@
 
 ## 📋 Resumen
 
-Sistema completo de confirmación de pagos que actualiza automáticamente la base de datos y envía correos de notificación tanto al cliente como al administrador cuando se confirma un pago a través de MercadoPago o Flow.
+Sistema completo de confirmación de pagos que actualiza automáticamente la base de datos y envía correos de notificación tanto al cliente como al administrador cuando se confirma un pago a través de Flow.
 
 ## 🎯 Componentes Implementados
 
@@ -29,7 +29,7 @@ Ubicación: `/enviar_confirmacion_pago.php` (en servidor Hostinger)
   "pasajeros": 2,
   "vehiculo": "Sedan",
   "monto": 25000,
-  "gateway": "MercadoPago",
+  "gateway": "Flow",
   "paymentId": "12345678",
   "estadoPago": "approved"
 }
@@ -43,28 +43,6 @@ Ubicación: `/enviar_confirmacion_pago.php` (en servidor Hostinger)
 - 📧 Información de contacto
 
 ### 2. **Webhooks de Pago** (Backend Node.js)
-
-#### Webhook MercadoPago (`/api/webhook-mercadopago`)
-
-**Flujo:**
-1. MercadoPago envía notificación POST al webhook
-2. Responde inmediatamente "200 OK" (requisito de MercadoPago)
-3. Consulta detalles del pago a la API de MercadoPago
-4. Busca la reserva en la BD (por external_reference o email)
-5. Actualiza estado de pago en la reserva:
-   - `estadoPago`: "aprobado"
-   - `pagoId`: ID de transacción
-   - `pagoGateway`: "mercadopago"
-   - `pagoMonto`: Monto pagado
-   - `pagoFecha`: Fecha del pago
-   - `estado`: "confirmada" (si no está en pendiente_detalles)
-6. Llama al PHP para enviar correo de confirmación
-
-**Configuración requerida:**
-```env
-MERCADOPAGO_ACCESS_TOKEN=tu_access_token
-BACKEND_URL=https://tu-backend.onrender.com
-```
 
 #### Webhook Flow (`/api/flow-confirmation`)
 
@@ -94,7 +72,7 @@ Nuevos campos agregados al modelo `Reserva`:
 ```javascript
 estadoPago: ENUM("pendiente", "aprobado", "pagado", "fallido", "reembolsado")
 pagoId: STRING(255) - ID de transacción del gateway
-pagoGateway: STRING(50) - Gateway utilizado (mercadopago, flow)
+pagoGateway: STRING(50) - Gateway utilizado (flow, transferencia, efectivo, otro)
 pagoMonto: DECIMAL(10,2) - Monto pagado
 pagoFecha: DATE - Fecha y hora del pago confirmado
 ```
@@ -120,7 +98,7 @@ sequenceDiagram
     participant Cliente
     participant Frontend
     participant Backend
-    participant Gateway as MercadoPago/Flow
+    participant Gateway as Flow
     participant Webhook as Backend Webhook
     participant BD as Base de Datos
     participant PHP as PHP Email Service
@@ -159,7 +137,6 @@ sequenceDiagram
 ## 🔐 Seguridad
 
 1. **Validación de webhooks:**
-   - MercadoPago: Consulta directa a su API para verificar pago
    - Flow: Usa firma HMAC-SHA256 con secret key
 
 2. **Respuesta rápida:**
@@ -171,18 +148,6 @@ sequenceDiagram
    - Errores no críticos no bloquean el flujo
 
 ## 🧪 Pruebas
-
-### Probar webhook MercadoPago:
-```bash
-curl -X POST https://tu-backend.onrender.com/api/webhook-mercadopago \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "payment",
-    "data": {
-      "id": "12345678"
-    }
-  }'
-```
 
 ### Probar webhook Flow:
 ```bash
@@ -219,7 +184,7 @@ curl -X POST https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php \
 El panel de administración muestra ahora:
 - **Estado de Pago:** pendiente, aprobado, pagado, fallido, reembolsado
 - **ID de Pago:** ID de transacción del gateway
-- **Gateway:** mercadopago, flow
+- **Gateway:** flow, transferencia, efectivo, otro
 - **Monto Pagado:** Monto de la transacción
 - **Fecha de Pago:** Cuándo se confirmó el pago
 
@@ -236,7 +201,6 @@ Los siguientes archivos obsoletos fueron eliminados:
 
 2. **Variables de entorno en Render:**
    ```env
-   MERCADOPAGO_ACCESS_TOKEN=...
    FLOW_API_KEY=...
    FLOW_SECRET_KEY=...
    BACKEND_URL=https://tu-backend.onrender.com
@@ -244,13 +208,11 @@ Los siguientes archivos obsoletos fueron eliminados:
    ```
 
 3. **Configurar webhooks en gateways:**
-   - **MercadoPago:** Configurar en dashboard la URL: `https://tu-backend.onrender.com/api/webhook-mercadopago`
    - **Flow:** La URL de confirmación se pasa al crear el pago
 
 ## ✅ Checklist de Implementación
 
 - [x] Crear `enviar_confirmacion_pago.php`
-- [x] Implementar webhook MercadoPago funcional
 - [x] Implementar webhook Flow funcional
 - [x] Agregar campos de pago al modelo Reserva
 - [x] Crear migración automática `add-payment-fields.js`
@@ -258,7 +220,6 @@ Los siguientes archivos obsoletos fueron eliminados:
 - [x] Eliminar archivos PHP obsoletos
 - [x] Documentar sistema completo
 - [ ] Subir PHP a Hostinger
-- [ ] Configurar webhooks en MercadoPago dashboard
 - [ ] Probar flujo completo con pago real
 - [ ] Verificar emails recibidos por cliente y admin
 
