@@ -29,7 +29,7 @@ Ubicación: `/enviar_confirmacion_pago.php` (en servidor Hostinger)
   "pasajeros": 2,
   "vehiculo": "Sedan",
   "monto": 25000,
-  "gateway": "Flow",
+  "gateway": "flow",
   "paymentId": "12345678",
   "estadoPago": "approved"
 }
@@ -72,7 +72,7 @@ Nuevos campos agregados al modelo `Reserva`:
 ```javascript
 estadoPago: ENUM("pendiente", "aprobado", "pagado", "fallido", "reembolsado")
 pagoId: STRING(255) - ID de transacción del gateway
-pagoGateway: STRING(50) - Gateway utilizado (Flow, transferencia, efectivo, otro)
+pagoGateway: STRING(50) - Gateway utilizado (flow, transferencia, efectivo, otro)
 pagoMonto: DECIMAL(10,2) - Monto pagado
 pagoFecha: DATE - Fecha y hora del pago confirmado
 ```
@@ -184,7 +184,7 @@ curl -X POST https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php \
 El panel de administración muestra ahora:
 - **Estado de Pago:** pendiente, aprobado, pagado, fallido, reembolsado
 - **ID de Pago:** ID de transacción del gateway
-- **Gateway:** Flow, transferencia, efectivo, otro
+- **Gateway:** flow, transferencia, efectivo, otro
 - **Monto Pagado:** Monto de la transacción
 - **Fecha de Pago:** Cuándo se confirmó el pago
 
