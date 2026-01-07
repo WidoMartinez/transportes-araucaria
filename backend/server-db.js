@@ -3041,6 +3041,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		if (!emailNormalizado) {
 			return res.status(400).json({
+				success: false,
+				message: "El email es obligatorio",
+			});
 		}
 
 		datosReserva.email = emailNormalizado;

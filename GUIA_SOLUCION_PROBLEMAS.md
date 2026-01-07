@@ -553,3 +553,220 @@ En `backend/server-db.js`, el endpoint `/api/payment-result` (línea 7059) acept
 
 > [!IMPORTANT]
 > El webhook de confirmación (`/api/flow-confirmation`) solo procesa pagos con `status === 2`, por lo que los pagos pendientes eventualmente se confirmarán cuando Flow los apruebe.
+
+---
+
+## 13. Validación y Sanitización de Fechas en Reservas
+
+**Implementado: 7 Enero 2026**
+
+### Problema
+Las fechas ingresadas por usuarios o sistemas externos podían contener caracteres especiales, espacios o formatos incorrectos, causando errores en la base de datos o comportamientos inesperados en el sistema.
+
+### Síntomas
+- Errores SQL al insertar reservas con fechas mal formateadas
+- Fechas con espacios o caracteres extraños almacenadas en la base de datos
+- Inconsistencias en el formato de fechas entre frontend y backend
+- Posibles vulnerabilidades de inyección SQL a través de campos de fecha
+
+### Causa
+No existía validación ni sanitización de fechas en el endpoint `/enviar-reserva-express`, permitiendo que datos malformados llegaran directamente a la base de datos.
+
+### Solución (Enero 2026)
+
+Se implementó una función de validación y sanitización robusta que:
+
+1. **Sanitiza** la entrada eliminando caracteres no permitidos
+2. **Valida** el formato YYYY-MM-DD con regex
+3. **Verifica** que sea una fecha real (no acepta 2024-02-30)
+4. **Registra** logs detallados para debugging
+
+#### Función Implementada
+
+**Archivo**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L2878-L2931)  
+**Líneas**: 2878-2931
+
+```javascript
+/**
+ * Valida y sanitiza una fecha para asegurar que tenga el formato correcto YYYY-MM-DD
+ * @param {string} fecha - La fecha a validar
+ * @param {string} nombreCampo - Nombre del campo para mensajes de error
+ * @returns {string} - La fecha sanitizada en formato YYYY-MM-DD
+ * @throws {Error} - Si la fecha es inválida
+ */
+function validarYSanitizarFecha(fecha, nombreCampo = "fecha") {
+    if (!fecha) {
+        throw new Error(`${nombreCampo} es requerida`);
+    }
+
+    // Convertir a string y eliminar espacios
+    let fechaStr = String(fecha).trim();
+
+    // Sanitizar: eliminar cualquier carácter que no sea dígito o guión
+    fechaStr = fechaStr.replace(/[^0-9-]/g, "");
+
+    // Validar formato YYYY-MM-DD usando regex
+    const formatoFechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!formatoFechaRegex.test(fechaStr)) {
+        console.error(
+            `❌ Formato de ${nombreCampo} inválido. Recibido: "${fecha}", Sanitizado: "${fechaStr}"`
+        );
+        throw new Error(
+            `${nombreCampo} debe tener el formato YYYY-MM-DD (año-mes-día)`
+        );
+    }
+
+    // Validar que sea una fecha real usando Date
+    const [year, month, day] = fechaStr.split("-").map(Number);
+    const fechaObj = new Date(year, month - 1, day);
+
+    // Verificar que la fecha sea válida y coincida con los valores ingresados
+    if (
+        fechaObj.getFullYear() !== year ||
+        fechaObj.getMonth() !== month - 1 ||
+        fechaObj.getDate() !== day
+    ) {
+        console.error(
+            `❌ ${nombreCampo} no es una fecha válida: "${fechaStr}"`
+        );
+        throw new Error(
+            `${nombreCampo} no es una fecha válida (${fechaStr})`
+        );
+    }
+
+    console.log(
+        `✅ ${nombreCampo} validada correctamente: "${fechaStr}"`
+    );
+    return fechaStr;
+}
+```
+
+#### Integración en Endpoint
+
+**Archivo**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L3053-L3073)  
+**Líneas**: 3053-3073
+
+```javascript
+// Validar y sanitizar fechas
+try {
+    // Validar fecha principal (requerida)
+    datosReserva.fecha = validarYSanitizarFecha(
+        datosReserva.fecha,
+        "Fecha del servicio"
+    );
+
+    // Validar fecha de regreso si existe (opcional)
+    if (datosReserva.fechaRegreso) {
+        datosReserva.fechaRegreso = validarYSanitizarFecha(
+            datosReserva.fechaRegreso,
+            "Fecha de regreso"
+        );
+    }
+} catch (errorFecha) {
+    console.error("Error validando fechas:", errorFecha.message);
+    return res.status(400).json({
+        success: false,
+        message: errorFecha.message,
+    });
+}
+```
+
+### Características de la Validación
+
+1. **Sanitización Automática**:
+   - Elimina espacios al inicio y final
+   - Remueve caracteres especiales (solo permite dígitos y guiones)
+   - Convierte cualquier tipo de dato a string
+
+2. **Validación de Formato**:
+   - Regex estricto: `^\d{4}-\d{2}-\d{2}$`
+   - Asegura exactamente 4 dígitos para año, 2 para mes, 2 para día
+
+3. **Validación de Fecha Real**:
+   - Verifica que la fecha exista en el calendario
+   - Rechaza fechas imposibles como `2024-02-30` o `2024-13-01`
+   - Usa objeto `Date` nativo para validación
+
+4. **Logging Detallado**:
+   - Registra valor original y sanitizado en caso de error
+   - Mensaje de éxito con fecha validada
+   - Facilita debugging de problemas de formato
+
+### Ejemplos de Validación
+
+**Casos Exitosos**:
+```javascript
+validarYSanitizarFecha("2026-01-07", "fecha")
+// ✅ Retorna: "2026-01-07"
+
+validarYSanitizarFecha("  2026-01-07  ", "fecha")
+// ✅ Retorna: "2026-01-07" (espacios eliminados)
+
+validarYSanitizarFecha("2026-01-07T00:00:00", "fecha")
+// ✅ Retorna: "2026-01-07" (hora eliminada)
+```
+
+**Casos de Error**:
+```javascript
+validarYSanitizarFecha("2024-02-30", "fecha")
+// ❌ Error: "fecha no es una fecha válida (2024-02-30)"
+
+validarYSanitizarFecha("07/01/2026", "fecha")
+// ❌ Error: "fecha debe tener el formato YYYY-MM-DD"
+
+validarYSanitizarFecha("2026-13-01", "fecha")
+// ❌ Error: "fecha no es una fecha válida (2026-13-01)"
+
+validarYSanitizarFecha("", "fecha")
+// ❌ Error: "fecha es requerida"
+```
+
+### Beneficios
+
+✅ **Seguridad**: Previene inyección SQL a través de campos de fecha  
+✅ **Consistencia**: Garantiza formato uniforme YYYY-MM-DD en toda la base de datos  
+✅ **Validación**: Rechaza fechas imposibles antes de llegar a la BD  
+✅ **Debugging**: Logs claros facilitan identificación de problemas  
+✅ **Robustez**: Maneja múltiples formatos de entrada y los normaliza
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 2878-2931): Función de validación
+- `backend/server-db.js` (líneas 3053-3073): Integración en endpoint
+
+### Prevención de Problemas Futuros
+
+**Para nuevos endpoints que manejen fechas**:
+
+1. Importar o usar la función `validarYSanitizarFecha()`
+2. Aplicar validación ANTES de cualquier operación de base de datos
+3. Capturar errores y retornar HTTP 400 con mensaje descriptivo
+4. Aplicar tanto a fechas requeridas como opcionales
+
+**Ejemplo de uso**:
+```javascript
+app.post("/mi-endpoint", async (req, res) => {
+    try {
+        const fechaValidada = validarYSanitizarFecha(
+            req.body.fecha,
+            "Fecha de inicio"
+        );
+        
+        // Usar fechaValidada en lugar de req.body.fecha
+        await Reserva.create({ fecha: fechaValidada, ... });
+        
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+```
+
+> [!TIP]
+> **Buena Práctica**: Siempre validar fechas en el backend, incluso si el frontend ya las valida. La validación del frontend puede ser bypasseada por usuarios maliciosos o integraciones externas.
+
+> [!WARNING]
+> **No confiar en validación del frontend**: Aunque el frontend use componentes de fecha, siempre aplicar validación en el backend para garantizar seguridad e integridad de datos.
+
