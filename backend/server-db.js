@@ -3468,12 +3468,14 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			1
 		);
 		const observaciones = body.observaciones || "";
+
 		// Datos del cliente (opcionales)
 		const nombreCliente = String(body.nombreCliente || "").trim() || null;
 		const emailCliente = String(body.emailCliente || "").trim() || null;
 		const telefonoCliente = String(body.telefonoCliente || "").trim() || null;
 		const direccionCliente = String(body.direccionCliente || "").trim() || null;
 		const codigoReservaVinculado = String(body.codigoReservaVinculado || "").trim() || null;
+		const reservaVinculadaId = body.reservaVinculadaId || null;
 
 		if (!codigo) {
 			return res
@@ -3507,7 +3509,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			vehiculo,
 			pasajeros,
 			idaVuelta,
-			permitirAbono, // Nuevo campo
+			permitirAbono,
 			sillaInfantil,
 			fechaVencimiento,
 			usosMaximos,
@@ -3518,6 +3520,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			telefonoCliente,
 			direccionCliente,
 			codigoReservaVinculado,
+			reservaVinculadaId,
 			usosActuales: 0,
 			estado: "activo",
 		});
@@ -7775,6 +7778,42 @@ app.get("/api/reservas/:id/gastos", authAdmin, async (req, res) => {
 			success: false,
 			error: "Error al obtener gastos",
 		});
+	}
+});
+
+// Buscar una reserva específica por Código (AR-...) o ID
+app.get("/api/reservas/buscar/:codigo", authAdmin, async (req, res) => {
+	try {
+		const { codigo } = req.params;
+		let whereClause = {};
+
+		if (codigo.startsWith("AR-")) {
+			whereClause = { codigoReserva: codigo };
+		} else if (!isNaN(codigo)) {
+			whereClause = { id: codigo };
+		} else {
+			return res.status(400).json({ success: false, message: "Código de reserva inválido" });
+		}
+
+		const reserva = await Reserva.findOne({
+			where: whereClause,
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+					attributes: ["id", "nombre", "email", "telefono"],
+				},
+			],
+		});
+
+		if (!reserva) {
+			return res.status(404).json({ success: false, message: "Reserva no encontrada" });
+		}
+
+		res.json({ success: true, reserva });
+	} catch (error) {
+		console.error("Error al buscar reserva:", error);
+		res.status(500).json({ success: false, message: "Error interno del servidor" });
 	}
 });
 

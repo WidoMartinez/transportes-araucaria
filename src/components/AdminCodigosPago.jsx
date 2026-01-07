@@ -86,6 +86,43 @@ function AdminCodigosPago() {
 			cancelado = true;
 		};
 	}, [backendUrl]);
+	
+	// Buscar reserva vinculada automáticamente para pre-llenar datos
+	useEffect(() => {
+		const codigo = formData.codigoReservaVinculado?.trim().toUpperCase();
+		if (!codigo || !codigo.startsWith("AR-") || codigo.length < 13) return;
+
+		const buscar = async () => {
+			try {
+				const resp = await authenticatedFetch(`/api/reservas/buscar/${codigo}`);
+				if (!resp.ok) return;
+				const data = await resp.json();
+				if (data.success && data.reserva) {
+					const r = data.reserva;
+					console.log("📍 Reserva vinculada encontrada:", r);
+					setFormData(prev => ({
+						...prev,
+						nombreCliente: r.nombre || prev.nombreCliente,
+						emailCliente: r.email || prev.emailCliente,
+						telefonoCliente: r.telefono || prev.telefonoCliente,
+						// Guardar el ID real para el backend
+						reservaVinculadaId: r.id || prev.reservaVinculadaId,
+						// Lógica inteligente de dirección:
+						// Si el origen es aeropuerto, la dirección relevante es el destino.
+						// Si el destino es aeropuerto, la dirección relevante es el origen.
+						direccionCliente: (r.origen || "").includes("Aeropuerto") 
+							? r.direccionDestino 
+							: r.direccionOrigen
+					}));
+				}
+			} catch (e) {
+				console.error("Error buscando reserva vinculada:", e);
+			}
+		};
+
+		const timer = setTimeout(buscar, 600);
+		return () => clearTimeout(timer);
+	}, [formData.codigoReservaVinculado, authenticatedFetch]);
 
 	const origenes = useMemo(
 		() => ["Aeropuerto La Araucanía", ...destinosOpciones, "Otro"],

@@ -21,7 +21,8 @@ import {
 	Plane,
 	Building2,
 	Shield,
-	Baby
+	Baby,
+	Info
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 
@@ -299,27 +300,33 @@ function PagarConCodigo() {
 				reservaPayload.horaRegreso = formData.horaRegreso;
 			}
 
-			const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(reservaPayload),
-			});
-			const rj = await r.json();
-			if (!r.ok || rj.success === false) {
-				throw new Error(rj.message || "No se pudo crear la reserva");
+			let reservaId = null;
+			let codigoReservaGenerado = null;
+
+			// SI EL CÓDIGO YA ESTÁ VINCULADO A UNA RESERVA, NO CREAMOS UNA NUEVA
+			if (codigoValidado.reservaVinculadaId) {
+				console.log("🔗 Pago vinculado detectado. Saltando creación de reserva express.");
+				reservaId = codigoValidado.reservaVinculadaId;
+				codigoReservaGenerado = codigoValidado.codigoReservaVinculado;
+			} else {
+				// FLUJO NORMAL: Crear reserva express
+				const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(reservaPayload),
+				});
+				const rj = await r.json();
+				if (!r.ok || rj.success === false) {
+					throw new Error(rj.message || "No se pudo crear la reserva");
+				}
+				reservaId = rj.reservaId || rj.reserva?.id || null;
+				codigoReservaGenerado =
+					rj.codigoReserva ||
+					rj.codigo_reserva ||
+					rj.reserva?.codigoReserva ||
+					null;
 			}
 
-			// NOTA: no llamamos a `/completar-reserva-detalles/:id` desde el frontend porque
-			// ese endpoint en el backend marca la reserva como 'confirmada'. El backend
-			// debe marcar confirmada solo cuando reciba el webhook/callback de pago.
-			// Simplemente registramos el ID de reserva si existe y seguimos con el flujo
-			// de pago (no bloquear el proceso).
-			const reservaId = rj.reservaId || rj.reserva?.id || null;
-			const codigoReservaGenerado =
-				rj.codigoReserva ||
-				rj.codigo_reserva ||
-				rj.reserva?.codigoReserva ||
-				null;
 			const codigoPagoNormalizado = (codigoValidado.codigo || "")
 				.toString()
 				.toUpperCase();
@@ -377,6 +384,17 @@ function PagarConCodigo() {
 								: `Código: ${codigoValidado?.codigo || ""}`
 							}
 						</p>
+						{codigoValidado?.codigoReservaVinculado && (
+							<div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-lg flex items-start gap-3">
+								<Info className="h-5 w-5 text-primary mt-0.5" />
+								<div>
+									<p className="text-sm font-semibold text-primary">Pago de Diferencia</p>
+									<p className="text-xs text-primary/80">
+										Este pago está vinculado a la reserva <strong>{codigoValidado.codigoReservaVinculado}</strong>. No se generará un nuevo viaje.
+									</p>
+								</div>
+							</div>
+						)}
 					</div>
 
 					{/* =============== PASO 1: VALIDAR CÓDIGO =============== */}
