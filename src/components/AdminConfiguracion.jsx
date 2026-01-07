@@ -11,6 +11,7 @@ Loader2,
 AlertCircle 
 } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
+import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 
 /**
  * Panel de Configuración General del Sistema
@@ -21,6 +22,7 @@ const [whatsappInterceptActivo, setWhatsappInterceptActivo] = useState(true);
 const [loading, setLoading] = useState(true);
 const [saving, setSaving] = useState(false);
 const [feedback, setFeedback] = useState(null);
+const { authenticatedFetch } = useAuthenticatedFetch();
 
 // Cargar configuración actual al montar el componente
 useEffect(() => {
@@ -50,44 +52,42 @@ setLoading(false);
 };
 
 const handleToggleWhatsApp = async () => {
-const nuevoEstado = !whatsappInterceptActivo;
+	const nuevoEstado = !whatsappInterceptActivo;
 
-try {
-setSaving(true);
-const token = localStorage.getItem("token");
+	try {
+		setSaving(true);
 
-const response = await fetch(
-`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/configuracion/whatsapp-intercept`,
-{
-method: "PUT",
-headers: {
-"Content-Type": "application/json",
-Authorization: `Bearer ${token}`,
-},
-body: JSON.stringify({ activo: nuevoEstado }),
-}
-);
+		const response = await authenticatedFetch(
+			`/api/configuracion/whatsapp-intercept`,
+			{
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ activo: nuevoEstado }),
+			}
+		);
 
-if (!response.ok) {
-throw new Error("Error al guardar configuración");
-}
+		if (!response.ok) {
+			throw new Error("Error al guardar configuración");
+		}
 
-await response.json();
-setWhatsappInterceptActivo(nuevoEstado);
+		await response.json();
+		setWhatsappInterceptActivo(nuevoEstado);
 
-// Actualizar localStorage para caché en el frontend
-localStorage.setItem("whatsapp_intercept_activo", nuevoEstado.toString());
+		// Actualizar localStorage para caché en el frontend
+		localStorage.setItem("whatsapp_intercept_activo", nuevoEstado.toString());
 
-showFeedback(
-"success",
-`Modal de WhatsApp ${nuevoEstado ? "activado" : "desactivado"} correctamente`
-);
-} catch (error) {
-console.error("Error guardando configuración:", error);
-showFeedback("error", "Error al guardar la configuración");
-} finally {
-setSaving(false);
-}
+		showFeedback(
+			"success",
+			`Modal de WhatsApp ${nuevoEstado ? "activado" : "desactivado"} correctamente`
+		);
+	} catch (error) {
+		console.error("Error guardando configuración:", error);
+		showFeedback("error", "Error al guardar la configuración");
+	} finally {
+		setSaving(false);
+	}
 };
 
 const showFeedback = (type, message) => {
