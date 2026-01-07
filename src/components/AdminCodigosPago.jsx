@@ -107,6 +107,11 @@ function AdminCodigosPago() {
 						telefonoCliente: r.telefono || prev.telefonoCliente,
 						// Guardar el ID real para el backend
 						reservaVinculadaId: r.id || prev.reservaVinculadaId,
+						// Auto-completar origen, destino, pasajeros y vehículo
+						origen: r.origen || prev.origen,
+						destino: r.destino || prev.destino,
+						pasajeros: r.pasajeros || prev.pasajeros,
+						vehiculo: r.vehiculo || prev.vehiculo,
 						// Lógica inteligente de dirección:
 						// Si el origen es aeropuerto, la dirección relevante es el destino.
 						// Si el destino es aeropuerto, la dirección relevante es el origen.
@@ -644,7 +649,7 @@ function AdminCodigosPago() {
 								/>
 							</div>
 							<div className="space-y-2 md:col-span-2">
-								<Label htmlFor="descripcion">Descripción</Label>
+								<Label htmlFor="descripcion">Motivo / Descripción</Label>
 								<Input
 									id="descripcion"
 									name="descripcion"

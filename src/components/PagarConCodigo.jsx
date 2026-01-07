@@ -338,7 +338,7 @@ function PagarConCodigo() {
 				);
 			}
 
-			const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}`;
+			const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}${codigoValidado.descripcion ? ` (${codigoValidado.descripcion})` : ""}`;
 			const p = await fetch(`${backendUrl}/create-payment`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },

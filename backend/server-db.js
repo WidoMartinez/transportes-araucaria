@@ -7568,6 +7568,9 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				const codigo = codigoDePago.trim().toUpperCase();
 				const registro = await CodigoPago.findOne({ where: { codigo } });
 				if (registro) {
+					// Guardar motivo para el correo
+					reserva.motivoPago = registro.descripcion;
+					
 					const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
 					const estado =
 						nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
@@ -7612,7 +7615,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				gateway: "Flow",
 				paymentId: payment.flowOrder.toString(),
 				estadoPago: "approved",
-				idaVuelta: reserva.idaVuelta
+				idaVuelta: reserva.idaVuelta,
+				motivo: reserva.motivoPago || ""
 			};
 
 			const phpUrl =
@@ -7644,8 +7648,9 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				fecha: reserva.fecha,
 				hora: reserva.hora,
 				origen: reserva.origen,
-				destino: reserva.destino,
-				idaVuelta: reserva.idaVuelta
+				destino: reserva.motivoPago ? `${reserva.destino} (Motivo: ${reserva.motivoPago})` : reserva.destino,
+				idaVuelta: reserva.idaVuelta,
+				motivo: reserva.motivoPago || ""
 			}, {
 				headers: { "Content-Type": "application/json" },
 				timeout: 10000
