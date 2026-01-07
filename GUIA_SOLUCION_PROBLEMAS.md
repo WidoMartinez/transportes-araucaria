@@ -506,3 +506,50 @@ Cuando se agreguen columnas nuevas que tienen índices definidos en el modelo:
  - `src/components/PagarConCodigo.jsx` (Lógica de bypass y validación)
  - `backend/models/CodigoPago.js` (Estructura de datos)
 
+
+
+---
+
+## 12. Pagos Pendientes Tratados como Exitosos (Flow Status 1 vs 2)
+
+**Implementado: 7 Enero 2026**
+
+### Problema
+Los pagos que quedaban en estado "Pendiente" (Flow Status 1) se trataban como exitosos, mostrando la pantalla de "¡Pago Exitoso!" al cliente y registrando conversiones en Google Ads antes de que el dinero estuviera realmente confirmado.
+
+### Síntomas
+- Cliente ve "¡Pago Exitoso!" pero en el panel de Flow aparece "Pendiente"
+- Conversiones de Google Ads se registran para pagos no confirmados
+- Logs del backend muestran `[CONVERSIÓN GA]` con monto real para pagos pendientes
+- Discrepancia entre lo que ve el cliente y el estado real en Flow
+
+### Causa
+En `backend/server-db.js`, el endpoint `/api/payment-result` (línea 7059) aceptaba tanto `status === 2` (pagado) como `status === 1` (pendiente) y los trataba de la misma manera.
+
+### Solución (Enero 2026)
+
+**Backend**: Separar lógica de estados en `backend/server-db.js` (líneas 7058-7201):
+- Solo `status === 2` redirige con `status=success` y registra conversión
+- `status === 1` redirige con `status=pending` sin monto (evita conversión prematura)
+
+**Frontend**: Agregar soporte para estado pendiente en `src/components/FlowReturn.jsx`:
+- Detección de `status=pending` (líneas 92-96)
+- Ícono Clock y UI apropiada (líneas 5, 287-302)
+- Mensaje informativo explicando que el pago está siendo procesado
+
+### Estados de Flow
+
+| Status | Significado | Acción del Sistema |
+|--------|-------------|-------------------|
+| 1 | Pendiente | Mostrar mensaje de espera, NO registrar conversión |
+| 2 | Pagado | Mostrar éxito, registrar conversión de Google Ads |
+| 3 | Rechazado | Mostrar error |
+| 4 | Anulado | Mostrar error |
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 7058-7201)
+- `src/components/FlowReturn.jsx` (líneas 5, 92-96, 287-302, CardContent)
+
+> [!IMPORTANT]
+> El webhook de confirmación (`/api/flow-confirmation`) solo procesa pagos con `status === 2`, por lo que los pagos pendientes eventualmente se confirmarán cuando Flow los apruebe.

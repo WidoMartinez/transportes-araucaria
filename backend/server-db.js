@@ -7055,8 +7055,8 @@ app.post("/api/payment-result", async (req, res) => {
             
             console.log(`💰 [DEBUG] Monto parseado de Flow: ${montoFlowActual}`);
 
-			// Si tenemos reservaId y el pago fue exitoso (2) o está pendiente (1)
-			if (reservaId && (flowData.status === 2 || flowData.status === 1)) {
+			// Si tenemos reservaId y el pago fue exitoso (2)
+			if (reservaId && flowData.status === 2) {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
 				
@@ -7074,7 +7074,7 @@ app.post("/api/payment-result", async (req, res) => {
 				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
 					// Caso: Pagar con Código, Consultar Reserva o Compra Productos
 					// Redirigir a la página de éxito estándar (FlowReturn)
-					console.log(`✅ Pago detectado (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva?.source}). Redirigiendo a FlowReturn.`);
+					console.log(`✅ Pago CONFIRMADO (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva?.source}). Redirigiendo a FlowReturn.`);
 					
 					// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks
 					let montoParaConversion = montoFlowActual;
@@ -7132,7 +7132,7 @@ app.post("/api/payment-result", async (req, res) => {
 
 				// Caso: Reserva Express (flujo normal)
 				// Redirigir a Completar Detalles
-				console.log(`✅ Reserva Express detectada (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
+				console.log(`✅ Reserva Express CONFIRMADA (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
 				
 				// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks (igual que en flujo anterior)
 				let montoExpress = montoFlowActual;
@@ -7179,6 +7179,26 @@ app.post("/api/payment-result", async (req, res) => {
 				const userDataEncodedExpress = Buffer.from(JSON.stringify(userDataExpress)).toString('base64');
 
 				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}&d=${userDataEncodedExpress}`);
+			} else if (reservaId && flowData.status === 1) {
+				// Pago PENDIENTE - No registrar conversión aún
+				console.warn(`⏳ Pago PENDIENTE (Reserva ${reservaId}, Status: ${flowData.status}). Redirigiendo con status=pending.`);
+				
+				// Re-parsear optional data para determinar el flujo
+				let optionalDataSafe = optionalData || {};
+				const paymentOrigin = optionalDataSafe?.paymentOrigin;
+				const reserva = await Reserva.findByPk(reservaId);
+				
+				const isCodigoPago = (reserva && reserva.source === "codigo_pago") || paymentOrigin === "pagar_con_codigo";
+				const isConsultaReserva = paymentOrigin === "consultar_reserva";
+				const isCompraProductos = paymentOrigin === "compra_productos";
+				
+				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
+					// Redirigir a FlowReturn con estado pendiente (sin monto para evitar conversión)
+					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`);
+				} else {
+					// Reserva Express - redirigir a home con estado pendiente
+					return res.redirect(303, `${frontendBase}/?flow_payment=pending&reserva_id=${reservaId}`);
+				}
 			} else if (flowData.status === 3 || flowData.status === 4) {
 				// Pago rechazado (3) o anulado (4)
 				console.warn(`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`);

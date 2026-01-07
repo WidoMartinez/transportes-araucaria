@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle, Loader2, AlertCircle, Clock } from "lucide-react";
 import logo from "../assets/logo.png";
 
 // Configuración
@@ -86,6 +86,13 @@ function FlowReturn() {
 				setPaymentStatus("success");
 				// Disparar evento de conversión
 				triggerConversion(amountParam, reservaIdParam, token);
+				return;
+			}
+
+			// Si el pago está PENDIENTE (esperando confirmación)
+			if (statusParam === "pending") {
+				console.warn(`⏳ Pago PENDIENTE detectado. No se disparará conversión hasta confirmación.`);
+				setPaymentStatus("pending");
 				return;
 			}
 
@@ -277,6 +284,24 @@ function FlowReturn() {
 							</>
 						)}
 
+
+						{paymentStatus === "pending" && (
+							<>
+								<div className="flex justify-center mb-4">
+									<div className="rounded-full bg-blue-100 p-4">
+										<Clock className="h-16 w-16 text-blue-600" />
+									</div>
+								</div>
+								<CardTitle className="text-2xl text-blue-600">
+									Pago Pendiente de Confirmación
+								</CardTitle>
+								<p className="text-gray-600 mt-2">
+									Tu pago está siendo procesado y será confirmado pronto.
+								</p>
+							</>
+						)}
+
+
 						{paymentStatus === "error" && (
 							<>
 								<div className="flex justify-center mb-4">
@@ -333,6 +358,31 @@ function FlowReturn() {
 									</p>
 								</div>
 							</>
+						)}
+
+						{paymentStatus === "pending" && (
+							<div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+								<h3 className="font-semibold text-blue-900 mb-3">
+									⏳ ¿Qué significa esto?
+								</h3>
+								<p className="text-sm text-blue-800 mb-3">
+									Tu pago está siendo procesado por Flow. Esto puede tardar unos minutos.
+								</p>
+								<ul className="space-y-2 text-blue-800 text-sm">
+									<li className="flex items-start">
+										<span className="mr-2">•</span>
+										<span>
+											Recibirás un correo de confirmación cuando el pago sea aprobado
+										</span>
+									</li>
+									<li className="flex items-start">
+										<span className="mr-2">•</span>
+										<span>
+											Si tienes dudas, contáctanos por WhatsApp
+										</span>
+									</li>
+								</ul>
+							</div>
 						)}
 
 						{paymentStatus === "error" && (
