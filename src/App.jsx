@@ -1787,12 +1787,9 @@ function App() {
 				console.log("📋 Código de reserva generado:", result.codigoReserva);
 			}
 
-			// Registrar conversión
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
-					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-				});
-			}
+			// NOTA: La conversión de Google Ads se dispara en FlowReturn.jsx cuando el pago es confirmado
+			// NO disparar conversión aquí para evitar conversiones prematuras de reservas no pagadas
+			// Referencia: docs/legacy/CONVERSIONES_AVANZADAS_GOOGLE_ADS.md
 
 			// Registrar uso del código si hay uno aplicado
 			if (codigoAplicado) {
