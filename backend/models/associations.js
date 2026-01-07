@@ -11,6 +11,8 @@ import ProductoReserva from "./ProductoReserva.js";
 import AdminUser from "./AdminUser.js";
 import AdminAuditLog from "./AdminAuditLog.js";
 import PendingEmail from "./PendingEmail.js";
+import EvaluacionConductor from "./EvaluacionConductor.js";
+import EstadisticasConductor from "./EstadisticasConductor.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -136,6 +138,39 @@ export const setupAssociations = () => {
 	PendingEmail.belongsTo(Reserva, {
 		foreignKey: "reservaId",
 		as: "reserva",
+	});
+
+	// Relación: Conductor -> EvaluacionConductor (Un conductor puede tener muchas evaluaciones)
+	Conductor.hasMany(EvaluacionConductor, {
+		foreignKey: "conductorId",
+		as: "evaluaciones",
+	});
+
+	EvaluacionConductor.belongsTo(Conductor, {
+		foreignKey: "conductorId",
+		as: "conductor",
+	});
+
+	// Relación: Reserva -> EvaluacionConductor (Una reserva puede tener una evaluación)
+	Reserva.hasOne(EvaluacionConductor, {
+		foreignKey: "reservaId",
+		as: "evaluacion",
+	});
+
+	EvaluacionConductor.belongsTo(Reserva, {
+		foreignKey: "reservaId",
+		as: "reserva",
+	});
+
+	// Relación: Conductor -> EstadisticasConductor (Un conductor tiene una estadística)
+	Conductor.hasOne(EstadisticasConductor, {
+		foreignKey: "conductorId",
+		as: "estadisticas",
+	});
+
+	EstadisticasConductor.belongsTo(Conductor, {
+		foreignKey: "conductorId",
+		as: "conductor",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
