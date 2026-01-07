@@ -2878,6 +2878,59 @@ app.post("/enviar-reserva", async (req, res) => {
 	}
 });
 
+/**
+ * Valida y sanitiza una fecha para asegurar que tenga el formato correcto YYYY-MM-DD
+ * @param {string} fecha - La fecha a validar
+ * @param {string} nombreCampo - Nombre del campo para mensajes de error
+ * @returns {string} - La fecha sanitizada en formato YYYY-MM-DD
+ * @throws {Error} - Si la fecha es inválida
+ */
+function validarYSanitizarFecha(fecha, nombreCampo = "fecha") {
+	if (!fecha) {
+		throw new Error(`${nombreCampo} es requerida`);
+	}
+
+	// Convertir a string y eliminar espacios
+	let fechaStr = String(fecha).trim();
+
+	// Sanitizar: eliminar cualquier carácter que no sea dígito o guión
+	fechaStr = fechaStr.replace(/[^0-9-]/g, "");
+
+	// Validar formato YYYY-MM-DD usando regex
+	const formatoFechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+	if (!formatoFechaRegex.test(fechaStr)) {
+		console.error(
+			`❌ Formato de ${nombreCampo} inválido. Recibido: "${fecha}", Sanitizado: "${fechaStr}"`
+		);
+		throw new Error(
+			`${nombreCampo} debe tener el formato YYYY-MM-DD (año-mes-día)`
+		);
+	}
+
+	// Validar que sea una fecha real usando Date
+	const [year, month, day] = fechaStr.split("-").map(Number);
+	const fechaObj = new Date(year, month - 1, day);
+
+	// Verificar que la fecha sea válida y coincida con los valores ingresados
+	if (
+		fechaObj.getFullYear() !== year ||
+		fechaObj.getMonth() !== month - 1 ||
+		fechaObj.getDate() !== day
+	) {
+		console.error(
+			`❌ ${nombreCampo} no es una fecha válida: "${fechaStr}"`
+		);
+		throw new Error(
+			`${nombreCampo} no es una fecha válida (${fechaStr})`
+		);
+	}
+
+	console.log(
+		`✅ ${nombreCampo} validada correctamente: "${fechaStr}"`
+	);
+	return fechaStr;
+}
+
 // Endpoint para recibir reservas express (flujo simplificado)
 app.post("/enviar-reserva-express", async (req, res) => {
 	try {
@@ -2988,12 +3041,32 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		if (!emailNormalizado) {
 			return res.status(400).json({
-				success: false,
-				message: "El email es obligatorio",
-			});
 		}
 
 		datosReserva.email = emailNormalizado;
+
+		// Validar y sanitizar fechas
+		try {
+			// Validar fecha principal (requerida)
+			datosReserva.fecha = validarYSanitizarFecha(
+				datosReserva.fecha,
+				"Fecha del servicio"
+			);
+
+			// Validar fecha de regreso si existe (opcional)
+			if (datosReserva.fechaRegreso) {
+				datosReserva.fechaRegreso = validarYSanitizarFecha(
+					datosReserva.fechaRegreso,
+					"Fecha de regreso"
+				);
+			}
+		} catch (errorFecha) {
+			console.error("Error validando fechas:", errorFecha.message);
+			return res.status(400).json({
+				success: false,
+				message: errorFecha.message,
+			});
+		}
 
 		// Verificar si la fecha/hora está bloqueada
 		const bloqueoResultado = await verificarBloqueoAgenda(
