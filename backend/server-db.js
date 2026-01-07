@@ -1414,9 +1414,9 @@ app.put("/api/configuracion/whatsapp-intercept", authAdmin, async (req, res) => 
 			try {
 				await AdminAuditLog.create({
 					adminUserId: req.user.id,
-					action: "update_config",
-					resource: "whatsapp_intercept",
-					details: JSON.stringify({ 
+					accion: "update_config",
+					entidad: "whatsapp_intercept",
+					detalles: JSON.stringify({ 
 						activo,
 						usuario: req.user.nombre || req.user.usuario 
 					}),
