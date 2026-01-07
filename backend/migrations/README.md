@@ -199,3 +199,26 @@ Esta migración:
 ---
 
 **Nota**: Mantén este directorio actualizado con todas las migraciones que crees para tener un historial claro de cambios en el esquema.
+
+### `add-configuracion-table.js` ⭐ **NUEVO**
+Crea la tabla `configuracion` para almacenar configuraciones generales del sistema.
+
+**Cambios incluidos:**
+- Crea tabla `configuracion` con estructura clave-valor tipada
+- Soporta tipos: string, number, boolean, json
+- Inicializa configuración `whatsapp_intercept_activo = true`
+- Índice único en columna `clave` para búsquedas rápidas
+
+**Configuraciones disponibles:**
+- `whatsapp_intercept_activo` (boolean): Controla si el modal de intercepción de WhatsApp está activo
+
+**Uso en código:**
+```javascript
+import Configuracion from "./models/Configuracion.js";
+
+// Obtener valor parseado
+const activo = await Configuracion.getValorParseado('whatsapp_intercept_activo', true);
+
+// Establecer valor
+await Configuracion.setValor('whatsapp_intercept_activo', false, 'boolean');
+```

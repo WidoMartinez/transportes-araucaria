@@ -53,8 +53,39 @@ function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [whatsappInterceptEnabled, setWhatsappInterceptEnabled] = useState(true);
   const { scrollY } = useScroll();
   const { discountOnline } = usePricingData();
+
+  // Cargar configuración de modal WhatsApp al montar
+  useEffect(() => {
+    const cargarConfiguracion = async () => {
+      try {
+        // Intentar obtener de localStorage primero (caché)
+        const cachedValue = localStorage.getItem("whatsapp_intercept_activo");
+        if (cachedValue !== null) {
+          setWhatsappInterceptEnabled(cachedValue === "true");
+        }
+
+        // Consultar al backend para tener el valor más actualizado
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/configuracion/whatsapp-intercept`
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setWhatsappInterceptEnabled(data.activo);
+          // Actualizar caché
+          localStorage.setItem("whatsapp_intercept_activo", data.activo.toString());
+        }
+      } catch (error) {
+        console.error("Error cargando configuración WhatsApp intercept:", error);
+        // En caso de error, mantener valor por defecto o del caché
+      }
+    };
+
+    cargarConfiguracion();
+  }, []);
 
   // Detectar scroll para cambiar estilo
   useMotionValueEvent(scrollY, "change", (latest) => {
@@ -86,6 +117,14 @@ function Header() {
   const handleWhatsAppClick = (e) => {
     e.preventDefault();
     trackWhatsAppClick();
+    
+    // Si el modal está desactivado, abrir WhatsApp directamente
+    if (!whatsappInterceptEnabled) {
+      window.open("https://wa.me/56936643540", "_blank", "noopener,noreferrer");
+      return;
+    }
+    
+    // Si está activado, mostrar el modal
     setShowModal(true);
   };
 

@@ -20,6 +20,7 @@ import AdminFestivos from "./AdminFestivos";
 import AdminBloqueosAgenda from "./AdminBloqueosAgenda";
 import AdminUsuarios from "./AdminUsuarios";
 import AdminPerfil from "./AdminPerfil";
+import AdminConfiguracion from "./AdminConfiguracion";
 
 /**
  * Panel de Administración Principal
@@ -164,6 +165,8 @@ function AdminDashboard() {
               <AdminUsuarios />
             ) : active === "perfil" ? (
               <AdminPerfil />
+            ) : active === "configuracion" ? (
+              <AdminConfiguracion />
             ) : (
               // Fallback al dashboard si el panel no existe
               <DashboardHome onNavigate={setPanel} />

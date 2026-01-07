@@ -162,3 +162,142 @@ else if (ev.vehiculo || ev.conductorId) {
 
 ---
 **Nota**: Si el problema persiste, revisar la carpeta `docs/legacy/` para bitácoras históricas más específicas.
+
+## 8. Configuración de Modal de WhatsApp
+
+### Problema
+El modal de WhatsApp no respeta la configuración establecida en el panel administrativo, o los cambios no se reflejan para los usuarios.
+
+### Síntomas Comunes
+- El modal sigue apareciendo después de desactivarlo en el panel admin
+- Los cambios no se ven reflejados inmediatamente
+- Error al intentar cambiar la configuración desde el panel
+- El botón de WhatsApp no funciona correctamente
+
+### Causas y Soluciones
+
+#### 1. Caché del Navegador
+**Causa**: El navegador del usuario tiene cacheada la configuración antigua en `localStorage`.
+
+**Solución**:
+- Los usuarios deben limpiar la caché del navegador (Ctrl+Shift+Delete)
+- O abrir en ventana privada/incógnita para ver los cambios inmediatamente
+- La configuración se actualizará automáticamente en la próxima visita
+
+#### 2. Migración No Ejecutada
+**Causa**: La tabla `configuracion` no existe en la base de datos porque la migración no se ejecutó.
+
+**Solución**:
+1. Verificar logs del servidor en Render.com
+2. Buscar mensaje: "✅ Tabla configuracion creada exitosamente"
+3. Si no aparece, verificar que `addConfiguracionTable()` esté siendo llamada en `startServer()` de `backend/server-db.js`
+4. Redeploy del servidor para forzar ejecución de migraciones
+
+**Verificación Manual** (si tienes acceso a BD):
+```sql
+-- Verificar que la tabla existe
+SHOW TABLES LIKE 'configuracion';
+
+-- Verificar que la configuración existe
+SELECT * FROM configuracion WHERE clave = 'whatsapp_intercept_activo';
+```
+
+#### 3. Error de Autenticación en Panel Admin
+**Causa**: El token JWT no es válido o ha expirado al intentar cambiar la configuración.
+
+**Solución**:
+1. Cerrar sesión y volver a iniciar sesión en el panel admin
+2. Verificar que el usuario tenga permisos de administrador
+3. Revisar consola del navegador (F12) para ver errores específicos
+
+**Verificación**:
+```javascript
+// En consola del navegador
+localStorage.getItem('token') // Debe retornar un token válido
+```
+
+#### 4. Endpoint No Responde
+**Causa**: El backend no está respondiendo correctamente a las peticiones de configuración.
+
+**Solución**:
+1. Verificar que el servidor esté corriendo
+2. Probar el endpoint manualmente:
+   ```bash
+   # GET (público)
+   curl https://transportes-araucaria.onrender.com/api/configuracion/whatsapp-intercept
+   
+   # PUT (requiere token)
+   curl -X PUT https://transportes-araucaria.onrender.com/api/configuracion/whatsapp-intercept \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -d '{"activo": false}'
+   ```
+3. Revisar logs del servidor para errores
+
+#### 5. Tracking de Google Ads No Funciona
+**Causa**: El tracking está configurado para funcionar en ambos casos (modal activo/inactivo), pero puede haber un error en la implementación.
+
+**Verificación**:
+- El tracking debe dispararse en `handleWhatsAppClick()` en `Header.jsx`
+- Verificar en Network tab del navegador que se envía la petición a Google Ads
+- ID de conversión: `AW-17529712870/M7-iCN_HtZUbEObh6KZB`
+
+**Solución**:
+- El tracking está implementado antes de verificar la configuración, por lo que debería funcionar siempre
+- Si no funciona, revisar que la función `trackWhatsAppClick()` se esté ejecutando
+
+### Verificación de Estado Correcto
+
+Para verificar que el sistema funciona correctamente:
+
+1. **Backend**:
+   ```bash
+   # Verificar que el endpoint responde
+   curl https://transportes-araucaria.onrender.com/api/configuracion/whatsapp-intercept
+   # Debe retornar: {"activo": true/false, "mensaje": "..."}
+   ```
+
+2. **Frontend - Panel Admin**:
+   - Ir a "Configuración → Configuración General"
+   - Verificar que el switch muestra el estado actual
+   - Cambiar el estado y verificar mensaje de confirmación
+
+3. **Frontend - Usuario**:
+   - Abrir ventana privada
+   - Ir a la página principal
+   - Hacer clic en botón de WhatsApp
+   - Verificar comportamiento según configuración:
+     - **Activo**: Debe aparecer modal con descuentos
+     - **Inactivo**: Debe abrir WhatsApp directamente
+
+### Logs Útiles
+
+**Backend** (Render.com):
+```
+🔄 Verificando tabla configuracion...
+📋 Creando tabla configuracion...
+✅ Tabla configuracion creada exitosamente
+✅ Configuración inicial de WhatsApp establecida (activo: true)
+✅ Migración de configuracion completada
+```
+
+**Frontend** (Consola del navegador):
+```javascript
+// Al cargar Header
+"Configuración WhatsApp intercept cargada: true"
+
+// Al hacer clic en WhatsApp con modal activo
+"Mostrando modal de intercepción"
+
+// Al hacer clic en WhatsApp con modal inactivo
+"Abriendo WhatsApp directamente"
+```
+
+### Referencias
+- **Documentación técnica**: `docs/WHATSAPP_INTERCEPT_CONFIG.md`
+- **Guía de usuario**: `GUIA_USO_CONFIGURACION_WHATSAPP.md`
+- **Código de migración**: `backend/migrations/add-configuracion-table.js`
+- **Modelo**: `backend/models/Configuracion.js`
+
+---
+
