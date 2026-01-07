@@ -31,6 +31,7 @@ import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
 import addSillaInfantilToCodigosPago from "./migrations/add-silla-infantil-to-codigos-pago.js";
 import CodigoPago from "./models/CodigoPago.js";
+import Transaccion from "./models/Transaccion.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
 import addGastosTable from "./migrations/add-gastos-table.js";
@@ -48,6 +49,7 @@ import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional
 import addColumnVan from "./migrations/add-column-van.js";
 import addConfiguracionTable from "./migrations/add-configuracion-table.js";
 import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
+import addTransaccionesTable from "./migrations/add-transacciones-table.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -7108,8 +7110,9 @@ app.post("/api/payment-result", async (req, res) => {
 				flowOrder: flowData.flowOrder
 			});
 			
-			// Intentar extraer reservaId de los datos opcionales
+			// Intentar extraer reservaId y codigoReserva de los datos opcionales
 			let reservaId = null;
+			let codigoReserva = null;
 			let optionalData = null; 
 			
 			if (flowData.optional) {
@@ -7120,8 +7123,24 @@ app.post("/api/payment-result", async (req, res) => {
 						: flowData.optional;
 
 					reservaId = optionalData?.reservaId;
+					codigoReserva = optionalData?.codigoReserva;
 				} catch (e) {
 					console.warn("⚠️ Error parseando optional data de Flow:", e.message, "Data:", flowData.optional);
+				}
+			}
+			
+			// Si no tenemos reservaId pero sí codigoReserva, buscar la reserva por código
+			if (!reservaId && codigoReserva) {
+				try {
+					const reservaByCodigo = await Reserva.findOne({
+						where: { codigoReserva: codigoReserva }
+					});
+					if (reservaByCodigo) {
+						reservaId = reservaByCodigo.id;
+						console.log(`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`);
+					}
+				} catch (e) {
+					console.warn("⚠️ Error buscando reserva por código:", e.message);
 				}
 			}
 

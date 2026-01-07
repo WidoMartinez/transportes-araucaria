@@ -11,6 +11,8 @@ import ProductoReserva from "./ProductoReserva.js";
 import AdminUser from "./AdminUser.js";
 import AdminAuditLog from "./AdminAuditLog.js";
 import PendingEmail from "./PendingEmail.js";
+import Transaccion from "./Transaccion.js";
+import CodigoPago from "./CodigoPago.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -136,6 +138,28 @@ export const setupAssociations = () => {
 	PendingEmail.belongsTo(Reserva, {
 		foreignKey: "reservaId",
 		as: "reserva",
+	});
+
+	// Relación: Reserva -> Transacciones (Una reserva puede tener muchas transacciones)
+	Reserva.hasMany(Transaccion, {
+		foreignKey: "reservaId",
+		as: "transacciones",
+	});
+
+	Transaccion.belongsTo(Reserva, {
+		foreignKey: "reservaId",
+		as: "reserva",
+	});
+
+	// Relación: CodigoPago -> Transacciones (Un código puede tener muchas transacciones)
+	CodigoPago.hasMany(Transaccion, {
+		foreignKey: "codigoPagoId",
+		as: "transacciones",
+	});
+
+	Transaccion.belongsTo(CodigoPago, {
+		foreignKey: "codigoPagoId",
+		as: "codigoPago",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
