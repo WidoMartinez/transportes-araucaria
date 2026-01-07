@@ -1058,7 +1058,7 @@ function App() {
 			let vehiculoAsignado;
 			let precioFinal;
 
-			if (numPasajeros > 0 && numPasajeros <= 4) {
+			if (numPasajeros > 0 && numPasajeros <= 3) {
 				vehiculoAsignado = "Auto Privado";
 				const precios = destinoInfo.precios.auto;
 				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
@@ -1076,7 +1076,7 @@ function App() {
 					precioFinal
 				});
 			} else if (
-				numPasajeros >= 5 &&
+				numPasajeros >= 4 &&
 				numPasajeros <= destinoInfo.maxPasajeros
 			) {
 				vehiculoAsignado = "Van de Pasajeros";
@@ -1084,8 +1084,8 @@ function App() {
 				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
 
 				const precioBase = Number(precios.base);
-				// El aumento comienza desde el pasajero 6 (ej: 5 pax = base, 6 pax = base + 1 adicional)
-				const pasajerosAdicionales = numPasajeros - 5;
+				// El aumento comienza desde el pasajero 5 (ej: 4 pax = base, 5 pax = base + 1 adicional)
+				const pasajerosAdicionales = numPasajeros - 4;
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
 				

@@ -50,6 +50,12 @@ function AdminCodigosPago() {
 		fechaVencimiento: "",
 		usosMaximos: 1,
 		observaciones: "",
+		// Datos del cliente (opcional - pre-llenado)
+		nombreCliente: "",
+		emailCliente: "",
+		telefonoCliente: "",
+		direccionCliente: "",
+		codigoReservaVinculado: "",
 	});
 	const backendUrl = getBackendUrl();
 	const { authenticatedFetch } = useAuthenticatedFetch();
@@ -242,6 +248,12 @@ function AdminCodigosPago() {
 				fechaVencimiento: formData.fechaVencimiento || undefined,
 				usosMaximos: parseInt(formData.usosMaximos) || 1,
 				observaciones: formData.observaciones || "",
+				// Datos del cliente (opcionales)
+				nombreCliente: formData.nombreCliente.trim() || null,
+				emailCliente: formData.emailCliente.trim() || null,
+				telefonoCliente: formData.telefonoCliente.trim() || null,
+				direccionCliente: formData.direccionCliente.trim() || null,
+				codigoReservaVinculado: formData.codigoReservaVinculado.trim() || null,
 			};
 			const response = await authenticatedFetch(`/api/codigos-pago`, {
 				method: "POST",
@@ -267,6 +279,12 @@ function AdminCodigosPago() {
 				fechaVencimiento: "",
 				usosMaximos: 1,
 				observaciones: "",
+				// Resetear datos del cliente
+				nombreCliente: "",
+				emailCliente: "",
+				telefonoCliente: "",
+				direccionCliente: "",
+				codigoReservaVinculado: "",
 			});
 			setShowCrearDialog(false);
 			cargarCodigos();
@@ -632,6 +650,88 @@ function AdminCodigosPago() {
 									"Crear Código"
 								)}
 							</Button>
+						</div>
+
+						{/* Sección de Datos del Cliente (Opcional) */}
+						<div className="space-y-2 md:col-span-2 pt-4 border-t">
+							<Label className="text-sm font-semibold text-foreground">
+								Datos del Cliente (Opcional - Pre-llenado)
+							</Label>
+							<p className="text-xs text-muted-foreground mb-3">
+								Si completas estos campos, el cliente no tendrá que ingresarlos al usar el código
+							</p>
+							
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								{/* Nombre */}
+								<div className="space-y-2">
+									<Label htmlFor="nombreCliente">Nombre Completo</Label>
+									<Input
+										id="nombreCliente"
+										name="nombreCliente"
+										value={formData.nombreCliente}
+										onChange={handleInputChange}
+										placeholder="Juan Pérez"
+									/>
+								</div>
+								
+								{/* Email */}
+								<div className="space-y-2">
+									<Label htmlFor="emailCliente">Email</Label>
+									<Input
+										id="emailCliente"
+										name="emailCliente"
+										type="email"
+										value={formData.emailCliente}
+										onChange={handleInputChange}
+										placeholder="cliente@email.cl"
+									/>
+								</div>
+								
+								{/* Teléfono */}
+								<div className="space-y-2">
+									<Label htmlFor="telefonoCliente">Teléfono</Label>
+									<Input
+										id="telefonoCliente"
+										name="telefonoCliente"
+										value={formData.telefonoCliente}
+										onChange={handleInputChange}
+										placeholder="+56 9 1234 5678"
+									/>
+								</div>
+								
+								{/* Dirección */}
+								<div className="space-y-2">
+									<Label htmlFor="direccionCliente">Dirección Específica</Label>
+									<Input
+										id="direccionCliente"
+										name="direccionCliente"
+										value={formData.direccionCliente}
+										onChange={handleInputChange}
+										placeholder="Av. Alemania 1234, Temuco"
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Vinculación con Reserva Existente (Opcional) */}
+						<div className="space-y-2 md:col-span-2 pt-4 border-t">
+							<Label className="text-sm font-semibold text-foreground">
+								Vinculación con Reserva (Opcional)
+							</Label>
+							<p className="text-xs text-muted-foreground mb-3">
+								Si este código es para un pago adicional de una reserva existente
+							</p>
+							
+							<div className="space-y-2">
+								<Label htmlFor="codigoReservaVinculado">Código de Reserva Original</Label>
+								<Input
+									id="codigoReservaVinculado"
+									name="codigoReservaVinculado"
+									value={formData.codigoReservaVinculado}
+									onChange={handleInputChange}
+									placeholder="AR-20260107-0001"
+								/>
+							</div>
 						</div>
 					</div>
 				</DialogContent>

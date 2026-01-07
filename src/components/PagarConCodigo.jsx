@@ -123,6 +123,25 @@ function PagarConCodigo() {
 			}
 
 			setCodigoValidado(data.codigoPago);
+
+			// Pre-llenar formulario con datos del código si están disponibles
+			setFormData((prev) => ({
+				...prev,
+				// Solo sobrescribir si el código tiene datos
+				nombre: data.codigoPago.nombreCliente || prev.nombre,
+				email: data.codigoPago.emailCliente || prev.email,
+				telefono: data.codigoPago.telefonoCliente || prev.telefono,
+				// Determinar qué campo de dirección usar según el sentido del viaje
+				direccionDestino:
+					data.codigoPago.origen === "Aeropuerto La Araucanía"
+						? (data.codigoPago.direccionCliente || prev.direccionDestino)
+						: prev.direccionDestino,
+				direccionOrigen:
+					data.codigoPago.destino === "Aeropuerto La Araucanía"
+						? (data.codigoPago.direccionCliente || prev.direccionOrigen)
+						: prev.direccionOrigen
+			}));
+
 			setSelectedPaymentType("total");
 			setStep(2);
 		} catch (error) {

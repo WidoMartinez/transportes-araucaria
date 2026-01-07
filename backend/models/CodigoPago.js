@@ -97,6 +97,36 @@ const CodigoPago = sequelize.define(
 			field: "email_cliente",
 			comment: "Email del cliente que usó el código",
 		},
+		nombreCliente: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "nombre_cliente",
+			comment: "Nombre del cliente (pre-llenado opcional)",
+		},
+		telefonoCliente: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "telefono_cliente",
+			comment: "Teléfono del cliente (pre-llenado opcional)",
+		},
+		direccionCliente: {
+			type: DataTypes.TEXT,
+			allowNull: true,
+			field: "direccion_cliente",
+			comment: "Dirección específica del cliente (pre-llenado opcional)",
+		},
+		reservaVinculadaId: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "reserva_vinculada_id",
+			comment: "ID de la reserva original si es un pago adicional",
+		},
+		codigoReservaVinculado: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "codigo_reserva_vinculado",
+			comment: "Código de la reserva original (ej: AR-20260107-0001)",
+		},
 		fechaUso: {
 			type: DataTypes.DATE,
 			allowNull: true,
@@ -120,6 +150,7 @@ const CodigoPago = sequelize.define(
 			{ fields: ["fecha_vencimiento"] },
 			{ fields: ["reserva_id"] },
 			{ fields: ["email_cliente"] },
+			{ fields: ["codigo_reserva_vinculado"] },
 		],
 	}
 );

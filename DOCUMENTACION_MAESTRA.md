@@ -139,11 +139,12 @@ graph TD
    - Alertas de conflictos de horario.
 4. **Configuración de Precios por Pasajero**:
    - Gestión de **porcentaje adicional** por cada pasajero extra.
-   - Configuración independiente para **Autos** (1-4 pasajeros) y **Vans** (5-7 pasajeros).
+   - Configuración independiente para **Autos** (1-3 pasajeros) y **Vans** (4-7 pasajeros).
    - Valores en formato decimal: `0.10` = 10% de incremento.
    - **Fórmula Auto**: `Precio Final = Base + (Pasajeros - 1) × (Base × % Adicional)`
-   - **Fórmula Van**: `Precio Final = Base + (Pasajeros - 5) × (Base × % Adicional)`
-   - Ejemplo: Auto $30,000 con 10% adicional → 2 pax = $33,000, 3 pax = $36,000
+   - **Fórmula Van**: `Precio Final = Base + (Pasajeros - 4) × (Base × % Adicional)`
+   - Ejemplo Auto: $30,000 con 10% adicional → 2 pax = $33,000, 3 pax = $36,000
+   - Ejemplo Van: $50,000 con 5% adicional → 4 pax = $50,000, 5 pax = $52,500, 6 pax = $55,000
 5. **Gestión de Vehículos de Alta Capacidad (Vans)**:
    - **Soporte extendido**: El sistema permite reservas de hasta 7 pasajeros.
    - **Requisito de Flota**: Para aceptar reservas de 5-7 pasajeros, debe existir un vehículo tipo "Van" con capacidad 7 en `AdminVehiculos`.
@@ -611,7 +612,96 @@ Cálculo:
 
 
 
-### 5.11 Solución de UI/UX Crítica: Modal de Intercepción y Stacking Contexts
+
+### 5.11 Ajuste de Umbrales de Pasajeros por Tipo de Vehículo
+
+**Implementado: 7 Enero 2026**
+
+Para optimizar la comodidad de los pasajeros y garantizar espacio adecuado para equipaje, se ajustaron los umbrales de asignación automática de vehículos.
+
+#### Problema Identificado
+
+Con la configuración anterior (Auto Privado para 1-4 pasajeros), se detectó que:
+- **4 pasajeros en sedán**: Espacio muy limitado para pasajeros
+- **Equipaje insuficiente**: La cajuela de un sedán no puede acomodar adecuadamente el equipaje de 4 personas
+- **Experiencia degradada**: Los clientes viajan incómodos
+
+#### Solución Implementada
+
+Se modificó el umbral para aplicar un **salto exponencial en el 4to pasajero**, enviándolo directamente a la categoría Van:
+
+**Nueva Configuración:**
+- **Auto Privado (Sedán)**: 1-3 pasajeros
+- **Van de Pasajeros**: 4-7 pasajeros
+
+#### Ajuste de Precios
+
+Para mantener la coherencia financiera, se ajustó el cálculo de precios de Van:
+
+**Antes:**
+```javascript
+// Van comenzaba en 5 pasajeros
+const pasajerosAdicionales = numPasajeros - 5;
+// 5 pax = base, 6 pax = base + 5%, 7 pax = base + 10%
+```
+
+**Después:**
+```javascript
+// Van comienza en 4 pasajeros
+const pasajerosAdicionales = numPasajeros - 4;
+// 4 pax = base, 5 pax = base + 5%, 6 pax = base + 10%, 7 pax = base + 15%
+```
+
+#### Ejemplo de Precios
+
+Asumiendo precio base van de $50,000 con incremento del 5%:
+
+| Pasajeros | Cálculo | Precio Final |
+|-----------|---------|--------------|
+| 4 pax | $50,000 (base) | **$50,000** |
+| 5 pax | $50,000 + (1 × $2,500) | **$52,500** |
+| 6 pax | $50,000 + (2 × $2,500) | **$55,000** |
+| 7 pax | $50,000 + (3 × $2,500) | **$57,500** |
+
+#### Beneficios
+
+✅ **Comodidad real**: Hasta 3 pasajeros viajan cómodamente en sedán  
+✅ **Espacio para equipaje**: La cajuela puede acomodar el equipaje de 3 personas  
+✅ **Salto lógico**: El 4to pasajero justifica el costo de una van  
+✅ **Mejor experiencia**: Los clientes no viajan apretados  
+✅ **Precio justo**: El precio base van cubre el costo operativo del vehículo más grande
+
+#### Implementación Técnica
+
+**Archivo**: [`src/App.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/App.jsx)  
+**Líneas modificadas**: 1061, 1079, 1087-1088
+
+```javascript
+// Línea 1061: Cambio de umbral para Auto
+if (numPasajeros > 0 && numPasajeros <= 3) {  // Antes: <= 4
+    vehiculoAsignado = "Auto Privado";
+    // ... cálculo de precio
+}
+
+// Línea 1079: Cambio de umbral para Van
+else if (numPasajeros >= 4 && numPasajeros <= destinoInfo.maxPasajeros) {  // Antes: >= 5
+    vehiculoAsignado = "Van de Pasajeros";
+    
+    // Línea 1088: Ajuste de cálculo de pasajeros adicionales
+    const pasajerosAdicionales = numPasajeros - 4;  // Antes: - 5
+    // ... cálculo de precio
+}
+```
+
+> [!IMPORTANT]
+> **Impacto en Operaciones**: Este cambio afecta directamente la asignación automática de vehículos. Asegúrate de que el precio base de Van esté configurado adecuadamente en el panel de administración para reflejar el costo real de operar vehículos más grandes.
+
+> [!TIP]
+> **Configuración Recomendada**: El precio base de Van debería ser aproximadamente 1.5x - 1.7x el precio base de Auto para reflejar los costos operativos adicionales (combustible, mantenimiento, seguro).
+
+
+### 5.12 Solución de UI/UX Crítica: Modal de Intercepción y Stacking Contexts
+
 
 **Documentado: 3 Enero 2026**
 

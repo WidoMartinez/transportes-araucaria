@@ -47,6 +47,7 @@ import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
 import addColumnVan from "./migrations/add-column-van.js";
 import addConfiguracionTable from "./migrations/add-configuracion-table.js";
+import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
@@ -713,6 +714,7 @@ const initializeDatabase = async () => {
 		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 		await addGastosCerradosField(); // Migración para campo gastos_cerrados
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
+		await addClientDataToCodigosPago(); // Migración para datos de cliente en códigos de pago
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
@@ -3460,6 +3462,12 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			1
 		);
 		const observaciones = body.observaciones || "";
+		// Datos del cliente (opcionales)
+		const nombreCliente = String(body.nombreCliente || "").trim() || null;
+		const emailCliente = String(body.emailCliente || "").trim() || null;
+		const telefonoCliente = String(body.telefonoCliente || "").trim() || null;
+		const direccionCliente = String(body.direccionCliente || "").trim() || null;
+		const codigoReservaVinculado = String(body.codigoReservaVinculado || "").trim() || null;
 
 		if (!codigo) {
 			return res
@@ -3497,8 +3505,14 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			sillaInfantil,
 			fechaVencimiento,
 			usosMaximos,
-			usosActuales: 0,
 			observaciones,
+			// Nuevos campos
+			nombreCliente,
+			emailCliente,
+			telefonoCliente,
+			direccionCliente,
+			codigoReservaVinculado,
+			usosActuales: 0,
 			estado: "activo",
 		});
 
