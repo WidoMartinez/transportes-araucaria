@@ -185,6 +185,18 @@ Cuando está **inactivo**, el botón de WhatsApp abre directamente la aplicació
    - Precio (calculado automáticamente)
    - Fecha de vencimiento
 4. Click en **"Generar Código"**
+   
+### Generar Código para Pago de Saldo (Vinculado)
+
+Permite cobrar saldos pendientes o diferencias de tarifa (ej: cambio de vehículo, paradas extra) asociándolos a una reserva existente.
+
+1. Ir a **Códigos de Pago** > **Nuevo Código**
+2. Activar switch **"Vincular a Reserva Existente"**
+3. Ingresar Código de Reserva (ej: `AR-20260101-1234`)
+   - El sistema cargará los datos del cliente automáticamente
+4. Ingresar **Monto a Cobrar** y **Descripción** (ej: "Pago saldo pendiente")
+5. Generar y compartir igual que un código normal
+   - **Nota**: Al pagar, el cliente verá un resumen simplificado y el pago se abonará directamente a la reserva original.
 
 ### Compartir Código
 

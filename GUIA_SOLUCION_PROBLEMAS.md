@@ -764,3 +764,169 @@ app.post("/mi-endpoint", async (req, res) => {
 > [!WARNING]
 > **No confiar en validación del frontend**: Aunque el frontend use componentes de fecha, siempre aplicar validación en el backend para garantizar seguridad e integridad de datos.
 
+---
+
+## 14. Códigos de Pago No Se Marcan Como "Usado" Después del Pago
+
+**Implementado: 8 Enero 2026**
+
+### Problema
+Al implementar la funcionalidad de pago de saldos asociados a una reserva activa con código de pago, el proceso de pago se realizaba correctamente pero el estado del código no cambiaba a "usado" en el admin panel de Códigos de Pago.
+
+### Síntomas
+- ✅ El pago se procesa exitosamente en Flow
+- ✅ La transacción se registra en la base de datos
+- ✅ La reserva se actualiza correctamente
+- ❌ El código de pago permanece en estado "activo" en lugar de cambiar a "usado"
+- ❌ El campo `usosActuales` no se incrementa
+- ❌ El campo `fechaUso` no se actualiza
+
+### Causa Raíz
+La lógica de actualización del código de pago en el webhook de Flow (`/api/flow-confirmation`) solo buscaba el código usando `reserva.referenciaPago` (texto del código). Sin embargo:
+
+1. **Frontend envía `codigoPagoId`**: El componente `PagarConCodigo.jsx` envía correctamente el ID numérico del código en la metadata (línea 360)
+2. **Backend recibe el ID**: Se captura en `optionalMetadata.codigoPagoId` (línea 7609 de `server-db.js`)
+3. **Pero no se usa**: La lógica antigua (líneas 7707-7744) solo buscaba por `referenciaPago`, ignorando el `codigoPagoId`
+
+Esto causaba que:
+- **Pagos vinculados a saldos**: No actualizaban el código porque `referenciaPago` podía no coincidir o no estar presente
+- **Pagos normales**: Funcionaban si `referenciaPago` coincidía exactamente con el código
+
+### Solución (Enero 2026)
+
+Se modificó la lógica de actualización del código de pago en `backend/server-db.js` (líneas 7707-7756) para:
+
+1. **Priorizar `codigoPagoId`**: Buscar primero por ID numérico (más confiable)
+2. **Fallback a `referenciaPago`**: Mantener compatibilidad con flujos antiguos
+3. **Consolidar lógica**: Evitar duplicación de código
+
+**Código implementado**:
+```javascript
+// Si la reserva proviene de un código de pago, marcarlo como usado
+try {
+    let registro = null;
+    
+    // PRIORIDAD 1: Usar codigoPagoId de metadata (más confiable para pagos de saldo)
+    if (codigoPagoId && !isNaN(codigoPagoId)) {
+        registro = await CodigoPago.findByPk(codigoPagoId);
+        if (registro) {
+            console.log(`✅ Código de pago encontrado por ID: ${codigoPagoId} (${registro.codigo})`);
+        }
+    }
+    
+    // PRIORIDAD 2: Buscar por referenciaPago (compatibilidad con flujos antiguos)
+    if (!registro && reserva.referenciaPago) {
+        const codigoDePago = reserva.referenciaPago;
+        if (typeof codigoDePago === "string" && codigoDePago.trim().length > 0) {
+            const codigo = codigoDePago.trim().toUpperCase();
+            registro = await CodigoPago.findOne({ where: { codigo } });
+            if (registro) {
+                console.log(`✅ Código de pago encontrado por referencia: ${codigo}`);
+            }
+        }
+    }
+    
+    // Si encontramos el código, actualizarlo
+    if (registro) {
+        reserva.motivoPago = registro.descripcion;
+        
+        const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+        const estado = nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+        
+        await registro.update({
+            usosActuales: nuevosUsos,
+            reservaId: reserva.id,
+            emailCliente: reserva.email,
+            fechaUso: new Date(),
+            estado,
+        });
+        
+        console.log(`✅ Código de pago actualizado: ${registro.codigo} (Usos: ${nuevosUsos}/${registro.usosMaximos}, Estado: ${estado})`);
+    } else {
+        console.log("ℹ️ No se encontró código de pago para actualizar");
+    }
+} catch (cpError) {
+    console.warn("⚠️ No se pudo actualizar el código de pago:", cpError.message);
+}
+```
+
+### Flujo de Actualización
+
+**Antes (Fallaba)**:
+```
+1. Pago exitoso en Flow
+2. Webhook recibe confirmación
+3. Busca código solo por referenciaPago
+4. ❌ No encuentra código (referenciaPago no coincide)
+5. ❌ Código permanece "activo"
+```
+
+**Ahora (Funciona)**:
+```
+1. Pago exitoso en Flow
+2. Webhook recibe confirmación con codigoPagoId en metadata
+3. Busca código por ID numérico
+4. ✅ Encuentra código directamente
+5. ✅ Actualiza: usosActuales++, estado="usado", fechaUso=now
+```
+
+### Logs de Verificación
+
+**Pago exitoso con código**:
+```
+💳 Estado del pago Flow: { flowOrder: 123456, status: 2, amount: 50000 }
+✅ Reserva encontrada: ID 789, Código AR-20260108-0001
+✅ Código de pago encontrado por ID: 45 (PX-ABC123)
+✅ Código de pago actualizado: PX-ABC123 (Usos: 1/1, Estado: usado)
+💾 Reserva actualizada con información de pago Flow
+```
+
+**Pago sin código**:
+```
+💳 Estado del pago Flow: { flowOrder: 123457, status: 2, amount: 30000 }
+✅ Reserva encontrada: ID 790, Código AR-20260108-0002
+ℹ️ No se encontró código de pago para actualizar
+💾 Reserva actualizada con información de pago Flow
+```
+
+### Casos de Uso Soportados
+
+| Escenario | codigoPagoId | referenciaPago | Resultado |
+|-----------|--------------|----------------|-----------|
+| Pago de saldo con código | ✅ Presente | ✅ Presente | ✅ Actualiza por ID |
+| Pago de saldo (ID sin referencia) | ✅ Presente | ❌ Ausente | ✅ Actualiza por ID |
+| Pago normal con código (legacy) | ❌ Ausente | ✅ Presente | ✅ Actualiza por referencia |
+| Pago sin código | ❌ Ausente | ❌ Ausente | ℹ️ No actualiza (esperado) |
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 7707-7756): Lógica de actualización mejorada
+
+### Prevención de Problemas Futuros
+
+**Para nuevos flujos de pago con códigos**:
+
+1. **Frontend**: Siempre enviar `codigoPagoId` en la metadata de Flow
+   ```javascript
+   codigoPagoId: codigoValidado.id  // ID numérico
+   ```
+
+2. **Backend**: Confiar en `codigoPagoId` como fuente primaria
+   - Más confiable que buscar por texto
+   - Evita problemas de normalización (mayúsculas, espacios, etc.)
+   - Más eficiente (búsqueda por primary key)
+
+3. **Logging**: Los logs mejorados facilitan debugging
+   - Indica si encontró el código por ID o por referencia
+   - Muestra estado final del código
+   - Registra errores sin romper el flujo de pago
+
+> [!IMPORTANT]
+> La actualización del código es **no crítica** para el flujo de pago. Si falla, el pago se procesa igualmente y solo se registra un warning en los logs. Esto previene que errores en códigos de pago afecten la experiencia del cliente.
+
+> [!TIP]
+> **Verificación manual**: Para verificar que un código se marcó correctamente como "usado", revisar en el admin panel:
+> - Estado debe ser "Usado"
+> - Usos actuales debe incrementarse
+> - Fecha de uso debe estar presente
+> - Email del cliente debe estar registrado

@@ -218,7 +218,10 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 *   **Tracking**: La conversión se dispara en `App.jsx` al retornar de Flow, usando los parámetros `amount` y `d` (datos de usuario encriptados).
 
 #### B. Pagar con Código
-*   **Ruta**: Usuario ingresa código → Cotización + Detalles upfront → Pago → `FlowReturn.jsx`.
+*   **Escenarios**:
+    1.  **Nueva Reserva**: Crea una reserva express con los datos del código.
+    2.  **Pago de Saldo/Diferencia**: Paga un monto vinculado a una reserva existente (`reservaVinculadaId`).
+*   **Ruta**: Usuario ingresa código → Vista (Formulario Completo o Resumen Vinculado) → Pago → `FlowReturn.jsx`.
 *   **Captura de Dirección**: 
     - Obligatorio usar `AddressAutocomplete` en el formulario inicial de `PagarConCodigo.jsx`.
     - Campos condicionales: `direccionDestino` (viajes DESDE aeropuerto) o `direccionOrigen` (viajes HACIA aeropuerto).
@@ -227,6 +230,8 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 *   **Notificaciones**:
     1.  **Logística**: Ocurre al crear la reserva inicial (`POST /enviar-reserva-express`).
     2.  **Pago**: Webhook (`/api/flow-confirmation`) notifica solo el pago (el sistema detecta que es flujo de código y evita duplicar la logística).
+*   **Actualización de Código**:
+    - El webhook localiza el código mediante `codigoPagoId` (prioritario) o `referenciaPago` y lo marca como **usado** automáticamente tras el pago exitoso.
 *   **Tracking**: La conversión se dispara en `FlowReturn.jsx` usando los parámetros `amount` y `d`.
 
 #### C. Consultar Reserva / Pagos Pendientes
