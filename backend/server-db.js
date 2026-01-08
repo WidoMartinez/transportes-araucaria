@@ -635,6 +635,7 @@ const initializeDatabase = async () => {
 		await addCodigosPagoTable();
 		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), sequelize);
 		await addClientDataToCodigosPago();
+		await addTransaccionesTable();
 
 		await syncDatabase(false, [
 			AdminUser, // Primero los usuarios admin
@@ -649,6 +650,7 @@ const initializeDatabase = async () => {
 			Promocion,
 			DescuentoGlobal,
 			PendingEmail,
+			Transaccion,
 		]); // false = no forzar recreación
 
 		// Crear o actualizar usuario admin por defecto
@@ -6970,6 +6972,7 @@ app.post("/create-payment", async (req, res) => {
 		tipoPago,
 		referenciaPago,
 		paymentOrigin, // Nuevo: Identifica el origen del pago (consultar_reserva, compra_productos, etc.)
+		codigoPagoId, // Nuevo: ID del código de pago para historial de transacciones
 	} = req.body || {};
 
 	if (!gateway || !amount || !description || !email) {
@@ -7002,6 +7005,7 @@ app.post("/create-payment", async (req, res) => {
 		if (tipoPago) optionalPayload.tipoPago = tipoPago;
 		if (referenciaPago) optionalPayload.referenciaPago = referenciaPago;
 		if (paymentOrigin) optionalPayload.paymentOrigin = paymentOrigin;
+		if (codigoPagoId) optionalPayload.codigoPagoId = codigoPagoId;
 
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
@@ -7600,6 +7604,34 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			saldoPagado,
 		});
 
+		// CREAR REGISTRO DE TRANSACCIÓN
+		try {
+			const codigoPagoId = optionalMetadata.codigoPagoId || null;
+			await Transaccion.create({
+				reservaId: reserva.id,
+				codigoPagoId: codigoPagoId,
+				monto: montoActual,
+				gateway: "flow",
+				transaccionId: payment.flowOrder.toString(),
+				referencia: optionalReferenciaPago,
+				tipoPago: tipoPagoFinal,
+				estado: "aprobado",
+				emailPagador: email,
+				metadata: {
+					flowOrder: payment.flowOrder,
+					status: payment.status,
+					amount: payment.amount,
+					paymentDate: payment.paymentDate,
+					commerceOrder: payment.commerceOrder,
+					payer: payment.payer
+				},
+				notas: `Pago procesado vía Flow. Acumulado: $${pagoAcumulado}`
+			});
+			console.log(`💾 Transacción registrada: ID Flow ${payment.flowOrder}, Monto $${montoActual}`);
+		} catch (transError) {
+			console.error("⚠️ Error registrando transacción:", transError.message);
+		}
+
 		// Intentar vincular la reserva con un cliente existente o crearlo si es necesario
 		let clienteActualizado = null;
 		try {
@@ -7673,43 +7705,52 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		console.log("💾 Reserva actualizada con información de pago Flow");
 
 		// Si la reserva proviene de un código de pago, marcarlo como usado
-		try {
+	try {
+		let registro = null;
+		
+		// PRIORIDAD 1: Usar codigoPagoId de metadata (más confiable para pagos de saldo)
+		if (codigoPagoId && !isNaN(codigoPagoId)) {
+			registro = await CodigoPago.findByPk(codigoPagoId);
+			if (registro) {
+				console.log(`✅ Código de pago encontrado por ID: ${codigoPagoId} (${registro.codigo})`);
+			}
+		}
+		
+		// PRIORIDAD 2: Buscar por referenciaPago (compatibilidad con flujos antiguos)
+		if (!registro && reserva.referenciaPago) {
 			const codigoDePago = reserva.referenciaPago;
-			if (
-				codigoDePago &&
-				typeof codigoDePago === "string" &&
-				codigoDePago.trim().length > 0
-			) {
+			if (typeof codigoDePago === "string" && codigoDePago.trim().length > 0) {
 				const codigo = codigoDePago.trim().toUpperCase();
-				const registro = await CodigoPago.findOne({ where: { codigo } });
+				registro = await CodigoPago.findOne({ where: { codigo } });
 				if (registro) {
-					// Guardar motivo para el correo
-					reserva.motivoPago = registro.descripcion;
-					
-					const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
-					const estado =
-						nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
-					await registro.update({
-						usosActuales: nuevosUsos,
-						reservaId: reserva.id,
-						emailCliente: reserva.email,
-						fechaUso: new Date(),
-						estado,
-					});
-					console.log("✅ Código de pago marcado como usado:", codigo);
-				} else {
-					console.log(
-						"ℹ️ Código de pago no encontrado para marcar uso:",
-						codigo
-					);
+					console.log(`✅ Código de pago encontrado por referencia: ${codigo}`);
 				}
 			}
-		} catch (cpError) {
-			console.warn(
-				"⚠️ No se pudo marcar el código de pago como usado:",
-				cpError.message
-			);
 		}
+		
+		// Si encontramos el código, actualizarlo
+		if (registro) {
+			// Guardar motivo para el correo
+			reserva.motivoPago = registro.descripcion;
+			
+			const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+			const estado = nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+			
+			await registro.update({
+				usosActuales: nuevosUsos,
+				reservaId: reserva.id,
+				emailCliente: reserva.email,
+				fechaUso: new Date(),
+				estado,
+			});
+			
+			console.log(`✅ Código de pago actualizado: ${registro.codigo} (Usos: ${nuevosUsos}/${registro.usosMaximos}, Estado: ${estado})`);
+		} else {
+			console.log("ℹ️ No se encontró código de pago para actualizar");
+		}
+	} catch (cpError) {
+		console.warn("⚠️ No se pudo actualizar el código de pago:", cpError.message);
+	}
 
 		// Enviar correo de confirmación de pago al cliente
 		try {
@@ -9458,6 +9499,74 @@ app.delete(
 		}
 	}
 );
+
+/**
+ * GET /api/reservas/:id/transacciones
+ * Obtener el historial completo de transacciones de una reserva
+ */
+app.get("/api/reservas/:id/transacciones", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Obtener todas las transacciones de la reserva
+		const transacciones = await Transaccion.findAll({
+			where: { reservaId: id },
+			include: [
+				{
+					model: CodigoPago,
+					as: "codigoPago",
+					attributes: ["id", "codigo", "descripcion"],
+					required: false,
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		// Calcular resumen
+		const montoTotal = transacciones.reduce(
+			(sum, t) => sum + parseFloat(t.monto || 0),
+			0
+		);
+
+		const transaccionesPorTipo = transacciones.reduce((acc, t) => {
+			const tipo = t.tipoPago || "sin_tipo";
+			acc[tipo] = (acc[tipo] || 0) + 1;
+			return acc;
+		}, {});
+
+		const transaccionesPorEstado = transacciones.reduce((acc, t) => {
+			const estado = t.estado || "desconocido";
+			acc[estado] = (acc[estado] || 0) + 1;
+			return acc;
+		}, {});
+
+		res.json({
+			success: true,
+			transacciones,
+			resumen: {
+				totalTransacciones: transacciones.length,
+				montoTotal,
+				transaccionesPorTipo,
+				transaccionesPorEstado,
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener transacciones de reserva:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener transacciones de reserva",
+		});
+	}
+});
 
 // --- UTILIDADES DE KEEP ALIVE ---
 const scheduleKeepAlive = () => {

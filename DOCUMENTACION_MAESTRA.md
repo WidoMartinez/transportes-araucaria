@@ -943,6 +943,42 @@ El sistema incluye las siguientes migraciones (en orden de ejecución):
 
 
 
+### 5.14 Sistema de Historial de Transacciones (Flow)
+
+**Implementado: Enero 2026**
+
+Sistema para el registro detallado y auditable de cada transacción de pago realizada a través de la pasarela Flow. Reemplaza el modelo anterior de "pago único" por un registro histórico que permite abonos múltiples.
+
+#### Componentes del Sistema
+
+1.  **Modelo de Datos (`Transaccion`)**:
+    *   Registra individualmente cada pago exitoso.
+    *   Campos: `monto`, `gateway`, `transaccionId` (Flow Order), `estado`, `tipoPago` (abono/saldo), `metadata` (JSON completo de Flow).
+    *   Relación auditora con `Reserva` (1:N) y `CodigoPago` (1:N).
+
+2.  **Integración Flow (`Webhook`)**:
+    *   Endpoint: `/api/flow-confirmation`
+    *   Registra automáticamente la transacción al confirmar el pago.
+    *   Actualiza los acumuladores de la Reserva (`pagoMonto`, `estadoPago`), pero **mantiene el registro individual** en la tabla `transacciones`.
+    *   Vincula pagos realizados mediante códigos de cupón/descuento.
+
+3.  **Visualización en Panel Admin**:
+    *   Ubicación: Modal "Ver Detalles" en `AdminReservas`.
+    *   Funcionalidad: Tabla detallada con fechas, montos y estados de cada intento de pago.
+    *   API Backend: `GET /api/reservas/:id/transacciones`.
+
+#### Flujo de Datos
+
+1.  **Inicio**: Cliente inicia pago (Reserva o Código).
+2.  **Procesamiento**: Flow procesa el cobro bancario.
+3.  **Confirmación**:
+    *   Webhook recibe notificación POST.
+    *   Se crea registro en `Transaccion`.
+    *   Se actualiza saldo en `Reserva`.
+4.  **Auditoría**: Admin visualiza el historial completo, permitiendo distinguir entre abono inicial y pago de saldo.
+
+---
+
 ## 6. Mantenimiento y Despliegue
 
 ### Frontend

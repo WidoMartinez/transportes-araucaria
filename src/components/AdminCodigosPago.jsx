@@ -288,7 +288,9 @@ function AdminCodigosPago() {
 				idaVuelta: Boolean(formData.idaVuelta),
 				permitirAbono: Boolean(formData.permitirAbono),
 				sillaInfantil: Boolean(formData.sillaInfantil),
-				fechaVencimiento: formData.fechaVencimiento || undefined,
+				fechaVencimiento: formData.fechaVencimiento
+					? new Date(formData.fechaVencimiento).toISOString()
+					: undefined,
 				usosMaximos: parseInt(formData.usosMaximos) || 1,
 				observaciones: formData.observaciones || "",
 				// Datos del cliente (opcionales)
@@ -643,6 +645,68 @@ function AdminCodigosPago() {
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="fechaVencimiento">Fecha de Vencimiento</Label>
+								<div className="flex flex-wrap gap-2 mb-2">
+									<Button 
+										type="button" 
+										variant="outline" 
+										size="sm" 
+										onClick={() => {
+											const d = new Date();
+											d.setMinutes(d.getMinutes() + 15);
+											const offset = d.getTimezoneOffset() * 60000;
+											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+										}}
+									>
+										15 min
+									</Button>
+									<Button 
+										type="button" 
+										variant="outline" 
+										size="sm" 
+										onClick={() => {
+											const d = new Date();
+											d.setMinutes(d.getMinutes() + 30);
+											const offset = d.getTimezoneOffset() * 60000;
+											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+										}}
+									>
+										30 min
+									</Button>
+									<Button 
+										type="button" 
+										variant="outline" 
+										size="sm" 
+										onClick={() => {
+											const d = new Date();
+											d.setHours(d.getHours() + 1);
+											const offset = d.getTimezoneOffset() * 60000;
+											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+										}}
+									>
+										1 hora
+									</Button>
+									<Button 
+										type="button" 
+										variant="outline" 
+										size="sm" 
+										onClick={() => {
+											// Personalizado: Dejar el input libre (o resetear a vacío si se prefiere)
+											// En este caso, simplemente enfocamos el input si fuera necesario, 
+											// pero como ya es editable, el usuario puede cambiarlo.
+											// Podríamos poner una fecha por defecto lejana (ej. 24h) si está vacío.
+											const d = new Date();
+											d.setHours(d.getHours() + 24);
+											const offset = d.getTimezoneOffset() * 60000;
+											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+										}}
+									>
+										24 horas
+									</Button>
+								</div>
 								<Input
 									id="fechaVencimiento"
 									name="fechaVencimiento"

@@ -90,6 +90,8 @@ function AdminReservas() {
 	const [selectedReserva, setSelectedReserva] = useState(null);
 	const [showEditDialog, setShowEditDialog] = useState(false);
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
+	const [transacciones, setTransacciones] = useState([]);
+	const [loadingTransacciones, setLoadingTransacciones] = useState(false);
 	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [saving, setSaving] = useState(false);
 	// Estados para editar ruta con 'otro'
@@ -1129,6 +1131,25 @@ function AdminReservas() {
 			setHistorialAsignaciones([]);
 		} finally {
 			setLoadingHistorial(false);
+		}
+
+		// Cargar historial de transacciones
+		setLoadingTransacciones(true);
+		try {
+			const respTrans = await authenticatedFetch(
+				`/api/reservas/${reserva.id}/transacciones`
+			);
+			if (respTrans.ok) {
+				const dataTrans = await respTrans.json();
+				setTransacciones(dataTrans.transacciones || []);
+			} else {
+				setTransacciones([]);
+			}
+		} catch (errTrans) {
+			console.error("Error cargando transacciones:", errTrans);
+			setTransacciones([]);
+		} finally {
+			setLoadingTransacciones(false);
 		}
 	};
 
@@ -3264,6 +3285,94 @@ function AdminReservas() {
 									</div>
 								</div>
 							</div>
+
+							{/* Historial de Transacciones */}
+							{transacciones.length > 0 && (
+								<div className="border-t pt-6">
+									<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+										<DollarSign className="h-5 w-5" />
+										Historial de Transacciones
+									</h3>
+									
+									{loadingTransacciones ? (
+										<p className="text-sm text-gray-500">Cargando transacciones...</p>
+									) : (
+										<div className="overflow-x-auto">
+											<table className="w-full text-sm">
+												<thead className="bg-gray-50">
+													<tr>
+														<th className="px-4 py-2 text-left">Fecha</th>
+														<th className="px-4 py-2 text-left">Monto</th>
+														<th className="px-4 py-2 text-left">Tipo</th>
+														<th className="px-4 py-2 text-left">Gateway</th>
+														<th className="px-4 py-2 text-left">Estado</th>
+														<th className="px-4 py-2 text-left">Referencia</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y">
+													{transacciones.map((trans) => (
+														<tr key={trans.id} className="hover:bg-gray-50">
+															<td className="px-4 py-2">
+																{new Date(trans.createdAt).toLocaleString('es-CL', {
+																	day: '2-digit',
+																	month: '2-digit',
+																	year: 'numeric',
+																	hour: '2-digit',
+																	minute: '2-digit'
+																})}
+															</td>
+															<td className="px-4 py-2 font-medium">
+																{formatCurrency(trans.monto)}
+															</td>
+															<td className="px-4 py-2">
+																<Badge variant="outline">
+																	{trans.tipoPago || 'N/A'}
+																</Badge>
+															</td>
+															<td className="px-4 py-2 capitalize">
+																{trans.gateway}
+															</td>
+															<td className="px-4 py-2">
+																{trans.estado === 'aprobado' && (
+																	<Badge variant="default" className="bg-green-500">
+																		✓ Aprobado
+																	</Badge>
+																)}
+																{trans.estado === 'pendiente' && (
+																	<Badge variant="secondary">
+																		⏳ Pendiente
+																	</Badge>
+																)}
+																{trans.estado === 'fallido' && (
+																	<Badge variant="destructive">
+																		✗ Fallido
+																	</Badge>
+																)}
+															</td>
+															<td className="px-4 py-2 text-xs text-gray-600">
+																{trans.referencia || trans.codigoPago?.codigo || '-'}
+															</td>
+														</tr>
+													))}
+												</tbody>
+												<tfoot className="bg-gray-50 font-semibold">
+													<tr>
+														<td className="px-4 py-2">Total</td>
+														<td className="px-4 py-2">
+															{formatCurrency(
+																transacciones.reduce((sum, t) => sum + parseFloat(t.monto || 0), 0)
+															)}
+														</td>
+														<td colSpan="4" className="px-4 py-2 text-xs text-gray-600">
+															{transacciones.length} transacción(es)
+														</td>
+													</tr>
+												</tfoot>
+											</table>
+										</div>
+									)}
+								</div>
+							)}
 
 							{/* Historial de Asignaciones (interno) */}
 							<div>

@@ -357,6 +357,7 @@ function PagarConCodigo() {
 					tipoPago: selectedPaymentType,
 					referenciaPago: codigoPagoNormalizado,
 					paymentOrigin: "pagar_con_codigo", // Identificador de flujo para redirección correcta
+					codigoPagoId: codigoValidado.id,
 				}),
 			});
 			const pj = await p.json();

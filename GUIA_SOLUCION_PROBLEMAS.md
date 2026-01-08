@@ -930,3 +930,28 @@ try {
 > - Usos actuales debe incrementarse
 > - Fecha de uso debe estar presente
 > - Email del cliente debe estar registrado
+
+## 12. Historial de Transacciones no Visible
+
+### Problema
+Al entrar al detalle de una reserva en el panel administrativo, no aparece la sección "Historial de Transacciones" a pesar de que la reserva está pagada.
+
+### Causa
+El sistema de historial solo registra pagos realizados **después** de la implementación de la Fase 3 (Enero 2026).
+- **Reservas Antiguas**: No tienen registros en la tabla `transacciones`. Solo tienen el monto acumulado en la reserva.
+- **Reservas Nuevas**: Deberían aparecer. Si no aparecen, puede haber fallado el webhook de Flow.
+
+### Diagnóstico
+1. **Verificar Fecha**: ¿La reserva/pago es anterior al dia de implementación?
+   - Si es anterior → Comportamiento normal (Legacy).
+2. **Verificar Estado**: ¿El estado de pago es `pagado`, `abono` o `parcial`?
+   - Si es `pendiente` y no hay intentos fallidos, no habrá registros.
+
+### Solución
+Si es una reserva nueva y debería tener historial:
+1. Revisar los **Logs del Servidor** buscando:
+   `API Flow Confirmation - Payload recibido:`
+2. Verificar si hubo un error en la creación de la transacción:
+   `Error creando transaccion para reserva`
+
+El sistema está diseñado para ser **resiliente**: si falla el registro de la transacción detallada, **aún se actualiza** el estado y monto de la reserva principal para no bloquear la operación. En estos casos, la reserva aparecerá pagada pero sin historial detallado.
