@@ -3067,11 +3067,6 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-6">
-							{/* DEBUG - ELIMINAR DESPUÉS DE VERIFICAR */}
-							<div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-2 py-1 text-[10px] rounded text-center font-bold uppercase">
-								Modal Versión Historial v1.0 (Refresca si no ves esto)
-							</div>
-
 							{/* Código de Reserva */}
 							{selectedReserva.codigoReserva && (
 								<div className="bg-chocolate-50 border-2 border-chocolate-200 rounded-lg p-4">
@@ -3293,100 +3288,102 @@ function AdminReservas() {
 							</div>
 
 							{/* Historial de Transacciones */}
-							<div className="border-t pt-6">
-								<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-									<DollarSign className="h-5 w-5" />
-									Historial de Transacciones
-								</h3>
-								
-								{loadingTransacciones ? (
-									<p className="text-sm text-gray-500 italic flex items-center gap-2">
-										<span className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full"></span>
-										Consultando registros...
-									</p>
-								) : transacciones.length > 0 ? (
-									<div className="overflow-x-auto">
-										<table className="w-full text-sm">
-											<thead className="bg-gray-50">
-												<tr>
-													<th className="px-4 py-2 text-left">Fecha</th>
-													<th className="px-4 py-2 text-left">Monto</th>
-													<th className="px-4 py-2 text-left">Tipo</th>
-													<th className="px-4 py-2 text-left">Gateway</th>
-													<th className="px-4 py-2 text-left">Estado</th>
-													<th className="px-4 py-2 text-left">Referencia</th>
-												</tr>
-											</thead>
-											<tbody className="divide-y">
-												{transacciones.map((trans) => (
-													<tr key={trans.id} className="hover:bg-gray-50">
-														<td className="px-4 py-2">
-															{new Date(trans.createdAt).toLocaleString('es-CL', {
-																day: '2-digit',
-																month: '2-digit',
-																year: 'numeric',
-																hour: '2-digit',
-																minute: '2-digit'
-															})}
-														</td>
-														<td className="px-4 py-2 font-medium">
-															{formatCurrency(trans.monto)}
-														</td>
-														<td className="px-4 py-2">
-															<Badge variant="outline">
-																{trans.tipoPago || 'N/A'}
-															</Badge>
-														</td>
-														<td className="px-4 py-2 capitalize">
-															{trans.gateway}
-														</td>
-														<td className="px-4 py-2">
-															{trans.estado === 'aprobado' && (
-																<Badge variant="default" className="bg-green-500">
-																	✓ Aprobado
+							{(loadingTransacciones || transacciones.length > 0 || (selectedReserva && Number(selectedReserva.pagoMonto) > 0)) && (
+								<div className="border-t pt-6">
+									<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+										<DollarSign className="h-5 w-5" />
+										Historial de Transacciones
+									</h3>
+									
+									{loadingTransacciones ? (
+										<p className="text-sm text-gray-500 italic flex items-center gap-2">
+											<span className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full"></span>
+											Consultando registros...
+										</p>
+									) : transacciones.length > 0 ? (
+										<div className="overflow-x-auto">
+											<table className="w-full text-sm">
+												<thead className="bg-gray-50">
+													<tr>
+														<th className="px-4 py-2 text-left">Fecha</th>
+														<th className="px-4 py-2 text-left">Monto</th>
+														<th className="px-4 py-2 text-left">Tipo</th>
+														<th className="px-4 py-2 text-left">Gateway</th>
+														<th className="px-4 py-2 text-left">Estado</th>
+														<th className="px-4 py-2 text-left">Referencia</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y">
+													{transacciones.map((trans) => (
+														<tr key={trans.id} className="hover:bg-gray-50">
+															<td className="px-4 py-2">
+																{new Date(trans.createdAt).toLocaleString('es-CL', {
+																	day: '2-digit',
+																	month: '2-digit',
+																	year: 'numeric',
+																	hour: '2-digit',
+																	minute: '2-digit'
+																})}
+															</td>
+															<td className="px-4 py-2 font-medium">
+																{formatCurrency(trans.monto)}
+															</td>
+															<td className="px-4 py-2">
+																<Badge variant="outline">
+																	{trans.tipoPago || 'N/A'}
 																</Badge>
-															)}
-															{trans.estado === 'pendiente' && (
-																<Badge variant="secondary">
-																	⏳ Pendiente
-																</Badge>
-															)}
-															{trans.estado === 'fallido' && (
-																<Badge variant="destructive">
-																	✗ Fallido
-																</Badge>
+															</td>
+															<td className="px-4 py-2 capitalize">
+																{trans.gateway}
+															</td>
+															<td className="px-4 py-2">
+																{trans.estado === 'aprobado' && (
+																	<Badge variant="default" className="bg-green-500">
+																		✓ Aprobado
+																	</Badge>
+																)}
+																{trans.estado === 'pendiente' && (
+																	<Badge variant="secondary">
+																		⏳ Pendiente
+																	</Badge>
+																)}
+																{trans.estado === 'fallido' && (
+																	<Badge variant="destructive">
+																		✗ Fallido
+																	</Badge>
+																)}
+															</td>
+															<td className="px-4 py-2 text-xs text-gray-600">
+																{trans.referencia || trans.codigoPago?.codigo || '-'}
+															</td>
+														</tr>
+													))}
+												</tbody>
+												<tfoot className="bg-gray-50 font-semibold">
+													<tr>
+														<td className="px-4 py-2">Total</td>
+														<td className="px-4 py-2">
+															{formatCurrency(
+																transacciones.reduce((sum, t) => sum + parseFloat(t.monto || 0), 0)
 															)}
 														</td>
-														<td className="px-4 py-2 text-xs text-gray-600">
-															{trans.referencia || trans.codigoPago?.codigo || '-'}
+														<td colSpan="4" className="px-4 py-2 text-xs text-gray-600">
+															{transacciones.length} transacción(es)
 														</td>
 													</tr>
-												))}
-											</tbody>
-											<tfoot className="bg-gray-50 font-semibold">
-												<tr>
-													<td className="px-4 py-2">Total</td>
-													<td className="px-4 py-2">
-														{formatCurrency(
-															transacciones.reduce((sum, t) => sum + parseFloat(t.monto || 0), 0)
-														)}
-													</td>
-													<td colSpan="4" className="px-4 py-2 text-xs text-gray-600">
-														{transacciones.length} transacción(es)
-													</td>
-												</tr>
-											</tfoot>
-										</table>
-									</div>
-								) : (
-									<div className="bg-blue-50 border-l-4 border-blue-400 p-3">
-										<p className="text-sm text-blue-700 italic">
-											Esta reserva tiene pagos registrados ({selectedReserva ? formatCurrency(selectedReserva.pagoMonto) : '$0'}), 
-											pero no existen detalles históricos porque el pago se realizó antes de la actualización del sistema.
-										</p>
-									</div>
-								)}
-							</div>
+												</tfoot>
+											</table>
+										</div>
+									) : (
+										<div className="bg-blue-50 border-l-4 border-blue-400 p-3">
+											<p className="text-sm text-blue-700 italic">
+												Esta reserva tiene pagos registrados ({selectedReserva ? formatCurrency(selectedReserva.pagoMonto) : '$0'}), 
+												pero no existen detalles históricos porque el pago se realizó antes de la actualización del sistema.
+											</p>
+										</div>
+									)}
+								</div>
+							)}
 
 							{/* Historial de Asignaciones (interno) */}
 							<div>
