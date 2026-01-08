@@ -3287,7 +3287,7 @@ function AdminReservas() {
 							</div>
 
 							{/* Historial de Transacciones */}
-							{(loadingTransacciones || transacciones.length > 0) && (
+							{(loadingTransacciones || transacciones.length > 0 || (selectedReserva && Number(selectedReserva.pagoMonto) > 0)) && (
 								<div className="border-t pt-6">
 									<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
 										<DollarSign className="h-5 w-5" />
@@ -3295,8 +3295,11 @@ function AdminReservas() {
 									</h3>
 									
 									{loadingTransacciones ? (
-										<p className="text-sm text-gray-500">Cargando transacciones...</p>
-									) : (
+										<p className="text-sm text-gray-500 italic flex items-center gap-2">
+											<span className="animate-spin h-3 w-3 border-2 border-gray-300 border-t-gray-600 rounded-full"></span>
+											Consultando registros...
+										</p>
+									) : transacciones.length > 0 ? (
 										<div className="overflow-x-auto">
 											<table className="w-full text-sm">
 												<thead className="bg-gray-50">
@@ -3369,6 +3372,13 @@ function AdminReservas() {
 													</tr>
 												</tfoot>
 											</table>
+										</div>
+									) : (
+										<div className="bg-blue-50 border-l-4 border-blue-400 p-3">
+											<p className="text-sm text-blue-700 italic">
+												Esta reserva tiene pagos registrados ({formatCurrency(selectedReserva.pagoMonto)}), 
+												pero no existen detalles históricos porque el pago se realizó antes de la actualización del sistema.
+											</p>
 										</div>
 									)}
 								</div>
