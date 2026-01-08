@@ -9528,7 +9528,7 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 					required: false,
 				},
 			],
-			order: [["createdAt", "DESC"]],
+			order: [["created_at", "DESC"]],
 		});
 
 		// Calcular resumen
