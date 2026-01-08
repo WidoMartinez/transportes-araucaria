@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 7 Enero 2026
-> **Versión**: 1.4
+> **Última Actualización**: 8 Enero 2026
+> **Versión**: 1.5
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -18,6 +18,16 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Pagos y Finanzas](#52-pagos-y-finanzas)
    - [Notificaciones](#53-notificaciones-via-email)
    - [Integraciones Externas](#54-integraciones-externas)
+   - [Lógica de Disponibilidad y Capacidad](#55-lógica-de-disponibilidad-y-capacidad-extendida)
+   - [Estándares de Flujos de Pago](#56-estándares-de-flujos-de-pago-y-notificaciones)
+   - [Cálculo de Precios Dinámicos](#57-lógica-de-precios-y-descuentos)
+   - [Sistema de Bloqueos de Fecha](#58-sistema-de-bloqueos-de-fecha)
+   - [Gestión de Clientes Frecuentes](#59-gestión-de-clientes-frecuentes)
+   - [Descuentos Personalizados](#510-sistema-de-descuentos-personalizados)
+   - [Integración con Google Ads](#511-seguimiento-de-conversiones)
+   - [Sistema de Auditoría](#512-sistema-de-auditoria)
+   - [Sistema de Migraciones](#513-sistema-de-migraciones-de-base-de-datos)
+   - [Historial de Transacciones](#514-sistema-de-historial-de-transacciones-flow)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
