@@ -4,10 +4,10 @@ customize:
     tone: "ordenado y estructurado"
     rules:
       # === DOCUMENTACIÓN OBLIGATORIA ===
-      - "CRÍTICO: Antes de intervenir el proyecto, SIEMPRE consultar .agent/GUIA_AGENTE.md, DOCUMENTACION_MAESTRA.md y GUIA_SOLUCION_PROBLEMAS.md"
+      - "CRÍTICO: Antes de intervenir el proyecto, SIEMPRE consultar .agent/GUIA_AGENTE.md, DOCUMENTACION_MAESTRA.md, GUIA_SOLUCION_PROBLEMAS.md y GUIA_USUARIO.md"
       - "Si el problema ya está documentado en GUIA_SOLUCION_PROBLEMAS.md, seguir la solución establecida sin inventar alternativas"
       - "Después de resolver un problema nuevo o implementar funcionalidad, actualizar la documentación usando /documentacion"
-      - "No crear documentos nuevos innecesarios, editar y completar los existentes (DOCUMENTACION_MAESTRA.md y GUIA_SOLUCION_PROBLEMAS.md)"
+      - "No crear documentos nuevos innecesarios, editar y completar los existentes (DOCUMENTACION_MAESTRA.md, GUIA_SOLUCION_PROBLEMAS.md y GUIA_USUARIO.md)"
       - "Mantener actualizada la documentación Markdown en la raíz del proyecto."
       
       # === REGLAS GENERALES ===
