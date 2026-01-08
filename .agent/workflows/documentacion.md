@@ -60,6 +60,7 @@ Para cada documento a revisar:
 2. **Determinar destino**:
    - ¿Es información técnica/arquitectónica? → `DOCUMENTACION_MAESTRA.md`
    - ¿Es solución a un problema? → `GUIA_SOLUCION_PROBLEMAS.md`
+   - ¿Es guía de uso para administradores/usuarios? → `GUIA_USUARIO.md`
    - ¿Es información obsoleta/histórica? → Mover a `docs/legacy/`
    - ¿Es información duplicada? → Eliminar
 3. **Extraer información valiosa**:
@@ -111,7 +112,7 @@ Determinar si el cambio corresponde a:
 **DOCUMENTACION_MAESTRA.md** (Funcionalidades y arquitectura):
 - Nuevas funcionalidades del sistema
 - Cambios en la arquitectura
-- Modificaciones en flujos de usuario
+- Modificaciones en flujos técnicos
 - Actualizaciones de tecnologías o dependencias
 - Nuevos endpoints o APIs
 - Cambios en modelos de datos
@@ -122,6 +123,13 @@ Determinar si el cambio corresponde a:
 - Issues de despliegue
 - Bugs corregidos que podrían reaparecer
 - Problemas de integración con servicios externos
+
+**GUIA_USUARIO.md** (Guías de uso y procedimientos):
+- Nuevas funcionalidades de interfaz de usuario
+- Cambios en el panel administrativo
+- Procedimientos operativos
+- Guías de configuración para usuarios
+- Instrucciones de uso de features
 
 ## Paso 4: Actualizar DOCUMENTACION_MAESTRA.md
 
@@ -169,7 +177,27 @@ Si se resolvió un problema o error:
 4. Incluir comandos, código o queries SQL cuando sea aplicable
 5. Referenciar la documentación maestra si hay información relacionada
 
-## Paso 6: Verificar consistencia
+## Paso 6: Actualizar GUIA_USUARIO.md
+
+Si hay cambios en la interfaz de usuario o procedimientos operativos:
+
+1. Abrir `GUIA_USUARIO.md`
+2. Localizar la sección correspondiente según el índice
+3. Agregar o actualizar la información:
+   - Usar formato markdown consistente
+   - Incluir capturas de pantalla si es relevante (guardar en artifacts)
+   - Usar lenguaje claro y orientado al usuario final
+   - Incluir ejemplos prácticos paso a paso
+   - Actualizar la fecha en el encabezado
+4. Si es una funcionalidad nueva de usuario, considerar agregar una nueva subsección
+
+**Secciones principales:**
+- Sección 1: Panel Administrativo
+- Sección 2: Gestión de Reservas
+- Sección 3: Configuración del Sistema
+- Sección 4-6: Features específicas (WhatsApp, Códigos, Estadísticas)
+
+## Paso 7: Verificar consistencia
 
 Después de actualizar:
 
@@ -186,17 +214,17 @@ Después de actualizar:
    - Fecha de última actualización
    - Versión del documento (si aplica)
 
-## Paso 7: Commit de cambios
+## Paso 8: Commit de cambios
 
 // turbo
 ```bash
-git add DOCUMENTACION_MAESTRA.md GUIA_SOLUCION_PROBLEMAS.md
+git add DOCUMENTACION_MAESTRA.md GUIA_SOLUCION_PROBLEMAS.md GUIA_USUARIO.md
 git commit -m "docs: actualizar documentación [descripción breve del cambio]"
 ```
 
 Si se consolidaron archivos, incluir en el commit:
 ```bash
-git add DOCUMENTACION_MAESTRA.md GUIA_SOLUCION_PROBLEMAS.md docs/legacy/
+git add DOCUMENTACION_MAESTRA.md GUIA_SOLUCION_PROBLEMAS.md GUIA_USUARIO.md docs/legacy/
 git commit -m "docs: consolidar documentación fragmentada en documentos maestros"
 ```
 
