@@ -955,3 +955,23 @@ Si es una reserva nueva y debería tener historial:
    `Error creando transaccion para reserva`
 
 El sistema está diseñado para ser **resiliente**: si falla el registro de la transacción detallada, **aún se actualiza** el estado y monto de la reserva principal para no bloquear la operación. En estos casos, la reserva aparecerá pagada pero sin historial detallado.
+
+---
+
+## 13. Error SQL: Unknown column 'Transaccion.createdAt' in 'ORDER BY'
+
+### Problema
+Al intentar cargar las transacciones, el backend devuelve un error 500 y en los logs de Render aparece: `SequelizeDatabaseError: Unknown column 'Transaccion.createdAt' in 'ORDER BY'`.
+
+### Causa
+Sequelize intenta ordenar por el nombre del atributo del modelo (`createdAt`) en lugar del nombre real de la columna en la base de datos (`created_at`), y no realiza el mapeo automático correctamente en cláusulas `order` complejas o literales.
+
+### Solución
+Forzar el uso del nombre de columna real en la base de datos mediante un literal de Sequelize:
+
+```javascript
+// En backend/server-db.js
+order: [[sequelize.literal("created_at"), "DESC"]]
+```
+
+Esto garantiza que la consulta SQL generada sea `ORDER BY created_at DESC`, lo cual es compatible con MySQL sin ambigüedades.
