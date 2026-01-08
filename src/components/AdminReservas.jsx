@@ -3067,6 +3067,11 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-6">
+							{/* DEBUG - ELIMINAR DESPUÉS DE VERIFICAR */}
+							<div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-2 py-1 text-[10px] rounded text-center font-bold uppercase">
+								Modal Versión Historial v1.0 (Refresca si no ves esto)
+							</div>
+
 							{/* Código de Reserva */}
 							{selectedReserva.codigoReserva && (
 								<div className="bg-chocolate-50 border-2 border-chocolate-200 rounded-lg p-4">
