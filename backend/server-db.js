@@ -9528,8 +9528,13 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 					required: false,
 				},
 			],
-			order: [["created_at", "DESC"]],
+			order: [[sequelize.literal("created_at"), "DESC"]],
 		});
+
+		console.log(`[DEBUG] Transacciones para reserva ${id}:`, transacciones.length);
+		if (transacciones.length > 0) {
+			console.log(`[DEBUG] Detalle:`, JSON.stringify(transacciones, null, 2));
+		}
 
 		// Calcular resumen
 		const montoTotal = transacciones.reduce(

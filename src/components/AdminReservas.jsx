@@ -3287,7 +3287,7 @@ function AdminReservas() {
 							</div>
 
 							{/* Historial de Transacciones */}
-							{transacciones.length > 0 && (
+							{(loadingTransacciones || transacciones.length > 0) && (
 								<div className="border-t pt-6">
 									<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
 										<DollarSign className="h-5 w-5" />
