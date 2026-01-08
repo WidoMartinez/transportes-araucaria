@@ -17,7 +17,7 @@ El flujo original tenía un único botón "Confirmar reserva →" que:
 
 1. **Opciones de Pago Directo** (Arriba):
    - Selector de monto (40% o 100%)
-   - Selector de método de pago (Flow o Mercado Pago)
+   - Selector de método de pago (Flow)
    - Al hacer clic en un método de pago:
      - Se guarda automáticamente la reserva
      - Se redirige directamente a la pasarela de pago
@@ -65,7 +65,7 @@ handleProcesarPago(gateway, type)
 1. Usuario completa datos personales
 2. Usuario acepta términos
 3. Usuario selecciona monto a pagar (40% o 100%)
-4. Usuario selecciona método de pago (Flow o Mercado Pago)
+4. Usuario selecciona método de pago (Flow)
 5. → Sistema guarda reserva automáticamente
 6. → Sistema redirige a pasarela de pago
 7. ✅ Usuario completa el pago
@@ -90,7 +90,7 @@ handleProcesarPago(gateway, type)
 
 - ✅ Compatible con sistema de notificaciones PHPMailer
 - ✅ Compatible con backend en Render.com
-- ✅ Compatible con pasarelas de pago existentes (Flow, Mercado Pago)
+- ✅ Compatible con pasarela de pago Flow
 - ✅ No se modificó el backend
 - ✅ No se modificaron archivos PHP
 

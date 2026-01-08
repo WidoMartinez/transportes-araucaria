@@ -87,7 +87,7 @@ Este documento proporciona una lista de verificación para probar manualmente la
   - Reservar con 40% (con badge "Recomendado")
   - Pagar el 100%
 - [ ] Verificar que cada opción muestra el monto correcto
-- [ ] Verificar que NO se muestran los métodos de pago (Flow, Mercado Pago) todavía
+- [ ] Verificar que NO se muestran los métodos de pago (Flow) todavía
 
 #### Seleccionar 40%
 - [ ] Hacer clic en "Reservar con 40%"
@@ -95,9 +95,8 @@ Este documento proporciona una lista de verificación para probar manualmente la
 - [ ] Verificar que aparece "Paso 2: Elige tu método de pago"
 - [ ] Verificar que se muestra "Pagarás: $X" con el monto del 40%
 - [ ] Verificar que aparece el botón "← Cambiar monto"
-- [ ] Verificar que ahora SÍ aparecen 2 métodos de pago:
+- [ ] Verificar que ahora SÍ aparece el método de pago:
   - Flow (con descripción)
-  - Mercado Pago (con descripción)
 
 #### Cambiar de opinión - Regresar
 - [ ] Hacer clic en "← Cambiar monto"
@@ -112,22 +111,14 @@ Este documento proporciona una lista de verificación para probar manualmente la
 ### Caso 4: Flujo de pago - Paso 2 (Selección de método)
 
 #### Visualización de métodos
-- [ ] Con 40% seleccionado, verificar que se muestran:
+- [ ] Con 40% seleccionado, verificar que se muestra:
   - Botón de Flow con logo y descripción
-  - Botón de Mercado Pago con logo y descripción
-- [ ] Verificar que los botones tienen efecto hover (cambia borde a primario)
+- [ ] Verificar que el botón tiene efecto hover (cambia borde a primario)
 
 #### Intentar pagar con Flow
 - [ ] Hacer clic en el botón de Flow
 - [ ] Verificar que el botón muestra spinner de carga
-- [ ] Verificar que los demás botones se deshabilitan
 - [ ] (Nota: El pago real se procesará según la configuración del backend)
-
-#### Intentar pagar con Mercado Pago
-- [ ] Regresar y seleccionar 100%
-- [ ] Hacer clic en el botón de Mercado Pago
-- [ ] Verificar que el botón muestra spinner de carga
-- [ ] Verificar que los demás botones se deshabilitan
 
 ### Caso 5: Validación de email en tiempo real
 

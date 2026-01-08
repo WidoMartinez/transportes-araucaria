@@ -15,7 +15,7 @@ Se ha eliminado completamente el sistema alternativo basado en archivos JSON, ma
 - ✅ Base de datos MySQL en Hostinger (persistente)
 - ✅ Backend en Render.com usando `server-db.js`
 - ✅ Sistema de correos con phpmailer en Hostinger
-- ✅ Sistema de pagos (MercadoPago y Flow)
+- ✅ Sistema de pagos (Flow)
 
 ## 📊 Archivos Eliminados
 
@@ -106,7 +106,6 @@ DB_USER=u419311572_admin
 DB_PASSWORD=tu_password_aqui
 
 # Pagos
-MERCADOPAGO_ACCESS_TOKEN=tu_token_aqui
 FLOW_API_KEY=tu_api_key_aqui
 FLOW_SECRET_KEY=tu_secret_key_aqui
 ```
