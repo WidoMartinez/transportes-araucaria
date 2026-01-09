@@ -975,3 +975,92 @@ order: [[sequelize.literal("created_at"), "DESC"]]
 ```
 
 Esto garantiza que la consulta SQL generada sea `ORDER BY created_at DESC`, lo cual es compatible con MySQL sin ambigüedades.
+
+---
+
+## 14. Error "No se recibió información desde Webpay" en Flow
+
+**Implementado: 8 Enero 2026**
+
+### Problema
+Los clientes recibían el error **"No se recibió información desde Webpay"** en Flow al intentar pagar desde "Consultar Reserva" o "Compra Productos". El pago quedaba en estado pendiente (Status: 1) y no se completaba correctamente.
+
+### Síntomas
+- ✅ El flujo de "Pagar con Código" funciona perfectamente
+- ❌ El flujo de "Consultar Reserva" muestra error de Webpay
+- ❌ El flujo de "Compra Productos" muestra error de Webpay
+- Flow muestra: "¡Ups! Ha ocurrido un error - No se recibió información desde Webpay"
+- El cliente retorna a la página de "Pago Pendiente de Confirmación"
+- El pago nunca se completa (queda en Status: 1 indefinidamente)
+
+### Causa Raíz
+Inconsistencia en el método de redirección a Flow entre componentes:
+
+- **`PagarConCodigo.jsx`** (funcional): Usa `window.location.href = pj.url`
+- **`ConsultarReserva.jsx`** (falla): Usa `window.open(data.url, "_blank")`
+- **`CompraProductos.jsx`** (falla): Usa `window.open(data.url, "_blank")`
+
+El uso de `window.open()` causa problemas en navegadores móviles y con Flow/Webpay:
+
+1. **Contexto de navegación separado**: Flow/Webpay pierden el contexto de la sesión original
+2. **Bloqueadores de pop-ups**: Interfieren con la redirección
+3. **Cookies no transferidas**: El contexto de seguridad se pierde entre ventanas
+4. **Restricciones móviles**: iOS/Android limitan comunicación entre ventanas
+
+### Solución (Enero 2026)
+
+Se cambió `window.open()` por `window.location.href` en ambos archivos problemáticos:
+
+**`src/components/ConsultarReserva.jsx`** (línea 116):
+```javascript
+// Antes
+window.open(data.url, "_blank");
+
+// Después
+window.location.href = data.url;
+```
+
+**`src/components/CompraProductos.jsx`** (línea 89):
+```javascript
+// Antes
+window.open(data.url, "_blank");
+
+// Después  
+window.location.href = data.url;
+```
+
+### Comportamiento Correcto
+
+**Antes del fix:**
+1. Usuario hace clic en "Pagar"
+2. Se abre nueva pestaña/ventana
+3. Flow muestra error "No se recibió información desde Webpay"
+4. Pago queda pendiente
+
+**Después del fix:**
+1. Usuario hace clic en "Pagar"
+2. La misma ventana redirige a Flow
+3. Flow carga correctamente con el contexto
+4. Usuario completa pago sin errores
+5. Pago se confirma exitosamente
+
+### Archivos Modificados
+
+- `src/components/ConsultarReserva.jsx` (línea 116)
+- `src/components/CompraProductos.jsx` (línea 89)
+
+### Consistencia
+
+Ahora **todos** los flujos de pago usan `window.location.href`, garantizando:
+- ✅ Comportamiento uniforme en todos los navegadores
+- ✅ Compatibilidad con móviles (iOS/Android)
+- ✅ Sin errores de contexto de navegación
+- ✅ Código más mantenible
+
+> [!IMPORTANT]  
+> **Regla para futuros componentes de pago**: Siempre usar `window.location.href` para redirigir a Flow/Webpay, nunca `window.open()`.
+
+> [!TIP]  
+> Si necesitas debug, verifica en Network tab del navegador que las cookies de sesión se envían correctamente en la petición a Flow.
+
+

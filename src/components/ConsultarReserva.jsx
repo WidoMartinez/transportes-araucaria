@@ -113,7 +113,7 @@ function ConsultarReserva() {
 			const data = await resp.json();
 			if (!data.url)
 				throw new Error("Respuesta inválida del servidor de pagos");
-			window.open(data.url, "_blank");
+			window.location.href = data.url;
 		} catch (e) {
 			setPayError(e.message || "No se pudo iniciar el pago");
 		} finally {
