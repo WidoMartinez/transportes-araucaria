@@ -7477,6 +7477,12 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			optionalMetadata.referenciaPago.trim().length > 0
 				? optionalMetadata.referenciaPago.trim().toUpperCase()
 				: null;
+		const codigoPagoId =
+			optionalMetadata.codigoPagoId !== undefined &&
+			optionalMetadata.codigoPagoId !== null &&
+			optionalMetadata.codigoPagoId !== ""
+				? Number(optionalMetadata.codigoPagoId)
+				: null;
 
 		if (
 			!commerceOrder &&

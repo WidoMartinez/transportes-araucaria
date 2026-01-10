@@ -653,8 +653,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											const d = new Date();
 											d.setMinutes(d.getMinutes() + 15);
-											const offset = d.getTimezoneOffset() * 60000;
-											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											const localISOTime = d.toISOString().slice(0, 16);
 											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
 										}}
 									>
@@ -667,8 +666,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											const d = new Date();
 											d.setMinutes(d.getMinutes() + 30);
-											const offset = d.getTimezoneOffset() * 60000;
-											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											const localISOTime = d.toISOString().slice(0, 16);
 											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
 										}}
 									>
@@ -681,8 +679,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											const d = new Date();
 											d.setHours(d.getHours() + 1);
-											const offset = d.getTimezoneOffset() * 60000;
-											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											const localISOTime = d.toISOString().slice(0, 16);
 											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
 										}}
 									>
@@ -699,8 +696,7 @@ function AdminCodigosPago() {
 											// Podríamos poner una fecha por defecto lejana (ej. 24h) si está vacío.
 											const d = new Date();
 											d.setHours(d.getHours() + 24);
-											const offset = d.getTimezoneOffset() * 60000;
-											const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+											const localISOTime = d.toISOString().slice(0, 16);
 											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
 										}}
 									>
