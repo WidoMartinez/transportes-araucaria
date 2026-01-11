@@ -29,27 +29,37 @@ const AEROPUERTO = "Aeropuerto La Araucanía";
 const OPCION_OTRO = "Otro";
 const DESTINO_BASE_POR_DEFECTO = destinosBase[0]?.nombre || "";
 
+// Constantes de tiempo en minutos para los botones de vencimiento
+const QUINCE_MINUTOS = 15;
+const TREINTA_MINUTOS = 30;
+const UNA_HORA = 60;
+const DOS_HORAS = 120;
+const VEINTICUATRO_HORAS = 24 * 60;
+
 /**
  * Genera una fecha/hora local sin conversión a UTC
- * @param {number} minutosAdelante - Cantidad de minutos a agregar desde la hora actual
+ * @param {number} minutosAdelante - Cantidad de minutos a agregar desde la hora actual (debe ser >= 0)
  * @returns {string} Fecha formateada en formato 'YYYY-MM-DDTHH:mm' (compatible con datetime-local)
  * 
  * Soluciona el problema de desfase horario al usar toISOString() que convierte a UTC.
  * Chile está en UTC-3 (o UTC-4 en horario de verano), causando un desfase de 3-4 horas.
  */
 const obtenerFechaLocal = (minutosAdelante) => {
+	// Validar que el parámetro sea un número positivo
+	const minutos = Math.max(0, Number(minutosAdelante) || 0);
+	
 	const fecha = new Date();
 	// Usar setTime para manejar correctamente los cruces de día/mes/año
-	fecha.setTime(fecha.getTime() + minutosAdelante * 60 * 1000);
+	fecha.setTime(fecha.getTime() + minutos * 60 * 1000);
 	
 	// Formatear manualmente sin conversión UTC
 	const año = fecha.getFullYear();
 	const mes = String(fecha.getMonth() + 1).padStart(2, '0');
 	const dia = String(fecha.getDate()).padStart(2, '0');
 	const horas = String(fecha.getHours()).padStart(2, '0');
-	const minutos = String(fecha.getMinutes()).padStart(2, '0');
+	const minutosStr = String(fecha.getMinutes()).padStart(2, '0');
 	
-	return `${año}-${mes}-${dia}T${horas}:${minutos}`;
+	return `${año}-${mes}-${dia}T${horas}:${minutosStr}`;
 };
 
 function AdminCodigosPago() {
@@ -236,7 +246,7 @@ function AdminCodigosPago() {
 	// Efecto para establecer fecha de vencimiento por defecto al abrir el modal
 	useEffect(() => {
 		if (showCrearDialog && !formData.fechaVencimiento) {
-			const fechaStr = obtenerFechaLocal(24 * 60); // 24 horas por defecto
+			const fechaStr = obtenerFechaLocal(VEINTICUATRO_HORAS); // 24 horas por defecto
 			setFormData((prev) => ({ ...prev, fechaVencimiento: fechaStr }));
 		}
 	}, [showCrearDialog, formData.fechaVencimiento]);
@@ -672,7 +682,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
-												fechaVencimiento: obtenerFechaLocal(15) 
+												fechaVencimiento: obtenerFechaLocal(QUINCE_MINUTOS) 
 											}));
 										}}
 									>
@@ -685,7 +695,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
-												fechaVencimiento: obtenerFechaLocal(30) 
+												fechaVencimiento: obtenerFechaLocal(TREINTA_MINUTOS) 
 											}));
 										}}
 									>
@@ -698,7 +708,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
-												fechaVencimiento: obtenerFechaLocal(60) 
+												fechaVencimiento: obtenerFechaLocal(UNA_HORA) 
 											}));
 										}}
 									>
@@ -711,7 +721,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
-												fechaVencimiento: obtenerFechaLocal(120) 
+												fechaVencimiento: obtenerFechaLocal(DOS_HORAS) 
 											}));
 										}}
 									>
@@ -724,7 +734,7 @@ function AdminCodigosPago() {
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
-												fechaVencimiento: obtenerFechaLocal(24 * 60) 
+												fechaVencimiento: obtenerFechaLocal(VEINTICUATRO_HORAS) 
 											}));
 										}}
 									>
