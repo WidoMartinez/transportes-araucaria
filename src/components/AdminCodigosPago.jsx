@@ -29,10 +29,18 @@ const AEROPUERTO = "Aeropuerto La Araucanía";
 const OPCION_OTRO = "Otro";
 const DESTINO_BASE_POR_DEFECTO = destinosBase[0]?.nombre || "";
 
-// Función helper para generar fecha local sin conversión UTC
+/**
+ * Genera una fecha/hora local sin conversión a UTC
+ * @param {number} minutosAdelante - Cantidad de minutos a agregar desde la hora actual
+ * @returns {string} Fecha formateada en formato 'YYYY-MM-DDTHH:mm' (compatible con datetime-local)
+ * 
+ * Soluciona el problema de desfase horario al usar toISOString() que convierte a UTC.
+ * Chile está en UTC-3 (o UTC-4 en horario de verano), causando un desfase de 3-4 horas.
+ */
 const obtenerFechaLocal = (minutosAdelante) => {
 	const fecha = new Date();
-	fecha.setMinutes(fecha.getMinutes() + minutosAdelante);
+	// Usar setTime para manejar correctamente los cruces de día/mes/año
+	fecha.setTime(fecha.getTime() + minutosAdelante * 60 * 1000);
 	
 	// Formatear manualmente sin conversión UTC
 	const año = fecha.getFullYear();
