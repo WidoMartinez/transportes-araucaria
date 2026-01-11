@@ -29,6 +29,21 @@ const AEROPUERTO = "Aeropuerto La Araucanía";
 const OPCION_OTRO = "Otro";
 const DESTINO_BASE_POR_DEFECTO = destinosBase[0]?.nombre || "";
 
+// Función helper para generar fecha local sin conversión UTC
+const obtenerFechaLocal = (minutosAdelante) => {
+	const fecha = new Date();
+	fecha.setMinutes(fecha.getMinutes() + minutosAdelante);
+	
+	// Formatear manualmente sin conversión UTC
+	const año = fecha.getFullYear();
+	const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+	const dia = String(fecha.getDate()).padStart(2, '0');
+	const horas = String(fecha.getHours()).padStart(2, '0');
+	const minutos = String(fecha.getMinutes()).padStart(2, '0');
+	
+	return `${año}-${mes}-${dia}T${horas}:${minutos}`;
+};
+
 function AdminCodigosPago() {
 	const [codigosPago, setCodigosPago] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -213,11 +228,7 @@ function AdminCodigosPago() {
 	// Efecto para establecer fecha de vencimiento por defecto al abrir el modal
 	useEffect(() => {
 		if (showCrearDialog && !formData.fechaVencimiento) {
-			// Por defecto 24 horas desde ahora
-			const manana = new Date();
-			manana.setHours(manana.getHours() + 24);
-			// Formato requerido para input datetime-local: YYYY-MM-DDTHH:mm
-			const fechaStr = manana.toISOString().slice(0, 16);
+			const fechaStr = obtenerFechaLocal(24 * 60); // 24 horas por defecto
 			setFormData((prev) => ({ ...prev, fechaVencimiento: fechaStr }));
 		}
 	}, [showCrearDialog, formData.fechaVencimiento]);
@@ -651,10 +662,10 @@ function AdminCodigosPago() {
 										variant="outline" 
 										size="sm" 
 										onClick={() => {
-											const d = new Date();
-											d.setMinutes(d.getMinutes() + 15);
-											const localISOTime = d.toISOString().slice(0, 16);
-											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+											setFormData(prev => ({ 
+												...prev, 
+												fechaVencimiento: obtenerFechaLocal(15) 
+											}));
 										}}
 									>
 										15 min
@@ -664,10 +675,10 @@ function AdminCodigosPago() {
 										variant="outline" 
 										size="sm" 
 										onClick={() => {
-											const d = new Date();
-											d.setMinutes(d.getMinutes() + 30);
-											const localISOTime = d.toISOString().slice(0, 16);
-											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+											setFormData(prev => ({ 
+												...prev, 
+												fechaVencimiento: obtenerFechaLocal(30) 
+											}));
 										}}
 									>
 										30 min
@@ -677,10 +688,10 @@ function AdminCodigosPago() {
 										variant="outline" 
 										size="sm" 
 										onClick={() => {
-											const d = new Date();
-											d.setHours(d.getHours() + 1);
-											const localISOTime = d.toISOString().slice(0, 16);
-											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+											setFormData(prev => ({ 
+												...prev, 
+												fechaVencimiento: obtenerFechaLocal(60) 
+											}));
 										}}
 									>
 										1 hora
@@ -690,14 +701,23 @@ function AdminCodigosPago() {
 										variant="outline" 
 										size="sm" 
 										onClick={() => {
-											// Personalizado: Dejar el input libre (o resetear a vacío si se prefiere)
-											// En este caso, simplemente enfocamos el input si fuera necesario, 
-											// pero como ya es editable, el usuario puede cambiarlo.
-											// Podríamos poner una fecha por defecto lejana (ej. 24h) si está vacío.
-											const d = new Date();
-											d.setHours(d.getHours() + 24);
-											const localISOTime = d.toISOString().slice(0, 16);
-											setFormData(prev => ({ ...prev, fechaVencimiento: localISOTime }));
+											setFormData(prev => ({ 
+												...prev, 
+												fechaVencimiento: obtenerFechaLocal(120) 
+											}));
+										}}
+									>
+										2 horas
+									</Button>
+									<Button 
+										type="button" 
+										variant="outline" 
+										size="sm" 
+										onClick={() => {
+											setFormData(prev => ({ 
+												...prev, 
+												fechaVencimiento: obtenerFechaLocal(24 * 60) 
+											}));
 										}}
 									>
 										24 horas
