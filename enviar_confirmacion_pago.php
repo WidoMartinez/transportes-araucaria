@@ -88,6 +88,7 @@ $monto = $data['monto'] ?? 0;
 $gateway = $data['gateway'] ?? 'MercadoPago';
 $paymentId = $data['paymentId'] ?? '';
 $estadoPago = $data['estadoPago'] ?? 'approved';
+$motivo = $data['motivo'] ?? ''; // Nuevo campo para el motivo del pago
 
 // Formatear monto
 $montoFormateado = '$' . number_format($monto, 0, ',', '.') . ' CLP';
@@ -261,16 +262,19 @@ try {
                             {$paymentId}
                         </td>
                     </tr>
-                    <tr>
-                        <td style='padding:12px 0;color:#6b7280;font-size:14px'>
-                            <strong>Estado:</strong>
-                        </td>
-                        <td style='padding:12px 0;color:#10b981;font-size:14px'>
-                            <span style='background-color:#d1fae5;color:#065f46;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600'>
-                                ✓ APROBADO
                             </span>
                         </td>
                     </tr>
+                    <?php if (!empty($motivo)): ?>
+                    <tr>
+                        <td style='padding:12px 0;color:#6b7280;font-size:14px'>
+                            <strong>Motivo:</strong>
+                        </td>
+                        <td style='padding:12px 0;color:#111827;font-size:14px'>
+                            <?php echo htmlspecialchars($motivo); ?>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
                 </table>
 
                 <!-- Próximos pasos -->
@@ -339,6 +343,7 @@ try {
     - Método de Pago: {$gateway}
     - ID de Transacción: {$paymentId}
     - Estado: APROBADO
+    " . (!empty($motivo) ? "- Motivo: {$motivo}" : "") . "
     
     PRÓXIMOS PASOS:
     - Guarda este correo como comprobante
