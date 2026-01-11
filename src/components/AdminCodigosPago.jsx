@@ -46,6 +46,8 @@ const VEINTICUATRO_HORAS = 24 * 60;
  */
 const obtenerFechaLocal = (minutosAdelante) => {
 	// Validar que el parámetro sea un número positivo
+	// Se usa Math.max(0, ...) para convertir valores negativos a 0 de forma segura,
+	// evitando fechas en el pasado que no tienen sentido para vencimientos
 	const minutos = Math.max(0, Number(minutosAdelante) || 0);
 	
 	const fecha = new Date();
