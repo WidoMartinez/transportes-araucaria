@@ -40,6 +40,7 @@ import CompletarDetalles from "./components/CompletarDetalles"; // Importar comp
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
 import { AuthProvider } from "./contexts/AuthContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
 
@@ -1853,9 +1854,11 @@ function App() {
 	if (isAdminView) {
 		return (
 			<AuthProvider>
-				<ProtectedRoute>
-					<AdminDashboard />
-				</ProtectedRoute>
+				<NotificationProvider>
+					<ProtectedRoute>
+						<AdminDashboard />
+					</ProtectedRoute>
+				</NotificationProvider>
 			</AuthProvider>
 		);
 	}

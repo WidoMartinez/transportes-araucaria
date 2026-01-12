@@ -75,6 +75,13 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "./ui/alert-dialog";
+// Nuevos componentes para mejoras del panel
+import { GastoQuickAdd } from "./admin/reservas/GastoQuickAdd";
+import { ReservaActionsMenu } from "./admin/reservas/ReservaActionsMenu";
+import { ReservaTimeline, buildReservaTimeline } from "./admin/reservas/ReservaTimeline";
+import { ReservaAdvancedFilters } from "./admin/reservas/ReservaAdvancedFilters";
+import { PagoQuickDialog } from "./admin/reservas/PagoQuickDialog";
+import { useReservaNotifications, useGastoNotifications } from "../contexts/NotificationContext";
 
 const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
 const normalizeDestino = (value) =>
@@ -165,6 +172,17 @@ function AdminReservas() {
 	// Nuevo selector de rango y filtros inteligentes
 	const [rangoFecha, setRangoFecha] = useState("todos"); // 'hoy', 'ayer', 'semana', 'mes', 'personalizado', 'todos'
 	const [filtroInteligente, setFiltroInteligente] = useState("todos"); // 'sin_asignacion', 'incompletas', 'archivadas'
+	
+	// Estados para nuevas funcionalidades
+	const [showGastoDialog, setShowGastoDialog] = useState(false);
+	const [showPagoDialog, setShowPagoDialog] = useState(false);
+	const [showTimelineDialog, setShowTimelineDialog] = useState(false);
+	const [gastosReserva, setGastosReserva] = useState([]);
+	const [advancedFilters, setAdvancedFilters] = useState({});
+	
+	// Hooks de notificaciones
+	const reservaNotifications = useReservaNotifications();
+	const gastoNotifications = useGastoNotifications();
 
 	// Manejar cambio de rango de fechas
 	const handleRangoFechaChange = (valor) => {
@@ -1152,6 +1170,79 @@ function AdminReservas() {
 		} finally {
 			setLoadingTransacciones(false);
 		}
+	};
+
+	// Nueva función: Abrir modal de agregar gasto
+	const handleAgregarGasto = (reserva) => {
+		setSelectedReserva(reserva);
+		setShowGastoDialog(true);
+	};
+
+	// Nueva función: Manejar gasto creado exitosamente
+	const handleGastoCreado = (gasto) => {
+		gastoNotifications.created(gasto.tipoGasto);
+		// Recargar la lista de reservas para actualizar totales
+		fetchReservas();
+	};
+
+	// Nueva función: Ver historial completo con timeline
+	const handleVerHistorial = async (reserva) => {
+		setSelectedReserva(reserva);
+		setShowTimelineDialog(true);
+		
+		// Cargar gastos de la reserva
+		try {
+			const response = await authenticatedFetch(`/api/gastos?reservaId=${reserva.id}`);
+			if (response.ok) {
+				const data = await response.json();
+				setGastosReserva(data.gastos || []);
+			}
+		} catch (error) {
+			console.error("Error cargando gastos:", error);
+			setGastosReserva([]);
+		}
+	};
+
+	// Nueva función: Cambiar estado de reserva desde menú de acciones
+	const handleCambiarEstado = async (reserva, nuevoEstado) => {
+		try {
+			const response = await authenticatedFetch(
+				`/api/reservas/${reserva.id}/estado`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ estado: nuevoEstado }),
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error("Error al cambiar estado");
+			}
+
+			reservaNotifications.stateChanged(reserva.codigoReserva, nuevoEstado);
+			fetchReservas();
+		} catch (error) {
+			console.error("Error al cambiar estado:", error);
+			reservaNotifications.error("Error al cambiar el estado de la reserva");
+		}
+	};
+
+	// Nueva función: Marcar como pagada desde menú de acciones
+	const handleMarcarPagada = (reserva) => {
+		setSelectedReserva(reserva);
+		setShowPagoDialog(true);
+	};
+
+	// Nueva función: Callback cuando se registra un pago
+	const handlePagoRegistrado = () => {
+		reservaNotifications.paid(selectedReserva.codigoReserva);
+		fetchReservas();
+	};
+
+	// Nueva función: Manejar filtros avanzados
+	const handleAdvancedFiltersChange = (newFilters) => {
+		setAdvancedFilters(newFilters);
+		// Los filtros se aplicarán automáticamente en reservasFiltradas
 	};
 
 	// Completar reserva y redirigir a gastos
@@ -2309,21 +2400,30 @@ function AdminReservas() {
 						<p className="text-sm text-muted-foreground">
 							Mostrando {reservasFiltradas.length} de {totalReservas} reservas
 						</p>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								setSearchTerm("");
-								setEstadoFiltro("todos");
-								setEstadoPagoFiltro("todos");
-								setFechaDesde("");
-								setFechaHasta("");
-								setCurrentPage(1);
-							}}
-						>
-							<RefreshCw className="w-4 h-4 mr-2" />
-							Limpiar Filtros
-						</Button>
+						<div className="flex gap-2">
+							<ReservaAdvancedFilters
+								filters={advancedFilters}
+								onFiltersChange={handleAdvancedFiltersChange}
+								conductores={conductores}
+								vehiculos={vehiculos}
+							/>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									setSearchTerm("");
+									setEstadoFiltro("todos");
+									setEstadoPagoFiltro("todos");
+									setFechaDesde("");
+									setFechaHasta("");
+									setAdvancedFilters({});
+									setCurrentPage(1);
+								}}
+							>
+								<RefreshCw className="w-4 h-4 mr-2" />
+								Limpiar Filtros
+							</Button>
+						</div>
 					</div>
 				</CardContent>
 			</Card>
@@ -2906,74 +3006,29 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.acciones && (
 												<TableCell>
-													<div className="flex gap-2">
+													<div className="flex gap-2 items-center">
+														{/* Botón Ver - siempre visible */}
 														<Button
 															variant="outline"
 															size="sm"
 															onClick={() => handleViewDetails(reserva)}
+															title="Ver detalles"
 														>
 															<Eye className="w-4 h-4" />
 														</Button>
-														<Button
-															variant="default"
-															size="sm"
-															onClick={() => handleEdit(reserva)}
-														>
-															<Edit className="w-4 h-4" />
-														</Button>
-														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
-														{reserva?.estado === "confirmada" && (
-															<Button
-																variant={
-																	isAsignada(reserva) ? "outline" : "secondary"
-																}
-																size="sm"
-																onClick={() => handleAsignar(reserva)}
-																title={
-																	isAsignada(reserva)
-																		? "Reasignar vehículo y conductor"
-																		: "Asignar vehículo y conductor"
-																}
-															>
-																<span role="img" aria-label="auto">
-																	🚗
-																</span>
-															</Button>
-														)}
-														{/* Botón para completar reserva y agregar gastos */}
-														{reserva?.estado === "confirmada" && (
-															<Button
-																variant="default"
-																size="sm"
-																onClick={() => handleCompletar(reserva)}
-																title="Completar reserva y agregar gastos"
-																className="bg-green-600 hover:bg-green-700"
-															>
-																<CheckCircle2 className="w-4 h-4" />
-															</Button>
-														)}
-														<Button
-															variant="ghost"
-															size="icon"
-															onClick={() => handleArchivar(reserva)}
-															title={
-																reserva.archivada
-																	? "Desarchivar"
-																	: ["pendiente", "cancelada"].includes(reserva.estado)
-																	? "Archivar"
-																	: "Solo se pueden archivar reservas pendientes o canceladas"
-															}
-															disabled={
-																!reserva.archivada &&
-																!["pendiente", "cancelada"].includes(reserva.estado)
-															}
-														>
-															{reserva.archivada ? (
-																<RefreshCw className="h-4 w-4" />
-															) : (
-																<CheckSquare className="h-4 w-4" />
-															)}
-														</Button>
+														
+														{/* Menú de acciones unificado */}
+														<ReservaActionsMenu
+															reserva={reserva}
+															onVer={handleViewDetails}
+															onEditar={handleEdit}
+															onEliminar={handleArchivar}
+															onAgregarGasto={handleAgregarGasto}
+															onVerHistorial={handleVerHistorial}
+															onAsignar={handleAsignar}
+															onMarcarPagada={handleMarcarPagada}
+															onCambiarEstado={handleCambiarEstado}
+														/>
 													</div>
 												</TableCell>
 											)}
@@ -5408,6 +5463,50 @@ function AdminReservas() {
 							})()}
 						</div>
 					</div>
+				</DialogContent>
+			</Dialog>
+
+			{/* Dialog para agregar gastos rápidamente */}
+			<GastoQuickAdd
+				reserva={selectedReserva}
+				open={showGastoDialog}
+				onOpenChange={setShowGastoDialog}
+				onGastoCreado={handleGastoCreado}
+				apiUrl={apiUrl}
+				authenticatedFetch={authenticatedFetch}
+			/>
+
+			{/* Dialog para registrar pago rápidamente */}
+			<PagoQuickDialog
+				reserva={selectedReserva}
+				open={showPagoDialog}
+				onOpenChange={setShowPagoDialog}
+				onPagoRegistrado={handlePagoRegistrado}
+				apiUrl={apiUrl}
+				authenticatedFetch={authenticatedFetch}
+			/>
+
+			{/* Dialog para ver historial completo con timeline */}
+			<Dialog open={showTimelineDialog} onOpenChange={setShowTimelineDialog}>
+				<DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle>
+							Historial Completo - Reserva #{selectedReserva?.codigoReserva}
+						</DialogTitle>
+						<DialogDescription>
+							Timeline completo de eventos, cambios de estado, pagos y gastos asociados
+						</DialogDescription>
+					</DialogHeader>
+					{selectedReserva && (
+						<ReservaTimeline
+							eventos={buildReservaTimeline(
+								selectedReserva,
+								pagoHistorial,
+								gastosReserva,
+								historialAsignaciones
+							)}
+						/>
+					)}
 				</DialogContent>
 			</Dialog>
 		</div>
