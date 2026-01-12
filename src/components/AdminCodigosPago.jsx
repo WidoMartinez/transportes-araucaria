@@ -264,7 +264,15 @@ function AdminCodigosPago() {
 
 	const generarMensaje = (codigo) => {
 		const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
-		return `Hola, aquí tienes tu código de pago:\n\n${codigo.codigo}\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+		let mensaje = `Hola, aquí tienes tu código de pago:\n\n${codigo.codigo}\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+		
+		// Agregar fecha de vencimiento si existe
+		if (codigo.fechaVencimiento) {
+			const fechaVenc = formatDate(codigo.fechaVencimiento);
+			mensaje += `\n\n⏰ Válido hasta: ${fechaVenc}`;
+		}
+		
+		return mensaje;
 	};
 
 	const copiarAlPortapapeles = (codigo) => {
