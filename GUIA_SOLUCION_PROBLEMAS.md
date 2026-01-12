@@ -900,18 +900,6 @@ try {
 
 ### Archivos Modificados
 
-- `backend/server-db.js` (líneas 7707-7756): Lógica de actualización mejorada
-
-### Prevención de Problemas Futuros
-
-**Para nuevos flujos de pago con códigos**:
-
-1. **Frontend**: Siempre enviar `codigoPagoId` en la metadata de Flow
-   ```javascript
-   codigoPagoId: codigoValidado.id  // ID numérico
-   ```
-
-2. **Backend**: Confiar en `codigoPagoId` como fuente primaria
    - Más confiable que buscar por texto
    - Evita problemas de normalización (mayúsculas, espacios, etc.)
    - Más eficiente (búsqueda por primary key)
@@ -1158,4 +1146,153 @@ Ahora **todos** los flujos de pago usan `window.location.href`, garantizando:
 > [!TIP]  
 > Si necesitas debug, verifica en Network tab del navegador que las cookies de sesión se envían correctamente en la petición a Flow.
 
+---
+
+## 15. Error 500 al Agregar Conductor (Validación de Sequelize)
+
+**Implementado: 11 Enero 2026**
+
+### Problema
+Al intentar agregar un nuevo conductor desde el panel de administración, el sistema devolvía un error 500 genérico sin información específica sobre qué campo estaba causando el problema.
+
+### Síntomas
+- ❌ Error 500 al hacer POST a `/api/conductores`
+- ❌ Mensaje genérico: "Error interno del servidor"
+- ❌ No se indica qué campo tiene el problema
+- ❌ Difícil de diagnosticar para el usuario
+
+### Causas Comunes
+
+#### 1. RUT Duplicado
+El error más común es intentar crear un conductor con un RUT que ya existe en la base de datos.
+
+**Error de Sequelize**:
+```
+SequelizeUniqueConstraintError: Duplicate entry '12666981-K' for key 'rut'
+```
+
+#### 2. Email Inválido
+Cuando se envía un email con formato incorrecto o una cadena vacía que no pasa la validación `isEmail` de Sequelize.
+
+**Error de Sequelize**:
+```
+SequelizeValidationError: Validation isEmail on email failed
+```
+
+### Solución (Enero 2026)
+
+Se mejoró el manejo de errores en los endpoints POST y PUT de `/api/conductores` para capturar y reportar errores de validación de Sequelize de manera específica.
+
+**Código implementado** (`backend/server-db.js`, líneas 6016-6040):
+
+```javascript
+} catch (error) {
+	console.error("Error creando conductor:", error);
+	
+	// Manejar errores de validación de Sequelize
+	if (error.name === "SequelizeValidationError") {
+		const validationErrors = error.errors.map(err => ({
+			field: err.path,
+			message: err.message
+		}));
+		console.error("Errores de validación:", validationErrors);
+		return res.status(400).json({
+			error: "Error de validación",
+			details: validationErrors
+		});
+	}
+	
+	// Manejar errores de unicidad (RUT duplicado)
+	if (error.name === "SequelizeUniqueConstraintError") {
+		return res.status(409).json({
+			error: "Ya existe un conductor con este RUT"
+		});
+	}
+	
+	res.status(500).json({ error: "Error interno del servidor" });
+}
+```
+
+### Comportamiento Después de la Solución
+
+#### RUT Duplicado
+**Antes**:
+```
+Status: 500
+Response: { "error": "Error interno del servidor" }
+```
+
+**Ahora**:
+```
+Status: 409 Conflict
+Response: { "error": "Ya existe un conductor con este RUT" }
+```
+
+#### Email Inválido
+**Antes**:
+```
+Status: 500
+Response: { "error": "Error interno del servidor" }
+```
+
+**Ahora**:
+```
+Status: 400 Bad Request
+Response: {
+  "error": "Error de validación",
+  "details": [
+    {
+      "field": "email",
+      "message": "Validation isEmail on email failed"
+    }
+  ]
+}
+```
+
+### Logs del Servidor
+
+**RUT Duplicado**:
+```
+Error creando conductor: SequelizeUniqueConstraintError
+  name: 'SequelizeUniqueConstraintError',
+  errors: [
+    ValidationErrorItem {
+      message: 'rut must be unique',
+      type: 'unique violation',
+      path: 'rut',
+      value: '12666981-K'
+    }
+  ]
+```
+
+**Email Inválido**:
+```
+Error creando conductor: SequelizeValidationError
+Errores de validación: [
+  {
+    field: 'email',
+    message: 'Validation isEmail on email failed'
+  }
+]
+```
+
+### Prevención
+
+Para evitar estos errores:
+
+1. **RUT Duplicado**: 
+   - El sistema ya valida antes de intentar crear el conductor (líneas 5990-5998)
+   - Si la validación previa falla, el nuevo manejo de errores captura el error de la base de datos
+
+2. **Email Inválido**:
+   - El backend normaliza emails vacíos a `null` (línea 5982)
+   - Se recomienda agregar validación de formato en el frontend
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 6016-6040): Manejo de errores POST
+- `backend/server-db.js` (líneas 6120-6144): Manejo de errores PUT
+
+> [!IMPORTANT]
+> El mismo manejo de errores se aplicó tanto al endpoint POST (crear) como PUT (actualizar) para mantener consistencia.
 
