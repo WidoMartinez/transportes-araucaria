@@ -66,26 +66,9 @@ dotenv.config();
 // Configurar asociaciones entre modelos para habilitar includes en consultas
 setupAssociations();
 
-// Importar procesador de correos y limpiador
+// Importar procesador de correos y limpiador (se inicializarán después de la BD)
 import { processPendingEmails } from "./cron/emailProcessor.js";
 import { cleanOldEmails, getEmailStats } from "./cron/cleanOldEmails.js";
-
-// Iniciar procesador de correos (cada 60 segundos)
-setInterval(processPendingEmails, 60000);
-console.log("🕒 Procesador de correos pendientes iniciado (intervalo: 60s)");
-
-// Iniciar limpiador de correos antiguos (cada 7 días = 604800000 ms)
-// NOTA: Se usa setInterval para simplicidad en un servidor continuo (Render.com)
-// En producción con múltiples instancias, considerar usar un cron job externo
-setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
-console.log("🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)");
-
-// Ejecutar limpieza inicial al arrancar (después de 5 minutos)
-setTimeout(async () => {
-    console.log("🔄 Ejecutando limpieza inicial de correos antiguos...");
-    await cleanOldEmails();
-    await getEmailStats();
-}, 5 * 60 * 1000);
 
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
@@ -9618,6 +9601,21 @@ const startServer = async () => {
 		await addConfiguracionTable();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
+
+		// Iniciar procesador de correos DESPUÉS de que la BD esté lista
+		setInterval(processPendingEmails, 60000);
+		console.log("🕒 Procesador de correos pendientes iniciado (intervalo: 60s)");
+
+		// Iniciar limpiador de correos antiguos (cada 7 días = 604800000 ms)
+		setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
+		console.log("🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)");
+
+		// Ejecutar limpieza inicial al arrancar (después de 5 minutos)
+		setTimeout(async () => {
+			console.log("🔄 Ejecutando limpieza inicial de correos antiguos...");
+			await cleanOldEmails();
+			await getEmailStats();
+		}, 5 * 60 * 1000);
 
 		// NOTA: Las migraciones de base de datos deben ejecutarse con el script
 		// separado: npm run migrate o npm run start:migrate
