@@ -39,8 +39,9 @@ export const processPendingEmails = async () => {
         console.log(`🔄 Procesando ${pendingEmails.length} correos pendientes...`);
 
         for (const emailTask of pendingEmails) {
+            let reserva = null; // Declarar fuera del try para que esté disponible en el catch
             try {
-                const reserva = await Reserva.findByPk(emailTask.reservaId);
+                reserva = await Reserva.findByPk(emailTask.reservaId);
                 
                 if (!reserva) {
                     console.warn(`⚠️ Reserva no encontrada para email pendiente ID ${emailTask.id}. Cancelando.`);
@@ -137,23 +138,28 @@ export const processPendingEmails = async () => {
                             console.warn("⚠️ PHP_EMAIL_URL no configurado para notificación de fallos");
                         }
                         
-                        await axios.post(phpUrl, {
-                            action: "notify_admin_failed_email",
-                            reservaId: reserva.id,
-                            codigoReserva: reserva.codigoReserva,
-                            email: emailTask.email,
-                            attempts: newAttempts,
-                            lastError: error.message,
-                            tipo: emailTask.type,
-                            nombre: reserva.nombre,
-                            origen: reserva.origen,
-                            destino: reserva.destino,
-                            fecha: reserva.fecha
-                        }, {
-                            headers: { "Content-Type": "application/json" },
-                            timeout: 10000
-                        });
-                        console.log(`📧 Notificación de fallo enviada al admin para reserva ${reserva.codigoReserva}`);
+                        // Solo notificar si tenemos datos de la reserva
+                        if (reserva) {
+                            await axios.post(phpUrl, {
+                                action: "notify_admin_failed_email",
+                                reservaId: reserva.id,
+                                codigoReserva: reserva.codigoReserva,
+                                email: emailTask.email,
+                                attempts: newAttempts,
+                                lastError: error.message,
+                                tipo: emailTask.type,
+                                nombre: reserva.nombre,
+                                origen: reserva.origen,
+                                destino: reserva.destino,
+                                fecha: reserva.fecha
+                            }, {
+                                headers: { "Content-Type": "application/json" },
+                                timeout: 10000
+                            });
+                            console.log(`📧 Notificación de fallo enviada al admin para reserva ${reserva.codigoReserva}`);
+                        } else {
+                            console.warn(`⚠️ No se pudo notificar al admin: reserva no disponible para email ID ${emailTask.id}`);
+                        }
                     } catch (notifError) {
                         console.error("❌ Error notificando fallo al admin:", notifError.message);
                     }
