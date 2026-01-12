@@ -6015,6 +6015,27 @@ app.post("/api/conductores", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error creando conductor:", error);
+		
+		// Manejar errores de validación de Sequelize
+		if (error.name === "SequelizeValidationError") {
+			const validationErrors = error.errors.map(err => ({
+				field: err.path,
+				message: err.message
+			}));
+			console.error("Errores de validación:", validationErrors);
+			return res.status(400).json({
+				error: "Error de validación",
+				details: validationErrors
+			});
+		}
+		
+		// Manejar errores de unicidad (RUT duplicado)
+		if (error.name === "SequelizeUniqueConstraintError") {
+			return res.status(409).json({
+				error: "Ya existe un conductor con este RUT"
+			});
+		}
+		
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -6098,6 +6119,27 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando conductor:", error);
+		
+		// Manejar errores de validación de Sequelize
+		if (error.name === "SequelizeValidationError") {
+			const validationErrors = error.errors.map(err => ({
+				field: err.path,
+				message: err.message
+			}));
+			console.error("Errores de validación:", validationErrors);
+			return res.status(400).json({
+				error: "Error de validación",
+				details: validationErrors
+			});
+		}
+		
+		// Manejar errores de unicidad (RUT duplicado)
+		if (error.name === "SequelizeUniqueConstraintError") {
+			return res.status(409).json({
+				error: "Ya existe un conductor con este RUT"
+			});
+		}
+		
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
