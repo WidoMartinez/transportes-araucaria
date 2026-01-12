@@ -931,6 +931,101 @@ try {
 > - Fecha de uso debe estar presente
 > - Email del cliente debe estar registrado
 
+## 15. Error en Procesador de Correos (ReferenceError: reserva is not defined)
+
+**Implementado: 11 Enero 2026**
+
+### Problema
+El procesador de correos pendientes (`emailProcessor.js`) crasheaba repetidamente con el error:
+```
+❌ Error global en processPendingEmails: ReferenceError: reserva is not defined
+    at Timeout.processPendingEmails [as _onTimeout] (file:///opt/render/project/src/backend/cron/emailProcessor.js:115:36)
+```
+
+### Síntomas
+- El cron job se ejecuta cada 60 segundos pero falla inmediatamente
+- Los correos de descuento programados no se envían
+- Los logs muestran el error repetidamente
+- El error ocurre en la línea 115 al intentar acceder a `reserva?.codigoReserva`
+
+### Causa
+La variable `reserva` estaba declarada dentro del bloque `try` (línea 43), pero se intentaba acceder a ella en el bloque `catch` (líneas 115 y 142-151), donde no estaba disponible debido al scope de JavaScript.
+
+**Código problemático**:
+```javascript
+for (const emailTask of pendingEmails) {
+    try {
+        const reserva = await Reserva.findByPk(emailTask.reservaId); // ❌ Scope limitado al try
+        // ... lógica de envío ...
+    } catch (error) {
+        console.error(`❌ Error procesando email ID ${emailTask.id}:`, {
+            codigoReserva: reserva?.codigoReserva, // ❌ ReferenceError: reserva no existe aquí
+        });
+    }
+}
+```
+
+### Solución (Enero 2026)
+
+Se movió la declaración de `reserva` fuera del bloque `try` para que esté disponible en todo el scope del bucle:
+
+**Código corregido** (líneas 41-44):
+```javascript
+for (const emailTask of pendingEmails) {
+    let reserva = null; // ✅ Declarar fuera del try para que esté disponible en el catch
+    try {
+        reserva = await Reserva.findByPk(emailTask.reservaId);
+        // ... lógica de envío ...
+    } catch (error) {
+        console.error(`❌ Error procesando email ID ${emailTask.id}:`, {
+            codigoReserva: reserva?.codigoReserva, // ✅ Ahora funciona correctamente
+        });
+    }
+}
+```
+
+Adicionalmente, se agregó validación en la notificación al admin (líneas 141-158):
+```javascript
+// Solo notificar si tenemos datos de la reserva
+if (reserva) {
+    await axios.post(phpUrl, {
+        action: "notify_admin_failed_email",
+        reservaId: reserva.id,
+        codigoReserva: reserva.codigoReserva,
+        // ... otros campos ...
+    });
+} else {
+    console.warn(`⚠️ No se pudo notificar al admin: reserva no disponible para email ID ${emailTask.id}`);
+}
+```
+
+### Archivos Modificados
+
+- `backend/cron/emailProcessor.js` (líneas 42, 141-158)
+
+### Prevención de Problemas Futuros
+
+**Regla de scope en try/catch**:
+- Siempre declarar variables que se necesiten en el `catch` **fuera** del bloque `try`
+- Usar `let variable = null;` antes del `try` para garantizar disponibilidad
+- Usar optional chaining (`?.`) al acceder a propiedades en el `catch` por si la variable es `null`
+
+**Ejemplo correcto**:
+```javascript
+let recurso = null; // ✅ Declarar fuera
+try {
+    recurso = await obtenerRecurso();
+    // ... usar recurso ...
+} catch (error) {
+    console.error(`Error con ${recurso?.id}`); // ✅ Funciona correctamente
+}
+```
+
+> [!IMPORTANT]
+> Este error solo se manifestaba en producción porque el cron job se ejecuta automáticamente. En desarrollo local, si no se ejecuta el cron, el error no aparece.
+
+---
+
 ## 12. Historial de Transacciones no Visible
 
 ### Problema
