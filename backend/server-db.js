@@ -2704,7 +2704,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					source: reservaGuardada.source,
 					
 					// Estado
-					estado: "pendiente", // Inicia pendiente
+					estado: reservaGuardada.estado, // Hereda estado del tramo de ida
 					estadoPago: reservaGuardada.estadoPago, // Hereda estado de pago
 					metodoPago: reservaGuardada.metodoPago,
 					pagoId: reservaGuardada.pagoId, // Comparte ID de transacción si existe
@@ -3446,7 +3446,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					source: reservaExpress.source,
 					
 					// Estado
-					estado: "pendiente", // Inicia pendiente
+					estado: reservaExpress.estado, // Hereda estado del tramo de ida
 					estadoPago: reservaExpress.estadoPago, // Hereda estado de pago
 					metodoPago: reservaExpress.metodoPago,
 					referenciaPago: reservaExpress.referenciaPago,
