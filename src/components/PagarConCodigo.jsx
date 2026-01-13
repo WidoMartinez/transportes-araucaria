@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -558,53 +558,17 @@ function PagarConCodigo() {
 								</div>
 							</div>
 
-							{/* Alerta de tiempo restante */}
+							{/* Alerta de tiempo restante minimalista */}
 							{tiempoRestante && (
-								<Alert 
-									variant={tiempoRestante.vencido ? "destructive" : "default"}
-									className={`${
-										tiempoRestante.vencido 
-											? 'bg-red-50 border-red-200' 
-											: tiempoRestante.urgente 
-												? 'bg-orange-50 border-orange-200' 
-												: 'bg-blue-50 border-blue-200'
-									}`}
-								>
-									<div className="flex items-start gap-3">
-										<Clock className={`h-5 w-5 mt-0.5 ${
-											tiempoRestante.vencido 
-												? 'text-red-600' 
-												: tiempoRestante.urgente 
-													? 'text-orange-600' 
-													: 'text-blue-600'
-										}`} />
-										<div className="flex-1">
-											<p className={`font-semibold ${
-												tiempoRestante.vencido 
-													? 'text-red-700' 
-													: tiempoRestante.urgente 
-														? 'text-orange-700' 
-														: 'text-blue-700'
-											}`}>
-												{tiempoRestante.vencido ? '⏰ Código Vencido' : `⏰ Tiempo restante: ${tiempoRestante.texto}`}
-											</p>
-											<p className={`text-sm mt-1 ${
-												tiempoRestante.vencido 
-													? 'text-red-600' 
-													: tiempoRestante.urgente 
-														? 'text-orange-600' 
-														: 'text-blue-600'
-											}`}>
-												{tiempoRestante.vencido 
-													? 'Este código ya no es válido. Por favor contacta a soporte.' 
-													: tiempoRestante.urgente 
-														? '¡Apúrate! Completa tu pago antes de que venza el código.' 
-														: 'Completa tu pago antes de que venza el código.'
-												}
-											</p>
-										</div>
-									</div>
-								</Alert>
+								<div className={`text-xs py-1.5 px-3 rounded border text-center font-medium ${
+									tiempoRestante.vencido 
+										? 'bg-red-50 border-red-100 text-red-600' 
+										: tiempoRestante.urgente 
+											? 'bg-orange-50 border-orange-100 text-orange-600' 
+											: 'bg-blue-50 border-blue-100 text-blue-600'
+								}`}>
+									{tiempoRestante.vencido ? 'El código ha vencido' : `Expira en: ${tiempoRestante.texto}`}
+								</div>
 							)}
 
 							{/* Formulario de datos */}
