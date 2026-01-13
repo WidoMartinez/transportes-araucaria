@@ -3377,6 +3377,122 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			);
 		}
 
+		// --- LÓGICA DE TRAMOS VINCULADOS (EXPRESS) ---
+		// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
+		if (!esModificacion && datosReserva.idaVuelta) {
+			console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+
+			try {
+				// 1. Preparar datos para el tramo de vuelta
+				// Invertir origen/destino y direcciones
+				const origenVuelta = datosReserva.destino || "";
+				const destinoVuelta = datosReserva.origen || "";
+				const dirOrigenVuelta = datosReserva.direccionDestino || "";
+				const dirDestinoVuelta = datosReserva.direccionOrigen || "";
+				
+				// Generar nuevo código para la vuelta
+				const codigoVuelta = await generarCodigoReserva();
+				
+				// Dividir costos (50/50 para simplificar asignación inicial)
+				const precioIda = Number(reservaExpress.precio) / 2;
+				const precioVuelta = Number(reservaExpress.precio) / 2;
+				const totalIda = Number(reservaExpress.totalConDescuento) / 2;
+				const totalVuelta = Number(reservaExpress.totalConDescuento) / 2;
+
+				// 2. Crear reserva de VUELTA (Hijo)
+				const reservaVuelta = await Reserva.create({
+					// Copiar datos base del cliente/contacto
+					nombre: reservaExpress.nombre,
+					email: reservaExpress.email,
+					telefono: reservaExpress.telefono,
+					clienteId: reservaExpress.clienteId,
+					rut: reservaExpress.rut,
+					pasajeros: reservaExpress.pasajeros,
+					
+					// Datos específicos de la vuelta
+					codigoReserva: codigoVuelta,
+					origen: origenVuelta,
+					destino: destinoVuelta,
+					direccionOrigen: dirOrigenVuelta,
+					direccionDestino: dirDestinoVuelta,
+					fecha: datosReserva.fechaRegreso, // Fecha regreso original
+					hora: normalizeTimeGlobal(datosReserva.horaRegreso),   // Hora regreso original
+					
+					// Datos financieros (mitad del total)
+					precio: precioVuelta,
+					totalConDescuento: totalVuelta,
+					descuentoBase: Number(reservaExpress.descuentoBase) / 2,
+					descuentoPromocion: Number(reservaExpress.descuentoPromocion) / 2,
+					descuentoRoundTrip: Number(reservaExpress.descuentoRoundTrip) / 2,
+					descuentoOnline: Number(reservaExpress.descuentoOnline) / 2,
+					abonoSugerido: Number(reservaExpress.abonoSugerido) / 2,
+					saldoPendiente: Number(reservaExpress.saldoPendiente) / 2,
+					
+					// Datos operativos
+					vehiculo: reservaExpress.vehiculo, // Copiar preferencia de vehículo
+					numeroVuelo: "", // El vuelo de vuelta suele ser diferente
+					hotel: reservaExpress.hotel, // Asumir mismo hotel si aplica
+					equipajeEspecial: reservaExpress.equipajeEspecial,
+					sillaInfantil: reservaExpress.sillaInfantil,
+					mensaje: reservaExpress.mensaje,
+					source: reservaExpress.source,
+					
+					// Estado
+					estado: "pendiente", // Inicia pendiente
+					estadoPago: reservaExpress.estadoPago, // Hereda estado de pago
+					metodoPago: reservaExpress.metodoPago,
+					referenciaPago: reservaExpress.referenciaPago,
+					tipoPago: reservaExpress.tipoPago,
+					
+					// Vinculación y Flags
+					idaVuelta: false, // Ya no es ida y vuelta "per se", es un tramo
+					tipoTramo: "vuelta",
+					tramoPadreId: reservaExpress.id,
+					tramoHijoId: null,
+					fechaRegreso: null, // Limpiar
+					horaRegreso: null,
+					
+					// Metadata
+					ipAddress: reservaExpress.ipAddress,
+					userAgent: reservaExpress.userAgent,
+					codigoDescuento: reservaExpress.codigoDescuento
+				});
+
+				console.log(`✅ [EXPRESS] Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`);
+
+				// 3. Actualizar reserva de IDA (Padre)
+				await reservaExpress.update({
+					precio: precioIda,
+					totalConDescuento: totalIda,
+					abonoSugerido: Number(reservaExpress.abonoSugerido) / 2,
+					saldoPendiente: Number(reservaExpress.saldoPendiente) / 2,
+					descuentoBase: Number(reservaExpress.descuentoBase) / 2,
+					descuentoPromocion: Number(reservaExpress.descuentoPromocion) / 2,
+					descuentoRoundTrip: Number(reservaExpress.descuentoRoundTrip) / 2,
+					descuentoOnline: Number(reservaExpress.descuentoOnline) / 2,
+					
+					// Vinculación y Flags
+					idaVuelta: false, // Convertir a tramo único
+					tipoTramo: "ida",
+					tramoHijoId: reservaVuelta.id,
+					
+					// Limpiar datos de regreso ya que ahora están en otra reserva
+					fechaRegreso: null,
+					horaRegreso: null
+				});
+				
+				console.log(`✅ [EXPRESS] Tramo de ida actualizado y vinculado: ${reservaExpress.id}`);
+
+				// Nota: reservaExpress sigue siendo el objeto que se usará para el email confirmación.
+				// Como el email usa 'datosReserva' (el input original), el cliente seguirá recibiendo 
+				// el resumen completo "Ida y Vuelta" con los totales correctos.
+				
+			} catch (errorSplit) {
+				console.error("❌ [EXPRESS] Error al dividir reserva ida y vuelta:", errorSplit);
+				// No fallar el request completo, pero loguear error crítico
+			}
+		}
+
 		if (clienteIdAsociado) {
 			try {
 				await actualizarResumenCliente(clienteIdAsociado);
@@ -3606,6 +3722,21 @@ app.get("/api/codigos-pago", authAdmin, async (req, res) => {
 		const pageNum = Math.max(1, parseInt(page, 10) || 1);
 		const limitNum = Math.max(1, Math.min(200, parseInt(limit, 10) || 50));
 		const offset = (pageNum - 1) * limitNum;
+
+		// 🔄 Actualizar códigos vencidos ANTES de listar
+		// Esto asegura que el panel de administración siempre muestre el estado correcto
+		const now = new Date();
+		await CodigoPago.update(
+			{ estado: "vencido" },
+			{
+				where: {
+					estado: "activo",
+					fechaVencimiento: {
+						[Op.lt]: now, // fechaVencimiento < now
+					},
+				},
+			}
+		);
 
 		const { count, rows } = await CodigoPago.findAndCountAll({
 			where,

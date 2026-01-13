@@ -2,7 +2,136 @@
 
 Este documento centraliza las soluciones a problemas comunes técnicos detectados durante el desarrollo, incluyendo migraciones y errores de enrutamiento.
 
-## 1. Problemas de Rutas y Backend (Error 500)
+## 1. Reservas Ida y Vuelta No Se Separan en Tramos (Flujo Express)
+
+**Implementado: 13 Enero 2026**
+
+### Problema
+Las reservas de tipo "Ida y Vuelta" creadas desde el flujo "Pagar con Código" quedaban guardadas como una sola reserva en lugar de separarse en dos tramos vinculados (IDA y VUELTA), como estaba documentado en el sistema.
+
+### Síntomas
+- Reserva ida y vuelta aparece como una sola fila en el panel admin
+- No muestra badges "IDA" y "RETORNO" separados
+- No permite asignar conductores diferentes para cada tramo
+- Dificulta el cierre de caja parcial (solo ida completada)
+
+### Causa Raíz
+La lógica de separación de tramos vinculados solo estaba implementada en el endpoint `/enviar-reserva` (líneas 2646-2752), pero **NO en `/enviar-reserva-express`** (usado por "Pagar con Código").
+
+**Flujos afectados:**
+- ❌ Pagar con Código → Usaba `/enviar-reserva-express` → No separaba
+- ❌ Cualquier otro flujo que use `/enviar-reserva-express`
+
+**Nota histórica:** El flujo principal de reservas que usaba `/enviar-reserva` fue removido del sistema, por lo que en la práctica **NINGUNA** reserva ida y vuelta se estaba separando correctamente.
+
+### Solución (Enero 2026)
+
+Se implementó la lógica de separación de tramos vinculados en el endpoint `/enviar-reserva-express`.
+
+**Archivo modificado:** `backend/server-db.js`  
+**Líneas agregadas:** 3380-3499
+
+**Lógica implementada:**
+```javascript
+// Después de crear la reserva express
+if (!esModificacion && datosReserva.idaVuelta) {
+    console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+    
+    try {
+        // 1. Crear tramo de VUELTA (hijo) con datos invertidos
+        const reservaVuelta = await Reserva.create({
+            // Origen/destino invertidos
+            // Precio dividido 50/50
+            // Vinculación: tramoPadreId, tipoTramo: "vuelta"
+        });
+        
+        // 2. Actualizar tramo de IDA (padre)
+        await reservaExpress.update({
+            // Precio dividido 50/50
+            // Vinculación: tramoHijoId, tipoTramo: "ida"
+            // Limpiar fechaRegreso/horaRegreso
+        });
+    } catch (errorSplit) {
+        console.error("❌ [EXPRESS] Error al dividir reserva ida y vuelta:", errorSplit);
+    }
+}
+```
+
+**Características de la implementación:**
+- ✅ División automática en dos registros independientes
+- ✅ Precios y descuentos divididos 50/50
+- ✅ Vinculación mediante `tramoPadreId` y `tramoHijoId`
+- ✅ Flags `tipoTramo: "ida"` y `tipoTramo: "vuelta"`
+- ✅ Origen/destino invertidos automáticamente
+- ✅ Logs con prefijo `[EXPRESS]` para debugging
+- ✅ Error handling que no falla el request completo
+
+### Comportamiento Después de la Solución
+
+**Antes:**
+```
+Reserva #204 - Ida y Vuelta
+├─ Origen: Aeropuerto → Destino: Pucón
+├─ Fecha Ida: 14-01-2026
+├─ Fecha Vuelta: 16-01-2026
+└─ Total: $120,000
+```
+
+**Después:**
+```
+Reserva #204 - IDA (Padre)
+├─ Origen: Aeropuerto → Destino: Pucón
+├─ Fecha: 14-01-2026
+├─ Total: $60,000
+├─ tipoTramo: "ida"
+└─ tramoHijoId: 205
+
+Reserva #205 - VUELTA (Hijo)
+├─ Origen: Pucón → Destino: Aeropuerto
+├─ Fecha: 16-01-2026
+├─ Total: $60,000
+├─ tipoTramo: "vuelta"
+└─ tramoPadreId: 204
+```
+
+### Verificación
+
+Para confirmar que el sistema funciona correctamente:
+
+1. **Crear reserva ida y vuelta desde "Pagar con Código"**
+2. **Revisar logs de Render:**
+   ```
+   🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...
+   ✅ [EXPRESS] Tramo de vuelta creado: 205 (AR-XXXX)
+   ✅ [EXPRESS] Tramo de ida actualizado y vinculado: 204
+   ```
+3. **Verificar en panel admin:**
+   - Deben aparecer 2 filas separadas
+   - Badge verde "IDA" en la primera
+   - Badge azul "RETORNO" en la segunda
+
+### Impacto en Reservas Existentes
+
+**Reservas creadas ANTES de este fix:**
+- Permanecen como una sola reserva (no se migran automáticamente)
+- Se identifican con badge "IDA Y VUELTA" (legacy)
+- Funcionan normalmente pero sin separación de tramos
+
+**Reservas creadas DESPUÉS de este fix:**
+- Se separan automáticamente en dos tramos
+- Permiten gestión independiente de cada viaje
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 3380-3499): Lógica de separación en express
+
+> [!IMPORTANT]
+> Este fix solo aplica a **nuevas reservas**. Las reservas ida y vuelta existentes (como #204) permanecen sin separar. Si se requiere separarlas manualmente, contactar al desarrollador.
+
+---
+
+## 2. Problemas de Rutas y Backend (Error 500)
+
 
 ### Síntoma
 Error 500 al acceder a ciertos endpoints (ej. `/api/reservas/estadisticas`) o pantallas en blanco en el panel administrativo.
@@ -1295,4 +1424,69 @@ Para evitar estos errores:
 
 > [!IMPORTANT]
 > El mismo manejo de errores se aplicó tanto al endpoint POST (crear) como PUT (actualizar) para mantener consistencia.
+
+---
+
+## 16. Códigos de Pago que no Vencen (Vencimiento Automático)
+
+**Implementado: 13 Enero 2026**
+
+### Problema
+Los códigos de pago generados en el panel de administración no se marcaban como "vencidos" automáticamente cuando expiraba su `fechaVencimiento`. Permanecían en estado "activo" indefinidamente en la lista.
+
+### Síntomas
+- Códigos antiguos con fecha de vencimiento pasada aparecían como "Activo" (badge verde).
+- Los administradores no tenían feedback visual de qué códigos seguían siendo válidos.
+- Solo se invalidaban cuando el cliente intentaba usarlos, pero el panel mostraba información incorrecta.
+
+### Causa Raíz
+La validación de vencimiento solo estaba implementada en el momento de **uso** del código (`/api/codigos-pago/:codigo`). El endpoint de listado (`GET /api/codigos-pago`) simplemente retornaba los registros de la base de datos sin verificar si la fecha actual ya había superado la fecha de vencimiento.
+
+### Solución (Enero 2026)
+
+Se implementó un sistema de **Vencimiento Automático al Listar** y **Contadores en Tiempo Real**.
+
+#### 1. Backend: Actualización Automática
+Se modificó el endpoint `GET /api/codigos-pago` para ejecutar una actualización masiva de estados antes de retornar la lista.
+
+**Archivo:** `backend/server-db.js` (líneas 3601-3633)
+```javascript
+// 🔄 Actualizar códigos vencidos ANTES de listar
+const now = new Date();
+await CodigoPago.update(
+    { estado: "vencido" },
+    {
+        where: {
+            estado: "activo",
+            fechaVencimiento: { [Op.lt]: now }
+        }
+    }
+);
+```
+
+#### 2. Frontend Admin: Contadores de Tiempo
+Se añadió una función de cálculo de tiempo restante y actualización automática por cada minuto.
+
+**Archivo:** `src/components/AdminCodigosPago.jsx`
+- ✅ **Feedback visual Dinámico**:
+    - 🟢 **Verde**: > 2 horas restantes.
+    - 🟠 **Naranja**: < 2 horas restantes (urgente).
+    - 🔴 **Rojo Parpadeante**: < 1 hora restante.
+    - ❌ **Rojo Plano**: Vencido.
+- ✅ **Auto-refresh**: La lista se re-renderiza cada minuto para mantener los contadores actualizados sin refrescar la página.
+
+#### 3. Frontend Cliente: Alerta de Caducidad
+Se añadió una alerta visual en el flujo de pago para que el cliente sepa exactamente cuánto tiempo tiene para completar la reserva.
+
+**Archivo:** `src/components/PagarConCodigo.jsx` (línea 559)
+
+### Verificación
+1. Crear un código con vencimiento en 2 minutos.
+2. Observar en el panel admin cómo cambia de color y finalmente a "Vencido" automáticamente.
+3. Al vencer, el cliente recibirá un mensaje de error si intenta pagar.
+
+### Archivos Modificados
+- `backend/server-db.js`: Lógica de auto-vencimiento.
+- `src/components/AdminCodigosPago.jsx`: Contadores y lógica visual.
+- `src/components/PagarConCodigo.jsx`: Alerta para el cliente.
 

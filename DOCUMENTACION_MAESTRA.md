@@ -28,6 +28,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Auditoría](#512-sistema-de-auditoria)
    - [Sistema de Migraciones](#513-sistema-de-migraciones-de-base-de-datos)
    - [Historial de Transacciones](#514-sistema-de-historial-de-transacciones-flow)
+   - [Gestión de Vencimiento de Códigos](#515-sistema-de-vencimiento-y-tiempos-restantes-en-códigos-de-pago)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
@@ -178,8 +179,9 @@ Usa **JWT (JSON Web Tokens)**.
 ### 5.2 Pagos y Finanzas
 - **Integración Flow**: Para pagos con tarjetas chilenas.
 - **Códigos de Pago**: Sistema propio para generar links de pago únicos.
-  - Vencimiento configurable.
-  - Asociación directa a reservas.
+  - **Vencimiento Inteligente**: Los códigos se marcan automáticamente como "vencido" al expirar.
+  - **Feedback Visual**: Contadores de tiempo restante con alertas por colores según urgencia.
+  - **Asociación Directa**: Vinculación a reservas existentes para cobro de saldos.
 
 ### 5.3 Notificaciones vía Email
 El sistema utiliza una arquitectura híbrida:
@@ -347,7 +349,8 @@ const whereReservas =
 
 ### 5.8 Sistema de Reservas Ida y Vuelta (Tramos Separados)
 
-**Implementado: Diciembre 2025**
+**Implementado: Diciembre 2025**  
+**Actualizado: 13 Enero 2026** (Fix para flujo Express)
 
 Para resolver problemas de asignación de conductores distintos para la ida y la vuelta, y permitir cierres de caja parciales, se implementó un cambio estructural en cómo se manejan los viajes redondos.
 
@@ -363,6 +366,19 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
     - Cada tramo puede tener su propio **Conductor** y **Vehículo**.
     - Cada tramo puede tener su propio estado de pago y estado de ejecución (`Confirmada` vs `Completada`).
 
+#### Implementación Técnica
+
+**Endpoints con lógica de separación:**
+- ✅ `/enviar-reserva` (líneas 2646-2752): Implementado desde Diciembre 2025
+- ✅ `/enviar-reserva-express` (líneas 3380-3499): **Implementado 13 Enero 2026**
+
+**Flujos que usan la separación:**
+- ✅ Pagar con Código → `/enviar-reserva-express`
+- ✅ Cualquier flujo que use `/enviar-reserva-express`
+
+> [!IMPORTANT]
+> **Fix Crítico (13 Enero 2026)**: Se detectó que el endpoint `/enviar-reserva-express` (usado por "Pagar con Código") NO tenía la lógica de separación, causando que todas las reservas ida y vuelta quedaran como una sola. Este problema fue corregido copiando la lógica de separación al endpoint express. Ver `GUIA_SOLUCION_PROBLEMAS.md` sección 1 para detalles.
+
 #### Impacto en Panel Admin (`AdminReservas`)
 - **Visualización**: Las reservas aparecen como filas separadas.
 - **Identificadores**:
@@ -371,6 +387,7 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
 - **Acciones**: Puede completar y cerrar la "Ida" (y registrar sus gastos) mientras la "Vuelta" permanece pendiente para días futuros.
 
 > **Nota**: Las reservas antiguas (creadas antes de este cambio) mantienen el comportamiento "Legacy" (una sola fila para todo el viaje) y se identifican con el badge **IDA Y VUELTA**.
+
 
 ### 5.9 Optimización del Modal de Detalles de Reserva
 
@@ -986,6 +1003,52 @@ Sistema para el registro detallado y auditable de cada transacción de pago real
     *   Se crea registro en `Transaccion`.
     *   Se actualiza saldo en `Reserva`.
 4.  **Auditoría**: Admin visualiza el historial completo, permitiendo distinguir entre abono inicial y pago de saldo.
+
+---
+
+### 5.15 Sistema de Vencimiento y Tiempos Restantes en Códigos de Pago
+
+**Implementado: 13 Enero 2026**
+
+Este sistema garantiza que los códigos de pago tengan una validez temporal estricta y proporciona feedback visual tanto al administrador como al cliente.
+
+#### Arquitectura de Vencimiento
+
+El sistema utiliza un enfoque de **vencimiento pasivo-reactivo**:
+
+1.  **Backend (Auto-update)**: En lugar de un cron job costoso, el backend ejecuta una actualización masiva cada vez que se solicita la lista de códigos (`GET /api/codigos-pago`). Esto garantiza que el panel de administración siempre muestre la realidad actual.
+2.  **Frontend (Real-time Calculation)**: Los componentes de React calculan la diferencia de tiempo entre la hora actual (`ahora`) y la `fechaVencimiento`.
+
+#### Lógica de Urgencia (Colores)
+
+Tanto en el Panel Admin como en la Vista del Cliente se utiliza la misma escala de urgencia:
+
+| Tiempo Restante | Color / Estado | Feedback |
+|-----------------|----------------|----------|
+| > 2 horas | 🟢 Verde (Admin) / Azul (Cliente) | Normal |
+| < 2 horas | 🟠 Naranja | Urgente |
+| < 1 hora | 🔴 Rojo Parpadeante (Admin) | Crítico |
+| Expitado | ❌ Rojo Plano / Gris | Vencido |
+
+#### Implementación Técnica
+
+**Backend (`server-db.js`):**
+```javascript
+// Actualización masiva antes de listar
+await CodigoPago.update(
+  { estado: "vencido" },
+  { where: { estado: "activo", fechaVencimiento: { [Op.lt]: new Date() } } }
+);
+```
+
+**Frontend (`AdminCodigosPago.jsx` & `PagarConCodigo.jsx`):**
+- Utilizan `setInterval(() => ..., 60000)` para actualizar los contadores cada minuto sin refrescar la página.
+- La función `calcularTiempoRestante` centraliza la lógica de formateo (ej: "1h 45m" o "15m").
+
+#### Beneficios
+- ✅ **Cero costos de servidor**: No requiere procesos en segundo plano permanentes.
+- ✅ **Precisión total**: El cliente sabe exactamente cuánto tiempo le queda para pagar.
+- ✅ **Orden Administrativo**: Los códigos viejos se limpian visualmente de forma automática.
 
 ---
 

@@ -72,6 +72,7 @@ function PagarConCodigo() {
 
 	const [procesando, setProcesando] = useState(false);
 	const [loadingGateway, setLoadingGateway] = useState(null);
+	const [tiempoRestante, setTiempoRestante] = useState(null);
 
 	const backendUrl =
 		getBackendUrl() || "https://transportes-araucaria.onrender.com";
@@ -88,6 +89,49 @@ function PagarConCodigo() {
 		selectedPaymentType === "abono" ? abonoSugerido : montoTotal;
 	const esIdaVuelta = Boolean(codigoValidado?.idaVuelta);
 	const incluyeSillaInfantil = Boolean(codigoValidado?.sillaInfantil);
+
+	// Calcular tiempo restante hasta el vencimiento del código
+	const calcularTiempoRestante = (fechaVencimiento) => {
+		if (!fechaVencimiento) return null;
+		
+		const ahora = new Date();
+		const vencimiento = new Date(fechaVencimiento);
+		const diff = vencimiento - ahora;
+		
+		if (diff <= 0) return { vencido: true, texto: 'Código vencido', urgente: true };
+		
+		const minutos = Math.floor(diff / 60000);
+		const horas = Math.floor(minutos / 60);
+		
+		if (horas > 0) {
+			const urgente = horas < 2;
+			return { 
+				vencido: false, 
+				texto: `${horas}h ${minutos % 60}m`, 
+				urgente
+			};
+		}
+		return { 
+			vencido: false, 
+			texto: `${minutos} minutos`, 
+			urgente: minutos < 15
+		};
+	};
+
+	// Actualizar tiempo restante cada minuto
+	useEffect(() => {
+		if (!codigoValidado?.fechaVencimiento) return;
+		
+		const actualizar = () => {
+			const tiempo = calcularTiempoRestante(codigoValidado.fechaVencimiento);
+			setTiempoRestante(tiempo);
+		};
+		
+		actualizar(); // Actualizar inmediatamente
+		const intervalo = setInterval(actualizar, 60000); // Cada minuto
+		
+		return () => clearInterval(intervalo);
+	}, [codigoValidado]);
 
 	// Validar el código de pago
 	const validarCodigo = async () => {
@@ -513,6 +557,55 @@ function PagarConCodigo() {
 									<span className="text-xl font-bold text-primary">{formatCurrency(montoTotal)}</span>
 								</div>
 							</div>
+
+							{/* Alerta de tiempo restante */}
+							{tiempoRestante && (
+								<Alert 
+									variant={tiempoRestante.vencido ? "destructive" : "default"}
+									className={`${
+										tiempoRestante.vencido 
+											? 'bg-red-50 border-red-200' 
+											: tiempoRestante.urgente 
+												? 'bg-orange-50 border-orange-200' 
+												: 'bg-blue-50 border-blue-200'
+									}`}
+								>
+									<div className="flex items-start gap-3">
+										<Clock className={`h-5 w-5 mt-0.5 ${
+											tiempoRestante.vencido 
+												? 'text-red-600' 
+												: tiempoRestante.urgente 
+													? 'text-orange-600' 
+													: 'text-blue-600'
+										}`} />
+										<div className="flex-1">
+											<p className={`font-semibold ${
+												tiempoRestante.vencido 
+													? 'text-red-700' 
+													: tiempoRestante.urgente 
+														? 'text-orange-700' 
+														: 'text-blue-700'
+											}`}>
+												{tiempoRestante.vencido ? '⏰ Código Vencido' : `⏰ Tiempo restante: ${tiempoRestante.texto}`}
+											</p>
+											<p className={`text-sm mt-1 ${
+												tiempoRestante.vencido 
+													? 'text-red-600' 
+													: tiempoRestante.urgente 
+														? 'text-orange-600' 
+														: 'text-blue-600'
+											}`}>
+												{tiempoRestante.vencido 
+													? 'Este código ya no es válido. Por favor contacta a soporte.' 
+													: tiempoRestante.urgente 
+														? '¡Apúrate! Completa tu pago antes de que venza el código.' 
+														: 'Completa tu pago antes de que venza el código.'
+												}
+											</p>
+										</div>
+									</div>
+								</Alert>
+							)}
 
 							{/* Formulario de datos */}
 							<div className="space-y-4">

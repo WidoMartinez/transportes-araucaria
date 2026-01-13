@@ -194,6 +194,45 @@ function AdminCodigosPago() {
 			minute: "2-digit",
 		});
 	};
+	
+	// Calcular tiempo restante hasta el vencimiento
+	const calcularTiempoRestante = (fechaVencimiento) => {
+		if (!fechaVencimiento) return null;
+		
+		const ahora = new Date();
+		const vencimiento = new Date(fechaVencimiento);
+		const diff = vencimiento - ahora;
+		
+		if (diff <= 0) return { vencido: true, texto: 'Vencido', clase: 'text-red-600 font-bold' };
+		
+		const minutos = Math.floor(diff / 60000);
+		const horas = Math.floor(minutos / 60);
+		const dias = Math.floor(horas / 24);
+		
+		if (dias > 0) {
+			return { 
+				vencido: false, 
+				texto: `${dias}d ${horas % 24}h`, 
+				urgente: false,
+				clase: 'text-green-600'
+			};
+		}
+		if (horas > 0) {
+			const urgente = horas < 2;
+			return { 
+				vencido: false, 
+				texto: `${horas}h ${minutos % 60}m`, 
+				urgente,
+				clase: urgente ? 'text-orange-600 font-semibold' : 'text-green-600'
+			};
+		}
+		return { 
+			vencido: false, 
+			texto: `${minutos}m`, 
+			urgente: true,
+			clase: 'text-red-600 font-bold animate-pulse'
+		};
+	};
 	const cargarCodigos = async () => {
 		setLoading(true);
 		setError("");
@@ -215,6 +254,14 @@ function AdminCodigosPago() {
 	};
 	useEffect(() => {
 		cargarCodigos();
+		
+		// Actualizar cada minuto para refrescar los tiempos restantes
+		const intervalo = setInterval(() => {
+			// Forzar re-render actualizando el timestamp
+			setCodigosPago(prev => [...prev]);
+		}, 60000); // 60 segundos
+		
+		return () => clearInterval(intervalo);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 	// Maneja cambios en los campos del formulario, sincronizando origen/destino para todos los destinos
@@ -479,7 +526,26 @@ function AdminCodigosPago() {
 												{c.usosActuales} / {c.usosMaximos}
 											</TableCell>
 											<TableCell className="text-sm">
-												{formatDate(c.fechaVencimiento)}
+												{c.fechaVencimiento ? (
+													<div className="space-y-1">
+														<div className="text-xs text-gray-500">
+															{formatDate(c.fechaVencimiento)}
+														</div>
+														{(() => {
+															const tiempo = calcularTiempoRestante(c.fechaVencimiento);
+															if (!tiempo) return null;
+															return (
+																<div className={`font-medium ${tiempo.clase}`}>
+																	{tiempo.urgente && !tiempo.vencido && '⏰ '}
+																	{tiempo.vencido && '❌ '}
+																	{tiempo.texto}
+																</div>
+															);
+														})()}
+													</div>
+												) : (
+													<span className="text-gray-400">Sin vencimiento</span>
+												)}
 											</TableCell>
 											<TableCell>
 												<div className="flex gap-1">
