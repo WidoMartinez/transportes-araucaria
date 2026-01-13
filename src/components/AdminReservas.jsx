@@ -4748,32 +4748,110 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="new-abono">Abono Sugerido (CLP)</Label>
-									<Input
-										id="new-abono"
-										type="number"
-										min="0"
-										placeholder="25000"
-										value={newReservaForm.abonoSugerido}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												abonoSugerido: parseFloat(e.target.value) || 0,
-											})
-										}
-									/>
+									<Label htmlFor="new-abono">Abono Sugerido (opcional)</Label>
+									<div className="flex gap-2">
+										<Input
+											id="new-abono"
+											type="number"
+											min="0"
+											placeholder="Ingresa monto o usa sugerencias →"
+											value={newReservaForm.abonoSugerido}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													abonoSugerido: parseFloat(e.target.value) || 0,
+												})
+											}
+											className="flex-1"
+										/>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() => {
+												const abono40 = Math.round(newReservaForm.precio * 0.4);
+												setNewReservaForm({
+													...newReservaForm,
+													abonoSugerido: abono40,
+												});
+											}}
+											disabled={!newReservaForm.precio || newReservaForm.precio <= 0}
+											title="Calcular 40% del precio total"
+										>
+											40%
+										</Button>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() => {
+												const abono50 = Math.round(newReservaForm.precio * 0.5);
+												setNewReservaForm({
+													...newReservaForm,
+													abonoSugerido: abono50,
+												});
+											}}
+											disabled={!newReservaForm.precio || newReservaForm.precio <= 0}
+											title="Calcular 50% del precio total"
+										>
+											50%
+										</Button>
+									</div>
+									<p className="text-xs text-muted-foreground">
+										💡 Tip: Usa los botones para calcular automáticamente el 40% o 50% del precio total
+									</p>
 								</div>
 							</div>
-							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
-								<p className="text-sm">
-									<strong>Saldo Pendiente:</strong>{" "}
-									{formatCurrency(
-										(parseFloat(newReservaForm.precio) || 0) -
-											(parseFloat(newReservaForm.abonoSugerido) || 0)
-									)}
-								</p>
-							</div>
+							{newReservaForm.precio > 0 && (
+								<div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-2">
+									<p className="text-sm font-semibold text-blue-900">
+										📊 Resumen Financiero
+									</p>
+									<div className="space-y-1 text-sm">
+										<div className="flex justify-between">
+											<span className="text-gray-700">Precio Total:</span>
+											<span className="font-bold text-gray-900">
+												{formatCurrency(newReservaForm.precio)}
+											</span>
+										</div>
+										{newReservaForm.abonoSugerido > 0 && (
+											<>
+												<div className="flex justify-between">
+													<span className="text-gray-700">Abono Sugerido:</span>
+													<span className="text-green-600">
+														-{formatCurrency(newReservaForm.abonoSugerido)}
+													</span>
+												</div>
+												<div className="flex justify-between border-t border-blue-300 pt-2 mt-2">
+													<span className="font-bold text-gray-900">Saldo Pendiente:</span>
+													<span className="font-bold text-red-600">
+														{formatCurrency(
+															newReservaForm.precio - newReservaForm.abonoSugerido
+														)}
+													</span>
+												</div>
+											</>
+										)}
+										{newReservaForm.abonoSugerido === 0 && (
+											<p className="text-xs text-blue-700 italic">
+												Sin abono: el cliente deberá pagar el total completo
+											</p>
+										)}
+									</div>
+								</div>
+							)}
 						</div>
+
+						{/* Alerta de validación de abono excesivo */}
+						{newReservaForm.abonoSugerido > newReservaForm.precio && (
+							<div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-2">
+								<AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+								<div className="text-sm text-red-700">
+									<p className="font-semibold">⚠️ Error: Abono mayor al precio total</p>
+									<p>El abono no puede superar el monto total de la reserva.</p>
+								</div>
+							</div>
+						)}
 
 						{/* Estado y Pago */}
 						<div className="space-y-4">
@@ -4902,7 +4980,15 @@ function AdminReservas() {
 							>
 								Cancelar
 							</Button>
-							<Button onClick={handleSaveNewReserva} disabled={saving}>
+							<Button 
+								onClick={handleSaveNewReserva} 
+								disabled={
+									saving || 
+									!newReservaForm.precio || 
+									newReservaForm.precio <= 0 ||
+									newReservaForm.abonoSugerido > newReservaForm.precio
+								}
+							>
 								{saving ? (
 									<>
 										<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
