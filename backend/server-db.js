@@ -2396,6 +2396,9 @@ app.post("/enviar-reserva", async (req, res) => {
 			datosReserva.pagoMonto !== "" &&
 			parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
 
+		const estadoSolicitado = normalizeEstado(datosReserva.estado);
+		const estadoPagoSolicitado = normalizeEstado(datosReserva.estadoPago);
+
 		if (
 			hasSaldoProvided &&
 			(pagoMontoProvided || estadoPagoSolicitado === "pagado")
@@ -2409,9 +2412,6 @@ app.post("/enviar-reserva", async (req, res) => {
 			// No se asume ningún pago: saldo = total
 			saldoEntrada = totalCalculado;
 		}
-
-		const estadoSolicitado = normalizeEstado(datosReserva.estado);
-		const estadoPagoSolicitado = normalizeEstado(datosReserva.estadoPago);
 
 		let estadoInicial = estadosReservaValidos.has(estadoSolicitado)
 			? estadoSolicitado
