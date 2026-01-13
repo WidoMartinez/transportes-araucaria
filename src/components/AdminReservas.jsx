@@ -4657,6 +4657,59 @@ function AdminReservas() {
 								</div>
 							)}
 						</div>
+						{/* Precio Manual */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Precio Manual
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="space-y-2">
+									<Label htmlFor="new-precio" className="font-semibold text-base">
+										💰 Precio Total (CLP) <span className="text-red-500">*</span>
+									</Label>
+									<Input
+										id="new-precio"
+										type="number"
+										min="0"
+										placeholder="Ejemplo: 85000"
+										value={newReservaForm.precio}
+										className="text-lg font-medium"
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												precio: parseFloat(e.target.value) || 0,
+												totalConDescuento: parseFloat(e.target.value) || 0,
+											})
+										}
+									/>
+								</div>
+								<div className="space-y-2">
+									<Label htmlFor="new-abono">Abono Sugerido (CLP)</Label>
+									<Input
+										id="new-abono"
+										type="number"
+										min="0"
+										placeholder="25000"
+										value={newReservaForm.abonoSugerido}
+										onChange={(e) =>
+											setNewReservaForm({
+												...newReservaForm,
+												abonoSugerido: parseFloat(e.target.value) || 0,
+											})
+										}
+									/>
+								</div>
+							</div>
+							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
+								<p className="text-sm">
+									<strong>Saldo Pendiente:</strong>{" "}
+									{formatCurrency(
+										(parseFloat(newReservaForm.precio) || 0) -
+											(parseFloat(newReservaForm.abonoSugerido) || 0)
+									)}
+								</p>
+							</div>
+						</div>
 
 						{/* Información Adicional */}
 						<div className="space-y-4">
@@ -4723,58 +4776,6 @@ function AdminReservas() {
 								</div>
 							</div>
 						</div>
-
-						{/* Información Financiera */}
-						<div className="space-y-4">
-							<h3 className="font-semibold text-lg border-b pb-2">
-								Información Financiera
-							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-2">
-									<Label htmlFor="new-precio">Precio Total (CLP)</Label>
-									<Input
-										id="new-precio"
-										type="number"
-										min="0"
-										placeholder="50000"
-										value={newReservaForm.precio}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												precio: parseFloat(e.target.value) || 0,
-												totalConDescuento: parseFloat(e.target.value) || 0,
-											})
-										}
-									/>
-								</div>
-								<div className="space-y-2">
-									<Label htmlFor="new-abono">Abono Sugerido (CLP)</Label>
-									<Input
-										id="new-abono"
-										type="number"
-										min="0"
-										placeholder="25000"
-										value={newReservaForm.abonoSugerido}
-										onChange={(e) =>
-											setNewReservaForm({
-												...newReservaForm,
-												abonoSugerido: parseFloat(e.target.value) || 0,
-											})
-										}
-									/>
-								</div>
-							</div>
-							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
-								<p className="text-sm">
-									<strong>Saldo Pendiente:</strong>{" "}
-									{formatCurrency(
-										(parseFloat(newReservaForm.precio) || 0) -
-											(parseFloat(newReservaForm.abonoSugerido) || 0)
-									)}
-								</p>
-							</div>
-						</div>
-
 						{/* Estado y Pago */}
 						<div className="space-y-4">
 							<h3 className="font-semibold text-lg border-b pb-2">
