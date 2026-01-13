@@ -26,45 +26,47 @@ La lógica de separación de tramos vinculados solo estaba implementada en el en
 
 ### Solución (Enero 2026)
 
-Se implementó la lógica de separación de tramos vinculados en el endpoint `/enviar-reserva-express`.
+Se implementó la lógica de separación de tramos vinculados tanto en el endpoint `/enviar-reserva-express` como en el endpoint principal `/enviar-reserva`.
 
 **Archivo modificado:** `backend/server-db.js`  
-**Líneas agregadas:** 3380-3499
+**Líneas modificadas:** 2646-2752 (Manual/Web) y 3380-3499 (Express)
 
 **Lógica implementada:**
 ```javascript
-// Después de crear la reserva express
-if (!esModificacion && datosReserva.idaVuelta) {
-    console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+// Después de crear la reserva (Manual o Express)
+if ((!esModificacion || !reservaExistente) && datosReserva.idaVuelta) {
+    console.log("🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
     
     try {
         // 1. Crear tramo de VUELTA (hijo) con datos invertidos
         const reservaVuelta = await Reserva.create({
             // Origen/destino invertidos
-            // Precio dividido 50/50
+            // Montos (total, abono, saldo, descuentos) divididos 50/50
+            // Hora de regreso normalizada con normalizeTimeGlobal
             // Vinculación: tramoPadreId, tipoTramo: "vuelta"
         });
         
         // 2. Actualizar tramo de IDA (padre)
         await reservaExpress.update({
-            // Precio dividido 50/50
+            // Montos divididos 50/50
             // Vinculación: tramoHijoId, tipoTramo: "ida"
             // Limpiar fechaRegreso/horaRegreso
         });
     } catch (errorSplit) {
-        console.error("❌ [EXPRESS] Error al dividir reserva ida y vuelta:", errorSplit);
+        console.error("❌ Error al dividir reserva ida y vuelta:", errorSplit);
     }
 }
 ```
 
 **Características de la implementación:**
-- ✅ División automática en dos registros independientes
-- ✅ Precios y descuentos divididos 50/50
-- ✅ Vinculación mediante `tramoPadreId` y `tramoHijoId`
-- ✅ Flags `tipoTramo: "ida"` y `tipoTramo: "vuelta"`
-- ✅ Origen/destino invertidos automáticamente
-- ✅ Logs con prefijo `[EXPRESS]` para debugging
-- ✅ Error handling que no falla el request completo
+- ✅ División automática en dos registros independientes en TODOS los flujos.
+- ✅ Precios, abonos, saldos y descuentos divididos 50/50.
+- ✅ Normalización de hora de regreso en el tramo de vuelta.
+- ✅ Vinculación mediante `tramoPadreId` y `tramoHijoId`.
+- ✅ Flags `tipoTramo: "ida"` y `tipoTramo: "vuelta"`.
+- ✅ Origen/destino invertidos automáticamente.
+- ✅ Logs detallados para debugging.
+- ✅ Error handling que no falla el request completo.
 
 ### Comportamiento Después de la Solución
 
@@ -74,7 +76,8 @@ Reserva #204 - Ida y Vuelta
 ├─ Origen: Aeropuerto → Destino: Pucón
 ├─ Fecha Ida: 14-01-2026
 ├─ Fecha Vuelta: 16-01-2026
-└─ Total: $120,000
+├─ Total: $120,000
+└─ Abono: $48,000
 ```
 
 **Después:**
@@ -83,6 +86,7 @@ Reserva #204 - IDA (Padre)
 ├─ Origen: Aeropuerto → Destino: Pucón
 ├─ Fecha: 14-01-2026
 ├─ Total: $60,000
+├─ Abono: $24,000
 ├─ tipoTramo: "ida"
 └─ tramoHijoId: 205
 
@@ -90,6 +94,7 @@ Reserva #205 - VUELTA (Hijo)
 ├─ Origen: Pucón → Destino: Aeropuerto
 ├─ Fecha: 16-01-2026
 ├─ Total: $60,000
+├─ Abono: $24,000
 ├─ tipoTramo: "vuelta"
 └─ tramoPadreId: 204
 ```
@@ -98,35 +103,35 @@ Reserva #205 - VUELTA (Hijo)
 
 Para confirmar que el sistema funciona correctamente:
 
-1. **Crear reserva ida y vuelta desde "Pagar con Código"**
+1. **Crear reserva ida y vuelta** (ya sea desde "Pagar con Código" o desde el Panel Admin "Nueva Reserva").
 2. **Revisar logs de Render:**
    ```
-   🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...
-   ✅ [EXPRESS] Tramo de vuelta creado: 205 (AR-XXXX)
-   ✅ [EXPRESS] Tramo de ida actualizado y vinculado: 204
+   🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados...
+   ✅ Tramo de vuelta creado: 205 (AR-XXXX)
+   ✅ Tramo de ida actualizado y vinculado: 204
    ```
 3. **Verificar en panel admin:**
-   - Deben aparecer 2 filas separadas
-   - Badge verde "IDA" en la primera
-   - Badge azul "RETORNO" en la segunda
+   - Deben aparecer 2 filas separadas.
+   - Badge verde "IDA" en la primera.
+   - Badge azul "RETORNO" en la segunda.
+   - Los montos deben estar correctamente divididos.
 
 ### Impacto en Reservas Existentes
 
 **Reservas creadas ANTES de este fix:**
-- Permanecen como una sola reserva (no se migran automáticamente)
-- Se identifican con badge "IDA Y VUELTA" (legacy)
-- Funcionan normalmente pero sin separación de tramos
+- Permanecen como una sola reserva (no se migran automáticamente).
+- Se identifican con badge "IDA Y VUELTA" (legacy).
 
 **Reservas creadas DESPUÉS de este fix:**
-- Se separan automáticamente en dos tramos
-- Permiten gestión independiente de cada viaje
+- Se separan automáticamente en dos tramos.
+- Permiten gestión independiente de cada viaje.
 
 ### Archivos Modificados
 
-- `backend/server-db.js` (líneas 3380-3499): Lógica de separación en express
+- `backend/server-db.js`: Lógica de separación en todos los flujos.
 
 > [!IMPORTANT]
-> Este fix solo aplica a **nuevas reservas**. Las reservas ida y vuelta existentes (como #204) permanecen sin separar. Si se requiere separarlas manualmente, contactar al desarrollador.
+> Este fix asegura la paridad entre el flujo de ventas web/manual y el flujo de pago con código. any reserva ida y vuelta ahora se gestionará como dos viajes independientes para facilitar la logística y asignación de conductores.
 
 ---
 

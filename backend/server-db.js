@@ -2682,7 +2682,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					direccionOrigen: dirOrigenVuelta,
 					direccionDestino: dirDestinoVuelta,
 					fecha: datosReserva.fechaRegreso, // Fecha regresó original
-					hora: datosReserva.horaRegreso,   // Hora regreso original
+					hora: normalizeTimeGlobal(datosReserva.horaRegreso),   // Hora regreso original (NORMALIZADA)
 					
 					// Datos financieros (mitad del total)
 					precio: precioVuelta,
@@ -2691,10 +2691,12 @@ app.post("/enviar-reserva", async (req, res) => {
 					descuentoPromocion: Number(reservaGuardada.descuentoPromocion) / 2,
 					descuentoRoundTrip: Number(reservaGuardada.descuentoRoundTrip) / 2,
 					descuentoOnline: Number(reservaGuardada.descuentoOnline) / 2,
+					abonoSugerido: Number(reservaGuardada.abonoSugerido) / 2,
+					saldoPendiente: Number(reservaGuardada.saldoPendiente) / 2,
 					
 					// Datos operativos
 					vehiculo: reservaGuardada.vehiculo, // Copiar preferencia de vehículo
-					numeroVuelo: "", // El vuelo de vuelta suele ser diferente, mejor dejar en blanco o copiar si se asume mismo
+					numeroVuelo: "", // El vuelo de vuelta suele ser diferente
 					hotel: reservaGuardada.hotel, // Asumir mismo hotel si aplica
 					equipajeEspecial: reservaGuardada.equipajeEspecial,
 					sillaInfantil: reservaGuardada.sillaInfantil,
@@ -2728,6 +2730,12 @@ app.post("/enviar-reserva", async (req, res) => {
 					precio: precioIda,
 					totalConDescuento: totalIda,
 					pagoMonto: Number(reservaGuardada.pagoMonto) / 2,
+					abonoSugerido: Number(reservaGuardada.abonoSugerido) / 2,
+					saldoPendiente: Number(reservaGuardada.saldoPendiente) / 2,
+					descuentoBase: Number(reservaGuardada.descuentoBase) / 2,
+					descuentoPromocion: Number(reservaGuardada.descuentoPromocion) / 2,
+					descuentoRoundTrip: Number(reservaGuardada.descuentoRoundTrip) / 2,
+					descuentoOnline: Number(reservaGuardada.descuentoOnline) / 2,
 					
 					// Vinculación y Flags
 					idaVuelta: false, // Convertir a tramo único
