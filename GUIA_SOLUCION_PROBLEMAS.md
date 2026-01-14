@@ -1282,6 +1282,132 @@ Ahora **todos** los flujos de pago usan `window.location.href`, garantizando:
 
 ---
 
+## 16. Error al Eliminar Reservas (Restricción de Clave Foránea en pending_emails)
+
+**Implementado: 13 Enero 2026**
+
+### Problema
+Al intentar eliminar una reserva desde el panel de administración, el sistema devuelve un error 500 y la operación falla.
+
+### Síntomas
+- ❌ Error 500 al hacer DELETE a `/api/reservas/:id`
+- ❌ Mensaje: `SequelizeForeignKeyConstraintError`
+- ❌ Detalles: `Cannot delete or update a parent row: a foreign key constraint fails (pending_emails, CONSTRAINT pending_emails_ibfk_1 FOREIGN KEY (reserva_id) REFERENCES reservas (id))`
+
+**Error en logs**:
+```
+Error eliminando reserva: Error
+    at Query.run (.../sequelize/lib/dialects/mysql/query.js:52:25)
+  name: 'SequelizeForeignKeyConstraintError',
+  parent: Error: Cannot delete or update a parent row: a foreign key constraint fails
+    (`u419311572_araucaria`.`pending_emails`, CONSTRAINT `pending_emails_ibfk_1` 
+    FOREIGN KEY (`reserva_id`) REFERENCES `reservas` (`id`))
+```
+
+### Causa
+La tabla `pending_emails` almacena correos programados asociados a reservas mediante una clave foránea (`reserva_id`). Cuando se intenta eliminar una reserva que tiene correos pendientes asociados, MySQL bloquea la operación para mantener la integridad referencial.
+
+**Orden incorrecto de eliminación**:
+```javascript
+// ❌ Falla: Intenta eliminar la reserva primero
+await reserva.destroy(); // Error: hay registros dependientes en pending_emails
+```
+
+### Solución (Enero 2026)
+
+Se modificó el endpoint `/api/reservas/:id` (DELETE) en `backend/server-db.js` (líneas 7045-7078) para eliminar primero los registros dependientes:
+
+**Código implementado**:
+```javascript
+app.delete("/api/reservas/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// 1. Eliminar registros dependientes para evitar errores de clave foránea
+		await PendingEmail.destroy({
+			where: { reservaId: id }
+		});
+
+		// 2. Eliminar la reserva
+		await reserva.destroy();
+
+		console.log(`✅ Reserva ${id} eliminada exitosamente`);
+
+		res.json({
+			success: true,
+			message: "Reserva eliminada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error eliminando reserva:", error);
+		
+		// Proporcionar mensaje de error más específico
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			return res.status(409).json({ 
+				error: "No se puede eliminar la reserva debido a restricciones de integridad referencial",
+				details: error.message 
+			});
+		}
+		
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+```
+
+### Flujo de Eliminación
+
+**Antes (Fallaba)**:
+```
+1. Usuario hace clic en "Eliminar" en el panel admin
+2. Backend intenta eliminar la reserva directamente
+3. ❌ MySQL rechaza la operación por clave foránea
+4. ❌ Error 500 se devuelve al frontend
+```
+
+**Ahora (Funciona)**:
+```
+1. Usuario hace clic en "Eliminar" en el panel admin
+2. Backend elimina correos pendientes asociados (pending_emails)
+3. Backend elimina la reserva
+4. ✅ Operación exitosa, se confirma la eliminación
+```
+
+### Tablas Afectadas
+
+| Tabla | Acción | Orden |
+|-------|--------|-------|
+| `pending_emails` | Eliminar registros donde `reserva_id = id` | 1° |
+| `reservas` | Eliminar reserva con `id` | 2° |
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 7045-7078): Endpoint de eliminación
+- `backend/models/PendingEmail.js`: Modelo con clave foránea
+
+### Consideraciones
+
+> [!IMPORTANT]
+> Esta solución elimina **permanentemente** los correos pendientes asociados a la reserva. Si en el futuro se requiere mantener un historial de correos programados, considerar implementar soft-delete en lugar de hard-delete.
+
+> [!TIP]
+> **Prevención**: Para nuevas tablas relacionadas con `reservas`, considerar agregar `ON DELETE CASCADE` en la definición de la clave foránea para automatizar la eliminación en cascada:
+> ```sql
+> FOREIGN KEY (reserva_id) REFERENCES reservas(id) ON DELETE CASCADE
+> ```
+
+### Otras Tablas Relacionadas
+
+Si se agregan nuevas tablas con claves foráneas a `reservas`, seguir el mismo patrón:
+1. Identificar todas las tablas dependientes
+2. Eliminar registros en orden correcto (hijas → padre)
+3. Manejar errores de restricción con mensajes específicos
+
+---
+
 ## 15. Error 500 al Agregar Conductor (Validación de Sequelize)
 
 **Implementado: 11 Enero 2026**

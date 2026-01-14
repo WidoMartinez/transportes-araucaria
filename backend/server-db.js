@@ -7052,7 +7052,16 @@ app.delete("/api/reservas/:id", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
+		// Eliminar registros dependientes para evitar errores de clave foránea
+		// 1. Eliminar correos pendientes asociados
+		await PendingEmail.destroy({
+			where: { reservaId: id }
+		});
+
+		// 2. Eliminar la reserva
 		await reserva.destroy();
+
+		console.log(`✅ Reserva ${id} eliminada exitosamente (incluyendo ${await PendingEmail.count({ where: { reservaId: id } })} correos pendientes)`);
 
 		res.json({
 			success: true,
@@ -7060,6 +7069,15 @@ app.delete("/api/reservas/:id", async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error eliminando reserva:", error);
+		
+		// Proporcionar mensaje de error más específico
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			return res.status(409).json({ 
+				error: "No se puede eliminar la reserva debido a restricciones de integridad referencial",
+				details: error.message 
+			});
+		}
+		
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
