@@ -1997,15 +1997,12 @@ function AdminReservas() {
 							`💰 Registrando pago inicial de $${montoPago} para reserva #${reservaId}`
 						);
 
-						const pagoResp = await fetch(
+						const pagoResp = await authenticatedFetch(
 							`${apiUrl}/api/reservas/${reservaId}/pagos`,
 							{
 								method: "POST",
 								headers: {
 									"Content-Type": "application/json",
-									...(accessToken
-										? { Authorization: `Bearer ${accessToken}` }
-										: {}),
 								},
 								body: JSON.stringify({
 									amount: montoPago,
