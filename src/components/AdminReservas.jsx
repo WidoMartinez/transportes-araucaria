@@ -2604,7 +2604,8 @@ function AdminReservas() {
 						</div>
 					)}
 
-					<div className="overflow-x-auto">
+					{/* Vista de tabla para desktop */}
+					<div className="hidden lg:block overflow-x-auto">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -2967,6 +2968,134 @@ function AdminReservas() {
 						</Table>
 					</div>
 
+					{/* Vista de tarjetas para móvil/tablet */}
+					<div className="lg:hidden space-y-3">
+						{reservasFiltradas.length === 0 ? (
+							<Card className="p-8">
+								<div className="text-center text-muted-foreground">
+									<FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+									<p>No se encontraron reservas</p>
+								</div>
+							</Card>
+						) : (
+							reservasFiltradas.map((reserva) => (
+								<Card key={reserva.id} className="p-4">
+									<div className="space-y-3">
+										{/* Header: ID, Código, Cliente y Estados */}
+										<div className="flex justify-between items-start gap-2">
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center gap-2 mb-1 flex-wrap">
+													<span className="font-bold">#{reserva.id}</span>
+													{reserva.codigoReserva && (
+														<span className="text-xs font-mono text-chocolate-600 truncate">
+															{reserva.codigoReserva}
+														</span>
+													)}
+													{/* Badges de Tramos */}
+													{reserva.tipoTramo ? (
+														<Badge 
+															variant={reserva.tipoTramo === 'vuelta' ? 'secondary' : 'outline'} 
+															className={`text-[10px] px-1 py-0 h-4 ${reserva.tipoTramo === 'vuelta' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-green-50 text-green-700 border-green-200'}`}
+														>
+															{reserva.tipoTramo === 'vuelta' ? 'RETORNO' : 'IDA'}
+														</Badge>
+													) : reserva.idaVuelta && (
+														<Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-purple-200 text-purple-700 bg-purple-50">
+															IDA Y VUELTA
+														</Badge>
+													)}
+												</div>
+												<p className="font-medium text-base truncate">{reserva.nombre}</p>
+												<div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+													<Phone className="h-3 w-3 flex-shrink-0" />
+													<span className="truncate">{reserva.telefono}</span>
+												</div>
+											</div>
+											<div className="flex flex-col gap-1 items-end flex-shrink-0">
+												{getEstadoBadge(reserva.estado)}
+												{getEstadoPagoBadge(reserva)}
+											</div>
+										</div>
+
+										{/* Ruta */}
+										<div className="border-t pt-2">
+											<div className="flex items-start gap-2 text-sm">
+												<MapPin className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+												<span className="font-medium break-words">{reserva.origen}</span>
+											</div>
+											<div className="flex items-start gap-2 text-sm mt-1">
+												<MapPin className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+												<span className="font-medium break-words">{reserva.destino}</span>
+											</div>
+										</div>
+
+										{/* Fecha y Pasajeros */}
+										<div className="flex justify-between items-center text-sm border-t pt-2 gap-2">
+											<div className="flex items-center gap-1 flex-wrap min-w-0">
+												<Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
+												<span className="truncate">{formatDate(reserva.fecha)}</span>
+												<span className="text-gray-500">{reserva.hora}</span>
+											</div>
+											<div className="flex items-center gap-1 flex-shrink-0">
+												<Users className="h-4 w-4 text-gray-500" />
+												<span>{reserva.pasajeros}</span>
+											</div>
+										</div>
+
+										{/* Total y Saldo */}
+										<div className="flex justify-between items-center border-t pt-2">
+											<div>
+												<p className="text-xs text-gray-500">Total</p>
+												<p className="font-bold text-lg">{formatCurrency(reserva.totalConDescuento)}</p>
+											</div>
+											{reserva.saldoPendiente > 0 && (
+												<div className="text-right">
+													<p className="text-xs text-gray-500">Saldo</p>
+													<p className="font-semibold text-red-600">
+														{formatCurrency(reserva.saldoPendiente)}
+													</p>
+												</div>
+											)}
+										</div>
+
+										{/* Acciones */}
+										<div className="flex gap-2 border-t pt-2">
+											<Button 
+												size="sm" 
+												variant="outline"
+												className="flex-1 h-11"
+												onClick={() => handleViewDetails(reserva)}
+											>
+												<Eye className="h-4 w-4 mr-2" />
+												Ver
+											</Button>
+											<Button 
+												size="sm" 
+												variant="outline"
+												className="flex-1 h-11"
+												onClick={() => handleEdit(reserva)}
+											>
+												<Edit className="h-4 w-4 mr-2" />
+												Editar
+											</Button>
+											{reserva?.estado === "confirmada" && (
+												<Button 
+													size="sm" 
+													variant="outline"
+													className="h-11 w-11 p-0"
+													onClick={() => handleAsignar(reserva)}
+													title="Asignar vehículo"
+												>
+													<Car className="h-5 w-5" />
+												</Button>
+											)}
+										</div>
+									</div>
+								</Card>
+							))
+						)}
+					</div>
+
 					{/* PaginaciÃ³n */}
 					<div className="flex items-center justify-between mt-4">
 						<p className="text-sm text-muted-foreground mr-4">
@@ -3023,20 +3152,21 @@ function AdminReservas() {
 
 			{/* Modal de Detalles */}
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-					<DialogHeader>
-						<div className="flex justify-between items-center">
-							<div>
-								<DialogTitle>
+				<DialogContent className="w-[95vw] max-w-4xl h-[90vh] flex flex-col">
+					<DialogHeader className="flex-shrink-0 pb-4 border-b">
+						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+							<div className="flex-1">
+								<DialogTitle className="text-lg md:text-xl">
 									Detalles de Reserva #{selectedReserva?.id}
 								</DialogTitle>
-								<DialogDescription>
+								<DialogDescription className="text-sm">
 									Información completa de la reserva
 								</DialogDescription>
 							</div>
 							<Button
 								size="sm"
 								variant="outline"
+								className="h-10 md:h-9 text-sm w-full sm:w-auto"
 								onClick={() => {
 									const link = `${window.location.origin}/#comprar-productos/${selectedReserva.codigoReserva}`;
 									navigator.clipboard.writeText(link);
@@ -3048,8 +3178,10 @@ function AdminReservas() {
 						</div>
 					</DialogHeader>
 
-					{selectedReserva && (
-						<div className="space-y-6">
+					{/* Contenido scrolleable */}
+					<div className="flex-1 overflow-y-auto px-1 py-4">
+						{selectedReserva && (
+							<div className="space-y-4">
 							{/* Código de Reserva */}
 							{selectedReserva.codigoReserva && (
 								<div className="bg-chocolate-50 border-2 border-chocolate-200 rounded-lg p-4">
@@ -3081,12 +3213,14 @@ function AdminReservas() {
 								</div>
 							)}
 
-							{/* Información del Cliente */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Información del Cliente
-								</h3>
-								<div className="grid grid-cols-2 gap-4">
+							{/* Sección: Información del Cliente */}
+							<Collapsible defaultOpen={!isMobile}>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base">Información del Cliente</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Nombre</Label>
 										<p className="font-medium">{selectedReserva.nombre}</p>
@@ -3121,14 +3255,17 @@ function AdminReservas() {
 										</div>
 									)}
 								</div>
-							</div>
+								</CollapsibleContent>
+							</Collapsible>
 
-							{/* Detalles del Viaje */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Detalles del Viaje
-								</h3>
-								<div className="grid grid-cols-2 gap-4">
+							{/* Sección: Detalles del Viaje */}
+							<Collapsible defaultOpen={!isMobile}>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base">Detalles del Viaje</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Origen</Label>
 										<p className="font-medium">{selectedReserva.origen}</p>
@@ -3204,18 +3341,33 @@ function AdminReservas() {
 										</>
 									)}
 								</div>
-							</div>
+								</CollapsibleContent>
+							</Collapsible>
 
-							{/* Información de la Reserva */}
-							<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-								<h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-									<svg
-										className="w-5 h-5 text-slate-600"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
+							{/* Sección: Información de la Reserva */}
+							<Collapsible defaultOpen={!isMobile}>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base flex items-center gap-2">
+										<svg
+											className="w-5 h-5"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+											/>
+										</svg>
+										Registro de la Reserva
+									</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
+									<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={2}
@@ -3268,15 +3420,21 @@ function AdminReservas() {
 										</p>
 									</div>
 								</div>
-							</div>
+									</div>
+								</CollapsibleContent>
+							</Collapsible>
 
-							{/* Historial de Transacciones */}
+							{/* Sección: Historial de Transacciones */}
 							{(loadingTransacciones || transacciones.length > 0 || (selectedReserva && Number(selectedReserva.pagoMonto) > 0)) && (
-								<div className="border-t pt-6">
-									<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-										<DollarSign className="h-5 w-5" />
-										Historial de Transacciones
-									</h3>
+								<Collapsible defaultOpen={!isMobile}>
+									<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+										<h3 className="font-semibold text-base flex items-center gap-2">
+											<DollarSign className="h-5 w-5" />
+											Historial de Transacciones
+										</h3>
+										<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+									</CollapsibleTrigger>
+									<CollapsibleContent className="pt-3">
 									
 									{loadingTransacciones ? (
 										<p className="text-sm text-gray-500 italic flex items-center gap-2">
@@ -3365,14 +3523,17 @@ function AdminReservas() {
 											</p>
 										</div>
 									)}
-								</div>
+									</CollapsibleContent>
+								</Collapsible>
 							)}
 
-							{/* Historial de Asignaciones (interno) */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Historial de Asignaciones
-								</h3>
+							{/* Sección: Historial de Asignaciones */}
+							<Collapsible defaultOpen={!isMobile}>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base">Historial de Asignaciones</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
 								{loadingHistorial ? (
 									<p className="text-sm text-muted-foreground">
 										Cargando historial...
@@ -3403,15 +3564,18 @@ function AdminReservas() {
 										))}
 									</div>
 								)}
-							</div>
+								</CollapsibleContent>
+							</Collapsible>
 
-							{/* Información Adicional */}
+							{/* Sección: Información Adicional */}
 							{(selectedReserva.numeroVuelo || selectedReserva.hotel || selectedReserva.equipajeEspecial || selectedReserva.sillaInfantil) && (
-								<div>
-									<h3 className="font-semibold text-lg mb-3">
-										Información Adicional
-									</h3>
-									<div className="grid grid-cols-2 gap-4">
+								<Collapsible defaultOpen={!isMobile}>
+									<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+										<h3 className="font-semibold text-base">Información Adicional</h3>
+										<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+									</CollapsibleTrigger>
+									<CollapsibleContent className="pt-3">
+										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 										{selectedReserva.numeroVuelo && (
 											<div>
 												<Label className="text-muted-foreground">
@@ -3449,15 +3613,18 @@ function AdminReservas() {
 											</div>
 										)}
 									</div>
-								</div>
+									</CollapsibleContent>
+								</Collapsible>
 							)}
 
-							{/* Información Financiera */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Información Financiera
-								</h3>
-								<div className="grid grid-cols-2 gap-4">
+							{/* Sección: Información Financiera */}
+							<Collapsible defaultOpen={!isMobile}>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base">Información Financiera</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Precio Base</Label>
 										<p className="font-medium">
@@ -3577,12 +3744,17 @@ function AdminReservas() {
 										</div>
 									)}
 								</div>
-							</div>
+								</CollapsibleContent>
+							</Collapsible>
 
-							{/* Estado y Pago */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">Estado y Pago</h3>
-								<div className="grid grid-cols-2 gap-4">
+							{/* Sección: Estado y Pago */}
+							<Collapsible defaultOpen={!isMobile}>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base">Estado y Pago</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Estado</Label>
 										<div className="mt-1">
@@ -3618,14 +3790,17 @@ function AdminReservas() {
 										</div>
 									)}
 								</div>
-							</div>
+								</CollapsibleContent>
+							</Collapsible>
 
-							{/* Observaciones y Mensaje */}
+							{/* Sección: Observaciones y Mensaje */}
 							{(selectedReserva.observaciones || selectedReserva.mensaje) && (
-								<div>
-									<h3 className="font-semibold text-lg mb-3">
-										Notas y Comentarios
-									</h3>
+								<Collapsible defaultOpen={!isMobile}>
+									<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+										<h3 className="font-semibold text-base">Notas y Comentarios</h3>
+										<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+									</CollapsibleTrigger>
+									<CollapsibleContent className="pt-3">
 									{selectedReserva.mensaje && (
 										<div className="mb-3">
 											<Label className="text-muted-foreground">
@@ -3646,15 +3821,18 @@ function AdminReservas() {
 											</p>
 										</div>
 									)}
-								</div>
+									</CollapsibleContent>
+								</Collapsible>
 							)}
 
-							{/* Información Técnica */}
-							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Información Técnica
-								</h3>
-								<div className="grid grid-cols-2 gap-4 text-sm">
+							{/* Sección: Información Técnica */}
+							<Collapsible>
+								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+									<h3 className="font-semibold text-base">Información Técnica</h3>
+									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
+								</CollapsibleTrigger>
+								<CollapsibleContent className="pt-3">
+									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
 									<div>
 										<Label className="text-muted-foreground">Origen</Label>
 										<p>{selectedReserva.source || "web"}</p>
@@ -3677,30 +3855,48 @@ function AdminReservas() {
 										</Label>
 										<p>{formatDate(selectedReserva.updated_at)}</p>
 									</div>
-								</div>
-							</div>
-						{/* Botón para asignar vehículo y conductor si no están asignados o faltan datos internos */}
-						{(!isAsignada(selectedReserva) || !selectedReserva.conductorId || !selectedReserva.vehiculoId) && (
-							<div className="mt-6 pt-4 border-t">
-								<Button
-									onClick={() => {
-										setShowDetailDialog(false);
-										handleAsignar(selectedReserva);
-									}}
-									className="w-full bg-chocolate-600 hover:bg-chocolate-700"
-									size="lg"
-								>
-									<Car className="w-4 h-4 mr-2" />
-									{isAsignada(selectedReserva) 
-										? "Corregir Asignación (Actualizar Datos)" 
-										: "Asignar Vehículo y Conductor"}
-								</Button>
-							</div>
-						)}
+								</CollapsibleContent>
+							</Collapsible>
+						</div>
+					)}
+				</div>
+
+				{/* Footer fijo con botones */}
+				<div className="flex-shrink-0 border-t pt-4 bg-background">
+					{/* Botón para asignar vehículo y conductor */}
+					{selectedReserva && (!isAsignada(selectedReserva) || !selectedReserva.conductorId || !selectedReserva.vehiculoId) && (
+						<Button
+							onClick={() => {
+								setShowDetailDialog(false);
+								handleAsignar(selectedReserva);
+							}}
+							className="w-full bg-chocolate-600 hover:bg-chocolate-700 h-12 mb-3"
+						>
+							<Car className="w-4 h-4 mr-2" />
+							{isAsignada(selectedReserva) 
+								? "Corregir Asignación (Actualizar Datos)" 
+								: "Asignar Vehículo y Conductor"}
+						</Button>
+					)}
+					<div className="flex flex-col sm:flex-row gap-2">
+						<Button 
+							className="flex-1 h-12" 
+							onClick={() => { setShowDetailDialog(false); handleEdit(selectedReserva); }}
+						>
+							<Edit className="h-4 w-4 mr-2" />
+							Editar
+						</Button>
+						<Button 
+							className="flex-1 h-12" 
+							variant="outline"
+							onClick={() => setShowDetailDialog(false)}
+						>
+							Cerrar
+						</Button>
 					</div>
-				)}
-				</DialogContent>
-			</Dialog>
+				</div>
+			</DialogContent>
+		</Dialog>
 
 			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
