@@ -7,18 +7,7 @@ import sequelize from "../config/database.js";
 // Función para procesar correos pendientes
 export const processPendingEmails = async () => {
     try {
-        // Verificar conexión a la base de datos antes de intentar consultas
-        try {
-            await sequelize.authenticate();
-        } catch (connectionError) {
-            // Si no hay conexión, silenciar el error para no saturar logs
-            // Solo loguear cada 10 minutos (600000ms)
-            if (!processPendingEmails.lastLogTime || Date.now() - processPendingEmails.lastLogTime > 600000) {
-                console.warn("⚠️ Procesador de correos: sin conexión a BD. Reintentando en 60s...");
-                processPendingEmails.lastLogTime = Date.now();
-            }
-            return; // Salir silenciosamente
-        }
+
 
         const now = new Date();
         
