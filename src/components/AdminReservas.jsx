@@ -286,6 +286,11 @@ function AdminReservas() {
 		metodoPago: "",
 		observaciones: "",
 		enviarCorreo: true,
+		// Nuevos campos para pago inicial
+		registrarPagoInicial: false,
+		pagoMonto: "",
+		pagoMetodo: "efectivo",
+		pagoReferencia: "",
 	});
 
 	// CatÃ¡logo de destinos (para selects)
@@ -1774,6 +1779,11 @@ function AdminReservas() {
 			metodoPago: "",
 			observaciones: "",
 			enviarCorreo: true,
+			// Nuevos campos para pago inicial
+			registrarPagoInicial: false,
+			pagoMonto: "",
+			pagoMetodo: "efectivo",
+			pagoReferencia: "",
 		});
 		setOrigenEsOtro(false);
 		setDestinoEsOtro(false);
@@ -1810,6 +1820,28 @@ function AdminReservas() {
 		if (!newReservaForm.fecha) {
 			alert("Por favor selecciona una fecha");
 			return;
+		}
+
+		// Validaciones de pago inicial
+		if (newReservaForm.registrarPagoInicial) {
+			const monto = parseFloat(newReservaForm.pagoMonto) || 0;
+
+			if (monto <= 0) {
+				alert("⚠️ El monto del pago debe ser mayor a 0");
+				return;
+			}
+
+			// Validar coherencia con estado de pago
+			const total = parseFloat(newReservaForm.precio) || 0;
+
+			if (newReservaForm.estadoPago === "pagado" && monto < total) {
+				const confirmar = confirm(
+					`El monto pagado ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}). ¿Continuar de todos modos?`
+				);
+				if (!confirmar) {
+					return;
+				}
+			}
 		}
 
 		setSaving(true);
@@ -1950,6 +1982,52 @@ function AdminReservas() {
 
 			if (!response.ok) {
 				throw new Error("Error al crear la reserva");
+			}
+
+			const resultData = await response.json();
+			const reservaId = resultData.reservaId;
+
+			// NUEVO: Registrar pago inicial si corresponde
+			if (newReservaForm.registrarPagoInicial && newReservaForm.pagoMonto) {
+				const montoPago = parseFloat(newReservaForm.pagoMonto) || 0;
+
+				if (montoPago > 0) {
+					try {
+						console.log(
+							`💰 Registrando pago inicial de $${montoPago} para reserva #${reservaId}`
+						);
+
+						const pagoResp = await fetch(
+							`${apiUrl}/api/reservas/${reservaId}/pagos`,
+							{
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json",
+									...(accessToken
+										? { Authorization: `Bearer ${accessToken}` }
+										: {}),
+								},
+								body: JSON.stringify({
+									amount: montoPago,
+									metodo: newReservaForm.pagoMetodo || "efectivo",
+									referencia: newReservaForm.pagoReferencia || "",
+									source: "manual",
+								}),
+							}
+						);
+
+						if (!pagoResp.ok) {
+							console.warn(
+								"⚠️ No se pudo registrar el pago inicial en el historial"
+							);
+						} else {
+							console.log("✅ Pago inicial registrado exitosamente");
+						}
+					} catch (pagoError) {
+						console.error("Error registrando pago inicial:", pagoError);
+						// No bloquear la creación de la reserva por un error de pago
+					}
+				}
 			}
 
 			// Recargar datos
@@ -4775,6 +4853,103 @@ function AdminReservas() {
 							</div>
 						</div>
 
+						{/* Sección de Pago Inicial */}
+						<div className="space-y-4">
+							<h3 className="font-semibold text-lg border-b pb-2">
+								Pago Inicial (Opcional)
+							</h3>
+							<p className="text-sm text-muted-foreground">
+								Si el cliente ya realizó un pago, regístralo aquí para que
+								quede en el historial
+							</p>
+
+							{/* Checkbox para activar registro de pago */}
+							<div className="flex items-center space-x-2">
+								<Checkbox
+									id="registrar-pago-inicial"
+									checked={newReservaForm.registrarPagoInicial}
+									onCheckedChange={(checked) =>
+										setNewReservaForm({
+											...newReservaForm,
+											registrarPagoInicial: checked,
+										})
+									}
+								/>
+								<Label htmlFor="registrar-pago-inicial">
+									Registrar pago inicial
+								</Label>
+							</div>
+
+							{/* Campos de pago (solo si checkbox está marcado) */}
+							{newReservaForm.registrarPagoInicial && (
+								<div className="space-y-4 pl-6 border-l-2 border-chocolate-200">
+									{/* Monto */}
+									<div className="space-y-2">
+										<Label htmlFor="new-pago-monto">Monto del Pago (CLP)</Label>
+										<Input
+											id="new-pago-monto"
+											type="number"
+											min="0"
+											step="100"
+											placeholder="Ej: 30000"
+											value={newReservaForm.pagoMonto || ""}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													pagoMonto: e.target.value,
+												})
+											}
+										/>
+									</div>
+
+									{/* Método de pago */}
+									<div className="space-y-2">
+										<Label htmlFor="new-pago-metodo">Método de Pago</Label>
+										<Select
+											value={newReservaForm.pagoMetodo || "efectivo"}
+											onValueChange={(value) =>
+												setNewReservaForm({
+													...newReservaForm,
+													pagoMetodo: value,
+												})
+											}
+										>
+											<SelectTrigger id="new-pago-metodo">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="efectivo">Efectivo</SelectItem>
+												<SelectItem value="transferencia">
+													Transferencia
+												</SelectItem>
+												<SelectItem value="flow">Flow</SelectItem>
+												<SelectItem value="otro">Otro</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+
+									{/* Referencia */}
+									<div className="space-y-2">
+										<Label htmlFor="new-pago-referencia">
+											Referencia/Comprobante (Opcional)
+										</Label>
+										<Input
+											id="new-pago-referencia"
+											type="text"
+											placeholder="Ej: N° de transferencia, boleta, etc."
+											value={newReservaForm.pagoReferencia || ""}
+											onChange={(e) =>
+												setNewReservaForm({
+													...newReservaForm,
+													pagoReferencia: e.target.value,
+												})
+											}
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+
 						{/* Estado y Pago */}
 						<div className="space-y-4">
 							<h3 className="font-semibold text-lg border-b pb-2">
@@ -4815,9 +4990,16 @@ function AdminReservas() {
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="pendiente">Pendiente</SelectItem>
-											<SelectItem value="pagado">Pagado</SelectItem>
+											<SelectItem value="parcial">
+												Pagado Parcialmente
+											</SelectItem>
+											<SelectItem value="pagado">Pagado Completo</SelectItem>
 										</SelectContent>
 									</Select>
+									<p className="text-xs text-muted-foreground">
+										Si registras un pago inicial arriba, selecciona "Pagado
+										Parcialmente" o "Pagado Completo"
+									</p>
 								</div>
 								{newReservaForm.estadoPago === "pagado" && (
 									<div className="space-y-2">
