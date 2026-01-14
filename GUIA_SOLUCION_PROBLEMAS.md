@@ -1621,3 +1621,34 @@ Se añadió una alerta visual en el flujo de pago para que el cliente sepa exact
 - `src/components/AdminCodigosPago.jsx`: Contadores y lógica visual.
 - `src/components/PagarConCodigo.jsx`: Alerta para el cliente.
 
+---
+
+## 15. Error 404 al Probar Nuevos Endpoints en Desarrollo
+
+**Documentado: 13 Enero 2026**
+
+### Síntoma
+Al intentar probar una funcionalidad nueva que requiere un nuevo endpoint de backend (ej: `bulk-update`), el navegador retorna un error **404 Not Found**, a pesar de que el código del backend parece estar correcto y el servidor local está corriendo.
+
+### Causa
+**Diferencia de Entornos (Shadowing)**: Por defecto, el frontend en desarrollo (`localhost:5173`) está configurado para conectarse al backend de **producción (Render)** para facilitar las pruebas con datos reales. 
+Si el nuevo endpoint aún no ha sido desplegado en Render, las llamadas fallarán con 404 porque el servidor de producción no reconoce la nueva ruta.
+
+### Solución
+Para resolver este problema durante el desarrollo, se debe forzar al frontend a usar el backend local:
+
+1.  **Configurar `.env.local`**:
+    Asegurarse de que `VITE_API_URL` apunte a tu servidor local (ej: `http://localhost:3001`).
+    ```env
+    VITE_API_URL=http://localhost:3001
+    ```
+
+2.  **Verificar `lib/backend.js`**:
+    El sistema tiene una lógica automática en `lib/backend.js` que prioriza localhost si detecta que estás en desarrollo. Sin embargo, algunos componentes pueden tener URLs "hardcoded" o dinámicas que requieren atención.
+
+3.  **Despliegue**:
+    La solución definitiva es hacer `push` de los cambios del backend a la rama `main` para que Render realice el despliegue automático del nuevo endpoint. Una vez desplegado, el error 404 desaparecerá incluso si el frontend apunta a producción.
+
+---
+
+
