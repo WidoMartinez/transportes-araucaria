@@ -1834,13 +1834,25 @@ function AdminReservas() {
 			// Validar coherencia con estado de pago
 			const total = parseFloat(newReservaForm.precio) || 0;
 
+			// Si marca como "Pagado Completo" pero el monto es menor al total
 			if (newReservaForm.estadoPago === "pagado" && monto < total) {
 				const confirmar = confirm(
-					`El monto pagado ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}). ¿Continuar de todos modos?`
+					`El monto pagado ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}).\n\n¿Continuar de todos modos?`
 				);
 				if (!confirmar) {
 					return;
 				}
+			}
+
+			// Si marca como "Pendiente" pero está registrando un pago, sugerir cambiar estado
+			if (
+				newReservaForm.estadoPago === "pendiente" &&
+				monto > 0 &&
+				!confirm(
+					`Has marcado el estado como "Pendiente" pero estás registrando un pago de $${monto.toLocaleString()}.\n\n¿Deseas continuar o prefieres cambiar el estado a "Pagado Parcialmente"?`
+				)
+			) {
+				return;
 			}
 		}
 
@@ -1989,41 +2001,40 @@ function AdminReservas() {
 
 			// NUEVO: Registrar pago inicial si corresponde
 			if (newReservaForm.registrarPagoInicial && newReservaForm.pagoMonto) {
-				const montoPago = parseFloat(newReservaForm.pagoMonto) || 0;
+				// El monto ya fue validado anteriormente, simplemente parseamos
+				const montoPago = parseFloat(newReservaForm.pagoMonto);
 
-				if (montoPago > 0) {
-					try {
-						console.log(
-							`💰 Registrando pago inicial de $${montoPago} para reserva #${reservaId}`
-						);
+				try {
+					console.log(
+						`💰 Registrando pago inicial de $${montoPago} para reserva #${reservaId}`
+					);
 
-						const pagoResp = await authenticatedFetch(
-							`${apiUrl}/api/reservas/${reservaId}/pagos`,
-							{
-								method: "POST",
-								headers: {
-									"Content-Type": "application/json",
-								},
-								body: JSON.stringify({
-									amount: montoPago,
-									metodo: newReservaForm.pagoMetodo || "efectivo",
-									referencia: newReservaForm.pagoReferencia || "",
-									source: "manual",
-								}),
-							}
-						);
-
-						if (!pagoResp.ok) {
-							console.warn(
-								"⚠️ No se pudo registrar el pago inicial en el historial"
-							);
-						} else {
-							console.log("✅ Pago inicial registrado exitosamente");
+					const pagoResp = await authenticatedFetch(
+						`${apiUrl}/api/reservas/${reservaId}/pagos`,
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({
+								amount: montoPago,
+								metodo: newReservaForm.pagoMetodo || "efectivo",
+								referencia: newReservaForm.pagoReferencia || "",
+								source: "manual",
+							}),
 						}
-					} catch (pagoError) {
-						console.error("Error registrando pago inicial:", pagoError);
-						// No bloquear la creación de la reserva por un error de pago
+					);
+
+					if (!pagoResp.ok) {
+						console.warn(
+							"⚠️ No se pudo registrar el pago inicial en el historial"
+						);
+					} else {
+						console.log("✅ Pago inicial registrado exitosamente");
 					}
+				} catch (pagoError) {
+					console.error("Error registrando pago inicial:", pagoError);
+					// No bloquear la creación de la reserva por un error de pago
 				}
 			}
 
@@ -4998,31 +5009,6 @@ function AdminReservas() {
 										Parcialmente" o "Pagado Completo"
 									</p>
 								</div>
-								{newReservaForm.estadoPago === "pagado" && (
-									<div className="space-y-2">
-										<Label htmlFor="new-metodopago">Método de Pago</Label>
-										<Select
-											value={newReservaForm.metodoPago}
-											onValueChange={(value) =>
-												setNewReservaForm({
-													...newReservaForm,
-													metodoPago: value,
-												})
-											}
-										>
-											<SelectTrigger id="new-metodopago">
-												<SelectValue placeholder="Seleccionar método" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="efectivo">Efectivo</SelectItem>
-												<SelectItem value="transferencia">
-													Transferencia
-												</SelectItem>
-												<SelectItem value="flow">Flow</SelectItem>
-											</SelectContent>
-										</Select>
-									</div>
-								)}
 							</div>
 						</div>
 
