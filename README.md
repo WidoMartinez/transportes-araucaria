@@ -168,6 +168,92 @@ Reemplazar archivos en `src/assets/`:
 - Tasa de rebote
 - Origen del tráfico
 
+## Optimización Móvil del Panel de Administración
+
+### 📱 Diseño Responsive
+
+El panel de administración ha sido completamente optimizado para dispositivos móviles, proporcionando una experiencia nativa y táctil en smartphones y tablets.
+
+#### Breakpoints Implementados
+- **Móvil**: < 768px (sm)
+- **Tablet**: 768px - 1023px (md/lg)
+- **Desktop**: ≥ 1024px (lg+)
+
+#### Componentes Optimizados
+
+##### 1. AdminCodigosPago.jsx
+- ✅ Vista dual: Tabla en desktop, tarjetas en móvil
+- ✅ Botones táctiles de 44x44px mínimo
+- ✅ Modal responsive con inputs de 48px en móvil
+- ✅ Botones de vencimiento rápido en columna para móvil
+- ✅ Grid adaptativo (1 columna móvil, 2 desktop)
+
+##### 2. AdminReservas.jsx
+- ✅ Vista de tarjetas optimizada para móvil/tablet
+- ✅ Filtros colapsables con botón toggle
+- ✅ Modales con estructura flex (header fijo, contenido scroll, footer fijo)
+- ✅ Secciones collapsibles en modales para móvil
+- ✅ Botones de acción táctiles (48px altura)
+- ✅ Información jerarquizada con iconos
+- ✅ Grid adaptativo en todos los formularios
+
+#### Características Responsive
+
+**Vista de Tarjetas en Móvil:**
+```jsx
+- Header: ID, código, cliente, badges de estado
+- Contacto: Teléfono con icono
+- Ruta: Origen/destino con iconos MapPin
+- Fecha/Hora: Con iconos Calendar y Clock  
+- Pasajeros: Con icono Users
+- Total y Saldo: Destacado visualmente
+- Acciones: Botones Ver, Editar, Asignar
+```
+
+**Modales Optimizados:**
+```jsx
+- Ancho: 95vw en móvil, max-w-3xl/4xl en desktop
+- Altura máxima: 90vh con scroll interno
+- Labels: 16px en móvil, 14px en desktop
+- Inputs: 48px en móvil, 40px en desktop
+- Botones: Stack vertical en móvil, horizontal en desktop
+```
+
+**Clases Tailwind Utilizadas:**
+- `hidden lg:block` - Mostrar solo en desktop
+- `lg:hidden` - Mostrar solo en móvil/tablet
+- `h-12 md:h-10` - Altura táctil responsive
+- `text-base md:text-sm` - Texto más grande en móvil
+- `grid-cols-1 md:grid-cols-2` - Grid adaptativo
+- `flex-col sm:flex-row` - Stack vertical/horizontal
+
+#### Hook Personalizado
+
+**useMediaQuery** (`src/hooks/useMediaQuery.js`)
+```javascript
+// Detectar breakpoints en tiempo real
+const isMobile = useMediaQuery('(max-width: 767px)');
+const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
+const isDesktop = useMediaQuery('(min-width: 1024px)');
+```
+
+#### Testing en Dispositivos
+
+Se recomienda probar en:
+- iPhone SE (375px) - Pantalla pequeña crítica
+- iPhone 12/13 (390px) - Estándar iOS
+- Samsung Galaxy S21 (360px) - Estándar Android
+- iPad (768px) - Tablet
+- Desktop (1920px) - Verificar sin regresiones
+
+#### Accesibilidad Táctil
+
+- ✅ Área táctil mínima: 44x44px (estándar WCAG)
+- ✅ Espaciado entre elementos interactivos: 8px mínimo
+- ✅ Texto legible sin zoom: 16px mínimo en inputs
+- ✅ Contraste de texto: >= 4.5:1
+- ✅ Navegación por teclado funcional
+
 ## Backend y Servicios Externos
 
 El proyecto cuenta con documentación detallada sobre subsistemas específicos:
