@@ -20,7 +20,6 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import {
 	Dialog,
 	DialogContent,
@@ -41,7 +40,6 @@ import {
 	Search,
 	ChevronLeft,
 	ChevronRight,
-	ChevronDown,
 	Edit,
 	Eye,
 	DollarSign,
@@ -84,13 +82,13 @@ const normalizeDestino = (value) =>
 	(value || "").toString().trim().toLowerCase();
 
 function AdminReservas() {
-	// Hooks para detectar tamaños de pantalla
-	const isMobile = useMediaQuery('(max-width: 767px)');
-	const isTablet = useMediaQuery('(max-width: 1023px)');
-	
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
 	const { authenticatedFetch } = useAuthenticatedFetch();
+	
+	// Detección de dispositivos móviles
+	const isMobile = useMediaQuery('(max-width: 767px)');
+	const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
 
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -2064,7 +2062,7 @@ function AdminReservas() {
 			<div>
 				<div className="flex justify-between items-center mb-4">
 					<h2 className="text-3xl font-bold">Gestión de Reservas</h2>
-					<Button onClick={handleNewReserva} className="gap-2">
+					<Button onClick={handleNewReserva} className="gap-2 h-12">
 						<Plus className="w-4 h-4" />
 						Nueva Reserva
 					</Button>
@@ -2152,142 +2150,127 @@ function AdminReservas() {
 				</div>
 			</div>
 
-			{/* Filtros y Búsqueda */}
+			{/* Filtros y BÃºsqueda */}
 			<Card>
-				<CardHeader className="pb-3">
-					<div className="flex items-center justify-between">
-						<CardTitle>Filtros de Búsqueda</CardTitle>
-						{isTablet && (
-							<Collapsible>
-								<CollapsibleTrigger asChild>
-									<Button variant="ghost" size="sm" className="lg:hidden">
-										<ChevronDown className="h-4 w-4" />
-									</Button>
-								</CollapsibleTrigger>
-							</Collapsible>
-						)}
-					</div>
+				<CardHeader>
+					<CardTitle>Filtros de Búsqueda</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Collapsible defaultOpen={!isTablet}>
-						<CollapsibleContent>
-							<div className="flex flex-col lg:flex-row gap-4 mb-6">
-								<div className="flex-1">
-									<Label className="mb-2 block text-base">Buscar</Label>
-									<div className="relative">
-										<Search className="absolute left-2 top-3 md:top-2.5 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
-										<Input
-											placeholder="Nombre, email, teléfono, ID..."
-											className="pl-9 md:pl-8 h-12 md:h-10 text-base"
-											value={searchTerm}
-											onChange={(e) => setSearchTerm(e.target.value)}
-										/>
-									</div>
-								</div>
-								<div className="w-full lg:w-[180px]">
-									<Label className="mb-2 block text-base">Rango Fechas</Label>
-									<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
-										<SelectTrigger className="h-12 lg:h-10 text-base">
-											<SelectValue placeholder="Seleccionar rango" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="todos">Todo el tiempo</SelectItem>
-											<SelectItem value="hoy">Hoy</SelectItem>
-											<SelectItem value="ayer">Ayer</SelectItem>
-											<SelectItem value="semana">Últimos 7 días</SelectItem>
-											<SelectItem value="quincena">Últimos 15 días</SelectItem>
-											<SelectItem value="mes">Este Mes</SelectItem>
-											<SelectItem value="personalizado">Personalizado</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								{rangoFecha === "personalizado" && (
-									<>
-										<div className="w-full lg:w-[150px]">
-											<Label className="mb-2 block text-base">Fecha Desde</Label>
-											<div className="relative">
-												<Input
-													type="date"
-													value={fechaDesde}
-													onChange={(e) => setFechaDesde(e.target.value)}
-													className="pl-9 md:pl-8 h-12 md:h-10 text-base"
-												/>
-												<Calendar className="absolute left-2 top-3 md:top-2.5 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
-											</div>
-										</div>
-										<div className="w-full lg:w-[150px]">
-											<Label className="mb-2 block text-base">Fecha Hasta</Label>
-											<div className="relative">
-												<Input
-													type="date"
-													value={fechaHasta}
-													onChange={(e) => setFechaHasta(e.target.value)}
-													className="pl-9 md:pl-8 h-12 md:h-10 text-base"
-												/>
-												<Calendar className="absolute left-2 top-3 md:top-2.5 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
-											</div>
-										</div>
-									</>
-								)}
-								<div className="w-full lg:w-[200px]">
-									<Label className="mb-2 block text-base">Filtros Inteligentes</Label>
-									<Select
-										value={filtroInteligente}
-										onValueChange={setFiltroInteligente}
-									>
-										<SelectTrigger className="h-12 lg:h-10 text-base">
-											<SelectValue placeholder="Aplicar filtro..." />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="todos">Ninguno</SelectItem>
-											<SelectItem value="sin_asignacion">
-												⚠️ Sin Asignación
-											</SelectItem>
-											<SelectItem value="incompletas">
-												📋 Faltan Detalles
-											</SelectItem>
-											<SelectItem value="archivadas">
-												📦 Ver Archivadas
-											</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="w-full lg:w-[150px]">
-									<Label className="mb-2 block text-base">Estado</Label>
-									<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-										<SelectTrigger className="h-12 lg:h-10 text-base">
-											<SelectValue placeholder="Todos" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="todos">Todos</SelectItem>
-											<SelectItem value="pendiente">Pendiente</SelectItem>
-											<SelectItem value="confirmada">Confirmada</SelectItem>
-											<SelectItem value="completada">Completada</SelectItem>
-											<SelectItem value="cancelada">Cancelada</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="w-full lg:w-[150px]">
-									<Label className="mb-2 block text-base">Estado de Pago</Label>
-									<Select
-										value={estadoPagoFiltro}
-										onValueChange={setEstadoPagoFiltro}
-									>
-										<SelectTrigger className="h-12 lg:h-10 text-base">
-											<SelectValue placeholder="Todos" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="todos">Todos</SelectItem>
-											<SelectItem value="pendiente">Pendiente</SelectItem>
-											<SelectItem value="pagado">Pagado</SelectItem>
-											<SelectItem value="parcial">Parcial</SelectItem>
-											<SelectItem value="reembolsado">Reembolsado</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
+					<div className="flex flex-col md:flex-row gap-4 mb-6">
+				<div className="flex-1">
+					<Label className="mb-2 block">Buscar</Label>
+					<div className="relative">
+						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+						<Input
+							placeholder="Nombre, email, teléfono, ID..."
+							className="pl-8 h-12 md:h-10 text-base"
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+						/>
+					</div>
+				</div>
+				<div className="w-full md:w-[180px]">
+					<Label className="mb-2 block">Rango Fechas</Label>
+					<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
+						<SelectTrigger className="h-12 md:h-10 text-base">
+							<SelectValue placeholder="Seleccionar rango" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Todo el tiempo</SelectItem>
+							<SelectItem value="hoy">Hoy</SelectItem>
+							<SelectItem value="ayer">Ayer</SelectItem>
+							<SelectItem value="semana">Últimos 7 días</SelectItem>
+							<SelectItem value="quincena">Últimos 15 días</SelectItem>
+							<SelectItem value="mes">Este Mes</SelectItem>
+							<SelectItem value="personalizado">Personalizado</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				{rangoFecha === "personalizado" && (
+					<>
+						<div className="w-full md:w-[150px]">
+							<Label className="mb-2 block">Fecha Desde</Label>
+							<div className="relative">
+								<Input
+									type="date"
+									value={fechaDesde}
+									onChange={(e) => setFechaDesde(e.target.value)}
+									className="pl-8 h-12 md:h-10 text-base"
+								/>
+								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 							</div>
-						</CollapsibleContent>
-					</Collapsible>
+						</div>
+						<div className="w-full md:w-[150px]">
+							<Label className="mb-2 block">Fecha Hasta</Label>
+							<div className="relative">
+								<Input
+									type="date"
+									value={fechaHasta}
+									onChange={(e) => setFechaHasta(e.target.value)}
+									className="pl-8 h-12 md:h-10 text-base"
+								/>
+								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+							</div>
+						</div>
+					</>
+				)}
+				<div className="w-full md:w-[200px]">
+					<Label className="mb-2 block">Filtros Inteligentes</Label>
+					<Select
+						value={filtroInteligente}
+						onValueChange={setFiltroInteligente}
+					>
+						<SelectTrigger className="h-12 md:h-10 text-base">
+							<SelectValue placeholder="Aplicar filtro..." />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Ninguno</SelectItem>
+							<SelectItem value="sin_asignacion">
+								⚠️ Sin Asignación
+							</SelectItem>
+							<SelectItem value="incompletas">
+								📋 Faltan Detalles
+							</SelectItem>
+							<SelectItem value="archivadas">
+								📦 Ver Archivadas
+							</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="w-full md:w-[150px]">
+					<Label className="mb-2 block">Estado</Label>
+					<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+						<SelectTrigger className="h-12 md:h-10 text-base">
+							<SelectValue placeholder="Todos" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Todos</SelectItem>
+							<SelectItem value="pendiente">Pendiente</SelectItem>
+							<SelectItem value="confirmada">Confirmada</SelectItem>
+							<SelectItem value="completada">Completada</SelectItem>
+							<SelectItem value="cancelada">Cancelada</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+				<div className="w-full md:w-[150px]">
+					<Label className="mb-2 block">Estado de Pago</Label>
+					<Select
+						value={estadoPagoFiltro}
+						onValueChange={setEstadoPagoFiltro}
+					>
+						<SelectTrigger className="h-12 md:h-10 text-base">
+							<SelectValue placeholder="Todos" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="todos">Todos</SelectItem>
+							<SelectItem value="pendiente">Pendiente</SelectItem>
+							<SelectItem value="pagado">Pagado</SelectItem>
+							<SelectItem value="parcial">Parcial</SelectItem>
+							<SelectItem value="reembolsado">Reembolsado</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
 					<div className="mt-4 flex justify-between items-center">
 						<p className="text-sm text-muted-foreground">
 							Mostrando {reservasFiltradas.length} de {totalReservas} reservas
@@ -2604,8 +2587,7 @@ function AdminReservas() {
 						</div>
 					)}
 
-					{/* Vista de tabla para desktop */}
-					<div className="hidden lg:block overflow-x-auto">
+					<div className="overflow-x-auto">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -2968,134 +2950,6 @@ function AdminReservas() {
 						</Table>
 					</div>
 
-					{/* Vista de tarjetas para móvil/tablet */}
-					<div className="lg:hidden space-y-3">
-						{reservasFiltradas.length === 0 ? (
-							<Card className="p-8">
-								<div className="text-center text-muted-foreground">
-									<FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-									<p>No se encontraron reservas</p>
-								</div>
-							</Card>
-						) : (
-							reservasFiltradas.map((reserva) => (
-								<Card key={reserva.id} className="p-4">
-									<div className="space-y-3">
-										{/* Header: ID, Código, Cliente y Estados */}
-										<div className="flex justify-between items-start gap-2">
-											<div className="flex-1 min-w-0">
-												<div className="flex items-center gap-2 mb-1 flex-wrap">
-													<span className="font-bold">#{reserva.id}</span>
-													{reserva.codigoReserva && (
-														<span className="text-xs font-mono text-chocolate-600 truncate">
-															{reserva.codigoReserva}
-														</span>
-													)}
-													{/* Badges de Tramos */}
-													{reserva.tipoTramo ? (
-														<Badge 
-															variant={reserva.tipoTramo === 'vuelta' ? 'secondary' : 'outline'} 
-															className={`text-[10px] px-1 py-0 h-4 ${reserva.tipoTramo === 'vuelta' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-green-50 text-green-700 border-green-200'}`}
-														>
-															{reserva.tipoTramo === 'vuelta' ? 'RETORNO' : 'IDA'}
-														</Badge>
-													) : reserva.idaVuelta && (
-														<Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-purple-200 text-purple-700 bg-purple-50">
-															IDA Y VUELTA
-														</Badge>
-													)}
-												</div>
-												<p className="font-medium text-base truncate">{reserva.nombre}</p>
-												<div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-													<Phone className="h-3 w-3 flex-shrink-0" />
-													<span className="truncate">{reserva.telefono}</span>
-												</div>
-											</div>
-											<div className="flex flex-col gap-1 items-end flex-shrink-0">
-												{getEstadoBadge(reserva.estado)}
-												{getEstadoPagoBadge(reserva)}
-											</div>
-										</div>
-
-										{/* Ruta */}
-										<div className="border-t pt-2">
-											<div className="flex items-start gap-2 text-sm">
-												<MapPin className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-												<span className="font-medium break-words">{reserva.origen}</span>
-											</div>
-											<div className="flex items-start gap-2 text-sm mt-1">
-												<MapPin className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-												<span className="font-medium break-words">{reserva.destino}</span>
-											</div>
-										</div>
-
-										{/* Fecha y Pasajeros */}
-										<div className="flex justify-between items-center text-sm border-t pt-2 gap-2">
-											<div className="flex items-center gap-1 flex-wrap min-w-0">
-												<Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
-												<span className="truncate">{formatDate(reserva.fecha)}</span>
-												<span className="text-gray-500">{reserva.hora}</span>
-											</div>
-											<div className="flex items-center gap-1 flex-shrink-0">
-												<Users className="h-4 w-4 text-gray-500" />
-												<span>{reserva.pasajeros}</span>
-											</div>
-										</div>
-
-										{/* Total y Saldo */}
-										<div className="flex justify-between items-center border-t pt-2">
-											<div>
-												<p className="text-xs text-gray-500">Total</p>
-												<p className="font-bold text-lg">{formatCurrency(reserva.totalConDescuento)}</p>
-											</div>
-											{reserva.saldoPendiente > 0 && (
-												<div className="text-right">
-													<p className="text-xs text-gray-500">Saldo</p>
-													<p className="font-semibold text-red-600">
-														{formatCurrency(reserva.saldoPendiente)}
-													</p>
-												</div>
-											)}
-										</div>
-
-										{/* Acciones */}
-										<div className="flex gap-2 border-t pt-2">
-											<Button 
-												size="sm" 
-												variant="outline"
-												className="flex-1 h-11"
-												onClick={() => handleViewDetails(reserva)}
-											>
-												<Eye className="h-4 w-4 mr-2" />
-												Ver
-											</Button>
-											<Button 
-												size="sm" 
-												variant="outline"
-												className="flex-1 h-11"
-												onClick={() => handleEdit(reserva)}
-											>
-												<Edit className="h-4 w-4 mr-2" />
-												Editar
-											</Button>
-											{reserva?.estado === "confirmada" && (
-												<Button 
-													size="sm" 
-													variant="outline"
-													className="h-11 w-11 p-0"
-													onClick={() => handleAsignar(reserva)}
-													title="Asignar vehículo"
-												>
-													<Car className="h-5 w-5" />
-												</Button>
-											)}
-										</div>
-									</div>
-								</Card>
-							))
-						)}
-					</div>
-
 					{/* PaginaciÃ³n */}
 					<div className="flex items-center justify-between mt-4">
 						<p className="text-sm text-muted-foreground mr-4">
@@ -3152,21 +3006,20 @@ function AdminReservas() {
 
 			{/* Modal de Detalles */}
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-				<DialogContent className="w-[95vw] max-w-4xl h-[90vh] flex flex-col">
-					<DialogHeader className="flex-shrink-0 pb-4 border-b">
-						<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-							<div className="flex-1">
-								<DialogTitle className="text-lg md:text-xl">
+				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+					<DialogHeader>
+						<div className="flex justify-between items-center">
+							<div>
+								<DialogTitle>
 									Detalles de Reserva #{selectedReserva?.id}
 								</DialogTitle>
-								<DialogDescription className="text-sm">
+								<DialogDescription>
 									Información completa de la reserva
 								</DialogDescription>
 							</div>
 							<Button
 								size="sm"
 								variant="outline"
-								className="h-10 md:h-9 text-sm w-full sm:w-auto"
 								onClick={() => {
 									const link = `${window.location.origin}/#comprar-productos/${selectedReserva.codigoReserva}`;
 									navigator.clipboard.writeText(link);
@@ -3178,10 +3031,8 @@ function AdminReservas() {
 						</div>
 					</DialogHeader>
 
-					{/* Contenido scrolleable */}
-					<div className="flex-1 overflow-y-auto px-1 py-4">
-						{selectedReserva && (
-							<div className="space-y-4">
+					{selectedReserva && (
+						<div className="space-y-6">
 							{/* Código de Reserva */}
 							{selectedReserva.codigoReserva && (
 								<div className="bg-chocolate-50 border-2 border-chocolate-200 rounded-lg p-4">
@@ -3213,14 +3064,12 @@ function AdminReservas() {
 								</div>
 							)}
 
-							{/* Sección: Información del Cliente */}
-							<Collapsible defaultOpen={!isMobile}>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base">Información del Cliente</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
-									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{/* Información del Cliente */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Información del Cliente
+								</h3>
+								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Nombre</Label>
 										<p className="font-medium">{selectedReserva.nombre}</p>
@@ -3255,17 +3104,14 @@ function AdminReservas() {
 										</div>
 									)}
 								</div>
-								</CollapsibleContent>
-							</Collapsible>
+							</div>
 
-							{/* Sección: Detalles del Viaje */}
-							<Collapsible defaultOpen={!isMobile}>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base">Detalles del Viaje</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
-									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{/* Detalles del Viaje */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Detalles del Viaje
+								</h3>
+								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Origen</Label>
 										<p className="font-medium">{selectedReserva.origen}</p>
@@ -3341,33 +3187,18 @@ function AdminReservas() {
 										</>
 									)}
 								</div>
-								</CollapsibleContent>
-							</Collapsible>
+							</div>
 
-							{/* Sección: Información de la Reserva */}
-							<Collapsible defaultOpen={!isMobile}>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base flex items-center gap-2">
-										<svg
-											className="w-5 h-5"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-											/>
-										</svg>
-										Registro de la Reserva
-									</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
-									<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{/* Información de la Reserva */}
+							<div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+								<h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+									<svg
+										className="w-5 h-5 text-slate-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
 											strokeLinecap="round"
 											strokeLinejoin="round"
 											strokeWidth={2}
@@ -3420,21 +3251,15 @@ function AdminReservas() {
 										</p>
 									</div>
 								</div>
-									</div>
-								</CollapsibleContent>
-							</Collapsible>
+							</div>
 
-							{/* Sección: Historial de Transacciones */}
+							{/* Historial de Transacciones */}
 							{(loadingTransacciones || transacciones.length > 0 || (selectedReserva && Number(selectedReserva.pagoMonto) > 0)) && (
-								<Collapsible defaultOpen={!isMobile}>
-									<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-										<h3 className="font-semibold text-base flex items-center gap-2">
-											<DollarSign className="h-5 w-5" />
-											Historial de Transacciones
-										</h3>
-										<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-									</CollapsibleTrigger>
-									<CollapsibleContent className="pt-3">
+								<div className="border-t pt-6">
+									<h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+										<DollarSign className="h-5 w-5" />
+										Historial de Transacciones
+									</h3>
 									
 									{loadingTransacciones ? (
 										<p className="text-sm text-gray-500 italic flex items-center gap-2">
@@ -3523,17 +3348,14 @@ function AdminReservas() {
 											</p>
 										</div>
 									)}
-									</CollapsibleContent>
-								</Collapsible>
+								</div>
 							)}
 
-							{/* Sección: Historial de Asignaciones */}
-							<Collapsible defaultOpen={!isMobile}>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base">Historial de Asignaciones</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
+							{/* Historial de Asignaciones (interno) */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Historial de Asignaciones
+								</h3>
 								{loadingHistorial ? (
 									<p className="text-sm text-muted-foreground">
 										Cargando historial...
@@ -3564,18 +3386,15 @@ function AdminReservas() {
 										))}
 									</div>
 								)}
-								</CollapsibleContent>
-							</Collapsible>
+							</div>
 
-							{/* Sección: Información Adicional */}
+							{/* Información Adicional */}
 							{(selectedReserva.numeroVuelo || selectedReserva.hotel || selectedReserva.equipajeEspecial || selectedReserva.sillaInfantil) && (
-								<Collapsible defaultOpen={!isMobile}>
-									<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-										<h3 className="font-semibold text-base">Información Adicional</h3>
-										<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-									</CollapsibleTrigger>
-									<CollapsibleContent className="pt-3">
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<div>
+									<h3 className="font-semibold text-lg mb-3">
+										Información Adicional
+									</h3>
+									<div className="grid grid-cols-2 gap-4">
 										{selectedReserva.numeroVuelo && (
 											<div>
 												<Label className="text-muted-foreground">
@@ -3613,18 +3432,15 @@ function AdminReservas() {
 											</div>
 										)}
 									</div>
-									</CollapsibleContent>
-								</Collapsible>
+								</div>
 							)}
 
-							{/* Sección: Información Financiera */}
-							<Collapsible defaultOpen={!isMobile}>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base">Información Financiera</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
-									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{/* Información Financiera */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Información Financiera
+								</h3>
+								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Precio Base</Label>
 										<p className="font-medium">
@@ -3744,17 +3560,12 @@ function AdminReservas() {
 										</div>
 									)}
 								</div>
-								</CollapsibleContent>
-							</Collapsible>
+							</div>
 
-							{/* Sección: Estado y Pago */}
-							<Collapsible defaultOpen={!isMobile}>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base">Estado y Pago</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
-									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							{/* Estado y Pago */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">Estado y Pago</h3>
+								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<Label className="text-muted-foreground">Estado</Label>
 										<div className="mt-1">
@@ -3790,17 +3601,14 @@ function AdminReservas() {
 										</div>
 									)}
 								</div>
-								</CollapsibleContent>
-							</Collapsible>
+							</div>
 
-							{/* Sección: Observaciones y Mensaje */}
+							{/* Observaciones y Mensaje */}
 							{(selectedReserva.observaciones || selectedReserva.mensaje) && (
-								<Collapsible defaultOpen={!isMobile}>
-									<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-										<h3 className="font-semibold text-base">Notas y Comentarios</h3>
-										<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-									</CollapsibleTrigger>
-									<CollapsibleContent className="pt-3">
+								<div>
+									<h3 className="font-semibold text-lg mb-3">
+										Notas y Comentarios
+									</h3>
 									{selectedReserva.mensaje && (
 										<div className="mb-3">
 											<Label className="text-muted-foreground">
@@ -3821,18 +3629,15 @@ function AdminReservas() {
 											</p>
 										</div>
 									)}
-									</CollapsibleContent>
-								</Collapsible>
+								</div>
 							)}
 
-							{/* Sección: Información Técnica */}
-							<Collapsible>
-								<CollapsibleTrigger className="w-full flex justify-between items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-									<h3 className="font-semibold text-base">Información Técnica</h3>
-									<ChevronDown className="h-5 w-5 transition-transform duration-200" />
-								</CollapsibleTrigger>
-								<CollapsibleContent className="pt-3">
-									<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+							{/* Información Técnica */}
+							<div>
+								<h3 className="font-semibold text-lg mb-3">
+									Información Técnica
+								</h3>
+								<div className="grid grid-cols-2 gap-4 text-sm">
 									<div>
 										<Label className="text-muted-foreground">Origen</Label>
 										<p>{selectedReserva.source || "web"}</p>
@@ -3855,55 +3660,37 @@ function AdminReservas() {
 										</Label>
 										<p>{formatDate(selectedReserva.updated_at)}</p>
 									</div>
-								</CollapsibleContent>
-							</Collapsible>
-						</div>
-					)}
-				</div>
-
-				{/* Footer fijo con botones */}
-				<div className="flex-shrink-0 border-t pt-4 bg-background">
-					{/* Botón para asignar vehículo y conductor */}
-					{selectedReserva && (!isAsignada(selectedReserva) || !selectedReserva.conductorId || !selectedReserva.vehiculoId) && (
-						<Button
-							onClick={() => {
-								setShowDetailDialog(false);
-								handleAsignar(selectedReserva);
-							}}
-							className="w-full bg-chocolate-600 hover:bg-chocolate-700 h-12 mb-3"
-						>
-							<Car className="w-4 h-4 mr-2" />
-							{isAsignada(selectedReserva) 
-								? "Corregir Asignación (Actualizar Datos)" 
-								: "Asignar Vehículo y Conductor"}
-						</Button>
-					)}
-					<div className="flex flex-col sm:flex-row gap-2">
-						<Button 
-							className="flex-1 h-12" 
-							onClick={() => { setShowDetailDialog(false); handleEdit(selectedReserva); }}
-						>
-							<Edit className="h-4 w-4 mr-2" />
-							Editar
-						</Button>
-						<Button 
-							className="flex-1 h-12" 
-							variant="outline"
-							onClick={() => setShowDetailDialog(false)}
-						>
-							Cerrar
-						</Button>
+								</div>
+							</div>
+						{/* Botón para asignar vehículo y conductor si no están asignados o faltan datos internos */}
+						{(!isAsignada(selectedReserva) || !selectedReserva.conductorId || !selectedReserva.vehiculoId) && (
+							<div className="mt-6 pt-4 border-t">
+								<Button
+									onClick={() => {
+										setShowDetailDialog(false);
+										handleAsignar(selectedReserva);
+									}}
+									className="w-full bg-chocolate-600 hover:bg-chocolate-700"
+									size="lg"
+								>
+									<Car className="w-4 h-4 mr-2" />
+									{isAsignada(selectedReserva) 
+										? "Corregir Asignación (Actualizar Datos)" 
+										: "Asignar Vehículo y Conductor"}
+								</Button>
+							</div>
+						)}
 					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+				)}
+				</DialogContent>
+			</Dialog>
 
 			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-				<DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle className="text-lg md:text-xl">Editar Reserva #{selectedReserva?.id}</DialogTitle>
-						<DialogDescription className="text-sm">
+						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
+						<DialogDescription>
 							Actualiza el estado, pago y detalles de la reserva
 						</DialogDescription>
 					</DialogHeader>
@@ -3913,8 +3700,8 @@ function AdminReservas() {
 							{/* InformaciÃ³n del Cliente (editable) */}
 							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
-									<Label className="text-base md:text-sm">Nombre</Label>
-									<Input className="h-12 md:h-10 text-base"
+									<Label>Nombre</Label>
+									<Input
 										value={formData.nombre || ""}
 										onChange={(e) =>
 											setFormData({ ...formData, nombre: e.target.value })
@@ -3922,8 +3709,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label className="text-base md:text-sm">Email</Label>
-									<Input className="h-12 md:h-10 text-base"
+									<Label>Email</Label>
+									<Input
 										type="email"
 										value={formData.email || ""}
 										onChange={(e) =>
@@ -3932,8 +3719,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label className="text-base md:text-sm">Teléfono</Label>
-									<Input className="h-12 md:h-10 text-base"
+									<Label>Teléfono</Label>
+									<Input
 										value={formData.telefono || ""}
 										onChange={(e) =>
 											setFormData({ ...formData, telefono: e.target.value })
@@ -3941,8 +3728,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label className="text-base md:text-sm">Fecha</Label>
-									<Input className="h-12 md:h-10 text-base"
+									<Label>Fecha</Label>
+									<Input
 										type="date"
 										value={formData.fecha || ""}
 										onChange={(e) =>
@@ -3951,8 +3738,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label className="text-base md:text-sm">Hora</Label>
-									<Input className="h-12 md:h-10 text-base"
+									<Label>Hora</Label>
+									<Input
 										type="time"
 										value={formData.hora || ""}
 										onChange={(e) =>
@@ -3961,8 +3748,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label className="text-base md:text-sm">Pasajeros</Label>
-									<Input className="h-12 md:h-10 text-base"
+									<Label>Pasajeros</Label>
+									<Input
 										type="number"
 										min="1"
 										value={formData.pasajeros || ""}
@@ -3978,14 +3765,14 @@ function AdminReservas() {
 								<h3 className="font-semibold border-b pb-2">Detalles del Trayecto</h3>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-1">
-										<Label className="text-base md:text-sm">Origen General</Label>
+										<Label>Origen General</Label>
 										<Select
 											value={formData.origen || ""}
 											onValueChange={(value) =>
 												setFormData({ ...formData, origen: value })
 											}
 										>
-											<SelectTrigger className="h-12 md:h-10 text-base bg-white">
+											<SelectTrigger className="bg-white">
 												<SelectValue placeholder="Seleccionar origen" />
 											</SelectTrigger>
 											<SelectContent>
@@ -3998,14 +3785,14 @@ function AdminReservas() {
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label className="text-base md:text-sm">Destino General</Label>
+										<Label>Destino General</Label>
 										<Select
 											value={formData.destino || ""}
 											onValueChange={(value) =>
 												setFormData({ ...formData, destino: value })
 											}
 										>
-											<SelectTrigger className="h-12 md:h-10 text-base bg-white">
+											<SelectTrigger className="bg-white">
 												<SelectValue placeholder="Seleccionar destino" />
 											</SelectTrigger>
 											<SelectContent>
@@ -4086,7 +3873,7 @@ function AdminReservas() {
 										setFormData({ ...formData, estado: value })
 									}
 								>
-									<SelectTrigger className="h-12 md:h-10 text-base" id="estado">
+									<SelectTrigger id="estado">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -4138,7 +3925,7 @@ function AdminReservas() {
 										})
 									}
 								>
-									<SelectTrigger className="h-12 md:h-10 text-base" id="estadoPago">
+									<SelectTrigger id="estadoPago">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -4159,7 +3946,7 @@ function AdminReservas() {
 										setFormData({ ...formData, metodoPago: value })
 									}
 								>
-									<SelectTrigger className="h-12 md:h-10 text-base" id="metodoPago">
+									<SelectTrigger id="metodoPago">
 										<SelectValue placeholder="Seleccionar método" />
 									</SelectTrigger>
 									<SelectContent>
@@ -4176,7 +3963,7 @@ function AdminReservas() {
 								<Label htmlFor="referenciaPago">
 									Referencia de Pago (opcional)
 								</Label>
-								<Input className="h-12 md:h-10 text-base"
+								<Input
 									id="referenciaPago"
 									placeholder="ID de transacción, número de transferencia, etc."
 									value={formData.referenciaPago}
@@ -4257,7 +4044,7 @@ function AdminReservas() {
 												})
 											}
 										>
-											<SelectTrigger className="h-12 md:h-10 text-base" id="tipoPago">
+											<SelectTrigger id="tipoPago">
 												<SelectValue placeholder="Selecciona el tipo de pago" />
 											</SelectTrigger>
 											<SelectContent>
@@ -4281,7 +4068,7 @@ function AdminReservas() {
 							<div className="space-y-2">
 								{/* Mostrar monto registrado actual (solo informativo). Los pagos manuales se registran en el apartado 'Registrar pago'. */}
 								<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
-								<Input className="h-12 md:h-10 text-base"
+								<Input
 									id="montoPagado"
 									type="number"
 									step="1"
@@ -4311,7 +4098,7 @@ function AdminReservas() {
 
 							{/* Historial de pagos de esta reserva */}
 							<div className="space-y-2">
-								<Label className="text-base md:text-sm">Historial de pagos</Label>
+								<Label>Historial de pagos</Label>
 								<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
 									{pagoHistorial &&
 										pagoHistorial.length > 0 &&
@@ -4351,7 +4138,7 @@ function AdminReservas() {
 
 							{/* BotÃ³n y modal para registrar pago manual */}
 							<div className="space-y-2">
-								<Label className="text-base md:text-sm">Registrar pago manual</Label>
+								<Label>Registrar pago manual</Label>
 								<div className="flex gap-2">
 									<Button
 										type="button"
@@ -4385,7 +4172,7 @@ function AdminReservas() {
 										Borrar todo
 									</Button>
 								</div>
-								<Textarea className="text-base min-h-[100px]" className="text-base min-h-[100px]"
+								<Textarea
 									id="observaciones"
 									placeholder="Notas internas sobre la reserva..."
 									value={formData.observaciones}
@@ -4454,18 +4241,15 @@ function AdminReservas() {
 							</div>
 
 							{/* Botones */}
-							<div className="flex flex-col sm:flex-row gap-2 pt-4">
+							<div className="flex justify-end gap-2 pt-4">
 								<Button
 									variant="outline"
-							className="h-12 flex-1"
 									onClick={() => setShowEditDialog(false)}
 									disabled={saving}
 								>
 									Cancelar
 								</Button>
-								<Button
-							className="h-12 flex-1"
-							onClick={handleSave} disabled={saving}>
+								<Button onClick={handleSave} disabled={saving}>
 									{saving ? (
 										<>
 											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -4483,10 +4267,10 @@ function AdminReservas() {
 
 			{/* Modal de Nueva Reserva */}
 			<Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-				<DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle className="text-lg md:text-xl">Nueva Reserva Manual</DialogTitle>
-						<DialogDescription className="text-sm">
+						<DialogTitle>Nueva Reserva Manual</DialogTitle>
+						<DialogDescription>
 							Crea una nueva reserva ingresando manualmente los datos del
 							cliente y del viaje
 						</DialogDescription>
@@ -5155,10 +4939,9 @@ function AdminReservas() {
 						</div>
 
 						{/* Botones */}
-						<div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+						<div className="flex justify-end gap-2 pt-4 border-t">
 							<Button
 								variant="outline"
-							className="h-12 flex-1"
 								onClick={() => setShowNewDialog(false)}
 								disabled={saving}
 							>
@@ -5166,7 +4949,6 @@ function AdminReservas() {
 							</Button>
 							<Button onClick={handleSaveNewReserva} disabled={saving}>
 								{saving ? (
-							className="h-12 flex-1"
 									<>
 										<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
 										Guardando...
@@ -5452,12 +5234,12 @@ function AdminReservas() {
 
 			{/* Dialog para asignar vehÃ­culo y conductor */}
 			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
-				<DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
+				<DialogContent className="max-w-lg">
 					<DialogHeader>
-						<DialogTitle className="text-lg md:text-xl">
+						<DialogTitle>
 							Asignar Vehículo y Conductor - Reserva #{selectedReserva?.id}
 						</DialogTitle>
-						<DialogDescription className="text-sm">
+						<DialogDescription>
 							Asigna un vehículo y opcionalmente un conductor a esta reserva
 							pagada
 						</DialogDescription>
@@ -5498,14 +5280,14 @@ function AdminReservas() {
 
 						{/* Selector de vehÃ­culo */}
 						<div className="space-y-2">
-							<Label className="text-base md:text-sm" htmlFor="vehiculo">
+							<Label htmlFor="vehiculo">
 								Vehículo <span className="text-red-500">*</span>
 							</Label>
 							<Select
 								value={vehiculoSeleccionado}
 								onValueChange={setVehiculoSeleccionado}
 							>
-								<SelectTrigger className="h-12 md:h-10 text-base" id="vehiculo">
+								<SelectTrigger id="vehiculo">
 									<SelectValue placeholder="Selecciona un vehículo" />
 								</SelectTrigger>
 								<SelectContent>
@@ -5530,12 +5312,12 @@ function AdminReservas() {
 
 						{/* Selector de conductor (opcional) */}
 						<div className="space-y-2">
-							<Label className="text-base md:text-sm" htmlFor="conductor">Conductor (opcional)</Label>
+							<Label htmlFor="conductor">Conductor (opcional)</Label>
 							<Select
 								value={conductorSeleccionado}
 								onValueChange={setConductorSeleccionado}
 							>
-								<SelectTrigger className="h-12 md:h-10 text-base" id="conductor">
+								<SelectTrigger id="conductor">
 									<SelectValue placeholder="Selecciona un conductor (opcional)" />
 								</SelectTrigger>
 								<SelectContent>
@@ -5627,10 +5409,9 @@ function AdminReservas() {
 								</div>
 							)}
 
-						<div className="flex flex-col sm:flex-row gap-2">
+						<div className="flex justify-end gap-2">
 							<Button
 								variant="outline"
-							className="h-12 flex-1"
 								onClick={() => setShowAsignarDialog(false)}
 								disabled={loadingAsignacion}
 							>
@@ -5650,7 +5431,6 @@ function AdminReservas() {
 								return (
 									<Button
 										onClick={handleGuardarAsignacion}
-									className="h-12 flex-1"
 										disabled={
 											loadingAsignacion ||
 											!vehiculoSeleccionado ||
