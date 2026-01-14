@@ -1194,292 +1194,167 @@ function AdminReservas() {
 	};
 
 	// Guardar cambios
+	// ✅ OPTIMIZACIÓN 1: Guardado Consolidado (Bulk Update)
 	const handleSave = async () => {
 		if (!selectedReserva) return;
 
 		setSaving(true);
 		try {
-			// Actualizar datos generales de la reserva
-			try {
-				// Usa el token de autenticación del contexto
-				const generalResp = await fetch(
-					`${apiUrl}/api/reservas/${selectedReserva.id}`,
-					{
-						method: "PUT",
-						headers: {
-							"Content-Type": "application/json",
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: JSON.stringify({
-							nombre: formData.nombre,
-							email: formData.email,
-							telefono: formData.telefono,
-							fecha: formData.fecha,
-							hora: formData.hora,
-							pasajeros:
-								Number(formData.pasajeros) || selectedReserva.pasajeros,
-							numeroVuelo: formData.numeroVuelo,
-							hotel: formData.hotel,
-							equipajeEspecial: formData.equipajeEspecial,
-							sillaInfantil: Boolean(formData.sillaInfantil),
-							idaVuelta: Boolean(formData.idaVuelta),
-							fechaRegreso: formData.fechaRegreso || null,
-							horaRegreso: formData.horaRegreso || null,
-							mensaje: selectedReserva.mensaje,
-							direccionOrigen: formData.direccionOrigen,
-							direccionDestino: formData.direccionDestino,
-						}),
-					}
-				);
-				if (!generalResp.ok) {
-					const t = await generalResp.text();
-					console.warn("No se pudo actualizar datos generales:", t);
-				}
-
-				// Si se marcÃ³ enviar actualizaciÃ³n al conductor
-				if (enviarActualizacionConductor && isAsignada(selectedReserva)) {
-					// Re-enviar asignaciÃ³n (mismo vehÃ­culo y conductor) para disparar email
-					await fetch(
-						`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
-						{
-							method: "PUT",
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${accessToken}`,
-							},
-							body: JSON.stringify({
-								vehiculoId: selectedReserva.vehiculoId,
-								conductorId: selectedReserva.conductorId,
-								sendEmail: false, // No reenviar al cliente por defecto aquÃ­
-								sendEmailDriver: true, // Forzar email al conductor
-							}),
-						}
-					);
-				}
-			} catch (e) {
-				console.warn(
-					"Error actualizando datos generales (no crÃ­tico):",
-					e.message
-				);
-			}
-			// Actualizar ruta si cambiÃ³
+			// 1. Manejo de destinos "otros" (pueden ser múltiples llamadas externas)
 			const origenFinalEdit = editOrigenEsOtro
 				? editOtroOrigen || formData.origen
 				: formData.origen;
 			const destinoFinalEdit = editDestinoEsOtro
 				? editOtroDestino || formData.destino
 				: formData.destino;
-			if (
-				(origenFinalEdit && origenFinalEdit !== selectedReserva.origen) ||
-				(destinoFinalEdit && destinoFinalEdit !== selectedReserva.destino)
-			) {
-				// Si el destino es 'otro' y no existe en el catálogo, crear registro inactivo
-				if (
-					editDestinoEsOtro &&
-					destinoFinalEdit &&
-					!destinoExiste(destinoFinalEdit)
-				) {
-					try {
-						// Usa el token de autenticación del contexto
-						await fetch(`${apiUrl}/api/destinos`, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${accessToken}`,
-							},
-							body: JSON.stringify({
-								nombre: destinoFinalEdit,
-								activo: false,
-								precioIda: 0,
-								precioVuelta: 0,
-								precioIdaVuelta: 0,
-							}),
-						});
-					} catch {
-						// Ignorar errores al guardar destino
-					}
-				}
-				// TambiÃ©n registrar origen si es 'otro' y no existe
-				if (
-					editOrigenEsOtro &&
-					origenFinalEdit &&
-					!destinoExiste(origenFinalEdit)
-				) {
-					try {
-						// Usa el token de autenticación del contexto
-						await fetch(`${apiUrl}/api/destinos`, {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${accessToken}`,
-							},
-							body: JSON.stringify({
-								nombre: origenFinalEdit,
-								activo: false,
-								precioIda: 0,
-								precioVuelta: 0,
-								precioIdaVuelta: 0,
-							}),
-						});
-					} catch {
-						// Ignorar errores al guardar origen
-					}
-				}
-				// Actualizar ruta (usa el token de autenticación del contexto)
-				const rutaResp = await fetch(
-					`${apiUrl}/api/reservas/${selectedReserva.id}/ruta`,
-					{
-						method: "PUT",
-						headers: {
-							"Content-Type": "application/json",
-							Authorization: `Bearer ${accessToken}`,
-						},
-						body: JSON.stringify({
-							origen: origenFinalEdit,
-							destino: destinoFinalEdit,
-						}),
-					}
-				);
-				if (!rutaResp.ok) {
-					throw new Error("Error al actualizar la ruta");
-				}
-			}
-			// Determinar estado final: respetar la selección del usuario
-			let estadoFinal =
-				formData.estado || selectedReserva.estado || "pendiente";
-			const estadoPagoActual =
-				formData.estadoPago || selectedReserva.estadoPago || "pendiente";
-			let estadoPagoSolicitado =
-				estadoFinal === "completada" ? "pagado" : estadoPagoActual;
 
-			// Determinar monto a enviar para la actualizaciÃ³n de pago.
-			// Reglas:
-			// - Si el admin ingresÃ³ manualmente un monto, usarlo.
-			// - Si no ingresÃ³ monto y seleccionÃ³ tipo 'abono', calcular el 40% (o abonoSugerido si es mayor)
-			//   restando lo ya pagado previamente para enviar solo el nuevo abono necesario.
-			// - Si seleccionÃ³ 'total' o 'saldo' y no indicÃ³ monto, completar el pago restante.
-			// Priorizar monto manual ingresado por el admin (si proporciona un valor > 0)
+			if (editDestinoEsOtro && destinoFinalEdit && !destinoExiste(destinoFinalEdit)) {
+				await fetch(`${apiUrl}/api/destinos`, {
+					method: "POST",
+					headers: { 
+						"Content-Type": "application/json", 
+						Authorization: `Bearer ${accessToken}` 
+					},
+					body: JSON.stringify({ 
+						nombre: destinoFinalEdit, 
+						activo: false, 
+						precioIda: 0, 
+						precioVuelta: 0, 
+						precioIdaVuelta: 0 
+					}),
+				}).catch(() => {});
+			}
+			if (editOrigenEsOtro && origenFinalEdit && !destinoExiste(origenFinalEdit)) {
+				await fetch(`${apiUrl}/api/destinos`, {
+					method: "POST",
+					headers: { 
+						"Content-Type": "application/json", 
+						Authorization: `Bearer ${accessToken}` 
+					},
+					body: JSON.stringify({ 
+						nombre: origenFinalEdit, 
+						activo: false, 
+						precioIda: 0, 
+						precioVuelta: 0, 
+						precioIdaVuelta: 0 
+					}),
+				}).catch(() => {});
+			}
+
+			// 2. Preparar lógica de negocio para el payload consolidado
+			let estadoFinal = formData.estado || selectedReserva.estado || "pendiente";
+			const estadoPagoActual = formData.estadoPago || selectedReserva.estadoPago || "pendiente";
+			let estadoPagoSolicitado = estadoFinal === "completada" ? "pagado" : estadoPagoActual;
+
 			let montoPagadoValue = null;
-			const montoManual =
-				formData.montoPagado !== undefined && formData.montoPagado !== null
-					? Number(formData.montoPagado)
-					: NaN;
+			const montoManual = formData.montoPagado !== undefined && formData.montoPagado !== null 
+				? Number(formData.montoPagado) 
+				: NaN;
+			
 			if (!Number.isNaN(montoManual) && montoManual > 0) {
 				montoPagadoValue = montoManual;
 			}
+			
 			const tipo = formData.tipoPago;
-			const totalReserva =
-				Number(
-					selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0
-				) || 0;
+			const totalReserva = Number(selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0) || 0;
 			const abonoSugerido = Number(selectedReserva?.abonoSugerido || 0) || 0;
 			const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
 			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
 
-			// Si se selecciona 'saldo' o 'total' (Completar pago), siempre enviar el restante
 			if (tipo === "saldo" || tipo === "total") {
 				const restante = Math.max(totalReserva - pagoPrevio, 0);
 				montoPagadoValue = restante > 0 ? restante : null;
-			} else {
-				// Para otros tipos (ej. 'abono'), calcular solo el nuevo abono necesario.
-				// Nota: el campo 'Monto Registrado' es solo informativo y refleja el acumulado,
-				// no debe reutilizarse como nuevo monto a sumar para evitar duplicar pagos.
-				if (tipo === "abono") {
-					const necesario = Math.max(umbralAbono - pagoPrevio, 0);
-					montoPagadoValue = necesario > 0 ? necesario : null;
-					if (
-						estadoFinal === "pendiente" ||
-						estadoFinal === "pendiente_detalles"
-					) {
-						estadoFinal = "confirmada";
-					}
-					if (estadoPagoSolicitado === "pendiente") {
-						estadoPagoSolicitado = "parcial";
-					}
-				} else {
-					montoPagadoValue = null;
+			} else if (tipo === "abono") {
+				const necesario = Math.max(umbralAbono - pagoPrevio, 0);
+				montoPagadoValue = necesario > 0 ? necesario : null;
+				if (estadoFinal === "pendiente" || estadoFinal === "pendiente_detalles") {
+					estadoFinal = "confirmada";
+				}
+				if (estadoPagoSolicitado === "pendiente") {
+					estadoPagoSolicitado = "parcial";
 				}
 			}
 
-			// Actualizar pago
-			// Si el estado pasa a completada, aseguramos cancelar cualquier saldo restante
 			if (estadoFinal === "completada") {
 				const restante = Math.max(totalReserva - pagoPrevio, 0);
-				if (restante > 0) {
-					montoPagadoValue = restante;
-				}
+				if (restante > 0) montoPagadoValue = restante;
 			}
 
-			// Enviar actualización de pago al backend (usa el token del contexto)
-			const pagoResponse = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/pago`,
-				{
-					method: "PUT",
-					headers: {
-						"Content-Type": "application/json",
-						...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-					},
-					body: JSON.stringify({
-						estadoPago: estadoPagoSolicitado,
-						metodoPago:
-							formData.metodoPago || selectedReserva.metodoPago || null,
-						referenciaPago:
-							formData.referenciaPago || selectedReserva.referenciaPago || null,
-						tipoPago: formData.tipoPago || null,
-						estadoReserva: estadoFinal,
-						montoPagado:
-							montoPagadoValue !== null && !Number.isNaN(montoPagadoValue)
-								? montoPagadoValue
-								: null,
-					}),
-				}
-			);
+			// 3. Payload UNIFICADO
+			const bulkPayload = {
+				datosGenerales: {
+					nombre: formData.nombre,
+					email: formData.email,
+					telefono: formData.telefono,
+					fecha: formData.fecha,
+					hora: formData.hora,
+					pasajeros: Number(formData.pasajeros) || selectedReserva.pasajeros,
+					numeroVuelo: formData.numeroVuelo,
+					hotel: formData.hotel,
+					equipajeEspecial: formData.equipajeEspecial,
+					sillaInfantil: Boolean(formData.sillaInfantil),
+					idaVuelta: Boolean(formData.idaVuelta),
+					fechaRegreso: formData.fechaRegreso || null,
+					horaRegreso: formData.horaRegreso || null,
+					direccionOrigen: formData.direccionOrigen,
+					direccionDestino: formData.direccionDestino,
+				},
+				ruta: (origenFinalEdit !== selectedReserva.origen || destinoFinalEdit !== selectedReserva.destino) ? {
+					origen: origenFinalEdit,
+					destino: destinoFinalEdit
+				} : null,
+				pago: {
+					estadoPago: estadoPagoSolicitado,
+					metodoPago: formData.metodoPago || selectedReserva.metodoPago || null,
+					referenciaPago: formData.referenciaPago || selectedReserva.referenciaPago || null,
+					tipoPago: formData.tipoPago || null,
+					estadoReserva: estadoFinal,
+					montoPagado: montoPagadoValue
+				},
+				estado: estadoFinal,
+				observaciones: formData.observaciones
+			};
 
-			if (!pagoResponse.ok) {
-				throw new Error("Error al actualizar el pago");
+			// 4. Llamada ÚNICA al endpoint de bulk-update
+			const response = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/bulk-update`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+				body: JSON.stringify(bulkPayload),
+			});
+
+			if (!response.ok) {
+				const errData = await response.json().catch(() => ({}));
+				throw new Error(errData.error || "No se pudo realizar la actualización unificada");
 			}
-			let pagoData = null;
-			try {
-				pagoData = await pagoResponse.json();
-			} catch (parseError) {
-				pagoData = null;
-			}
-			const estadoAplicadoBackend = pagoData?.reserva?.estado || null;
 
-			// Aplicar finalmente el estado seleccionado por el usuario.
-			// FIX: Si el backend sugiere "completada" (lógica antigua) pero el usuario
-			// explícitamente selecciona "confirmada", priorizar la selección del usuario.
-			const nuevoEstado =
-				estadoFinal === "confirmada" && estadoAplicadoBackend === "completada"
-					? "confirmada"
-					: estadoAplicadoBackend || estadoFinal;
-
-			const estadoResponse = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/estado`,
-				{
+			// 5. Notificación al conductor (se mantiene como llamada separada por su lógica de email)
+			if (enviarActualizacionConductor && isAsignada(selectedReserva)) {
+				await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`, {
 					method: "PUT",
 					headers: { 
-						"Content-Type": "application/json",
-						...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) // Asegurar auth en esta llamada tambien
+						"Content-Type": "application/json", 
+						Authorization: `Bearer ${accessToken}` 
 					},
 					body: JSON.stringify({
-						estado: nuevoEstado,
-						observaciones: formData.observaciones,
+						vehiculoId: selectedReserva.vehiculoId,
+						conductorId: selectedReserva.conductorId,
+						sendEmail: false,
+						sendEmailDriver: true,
 					}),
-				}
-			);
-
-			if (!estadoResponse.ok) {
-				throw new Error("Error al actualizar el estado");
+				}).catch(e => console.warn("Error enviando email al conductor:", e));
 			}
 
-			// Recargar datos
 			await fetchReservas();
 			await fetchEstadisticas();
 			setShowEditDialog(false);
 			setSelectedReserva(null);
+			// Feedback de éxito
+			console.log("✅ Reserva actualizada satisfactoriamente vía Bulk Update.");
 		} catch (error) {
-			console.error("Error guardando cambios:", error);
+			console.error("❌ Error en handleSave (Bulk Update):", error);
 			alert("Error al guardar los cambios: " + error.message);
 		} finally {
 			setSaving(false);
