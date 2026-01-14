@@ -20,10 +20,11 @@ import {
 	DialogDescription,
 } from "./ui/dialog";
 import { Alert, AlertDescription } from "./ui/alert";
-import { LoaderCircle, Plus, Trash2, Copy, MessageCircle } from "lucide-react";
+import { LoaderCircle, Plus, Trash2, Copy, MessageCircle, MapPin, DollarSign, Clock } from "lucide-react";
 import { destinosBase } from "../data/destinos";
 import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 
 const AEROPUERTO = "Aeropuerto La Araucanía";
 const OPCION_OTRO = "Otro";
@@ -65,6 +66,9 @@ const obtenerFechaLocal = (minutosAdelante) => {
 };
 
 function AdminCodigosPago() {
+	// Hook para detectar si es móvil (< 768px)
+	const isMobile = useMediaQuery('(max-width: 767px)');
+	
 	const [codigosPago, setCodigosPago] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -483,7 +487,118 @@ function AdminCodigosPago() {
 						<div className="text-center py-8 text-gray-500">
 							No hay códigos registrados
 						</div>
+					) : isMobile ? (
+						// Vista de tarjetas para móvil
+						<div className="space-y-3">
+							{codigosPago.map((c) => {
+								const tiempo = c.fechaVencimiento ? calcularTiempoRestante(c.fechaVencimiento) : null;
+								return (
+									<div key={c.id} className="border rounded-lg p-4 space-y-3 bg-white shadow-sm">
+										{/* Header: Código y Estado */}
+										<div className="flex items-start justify-between gap-2">
+											<div className="flex-1 min-w-0">
+												<div className="font-mono font-bold text-lg truncate">{c.codigo}</div>
+												<div className="flex items-center gap-2 mt-1 flex-wrap">
+													{getEstadoBadge(c.estado)}
+													{c.idaVuelta ? (
+														<Badge className="bg-purple-600 text-white text-xs">
+															Ida y vuelta
+														</Badge>
+													) : (
+														<Badge variant="outline" className="text-xs">Solo ida</Badge>
+													)}
+												</div>
+											</div>
+										</div>
+
+										{/* Botones de acción táctiles */}
+										<div className="flex gap-2">
+											<Button
+												variant="outline"
+												size="sm"
+												className="flex-1 h-11"
+												onClick={() => copiarAlPortapapeles(c)}
+											>
+												<Copy className="h-5 w-5 mr-2" />
+												Copiar
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												className="flex-1 h-11"
+												onClick={() => enviarPorWhatsApp(c)}
+											>
+												<MessageCircle className="h-5 w-5 mr-2" />
+												WhatsApp
+											</Button>
+											<Button
+												variant="outline"
+												size="sm"
+												className="h-11 w-11 p-0"
+												onClick={() => eliminarCodigo(c.codigo)}
+												disabled={c.estado === "usado"}
+											>
+												<Trash2 className="h-5 w-5 text-red-500" />
+											</Button>
+										</div>
+
+										{/* Ruta con íconos */}
+										<div className="space-y-1 text-sm">
+											<div className="flex items-start gap-2">
+												<MapPin className="h-4 w-4 mt-0.5 text-gray-500 flex-shrink-0" />
+												<div className="flex-1">
+													<div className="font-medium">{c.origen}</div>
+													<div className="text-gray-500 ml-1">↓</div>
+													<div className="font-medium">{c.destino}</div>
+												</div>
+											</div>
+										</div>
+
+										{/* Monto destacado */}
+										<div className="flex items-center gap-2 bg-green-50 p-3 rounded-lg">
+											<DollarSign className="h-5 w-5 text-green-600" />
+											<span className="text-xl font-bold text-green-700">
+												{formatCurrency(c.monto)}
+											</span>
+										</div>
+
+										{/* Usos y vencimiento */}
+										<div className="grid grid-cols-2 gap-3 text-sm">
+											<div className="bg-gray-50 p-2 rounded">
+												<div className="text-gray-500 text-xs">Usos</div>
+												<div className="font-semibold">
+													{c.usosActuales} / {c.usosMaximos}
+												</div>
+											</div>
+											<div className="bg-gray-50 p-2 rounded">
+												<div className="text-gray-500 text-xs flex items-center gap-1">
+													<Clock className="h-3 w-3" />
+													Vencimiento
+												</div>
+												{c.fechaVencimiento ? (
+													<div>
+														<div className="text-xs text-gray-600">
+															{formatDate(c.fechaVencimiento)}
+														</div>
+														{tiempo && (
+															<div className={`font-semibold text-sm ${tiempo.clase}`}>
+																{tiempo.urgente && !tiempo.vencido && '⏰ '}
+																{tiempo.vencido && '❌ '}
+																{tiempo.texto}
+															</div>
+														)}
+													</div>
+												) : (
+													<span className="text-xs text-gray-400">Sin límite</span>
+												)}
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
 					) : (
+						// Vista de tabla para desktop
 						<div className="overflow-x-auto">
 							<Table>
 								<TableHeader>
@@ -584,10 +699,10 @@ function AdminCodigosPago() {
 				</CardContent>
 			</Card>
 			<Dialog open={showCrearDialog} onOpenChange={setShowCrearDialog}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="w-[95vw] md:max-w-2xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Crear Nuevo Código de Pago</DialogTitle>
-						<DialogDescription>
+						<DialogTitle className="text-base md:text-lg">Crear Nuevo Código de Pago</DialogTitle>
+						<DialogDescription className="text-sm">
 							Completa origen, destino y monto. El código se generará
 							automáticamente.
 						</DialogDescription>
@@ -595,7 +710,7 @@ function AdminCodigosPago() {
 					<div className="space-y-4 py-4">
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div className="space-y-2">
-								<Label htmlFor="monto">Monto</Label>
+								<Label htmlFor="monto" className="text-base">Monto</Label>
 								<Input
 									id="monto"
 									name="monto"
@@ -606,16 +721,17 @@ function AdminCodigosPago() {
 									min="0"
 									step="1"
 									required
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="origen">Origen</Label>
+								<Label htmlFor="origen" className="text-base">Origen</Label>
 								<select
 									id="origen"
 									name="origen"
 									value={formData.origen}
 									onChange={handleInputChange}
-									className="h-10 border rounded px-3"
+									className="h-12 md:h-10 border rounded px-3 w-full text-base"
 								>
 									{origenes.map((o) => (
 										<option key={o} value={o}>
@@ -630,17 +746,18 @@ function AdminCodigosPago() {
 										value={formData.otroOrigen}
 										onChange={handleInputChange}
 										placeholder="Especifica el origen"
+										className="h-12 md:h-10 text-base"
 									/>
 								)}
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="destino">Destino</Label>
+								<Label htmlFor="destino" className="text-base">Destino</Label>
 								<select
 									id="destino"
 									name="destino"
 									value={formData.destino}
 									onChange={handleInputChange}
-									className="h-10 border rounded px-3"
+									className="h-12 md:h-10 border rounded px-3 w-full text-base"
 								>
 									{destinosFiltrados.map((d) => (
 										<option key={d} value={d}>
@@ -655,21 +772,23 @@ function AdminCodigosPago() {
 										value={formData.otroDestino}
 										onChange={handleInputChange}
 										placeholder="Especifica el destino"
+										className="h-12 md:h-10 text-base"
 									/>
 								)}
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="vehiculo">Vehículo (opcional)</Label>
+								<Label htmlFor="vehiculo" className="text-base">Vehículo (opcional)</Label>
 								<Input
 									id="vehiculo"
 									name="vehiculo"
 									value={formData.vehiculo}
 									onChange={handleInputChange}
 									placeholder="Sedan, Van, etc."
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="pasajeros">Pasajeros</Label>
+								<Label htmlFor="pasajeros" className="text-base">Pasajeros</Label>
 								<Input
 									id="pasajeros"
 									name="pasajeros"
@@ -678,6 +797,7 @@ function AdminCodigosPago() {
 									onChange={handleInputChange}
 									min="1"
 									max="15"
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 							<div className="space-y-2 md:col-span-2">
@@ -738,7 +858,7 @@ function AdminCodigosPago() {
 								</div>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="usosMaximos">Usos Máximos</Label>
+								<Label htmlFor="usosMaximos" className="text-base">Usos Máximos</Label>
 								<Input
 									id="usosMaximos"
 									name="usosMaximos"
@@ -746,15 +866,17 @@ function AdminCodigosPago() {
 									value={formData.usosMaximos}
 									onChange={handleInputChange}
 									min="1"
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="fechaVencimiento">Fecha de Vencimiento</Label>
-								<div className="flex flex-wrap gap-2 mb-2">
+								<Label htmlFor="fechaVencimiento" className="text-base">Fecha de Vencimiento</Label>
+								<div className="flex flex-col md:flex-row md:flex-wrap gap-2 mb-2">
 									<Button 
 										type="button" 
 										variant="outline" 
 										size="sm" 
+										className="h-11 md:h-9 text-base md:text-sm"
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
@@ -768,6 +890,7 @@ function AdminCodigosPago() {
 										type="button" 
 										variant="outline" 
 										size="sm" 
+										className="h-11 md:h-9 text-base md:text-sm"
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
@@ -781,6 +904,7 @@ function AdminCodigosPago() {
 										type="button" 
 										variant="outline" 
 										size="sm" 
+										className="h-11 md:h-9 text-base md:text-sm"
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
@@ -794,6 +918,7 @@ function AdminCodigosPago() {
 										type="button" 
 										variant="outline" 
 										size="sm" 
+										className="h-11 md:h-9 text-base md:text-sm"
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
@@ -807,6 +932,7 @@ function AdminCodigosPago() {
 										type="button" 
 										variant="outline" 
 										size="sm" 
+										className="h-11 md:h-9 text-base md:text-sm"
 										onClick={() => {
 											setFormData(prev => ({ 
 												...prev, 
@@ -823,26 +949,29 @@ function AdminCodigosPago() {
 									type="datetime-local"
 									value={formData.fechaVencimiento}
 									onChange={handleInputChange}
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 							<div className="space-y-2 md:col-span-2">
-								<Label htmlFor="descripcion">Motivo / Descripción</Label>
+								<Label htmlFor="descripcion" className="text-base">Motivo / Descripción</Label>
 								<Input
 									id="descripcion"
 									name="descripcion"
 									value={formData.descripcion}
 									onChange={handleInputChange}
 									placeholder="Descripción del servicio..."
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 							<div className="space-y-2 md:col-span-2">
-								<Label htmlFor="observaciones">Observaciones</Label>
+								<Label htmlFor="observaciones" className="text-base">Observaciones</Label>
 								<Input
 									id="observaciones"
 									name="observaciones"
 									value={formData.observaciones}
 									onChange={handleInputChange}
 									placeholder="Notas internas..."
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 						</div>
@@ -851,18 +980,19 @@ function AdminCodigosPago() {
 								<AlertDescription>{error}</AlertDescription>
 							</Alert>
 						)}
-						<div className="flex justify-end gap-3 pt-4">
+						<div className="flex flex-col md:flex-row justify-end gap-3 pt-4">
 							<Button
 								variant="outline"
 								onClick={() => setShowCrearDialog(false)}
 								disabled={procesando}
+								className="h-11 md:h-10 text-base"
 							>
 								Cancelar
 							</Button>
-							<Button onClick={crearCodigo} disabled={procesando}>
+							<Button onClick={crearCodigo} disabled={procesando} className="h-11 md:h-10 text-base">
 								{procesando ? (
 									<>
-										<LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+										<LoaderCircle className="h-5 w-5 md:h-4 md:w-4 mr-2 animate-spin" />
 										Creando...
 									</>
 								) : (
@@ -873,29 +1003,30 @@ function AdminCodigosPago() {
 
 						{/* Sección de Datos del Cliente (Opcional) */}
 						<div className="space-y-2 md:col-span-2 pt-4 border-t">
-							<Label className="text-sm font-semibold text-foreground">
+							<Label className="text-sm md:text-base font-semibold text-foreground">
 								Datos del Cliente (Opcional - Pre-llenado)
 							</Label>
-							<p className="text-xs text-muted-foreground mb-3">
+							<p className="text-xs md:text-sm text-muted-foreground mb-3">
 								Si completas estos campos, el cliente no tendrá que ingresarlos al usar el código
 							</p>
 							
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								{/* Nombre */}
 								<div className="space-y-2">
-									<Label htmlFor="nombreCliente">Nombre Completo</Label>
+									<Label htmlFor="nombreCliente" className="text-base">Nombre Completo</Label>
 									<Input
 										id="nombreCliente"
 										name="nombreCliente"
 										value={formData.nombreCliente}
 										onChange={handleInputChange}
 										placeholder="Juan Pérez"
+										className="h-12 md:h-10 text-base"
 									/>
 								</div>
 								
 								{/* Email */}
 								<div className="space-y-2">
-									<Label htmlFor="emailCliente">Email</Label>
+									<Label htmlFor="emailCliente" className="text-base">Email</Label>
 									<Input
 										id="emailCliente"
 										name="emailCliente"
@@ -903,30 +1034,33 @@ function AdminCodigosPago() {
 										value={formData.emailCliente}
 										onChange={handleInputChange}
 										placeholder="cliente@email.cl"
+										className="h-12 md:h-10 text-base"
 									/>
 								</div>
 								
 								{/* Teléfono */}
 								<div className="space-y-2">
-									<Label htmlFor="telefonoCliente">Teléfono</Label>
+									<Label htmlFor="telefonoCliente" className="text-base">Teléfono</Label>
 									<Input
 										id="telefonoCliente"
 										name="telefonoCliente"
 										value={formData.telefonoCliente}
 										onChange={handleInputChange}
 										placeholder="+56 9 1234 5678"
+										className="h-12 md:h-10 text-base"
 									/>
 								</div>
 								
 								{/* Dirección */}
 								<div className="space-y-2">
-									<Label htmlFor="direccionCliente">Dirección Específica</Label>
+									<Label htmlFor="direccionCliente" className="text-base">Dirección Específica</Label>
 									<Input
 										id="direccionCliente"
 										name="direccionCliente"
 										value={formData.direccionCliente}
 										onChange={handleInputChange}
 										placeholder="Av. Alemania 1234, Temuco"
+										className="h-12 md:h-10 text-base"
 									/>
 								</div>
 							</div>
@@ -934,21 +1068,22 @@ function AdminCodigosPago() {
 
 						{/* Vinculación con Reserva Existente (Opcional) */}
 						<div className="space-y-2 md:col-span-2 pt-4 border-t">
-							<Label className="text-sm font-semibold text-foreground">
+							<Label className="text-sm md:text-base font-semibold text-foreground">
 								Vinculación con Reserva (Opcional)
 							</Label>
-							<p className="text-xs text-muted-foreground mb-3">
+							<p className="text-xs md:text-sm text-muted-foreground mb-3">
 								Si este código es para un pago adicional de una reserva existente
 							</p>
 							
 							<div className="space-y-2">
-								<Label htmlFor="codigoReservaVinculado">Código de Reserva Original</Label>
+								<Label htmlFor="codigoReservaVinculado" className="text-base">Código de Reserva Original</Label>
 								<Input
 									id="codigoReservaVinculado"
 									name="codigoReservaVinculado"
 									value={formData.codigoReservaVinculado}
 									onChange={handleInputChange}
 									placeholder="AR-20260107-0001"
+									className="h-12 md:h-10 text-base"
 								/>
 							</div>
 						</div>

@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
 import { useAuth } from "../contexts/AuthContext";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { useMediaQuery } from "../hooks/useMediaQuery";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -19,6 +20,7 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import {
 	Dialog,
 	DialogContent,
@@ -39,6 +41,7 @@ import {
 	Search,
 	ChevronLeft,
 	ChevronRight,
+	ChevronDown,
 	Edit,
 	Eye,
 	DollarSign,
@@ -81,6 +84,10 @@ const normalizeDestino = (value) =>
 	(value || "").toString().trim().toLowerCase();
 
 function AdminReservas() {
+	// Hooks para detectar tamaños de pantalla
+	const isMobile = useMediaQuery('(max-width: 767px)');
+	const isTablet = useMediaQuery('(max-width: 1023px)');
+	
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
 	const { authenticatedFetch } = useAuthenticatedFetch();
@@ -2145,127 +2152,142 @@ function AdminReservas() {
 				</div>
 			</div>
 
-			{/* Filtros y BÃºsqueda */}
+			{/* Filtros y Búsqueda */}
 			<Card>
-				<CardHeader>
-					<CardTitle>Filtros de Búsqueda</CardTitle>
+				<CardHeader className="pb-3">
+					<div className="flex items-center justify-between">
+						<CardTitle>Filtros de Búsqueda</CardTitle>
+						{isTablet && (
+							<Collapsible>
+								<CollapsibleTrigger asChild>
+									<Button variant="ghost" size="sm" className="lg:hidden">
+										<ChevronDown className="h-4 w-4" />
+									</Button>
+								</CollapsibleTrigger>
+							</Collapsible>
+						)}
+					</div>
 				</CardHeader>
 				<CardContent>
-					<div className="flex flex-col md:flex-row gap-4 mb-6">
-				<div className="flex-1">
-					<Label className="mb-2 block">Buscar</Label>
-					<div className="relative">
-						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-						<Input
-							placeholder="Nombre, email, teléfono, ID..."
-							className="pl-8"
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-						/>
-					</div>
-				</div>
-				<div className="w-full md:w-[180px]">
-					<Label className="mb-2 block">Rango Fechas</Label>
-					<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
-						<SelectTrigger>
-							<SelectValue placeholder="Seleccionar rango" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Todo el tiempo</SelectItem>
-							<SelectItem value="hoy">Hoy</SelectItem>
-							<SelectItem value="ayer">Ayer</SelectItem>
-							<SelectItem value="semana">Últimos 7 días</SelectItem>
-							<SelectItem value="quincena">Últimos 15 días</SelectItem>
-							<SelectItem value="mes">Este Mes</SelectItem>
-							<SelectItem value="personalizado">Personalizado</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				{rangoFecha === "personalizado" && (
-					<>
-						<div className="w-full md:w-[150px]">
-							<Label className="mb-2 block">Fecha Desde</Label>
-							<div className="relative">
-								<Input
-									type="date"
-									value={fechaDesde}
-									onChange={(e) => setFechaDesde(e.target.value)}
-									className="pl-8"
-								/>
-								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+					<Collapsible defaultOpen={!isTablet}>
+						<CollapsibleContent>
+							<div className="flex flex-col lg:flex-row gap-4 mb-6">
+								<div className="flex-1">
+									<Label className="mb-2 block text-base">Buscar</Label>
+									<div className="relative">
+										<Search className="absolute left-2 top-3 md:top-2.5 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
+										<Input
+											placeholder="Nombre, email, teléfono, ID..."
+											className="pl-9 md:pl-8 h-12 md:h-10 text-base"
+											value={searchTerm}
+											onChange={(e) => setSearchTerm(e.target.value)}
+										/>
+									</div>
+								</div>
+								<div className="w-full lg:w-[180px]">
+									<Label className="mb-2 block text-base">Rango Fechas</Label>
+									<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
+										<SelectTrigger className="h-12 lg:h-10 text-base">
+											<SelectValue placeholder="Seleccionar rango" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Todo el tiempo</SelectItem>
+											<SelectItem value="hoy">Hoy</SelectItem>
+											<SelectItem value="ayer">Ayer</SelectItem>
+											<SelectItem value="semana">Últimos 7 días</SelectItem>
+											<SelectItem value="quincena">Últimos 15 días</SelectItem>
+											<SelectItem value="mes">Este Mes</SelectItem>
+											<SelectItem value="personalizado">Personalizado</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								{rangoFecha === "personalizado" && (
+									<>
+										<div className="w-full lg:w-[150px]">
+											<Label className="mb-2 block text-base">Fecha Desde</Label>
+											<div className="relative">
+												<Input
+													type="date"
+													value={fechaDesde}
+													onChange={(e) => setFechaDesde(e.target.value)}
+													className="pl-9 md:pl-8 h-12 md:h-10 text-base"
+												/>
+												<Calendar className="absolute left-2 top-3 md:top-2.5 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
+											</div>
+										</div>
+										<div className="w-full lg:w-[150px]">
+											<Label className="mb-2 block text-base">Fecha Hasta</Label>
+											<div className="relative">
+												<Input
+													type="date"
+													value={fechaHasta}
+													onChange={(e) => setFechaHasta(e.target.value)}
+													className="pl-9 md:pl-8 h-12 md:h-10 text-base"
+												/>
+												<Calendar className="absolute left-2 top-3 md:top-2.5 h-5 w-5 md:h-4 md:w-4 text-muted-foreground" />
+											</div>
+										</div>
+									</>
+								)}
+								<div className="w-full lg:w-[200px]">
+									<Label className="mb-2 block text-base">Filtros Inteligentes</Label>
+									<Select
+										value={filtroInteligente}
+										onValueChange={setFiltroInteligente}
+									>
+										<SelectTrigger className="h-12 lg:h-10 text-base">
+											<SelectValue placeholder="Aplicar filtro..." />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Ninguno</SelectItem>
+											<SelectItem value="sin_asignacion">
+												⚠️ Sin Asignación
+											</SelectItem>
+											<SelectItem value="incompletas">
+												📋 Faltan Detalles
+											</SelectItem>
+											<SelectItem value="archivadas">
+												📦 Ver Archivadas
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="w-full lg:w-[150px]">
+									<Label className="mb-2 block text-base">Estado</Label>
+									<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+										<SelectTrigger className="h-12 lg:h-10 text-base">
+											<SelectValue placeholder="Todos" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Todos</SelectItem>
+											<SelectItem value="pendiente">Pendiente</SelectItem>
+											<SelectItem value="confirmada">Confirmada</SelectItem>
+											<SelectItem value="completada">Completada</SelectItem>
+											<SelectItem value="cancelada">Cancelada</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="w-full lg:w-[150px]">
+									<Label className="mb-2 block text-base">Estado de Pago</Label>
+									<Select
+										value={estadoPagoFiltro}
+										onValueChange={setEstadoPagoFiltro}
+									>
+										<SelectTrigger className="h-12 lg:h-10 text-base">
+											<SelectValue placeholder="Todos" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Todos</SelectItem>
+											<SelectItem value="pendiente">Pendiente</SelectItem>
+											<SelectItem value="pagado">Pagado</SelectItem>
+											<SelectItem value="parcial">Parcial</SelectItem>
+											<SelectItem value="reembolsado">Reembolsado</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
 							</div>
-						</div>
-						<div className="w-full md:w-[150px]">
-							<Label className="mb-2 block">Fecha Hasta</Label>
-							<div className="relative">
-								<Input
-									type="date"
-									value={fechaHasta}
-									onChange={(e) => setFechaHasta(e.target.value)}
-									className="pl-8"
-								/>
-								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-							</div>
-						</div>
-					</>
-				)}
-				<div className="w-full md:w-[200px]">
-					<Label className="mb-2 block">Filtros Inteligentes</Label>
-					<Select
-						value={filtroInteligente}
-						onValueChange={setFiltroInteligente}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Aplicar filtro..." />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Ninguno</SelectItem>
-							<SelectItem value="sin_asignacion">
-								⚠️ Sin Asignación
-							</SelectItem>
-							<SelectItem value="incompletas">
-								📋 Faltan Detalles
-							</SelectItem>
-							<SelectItem value="archivadas">
-								📦 Ver Archivadas
-							</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="w-full md:w-[150px]">
-					<Label className="mb-2 block">Estado</Label>
-					<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-						<SelectTrigger>
-							<SelectValue placeholder="Todos" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Todos</SelectItem>
-							<SelectItem value="pendiente">Pendiente</SelectItem>
-							<SelectItem value="confirmada">Confirmada</SelectItem>
-							<SelectItem value="completada">Completada</SelectItem>
-							<SelectItem value="cancelada">Cancelada</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="w-full md:w-[150px]">
-					<Label className="mb-2 block">Estado de Pago</Label>
-					<Select
-						value={estadoPagoFiltro}
-						onValueChange={setEstadoPagoFiltro}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Todos" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Todos</SelectItem>
-							<SelectItem value="pendiente">Pendiente</SelectItem>
-							<SelectItem value="pagado">Pagado</SelectItem>
-							<SelectItem value="parcial">Parcial</SelectItem>
-							<SelectItem value="reembolsado">Reembolsado</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
+						</CollapsibleContent>
+					</Collapsible>
 					<div className="mt-4 flex justify-between items-center">
 						<p className="text-sm text-muted-foreground">
 							Mostrando {reservasFiltradas.length} de {totalReservas} reservas
