@@ -3900,10 +3900,10 @@ function AdminReservas() {
 
 			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
-						<DialogDescription>
+						<DialogTitle className="text-lg md:text-xl">Editar Reserva #{selectedReserva?.id}</DialogTitle>
+						<DialogDescription className="text-sm">
 							Actualiza el estado, pago y detalles de la reserva
 						</DialogDescription>
 					</DialogHeader>
@@ -3913,8 +3913,8 @@ function AdminReservas() {
 							{/* InformaciÃ³n del Cliente (editable) */}
 							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
-									<Label>Nombre</Label>
-									<Input
+									<Label className="text-base md:text-sm">Nombre</Label>
+									<Input className="h-12 md:h-10 text-base"
 										value={formData.nombre || ""}
 										onChange={(e) =>
 											setFormData({ ...formData, nombre: e.target.value })
@@ -3922,8 +3922,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label>Email</Label>
-									<Input
+									<Label className="text-base md:text-sm">Email</Label>
+									<Input className="h-12 md:h-10 text-base"
 										type="email"
 										value={formData.email || ""}
 										onChange={(e) =>
@@ -3932,8 +3932,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label>Teléfono</Label>
-									<Input
+									<Label className="text-base md:text-sm">Teléfono</Label>
+									<Input className="h-12 md:h-10 text-base"
 										value={formData.telefono || ""}
 										onChange={(e) =>
 											setFormData({ ...formData, telefono: e.target.value })
@@ -3941,8 +3941,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label>Fecha</Label>
-									<Input
+									<Label className="text-base md:text-sm">Fecha</Label>
+									<Input className="h-12 md:h-10 text-base"
 										type="date"
 										value={formData.fecha || ""}
 										onChange={(e) =>
@@ -3951,8 +3951,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label>Hora</Label>
-									<Input
+									<Label className="text-base md:text-sm">Hora</Label>
+									<Input className="h-12 md:h-10 text-base"
 										type="time"
 										value={formData.hora || ""}
 										onChange={(e) =>
@@ -3961,8 +3961,8 @@ function AdminReservas() {
 									/>
 								</div>
 								<div className="space-y-1">
-									<Label>Pasajeros</Label>
-									<Input
+									<Label className="text-base md:text-sm">Pasajeros</Label>
+									<Input className="h-12 md:h-10 text-base"
 										type="number"
 										min="1"
 										value={formData.pasajeros || ""}
@@ -3978,14 +3978,14 @@ function AdminReservas() {
 								<h3 className="font-semibold border-b pb-2">Detalles del Trayecto</h3>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-1">
-										<Label>Origen General</Label>
+										<Label className="text-base md:text-sm">Origen General</Label>
 										<Select
 											value={formData.origen || ""}
 											onValueChange={(value) =>
 												setFormData({ ...formData, origen: value })
 											}
 										>
-											<SelectTrigger className="bg-white">
+											<SelectTrigger className="h-12 md:h-10 text-base bg-white">
 												<SelectValue placeholder="Seleccionar origen" />
 											</SelectTrigger>
 											<SelectContent>
@@ -3998,14 +3998,14 @@ function AdminReservas() {
 										</Select>
 									</div>
 									<div className="space-y-1">
-										<Label>Destino General</Label>
+										<Label className="text-base md:text-sm">Destino General</Label>
 										<Select
 											value={formData.destino || ""}
 											onValueChange={(value) =>
 												setFormData({ ...formData, destino: value })
 											}
 										>
-											<SelectTrigger className="bg-white">
+											<SelectTrigger className="h-12 md:h-10 text-base bg-white">
 												<SelectValue placeholder="Seleccionar destino" />
 											</SelectTrigger>
 											<SelectContent>
@@ -4086,7 +4086,7 @@ function AdminReservas() {
 										setFormData({ ...formData, estado: value })
 									}
 								>
-									<SelectTrigger id="estado">
+									<SelectTrigger className="h-12 md:h-10 text-base" id="estado">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -4138,7 +4138,7 @@ function AdminReservas() {
 										})
 									}
 								>
-									<SelectTrigger id="estadoPago">
+									<SelectTrigger className="h-12 md:h-10 text-base" id="estadoPago">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -4159,7 +4159,7 @@ function AdminReservas() {
 										setFormData({ ...formData, metodoPago: value })
 									}
 								>
-									<SelectTrigger id="metodoPago">
+									<SelectTrigger className="h-12 md:h-10 text-base" id="metodoPago">
 										<SelectValue placeholder="Seleccionar método" />
 									</SelectTrigger>
 									<SelectContent>
@@ -4176,7 +4176,7 @@ function AdminReservas() {
 								<Label htmlFor="referenciaPago">
 									Referencia de Pago (opcional)
 								</Label>
-								<Input
+								<Input className="h-12 md:h-10 text-base"
 									id="referenciaPago"
 									placeholder="ID de transacción, número de transferencia, etc."
 									value={formData.referenciaPago}
@@ -4257,7 +4257,7 @@ function AdminReservas() {
 												})
 											}
 										>
-											<SelectTrigger id="tipoPago">
+											<SelectTrigger className="h-12 md:h-10 text-base" id="tipoPago">
 												<SelectValue placeholder="Selecciona el tipo de pago" />
 											</SelectTrigger>
 											<SelectContent>
@@ -4281,7 +4281,7 @@ function AdminReservas() {
 							<div className="space-y-2">
 								{/* Mostrar monto registrado actual (solo informativo). Los pagos manuales se registran en el apartado 'Registrar pago'. */}
 								<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
-								<Input
+								<Input className="h-12 md:h-10 text-base"
 									id="montoPagado"
 									type="number"
 									step="1"
@@ -4311,7 +4311,7 @@ function AdminReservas() {
 
 							{/* Historial de pagos de esta reserva */}
 							<div className="space-y-2">
-								<Label>Historial de pagos</Label>
+								<Label className="text-base md:text-sm">Historial de pagos</Label>
 								<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
 									{pagoHistorial &&
 										pagoHistorial.length > 0 &&
@@ -4351,7 +4351,7 @@ function AdminReservas() {
 
 							{/* BotÃ³n y modal para registrar pago manual */}
 							<div className="space-y-2">
-								<Label>Registrar pago manual</Label>
+								<Label className="text-base md:text-sm">Registrar pago manual</Label>
 								<div className="flex gap-2">
 									<Button
 										type="button"
@@ -4385,7 +4385,7 @@ function AdminReservas() {
 										Borrar todo
 									</Button>
 								</div>
-								<Textarea
+								<Textarea className="text-base min-h-[100px]" className="text-base min-h-[100px]"
 									id="observaciones"
 									placeholder="Notas internas sobre la reserva..."
 									value={formData.observaciones}
@@ -4454,15 +4454,18 @@ function AdminReservas() {
 							</div>
 
 							{/* Botones */}
-							<div className="flex justify-end gap-2 pt-4">
+							<div className="flex flex-col sm:flex-row gap-2 pt-4">
 								<Button
 									variant="outline"
+							className="h-12 flex-1"
 									onClick={() => setShowEditDialog(false)}
 									disabled={saving}
 								>
 									Cancelar
 								</Button>
-								<Button onClick={handleSave} disabled={saving}>
+								<Button
+							className="h-12 flex-1"
+							onClick={handleSave} disabled={saving}>
 									{saving ? (
 										<>
 											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -4480,10 +4483,10 @@ function AdminReservas() {
 
 			{/* Modal de Nueva Reserva */}
 			<Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-				<DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Nueva Reserva Manual</DialogTitle>
-						<DialogDescription>
+						<DialogTitle className="text-lg md:text-xl">Nueva Reserva Manual</DialogTitle>
+						<DialogDescription className="text-sm">
 							Crea una nueva reserva ingresando manualmente los datos del
 							cliente y del viaje
 						</DialogDescription>
@@ -5152,9 +5155,10 @@ function AdminReservas() {
 						</div>
 
 						{/* Botones */}
-						<div className="flex justify-end gap-2 pt-4 border-t">
+						<div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
 							<Button
 								variant="outline"
+							className="h-12 flex-1"
 								onClick={() => setShowNewDialog(false)}
 								disabled={saving}
 							>
@@ -5162,6 +5166,7 @@ function AdminReservas() {
 							</Button>
 							<Button onClick={handleSaveNewReserva} disabled={saving}>
 								{saving ? (
+							className="h-12 flex-1"
 									<>
 										<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
 										Guardando...
@@ -5447,12 +5452,12 @@ function AdminReservas() {
 
 			{/* Dialog para asignar vehÃ­culo y conductor */}
 			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
-				<DialogContent className="max-w-lg">
+				<DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>
+						<DialogTitle className="text-lg md:text-xl">
 							Asignar Vehículo y Conductor - Reserva #{selectedReserva?.id}
 						</DialogTitle>
-						<DialogDescription>
+						<DialogDescription className="text-sm">
 							Asigna un vehículo y opcionalmente un conductor a esta reserva
 							pagada
 						</DialogDescription>
@@ -5493,14 +5498,14 @@ function AdminReservas() {
 
 						{/* Selector de vehÃ­culo */}
 						<div className="space-y-2">
-							<Label htmlFor="vehiculo">
+							<Label className="text-base md:text-sm" htmlFor="vehiculo">
 								Vehículo <span className="text-red-500">*</span>
 							</Label>
 							<Select
 								value={vehiculoSeleccionado}
 								onValueChange={setVehiculoSeleccionado}
 							>
-								<SelectTrigger id="vehiculo">
+								<SelectTrigger className="h-12 md:h-10 text-base" id="vehiculo">
 									<SelectValue placeholder="Selecciona un vehículo" />
 								</SelectTrigger>
 								<SelectContent>
@@ -5525,12 +5530,12 @@ function AdminReservas() {
 
 						{/* Selector de conductor (opcional) */}
 						<div className="space-y-2">
-							<Label htmlFor="conductor">Conductor (opcional)</Label>
+							<Label className="text-base md:text-sm" htmlFor="conductor">Conductor (opcional)</Label>
 							<Select
 								value={conductorSeleccionado}
 								onValueChange={setConductorSeleccionado}
 							>
-								<SelectTrigger id="conductor">
+								<SelectTrigger className="h-12 md:h-10 text-base" id="conductor">
 									<SelectValue placeholder="Selecciona un conductor (opcional)" />
 								</SelectTrigger>
 								<SelectContent>
@@ -5622,9 +5627,10 @@ function AdminReservas() {
 								</div>
 							)}
 
-						<div className="flex justify-end gap-2">
+						<div className="flex flex-col sm:flex-row gap-2">
 							<Button
 								variant="outline"
+							className="h-12 flex-1"
 								onClick={() => setShowAsignarDialog(false)}
 								disabled={loadingAsignacion}
 							>
@@ -5644,6 +5650,7 @@ function AdminReservas() {
 								return (
 									<Button
 										onClick={handleGuardarAsignacion}
+									className="h-12 flex-1"
 										disabled={
 											loadingAsignacion ||
 											!vehiculoSeleccionado ||
