@@ -18,7 +18,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Pagos y Finanzas](#52-pagos-y-finanzas)
    - [Notificaciones](#53-notificaciones-via-email)
    - [Integraciones Externas](#54-integraciones-externas)
-   - [Lógica de Disponibilidad y Capacidad](#55-lógica-de-disponibilidad-y-capacidad-extendida)
+   - [Lógica de Disponibilidad y Anticipación](#55-lógica-de-disponibilidad-y-anticipación)
    - [Estándares de Flujos de Pago](#56-estándares-de-flujos-de-pago-y-notificaciones)
    - [Cálculo de Precios Dinámicos](#57-lógica-de-precios-y-descuentos)
    - [Sistema de Bloqueos de Fecha](#58-sistema-de-bloqueos-de-fecha)
@@ -196,7 +196,9 @@ El sistema utiliza una arquitectura híbrida:
   - **Tracking Robusto**: El backend (`/api/payment-result`) inyecta el monto real de la transacción en la URL de retorno, garantizando que el tag de conversión (`gtag`) reciba el valor correcto incluso si falla la consulta de base de datos local.
 - **Google Maps**: Autocomplete V2 (`PlaceAutocompleteElement`) para direcciones.
 
-### 5.5 Lógica de Disponibilidad y Capacidad Extendida
+### 5.5 Lógica de Disponibilidad y Anticipación
+
+### 5.5.1 Capacidad Extendida (Vans)
 Se implementó soporte para hasta 7 pasajeros con una lógica de fallback híbrida:
 
 1.  **Backend (`/api/disponibilidad/verificar`)**:
@@ -214,6 +216,17 @@ Se implementó soporte para hasta 7 pasajeros con una lógica de fallback híbri
 4.  **Panel de Administración**:
     - En `AdminReservas`, el selector de vehículos filtra automáticamente por capacidad en el frontend: `vehiculos.filter(v => capacity >= required)`.
     - Esto previene errores operativos de asignación de vehículos pequeños a grupos grandes.
+
+### 5.5.2 Restricción de Anticipación Mínima
+
+**Implementado: Enero 2026**
+
+El sistema implementa una doble validación para evitar reservas de "último minuto" que son operativamente inviables:
+
+1.  **Modelo de Datos**: Cada `Destino` tiene un campo `minHorasAnticipacion` (configurable desde el Admin). Por defecto 5 horas.
+2.  **Validación Frontend**: 
+    - **Filtrado Visual**: En `HeroExpress.jsx`, si el usuario selecciona HOY, se ocultan del selector las horas que violan la restricción.
+    - **Bloqueo Lógico**: Al intentar avanzar al paso de pago, se recalcula la diferencia horaria y se bloquea el avance si no cumple.
 
 ### 5.6 Estándares de Flujos de Pago y Notificaciones
 

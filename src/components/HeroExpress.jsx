@@ -108,8 +108,15 @@ function HeroExpress({
 		}
 	}, [currentStep]);
 
+	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
+	const targetName = useMemo(() => {
+		return formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro"
+			? formData.destino
+			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
+	}, [formData.destino, formData.origen]);
+
 	const timeOptions = useMemo(() => {
-		const options = generateTimeOptions();
+		let options = generateTimeOptions();
 
 		// Incorporar opciones de oportunidades de retorno si existen
 		if (oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones) {
@@ -129,11 +136,34 @@ function HeroExpress({
 			options.push({ value: formData.hora, label: formData.hora });
 		}
 
+		// --- FILTRADO POR ANTICIPACIÓN MÍNIMA ---
+		// Si la fecha es HOY, filtrar opciones que no cumplen con la anticipación
+		const hoy = new Date();
+		const esHoy = formData.fecha === hoy.toISOString().split("T")[0];
+
+		if (esHoy) {
+			const destinoObj = Array.isArray(destinosData)
+				? destinosData.find(d => d.nombre === targetName)
+				: null;
+			
+			const anticipacion = destinoObj?.minHorasAnticipacion || 5;
+			const ahora = new Date();
+
+			options = options.filter(opt => {
+				const [h, m] = opt.value.split(":").map(Number);
+				const fechaOpt = new Date();
+				fechaOpt.setHours(h, m, 0, 0);
+				
+				const diffHoras = (fechaOpt - ahora) / 3600000;
+				return diffHoras >= anticipacion;
+			});
+		}
+
 		// Ordenar las opciones por hora
 		options.sort((a, b) => a.value.localeCompare(b.value));
 
 		return options;
-	}, [formData.hora, oportunidadesRetornoUniversal]);
+	}, [formData.hora, oportunidadesRetornoUniversal, formData.fecha, targetName, destinosData]);
 
 	const currencyFormatter = useMemo(
 		() =>
@@ -162,12 +192,7 @@ function HeroExpress({
 		(formData.destino && !tieneCotizacionAutomatica);
 	const mostrarPrecio = tieneCotizacionAutomatica;
 
-	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
-	const targetName = useMemo(() => {
-		return formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro"
-			? formData.destino
-			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
-	}, [formData.destino, formData.origen]);
+
 
 	// Imagen dinámica basada en el destino seleccionado
 	const selectedDestinoImage = useMemo(() => {
@@ -431,6 +456,26 @@ function HeroExpress({
 			}
 			return;
 		}
+
+		// VALIDACIÓN ADICIONAL DE ANTICIPACIÓN MÍNIMA
+		if (formData.destino !== "Otro") {
+			const destinoObj = Array.isArray(destinosData)
+				? destinosData.find(d => d.nombre === targetName)
+				: null;
+			
+			if (destinoObj) {
+				const ahora = new Date();
+				const fechaReserva = new Date(`${formData.fecha}T${formData.hora}`);
+				const diffHoras = (fechaReserva - ahora) / 3600000;
+				const anticipacion = destinoObj.minHorasAnticipacion || 5;
+
+				if (diffHoras < anticipacion) {
+					setStepError(`Para ${destinoObj.nombre}, reserva con al menos ${anticipacion} horas de anticipación.`);
+					return;
+				}
+			}
+		}
+
 		setDescuentoRetorno(resultado.descuento || null);
 		setStepError("");
 		setErrorRequiereVan(false);

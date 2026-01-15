@@ -1652,3 +1652,61 @@ Para resolver este problema durante el desarrollo, se debe forzar al frontend a 
 ---
 
 
+
+---
+
+## 14. Restricción de Anticipación Mínima No Respetada o Ineditable
+
+**Implementado: 15 Enero 2026**
+
+### Problema
+El sistema permitía a los usuarios avanzar hasta la pantalla de pago incluso si la reserva se realizaba con una anticipación inferior a la mínima configurada (5 horas por defecto). Además, no existía una forma de editar esta restricción por destino desde el Panel de Administración.
+
+### Síntomas
+- Usuarios podían seleccionar una hora muy cercana (ej: 13 minutos de diferencia) y avanzar al paso de "Detalles y Pago".
+- El error de anticipación solo aparecía al final, al intentar procesar el pago (`App.jsx:1634`), causando una mala experiencia de usuario.
+- Administradores no podían ajustar las horas de anticipación para destinos específicos (ej: pedir 24h para destinos lejanos).
+
+### Causa
+1. **Falta de Interfaz**: La columna `minHorasAnticipacion` existía en la base de datos pero no tenía un campo de entrada en `AdminPricing.jsx`.
+2. **Validación Tardía**: El componente `HeroExpress.jsx` no validaba la anticipación en el paso 1 (`handleStepOneNext`), permitiendo al usuario completar sus datos personales antes de ser bloqueado.
+3. **Falta de Filtrado**: El selector de horarios (`timeOptions`) mostraba todas las horas del día independientemente de la hora actual.
+
+### Solución (Enero 2026)
+
+#### 1. Panel de Administración
+Se añadió el campo **"Anticipación Mínima (horas)"** en `AdminPricing.jsx` para permitir configurar la restricción por cada destino.
+- **Archivo**: `src/components/AdminPricing.jsx`
+- **Líneas**: 1690-1705
+
+#### 2. Validación Temprana (Frontend)
+Se implementó una doble protección en `HeroExpress.jsx`:
+- **Filtrado Dinámico**: Si el usuario selecciona "HOY" como fecha de reserva, el selector de horas solo muestra horarios que cumplen con la anticipación mínima del destino seleccionado.
+- **Bloqueo en Paso 1**: Al hacer clic en "Siguiente" tras elegir ruta y fecha, el sistema recalcula la diferencia de horas y bloquea el avance si se viola la restricción, mostrando un mensaje claro.
+
+**Lógica de filtrado en `HeroExpress.jsx`**:
+```javascript
+if (esHoy) {
+    const anticipacion = destinoObj?.minHorasAnticipacion || 5;
+    const ahora = new Date();
+    options = options.filter(opt => {
+        const [h, m] = opt.value.split(":").map(Number);
+        const fechaOpt = new Date();
+        fechaOpt.setHours(h, m, 0, 0);
+        const diffHoras = (fechaOpt - ahora) / 3600000;
+        return diffHoras >= anticipacion;
+    });
+}
+```
+
+### Verificación
+1. **Configuración**: Ir a Admin > Precios y poner "24" horas de anticipación a un destino (ej: Pucón).
+2. **Prueba de Selección**: Intentar reservar Pucón para hoy. El selector de horas debería aparecer vacío o solo con horas de la noche (si cumple las 24h).
+3. **Prueba de Validación**: Si se manipula el estado para intentar avanzar con una hora inválida, el botón "Continuar" mostrará: *"Para Pucón, reserva con al menos 24 horas de anticipación"*.
+
+### Archivos Modificados
+- `src/components/AdminPricing.jsx`: Inclusión del campo en el formulario.
+- `src/components/HeroExpress.jsx`: Lógica de filtrado y validación temprana.
+
+> [!TIP]
+> Para reservas de "Último Minuto" (menos de 5 horas), se recomienda dirigir al usuario al botón de WhatsApp para coordinación manual según disponibilidad de móviles.
