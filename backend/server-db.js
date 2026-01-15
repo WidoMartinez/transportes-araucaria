@@ -2367,17 +2367,26 @@ app.post("/enviar-reserva", async (req, res) => {
 			"reembolsado",
 		]);
 
-		const precioCalculado = parsePositiveDecimal(
-			datosReserva.precio,
-			"precio",
-			0
-		);
+		// Helper para formateo monetario
+	const formatMoney = (amount) => `$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
 
-		const totalCalculado = parsePositiveDecimal(
-			datosReserva.totalConDescuento,
-			"totalConDescuento",
-			precioCalculado
-		);
+	const precioCalculado = parsePositiveDecimal(
+		datosReserva.precio,
+		"precio",
+		0
+	);
+
+	// Calcular descuentos una sola vez
+	const descuentoPromocion = parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0);
+	const descuentoOnline = parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0);
+	const descuentoRoundTrip = parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0);
+	const descuentoBase = parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0);
+
+	const totalCalculado = parsePositiveDecimal(
+		datosReserva.totalConDescuento,
+		"totalConDescuento",
+		precioCalculado
+	);
 
 		const abonoCalculado = parsePositiveDecimal(
 			datosReserva.abonoSugerido,
@@ -2466,35 +2475,37 @@ app.post("/enviar-reserva", async (req, res) => {
 	console.log("💰 DESGLOSE FINANCIERO - RESERVA");
 	console.log("=".repeat(50));
 	
-	// Mostrar componentes del precio
-	const descuentoPromocion = parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0);
-	const descuentoOnline = parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0);
-	const descuentoRoundTrip = parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0);
-	const descuentoBase = parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0);
+	// Calcular total de descuentos
+	const totalDescuentos = descuentoPromocion + descuentoOnline + descuentoRoundTrip + descuentoBase;
 	
-	console.log(`(+) Precio Base:           $${precioCalculado.toLocaleString("es-CL")}`);
+	console.log(`(+) Precio Base:           ${formatMoney(precioCalculado)}`);
 	if (descuentoPromocion > 0) {
-		console.log(`(-) Desc. Promoción:       $${descuentoPromocion.toLocaleString("es-CL")}`);
+		console.log(`(-) Desc. Promoción:       ${formatMoney(descuentoPromocion)}`);
 	}
 	if (descuentoOnline > 0) {
-		console.log(`(-) Desc. Online:          $${descuentoOnline.toLocaleString("es-CL")}`);
+		console.log(`(-) Desc. Online:          ${formatMoney(descuentoOnline)}`);
 	}
 	if (descuentoRoundTrip > 0) {
-		console.log(`(-) Desc. Ida y Vuelta:    $${descuentoRoundTrip.toLocaleString("es-CL")}`);
+		console.log(`(-) Desc. Ida y Vuelta:    ${formatMoney(descuentoRoundTrip)}`);
 	}
 	if (descuentoBase > 0) {
-		console.log(`(-) Desc. Base:            $${descuentoBase.toLocaleString("es-CL")}`);
+		console.log(`(-) Desc. Base:            ${formatMoney(descuentoBase)}`);
+	}
+	if (totalDescuentos > 0) {
+		console.log(`    Total Descuentos:      ${formatMoney(totalDescuentos)} (${((totalDescuentos/precioCalculado)*100).toFixed(1)}%)`);
 	}
 	console.log("-".repeat(50));
-	console.log(`(=) TOTAL FINAL:           $${totalCalculado.toLocaleString("es-CL")}`);
+	console.log(`(=) TOTAL FINAL:           ${formatMoney(totalCalculado)}`);
 	console.log("-".repeat(50));
 	
 	// Detalles de pago
 	console.log(`📊 Estado de Pago:         ${estadoPagoInicial.toUpperCase()}`);
-	console.log(`💵 Monto Pagado:           $${montoPagadoCalculado.toLocaleString("es-CL")}`);
-	console.log(`💳 Saldo Pendiente:        $${saldoEntrada.toLocaleString("es-CL")}`);
-	console.log(`📌 Abono Sugerido:         $${abonoCalculado.toLocaleString("es-CL")}`);
-	console.log(`🎯 Umbral Abono (40%):     $${umbralAbono.toLocaleString("es-CL")}`);
+	console.log(`💵 Monto Pagado:           ${formatMoney(montoPagadoCalculado)}`);
+	console.log(`💳 Saldo Pendiente:        ${formatMoney(saldoEntrada)}`);
+	if (abonoCalculado > 0) {
+		console.log(`📌 Abono Sugerido:         ${formatMoney(abonoCalculado)} (${((abonoCalculado/totalCalculado)*100).toFixed(0)}%)`);
+	}
+	console.log(`🎯 Umbral Abono (40%):     ${formatMoney(umbralAbono)}`);
 	console.log("=".repeat(50) + "\n");
 
 		let abonoPagado = false;
