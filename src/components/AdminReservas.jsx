@@ -65,7 +65,58 @@ import {
 	Square,
 	Printer,
 	Car,
+	Copy,
 } from "lucide-react";
+
+// Helper para generar texto formateado para conductor (WhatsApp)
+const generarTextoConductor = (reserva) => {
+	if (!reserva) return "";
+
+	// Formato de fecha y hora local
+	const fechaStr = reserva.fecha 
+		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL") 
+		: "Sin fecha";
+	
+	const horaStr = reserva.hora || "Sin hora";
+	
+	// Construir dirección de origem y destino con detalles si existen
+	let origenStr = reserva.origen || "Sin origen";
+	if (reserva.direccionOrigen) origenStr += ` (${reserva.direccionOrigen})`;
+
+	let destinoStr = reserva.destino || "Sin destino";
+	if (reserva.direccionDestino) destinoStr += ` (${reserva.direccionDestino})`;
+
+	// Generar link de Google Maps (Prioridad: Dirección Destino > Destino > Origen si es ida)
+	// Asumimos que lo más útil para el conductor es navegar al DESTINO si es un viaje de ida, 
+	// o al ORIGEN si es una recogida.
+	// Por defecto usamos el Destino para el link de Maps.
+	const addressForMaps = reserva.direccionDestino || reserva.destino || "";
+	const mapsLink = addressForMaps 
+		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressForMaps)}` 
+		: "";
+
+	// Calcular saldo por pagar si corresponde
+	const saldo = Number(reserva.saldoPendiente) || 0;
+	const saldoStr = saldo > 0 
+		? `\n💰 *Por pagar:* ${new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(saldo)}` 
+		: "";
+
+	// Observaciones
+	const obsStr = reserva.observaciones ? `\n📝 *Obs:* ${reserva.observaciones}` : "";
+
+	// info adicional
+	const vueloStr = reserva.numeroVuelo ? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}` : "";
+	const mapsLine = mapsLink ? `\n🗺 *Maps:* ${mapsLink}` : "";
+	
+	return `*NUEVO SERVICIO ASIGNADO* 🚖
+
+🗓 *Fecha:* ${fechaStr}
+⏰ *Hora:* ${horaStr}
+👤 *Pasajero:* ${reserva.nombre || "Sin nombre"}
+📍 *Origen:* ${origenStr}
+🏁 *Destino:* ${destinoStr}${mapsLine}
+👥 *Pax:* ${reserva.pasajeros || 1}${vueloStr}${obsStr}${saldoStr}`;
+};
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -3027,6 +3078,19 @@ function AdminReservas() {
 								}}
 							>
 								Generar Link de Compra
+							</Button>
+							<Button
+								size="sm"
+								variant="outline"
+								className="gap-2 ml-2"
+								onClick={() => {
+									const text = generarTextoConductor(selectedReserva);
+									navigator.clipboard.writeText(text);
+									alert("✅ Info para conductor copiada al portapapeles");
+								}}
+							>
+								<Copy className="w-4 h-4" />
+								Copiar Info Conductor
 							</Button>
 						</div>
 					</DialogHeader>
