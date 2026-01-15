@@ -34,7 +34,7 @@ export default function WhatsAppInterceptModal({
 				console.log("💰 Conversión de clic en WhatsApp (Modal) enviada.");
 			}
 		}
-		console.log(`📊 Evento: ${action}`, { hasDiscount, discount: discountData.valor });
+
 	};
 
 	React.useEffect(() => {

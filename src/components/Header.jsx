@@ -32,7 +32,6 @@ const trackWhatsAppClick = () => {
     gtag("event", "conversion", {
       send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
     });
-    console.log("Conversión de clic en WhatsApp (Header) enviada.");
   }
 };
 
@@ -247,29 +246,30 @@ function Header() {
                 <Phone className="w-5 h-5" />
               </a>
 
-              <motion.button
-                onClick={handleWhatsAppClick}
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <Button className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 shadow-lg shadow-green-600/20">
+                <Button 
+                  onClick={handleWhatsAppClick}
+                  className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 shadow-lg shadow-green-600/20"
+                >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   WhatsApp
                 </Button>
-              </motion.button>
+              </motion.div>
             </motion.div>
           </nav>
 
           {/* MOBILE MENU TRIGGER */}
           <div className="xl:hidden flex items-center gap-4">
-            <button
+            <Button 
+              size="icon" 
               onClick={handleWhatsAppClick}
-              className="md:hidden"
+              className="md:hidden bg-green-600 hover:bg-green-700 rounded-full h-10 w-10 shadow-md"
             >
-              <Button size="icon" className="bg-green-600 hover:bg-green-700 rounded-full h-10 w-10 shadow-md">
-                <MessageCircle className="w-5 h-5 text-white" />
-              </Button>
-            </button>
+              <MessageCircle className="w-5 h-5 text-white" />
+            </Button>
 
             <Sheet>
               <SheetTrigger asChild>

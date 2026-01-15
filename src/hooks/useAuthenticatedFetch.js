@@ -43,7 +43,7 @@ export const useAuthenticatedFetch = () => {
 					const newToken = await renewToken();
 
 					if (newToken) {
-						console.log("Token renovado. Reintentando petición...");
+
 						response = await fetch(`${getBackendUrl()}${url}`, {
 							...options,
 							headers: getHeaders(newToken),

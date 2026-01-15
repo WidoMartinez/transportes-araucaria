@@ -74,7 +74,7 @@ export function usePricingData() {
 
 		// Escuchar eventos de actualización de pricing
 		const handlePricingUpdate = (event) => {
-			console.log("📡 Evento pricing_updated recibido en usePricingData");
+
 			if (event.detail?.descuentosGlobales?.descuentoOnline) {
 				setDiscountOnline({
 					valor: event.detail.descuentosGlobales.descuentoOnline.valor || 0,

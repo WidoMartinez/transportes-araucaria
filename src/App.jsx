@@ -318,7 +318,7 @@ function App() {
 			if (response.ok) {
 				const data = await response.json();
 				if (data.hayOportunidades && data.opciones?.length > 0) {
-					console.log("✅ [App.jsx] Oportunidades de retorno encontradas:", data.opciones.length);
+
 					setOportunidadesRetornoUniversal(data);
 				} else {
 					setOportunidadesRetornoUniversal(null);
@@ -476,7 +476,7 @@ function App() {
 
 						window.gtag("event", "conversion", conversionData);
 						sessionStorage.setItem(conversionKey, 'true');
-						console.log(`✅ Evento de conversión express disparado (Valor: ${conversionValue})`);
+
 					}
 				} catch (conversionError) {
 					console.error("❌ Error disparando conversión en App.jsx:", conversionError);
@@ -568,14 +568,14 @@ function App() {
 	// --- FUNCION PARA RECARGAR DATOS ---
 	const recargarDatosPrecios = useCallback(
 		async ({ signal, payload } = {}) => {
-			console.log("?? INICIANDO recarga de datos de precios... v2.1");
+
 			try {
 				let data = payload;
 
 				if (!data) {
 					const apiUrl =
 						getBackendUrl() || "https://transportes-araucaria.onrender.com";
-					console.log("?? Fetching desde:", `${apiUrl}/pricing`);
+
 
 					const response = await fetch(`${apiUrl}/pricing`, {
 						signal,
@@ -585,25 +585,19 @@ function App() {
 					}
 					data = await response.json();
 				} else {
-					console.log("?? Aplicando payload de precios ya disponible");
+
 				}
 
 				if (signal?.aborted) {
-					console.warn("?? Recarga abortada antes de aplicar los datos");
 					return false;
 				}
 
 				const applied = applyPricingPayload(data, { signal });
 
-				if (!applied && !payload) {
-					console.warn(
-						"?? No se pudieron aplicar los datos de precios recibidos"
-					);
-				}
+
 				return applied;
 			} catch (error) {
 				if (error.name == "AbortError") {
-					console.warn("Recarga de precios cancelada por cambio de vista");
 					throw error;
 				}
 				console.error("Error al recargar precios:", error);
@@ -738,9 +732,6 @@ function App() {
 			}
 
 			if (e.key === "pricing_updated") {
-				console.log(
-					"?? Detectado cambio en configuracion de precios, recargando..."
-				);
 				recargarDatosPrecios().catch((error) => {
 					if (error?.name !== "AbortError") {
 						console.error(
@@ -756,7 +747,6 @@ function App() {
 
 		// Tambien escuchar eventos personalizados
 		const handlePricingUpdate = (event) => {
-			console.log("?? Recargando precios por evento personalizado...");
 			const payload = event?.detail;
 			if (payload) {
 				recargarDatosPrecios({ payload }).catch((error) => {
@@ -784,7 +774,6 @@ function App() {
 			const lastCheck = localStorage.getItem("last_pricing_check") || "0";
 
 			if (lastUpdate && parseInt(lastUpdate) > parseInt(lastCheck)) {
-				console.log("🔄 Polling detectó cambios en precios, recargando...");
 				await recargarDatosPrecios();
 				localStorage.setItem("last_pricing_check", Date.now().toString());
 			}
@@ -805,7 +794,6 @@ function App() {
 		const handleKeyDown = (e) => {
 			if (e.ctrlKey && e.shiftKey && e.key === "U") {
 				e.preventDefault();
-				console.log("🔄 Actualizando precios por atajo de teclado...");
 				recargarDatosPrecios();
 			}
 		};
@@ -1041,25 +1029,16 @@ function App() {
 
 	const calcularCotizacion = useCallback(
 		(origen, destino, pasajeros) => {
-			console.log("\n" + "=".repeat(50));
-			console.log("🧮 CALCULANDO COTIZACIÓN");
-			console.log("=".repeat(50));
-			console.log(`📍 Ruta:                   ${origen || "?"} → ${destino || "?"}`);
-			console.log(`👥 Pasajeros:              ${pasajeros || "?"}`);
-			
 			const tramo = [origen, destino].find(
 				(lugar) => lugar !== "Aeropuerto La Araucanía"
 			);
 			const destinoInfo = destinosData.find((d) => d.nombre === tramo);
 
 			if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
-				console.log("⚠️  Cotización no disponible - Datos incompletos");
-				console.log("=".repeat(50) + "\n");
 				return { precio: null, vehiculo: null };
 			}
 
 			const numPasajeros = parseInt(pasajeros);
-			console.log("-".repeat(50));
 			
 			let vehiculoAsignado;
 			let precioFinal;
@@ -1067,66 +1046,33 @@ function App() {
 			if (numPasajeros > 0 && numPasajeros <= 3) {
 				vehiculoAsignado = "Auto Privado";
 				const precios = destinoInfo.precios.auto;
-				if (!precios) {
-					console.log("⚠️  Precios no configurados para Auto");
-					console.log("=".repeat(50) + "\n");
-					return { precio: null, vehiculo: vehiculoAsignado };
-				}
+				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
 
 				const precioBase = Number(precios.base);
 				const pasajerosAdicionales = numPasajeros - 1;
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
-				
-				console.log(`🚗 Vehículo:               ${vehiculoAsignado}`);
-				console.log(`💵 Precio Base:            $${precioBase.toLocaleString("es-CL")}`);
-				if (pasajerosAdicionales > 0) {
-					console.log(`➕ Pasajeros Adicionales:  ${pasajerosAdicionales} x $${costoAdicional.toLocaleString("es-CL")} = $${(pasajerosAdicionales * costoAdicional).toLocaleString("es-CL")}`);
-				}
 			} else if (
 				numPasajeros >= 4 &&
 				numPasajeros <= destinoInfo.maxPasajeros
 			) {
 				vehiculoAsignado = "Van de Pasajeros";
 				const precios = destinoInfo.precios.van;
-				if (!precios) {
-					console.log("⚠️  Precios no configurados para Van");
-					console.log("=".repeat(50) + "\n");
-					return { precio: null, vehiculo: "Van (Consultar)" };
-				}
+				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
 
 				const precioBase = Number(precios.base);
-				// El aumento comienza desde el pasajero 5 (ej: 4 pax = base, 5 pax = base + 1 adicional)
 				const pasajerosAdicionales = numPasajeros - 4;
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
-				
-				console.log(`🚐 Vehículo:               ${vehiculoAsignado}`);
-				console.log(`💵 Precio Base (4 pax):    $${precioBase.toLocaleString("es-CL")}`);
-				if (pasajerosAdicionales > 0) {
-					console.log(`➕ Pasajeros Adicionales:  ${pasajerosAdicionales} x $${costoAdicional.toLocaleString("es-CL")} = $${(pasajerosAdicionales * costoAdicional).toLocaleString("es-CL")}`);
-				}
 			} else {
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
-				console.log(`⚠️  Vehículo:              ${vehiculoAsignado}`);
-				console.log(`   Pasajeros exceden capacidad (máx: ${destinoInfo.maxPasajeros})`);
 			}
 			
-			const resultado = {
+			return {
 				precio: precioFinal !== null ? Math.round(precioFinal) : null,
 				vehiculo: vehiculoAsignado,
 			};
-			
-			console.log("-".repeat(50));
-			if (resultado.precio !== null) {
-				console.log(`✅ PRECIO FINAL:           $${resultado.precio.toLocaleString("es-CL")}`);
-			} else {
-				console.log(`❌ PRECIO:                 No disponible`);
-			}
-			console.log("=".repeat(50) + "\n");
-			
-			return resultado;
 		},
 		[destinosData]
 	);
@@ -1147,13 +1093,6 @@ function App() {
 				setTarifaDinamica((prev) => ({ ...prev, cargando: true }));
 				const apiUrl =
 					getBackendUrl() || "https://transportes-araucaria.onrender.com";
-
-				console.log("💰 Calculando tarifa dinámica:", {
-					precioBase,
-					destino,
-					fecha,
-					hora,
-				});
 
 				const response = await fetch(`${apiUrl}/api/tarifa-dinamica/calcular`, {
 					method: "POST",
@@ -1359,7 +1298,6 @@ function App() {
 
 					if (opcionCoincidente) {
 						descuentoRetornoUniversal = Math.round(precioBase * (opcionCoincidente.descuento / 100));
-						console.log(`🤑 [App.jsx] Descuento retorno universal aplicado: ${opcionCoincidente.descuento}% ($${descuentoRetornoUniversal})`);
 						break; 
 					}
 				}
