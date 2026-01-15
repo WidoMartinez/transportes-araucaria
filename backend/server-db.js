@@ -6681,17 +6681,17 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		);
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
 
-		console.log("📅 DEBUG Tarifa Dinámica:");
-		console.log("  Fecha recibida:", fecha);
-		console.log("  Fecha parseada:", fechaViaje);
-		console.log(
-			"  Día de la semana:",
-			diaSemana,
-			["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][diaSemana]
-		);
-		console.log("  Hora:", hora);
-		console.log("  Precio base:", precioBase);
-		console.log("  Destino:", destino);
+		// Helper para formateo monetario
+	const formatMoney = (amount) => `$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
+
+	console.log("\n" + "=".repeat(50));
+	console.log("💰 CALCULANDO TARIFA DINÁMICA");
+	console.log("=".repeat(50));
+	console.log(`📍 Destino:                ${destino || "No especificado"}`);
+	console.log(`💵 Precio Base:            ${formatMoney(precioBase)}`);
+	console.log(`📅 Fecha Viaje:            ${fecha}`);
+	console.log(`🕐 Hora:                   ${hora || "No especificada"}`);
+	console.log("-".repeat(50));
 
 		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
 		const ahora = new Date();
@@ -6735,14 +6735,17 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
 		}
 
-		console.log(
-			`\n🔍 Evaluando ${configuraciones.length} configuraciones activas...`
-		);
+		const nombreDia = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][diaSemana];
+	console.log(`📆 Día:                    ${nombreDia}`);
+	console.log(`⏰ Anticipación:           ${diasAnticipacion} días`);
+	if (festivo) {
+		console.log(`🎉 Festivo Detectado:      ${festivo.nombre}`);
+	}
+	console.log("-".repeat(50));
+	console.log(`🔍 Evaluando ${configuraciones.length} configuraciones activas...`);
 
 		for (const config of configuraciones) {
-			console.log(
-				`\n  ⚙️  Evaluando: "${config.nombre}" (tipo: ${config.tipo})`
-			);
+			console.log(`  ⚙️  "${config.nombre}" (${config.tipo})`);
 
 			// Verificar si el destino está excluido
 			if (
@@ -6772,29 +6775,27 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 					break;
 
 				case "dia_semana":
-					console.log(`    📆 Días configurados:`, config.diasSemana);
-					console.log(`    📆 Día del viaje: ${diaSemana}`);
 					if (
-						config.diasSemana &&
-						Array.isArray(config.diasSemana) &&
-						config.diasSemana.includes(diaSemana)
-					) {
-						aplica = true;
-						const nombresDias = [
-							"Domingo",
-							"Lunes",
-							"Martes",
-							"Miércoles",
-							"Jueves",
-							"Viernes",
-							"Sábado",
-						];
-						detalle = `${nombresDias[diaSemana]}`;
-						console.log(`    ✅ APLICA - Día ${detalle}`);
-					} else {
-						console.log(`    ❌ NO APLICA - Día no incluido`);
-					}
-					break;
+					config.diasSemana &&
+					Array.isArray(config.diasSemana) &&
+					config.diasSemana.includes(diaSemana)
+				) {
+					aplica = true;
+					const nombresDias = [
+						"Domingo",
+						"Lunes",
+						"Martes",
+						"Miércoles",
+						"Jueves",
+						"Viernes",
+						"Sábado",
+					];
+					detalle = `${nombresDias[diaSemana]}`;
+					console.log(`    ✅ Aplica - ${detalle}`);
+				} else {
+					console.log(`    ⏭️  No aplica`);
+				}
+				break;
 
 				case "horario":
 					if (hora && config.horaInicio && config.horaFin) {
@@ -6839,15 +6840,30 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		}
 
 		// Calcular montos
-		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
-		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
+	const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
+	const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
 
-		console.log("\n💰 RESULTADO:");
-		console.log("  Precio base:", precioBase);
-		console.log("  Ajuste total:", porcentajeTotal + "%");
-		console.log("  Ajuste monto:", ajusteMonto);
-		console.log("  Precio final:", precioFinal);
-		console.log("  Ajustes aplicados:", ajustesAplicados.length);
+	console.log("-".repeat(50));
+	console.log("📊 AJUSTES APLICADOS:");
+	if (ajustesAplicados.length > 0) {
+		ajustesAplicados.forEach((ajuste, index) => {
+			const signo = ajuste.porcentaje >= 0 ? "+" : "";
+			console.log(`  ${index + 1}. ${ajuste.nombre}: ${signo}${ajuste.porcentaje}%`);
+			if (ajuste.detalle) {
+				console.log(`     └─ ${ajuste.detalle}`);
+			}
+		});
+	} else {
+		console.log("  (Ninguno)");
+	}
+	console.log("-".repeat(50));
+	console.log(`💵 Precio Base:            ${formatMoney(precioBase)}`);
+	if (porcentajeTotal !== 0) {
+		const signo = porcentajeTotal >= 0 ? "+" : "";
+		console.log(`📈 Ajuste Total:           ${signo}${porcentajeTotal}% (${formatMoney(ajusteMonto)})`);
+	}
+	console.log(`✅ PRECIO FINAL:           ${formatMoney(precioFinal)}`);
+	console.log("=".repeat(50) + "\n");
 
 		res.json({
 			precioBase: parseFloat(precioBase),

@@ -1041,7 +1041,11 @@ function App() {
 
 	const calcularCotizacion = useCallback(
 		(origen, destino, pasajeros) => {
-			console.log("🔍 calcularCotizacion llamado con:", { origen, destino, pasajeros });
+			console.log("\n" + "=".repeat(50));
+			console.log("🧮 CALCULANDO COTIZACIÓN");
+			console.log("=".repeat(50));
+			console.log(`📍 Ruta:                   ${origen || "?"} → ${destino || "?"}`);
+			console.log(`👥 Pasajeros:              ${pasajeros || "?"}`);
 			
 			const tramo = [origen, destino].find(
 				(lugar) => lugar !== "Aeropuerto La Araucanía"
@@ -1049,11 +1053,13 @@ function App() {
 			const destinoInfo = destinosData.find((d) => d.nombre === tramo);
 
 			if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
+				console.log("⚠️  Cotización no disponible - Datos incompletos");
+				console.log("=".repeat(50) + "\n");
 				return { precio: null, vehiculo: null };
 			}
 
 			const numPasajeros = parseInt(pasajeros);
-			console.log("🔍 Número de pasajeros parseado:", numPasajeros);
+			console.log("-".repeat(50));
 			
 			let vehiculoAsignado;
 			let precioFinal;
@@ -1061,27 +1067,33 @@ function App() {
 			if (numPasajeros > 0 && numPasajeros <= 3) {
 				vehiculoAsignado = "Auto Privado";
 				const precios = destinoInfo.precios.auto;
-				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
+				if (!precios) {
+					console.log("⚠️  Precios no configurados para Auto");
+					console.log("=".repeat(50) + "\n");
+					return { precio: null, vehiculo: vehiculoAsignado };
+				}
 
 				const precioBase = Number(precios.base);
 				const pasajerosAdicionales = numPasajeros - 1;
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
 				
-				console.log("🔍 Cálculo Auto:", {
-					base: precioBase,
-					porcentajeAdicional: precios.porcentajeAdicional,
-					pasajerosAdicionales,
-					costoAdicional,
-					precioFinal
-				});
+				console.log(`🚗 Vehículo:               ${vehiculoAsignado}`);
+				console.log(`💵 Precio Base:            $${precioBase.toLocaleString("es-CL")}`);
+				if (pasajerosAdicionales > 0) {
+					console.log(`➕ Pasajeros Adicionales:  ${pasajerosAdicionales} x $${costoAdicional.toLocaleString("es-CL")} = $${(pasajerosAdicionales * costoAdicional).toLocaleString("es-CL")}`);
+				}
 			} else if (
 				numPasajeros >= 4 &&
 				numPasajeros <= destinoInfo.maxPasajeros
 			) {
 				vehiculoAsignado = "Van de Pasajeros";
 				const precios = destinoInfo.precios.van;
-				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
+				if (!precios) {
+					console.log("⚠️  Precios no configurados para Van");
+					console.log("=".repeat(50) + "\n");
+					return { precio: null, vehiculo: "Van (Consultar)" };
+				}
 
 				const precioBase = Number(precios.base);
 				// El aumento comienza desde el pasajero 5 (ej: 4 pax = base, 5 pax = base + 1 adicional)
@@ -1089,16 +1101,16 @@ function App() {
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
 				
-				console.log("🔍 Cálculo Van:", {
-					base: precioBase,
-					porcentajeAdicional: precios.porcentajeAdicional,
-					pasajerosAdicionales,
-					costoAdicional,
-					precioFinal
-				});
+				console.log(`🚐 Vehículo:               ${vehiculoAsignado}`);
+				console.log(`💵 Precio Base (4 pax):    $${precioBase.toLocaleString("es-CL")}`);
+				if (pasajerosAdicionales > 0) {
+					console.log(`➕ Pasajeros Adicionales:  ${pasajerosAdicionales} x $${costoAdicional.toLocaleString("es-CL")} = $${(pasajerosAdicionales * costoAdicional).toLocaleString("es-CL")}`);
+				}
 			} else {
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
+				console.log(`⚠️  Vehículo:              ${vehiculoAsignado}`);
+				console.log(`   Pasajeros exceden capacidad (máx: ${destinoInfo.maxPasajeros})`);
 			}
 			
 			const resultado = {
@@ -1106,7 +1118,14 @@ function App() {
 				vehiculo: vehiculoAsignado,
 			};
 			
-			console.log("🔍 Resultado final:", resultado);
+			console.log("-".repeat(50));
+			if (resultado.precio !== null) {
+				console.log(`✅ PRECIO FINAL:           $${resultado.precio.toLocaleString("es-CL")}`);
+			} else {
+				console.log(`❌ PRECIO:                 No disponible`);
+			}
+			console.log("=".repeat(50) + "\n");
+			
 			return resultado;
 		},
 		[destinosData]
