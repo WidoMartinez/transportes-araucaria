@@ -2305,23 +2305,27 @@ app.post("/enviar-reserva", async (req, res) => {
 		// Generar código único de reserva
 		const codigoReserva = await generarCodigoReserva();
 
-		console.log("Reserva web recibida:", {
-			nombre: datosReserva.nombre,
-			email: datosReserva.email,
-			telefono: datosReserva.telefono,
-			clienteId: datosReserva.clienteId,
-			rut: rutFormateado,
-			codigoReserva: codigoReserva,
-			origen: datosReserva.origen,
-			destino: datosReserva.destino,
-			fecha: datosReserva.fecha,
-			hora: datosReserva.hora,
-			pasajeros: datosReserva.pasajeros,
-			totalConDescuento: datosReserva.totalConDescuento,
-			estado: datosReserva.estado,
-			estadoPago: datosReserva.estadoPago,
-			source: datosReserva.source || "web",
-		});
+		console.log("\n" + "=".repeat(50));
+	console.log("📝 NUEVA RESERVA RECIBIDA");
+	console.log("=".repeat(50));
+	console.log(`👤 Cliente:                ${datosReserva.nombre || "No especificado"}`);
+	console.log(`📧 Email:                  ${datosReserva.email || "No especificado"}`);
+	console.log(`📱 Teléfono:               ${datosReserva.telefono || "No especificado"}`);
+	if (rutFormateado) {
+		console.log(`🆔 RUT:                    ${rutFormateado}`);
+	}
+	console.log(`🔖 Código Reserva:         ${codigoReserva}`);
+	console.log("-".repeat(50));
+	console.log(`🚗 Viaje:                  ${datosReserva.origen || "?"} → ${datosReserva.destino || "?"}`);
+	console.log(`📅 Fecha:                  ${datosReserva.fecha || "No especificada"}`);
+	console.log(`🕐 Hora:                   ${datosReserva.hora || "No especificada"}`);
+	console.log(`👥 Pasajeros:              ${datosReserva.pasajeros || 1}`);
+	console.log(`🚙 Vehículo:               ${datosReserva.vehiculo || "Por asignar"}`);
+	console.log("-".repeat(50));
+	console.log(`📊 Estado:                 ${(datosReserva.estado || "pendiente").toUpperCase()}`);
+	console.log(`💳 Estado Pago:            ${(datosReserva.estadoPago || "pendiente").toUpperCase()}`);
+	console.log(`🌐 Fuente:                 ${datosReserva.source || "web"}`);
+	console.log("=".repeat(50) + "\n");
 
 		// Verificar si la fecha/hora está bloqueada
 		const bloqueoResultado = await verificarBloqueoAgenda(
@@ -2457,15 +2461,41 @@ app.post("/enviar-reserva", async (req, res) => {
 		}
 		const umbralAbono = Math.max(totalCalculado * 0.4, abonoCalculado || 0);
 
-		// Log temporal para depuración: mostrar los valores que se usarán para guardar
-		console.log("[DEBUG] /enviar-reserva - cálculos financieros:", {
-			totalCalculado,
-			abonoCalculado,
-			saldoEntrada,
-			montoPagadoCalculado,
-			umbralAbono,
-			estadoPagoInicial,
-		});
+		// Log mejorado: desglose financiero detallado y agrupado
+	console.log("\n" + "=".repeat(50));
+	console.log("💰 DESGLOSE FINANCIERO - RESERVA");
+	console.log("=".repeat(50));
+	
+	// Mostrar componentes del precio
+	const descuentoPromocion = parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0);
+	const descuentoOnline = parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0);
+	const descuentoRoundTrip = parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0);
+	const descuentoBase = parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0);
+	
+	console.log(`(+) Precio Base:           $${precioCalculado.toLocaleString("es-CL")}`);
+	if (descuentoPromocion > 0) {
+		console.log(`(-) Desc. Promoción:       $${descuentoPromocion.toLocaleString("es-CL")}`);
+	}
+	if (descuentoOnline > 0) {
+		console.log(`(-) Desc. Online:          $${descuentoOnline.toLocaleString("es-CL")}`);
+	}
+	if (descuentoRoundTrip > 0) {
+		console.log(`(-) Desc. Ida y Vuelta:    $${descuentoRoundTrip.toLocaleString("es-CL")}`);
+	}
+	if (descuentoBase > 0) {
+		console.log(`(-) Desc. Base:            $${descuentoBase.toLocaleString("es-CL")}`);
+	}
+	console.log("-".repeat(50));
+	console.log(`(=) TOTAL FINAL:           $${totalCalculado.toLocaleString("es-CL")}`);
+	console.log("-".repeat(50));
+	
+	// Detalles de pago
+	console.log(`📊 Estado de Pago:         ${estadoPagoInicial.toUpperCase()}`);
+	console.log(`💵 Monto Pagado:           $${montoPagadoCalculado.toLocaleString("es-CL")}`);
+	console.log(`💳 Saldo Pendiente:        $${saldoEntrada.toLocaleString("es-CL")}`);
+	console.log(`📌 Abono Sugerido:         $${abonoCalculado.toLocaleString("es-CL")}`);
+	console.log(`🎯 Umbral Abono (40%):     $${umbralAbono.toLocaleString("es-CL")}`);
+	console.log("=".repeat(50) + "\n");
 
 		let abonoPagado = false;
 		let saldoPagado = false;
