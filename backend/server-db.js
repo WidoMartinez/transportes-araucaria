@@ -7982,19 +7982,55 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
 		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
 		const montoActual = Number(payment.amount) || 0;
-		const pagoAcumulado = pagoPrevio + montoActual;
+		// --- LÓGICA DE DIVISIÓN DE PAGO (Split Payment) ---
+		// Validar si es una reserva vinculada para dividir el monto
+		let montoIda = montoActual;
+		let montoVuelta = 0;
+		let reservaHija = null;
+
+		if (reserva.tramoHijoId) {
+			try {
+				reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
+				if (reservaHija) {
+					console.log(`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`);
+					
+					// Calcular totales para proporción
+					const totalIda = parseFloat(reserva.totalConDescuento || 0);
+					const totalVuelta = parseFloat(reservaHija.totalConDescuento || 0);
+					const totalConjunto = totalIda + totalVuelta;
+
+					if (totalConjunto > 0) {
+						// Calcular factores (si el total es 0, evitar división por cero)
+						const factorIda = totalIda / totalConjunto;
+						
+						// Dividir el monto del pago actual
+						montoIda = Math.round(montoActual * factorIda);
+						montoVuelta = montoActual - montoIda; // El resto va a la vuelta para evitar problemas de redondeo
+						
+						console.log(`📊 División aplicada (Total Pago: ${montoActual}): Ida $${montoIda} (${(factorIda*100).toFixed(1)}%) | Vuelta $${montoVuelta}`);
+					} else {
+						// Si son reservas gratuitas o precio 0, dividir a la mitad
+						montoIda = Math.round(montoActual / 2);
+						montoVuelta = montoActual - montoIda;
+					}
+				}
+			} catch (errSplit) {
+				console.error("⚠️ Error calculando split de pago:", errSplit.message);
+				// En caso de error, el montoIda se mantiene como el total (fallback seguro)
+			}
+		}
+
+		// Definir variables comunes y umbrales para IDA
 		const umbralAbono = Math.max(
 			totalReserva * 0.4,
 			parseFloat(reserva.abonoSugerido || 0) || 0
 		);
-
-		let nuevoEstadoPago = reserva.estadoPago;
-		let nuevoEstadoReserva = reserva.estado;
-		let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
-		let abonoPagado = reserva.abonoPagado;
-		let saldoPagado = reserva.saldoPagado;
 		const referenciaPagoFinal =
 			optionalReferenciaPago || reserva.referenciaPago || null;
+
+		// --- CÁLCULOS RESERVA PRINCIPAL (IDA) ---
+		// Recalcular estados usando SOLO la parte del pago que le corresponde a la Ida
+		const pagoAcumulado = pagoPrevio + montoIda;
 
 		let tipoPagoFinal = optionalTipoPago || reserva.tipoPago;
 		if (!tipoPagoFinal) {
@@ -8005,6 +8041,12 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			}
 		}
 
+		let nuevoEstadoPago = reserva.estadoPago;
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
+		let abonoPagado = reserva.abonoPagado;
+		let saldoPagado = reserva.saldoPagado;
+		
 		if (pagoAcumulado >= totalReserva && totalReserva > 0) {
 			nuevoEstadoPago = "pagado";
 			nuevoSaldoPendiente = 0;
@@ -8044,6 +8086,65 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			abonoPagado,
 			saldoPagado,
 		});
+
+		// --- ACTUALIZAR RESERVA VINCULADA (VUELTA) ---
+		// Usar la instancia de reservaHija obtenida previamente
+		if (reservaHija && montoVuelta > 0) {
+			try {
+				console.log(`🔗 Actualizando reserva vinculada (Vuelta) con pago asignado: $${montoVuelta}`);
+				
+				const totalHija = parseFloat(reservaHija.totalConDescuento || 0);
+				const pagoPrevioHija = parseFloat(reservaHija.pagoMonto || 0);
+				const pagoAcumuladoHija = pagoPrevioHija + montoVuelta;
+				const umbralAbonoHija = Math.max(
+					totalHija * 0.4,
+					parseFloat(reservaHija.abonoSugerido || 0) || 0
+				);
+
+				let estadoPagoHija = reservaHija.estadoPago;
+				let estadoReservaHija = reservaHija.estado;
+				let saldoPendienteHija = Math.max(totalHija - pagoAcumuladoHija, 0);
+				let abonoPagadoHija = reservaHija.abonoPagado;
+				let saldoPagadoHija = reservaHija.saldoPagado;
+
+				// Evaluar estados Hija
+				if (pagoAcumuladoHija >= totalHija && totalHija > 0) {
+					estadoPagoHija = "pagado";
+					saldoPendienteHija = 0;
+					abonoPagadoHija = true;
+					saldoPagadoHija = true;
+					if (["pendiente", "pendiente_detalles", "confirmada"].includes(estadoReservaHija)) {
+						estadoReservaHija = "confirmada";
+					}
+				} else if (pagoAcumuladoHija > 0) {
+					estadoPagoHija = "parcial";
+					if (pagoAcumuladoHija >= umbralAbonoHija) {
+						abonoPagadoHija = true;
+						if (["pendiente", "pendiente_detalles"].includes(estadoReservaHija)) {
+							estadoReservaHija = "confirmada";
+						}
+					}
+				}
+
+				await reservaHija.update({
+					estadoPago: estadoPagoHija,
+					pagoId: payment.flowOrder.toString(),
+					pagoGateway: "flow",
+					pagoMonto: pagoAcumuladoHija,
+					pagoFecha: new Date(payment.paymentDate || new Date()),
+					estado: estadoReservaHija,
+					saldoPendiente: saldoPendienteHija,
+					referenciaPago: referenciaPagoFinal,
+					tipoPago: tipoPagoFinal,
+					abonoPagado: abonoPagadoHija,
+					saldoPagado: saldoPagadoHija
+				});
+				console.log(`✅ Reserva vinculada actualizada: Estado ${estadoReservaHija}, Pago ${estadoPagoHija}`);
+
+			} catch (errVinculada) {
+				console.error("⚠️ Error al actualizar reserva vinculada:", errVinculada.message);
+			}
+		}
 
 		// CREAR REGISTRO DE TRANSACCIÓN
 		try {
