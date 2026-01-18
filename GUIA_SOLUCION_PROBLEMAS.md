@@ -135,6 +135,138 @@ Para confirmar que el sistema funciona correctamente:
 
 ---
 
+## 1.1. División de Pago Proporcional para Reservas Ida/Vuelta
+
+**Implementado: 18 Enero 2026**
+
+### Problema
+Cuando un cliente pagaba una reserva de ida y vuelta, el sistema asignaba el 100% del monto a la reserva de IDA, dejando la reserva de VUELTA sin registro de pago. Esto causaba:
+- Sobrepago contable en la IDA (ej: $100.000 pagados sobre $50.000 de costo)
+- Saldo pendiente incorrecto en la VUELTA ($0 pagados sobre $50.000 de costo)
+- Estados de pago inconsistentes entre ambos tramos
+- Problemas para calcular gastos y comisiones por tramo
+
+### Causa Raíz
+El webhook de confirmación de Flow (`/api/flow-confirmation`) no dividía el monto del pago entre las reservas vinculadas. Simplemente:
+1. Asignaba `payment.amount` completo a la reserva principal (IDA)
+2. Copiaba el estado de pago a la VUELTA sin asignarle monto
+
+Como las reservas se crean con precios divididos 50/50 (ver sección 1), esto generaba un desbalance contable.
+
+### Solución (Enero 2026)
+
+Se implementó **división proporcional del pago** en el webhook de Flow.
+
+**Archivo modificado:** `backend/server-db.js`  
+**Líneas modificadas:** 7985-8124
+
+**Lógica implementada:**
+
+```javascript
+// 1. Calcular proporción de pago para cada tramo
+if (reserva.tramoHijoId) {
+    const reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
+    
+    if (reservaHija) {
+        const totalIda = parseFloat(reserva.totalConDescuento || 0);
+        const totalVuelta = parseFloat(reservaHija.totalConDescuento || 0);
+        const totalConjunto = totalIda + totalVuelta;
+        
+        // Dividir el pago proporcionalmente
+        const factorIda = totalIda / totalConjunto;
+        montoIda = Math.round(payment.amount * factorIda);
+        montoVuelta = payment.amount - montoIda;
+    }
+}
+
+// 2. Actualizar IDA con su monto correspondiente
+const pagoAcumuladoIda = pagoPrevioIda + montoIda;
+// Evaluar estados (pagado/parcial/confirmada) basado en montoIda
+
+// 3. Actualizar VUELTA con su monto correspondiente
+const pagoAcumuladoVuelta = pagoPrevioVuelta + montoVuelta;
+// Evaluar estados independientemente basado en montoVuelta
+```
+
+### Comportamiento Después de la Solución
+
+**Escenario 1: Pago Total ($100.000)**
+```
+Antes:
+├─ IDA:    Precio $50k, Pago $100k ❌ (sobrepago)
+└─ VUELTA: Precio $50k, Pago $0    ❌ (sin pago)
+
+Después:
+├─ IDA:    Precio $50k, Pago $50k ✅ → Estado: PAGADO
+└─ VUELTA: Precio $50k, Pago $50k ✅ → Estado: PAGADO
+```
+
+**Escenario 2: Abono 40% ($40.000)**
+```
+Antes:
+├─ IDA:    Precio $50k, Pago $40k ❌ (80% pagado, pero umbral es 40% de $50k = $20k)
+└─ VUELTA: Precio $50k, Pago $0   ❌ (0% pagado)
+
+Después:
+├─ IDA:    Precio $50k, Pago $20k ✅ → Estado: CONFIRMADA (cumple umbral $20k)
+└─ VUELTA: Precio $50k, Pago $20k ✅ → Estado: CONFIRMADA (cumple umbral $20k)
+```
+
+**Escenario 3: Pago Insuficiente ($10.000)**
+```
+Después:
+├─ IDA:    Precio $50k, Pago $5k → Estado: PENDIENTE (no cumple umbral $20k)
+└─ VUELTA: Precio $50k, Pago $5k → Estado: PENDIENTE (no cumple umbral $20k)
+```
+
+### Verificación
+
+**Logs esperados en Render:**
+```
+🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...
+📊 División aplicada (Total Pago: 100000): Ida $50000 (50.0%) | Vuelta $50000
+✅ Reserva vinculada actualizada: Estado confirmada, Pago pagado
+```
+
+**Verificación en Base de Datos:**
+```sql
+SELECT 
+    id, 
+    codigoReserva, 
+    tipoTramo,
+    totalConDescuento,
+    pagoMonto,
+    saldoPendiente,
+    estadoPago,
+    estado
+FROM reservas 
+WHERE tramoPadreId = X OR tramoHijoId = X;
+```
+
+Ambas reservas deben mostrar:
+- `pagoMonto` aproximadamente igual a la mitad del pago total
+- `estadoPago` y `estado` consistentes con el monto recibido
+- `saldoPendiente` calculado correctamente
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 7985-8124): Lógica de split y actualización independiente
+- `backend/test-split-logic.js` (nuevo): Script de pruebas para validar cálculos
+
+### Script de Pruebas
+
+Se incluye `backend/test-split-logic.js` para validar la lógica sin necesidad de pagos reales:
+
+```bash
+cd backend
+node test-split-logic.js
+```
+
+> [!IMPORTANT]
+> Este fix garantiza integridad contable en reservas ida/vuelta. Cada tramo ahora tiene su propio registro de pago proporcional, permitiendo cálculos correctos de gastos, comisiones y estados.
+
+---
+
 ## 2. Problemas de Rutas y Backend (Error 500)
 
 
