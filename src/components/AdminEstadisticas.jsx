@@ -45,6 +45,7 @@ import {
 	Users,
 	Archive,
 	AlertCircle,
+	AlertTriangle,
 	CheckCircle,
 	ArrowRight,
 } from "lucide-react";
@@ -1399,19 +1400,100 @@ function AdminEstadisticas() {
 
 								{/* Detalles del Viaje */}
 								<div className="space-y-3">
-									<h4 className="font-semibold flex items-center gap-2">
-										<MapPin className="w-4 h-4" /> Ruta
-									</h4>
-									<div className="grid gap-2 text-sm border p-3 rounded-md">
-										<div className="grid grid-cols-[auto_1fr] gap-2">
-											<Badge variant="outline" className="w-fit">Origen</Badge>
-											<span>{selectedReservaDetail.origen}</span>
-										</div>
-										<div className="grid grid-cols-[auto_1fr] gap-2">
-											<Badge variant="outline" className="w-fit">Destino</Badge>
-											<span>{selectedReservaDetail.destino}</span>
+									<div className="flex items-center justify-between">
+										<h4 className="font-semibold flex items-center gap-2">
+											<MapPin className="w-4 h-4" /> Detalles del Viaje
+										</h4>
+										{selectedReservaDetail.idaVuelta ? (
+											<Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
+												🔄 Ida y Vuelta
+											</Badge>
+										) : (
+											<Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">
+												➡️ Solo Ida
+											</Badge>
+										)}
+									</div>
+
+									{/* Tarjeta de VIAJE DE IDA */}
+									<div className="border-2 border-blue-300 bg-blue-50 rounded-lg p-3">
+										<h5 className="font-semibold text-blue-900 text-sm mb-2 flex items-center gap-2">
+											🚗 VIAJE DE IDA
+										</h5>
+										<div className="grid gap-2 text-sm">
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit">Origen</Badge>
+												<span>{selectedReservaDetail.origen}</span>
+											</div>
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit">Destino</Badge>
+												<span>{selectedReservaDetail.destino}</span>
+											</div>
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit">Fecha</Badge>
+												<span>{formatearFecha(selectedReservaDetail.fecha)}</span>
+											</div>
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit">Hora</Badge>
+												<span>{selectedReservaDetail.hora}</span>
+											</div>
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit">Pasajeros</Badge>
+												<span>{selectedReservaDetail.pasajeros}</span>
+											</div>
 										</div>
 									</div>
+
+									{/* Tarjeta de VIAJE DE VUELTA */}
+									{selectedReservaDetail.idaVuelta && (
+										<div className="border-2 border-green-300 bg-green-50 rounded-lg p-3">
+											<h5 className="font-semibold text-green-900 text-sm mb-2 flex items-center gap-2">
+												🚗 VIAJE DE VUELTA
+											</h5>
+											<div className="grid gap-2 text-sm">
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit">Origen</Badge>
+													<span>{selectedReservaDetail.destino}</span>
+												</div>
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit">Destino</Badge>
+													<span>{selectedReservaDetail.origen}</span>
+												</div>
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit">Fecha Regreso</Badge>
+													<span>{selectedReservaDetail.fechaRegreso ? formatearFecha(selectedReservaDetail.fechaRegreso) : "-"}</span>
+												</div>
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit">Hora Regreso</Badge>
+													<span>{selectedReservaDetail.horaRegreso || "-"}</span>
+												</div>
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit">Pasajeros</Badge>
+													<span>{selectedReservaDetail.pasajeros}</span>
+												</div>
+											</div>
+										</div>
+									)}
+
+									{/* Alerta de información faltante */}
+									{selectedReservaDetail.idaVuelta && (!selectedReservaDetail.fechaRegreso || !selectedReservaDetail.horaRegreso) && (
+										<div className="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+											<div className="flex items-start gap-2">
+												<AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+												<div>
+													<p className="font-semibold text-yellow-800 text-sm">
+														⚠️ Información Incompleta del Viaje de Vuelta
+													</p>
+													<p className="text-xs text-yellow-700 mt-1">
+														Esta reserva está marcada como "Ida y Vuelta" pero falta:
+														{!selectedReservaDetail.fechaRegreso && " Fecha de Regreso"}
+														{!selectedReservaDetail.fechaRegreso && !selectedReservaDetail.horaRegreso && " y"}
+														{!selectedReservaDetail.horaRegreso && " Hora de Regreso"}
+													</p>
+												</div>
+											</div>
+										</div>
+									)}
 								</div>
 							</div>
 
