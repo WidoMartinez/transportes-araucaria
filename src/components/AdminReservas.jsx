@@ -55,6 +55,7 @@ import {
 	CheckCircle2,
 	XCircle,
 	AlertCircle,
+	AlertTriangle,
 	RefreshCw,
 	Plus,
 	Star,
@@ -3172,83 +3173,150 @@ function AdminReservas() {
 
 							{/* Detalles del Viaje */}
 							<div>
-								<h3 className="font-semibold text-lg mb-3">
-									Detalles del Viaje
-								</h3>
+								<div className="flex items-center justify-between mb-4">
+									<h3 className="font-semibold text-lg">
+										Detalles del Viaje
+									</h3>
+									{selectedReserva.idaVuelta ? (
+										<Badge className="bg-blue-600 hover:bg-blue-700 text-white">
+											🔄 Ida y Vuelta
+										</Badge>
+									) : (
+										<Badge className="bg-green-600 hover:bg-green-700 text-white">
+											➡️ Solo Ida
+										</Badge>
+									)}
+								</div>
+								
 								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">Origen</Label>
-										<p className="font-medium">{selectedReserva.origen}</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Destino</Label>
-										<p className="font-medium">{selectedReserva.destino}</p>
-									</div>
-									{selectedReserva.direccionOrigen && (
-										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
-											<Label className="text-yellow-800 font-semibold">
-												📍 Dirección de Origen (Específica)
-											</Label>
-											<p className="font-medium text-gray-900 mt-1">
-												{selectedReserva.direccionOrigen}
-											</p>
+									{/* Tarjeta de VIAJE DE IDA */}
+									<div className="col-span-2 bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+										<h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+											🚗 VIAJE DE IDA
+										</h4>
+										<div className="grid grid-cols-2 gap-3">
+											<div>
+												<Label className="text-muted-foreground">Origen</Label>
+												<p className="font-medium">{selectedReserva.origen}</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Destino</Label>
+												<p className="font-medium">{selectedReserva.destino}</p>
+											</div>
+											{selectedReserva.direccionOrigen && (
+												<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+													<Label className="text-yellow-800 font-semibold text-xs">
+														📍 Dirección de Origen (Específica)
+													</Label>
+													<p className="font-medium text-gray-900 mt-1 text-sm">
+														{selectedReserva.direccionOrigen}
+													</p>
+												</div>
+											)}
+											{selectedReserva.direccionDestino && (
+												<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+													<Label className="text-yellow-800 font-semibold text-xs">
+														📍 Dirección de Destino (Específica)
+													</Label>
+													<p className="font-medium text-gray-900 mt-1 text-sm">
+														{selectedReserva.direccionDestino}
+													</p>
+												</div>
+											)}
+											<div>
+												<Label className="text-muted-foreground">
+													Fecha del Viaje
+												</Label>
+												<p className="font-medium">
+													{formatDate(selectedReserva.fecha)}
+												</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">
+													Hora de Recogida
+												</Label>
+												<p className="font-medium">{selectedReserva.hora || "-"}</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Pasajeros</Label>
+												<p className="font-medium">{selectedReserva.pasajeros}</p>
+											</div>
+											{selectedReserva.vehiculo && (
+												<div>
+													<Label className="text-muted-foreground">Vehículo</Label>
+													<p className="font-medium">
+														{selectedReserva.vehiculo}
+													</p>
+												</div>
+											)}
 										</div>
-									)}
-									{selectedReserva.direccionDestino && (
-										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
-											<Label className="text-yellow-800 font-semibold">
-												📍 Dirección de Destino (Específica)
-											</Label>
-											<p className="font-medium text-gray-900 mt-1">
-												{selectedReserva.direccionDestino}
-											</p>
-										</div>
-									)}
-									<div>
-										<Label className="text-muted-foreground">
-											Fecha del Viaje
-										</Label>
-										<p className="font-medium">
-											{formatDate(selectedReserva.fecha)}
-										</p>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Hora de Recogida
-										</Label>
-										<p className="font-medium">{selectedReserva.hora || "-"}</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Pasajeros</Label>
-										<p className="font-medium">{selectedReserva.pasajeros}</p>
-									</div>
-									{selectedReserva.vehiculo && (
-										<div>
-											<Label className="text-muted-foreground">Vehículo</Label>
-											<p className="font-medium">
-												{selectedReserva.vehiculo}
-											</p>
-										</div>
-									)}
+
+									{/* Tarjeta de VIAJE DE VUELTA (solo si idaVuelta === true) */}
 									{selectedReserva.idaVuelta && (
-										<>
-											<div>
-												<Label className="text-muted-foreground">
-													Fecha Regreso
-												</Label>
-												<p className="font-medium">
-													{formatDate(selectedReserva.fechaRegreso)}
-												</p>
+										<div className="col-span-2 bg-green-50 border-2 border-green-300 rounded-lg p-4">
+											<h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+												🚗 VIAJE DE VUELTA
+											</h4>
+											<div className="grid grid-cols-2 gap-3">
+												<div>
+													<Label className="text-muted-foreground">Origen (Regreso)</Label>
+													<p className="font-medium">{selectedReserva.destino}</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">Destino (Regreso)</Label>
+													<p className="font-medium">{selectedReserva.origen}</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">
+														Fecha de Regreso
+													</Label>
+													<p className="font-medium">
+														{selectedReserva.fechaRegreso ? formatDate(selectedReserva.fechaRegreso) : "-"}
+													</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">
+														Hora de Regreso
+													</Label>
+													<p className="font-medium">
+														{selectedReserva.horaRegreso || "-"}
+													</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">Pasajeros</Label>
+													<p className="font-medium">{selectedReserva.pasajeros}</p>
+												</div>
+												{selectedReserva.vehiculo && (
+													<div>
+														<Label className="text-muted-foreground">Vehículo</Label>
+														<p className="font-medium">
+															{selectedReserva.vehiculo}
+														</p>
+													</div>
+												)}
 											</div>
-											<div>
-												<Label className="text-muted-foreground">
-													Hora Regreso
-												</Label>
-												<p className="font-medium">
-													{selectedReserva.horaRegreso || "-"}
-												</p>
+										</div>
+									)}
+
+									{/* Alerta de información faltante */}
+									{selectedReserva.idaVuelta && (!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso) && (
+										<div className="col-span-2 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+											<div className="flex items-start gap-2">
+												<AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+												<div>
+													<p className="font-semibold text-yellow-800">
+														⚠️ Información Incompleta del Viaje de Vuelta
+													</p>
+													<p className="text-sm text-yellow-700 mt-1">
+														Esta reserva está marcada como "Ida y Vuelta" pero falta:
+														{!selectedReserva.fechaRegreso && " Fecha de Regreso"}
+														{!selectedReserva.fechaRegreso && !selectedReserva.horaRegreso && " y"}
+														{!selectedReserva.horaRegreso && " Hora de Regreso"}
+													</p>
+												</div>
 											</div>
-										</>
+										</div>
 									)}
 								</div>
 							</div>
