@@ -21,6 +21,7 @@ import {
 	Users,
 	DollarSign,
 	AlertCircle,
+	AlertTriangle,
 	CheckCircle2,
 	Loader2,
 	FileText,
@@ -399,67 +400,136 @@ function ConsultarReserva() {
 						{/* Detalles del Viaje */}
 						<Card>
 							<CardHeader>
-								<CardTitle className="flex items-center gap-2">
-									<MapPin className="w-5 h-5" />
-									Detalles del Viaje
-								</CardTitle>
+								<div className="flex items-center justify-between">
+									<CardTitle className="flex items-center gap-2">
+										<MapPin className="w-5 h-5" />
+										Detalles del Viaje
+									</CardTitle>
+									{reserva.idaVuelta ? (
+										<Badge className="bg-blue-600 hover:bg-blue-700 text-white">
+											🔄 Ida y Vuelta
+										</Badge>
+									) : (
+										<Badge className="bg-green-600 hover:bg-green-700 text-white">
+											➡️ Solo Ida
+										</Badge>
+									)}
+								</div>
 							</CardHeader>
 							<CardContent>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">Origen</Label>
-										<p className="font-medium">{reserva.origen}</p>
+								<div className="space-y-4">
+									{/* Tarjeta de VIAJE DE IDA */}
+									<div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+										<h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+											🚗 VIAJE DE IDA
+										</h4>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div>
+												<Label className="text-muted-foreground">Origen</Label>
+												<p className="font-medium">{reserva.origen}</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Destino</Label>
+												<p className="font-medium">{reserva.destino}</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Fecha</Label>
+												<p className="font-medium flex items-center gap-2">
+													<Calendar className="w-4 h-4 text-muted-foreground" />
+													{formatDate(reserva.fecha)}
+												</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Hora</Label>
+												<p className="font-medium flex items-center gap-2">
+													<Clock className="w-4 h-4 text-muted-foreground" />
+													{reserva.hora || "No especificada"}
+												</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Pasajeros</Label>
+												<p className="font-medium flex items-center gap-2">
+													<Users className="w-4 h-4 text-muted-foreground" />
+													{reserva.pasajeros}
+												</p>
+											</div>
+											<div>
+												<Label className="text-muted-foreground">Vehículo</Label>
+												<p className="font-medium">
+													{reserva.vehiculo || "Por asignar"}
+												</p>
+											</div>
+										</div>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">Destino</Label>
-										<p className="font-medium">{reserva.destino}</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Fecha</Label>
-										<p className="font-medium flex items-center gap-2">
-											<Calendar className="w-4 h-4 text-muted-foreground" />
-											{formatDate(reserva.fecha)}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Hora</Label>
-										<p className="font-medium flex items-center gap-2">
-											<Clock className="w-4 h-4 text-muted-foreground" />
-											{reserva.hora || "No especificada"}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Pasajeros</Label>
-										<p className="font-medium flex items-center gap-2">
-											<Users className="w-4 h-4 text-muted-foreground" />
-											{reserva.pasajeros}
-										</p>
-									</div>
-									<div>
-										<Label className="text-muted-foreground">Vehículo</Label>
-										<p className="font-medium">
-											{reserva.vehiculo || "Por asignar"}
-										</p>
-									</div>
+
+									{/* Tarjeta de VIAJE DE VUELTA */}
 									{reserva.idaVuelta && (
-										<>
-											<div>
-												<Label className="text-muted-foreground">
-													Fecha Regreso
-												</Label>
-												<p className="font-medium">
-													{formatDate(reserva.fechaRegreso)}
-												</p>
+										<div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+											<h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+												🚗 VIAJE DE VUELTA
+											</h4>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												<div>
+													<Label className="text-muted-foreground">Origen (Regreso)</Label>
+													<p className="font-medium">{reserva.destino}</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">Destino (Regreso)</Label>
+													<p className="font-medium">{reserva.origen}</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">
+														Fecha Regreso
+													</Label>
+													<p className="font-medium flex items-center gap-2">
+														<Calendar className="w-4 h-4 text-muted-foreground" />
+														{reserva.fechaRegreso ? formatDate(reserva.fechaRegreso) : "-"}
+													</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">
+														Hora Regreso
+													</Label>
+													<p className="font-medium flex items-center gap-2">
+														<Clock className="w-4 h-4 text-muted-foreground" />
+														{reserva.horaRegreso || "No especificada"}
+													</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">Pasajeros</Label>
+													<p className="font-medium flex items-center gap-2">
+														<Users className="w-4 h-4 text-muted-foreground" />
+														{reserva.pasajeros}
+													</p>
+												</div>
+												<div>
+													<Label className="text-muted-foreground">Vehículo</Label>
+													<p className="font-medium">
+														{reserva.vehiculo || "Por asignar"}
+													</p>
+												</div>
 											</div>
-											<div>
-												<Label className="text-muted-foreground">
-													Hora Regreso
-												</Label>
-												<p className="font-medium">
-													{reserva.horaRegreso || "No especificada"}
-												</p>
+										</div>
+									)}
+
+									{/* Alerta de información faltante */}
+									{reserva.idaVuelta && (!reserva.fechaRegreso || !reserva.horaRegreso) && (
+										<div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+											<div className="flex items-start gap-2">
+												<AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+												<div>
+													<p className="font-semibold text-yellow-800">
+														⚠️ Información Incompleta del Viaje de Vuelta
+													</p>
+													<p className="text-sm text-yellow-700 mt-1">
+														Esta reserva está marcada como "Ida y Vuelta" pero falta:
+														{!reserva.fechaRegreso && " Fecha de Regreso"}
+														{!reserva.fechaRegreso && !reserva.horaRegreso && " y"}
+														{!reserva.horaRegreso && " Hora de Regreso"}
+													</p>
+												</div>
 											</div>
-										</>
+										</div>
 									)}
 								</div>
 							</CardContent>
