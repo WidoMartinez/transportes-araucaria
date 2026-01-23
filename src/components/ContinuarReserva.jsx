@@ -18,6 +18,7 @@ import {
 	LoaderCircle,
 	CheckCircle2,
 	AlertCircle,
+	AlertTriangle,
 	MapPin,
 	Calendar,
 	Clock,
@@ -269,36 +270,103 @@ function ContinuarReserva({ onComplete, onCancel, onPayReservation }) {
 							{/* Información del viaje */}
 							<Card className="bg-gray-50">
 								<CardHeader>
-									<CardTitle className="text-lg">Detalles del viaje</CardTitle>
+									<div className="flex items-center justify-between">
+										<CardTitle className="text-lg">Detalles del viaje</CardTitle>
+										{reservaEncontrada.idaVuelta ? (
+											<Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
+												🔄 Ida y Vuelta
+											</Badge>
+										) : (
+											<Badge className="bg-green-600 hover:bg-green-700 text-white text-xs">
+												➡️ Solo Ida
+											</Badge>
+										)}
+									</div>
 								</CardHeader>
 								<CardContent className="space-y-3">
-									<div className="flex items-center gap-2 text-sm">
-										<MapPin className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Ruta:</span>
-										<span>
-											{reservaEncontrada.origen} → {reservaEncontrada.destino}
-										</span>
+									{/* Tarjeta de VIAJE DE IDA */}
+									<div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3">
+										<h5 className="font-semibold text-blue-900 text-sm mb-2 flex items-center gap-2">
+											🚗 VIAJE DE IDA
+										</h5>
+										<div className="space-y-2">
+											<div className="flex items-center gap-2 text-sm">
+												<MapPin className="h-4 w-4 text-muted-foreground" />
+												<span className="font-medium">Ruta:</span>
+												<span>
+													{reservaEncontrada.origen} → {reservaEncontrada.destino}
+												</span>
+											</div>
+											<div className="flex items-center gap-2 text-sm">
+												<Calendar className="h-4 w-4 text-muted-foreground" />
+												<span className="font-medium">Fecha:</span>
+												<span>{formatDate(reservaEncontrada.fecha)}</span>
+											</div>
+											{reservaEncontrada.hora && (
+												<div className="flex items-center gap-2 text-sm">
+													<Clock className="h-4 w-4 text-muted-foreground" />
+													<span className="font-medium">Hora:</span>
+													<span>{reservaEncontrada.hora}</span>
+												</div>
+											)}
+											<div className="flex items-center gap-2 text-sm">
+												<Users className="h-4 w-4 text-muted-foreground" />
+												<span className="font-medium">Pasajeros:</span>
+												<span>{reservaEncontrada.pasajeros}</span>
+											</div>
+										</div>
 									</div>
-									<div className="flex items-center gap-2 text-sm">
-										<Calendar className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Fecha:</span>
-										<span>{formatDate(reservaEncontrada.fecha)}</span>
-									</div>
-									{reservaEncontrada.hora && (
-										<div className="flex items-center gap-2 text-sm">
-											<Clock className="h-4 w-4 text-muted-foreground" />
-											<span className="font-medium">Hora:</span>
-											<span>{reservaEncontrada.hora}</span>
+
+									{/* Tarjeta de VIAJE DE VUELTA */}
+									{reservaEncontrada.idaVuelta && (
+										<div className="bg-green-50 border-2 border-green-300 rounded-lg p-3">
+											<h5 className="font-semibold text-green-900 text-sm mb-2 flex items-center gap-2">
+												🚗 VIAJE DE VUELTA
+											</h5>
+											<div className="space-y-2">
+												<div className="flex items-center gap-2 text-sm">
+													<MapPin className="h-4 w-4 text-muted-foreground" />
+													<span className="font-medium">Ruta:</span>
+													<span>
+														{reservaEncontrada.destino} → {reservaEncontrada.origen}
+													</span>
+												</div>
+												<div className="flex items-center gap-2 text-sm">
+													<Calendar className="h-4 w-4 text-muted-foreground" />
+													<span className="font-medium">Fecha Regreso:</span>
+													<span>{reservaEncontrada.fechaRegreso ? formatDate(reservaEncontrada.fechaRegreso) : "-"}</span>
+												</div>
+												<div className="flex items-center gap-2 text-sm">
+													<Clock className="h-4 w-4 text-muted-foreground" />
+													<span className="font-medium">Hora Regreso:</span>
+													<span>{reservaEncontrada.horaRegreso ? reservaEncontrada.horaRegreso : "No especificada"}</span>
+												</div>
+												<div className="flex items-center gap-2 text-sm">
+													<Users className="h-4 w-4 text-muted-foreground" />
+													<span className="font-medium">Pasajeros:</span>
+													<span>{reservaEncontrada.pasajeros}</span>
+												</div>
+											</div>
 										</div>
 									)}
-									<div className="flex items-center gap-2 text-sm">
-										<Users className="h-4 w-4 text-muted-foreground" />
-										<span className="font-medium">Pasajeros:</span>
-										<span>{reservaEncontrada.pasajeros}</span>
-									</div>
-									{reservaEncontrada.idaVuelta && (
-										<div className="text-sm">
-											<Badge variant="secondary">Viaje ida y vuelta</Badge>
+
+									{/* Alerta de información faltante */}
+									{reservaEncontrada.idaVuelta && (!reservaEncontrada.fechaRegreso || !reservaEncontrada.horaRegreso) && (
+										<div className="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+											<div className="flex items-start gap-2">
+												<AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+												<div>
+													<p className="font-semibold text-yellow-800 text-xs">
+														⚠️ Información Incompleta del Viaje de Vuelta
+													</p>
+													<p className="text-xs text-yellow-700 mt-1">
+														Esta reserva está marcada como "Ida y Vuelta" pero falta:
+														{!reservaEncontrada.fechaRegreso && " Fecha de Regreso"}
+														{!reservaEncontrada.fechaRegreso && !reservaEncontrada.horaRegreso && " y"}
+														{!reservaEncontrada.horaRegreso && " Hora de Regreso"}
+													</p>
+												</div>
+											</div>
 										</div>
 									)}
 								</CardContent>

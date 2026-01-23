@@ -80,11 +80,31 @@ Haz clic en el botón del ojo 👁️ para ver todos los detalles de una reserva
 - Teléfono
 
 #### Detalles del Viaje
+El modal ahora presenta una visualización mejorada para distinguir claramente entre viajes de solo ida y viajes de ida y vuelta:
+
+**Badge indicador de tipo de viaje:**
+- 🔄 **Ida y Vuelta** (azul) - Cuando la reserva incluye viaje de regreso
+- ➡️ **Solo Ida** (verde) - Cuando la reserva es solo de ida
+
+**Tarjetas visuales separadas:**
+
+Todos los viajes muestran una **Tarjeta de VIAJE DE IDA** (fondo azul) con:
 - Origen y destino
-- Fecha y hora de salida
+- Fecha del viaje
+- Hora de recogida
 - Número de pasajeros
 - Vehículo asignado
-- Fecha y hora de regreso (si es ida y vuelta)
+- Direcciones específicas (si están disponibles)
+
+Cuando es un viaje de ida y vuelta, se muestra además una **Tarjeta de VIAJE DE VUELTA** (fondo verde) con:
+- Origen y destino (invertidos)
+- Fecha de regreso
+- Hora de regreso
+- Número de pasajeros
+- Vehículo asignado
+
+**Alerta de información incompleta:**
+Si la reserva está marcada como "Ida y Vuelta" pero falta información del viaje de regreso (fecha u hora), se muestra una alerta amarilla indicando qué datos faltan.
 
 #### Información Adicional
 - Número de vuelo
