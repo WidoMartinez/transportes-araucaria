@@ -3175,80 +3175,123 @@ function AdminReservas() {
 								<h3 className="font-semibold text-lg mb-3">
 									Detalles del Viaje
 								</h3>
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">Origen</Label>
-										<p className="font-medium">{selectedReserva.origen}</p>
+								
+								{/* Indicador del tipo de viaje */}
+								{selectedReserva.idaVuelta && (
+									<div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+										</svg>
+										<span className="font-semibold text-sm">Viaje Ida y Vuelta</span>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">Destino</Label>
-										<p className="font-medium">{selectedReserva.destino}</p>
-									</div>
-									{selectedReserva.direccionOrigen && (
-										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
-											<Label className="text-yellow-800 font-semibold">
-												📍 Dirección de Origen (Específica)
-											</Label>
-											<p className="font-medium text-gray-900 mt-1">
-												{selectedReserva.direccionOrigen}
-											</p>
+								)}
+
+								{/* Viaje de Ida */}
+								<div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-4 mb-4">
+									<h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+										</svg>
+										VIAJE DE IDA
+									</h4>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<Label className="text-green-700 font-medium">Origen</Label>
+											<p className="font-semibold text-gray-900">{selectedReserva.origen}</p>
 										</div>
-									)}
-									{selectedReserva.direccionDestino && (
-										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
-											<Label className="text-yellow-800 font-semibold">
-												📍 Dirección de Destino (Específica)
-											</Label>
-											<p className="font-medium text-gray-900 mt-1">
-												{selectedReserva.direccionDestino}
-											</p>
+										<div>
+											<Label className="text-green-700 font-medium">Destino</Label>
+											<p className="font-semibold text-gray-900">{selectedReserva.destino}</p>
 										</div>
-									)}
-									<div>
-										<Label className="text-muted-foreground">
-											Fecha del Viaje
-										</Label>
-										<p className="font-medium">
-											{formatDate(selectedReserva.fecha)}
-										</p>
+										{selectedReserva.direccionOrigen && (
+											<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+												<Label className="text-yellow-800 font-semibold">
+													📍 Dirección de Origen (Específica)
+												</Label>
+												<p className="font-medium text-gray-900 mt-1">
+													{selectedReserva.direccionOrigen}
+												</p>
+											</div>
+										)}
+										{selectedReserva.direccionDestino && (
+											<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+												<Label className="text-yellow-800 font-semibold">
+													📍 Dirección de Destino (Específica)
+												</Label>
+												<p className="font-medium text-gray-900 mt-1">
+													{selectedReserva.direccionDestino}
+												</p>
+											</div>
+										)}
+										<div>
+											<Label className="text-green-700 font-medium">📅 Fecha</Label>
+											<p className="font-semibold text-gray-900">{formatDate(selectedReserva.fecha)}</p>
+										</div>
+										<div>
+											<Label className="text-green-700 font-medium">🕐 Hora de Recogida</Label>
+											<p className="font-semibold text-gray-900">{selectedReserva.hora || "-"}</p>
+										</div>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Hora de Recogida
-										</Label>
-										<p className="font-medium">{selectedReserva.hora || "-"}</p>
+								</div>
+
+								{/* Viaje de Vuelta - SOLO si es ida y vuelta */}
+								{selectedReserva.idaVuelta && (
+									<div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+											</svg>
+											VIAJE DE VUELTA
+										</h4>
+										<div className="grid grid-cols-2 gap-4">
+											<div>
+												<Label className="text-blue-700 font-medium">Origen</Label>
+												<p className="font-semibold text-gray-900">{selectedReserva.destino}</p>
+											</div>
+											<div>
+												<Label className="text-blue-700 font-medium">Destino</Label>
+												<p className="font-semibold text-gray-900">{selectedReserva.origen}</p>
+											</div>
+											<div>
+												<Label className="text-blue-700 font-medium">📅 Fecha de Regreso</Label>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.fechaRegreso ? formatDate(selectedReserva.fechaRegreso) : "⚠️ No especificada"}
+												</p>
+											</div>
+											<div>
+												<Label className="text-blue-700 font-medium">🕐 Hora de Recogida</Label>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.horaRegreso || "⚠️ No especificada"}
+												</p>
+											</div>
+										</div>
+										
+										{/* Advertencia si falta información */}
+										{(!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso) && (
+											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+												</svg>
+												<div>
+													<p className="text-sm font-semibold text-yellow-800">Información Incompleta del Viaje de Vuelta</p>
+													<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+												</div>
+											</div>
+										)}
 									</div>
+								)}
+
+								{/* Información de pasajeros y vehículo */}
+								<div className="grid grid-cols-2 gap-4 pt-4 border-t">
 									<div>
-										<Label className="text-muted-foreground">Pasajeros</Label>
+										<Label className="text-muted-foreground">👥 Pasajeros</Label>
 										<p className="font-medium">{selectedReserva.pasajeros}</p>
 									</div>
 									{selectedReserva.vehiculo && (
 										<div>
-											<Label className="text-muted-foreground">Vehículo</Label>
-											<p className="font-medium">
-												{selectedReserva.vehiculo}
-											</p>
+											<Label className="text-muted-foreground">🚙 Vehículo</Label>
+											<p className="font-medium">{selectedReserva.vehiculo}</p>
 										</div>
-									)}
-									{selectedReserva.idaVuelta && (
-										<>
-											<div>
-												<Label className="text-muted-foreground">
-													Fecha Regreso
-												</Label>
-												<p className="font-medium">
-													{formatDate(selectedReserva.fechaRegreso)}
-												</p>
-											</div>
-											<div>
-												<Label className="text-muted-foreground">
-													Hora Regreso
-												</Label>
-												<p className="font-medium">
-													{selectedReserva.horaRegreso || "-"}
-												</p>
-											</div>
-										</>
 									)}
 								</div>
 							</div>

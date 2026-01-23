@@ -1400,39 +1400,106 @@ function AdminEstadisticas() {
 								{/* Detalles del Viaje */}
 								<div className="space-y-3">
 									<h4 className="font-semibold flex items-center gap-2">
-										<MapPin className="w-4 h-4" /> Ruta
+										<MapPin className="w-4 h-4" /> Detalles del Viaje
 									</h4>
-									<div className="grid gap-2 text-sm border p-3 rounded-md">
-										<div className="grid grid-cols-[auto_1fr] gap-2">
-											<Badge variant="outline" className="w-fit">Origen</Badge>
-											<span>{selectedReservaDetail.origen}</span>
+									
+									{/* Indicador del tipo de viaje */}
+									{selectedReservaDetail.idaVuelta && (
+										<div className="mb-3 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+											</svg>
+											<span className="font-semibold text-sm">Viaje Ida y Vuelta</span>
 										</div>
-										<div className="grid grid-cols-[auto_1fr] gap-2">
-											<Badge variant="outline" className="w-fit">Destino</Badge>
-											<span>{selectedReservaDetail.destino}</span>
+									)}
+
+									{/* Viaje de Ida */}
+									<div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-3">
+										<h5 className="font-semibold text-green-800 mb-2 flex items-center gap-2 text-sm">
+											<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+											</svg>
+											VIAJE DE IDA
+										</h5>
+										<div className="grid gap-2 text-sm">
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit bg-green-100 text-green-800 border-green-300">Origen</Badge>
+												<span className="font-medium">{selectedReservaDetail.origen}</span>
+											</div>
+											<div className="grid grid-cols-[auto_1fr] gap-2">
+												<Badge variant="outline" className="w-fit bg-green-100 text-green-800 border-green-300">Destino</Badge>
+												<span className="font-medium">{selectedReservaDetail.destino}</span>
+											</div>
+											<div className="flex justify-between border-t border-green-200 pt-2 mt-1">
+												<span className="text-green-700 font-medium">📅 Fecha:</span>
+												<span className="font-semibold text-gray-900">{formatearFecha(selectedReservaDetail.fecha)}</span>
+											</div>
+											<div className="flex justify-between">
+												<span className="text-green-700 font-medium">🕐 Hora:</span>
+												<span className="font-semibold text-gray-900">{selectedReservaDetail.hora}</span>
+											</div>
 										</div>
 									</div>
+
+									{/* Viaje de Vuelta - SOLO si es ida y vuelta */}
+									{selectedReservaDetail.idaVuelta && (
+										<div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-3">
+											<h5 className="font-semibold text-blue-800 mb-2 flex items-center gap-2 text-sm">
+												<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+												</svg>
+												VIAJE DE VUELTA
+											</h5>
+											<div className="grid gap-2 text-sm">
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit bg-blue-100 text-blue-800 border-blue-300">Origen</Badge>
+													<span className="font-medium">{selectedReservaDetail.destino}</span>
+												</div>
+												<div className="grid grid-cols-[auto_1fr] gap-2">
+													<Badge variant="outline" className="w-fit bg-blue-100 text-blue-800 border-blue-300">Destino</Badge>
+													<span className="font-medium">{selectedReservaDetail.origen}</span>
+												</div>
+												<div className="flex justify-between border-t border-blue-200 pt-2 mt-1">
+													<span className="text-blue-700 font-medium">📅 Fecha de Regreso:</span>
+													<span className="font-semibold text-gray-900">
+														{selectedReservaDetail.fechaRegreso ? formatearFecha(selectedReservaDetail.fechaRegreso) : "⚠️ No especificada"}
+													</span>
+												</div>
+												<div className="flex justify-between">
+													<span className="text-blue-700 font-medium">🕐 Hora:</span>
+													<span className="font-semibold text-gray-900">
+														{selectedReservaDetail.horaRegreso || "⚠️ No especificada"}
+													</span>
+												</div>
+											</div>
+											
+											{/* Advertencia si falta información */}
+											{(!selectedReservaDetail.fechaRegreso || !selectedReservaDetail.horaRegreso) && (
+												<div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-start gap-2">
+													<svg className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+													</svg>
+													<div>
+														<p className="text-xs font-semibold text-yellow-800">Información Incompleta del Viaje de Vuelta</p>
+														<p className="text-xs text-yellow-700">Es necesario completar la fecha y hora del regreso.</p>
+													</div>
+												</div>
+											)}
+										</div>
+									)}
 								</div>
 							</div>
 
 							<div className="grid md:grid-cols-2 gap-6">
-								{/* Fecha y Hora */}
+								{/* Pasajeros */}
 								<div className="space-y-3">
 									<h4 className="font-semibold flex items-center gap-2">
-										<Calendar className="w-4 h-4" /> Fecha y Hora
+										<Users className="w-4 h-4" /> Pasajeros
 									</h4>
 									<div className="grid gap-2 text-sm border p-3 rounded-md">
 										<div className="flex justify-between">
-											<span className="text-muted-foreground">Fecha:</span>
-											<span className="font-medium">{formatearFecha(selectedReservaDetail.fecha)}</span>
-										</div>
-										<div className="flex justify-between">
-											<span className="text-muted-foreground">Hora:</span>
-											<span className="font-medium">{selectedReservaDetail.hora}</span>
-										</div>
-										<div className="flex justify-between">
 											<span className="text-muted-foreground">Pasajeros:</span>
-											<span>{selectedReservaDetail.pasajeros}</span>
+											<span className="font-medium">{selectedReservaDetail.pasajeros}</span>
 										</div>
 									</div>
 								</div>
