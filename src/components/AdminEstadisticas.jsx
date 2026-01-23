@@ -1465,7 +1465,7 @@ function AdminEstadisticas() {
 												</div>
 												<div className="grid grid-cols-[auto_1fr] gap-2">
 													<Badge variant="outline" className="w-fit">Hora Regreso</Badge>
-													<span>{selectedReservaDetail.horaRegreso || "-"}</span>
+													<span>{selectedReservaDetail.horaRegreso ? selectedReservaDetail.horaRegreso : "-"}</span>
 												</div>
 												<div className="grid grid-cols-[auto_1fr] gap-2">
 													<Badge variant="outline" className="w-fit">Pasajeros</Badge>

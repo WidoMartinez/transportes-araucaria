@@ -3280,7 +3280,7 @@ function AdminReservas() {
 														Hora de Regreso
 													</Label>
 													<p className="font-medium">
-														{selectedReserva.horaRegreso || "-"}
+														{selectedReserva.horaRegreso ? selectedReserva.horaRegreso : "-"}
 													</p>
 												</div>
 												<div>
