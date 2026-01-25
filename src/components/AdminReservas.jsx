@@ -1106,6 +1106,10 @@ function AdminReservas() {
 			filtered = filtered.filter((r) => r.estadoPago === estadoPagoFiltro);
 		}
 
+		// SOLUCIÓN C: Ocultar reservas de tipo "vuelta" para evitar duplicados en la tabla
+		// Las reservas de vuelta se mostrarán dentro del modal de la reserva de ida
+		filtered = filtered.filter((r) => r.tipoTramo !== "vuelta");
+
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
 
@@ -1163,7 +1167,27 @@ function AdminReservas() {
 				throw new Error("Error al cargar la reserva");
 			}
 			const reservaActualizada = await response.json();
-			setSelectedReserva(reservaActualizada);
+			
+			// SOLUCIÓN C: Si esta reserva tiene un tramoHijoId, cargar también la reserva de vuelta
+			let reservaVuelta = null;
+			if (reservaActualizada.tramoHijoId) {
+				try {
+					const responseVuelta = await authenticatedFetch(
+						`/api/reservas/${reservaActualizada.tramoHijoId}?t=${Date.now()}`
+					);
+					if (responseVuelta.ok) {
+						reservaVuelta = await responseVuelta.json();
+					}
+				} catch (errorVuelta) {
+					console.warn("No se pudo cargar la reserva de vuelta vinculada:", errorVuelta);
+				}
+			}
+			
+			// Agregar la reserva de vuelta al objeto principal para usarla en el modal
+			setSelectedReserva({
+				...reservaActualizada,
+				tramoVuelta: reservaVuelta
+			});
 			setShowDetailDialog(true);
 		} catch (error) {
 			console.error("Error al cargar detalles de la reserva:", error);
@@ -2713,7 +2737,22 @@ function AdminReservas() {
 															</div>
 														)}
 														{/* Badges de Tramos */}
-														{reserva.tipoTramo ? (
+														{reserva.tipoTramo === 'ida' && reserva.tramoHijoId ? (
+															<div className="mt-1 flex gap-1">
+																<Badge 
+																	variant="outline" 
+																	className="text-[10px] px-1 py-0 h-4 bg-green-50 text-green-700 border-green-200"
+																>
+																	IDA
+																</Badge>
+																<Badge 
+																	variant="outline" 
+																	className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200"
+																>
+																	🔗 + VUELTA
+																</Badge>
+															</div>
+														) : reserva.tipoTramo ? (
 															<div className="mt-1">
 																<Badge 
 																	variant={reserva.tipoTramo === 'vuelta' ? 'secondary' : 'outline'} 
@@ -3176,13 +3215,15 @@ function AdminReservas() {
 									Detalles del Viaje
 								</h3>
 								
-								{/* Indicador del tipo de viaje */}
-								{selectedReserva.idaVuelta && (
+								{/* Indicador del tipo de viaje - actualizado para SOLUCIÓN C */}
+								{(selectedReserva.idaVuelta || selectedReserva.tramoVuelta) && (
 									<div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
 										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
 										</svg>
-										<span className="font-semibold text-sm">Viaje Ida y Vuelta</span>
+										<span className="font-semibold text-sm">
+											{selectedReserva.tramoVuelta ? "Reservas Vinculadas: Ida y Vuelta" : "Viaje Ida y Vuelta"}
+										</span>
 									</div>
 								)}
 
@@ -3234,40 +3275,76 @@ function AdminReservas() {
 									</div>
 								</div>
 
-								{/* Viaje de Vuelta - SOLO si es ida y vuelta */}
-								{selectedReserva.idaVuelta && (
+								{/* Viaje de Vuelta - Actualizado para SOLUCIÓN C: usar tramoVuelta si está disponible */}
+								{(selectedReserva.idaVuelta || selectedReserva.tramoVuelta) && (
 									<div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
 										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
 											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
 											</svg>
 											VIAJE DE VUELTA
+											{selectedReserva.tramoVuelta && (
+												<Badge variant="outline" className="ml-2 text-xs bg-white">
+													Reserva #{selectedReserva.tramoVuelta.id}
+												</Badge>
+											)}
 										</h4>
 										<div className="grid grid-cols-2 gap-4">
 											<div>
 												<Label className="text-blue-700 font-medium">Origen</Label>
-												<p className="font-semibold text-gray-900">{selectedReserva.destino}</p>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.tramoVuelta ? selectedReserva.tramoVuelta.origen : selectedReserva.destino}
+												</p>
 											</div>
 											<div>
 												<Label className="text-blue-700 font-medium">Destino</Label>
-												<p className="font-semibold text-gray-900">{selectedReserva.origen}</p>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.tramoVuelta ? selectedReserva.tramoVuelta.destino : selectedReserva.origen}
+												</p>
 											</div>
+											{selectedReserva.tramoVuelta?.direccionOrigen && (
+												<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+													<Label className="text-yellow-800 font-semibold">
+														📍 Dirección de Origen (Específica)
+													</Label>
+													<p className="font-medium text-gray-900 mt-1">
+														{selectedReserva.tramoVuelta.direccionOrigen}
+													</p>
+												</div>
+											)}
+											{selectedReserva.tramoVuelta?.direccionDestino && (
+												<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+													<Label className="text-yellow-800 font-semibold">
+														📍 Dirección de Destino (Específica)
+													</Label>
+													<p className="font-medium text-gray-900 mt-1">
+														{selectedReserva.tramoVuelta.direccionDestino}
+													</p>
+												</div>
+											)}
 											<div>
 												<Label className="text-blue-700 font-medium">📅 Fecha de Regreso</Label>
 												<p className="font-semibold text-gray-900">
-													{selectedReserva.fechaRegreso ? formatDate(selectedReserva.fechaRegreso) : "⚠️ No especificada"}
+													{selectedReserva.tramoVuelta 
+														? (selectedReserva.tramoVuelta.fecha ? formatDate(selectedReserva.tramoVuelta.fecha) : "⚠️ No especificada")
+														: (selectedReserva.fechaRegreso ? formatDate(selectedReserva.fechaRegreso) : "⚠️ No especificada")
+													}
 												</p>
 											</div>
 											<div>
 												<Label className="text-blue-700 font-medium">🕐 Hora de Recogida</Label>
 												<p className="font-semibold text-gray-900">
-													{selectedReserva.horaRegreso || "⚠️ No especificada"}
+													{selectedReserva.tramoVuelta 
+														? (selectedReserva.tramoVuelta.hora || "⚠️ No especificada")
+														: (selectedReserva.horaRegreso || "⚠️ No especificada")
+													}
 												</p>
 											</div>
 										</div>
 										
 										{/* Advertencia si falta información */}
-										{(!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso) && (
+										{((selectedReserva.tramoVuelta && (!selectedReserva.tramoVuelta.fecha || !selectedReserva.tramoVuelta.hora)) ||
+										  (!selectedReserva.tramoVuelta && (!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso))) && (
 											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
 												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
