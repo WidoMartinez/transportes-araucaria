@@ -483,6 +483,137 @@ Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar s
 > [!TIP]
 > **Para Futuros Desarrolladores**: Si agregas nuevos campos al modal de detalles, sigue el patrón de renderizado condicional mostrado arriba. Pregúntate: "¿Este campo puede estar vacío o en 0?" Si la respuesta es sí, envuélvelo en una condición.
 
+### 5.9.1 Mejora Visual de Reservas Ida y Vuelta en Modal de Detalles
+
+**Implementado: 23 Enero 2026**
+
+Se implementó una mejora significativa en la visualización de reservas de ida y vuelta en todos los modales de detalle del sistema, para hacer la información más clara y evitar confusiones operativas.
+
+#### Problema Identificado
+Cuando una reserva era de tipo **ida y vuelta** (`idaVuelta === true`), la información del viaje de regreso (fecha y hora de vuelta) no se mostraba de manera prominente. Los campos `fechaRegreso` y `horaRegreso` aparecían mezclados con otros datos, lo que dificultaba:
+- Identificar rápidamente que era un viaje de ida y vuelta
+- Visualizar claramente las fechas y horas de ambos viajes
+- Detectar cuando faltaba información del viaje de regreso
+
+#### Solución Implementada
+
+Se implementó un **diseño visual mejorado con separación por colores** que distingue claramente entre el viaje de ida y el viaje de vuelta:
+
+**Características Principales:**
+1. **Indicador Visual del Tipo de Viaje**: Badge azul que indica "Viaje Ida y Vuelta"
+2. **Tarjeta Verde para Viaje de Ida**: Con borde izquierdo verde, fondo degradado verde claro
+3. **Tarjeta Azul para Viaje de Vuelta**: Con borde izquierdo azul, fondo degradado azul claro
+4. **Iconos SVG Direccionales**: Flecha derecha (→) para ida, flecha izquierda (←) para vuelta
+5. **Advertencia Visual**: Alert amarillo cuando falta `fechaRegreso` o `horaRegreso`
+6. **Información de Direcciones**: Se mantiene visible en ambas tarjetas cuando existe
+
+#### Archivos Modificados
+
+**1. AdminReservas.jsx** (Líneas ~3173-3297)
+```jsx
+{/* Indicador del tipo de viaje */}
+{selectedReserva.idaVuelta && (
+  <div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+    </svg>
+    <span className="font-semibold text-sm">Viaje Ida y Vuelta</span>
+  </div>
+)}
+
+{/* Viaje de Ida - Tarjeta Verde */}
+<div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-4 mb-4">
+  <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+    </svg>
+    VIAJE DE IDA
+  </h4>
+  {/* Contenido del viaje de ida */}
+</div>
+
+{/* Viaje de Vuelta - Tarjeta Azul con Advertencia */}
+{selectedReserva.idaVuelta && (
+  <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+    <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+      </svg>
+      VIAJE DE VUELTA
+    </h4>
+    {/* Contenido del viaje de vuelta */}
+    
+    {/* Advertencia si falta información */}
+    {(!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso) && (
+      <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+        <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <p className="text-sm font-semibold text-yellow-800">Información Incompleta del Viaje de Vuelta</p>
+          <p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+```
+
+**2. ConsultarReserva.jsx** (Líneas ~399-466)
+- Mismas mejoras visuales adaptadas para la vista del cliente
+- Mensaje de advertencia adaptado: "Nos comunicaremos contigo para confirmar la fecha y hora del regreso"
+
+**3. AdminEstadisticas.jsx** (Líneas ~1400-1438)
+- Diseño compacto adaptado al modal más pequeño
+- Mantiene la misma lógica de separación visual por colores
+
+#### Esquema de Colores
+
+| Elemento | Color/Estilo | Propósito |
+|----------|-------------|-----------|
+| Badge Ida y Vuelta | `bg-blue-50 text-blue-700 border-blue-200` | Indicador general del tipo de viaje |
+| Tarjeta de Ida | `from-green-50 to-green-100 border-l-4 border-green-500` | Viaje de ida destacado en verde |
+| Tarjeta de Vuelta | `from-blue-50 to-blue-100 border-l-4 border-blue-500` | Viaje de vuelta destacado en azul |
+| Advertencia | `bg-yellow-50 border-yellow-200` | Información faltante del viaje de vuelta |
+
+#### Beneficios
+
+- ✅ **Claridad Operativa**: Los operadores identifican inmediatamente los viajes de ida y vuelta
+- ✅ **Reducción de Errores**: La información de ambos viajes es claramente visible
+- ✅ **Detección de Datos Faltantes**: Alertas visuales cuando falta información crítica
+- ✅ **Experiencia de Usuario**: Interfaz intuitiva con códigos de color consistentes
+- ✅ **Responsive**: Funciona correctamente en móvil y desktop
+- ✅ **Consistencia**: Mismo patrón visual en todos los modales del sistema
+
+#### Datos Mostrados por Tarjeta
+
+**Tarjeta de Ida (Verde):**
+- Origen
+- Destino
+- Dirección de Origen (si existe)
+- Dirección de Destino (si existe)
+- Fecha del viaje
+- Hora de recogida
+
+**Tarjeta de Vuelta (Azul):**
+- Origen (que es el destino original invertido)
+- Destino (que es el origen original invertido)
+- Fecha de regreso (con advertencia si no existe)
+- Hora de regreso (con advertencia si no existe)
+
+**Información Adicional (Fuera de tarjetas):**
+- Número de pasajeros
+- Vehículo asignado (si existe)
+
+> [!IMPORTANT]
+> **Para Mantenimiento Futuro**: Si se agregan nuevos campos relacionados con el viaje de regreso, asegúrate de:
+> 1. Incluirlos dentro de la tarjeta azul de vuelta
+> 2. Agregar validación en la advertencia si son campos críticos
+> 3. Mantener la consistencia de colores (azul para vuelta, verde para ida)
+
+> [!TIP]
+> **Mejora Sugerida para el Futuro**: Considerar agregar validaciones en el backend para requerir `fechaRegreso` y `horaRegreso` cuando `idaVuelta === true` antes de permitir que una reserva pase a estado "Confirmada".
+
 ### 5.10 Sistema de Descuentos Personalizados
 
 **Implementado: Enero 2026**

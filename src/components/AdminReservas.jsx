@@ -1106,12 +1106,32 @@ function AdminReservas() {
 			filtered = filtered.filter((r) => r.estadoPago === estadoPagoFiltro);
 		}
 
+		// SOLUCIÓN C: Ocultar reservas de tipo "vuelta" para evitar duplicados en la tabla
+		// Las reservas de vuelta se mostrarán dentro del modal de la reserva de ida
+		filtered = filtered.filter((r) => r.tipoTramo !== "vuelta");
+
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
 
-	// Abrir modal de ediciÃ³n
-	const handleEdit = (reserva) => {
+	// Abrir modal de edición
+	const handleEdit = async (reserva) => {
 		setSelectedReserva(reserva);
+		
+		// SOLUCIÓN: Cargar datos del tramo de vuelta si existe tramoHijoId
+		let reservaVuelta = null;
+		if (reserva.tramoHijoId) {
+			try {
+				const responseVuelta = await authenticatedFetch(
+					`/api/reservas/${reserva.tramoHijoId}?t=${Date.now()}`
+				);
+				if (responseVuelta.ok) {
+					reservaVuelta = await responseVuelta.json();
+				}
+			} catch (errorVuelta) {
+				console.warn(`No se pudo cargar la reserva de vuelta vinculada (ID: ${reserva.tramoHijoId}) para edición de la reserva #${reserva.id}:`, errorVuelta);
+			}
+		}
+		
 		setFormData({
 			nombre: reserva.nombre || "",
 			email: reserva.email || "",
@@ -1135,19 +1155,24 @@ function AdminReservas() {
 			hotel: reserva.hotel || "",
 			equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
-			horaRegreso: reserva.horaRegreso || "",
-			idaVuelta: Boolean(reserva.idaVuelta),
-			fechaRegreso: (reserva.fechaRegreso || "").toString().substring(0, 10),
+			// SOLUCIÓN: Si hay reservaVuelta, cargar sus datos; sino usar los de la reserva principal (legacy)
+			horaRegreso: reservaVuelta ? (reservaVuelta.hora || "") : (reserva.horaRegreso || ""),
+			idaVuelta: Boolean(reserva.idaVuelta || reservaVuelta),
+			fechaRegreso: reservaVuelta 
+				? (reservaVuelta.fecha || "").toString().substring(0, 10)
+				: (reserva.fechaRegreso || "").toString().substring(0, 10),
 			direccionOrigen: reserva.direccionOrigen || "",
 			direccionDestino: reserva.direccionDestino || "",
+			// Guardar ID de la reserva de vuelta para actualizar después
+			tramoVueltaId: reservaVuelta ? reservaVuelta.id : null,
 		});
-		// Reset ediciÃ³n de ruta
+		// Reset edición de ruta
 		setEditOrigenEsOtro(false);
 		setEditDestinoEsOtro(false);
 		setEditOtroOrigen("");
 		setEditOtroDestino("");
 		setEnviarActualizacionConductor(false);
-		// Cargar catÃ¡logo de destinos para selects
+		// Cargar catálogo de destinos para selects
 		fetchDestinosCatalog();
 		setShowEditDialog(true);
 	};
@@ -1163,7 +1188,27 @@ function AdminReservas() {
 				throw new Error("Error al cargar la reserva");
 			}
 			const reservaActualizada = await response.json();
-			setSelectedReserva(reservaActualizada);
+			
+			// SOLUCIÓN C: Si esta reserva tiene un tramoHijoId, cargar también la reserva de vuelta
+			let reservaVuelta = null;
+			if (reservaActualizada.tramoHijoId) {
+				try {
+					const responseVuelta = await authenticatedFetch(
+						`/api/reservas/${reservaActualizada.tramoHijoId}?t=${Date.now()}`
+					);
+					if (responseVuelta.ok) {
+						reservaVuelta = await responseVuelta.json();
+					}
+				} catch (errorVuelta) {
+					console.warn(`No se pudo cargar la reserva de vuelta vinculada (ID: ${reservaActualizada.tramoHijoId}) para la reserva #${reservaActualizada.id}:`, errorVuelta);
+				}
+			}
+			
+			// Agregar la reserva de vuelta al objeto principal para usarla en el modal
+			setSelectedReserva({
+				...reservaActualizada,
+				tramoVuelta: reservaVuelta
+			});
 			setShowDetailDialog(true);
 		} catch (error) {
 			console.error("Error al cargar detalles de la reserva:", error);
@@ -1405,6 +1450,43 @@ function AdminReservas() {
 
 			await fetchReservas();
 			await fetchEstadisticas();
+			
+			// SOLUCIÓN: Si hay una reserva de vuelta vinculada, actualizar sus datos también
+			if (formData.tramoVueltaId && (formData.fechaRegreso || formData.horaRegreso)) {
+				try {
+					const vueltaPayload = {
+						datosGenerales: {
+							fecha: formData.fechaRegreso || null,
+							hora: formData.horaRegreso || null,
+							// Mantener otros datos sincronizados
+							nombre: formData.nombre,
+							email: formData.email,
+							telefono: formData.telefono,
+							pasajeros: Number(formData.pasajeros) || selectedReserva.pasajeros,
+						},
+						estado: estadoFinal, // Sincronizar estado con la reserva de ida
+						observaciones: formData.observaciones
+					};
+					
+					const responseVuelta = await fetch(`${apiUrl}/api/reservas/${formData.tramoVueltaId}/bulk-update`, {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${accessToken}`,
+						},
+						body: JSON.stringify(vueltaPayload),
+					});
+					
+					if (!responseVuelta.ok) {
+						console.warn("⚠️ No se pudo actualizar la reserva de vuelta vinculada");
+					} else {
+						console.log(`✅ Reserva de vuelta #${formData.tramoVueltaId} actualizada correctamente`);
+					}
+				} catch (errorVuelta) {
+					console.warn("⚠️ Error al actualizar reserva de vuelta:", errorVuelta);
+				}
+			}
+			
 			setShowEditDialog(false);
 			setSelectedReserva(null);
 			// Feedback de éxito
@@ -2713,7 +2795,22 @@ function AdminReservas() {
 															</div>
 														)}
 														{/* Badges de Tramos */}
-														{reserva.tipoTramo ? (
+														{reserva.tipoTramo === 'ida' && reserva.tramoHijoId ? (
+															<div className="mt-1 flex gap-1">
+																<Badge 
+																	variant="outline" 
+																	className="text-[10px] px-1 py-0 h-4 bg-green-50 text-green-700 border-green-200"
+																>
+																	IDA
+																</Badge>
+																<Badge 
+																	variant="outline" 
+																	className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200"
+																>
+																	🔗 + VUELTA
+																</Badge>
+															</div>
+														) : reserva.tipoTramo ? (
 															<div className="mt-1">
 																<Badge 
 																	variant={reserva.tipoTramo === 'vuelta' ? 'secondary' : 'outline'} 
@@ -3057,7 +3154,7 @@ function AdminReservas() {
 
 			{/* Modal de Detalles */}
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-				<DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="sm:max-w-6xl md:max-w-6xl lg:max-w-6xl max-h-[85vh] overflow-y-auto">
 					<DialogHeader>
 						<div className="flex justify-between items-center">
 							<div>
@@ -3175,80 +3272,165 @@ function AdminReservas() {
 								<h3 className="font-semibold text-lg mb-3">
 									Detalles del Viaje
 								</h3>
-								<div className="grid grid-cols-2 gap-4">
-									<div>
-										<Label className="text-muted-foreground">Origen</Label>
-										<p className="font-medium">{selectedReserva.origen}</p>
+								
+								{/* Indicador del tipo de viaje - actualizado para SOLUCIÓN C */}
+								{(selectedReserva.idaVuelta || selectedReserva.tramoVuelta) && (
+									<div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+										</svg>
+										<span className="font-semibold text-sm">
+											{selectedReserva.tramoVuelta ? "Reservas Vinculadas: Ida y Vuelta" : "Viaje Ida y Vuelta"}
+										</span>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">Destino</Label>
-										<p className="font-medium">{selectedReserva.destino}</p>
-									</div>
-									{selectedReserva.direccionOrigen && (
-										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
-											<Label className="text-yellow-800 font-semibold">
-												📍 Dirección de Origen (Específica)
-											</Label>
-											<p className="font-medium text-gray-900 mt-1">
-												{selectedReserva.direccionOrigen}
-											</p>
+								)}
+
+								{/* Viaje de Ida */}
+								<div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-4 mb-4">
+									<h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+										</svg>
+										VIAJE DE IDA
+									</h4>
+									<div className="grid grid-cols-2 gap-4">
+										<div>
+											<Label className="text-green-700 font-medium">Origen</Label>
+											<p className="font-semibold text-gray-900">{selectedReserva.origen}</p>
 										</div>
-									)}
-									{selectedReserva.direccionDestino && (
-										<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
-											<Label className="text-yellow-800 font-semibold">
-												📍 Dirección de Destino (Específica)
-											</Label>
-											<p className="font-medium text-gray-900 mt-1">
-												{selectedReserva.direccionDestino}
-											</p>
+										<div>
+											<Label className="text-green-700 font-medium">Destino</Label>
+											<p className="font-semibold text-gray-900">{selectedReserva.destino}</p>
 										</div>
-									)}
-									<div>
-										<Label className="text-muted-foreground">
-											Fecha del Viaje
-										</Label>
-										<p className="font-medium">
-											{formatDate(selectedReserva.fecha)}
-										</p>
+										{selectedReserva.direccionOrigen && (
+											<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+												<Label className="text-yellow-800 font-semibold">
+													📍 Dirección de Origen (Específica)
+												</Label>
+												<p className="font-medium text-gray-900 mt-1">
+													{selectedReserva.direccionOrigen}
+												</p>
+											</div>
+										)}
+										{selectedReserva.direccionDestino && (
+											<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+												<Label className="text-yellow-800 font-semibold">
+													📍 Dirección de Destino (Específica)
+												</Label>
+												<p className="font-medium text-gray-900 mt-1">
+													{selectedReserva.direccionDestino}
+												</p>
+											</div>
+										)}
+										<div>
+											<Label className="text-green-700 font-medium">📅 Fecha</Label>
+											<p className="font-semibold text-gray-900">{formatDate(selectedReserva.fecha)}</p>
+										</div>
+										<div>
+											<Label className="text-green-700 font-medium">🕐 Hora de Recogida</Label>
+											<p className="font-semibold text-gray-900">{selectedReserva.hora || "-"}</p>
+										</div>
 									</div>
-									<div>
-										<Label className="text-muted-foreground">
-											Hora de Recogida
-										</Label>
-										<p className="font-medium">{selectedReserva.hora || "-"}</p>
+								</div>
+
+								{/* Viaje de Vuelta - Actualizado para SOLUCIÓN C: usar tramoVuelta si está disponible */}
+								{(selectedReserva.idaVuelta || selectedReserva.tramoVuelta) && (
+									<div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+											</svg>
+											VIAJE DE VUELTA
+											{selectedReserva.tramoVuelta && (
+												<Badge 
+													variant="outline" 
+													className="ml-2 text-xs bg-white"
+													aria-label={`Datos del viaje de vuelta desde la reserva número ${selectedReserva.tramoVuelta.id}`}
+												>
+													Reserva #{selectedReserva.tramoVuelta.id}
+												</Badge>
+											)}
+										</h4>
+										<div className="grid grid-cols-2 gap-4">
+											<div>
+												<Label className="text-blue-700 font-medium">Origen</Label>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.tramoVuelta ? selectedReserva.tramoVuelta.origen : selectedReserva.destino}
+												</p>
+											</div>
+											<div>
+												<Label className="text-blue-700 font-medium">Destino</Label>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.tramoVuelta ? selectedReserva.tramoVuelta.destino : selectedReserva.origen}
+												</p>
+											</div>
+											{selectedReserva.tramoVuelta?.direccionOrigen && (
+												<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+													<Label className="text-yellow-800 font-semibold">
+														📍 Dirección de Origen (Específica)
+													</Label>
+													<p className="font-medium text-gray-900 mt-1">
+														{selectedReserva.tramoVuelta.direccionOrigen}
+													</p>
+												</div>
+											)}
+											{selectedReserva.tramoVuelta?.direccionDestino && (
+												<div className="col-span-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+													<Label className="text-yellow-800 font-semibold">
+														📍 Dirección de Destino (Específica)
+													</Label>
+													<p className="font-medium text-gray-900 mt-1">
+														{selectedReserva.tramoVuelta.direccionDestino}
+													</p>
+												</div>
+											)}
+											<div>
+												<Label className="text-blue-700 font-medium">📅 Fecha de Regreso</Label>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.tramoVuelta 
+														? (selectedReserva.tramoVuelta.fecha ? formatDate(selectedReserva.tramoVuelta.fecha) : "⚠️ No especificada")
+														: (selectedReserva.fechaRegreso ? formatDate(selectedReserva.fechaRegreso) : "⚠️ No especificada")
+													}
+												</p>
+											</div>
+											<div>
+												<Label className="text-blue-700 font-medium">🕐 Hora de Recogida</Label>
+												<p className="font-semibold text-gray-900">
+													{selectedReserva.tramoVuelta 
+														? (selectedReserva.tramoVuelta.hora || "⚠️ No especificada")
+														: (selectedReserva.horaRegreso || "⚠️ No especificada")
+													}
+												</p>
+											</div>
+										</div>
+										
+										{/* Advertencia si falta información */}
+										{((selectedReserva.tramoVuelta && (!selectedReserva.tramoVuelta.fecha || !selectedReserva.tramoVuelta.hora)) ||
+										  (!selectedReserva.tramoVuelta && (!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso))) && (
+											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+												</svg>
+												<div>
+													<p className="text-sm font-semibold text-yellow-800">Información Incompleta del Viaje de Vuelta</p>
+													<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+												</div>
+											</div>
+										)}
 									</div>
+								)}
+
+								{/* Información de pasajeros y vehículo */}
+								<div className="grid grid-cols-2 gap-4 pt-4 border-t">
 									<div>
-										<Label className="text-muted-foreground">Pasajeros</Label>
+										<Label className="text-muted-foreground">👥 Pasajeros</Label>
 										<p className="font-medium">{selectedReserva.pasajeros}</p>
 									</div>
 									{selectedReserva.vehiculo && (
 										<div>
-											<Label className="text-muted-foreground">Vehículo</Label>
-											<p className="font-medium">
-												{selectedReserva.vehiculo}
-											</p>
+											<Label className="text-muted-foreground">🚙 Vehículo</Label>
+											<p className="font-medium">{selectedReserva.vehiculo}</p>
 										</div>
-									)}
-									{selectedReserva.idaVuelta && (
-										<>
-											<div>
-												<Label className="text-muted-foreground">
-													Fecha Regreso
-												</Label>
-												<p className="font-medium">
-													{formatDate(selectedReserva.fechaRegreso)}
-												</p>
-											</div>
-											<div>
-												<Label className="text-muted-foreground">
-													Hora Regreso
-												</Label>
-												<p className="font-medium">
-													{selectedReserva.horaRegreso || "-"}
-												</p>
-											</div>
-										</>
 									)}
 								</div>
 							</div>
@@ -3751,7 +3933,7 @@ function AdminReservas() {
 
 			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+				<DialogContent className="sm:max-w-5xl md:max-w-5xl lg:max-w-5xl max-h-[85vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
 						<DialogDescription>
@@ -3907,6 +4089,58 @@ function AdminReservas() {
 											</>
 
 								</div>
+								
+								{/* SOLUCIÓN: Campos para editar viaje de vuelta cuando existe */}
+								{formData.idaVuelta && (
+									<div className="pt-4 border-t mt-4">
+										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+											</svg>
+											Viaje de Vuelta
+											{formData.tramoVueltaId && (
+												<Badge variant="outline" className="text-xs">
+													Reserva #{formData.tramoVueltaId}
+												</Badge>
+											)}
+										</h4>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-1">
+												<Label>Fecha de Regreso *</Label>
+												<Input
+													type="date"
+													value={formData.fechaRegreso || ""}
+													onChange={(e) =>
+														setFormData({ ...formData, fechaRegreso: e.target.value })
+													}
+													required
+												/>
+											</div>
+											<div className="space-y-1">
+												<Label>Hora de Recogida *</Label>
+												<Input
+													type="time"
+													value={formData.horaRegreso || ""}
+													onChange={(e) =>
+														setFormData({ ...formData, horaRegreso: e.target.value })
+													}
+													required
+												/>
+											</div>
+										</div>
+										{(!formData.fechaRegreso || !formData.horaRegreso) && (
+											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+												</svg>
+												<div>
+													<p className="text-sm font-semibold text-yellow-800">Información Requerida</p>
+													<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+												</div>
+											</div>
+										)}
+									</div>
+								)}
 								
 								{/* Opción de notificar al conductor si hubo cambios importantes y ya tiene conductor */}
 								{hasConductorAsignado && (
