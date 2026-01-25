@@ -1179,7 +1179,7 @@ function AdminReservas() {
 						reservaVuelta = await responseVuelta.json();
 					}
 				} catch (errorVuelta) {
-					console.warn("No se pudo cargar la reserva de vuelta vinculada:", errorVuelta);
+					console.warn(`No se pudo cargar la reserva de vuelta vinculada (ID: ${reservaActualizada.tramoHijoId}) para la reserva #${reservaActualizada.id}:`, errorVuelta);
 				}
 			}
 			
@@ -3284,7 +3284,11 @@ function AdminReservas() {
 											</svg>
 											VIAJE DE VUELTA
 											{selectedReserva.tramoVuelta && (
-												<Badge variant="outline" className="ml-2 text-xs bg-white">
+												<Badge 
+													variant="outline" 
+													className="ml-2 text-xs bg-white"
+													aria-label={`Datos del viaje de vuelta desde la reserva número ${selectedReserva.tramoVuelta.id}`}
+												>
 													Reserva #{selectedReserva.tramoVuelta.id}
 												</Badge>
 											)}
