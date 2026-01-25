@@ -3154,7 +3154,7 @@ function AdminReservas() {
 
 			{/* Modal de Detalles */}
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-				<DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+				<DialogContent className="sm:max-w-6xl md:max-w-6xl lg:max-w-6xl max-h-[85vh] overflow-y-auto">
 					<DialogHeader>
 						<div className="flex justify-between items-center">
 							<div>
@@ -3933,7 +3933,7 @@ function AdminReservas() {
 
 			{/* Modal de EdiciÃ³n */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-				<DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+				<DialogContent className="sm:max-w-5xl md:max-w-5xl lg:max-w-5xl max-h-[85vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
 						<DialogDescription>
