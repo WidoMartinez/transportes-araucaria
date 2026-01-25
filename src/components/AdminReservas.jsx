@@ -1113,9 +1113,25 @@ function AdminReservas() {
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
 
-	// Abrir modal de ediciÃ³n
-	const handleEdit = (reserva) => {
+	// Abrir modal de edición
+	const handleEdit = async (reserva) => {
 		setSelectedReserva(reserva);
+		
+		// SOLUCIÓN: Cargar datos del tramo de vuelta si existe tramoHijoId
+		let reservaVuelta = null;
+		if (reserva.tramoHijoId) {
+			try {
+				const responseVuelta = await authenticatedFetch(
+					`/api/reservas/${reserva.tramoHijoId}?t=${Date.now()}`
+				);
+				if (responseVuelta.ok) {
+					reservaVuelta = await responseVuelta.json();
+				}
+			} catch (errorVuelta) {
+				console.warn(`No se pudo cargar la reserva de vuelta vinculada (ID: ${reserva.tramoHijoId}) para edición de la reserva #${reserva.id}:`, errorVuelta);
+			}
+		}
+		
 		setFormData({
 			nombre: reserva.nombre || "",
 			email: reserva.email || "",
@@ -1139,19 +1155,24 @@ function AdminReservas() {
 			hotel: reserva.hotel || "",
 			equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
-			horaRegreso: reserva.horaRegreso || "",
-			idaVuelta: Boolean(reserva.idaVuelta),
-			fechaRegreso: (reserva.fechaRegreso || "").toString().substring(0, 10),
+			// SOLUCIÓN: Si hay reservaVuelta, cargar sus datos; sino usar los de la reserva principal (legacy)
+			horaRegreso: reservaVuelta ? (reservaVuelta.hora || "") : (reserva.horaRegreso || ""),
+			idaVuelta: Boolean(reserva.idaVuelta || reservaVuelta),
+			fechaRegreso: reservaVuelta 
+				? (reservaVuelta.fecha || "").toString().substring(0, 10)
+				: (reserva.fechaRegreso || "").toString().substring(0, 10),
 			direccionOrigen: reserva.direccionOrigen || "",
 			direccionDestino: reserva.direccionDestino || "",
+			// Guardar ID de la reserva de vuelta para actualizar después
+			tramoVueltaId: reservaVuelta ? reservaVuelta.id : null,
 		});
-		// Reset ediciÃ³n de ruta
+		// Reset edición de ruta
 		setEditOrigenEsOtro(false);
 		setEditDestinoEsOtro(false);
 		setEditOtroOrigen("");
 		setEditOtroDestino("");
 		setEnviarActualizacionConductor(false);
-		// Cargar catÃ¡logo de destinos para selects
+		// Cargar catálogo de destinos para selects
 		fetchDestinosCatalog();
 		setShowEditDialog(true);
 	};
@@ -1429,6 +1450,43 @@ function AdminReservas() {
 
 			await fetchReservas();
 			await fetchEstadisticas();
+			
+			// SOLUCIÓN: Si hay una reserva de vuelta vinculada, actualizar sus datos también
+			if (formData.tramoVueltaId && (formData.fechaRegreso || formData.horaRegreso)) {
+				try {
+					const vueltaPayload = {
+						datosGenerales: {
+							fecha: formData.fechaRegreso || null,
+							hora: formData.horaRegreso || null,
+							// Mantener otros datos sincronizados
+							nombre: formData.nombre,
+							email: formData.email,
+							telefono: formData.telefono,
+							pasajeros: Number(formData.pasajeros) || selectedReserva.pasajeros,
+						},
+						estado: estadoFinal, // Sincronizar estado con la reserva de ida
+						observaciones: formData.observaciones
+					};
+					
+					const responseVuelta = await fetch(`${apiUrl}/api/reservas/${formData.tramoVueltaId}/bulk-update`, {
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${accessToken}`,
+						},
+						body: JSON.stringify(vueltaPayload),
+					});
+					
+					if (!responseVuelta.ok) {
+						console.warn("⚠️ No se pudo actualizar la reserva de vuelta vinculada");
+					} else {
+						console.log(`✅ Reserva de vuelta #${formData.tramoVueltaId} actualizada correctamente`);
+					}
+				} catch (errorVuelta) {
+					console.warn("⚠️ Error al actualizar reserva de vuelta:", errorVuelta);
+				}
+			}
+			
 			setShowEditDialog(false);
 			setSelectedReserva(null);
 			// Feedback de éxito
@@ -4031,6 +4089,58 @@ function AdminReservas() {
 											</>
 
 								</div>
+								
+								{/* SOLUCIÓN: Campos para editar viaje de vuelta cuando existe */}
+								{formData.idaVuelta && (
+									<div className="pt-4 border-t mt-4">
+										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+											</svg>
+											Viaje de Vuelta
+											{formData.tramoVueltaId && (
+												<Badge variant="outline" className="text-xs">
+													Reserva #{formData.tramoVueltaId}
+												</Badge>
+											)}
+										</h4>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div className="space-y-1">
+												<Label>Fecha de Regreso *</Label>
+												<Input
+													type="date"
+													value={formData.fechaRegreso || ""}
+													onChange={(e) =>
+														setFormData({ ...formData, fechaRegreso: e.target.value })
+													}
+													required
+												/>
+											</div>
+											<div className="space-y-1">
+												<Label>Hora de Recogida *</Label>
+												<Input
+													type="time"
+													value={formData.horaRegreso || ""}
+													onChange={(e) =>
+														setFormData({ ...formData, horaRegreso: e.target.value })
+													}
+													required
+												/>
+											</div>
+										</div>
+										{(!formData.fechaRegreso || !formData.horaRegreso) && (
+											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+												</svg>
+												<div>
+													<p className="text-sm font-semibold text-yellow-800">Información Requerida</p>
+													<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+												</div>
+											</div>
+										)}
+									</div>
+								)}
 								
 								{/* Opción de notificar al conductor si hubo cambios importantes y ya tiene conductor */}
 								{hasConductorAsignado && (
