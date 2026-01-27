@@ -71,7 +71,7 @@ import {
 // Helper para generar texto formateado para conductor (WhatsApp)
 const generarTextoConductor = (reserva) => {
 	if (!reserva) return "";
-
+	
 	// Formato de fecha y hora local
 	const fechaStr = reserva.fecha 
 		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL") 
@@ -86,27 +86,35 @@ const generarTextoConductor = (reserva) => {
 	let destinoStr = reserva.destino || "Sin destino";
 	if (reserva.direccionDestino) destinoStr += ` (${reserva.direccionDestino})`;
 
-	// Generar link de Google Maps (Prioridad: Dirección Destino > Destino > Origen si es ida)
-	// Asumimos que lo más útil para el conductor es navegar al DESTINO si es un viaje de ida, 
-	// o al ORIGEN si es una recogida.
-	// Por defecto usamos el Destino para el link de Maps.
-	const addressForMaps = reserva.direccionDestino || reserva.destino || "";
-	const mapsLink = addressForMaps 
-		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressForMaps)}` 
+	// Generar enlaces de Google Maps para ORIGEN y DESTINO
+	// El conductor necesita ambos: primero para recoger (origen) y luego para entregar (destino)
+	const addressOrigen = reserva.direccionOrigen || reserva.origen || "";
+	const mapsLinkOrigen = addressOrigen 
+		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressOrigen)}` 
 		: "";
-
+	
+	const addressDestino = reserva.direccionDestino || reserva.destino || "";
+	const mapsLinkDestino = addressDestino 
+		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressDestino)}` 
+		: "";
+	
 	// Calcular saldo por pagar si corresponde
 	const saldo = Number(reserva.saldoPendiente) || 0;
 	const saldoStr = saldo > 0 
 		? `\n💰 *Por pagar:* ${new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(saldo)}` 
 		: "";
-
+	
 	// Observaciones
 	const obsStr = reserva.observaciones ? `\n📝 *Obs:* ${reserva.observaciones}` : "";
-
+	
 	// info adicional
 	const vueloStr = reserva.numeroVuelo ? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}` : "";
-	const mapsLine = mapsLink ? `\n🗺 *Maps:* ${mapsLink}` : "";
+	
+	// Construir líneas de Maps (origen y destino por separado)
+	const mapsLines = [];
+	if (mapsLinkOrigen) mapsLines.push(`📍 *Maps Origen:* ${mapsLinkOrigen}`);
+	if (mapsLinkDestino) mapsLines.push(`🗺 *Maps Destino:* ${mapsLinkDestino}`);
+	const mapsStr = mapsLines.length > 0 ? `\n${mapsLines.join("\n")}` : "";
 	
 	return `*NUEVO SERVICIO ASIGNADO* 🚖
 
@@ -114,7 +122,7 @@ const generarTextoConductor = (reserva) => {
 ⏰ *Hora:* ${horaStr}
 👤 *Pasajero:* ${reserva.nombre || "Sin nombre"}
 📍 *Origen:* ${origenStr}
-🏁 *Destino:* ${destinoStr}${mapsLine}
+🏁 *Destino:* ${destinoStr}${mapsStr}
 👥 *Pax:* ${reserva.pasajeros || 1}${vueloStr}${obsStr}${saldoStr}`;
 };
 import {
