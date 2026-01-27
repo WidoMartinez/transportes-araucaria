@@ -413,6 +413,7 @@ function HeroExpress({
 
 		if (formData.idaVuelta) {
 			if (!formData.fechaRegreso) return setStepError("Selecciona la fecha de regreso.");
+			if (!formData.horaRegreso) return setStepError("Selecciona la hora de regreso.");
 			const fechaRegreso = new Date(`${formData.fechaRegreso}T00:00:00`);
 			if (fechaRegreso < fechaSeleccionada) return setStepError("La fecha de regreso no puede ser anterior a la ida.");
 		}
@@ -914,20 +915,46 @@ function HeroExpress({
 									<motion.div
 										initial={{ opacity: 0, height: 0 }}
 										animate={{ opacity: 1, height: "auto" }}
-										className="space-y-2 pt-2"
+										className="space-y-4 pt-2"
 									>
-										<Label className="text-base md:text-sm font-semibold text-foreground">Fecha de Regreso</Label>
-										<div className="relative">
-											<Calendar className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
-											<input
-												type="date"
-												name="fechaRegreso"
-												value={formData.fechaRegreso}
-												onChange={handleInputChange}
-												min={formData.fecha || minDateTime}
-												aria-label="Seleccionar fecha de regreso"
-												className="w-full h-12 md:h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent touch-manipulation"
-											/>
+										<div className="space-y-2">
+											<Label className="text-base md:text-sm font-semibold text-foreground">Fecha de Regreso</Label>
+											<div className="relative">
+												<Calendar className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
+												<input
+													type="date"
+													name="fechaRegreso"
+													value={formData.fechaRegreso}
+													onChange={handleInputChange}
+													min={formData.fecha || minDateTime}
+													aria-label="Seleccionar fecha de regreso"
+													className="w-full h-12 md:h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent touch-manipulation"
+												/>
+											</div>
+										</div>
+										<div className="space-y-2">
+											<Label htmlFor="horaRegreso" className="text-base md:text-sm font-semibold text-foreground">Hora de Regreso</Label>
+											<div className="relative">
+												<Clock className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
+												<select
+													id="horaRegreso"
+													name="horaRegreso"
+													value={formData.horaRegreso || ""}
+													onChange={handleInputChange}
+													aria-label="Seleccionar hora de regreso"
+													className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
+												>
+													<option value="" disabled>Seleccionar...</option>
+													{timeOptions.map((t) => (
+														<option key={t.value} value={t.value}>{t.label}</option>
+													))}
+												</select>
+												<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
+													<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+													</svg>
+												</div>
+											</div>
 										</div>
 									</motion.div>
 								)}
