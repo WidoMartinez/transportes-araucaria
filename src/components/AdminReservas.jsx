@@ -217,6 +217,11 @@ function AdminReservas() {
 	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
 	const [assignedVehiculoId, setAssignedVehiculoId] = useState(null);
 	const [assignedConductorId, setAssignedConductorId] = useState(null);
+	// Estados para manejar reservas vinculadas (ida y vuelta)
+	const [reservaVuelta, setReservaVuelta] = useState(null);
+	const [asignarAmbas, setAsignarAmbas] = useState(true);
+	const [vueltaVehiculoSeleccionado, setVueltaVehiculoSeleccionado] = useState("");
+	const [vueltaConductorSeleccionado, setVueltaConductorSeleccionado] = useState("");
 	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
 	const [loadingHistorial, setLoadingHistorial] = useState(false);
 
@@ -863,9 +868,32 @@ function AdminReservas() {
 	};
 
 	// Abrir diÃ¡logo de asignaciÃ³n
-	const handleAsignar = (reserva) => {
+	const handleAsignar = async (reserva) => {
 		setSelectedReserva(reserva);
-		// Derivar patente del label "TIPO PATENTE" o "TIPO (patente PATENTE)"
+		
+		// 1. Detectar si tiene reserva vinculada (VUELTA)
+		let reservaVueltaData = null;
+		if (reserva.tramoHijoId) {
+			try {
+				const response = await authenticatedFetch(`/api/reservas/${reserva.tramoHijoId}`);
+				if (response.ok) {
+					reservaVueltaData = await response.json();
+					setReservaVuelta(reservaVueltaData);
+					
+					// Verificar si ya tienen el mismo conductor y vehículo asignado
+					const mismoConductor = reserva.conductorId && reserva.conductorId === reservaVueltaData.conductorId;
+					const mismoVehiculo = reserva.vehiculoId && reserva.vehiculoId === reservaVueltaData.vehiculoId;
+					setAsignarAmbas(mismoConductor && mismoVehiculo);
+				}
+			} catch (error) {
+				console.error("Error cargando reserva de vuelta:", error);
+				setReservaVuelta(null);
+			}
+		} else {
+			setReservaVuelta(null);
+		}
+		
+		// 2. Derivar patente del label "TIPO PATENTE" o "TIPO (patente PATENTE)"
 		const vehiculoStr = (reserva.vehiculo || "").trim();
 		let pat = "";
 		// Intentar extraer del formato nuevo: "TIPO (patente XXXX)"
@@ -877,12 +905,14 @@ function AdminReservas() {
 			pat = vehiculoStr.split(" ").pop().toUpperCase();
 		}
 		setAssignedPatente(pat || "");
-		// Intentar extraer nombre de conductor desde observaciones
+		
+		// 3. Intentar extraer nombre de conductor desde observaciones
 		const obs = (reserva.observaciones || "").toString();
 		const m = obs.match(/Conductor asignado:\s*([^(|\n]+?)(?:\s*\(|$)/i);
 		const nombreCon = m ? m[1].trim() : "";
 		setAssignedConductorNombre(nombreCon);
-		// Intentar preseleccionar si los catÃ¡logos ya existen
+		
+		// 4. Intentar preseleccionar si los catálogos ya existen
 		let preVeh = "";
 		if (vehiculos.length > 0 && pat) {
 			const found = vehiculos.find(
@@ -896,7 +926,9 @@ function AdminReservas() {
 		let preCon = "none";
 		if (conductores.length > 0 && nombreCon) {
 			const foundC = conductores.find(
-				(c) => (c.nombre || "").toLowerCase() === nombreCon.toLowerCase()
+				(c) =>
+					(c.nombre || "").toLowerCase() ===
+					nombreCon.toLowerCase()
 			);
 			if (foundC) {
 				preCon = foundC.id.toString();
@@ -905,10 +937,34 @@ function AdminReservas() {
 		}
 		setVehiculoSeleccionado(preVeh);
 		setConductorSeleccionado(preCon);
+		
+		// 5. Si hay VUELTA, pre-cargar sus asignaciones también
+		if (reservaVueltaData) {
+			// Pre-seleccionar vehículo de VUELTA
+			let preVehVuelta = "";
+			if (vehiculos.length > 0 && reservaVueltaData.vehiculoId) {
+				const foundVuelta = vehiculos.find(v => v.id === reservaVueltaData.vehiculoId);
+				if (foundVuelta) {
+					preVehVuelta = foundVuelta.id.toString();
+				}
+			}
+			setVueltaVehiculoSeleccionado(preVehVuelta);
+			
+			// Pre-seleccionar conductor de VUELTA
+			let preConVuelta = "none";
+			if (conductores.length > 0 && reservaVueltaData.conductorId) {
+				const foundConVuelta = conductores.find(c => c.id === reservaVueltaData.conductorId);
+				if (foundConVuelta) {
+					preConVuelta = foundConVuelta.id.toString();
+				}
+			}
+			setVueltaConductorSeleccionado(preConVuelta);
+		}
+		
 		setEnviarNotificacion(true);
 		setEnviarNotificacionConductor(true);
 		setShowAsignarDialog(true);
-		// Cargar vehÃ­culos y conductores si aÃºn no se han cargado
+		// Cargar vehículos y conductores si aún no se han cargado
 		if (vehiculos.length === 0) fetchVehiculos();
 		if (conductores.length === 0) fetchConductores();
 	};
@@ -945,17 +1001,23 @@ function AdminReservas() {
 		vehiculoSeleccionado,
 	]);
 
-	// Guardar asignaciÃ³n de vehÃ­culo/conductor
+	// Guardar asignación de vehículo/conductor
 	const handleGuardarAsignacion = async () => {
 		if (!vehiculoSeleccionado) {
-			alert("Debe seleccionar al menos un vehículo");
+			alert("Debe seleccionar al menos un vehículo para la IDA");
+			return;
+		}
+		
+		// Validar que si hay VUELTA y NO está marcado "asignar ambas", debe tener vehículo seleccionado
+		if (reservaVuelta && !asignarAmbas && !vueltaVehiculoSeleccionado) {
+			alert("Debe seleccionar un vehículo para la VUELTA");
 			return;
 		}
 
 		setLoadingAsignacion(true);
 		try {
-			// Usa el token de autenticación del contexto
-			const response = await fetch(
+			// 1. Asignar IDA
+			const responseIda = await fetch(
 				`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`,
 				{
 					method: "PUT",
@@ -974,38 +1036,75 @@ function AdminReservas() {
 					}),
 				}
 			);
-
-			if (response.ok) {
-				await fetchReservas(); // Recargar reservas
-				setShowAsignarDialog(false);
-				alert("Vehículo y conductor asignados correctamente");
-				// Refrescar historial si estamos viendo detalles
-				if (showDetailDialog && selectedReserva?.id) {
-					setLoadingHistorial(true);
-					try {
-						// Usa el token de autenticación del contexto
-						const resp = await fetch(
-							`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`,
-							{
-								headers: accessToken
-									? { Authorization: `Bearer ${accessToken}` }
-									: {},
-							}
-						);
-						if (resp.ok) {
-							const data = await resp.json();
-							setHistorialAsignaciones(
-								Array.isArray(data.historial) ? data.historial : []
-							);
-						}
-					} catch {
-						// noop
+			
+			if (!responseIda.ok) {
+				const data = await responseIda.json();
+				throw new Error(data.error || "Error al asignar vehículo/conductor a la IDA");
+			}
+			
+			// 2. Asignar VUELTA (si existe)
+			if (reservaVuelta) {
+				const vueltaVehiculo = asignarAmbas ? vehiculoSeleccionado : vueltaVehiculoSeleccionado;
+				const vueltaConductor = asignarAmbas ? conductorSeleccionado : vueltaConductorSeleccionado;
+				
+				const responseVuelta = await fetch(
+					`${apiUrl}/api/reservas/${reservaVuelta.id}/asignar`,
+					{
+						method: "PUT",
+						headers: {
+							"Content-Type": "application/json",
+							Authorization: `Bearer ${accessToken}`,
+						},
+						body: JSON.stringify({
+							vehiculoId: parseInt(vueltaVehiculo),
+							conductorId:
+								vueltaConductor && vueltaConductor !== "none"
+									? parseInt(vueltaConductor)
+									: null,
+							sendEmail: Boolean(enviarNotificacion),
+							sendEmailDriver: Boolean(enviarNotificacionConductor),
+						}),
 					}
-					setLoadingHistorial(false);
+				);
+				
+				if (!responseVuelta.ok) {
+					const data = await responseVuelta.json();
+					throw new Error(data.error || "Error al asignar vehículo/conductor a la VUELTA");
 				}
-			} else {
-				const data = await response.json();
-				alert(data.error || "Error al asignar vehículo/conductor");
+			}
+
+			await fetchReservas(); // Recargar reservas
+			setShowAsignarDialog(false);
+			
+			// Mensaje de éxito
+			const mensaje = reservaVuelta
+				? "Vehículo y conductor asignados correctamente para IDA y VUELTA"
+				: "Vehículo y conductor asignados correctamente";
+			alert(mensaje);
+			
+			// Refrescar historial si estamos viendo detalles
+			if (showDetailDialog && selectedReserva?.id) {
+				setLoadingHistorial(true);
+				try {
+					// Usa el token de autenticación del contexto
+					const resp = await fetch(
+						`${apiUrl}/api/reservas/${selectedReserva.id}/asignaciones`,
+						{
+							headers: accessToken
+								? { Authorization: `Bearer ${accessToken}` }
+								: {},
+						}
+					);
+					if (resp.ok) {
+						const data = await resp.json();
+						setHistorialAsignaciones(
+							Array.isArray(data.historial) ? data.historial : []
+						);
+					}
+				} catch {
+					// noop
+				}
+				setLoadingHistorial(false);
 			}
 		} catch (error) {
 			console.error("Error asignando vehículo/conductor:", error);
@@ -5583,8 +5682,48 @@ function AdminReservas() {
 								<strong>Pasajeros:</strong> {selectedReserva?.pasajeros}
 							</p>
 						</div>
+					
+						{/* Alerta de viaje de IDA y VUELTA */}
+						{reservaVuelta && (
+							<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+								<div className="flex items-center gap-2 mb-2">
+									<AlertCircle className="h-4 w-4 text-blue-600" />
+									<span className="font-medium text-blue-900">
+										Este viaje tiene IDA y VUELTA
+									</span>
+								</div>
+								<p className="text-sm text-blue-700 mb-3">
+									Vuelta: {reservaVuelta.origen} → {reservaVuelta.destino} el{" "}
+									{reservaVuelta.fecha ? new Date(reservaVuelta.fecha).toLocaleDateString("es-CL") : ""}
+								</p>
+								<div className="flex items-center gap-2">
+									<Checkbox
+										id="asignar-ambas"
+										checked={asignarAmbas}
+										onCheckedChange={(checked) => setAsignarAmbas(Boolean(checked))}
+									/>
+									<label 
+										htmlFor="asignar-ambas" 
+										className="text-sm cursor-pointer text-blue-900"
+									>
+										Asignar el mismo conductor y vehículo para ambos tramos
+									</label>
+								</div>
+							</div>
+						)}
 
-						{/* Selector de vehÃ­culo */}
+						{/* Sección IDA */}
+					<div className="space-y-4">
+						{reservaVuelta && (
+							<div className="font-medium flex items-center gap-2">
+								<Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+									IDA
+								</Badge>
+								{selectedReserva?.origen} → {selectedReserva?.destino}
+							</div>
+						)}
+						
+						{/* Selector de vehículo */}
 						<div className="space-y-2">
 							<Label htmlFor="vehiculo">
 								Vehículo <span className="text-red-500">*</span>
@@ -5600,18 +5739,18 @@ function AdminReservas() {
 									{vehiculos
 										.filter((v) => v.capacidad >= (selectedReserva?.pasajeros || 1))
 										.map((v) => (
-										<SelectItem
-											key={v.id}
-											value={v.id.toString()}
-											disabled={
-												assignedVehiculoId !== null &&
-												assignedVehiculoId === v.id
-											}
-										>
-											{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
-											{v.capacidad} pasajeros
-										</SelectItem>
-									))}
+											<SelectItem
+												key={v.id}
+												value={v.id.toString()}
+												disabled={
+													assignedVehiculoId !== null &&
+													assignedVehiculoId === v.id
+												}
+											>
+												{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
+												{v.capacidad} pasajeros
+											</SelectItem>
+										))}
 								</SelectContent>
 							</Select>
 						</div>
@@ -5643,6 +5782,71 @@ function AdminReservas() {
 								</SelectContent>
 							</Select>
 						</div>
+					</div>
+					
+					{/* Sección VUELTA (solo si existe y NO está marcado "asignar ambas") */}
+					{reservaVuelta && !asignarAmbas && (
+						<div className="space-y-4 pt-4 border-t">
+							<div className="font-medium flex items-center gap-2">
+								<Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+									VUELTA
+								</Badge>
+								{reservaVuelta.origen} → {reservaVuelta.destino}
+							</div>
+							
+							{/* Selector de vehículo VUELTA */}
+							<div className="space-y-2">
+								<Label htmlFor="vehiculo-vuelta">
+									Vehículo <span className="text-red-500">*</span>
+								</Label>
+								<Select
+									value={vueltaVehiculoSeleccionado}
+									onValueChange={setVueltaVehiculoSeleccionado}
+								>
+									<SelectTrigger id="vehiculo-vuelta">
+										<SelectValue placeholder="Selecciona un vehículo" />
+									</SelectTrigger>
+									<SelectContent>
+										{vehiculos
+											.filter((v) => v.capacidad >= (reservaVuelta?.pasajeros || selectedReserva?.pasajeros || 1))
+											.map((v) => (
+												<SelectItem
+													key={v.id}
+													value={v.id.toString()}
+												>
+													{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
+													{v.capacidad} pasajeros
+												</SelectItem>
+											))}
+									</SelectContent>
+								</Select>
+							</div>
+
+							{/* Selector de conductor VUELTA (opcional) */}
+							<div className="space-y-2">
+								<Label htmlFor="conductor-vuelta">Conductor (opcional)</Label>
+								<Select
+									value={vueltaConductorSeleccionado}
+									onValueChange={setVueltaConductorSeleccionado}
+								>
+									<SelectTrigger id="conductor-vuelta">
+										<SelectValue placeholder="Selecciona un conductor (opcional)" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="none">Sin asignar</SelectItem>
+										{conductores.map((c) => (
+											<SelectItem
+												key={c.id}
+												value={c.id.toString()}
+											>
+												{c.nombre} - {c.rut}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					)}
 
 						{/* Sin ediciÃ³n de ruta en reasignaciÃ³n */}
 
