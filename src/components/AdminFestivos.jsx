@@ -32,6 +32,10 @@ function AdminFestivos() {
 		porcentajeRecargo: null,
 		activo: true,
 		descripcion: "",
+		bloqueaReservas: false,  // NUEVO: Indica si la fecha bloquea reservas
+		horaInicio: null,         // NUEVO: Hora de inicio del bloqueo (NULL = todo el día)
+		horaFin: null,            // NUEVO: Hora de fin del bloqueo (NULL = todo el día)
+		aplicaSoloDestinos: null, // NUEVO: Array de destinos afectados (NULL = todos los destinos)
 	};
 
 	useEffect(() => {
@@ -236,15 +240,24 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 	};
 
 	return (
-		<div className="flex items-start justify-between rounded-lg border border-slate-700 bg-slate-800 p-4">
+		<div className={`flex items-start justify-between rounded-lg border p-4 ${
+			festivo.bloqueaReservas 
+				? 'border-red-600 bg-red-950/30' 
+				: 'border-slate-700 bg-slate-800'
+		}`}>
 			<div className="flex-1">
-				<div className="flex items-center gap-3">
+				<div className="flex items-center gap-3 flex-wrap">
 					<h4 className="font-semibold text-white">{festivo.nombre}</h4>
 					<Badge variant="outline">{getTipoLabel(festivo.tipo)}</Badge>
 					{festivo.recurrente && <Badge variant="secondary">Recurrente</Badge>}
 					{festivo.porcentajeRecargo && (
 						<Badge className="bg-orange-900/50 text-orange-200">
 							+{festivo.porcentajeRecargo}%
+						</Badge>
+					)}
+					{festivo.bloqueaReservas && (
+						<Badge className="bg-red-900/50 text-red-200">
+							🚫 Bloquea Reservas
 						</Badge>
 					)}
 					<Badge
@@ -258,6 +271,30 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 				<p className="mt-2 text-sm text-slate-400">
 					{formatearFecha(festivo.fecha)}
 				</p>
+
+				{/* Mostrar información de bloqueo de reservas */}
+				{festivo.bloqueaReservas && (
+					<div className="mt-2 space-y-1">
+						{festivo.horaInicio && festivo.horaFin ? (
+							<p className="text-sm text-red-300">
+								🕒 Bloqueado de {festivo.horaInicio.substring(0, 5)} a {festivo.horaFin.substring(0, 5)}
+							</p>
+						) : (
+							<p className="text-sm text-red-300">
+								🕒 Bloqueado todo el día
+							</p>
+						)}
+						{festivo.aplicaSoloDestinos && Array.isArray(festivo.aplicaSoloDestinos) && festivo.aplicaSoloDestinos.length > 0 ? (
+							<p className="text-sm text-yellow-300">
+								📍 Destinos: {festivo.aplicaSoloDestinos.join(", ")}
+							</p>
+						) : festivo.bloqueaReservas && (
+							<p className="text-sm text-yellow-300">
+								📍 Aplica a todos los destinos
+							</p>
+						)}
+					</div>
+				)}
 
 				{festivo.descripcion && (
 					<p className="mt-2 text-sm text-slate-500">{festivo.descripcion}</p>
@@ -288,6 +325,84 @@ function FormularioFestivo({
 	onCancelar,
 	saving,
 }) {
+	const [destinos, setDestinos] = useState([]);
+	const [loadingDestinos, setLoadingDestinos] = useState(false);
+
+	// Cargar destinos disponibles
+	useEffect(() => {
+		const cargarDestinos = async () => {
+			try {
+				setLoadingDestinos(true);
+				const response = await fetch(`${API_BASE_URL}/api/destinos`);
+				if (response.ok) {
+					const data = await response.json();
+					setDestinos(data);
+				} else {
+					// Usar destinos por defecto si la API falla
+					setDestinos([
+						{ nombre: "Pucón" },
+						{ nombre: "Villarrica" },
+						{ nombre: "Lican Ray" },
+						{ nombre: "Caburgua" },
+						{ nombre: "Temuco" },
+						{ nombre: "Valdivia" },
+					]);
+				}
+			} catch {
+				// Usar destinos por defecto en caso de error
+				setDestinos([
+					{ nombre: "Pucón" },
+					{ nombre: "Villarrica" },
+					{ nombre: "Lican Ray" },
+					{ nombre: "Caburgua" },
+					{ nombre: "Temuco" },
+					{ nombre: "Valdivia" },
+				]);
+			} finally {
+				setLoadingDestinos(false);
+			}
+		};
+
+		cargarDestinos();
+	}, []);
+
+	// Manejar cambio de destinos seleccionados
+	const handleDestinosChange = (destinoNombre, checked) => {
+		const destinosActuales = festivo.aplicaSoloDestinos || [];
+		let nuevosDestinos;
+
+		if (checked) {
+			nuevosDestinos = [...destinosActuales, destinoNombre];
+		} else {
+			nuevosDestinos = destinosActuales.filter(d => d !== destinoNombre);
+		}
+
+		onChange({
+			...festivo,
+			aplicaSoloDestinos: nuevosDestinos.length > 0 ? nuevosDestinos : null,
+		});
+	};
+
+	// Formatear hora para enviar al backend (agregar :00 si es necesario)
+	const formatearHora = (hora) => {
+		if (!hora) return null;
+		// Si la hora está en formato HH:MM, agregar :00
+		if (hora.length === 5) {
+			return `${hora}:00`;
+		}
+		return hora;
+	};
+
+	// Manejar guardado con formato de hora correcto
+	const handleGuardarConFormato = () => {
+		const festivoFormateado = {
+			...festivo,
+			horaInicio: formatearHora(festivo.horaInicio),
+			horaFin: formatearHora(festivo.horaFin),
+		};
+		onGuardar(festivoFormateado);
+	};
+
 	return (
 		<div className="space-y-4 rounded-lg border-2 border-chocolate-500 bg-slate-900 p-4">
 			<h3 className="text-lg font-semibold text-white">
@@ -395,9 +510,126 @@ function FormularioFestivo({
 				</label>
 			</div>
 
+			{/* Sección de Bloqueo de Reservas */}
+			<div className={`space-y-4 rounded-lg p-4 ${
+				festivo.bloqueaReservas 
+					? 'border-2 border-red-600 bg-red-950/20' 
+					: 'border border-slate-700 bg-slate-800/50'
+			}`}>
+				<label className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+					<input
+						type="checkbox"
+						checked={festivo.bloqueaReservas || false}
+						onChange={(e) => {
+							const checked = e.target.checked;
+							onChange({ 
+								...festivo, 
+								bloqueaReservas: checked,
+								// Limpiar campos relacionados si se desmarca
+								horaInicio: checked ? festivo.horaInicio : null,
+								horaFin: checked ? festivo.horaFin : null,
+								aplicaSoloDestinos: checked ? festivo.aplicaSoloDestinos : null,
+							});
+						}}
+						className="rounded border-slate-600"
+					/>
+					🚫 Bloquea Reservas
+				</label>
+
+				{/* Campos adicionales cuando bloqueaReservas es true */}
+				{festivo.bloqueaReservas && (
+					<div className="space-y-4">
+						<div className="grid gap-4 md:grid-cols-2">
+							<div>
+								<label className="block text-sm text-slate-300">
+									Hora Inicio (opcional)
+								</label>
+								<input
+									type="time"
+									value={festivo.horaInicio ? festivo.horaInicio.substring(0, 5) : ""}
+									onChange={(e) => onChange({ 
+										...festivo, 
+										horaInicio: e.target.value || null 
+									})}
+									className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+								/>
+								<p className="mt-1 text-xs text-slate-500">
+									Dejar vacío para bloquear todo el día
+								</p>
+							</div>
+
+							<div>
+								<label className="block text-sm text-slate-300">
+									Hora Fin (opcional)
+								</label>
+								<input
+									type="time"
+									value={festivo.horaFin ? festivo.horaFin.substring(0, 5) : ""}
+									onChange={(e) => onChange({ 
+										...festivo, 
+										horaFin: e.target.value || null 
+									})}
+									className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+								/>
+								<p className="mt-1 text-xs text-slate-500">
+									Dejar vacío para bloquear todo el día
+								</p>
+							</div>
+						</div>
+
+						<div>
+							<label className="block text-sm text-slate-300 mb-2">
+								Destinos Afectados (opcional)
+							</label>
+							{loadingDestinos ? (
+								<p className="text-sm text-slate-400">Cargando destinos...</p>
+							) : (
+								<div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+									{destinos.map((destino) => (
+										<label 
+											key={destino.nombre} 
+											className="flex items-center gap-2 text-sm text-slate-300 bg-slate-800 px-3 py-2 rounded-md cursor-pointer hover:bg-slate-700"
+										>
+											<input
+												type="checkbox"
+												checked={(festivo.aplicaSoloDestinos || []).includes(destino.nombre)}
+												onChange={(e) => handleDestinosChange(destino.nombre, e.target.checked)}
+												className="rounded border-slate-600"
+											/>
+											{destino.nombre}
+										</label>
+									))}
+								</div>
+							)}
+							<p className="mt-2 text-xs text-slate-500">
+								Dejar vacío para aplicar a todos los destinos
+							</p>
+						</div>
+
+						{/* Resumen del bloqueo */}
+						<div className="rounded-md bg-yellow-900/30 p-3 border border-yellow-700">
+							<p className="text-sm text-yellow-200">
+								<strong>⚠️ Resumen del bloqueo:</strong>
+								<br />
+								{festivo.horaInicio && festivo.horaFin ? (
+									<>Bloqueará reservas de {festivo.horaInicio.substring(0, 5)} a {festivo.horaFin.substring(0, 5)}</>
+								) : (
+									<>Bloqueará reservas todo el día</>
+								)}
+								{festivo.aplicaSoloDestinos && festivo.aplicaSoloDestinos.length > 0 ? (
+									<> para los destinos: {festivo.aplicaSoloDestinos.join(", ")}</>
+								) : (
+									<> para todos los destinos</>
+								)}
+							</p>
+						</div>
+					</div>
+				)}
+			</div>
+
 			<div className="flex gap-2">
 				<Button
-					onClick={onGuardar}
+					onClick={handleGuardarConFormato}
 					disabled={saving || !festivo.nombre || !festivo.fecha}
 				>
 					{saving ? (

@@ -49,6 +49,26 @@ const Festivo = sequelize.define(
 			allowNull: true,
 			comment: "Descripción o notas adicionales",
 		},
+		bloqueaReservas: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			comment: "Indica si la fecha bloquea reservas",
+		},
+		horaInicio: {
+			type: DataTypes.TIME,
+			allowNull: true,
+			comment: "Hora de inicio del bloqueo (NULL = todo el día)",
+		},
+		horaFin: {
+			type: DataTypes.TIME,
+			allowNull: true,
+			comment: "Hora de fin del bloqueo (NULL = todo el día)",
+		},
+		aplicaSoloDestinos: {
+			type: DataTypes.JSON,
+			allowNull: true,
+			comment: "Array de destinos afectados (NULL = todos los destinos)",
+		},
 	},
 	{
 		tableName: "festivos",
@@ -58,6 +78,7 @@ const Festivo = sequelize.define(
 			{ fields: ["activo"] },
 			{ fields: ["tipo"] },
 			{ fields: ["recurrente"] },
+			{ fields: ["bloqueaReservas"] },
 		],
 	}
 );
