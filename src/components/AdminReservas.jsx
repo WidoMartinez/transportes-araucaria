@@ -24,6 +24,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
@@ -98,15 +99,6 @@ const generarTextoConductor = (reserva) => {
 		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressDestino)}` 
 		: "";
 	
-	// Calcular saldo por pagar si corresponde
-	const saldo = Number(reserva.saldoPendiente) || 0;
-	const saldoStr = saldo > 0 
-		? `\n💰 *Por pagar:* ${new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(saldo)}` 
-		: "";
-	
-	// Observaciones
-	const obsStr = reserva.observaciones ? `\n📝 *Obs:* ${reserva.observaciones}` : "";
-	
 	// info adicional
 	const vueloStr = reserva.numeroVuelo ? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}` : "";
 	
@@ -123,7 +115,7 @@ const generarTextoConductor = (reserva) => {
 👤 *Pasajero:* ${reserva.nombre || "Sin nombre"}
 📍 *Origen:* ${origenStr}
 🏁 *Destino:* ${destinoStr}${mapsStr}
-👥 *Pax:* ${reserva.pasajeros || 1}${vueloStr}${obsStr}${saldoStr}`;
+👥 *Pax:* ${reserva.pasajeros || 1}${vueloStr}`;
 };
 import {
 	AlertDialog,
@@ -224,6 +216,9 @@ function AdminReservas() {
 	const [vueltaConductorSeleccionado, setVueltaConductorSeleccionado] = useState("");
 	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
 	const [loadingHistorial, setLoadingHistorial] = useState(false);
+	// Estados para diálogo de completar reservas vinculadas
+	const [showDialogoCompletar, setShowDialogoCompletar] = useState(false);
+	const [dialogoCompletarOpciones, setDialogoCompletarOpciones] = useState(null);
 
 	// Filtros y bÃºsqueda
 	const [searchTerm, setSearchTerm] = useState("");
@@ -1367,37 +1362,121 @@ function AdminReservas() {
 		}
 	};
 
+	// Funciones auxiliares para completar reserva
+	const getNombreConductor = (reserva) => {
+		if (reserva.conductor_asignado) return reserva.conductor_asignado.nombre;
+		if (reserva.conductor) return reserva.conductor;
+		return "Sin asignar";
+	};
+
+	const getVehiculoInfo = (reserva) => {
+		if (reserva.vehiculo_asignado) return `${reserva.vehiculo_asignado.tipo} (${reserva.vehiculo_asignado.patente})`;
+		if (reserva.vehiculo) return reserva.vehiculo;
+		return "Sin asignar";
+	};
+
+	const completarReserva = async (id) => {
+		const response = await authenticatedFetch(
+			`/api/reservas/${id}/estado`,
+			{
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ estado: "completada" }),
+			}
+		);
+		if (!response.ok) {
+			throw new Error(`Error al completar la reserva #${id}`);
+		}
+		return true;
+	};
+
+	const completarAmbasReservas = async (ids) => {
+		for (const id of ids) {
+			await completarReserva(id);
+		}
+	};
+
+	const redirigirAGastos = (ids) => {
+		const url = new URL(window.location.href);
+		url.searchParams.set("panel", "gastos");
+		// Usamos reservaIds (plural) para el nuevo flujo, y reservaId (singular) para compatibilidad
+		url.searchParams.set("reservaIds", ids.join(","));
+		if (ids.length === 1) {
+			url.searchParams.set("reservaId", ids[0].toString());
+		}
+		window.location.href = url.toString();
+	};
+
 	// Completar reserva y redirigir a gastos
 	const handleCompletar = async (reserva) => {
-		if (!confirm(`¿Confirmar que deseas completar la reserva ${reserva.codigoReserva} y agregar gastos?`)) {
+		// 1. Detectar si tiene reserva vinculada (VUELTA)
+		let reservaVueltaData = null;
+		if (reserva.tramoHijoId) {
+			try {
+				const response = await authenticatedFetch(`/api/reservas/${reserva.tramoHijoId}`);
+				if (response.ok) {
+					reservaVueltaData = await response.json();
+				}
+			} catch (error) {
+				console.error("Error cargando reserva de vuelta:", error);
+			}
+		}
+
+		if (!reservaVueltaData) {
+			// Flujo normal para reservas simples
+			if (!confirm(`¿Confirmar que deseas completar la reserva ${reserva.codigoReserva} y agregar gastos?`)) {
+				return;
+			}
+			try {
+				await completarReserva(reserva.id);
+				await fetchReservas();
+				redirigirAGastos([reserva.id]);
+			} catch (error) {
+				console.error("Error al completar la reserva:", error);
+				alert("No se pudo completar la reserva. Inténtalo nuevamente.");
+			}
 			return;
 		}
 
-		try {
-			const response = await authenticatedFetch(
-				`/api/reservas/${reserva.id}/estado`,
-				{
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ estado: "completada" }),
+		// 2. Verificar si tienen mismo conductor y vehículo
+		const mismoConductor = reserva.conductorId && 
+							 reserva.conductorId === reservaVueltaData.conductorId;
+		const mismoVehiculo = reserva.vehiculoId && 
+							reserva.vehiculoId === reservaVueltaData.vehiculoId;
+		const esUnificado = mismoConductor && mismoVehiculo;
+
+		// 3. Mostrar diálogo apropiado
+		if (esUnificado) {
+			// Flujo unificado: mismo conductor y vehículo
+			if (confirm(
+				`Este viaje de IDA y VUELTA fue realizado por el mismo conductor y vehículo.\n\n` +
+				`¿Deseas completar ambos tramos juntos e ingresar gastos unificados?`
+			)) {
+				try {
+					await completarAmbasReservas([reserva.id, reservaVueltaData.id]);
+					await fetchReservas();
+					redirigirAGastos([reserva.id, reservaVueltaData.id]);
+				} catch (error) {
+					console.error("Error al completar las reservas:", error);
+					alert("Hubo un error al completar las reservas.");
 				}
-			);
-
-			if (!response.ok) {
-				throw new Error("Error al completar la reserva");
 			}
-
-			// Actualizar la lista de reservas
-			await fetchReservas();
-
-			// Redirigir al panel de gastos con el ID de la reserva
-			const url = new URL(window.location.href);
-			url.searchParams.set("panel", "gastos");
-			url.searchParams.set("reservaId", reserva.id.toString());
-			window.location.href = url.toString();
-		} catch (error) {
-			console.error("Error al completar la reserva:", error);
-			alert("No se pudo completar la reserva. Inténtalo nuevamente.");
+		} else {
+			// Flujo separado: diferentes conductores/vehículos o sin asignar
+			const mensaje = !reserva.conductorId || !reserva.vehiculoId
+				? `Este viaje tiene IDA y VUELTA, pero aún no tienen conductor/vehículo asignados en ambos tramos.\n\n` +
+				  `¿Qué deseas hacer?`
+				: `Este viaje tiene IDA y VUELTA con diferentes conductores o vehículos:\n\n` +
+				  `IDA: ${getNombreConductor(reserva)} - ${getVehiculoInfo(reserva)}\n` +
+				  `VUELTA: ${getNombreConductor(reservaVueltaData)} - ${getVehiculoInfo(reservaVueltaData)}\n\n` +
+				  `¿Qué deseas hacer?`;
+			
+			setDialogoCompletarOpciones({
+				mensaje,
+				reservaIda: reserva,
+				reservaVuelta: reservaVueltaData,
+			});
+			setShowDialogoCompletar(true);
 		}
 	};
 
@@ -3276,26 +3355,58 @@ function AdminReservas() {
 								size="sm"
 								variant="outline"
 								onClick={() => {
-									const link = `${window.location.origin}/#comprar-productos/${selectedReserva.codigoReserva}`;
+									const link = `${window.location.origin}/#comprar-productos/${selectedReserva?.codigoReserva}`;
 									navigator.clipboard.writeText(link);
 									alert(`Enlace copiado al portapapeles: ${link}`);
 								}}
 							>
 								Generar Link de Compra
 							</Button>
-							<Button
-								size="sm"
-								variant="outline"
-								className="gap-2 ml-2"
-								onClick={() => {
-									const text = generarTextoConductor(selectedReserva);
-									navigator.clipboard.writeText(text);
-									alert("✅ Info para conductor copiada al portapapeles");
-								}}
-							>
-								<Copy className="w-4 h-4" />
-								Copiar Info Conductor
-							</Button>
+							{/* Botones de copiar info conductor - separados para IDA y VUELTA */}
+							{selectedReserva?.tramoVuelta ? (
+								<>
+									<Button
+										size="sm"
+										variant="outline"
+										className="gap-2 ml-2 bg-green-50 hover:bg-green-100 border-green-200"
+										onClick={() => {
+											const text = generarTextoConductor(selectedReserva);
+											navigator.clipboard.writeText(text);
+											alert("✅ Info IDA copiada al portapapeles");
+										}}
+									>
+										<Copy className="w-4 h-4" />
+										Copiar Info IDA
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										className="gap-2 ml-2 bg-blue-50 hover:bg-blue-100 border-blue-200"
+										onClick={() => {
+											const text = generarTextoConductor(selectedReserva?.tramoVuelta);
+											navigator.clipboard.writeText(text);
+											alert("✅ Info VUELTA copiada al portapapeles");
+										}}
+									>
+										<Copy className="w-4 h-4" />
+										Copiar Info VUELTA
+									</Button>
+								</>
+							) : (
+								<Button
+									size="sm"
+									variant="outline"
+									className="gap-2 ml-2"
+									onClick={() => {
+										const text = generarTextoConductor(selectedReserva);
+										navigator.clipboard.writeText(text);
+										alert("✅ Info para conductor copiada al portapapeles");
+									}}
+								>
+									<Copy className="w-4 h-4" />
+									Copiar Info Conductor
+								</Button>
+							)}
 						</div>
 					</DialogHeader>
 
@@ -5963,6 +6074,115 @@ function AdminReservas() {
 							})()}
 						</div>
 					</div>
+				</DialogContent>
+			</Dialog>
+			{/* Dialog para completar reservas vinculadas */}
+			<Dialog open={showDialogoCompletar} onOpenChange={setShowDialogoCompletar}>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle>Completar Viaje de Ida y Vuelta</DialogTitle>
+						<DialogDescription>
+							Selecciona cómo deseas completar este servicio vinculado.
+						</DialogDescription>
+					</DialogHeader>
+					
+					<div className="space-y-4 py-4">
+						<div className="p-3 bg-muted rounded-md text-sm whitespace-pre-line">
+							{dialogoCompletarOpciones?.mensaje}
+						</div>
+						
+						<div className="space-y-2">
+							<Button
+								className="w-full justify-start h-auto py-3 text-left items-start"
+								variant="outline"
+								onClick={async () => {
+									if (!confirm("¿Confirmas que deseas completar AMBOS tramos y agregar gastos?")) return;
+									try {
+										await completarAmbasReservas([
+											dialogoCompletarOpciones.reservaIda.id,
+											dialogoCompletarOpciones.reservaVuelta.id
+										]);
+										await fetchReservas();
+										redirigirAGastos([
+											dialogoCompletarOpciones.reservaIda.id,
+											dialogoCompletarOpciones.reservaVuelta.id
+										]);
+										setShowDialogoCompletar(false);
+									} catch (error) {
+										alert("Error al completar las reservas");
+									}
+								}}
+							>
+								<div className="flex flex-col">
+									<span className="font-semibold flex items-center gap-2">
+										<CheckCircle2 className="h-4 w-4 text-green-600" />
+										Completar ambas juntas
+									</span>
+									<span className="text-xs text-muted-foreground mt-1">
+										Marca IDA y VUELTA como completadas y permite ingresar gastos unificados.
+									</span>
+								</div>
+							</Button>
+							
+							<Button
+								className="w-full justify-start h-auto py-3 text-left items-start"
+								variant="outline"
+								onClick={async () => {
+									if (!confirm("¿Confirmas que deseas completar solo la IDA y agregar gastos?")) return;
+									try {
+										await completarReserva(dialogoCompletarOpciones.reservaIda.id);
+										await fetchReservas();
+										redirigirAGastos([dialogoCompletarOpciones.reservaIda.id]);
+										setShowDialogoCompletar(false);
+									} catch (error) {
+										alert("Error al completar la reserva de ida");
+									}
+								}}
+							>
+								<div className="flex flex-col">
+									<span className="font-semibold flex items-center gap-2">
+										<div className="w-4 h-4 rounded-full border border-chocolate-600 flex items-center justify-center text-[10px] font-bold text-chocolate-600">1</div>
+										Solo completar IDA
+									</span>
+									<span className="text-xs text-muted-foreground mt-1">
+										Solo marca el tramo de ida como completado.
+									</span>
+								</div>
+							</Button>
+							
+							<Button
+								className="w-full justify-start h-auto py-3 text-left items-start"
+								variant="outline"
+								onClick={async () => {
+									if (!confirm("¿Confirmas que deseas completar solo la VUELTA y agregar gastos?")) return;
+									try {
+										await completarReserva(dialogoCompletarOpciones.reservaVuelta.id);
+										await fetchReservas();
+										redirigirAGastos([dialogoCompletarOpciones.reservaVuelta.id]);
+										setShowDialogoCompletar(false);
+									} catch (error) {
+										alert("Error al completar la reserva de vuelta");
+									}
+								}}
+							>
+								<div className="flex flex-col">
+									<span className="font-semibold flex items-center gap-2">
+										<div className="w-4 h-4 rounded-full border border-chocolate-600 flex items-center justify-center text-[10px] font-bold text-chocolate-600">2</div>
+										Solo completar VUELTA
+									</span>
+									<span className="text-xs text-muted-foreground mt-1">
+										Solo marca el tramo de vuelta como completado.
+									</span>
+								</div>
+							</Button>
+						</div>
+					</div>
+					
+					<DialogFooter>
+						<Button variant="ghost" onClick={() => setShowDialogoCompletar(false)}>
+							Cancelar
+						</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</div>

@@ -86,6 +86,10 @@ function AdminGastos() {
 	const [conductores, setConductores] = useState([]);
 	const [vehiculos, setVehiculos] = useState([]);
 
+	// Soporte para múltiples reservas (Ida y Vuelta)
+	const [reservasMultiples, setReservasMultiples] = useState([]);
+	const [vistaActual, setVistaActual] = useState("ida"); // "ida", "vuelta", "ambas"
+
 	const [formData, setFormData] = useState({
 		tipoGasto: "",
 		monto: "",
@@ -118,18 +122,38 @@ function AdminGastos() {
 		}
 	}, [reservaSeleccionada?.id]);
 
-	// Leer parámetro reservaId de URL y seleccionar automáticamente
+	// Leer parámetros reservaId o reservaIds de URL y seleccionar automáticamente
 	useEffect(() => {
 		const url = new URL(window.location.href);
 		const reservaIdParam = url.searchParams.get("reservaId");
+		const reservaIdsParam = url.searchParams.get("reservaIds");
 		
-		if (reservaIdParam && reservas.length > 0 && !reservaSeleccionada) {
-			const reserva = reservas.find(r => r.id.toString() === reservaIdParam);
-			if (reserva) {
-				setReservaSeleccionada(reserva);
-				// Limpiar el parámetro de la URL
-				url.searchParams.delete("reservaId");
-				window.history.replaceState({}, "", url.toString());
+		if ((reservaIdParam || reservaIdsParam) && reservas.length > 0) {
+			if (reservaIdsParam) {
+				const ids = reservaIdsParam.split(",").map(id => id.trim());
+				const seleccionadas = reservas.filter(r => ids.includes(r.id.toString()));
+				
+				if (seleccionadas.length > 0) {
+					setReservasMultiples(seleccionadas);
+					// Por defecto, si hay varias, seleccionamos la primera (IDA)
+					setReservaSeleccionada(seleccionadas[0]);
+					setVistaActual("ida");
+					
+					// Limpiar parámetros para evitar re-selección indeseada
+					url.searchParams.delete("reservaIds");
+					url.searchParams.delete("reservaId");
+					window.history.replaceState({}, "", url.toString());
+				}
+			} else if (reservaIdParam && !reservaSeleccionada) {
+				const reserva = reservas.find(r => r.id.toString() === reservaIdParam);
+				if (reserva) {
+					setReservaSeleccionada(reserva);
+					setReservasMultiples([reserva]);
+					setVistaActual("ida");
+					// Limpiar el parámetro de la URL
+					url.searchParams.delete("reservaId");
+					window.history.replaceState({}, "", url.toString());
+				}
 			}
 		}
 	}, [reservas, reservaSeleccionada]);
@@ -349,7 +373,7 @@ function AdminGastos() {
 	};
 
 	const handleSaveBulkGastos = async () => {
-		if (!reservaSeleccionada) {
+		if (!reservaSeleccionada && vistaActual !== "ambas") {
 			alert("Selecciona una reserva primero");
 			return;
 		}
@@ -395,35 +419,56 @@ function AdminGastos() {
 
 		setSavingBulk(true);
 		try {
-			for (const draft of validDrafts) {
-				const response = await authenticatedFetch(`/api/gastos`, {
-					method: "POST",
-					body: JSON.stringify({
-						reservaId: reservaSeleccionada.id,
-						tipoGasto: draft.tipoGasto,
-						monto: draft.monto,
-						porcentaje: draft.porcentaje || null,
-						descripcion: draft.descripcion || null,
-						fecha: draft.fecha,
-						comprobante: draft.comprobante || null,
-						conductorId: draft.conductorId || null,
-						vehiculoId: draft.vehiculoId || null,
-						observaciones: draft.observaciones || null,
-					}),
-				});
+			// Determinar a qué reservas guardar
+			const reservasATratar = vistaActual === "ambas" 
+				? reservasMultiples 
+				: [reservaSeleccionada];
 
-				if (!response.ok) {
-					const error = await response.json();
-					throw new Error(error.error || "Error al guardar gasto");
+			if (reservasATratar.length === 0) {
+				throw new Error("No hay reservas seleccionadas para guardar");
+			}
+
+			for (const reserva of reservasATratar) {
+				for (const draft of validDrafts) {
+					const response = await authenticatedFetch(`/api/gastos`, {
+						method: "POST",
+						body: JSON.stringify({
+							reservaId: reserva.id,
+							tipoGasto: draft.tipoGasto,
+							monto: draft.monto,
+							porcentaje: draft.porcentaje || null,
+							descripcion: draft.descripcion || null,
+							fecha: draft.fecha,
+							comprobante: draft.comprobante || null,
+							conductorId: draft.conductorId || null,
+							vehiculoId: draft.vehiculoId || null,
+							observaciones: draft.observaciones || null,
+						}),
+					});
+
+					if (!response.ok) {
+						const error = await response.json();
+						throw new Error(`Reserva ${reserva.codigoReserva}: ${error.error || "Error al guardar gasto"}`);
+					}
 				}
 			}
 
-			await fetchGastos(reservaSeleccionada.id);
+			// Refrescar gastos de la reserva actual
+			if (reservaSeleccionada) {
+				await fetchGastos(reservaSeleccionada.id);
+			} else if (reservasMultiples.length > 0) {
+				await fetchGastos(reservasMultiples[0].id);
+			}
+
 			const refreshedDrafts = TIPOS_GASTO.map((tipo) =>
 				createDraftGasto(tipo.value)
 			);
 			setDraftGastos(refreshedDrafts);
 			setShowBulkDialog(false);
+			
+			if (vistaActual === "ambas") {
+				alert("✅ Gastos registrados correctamente en ambos tramos");
+			}
 		} catch (error) {
 			console.error("Error al guardar gastos:", error);
 			alert(error.message || "Error al guardar gastos");
@@ -689,14 +734,62 @@ function AdminGastos() {
 				</CardContent>
 			</Card>
 
+			{/* Selector de tramo para múltiples reservas */}
+			{reservasMultiples.length > 1 && (
+				<div className="flex flex-wrap gap-2 items-center bg-muted/30 p-2 rounded-lg border">
+					<span className="text-sm font-medium mr-2 ml-1">Gestionar tramo:</span>
+					<Button
+						variant={vistaActual === "ida" ? "default" : "outline"}
+						size="sm"
+						onClick={() => {
+							setVistaActual("ida");
+							setReservaSeleccionada(reservasMultiples[0]);
+						}}
+						className="gap-2"
+					>
+						<Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">IDA</Badge>
+						{reservasMultiples[0].codigoReserva}
+					</Button>
+					<Button
+						variant={vistaActual === "vuelta" ? "default" : "outline"}
+						size="sm"
+						onClick={() => {
+							setVistaActual("vuelta");
+							setReservaSeleccionada(reservasMultiples[1]);
+						}}
+						className="gap-2"
+					>
+						<Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">VUELTA</Badge>
+						{reservasMultiples[1].codigoReserva}
+					</Button>
+					<Button
+						variant={vistaActual === "ambas" ? "default" : "outline"}
+						size="sm"
+						onClick={() => setVistaActual("ambas")}
+						className="gap-2"
+					>
+						<Badge variant="secondary" className="bg-purple-100 text-purple-700 hover:bg-purple-100">AMBAS</Badge>
+						Registrar en ambos
+					</Button>
+				</div>
+			)}
+
 			{reservaSeleccionada && (
 				<>
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between">
 							<div>
-								<CardTitle>Gastos de la Reserva</CardTitle>
+								<CardTitle>
+									{vistaActual === "ambas" 
+										? "Gastos Compartidos (IDA + VUELTA)" 
+										: "Gastos de la Reserva"
+									}
+								</CardTitle>
 								<p className="text-sm text-muted-foreground mt-1">
-									{reservaSeleccionada.codigoReserva} - {reservaSeleccionada.nombre}
+									{vistaActual === "ambas"
+										? `Se registrarán gastos simultáneamente en ${reservasMultiples.map(r => r.codigoReserva).join(" y ")}`
+										: `${reservaSeleccionada.codigoReserva} - ${reservaSeleccionada.nombre}`
+									}
 								</p>
 							</div>
 							<div className="flex items-center gap-4">
