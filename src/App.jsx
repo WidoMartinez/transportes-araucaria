@@ -291,6 +291,9 @@ function App() {
 	});
 	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
 	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
+	
+	// Estado para el selector de tipo de vehículo (Auto Privado o Van)
+	const [tipoVehiculoSeleccionado, setTipoVehiculoSeleccionado] = useState(null);
 
 	// --- LÓGICA DE RETORNOS UNIVERSALES (CENTRALIZADA) ---
 	const buscarRetornosUniversal = async (origen, destino, fecha) => {
@@ -1028,50 +1031,98 @@ function App() {
 	}, [formData.fecha, formData.fechaRegreso, formData.idaVuelta]);
 
 	const calcularCotizacion = useCallback(
-		(origen, destino, pasajeros) => {
+		(origen, destino, pasajeros, tipoVehiculoSeleccionado) => {
 			const tramo = [origen, destino].find(
 				(lugar) => lugar !== "Aeropuerto La Araucanía"
 			);
 			const destinoInfo = destinosData.find((d) => d.nombre === tramo);
 
 			if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
-				return { precio: null, vehiculo: null };
+				return { precio: null, vehiculo: null, opciones: [], opcionSeleccionada: null };
 			}
 
 			const numPasajeros = parseInt(pasajeros);
+			const opciones = [];
 			
-			let vehiculoAsignado;
-			let precioFinal;
-
+			// Calcular opción Auto Privado (disponible solo para 1-3 pasajeros)
 			if (numPasajeros > 0 && numPasajeros <= 3) {
-				vehiculoAsignado = "Auto Privado";
-				const precios = destinoInfo.precios.auto;
-				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
-
-				const precioBase = Number(precios.base);
-				const pasajerosAdicionales = numPasajeros - 1;
-				const costoAdicional = precioBase * precios.porcentajeAdicional;
-				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
-			} else if (
-				numPasajeros >= 4 &&
-				numPasajeros <= destinoInfo.maxPasajeros
-			) {
-				vehiculoAsignado = "Van de Pasajeros";
-				const precios = destinoInfo.precios.van;
-				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
-
-				const precioBase = Number(precios.base);
-				const pasajerosAdicionales = numPasajeros - 4;
-				const costoAdicional = precioBase * precios.porcentajeAdicional;
-				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
-			} else {
-				vehiculoAsignado = "Consultar disponibilidad";
-				precioFinal = null;
+				const preciosAuto = destinoInfo.precios.auto;
+				if (preciosAuto) {
+					const precioBaseAuto = Number(preciosAuto.base);
+					const pasajerosAdicionales = numPasajeros - 1;
+					const costoAdicional = precioBaseAuto * preciosAuto.porcentajeAdicional;
+					const precioAuto = Math.round(precioBaseAuto + pasajerosAdicionales * costoAdicional);
+					
+					opciones.push({
+						tipo: "Auto Privado",
+						precio: precioAuto,
+						capacidad: "1-3 pasajeros",
+						descripcion: "Ideal para viajes individuales o grupos pequeños",
+						codigo: "auto"
+					});
+				}
+			}
+			
+			// Calcular opción Van (disponible para 1-7 pasajeros)
+			if (numPasajeros > 0 && numPasajeros <= destinoInfo.maxPasajeros) {
+				const preciosVan = destinoInfo.precios.van;
+				if (preciosVan) {
+					const precioBaseVan = Number(preciosVan.base);
+					let precioVan;
+					
+					// Para 1-3 pasajeros: precio base de van sin incrementos
+					if (numPasajeros <= 3) {
+						precioVan = Math.round(precioBaseVan);
+					} else {
+						// Para 4-7 pasajeros: precio base + incremento por pasajeros adicionales desde el 4to
+						const pasajerosAdicionales = numPasajeros - 4;
+						const costoAdicional = precioBaseVan * preciosVan.porcentajeAdicional;
+						precioVan = Math.round(precioBaseVan + pasajerosAdicionales * costoAdicional);
+					}
+					
+					opciones.push({
+						tipo: "Van de Pasajeros",
+						precio: precioVan,
+						capacidad: numPasajeros <= 3 ? "Hasta 7 pasajeros" : `${numPasajeros} pasajeros`,
+						descripcion: "Más espacio para equipaje y mayor comodidad",
+						codigo: "van"
+					});
+				}
+			}
+			
+			// Si hay 8+ pasajeros, retornar consultar disponibilidad
+			if (numPasajeros > destinoInfo.maxPasajeros) {
+				return {
+					precio: null,
+					vehiculo: "Consultar disponibilidad",
+					opciones: [],
+					opcionSeleccionada: null
+				};
+			}
+			
+			// Determinar opción seleccionada
+			let opcionSeleccionada;
+			if (tipoVehiculoSeleccionado) {
+				// Si hay una selección manual, usar esa
+				opcionSeleccionada = opciones.find(op => op.codigo === tipoVehiculoSeleccionado);
+			}
+			
+			if (!opcionSeleccionada && opciones.length > 0) {
+				// Selección por defecto:
+				// - Para 1-3 pasajeros: Auto (más económico)
+				// - Para 4-7 pasajeros: Van (única opción)
+				if (numPasajeros <= 3) {
+					opcionSeleccionada = opciones.find(op => op.codigo === "auto") || opciones[0];
+				} else {
+					opcionSeleccionada = opciones.find(op => op.codigo === "van") || opciones[0];
+				}
 			}
 			
 			return {
-				precio: precioFinal !== null ? Math.round(precioFinal) : null,
-				vehiculo: vehiculoAsignado,
+				precio: opcionSeleccionada ? opcionSeleccionada.precio : null,
+				vehiculo: opcionSeleccionada ? opcionSeleccionada.tipo : null,
+				opciones: opciones,
+				opcionSeleccionada: opcionSeleccionada
 			};
 		},
 		[destinosData]
@@ -1151,14 +1202,28 @@ function App() {
 		return calcularCotizacion(
 			formData.origen,
 			formData.destino,
-			formData.pasajeros
+			formData.pasajeros,
+			tipoVehiculoSeleccionado
 		);
 	}, [
 		formData.origen,
 		formData.destino,
 		formData.pasajeros,
+		tipoVehiculoSeleccionado,
 		calcularCotizacion,
 	]);
+
+	// Efecto para resetear selección de vehículo cuando cambia el número de pasajeros
+	useEffect(() => {
+		// Resetear la selección cuando el tipo seleccionado no es válido para el nuevo número de pasajeros
+		if (formData.pasajeros && tipoVehiculoSeleccionado) {
+			const numPasajeros = parseInt(formData.pasajeros);
+			// Si hay 4+ pasajeros y está seleccionado auto, resetear (auto no es válido)
+			if (numPasajeros > 3 && tipoVehiculoSeleccionado === "auto") {
+				setTipoVehiculoSeleccionado(null);
+			}
+		}
+	}, [formData.pasajeros, tipoVehiculoSeleccionado]);
 
 	// Efecto para calcular tarifa dinámica cuando cambian fecha/hora
 	useEffect(() => {
@@ -1654,7 +1719,8 @@ function App() {
 
 			// Datos de pricing calculados
 			precio: cotizacion.precio,
-			vehiculo: cotizacion.vehiculo,
+			vehiculo: cotizacion.opcionSeleccionada?.tipo || cotizacion.vehiculo,
+			tipoVehiculo: cotizacion.opcionSeleccionada?.codigo || (cotizacion.vehiculo === "Auto Privado" ? "auto" : "van"),
 			abonoSugerido: pricing.abono,
 			saldoPendiente: pricing.saldoPendiente,
 			descuentoBase: pricing.descuentoBase,
@@ -1946,6 +2012,9 @@ function App() {
 					oportunidadesRetornoUniversal={oportunidadesRetornoUniversal}
 					onAplicarCodigo={validarCodigo}
 					onRemoverCodigo={removerCodigo}
+					tipoVehiculoSeleccionado={tipoVehiculoSeleccionado}
+					onSeleccionarVehiculo={setTipoVehiculoSeleccionado}
+					tarifaDinamica={tarifaDinamica}
 				/>
 				<Servicios />
 				<Destinos />
