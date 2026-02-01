@@ -75,6 +75,7 @@ function HeroExpress({
 	oportunidadesRetornoUniversal, // Recibido desde App.jsx
 	tipoVehiculoSeleccionado,
 	onSeleccionarVehiculo,
+	tarifaDinamica, // Tarifa dinámica para ajustar precios
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
@@ -776,7 +777,13 @@ function HeroExpress({
 											🚗 Selecciona tu vehículo
 										</label>
 										<div className="space-y-3">
-											{cotizacion.opciones.map((opcion) => (
+											{cotizacion.opciones.map((opcion) => {
+												// Calcular precio con tarifa dinámica si está disponible
+												const factorTarifaDinamica = (tarifaDinamica?.precioFinal && cotizacion.precio) 
+													? tarifaDinamica.precioFinal / cotizacion.precio 
+													: 1;
+												const precioAjustado = Math.round(opcion.precio * factorTarifaDinamica);
+												return (
 												<div
 													key={opcion.codigo}
 													onClick={() => onSeleccionarVehiculo(opcion.codigo)}
@@ -813,18 +820,25 @@ function HeroExpress({
 																{new Intl.NumberFormat("es-CL", {
 																	style: "currency",
 																	currency: "CLP",
-																}).format(opcion.precio)}
+																}).format(precioAjustado)}
 															</p>
 														</div>
 													</div>
 												</div>
-											))}
+												);
+											})}
 										</div>
 										<div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
 											<p className="text-xs text-blue-800 flex items-start gap-2">
 												<span className="text-sm">💡</span>
 												<span>Puedes elegir una van aunque sean menos de 4 pasajeros si necesitas más espacio para equipaje o mayor comodidad.</span>
 											</p>
+											{tarifaDinamica?.ajustesAplicados?.length > 0 && (
+												<p className="text-xs text-blue-700 mt-2 flex items-start gap-2">
+													<span className="text-sm">ℹ️</span>
+													<span>Los precios mostrados incluyen ajustes de tarifa dinámica según disponibilidad.</span>
+												</p>
+											)}
 										</div>
 									</div>
 								)}

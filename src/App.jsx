@@ -2014,6 +2014,7 @@ function App() {
 					onRemoverCodigo={removerCodigo}
 					tipoVehiculoSeleccionado={tipoVehiculoSeleccionado}
 					onSeleccionarVehiculo={setTipoVehiculoSeleccionado}
+					tarifaDinamica={tarifaDinamica}
 				/>
 				<Servicios />
 				<Destinos />
