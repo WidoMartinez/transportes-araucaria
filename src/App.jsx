@@ -1215,16 +1215,15 @@ function App() {
 
 	// Efecto para resetear selección de vehículo cuando cambia el número de pasajeros
 	useEffect(() => {
-		// Resetear la selección cuando cambia el número de pasajeros
-		if (formData.pasajeros) {
+		// Resetear la selección cuando el tipo seleccionado no es válido para el nuevo número de pasajeros
+		if (formData.pasajeros && tipoVehiculoSeleccionado) {
 			const numPasajeros = parseInt(formData.pasajeros);
-			// Si cambia de 1-3 a 4+ o viceversa, resetear la selección
-			if ((numPasajeros > 3 && tipoVehiculoSeleccionado === "auto") ||
-				(numPasajeros <= 3 && tipoVehiculoSeleccionado === "van" && cotizacion.opciones?.length > 1)) {
+			// Si hay 4+ pasajeros y está seleccionado auto, resetear (auto no es válido)
+			if (numPasajeros > 3 && tipoVehiculoSeleccionado === "auto") {
 				setTipoVehiculoSeleccionado(null);
 			}
 		}
-	}, [formData.pasajeros, tipoVehiculoSeleccionado, cotizacion.opciones]);
+	}, [formData.pasajeros, tipoVehiculoSeleccionado]);
 
 	// Efecto para calcular tarifa dinámica cuando cambian fecha/hora
 	useEffect(() => {

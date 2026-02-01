@@ -823,7 +823,7 @@ function HeroExpress({
 										<div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
 											<p className="text-xs text-blue-800 flex items-start gap-2">
 												<span className="text-sm">💡</span>
-												<span>Puedes elegir una van aunque sean menos de 4 pasajeros si necesitas más espacio para equipaje o mayor comodidad</span>
+												<span>Puedes elegir una van aunque sean menos de 4 pasajeros si necesitas más espacio para equipaje o mayor comodidad.</span>
 											</p>
 										</div>
 									</div>
