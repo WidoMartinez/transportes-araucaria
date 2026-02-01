@@ -73,6 +73,8 @@ function HeroExpress({
 	onAplicarCodigo,
 	onRemoverCodigo,
 	oportunidadesRetornoUniversal, // Recibido desde App.jsx
+	tipoVehiculoSeleccionado,
+	onSeleccionarVehiculo,
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
@@ -766,6 +768,66 @@ function HeroExpress({
 									</div>
 								</div>
 
+
+								{/* Selector de Tipo de Vehículo */}
+								{cotizacion?.opciones?.length > 1 && (
+									<div className="space-y-3 mb-6">
+										<label className="block text-sm font-semibold text-gray-800 mb-3">
+											🚗 Selecciona tu vehículo
+										</label>
+										<div className="space-y-3">
+											{cotizacion.opciones.map((opcion) => (
+												<div
+													key={opcion.codigo}
+													onClick={() => onSeleccionarVehiculo(opcion.codigo)}
+													className={`relative flex cursor-pointer rounded-xl border-2 p-4 shadow-sm transition-all hover:shadow-md ${
+														opcion.codigo === cotizacion.opcionSeleccionada?.codigo
+															? 'border-blue-600 bg-blue-50 ring-2 ring-blue-300'
+															: 'border-gray-300 bg-white hover:border-gray-400'
+													}`}
+												>
+													<div className="flex flex-1 items-center gap-4">
+														<div className="flex-shrink-0">
+															<input
+																type="radio"
+																name="tipo-vehiculo"
+																checked={opcion.codigo === cotizacion.opcionSeleccionada?.codigo}
+																onChange={() => onSeleccionarVehiculo(opcion.codigo)}
+																className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+															/>
+														</div>
+														<div className="flex-1 min-w-0">
+															<p className="text-base font-bold text-gray-900">
+																{opcion.tipo}
+															</p>
+															<p className="text-sm text-gray-600 mt-0.5">
+																{opcion.capacidad}
+															</p>
+															<p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+																<span>✓</span>
+																<span>{opcion.descripcion}</span>
+															</p>
+														</div>
+														<div className="flex-shrink-0 text-right">
+															<p className="text-xl md:text-2xl font-bold text-gray-900">
+																{new Intl.NumberFormat("es-CL", {
+																	style: "currency",
+																	currency: "CLP",
+																}).format(opcion.precio)}
+															</p>
+														</div>
+													</div>
+												</div>
+											))}
+										</div>
+										<div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+											<p className="text-xs text-blue-800 flex items-start gap-2">
+												<span className="text-sm">💡</span>
+												<span>Puedes elegir una van aunque sean menos de 4 pasajeros si necesitas más espacio para equipaje o mayor comodidad</span>
+											</p>
+										</div>
+									</div>
+								)}
 								{/* Alerta de oportunidades de retorno universal (sin email) */}
 								{oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones?.length > 0 && (
 									<AlertaDescuentoRetorno
