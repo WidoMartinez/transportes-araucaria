@@ -12,17 +12,18 @@ const sequelize = new Sequelize({
 	host: process.env.DB_HOST || "srv1551.hstgr.io",
 	port: process.env.DB_PORT || 3306,
 	dialect: "mysql",
-	logging: false, // Cambiar a console.log para ver las consultas SQL
+	// Habilitar logging condicional para diagnóstico (DB_LOGGING=true en .env)
+	logging: process.env.DB_LOGGING === 'true' ? console.log : false,
 	pool: {
 		max: 5,
 		min: 0,
-		acquire: 60000, // Aumentado a 60 segundos
+		acquire: 90000, // Aumentado a 90 segundos para Render
 		idle: 10000,
 	},
 	// Evitar conversiones automáticas de zona horaria que pueden desplazar DATE/DATEONLY
 	timezone: process.env.DB_TIMEZONE || "-04:00",
 	dialectOptions: {
-		connectTimeout: 60000, // Timeout de conexión: 60 segundos
+		connectTimeout: 90000, // Timeout de conexión: 90 segundos para Render
 		timezone: process.env.DB_TIMEZONE || "-04:00",
 	},
 	retry: {

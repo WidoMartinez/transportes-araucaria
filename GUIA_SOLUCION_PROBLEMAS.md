@@ -822,7 +822,144 @@ En `backend/server-db.js`, el endpoint `/api/payment-result` (línea 7059) acept
 
 ---
 
-## 13. Fechas Inválidas en Reservas Express (252026-01-09)
+## 13. Pagos Fallidos No Registrados en Historial (Flow Status 3 y 4)
+
+**Implementado: 3 Febrero 2026**
+
+### Problema
+Cuando un cliente intentaba pagar una reserva y el pago era rechazado o anulado por Flow (status 3 o 4), el sistema no registraba ningún intento de pago en la tabla de transacciones. Esto dificultaba el soporte técnico cuando un cliente afirmaba haber intentado pagar y haber tenido un error, ya que no había evidencia visible en el panel administrativo.
+
+### Síntomas
+- Cliente reporta error al pagar, pero no aparece ningún registro en el historial de transacciones
+- Logs del backend muestran `ℹ️ Pago no exitoso (status: 3), no se actualiza reserva` pero no se crea ningún registro
+- Panel administrativo muestra "0 transacción(es)" para reservas con intentos de pago fallidos
+- Imposibilidad de rastrear intentos de pago rechazados para análisis o soporte
+
+### Causa
+El webhook de confirmación de Flow (`/api/flow-confirmation`) en `backend/server-db.js` validaba el estado del pago antes de identificar la reserva. Si el pago no era exitoso (status !== 2), simplemente retornaba sin crear ningún registro en la tabla `Transaccion`.
+
+**Flujo anterior:**
+```javascript
+// 1. Obtener estado del pago de Flow
+const payment = flowResponse.data;
+
+// 2. Salir inmediatamente si no es exitoso
+if (payment.status !== 2) {
+    console.log(`ℹ️ Pago no exitoso (status: ${payment.status}), no se actualiza reserva`);
+    return; // ❌ No se registra nada
+}
+
+// 3. Identificar reserva (nunca se ejecuta para pagos fallidos)
+let reserva = await Reserva.findByPk(optionalReservaId);
+```
+
+### Solución (Febrero 2026)
+
+Se refactorizó el webhook para identificar la reserva **antes** de validar el estado del pago, y se agregó lógica para registrar transacciones fallidas.
+
+**Archivo modificado:** `backend/server-db.js`  
+**Líneas modificadas:** 7864-8023
+
+**Lógica implementada:**
+
+```javascript
+// 1. Responder a Flow
+res.status(200).send("OK");
+
+// 2. Extraer metadata y buscar reserva (independiente del estado del pago)
+let reserva = await Reserva.findByPk(optionalReservaId);
+// ... lógica de búsqueda por código, email, etc.
+
+if (!reserva) {
+    console.log("⚠️ Reserva no encontrada");
+    return;
+}
+
+// 3. Registrar transacción fallida si el pago fue rechazado o anulado
+if (payment.status === 3 || payment.status === 4) {
+    const statusLabel = payment.status === 3 ? "Rechazado" : "Anulado";
+    
+    await Transaccion.create({
+        reservaId: reserva.id,
+        monto: Number(payment.amount) || 0,
+        gateway: "flow",
+        transaccionId: payment.flowOrder.toString(),
+        estado: "fallido",
+        emailPagador: email,
+        metadata: { /* datos completos de Flow */ },
+        notas: `Pago ${statusLabel} por Flow. No se actualizó el estado de la reserva.`
+    });
+    
+    console.log(`💾 Transacción fallida registrada: Flow Order ${payment.flowOrder}`);
+    return;
+}
+
+// 4. Procesar pagos exitosos (status 2)
+if (payment.status !== 2) {
+    return;
+}
+// ... resto de la lógica de pago exitoso
+```
+
+### Comportamiento Después de la Solución
+
+**Antes:**
+```
+Cliente intenta pagar → Flow rechaza (status 3) → Sistema ignora
+Panel Admin: "0 transacción(es)" ❌
+```
+
+**Después:**
+```
+Cliente intenta pagar → Flow rechaza (status 3) → Sistema registra transacción fallida
+Panel Admin: "1 transacción(es)" con badge "✗ Fallido" ✅
+```
+
+### Verificación
+
+**Logs esperados en Render:**
+```
+💳 Estado del pago Flow: { flowOrder: 159003188, status: 3, amount: '115000' }
+❌ Pago Rechazado (status: 3). Registrando transacción fallida para reserva 246
+💾 Transacción fallida registrada: Flow Order 159003188
+```
+
+**Panel Administrativo:**
+1. Ir a "Reservas" → Ver detalles de la reserva
+2. Sección "Historial de Transacciones"
+3. Debe aparecer una fila con:
+   - Estado: Badge rojo "✗ Fallido"
+   - Monto: El monto del intento de pago
+   - Gateway: "flow"
+   - Referencia: Flow Order ID
+
+### Script de Prueba
+
+Se incluye `backend/test-failed-payment.js` para validar la lógica:
+
+```bash
+cd backend
+node test-failed-payment.js
+```
+
+El script:
+1. Busca una reserva existente
+2. Simula un pago fallido (status 3)
+3. Crea una transacción con estado "fallido"
+4. Verifica que la reserva no fue modificada
+5. Limpia los datos de prueba
+
+### Archivos Modificados
+
+- `backend/server-db.js` (líneas 7864-8023): Refactorización del webhook
+- `backend/test-failed-payment.js` (nuevo): Script de pruebas
+
+> [!IMPORTANT]
+> Este cambio mejora la visibilidad de intentos de pago fallidos sin afectar la lógica de negocio. La reserva sigue sin actualizarse para pagos rechazados, pero ahora queda registro del intento para soporte técnico y análisis.
+
+---
+
+## 14. Fechas Inválidas en Reservas Express (252026-01-09)
 
 **Implementado: 7 Enero 2026**
 
@@ -1842,3 +1979,211 @@ if (esHoy) {
 
 > [!TIP]
 > Para reservas de "Último Minuto" (menos de 5 horas), se recomienda dirigir al usuario al botón de WhatsApp para coordinación manual según disponibilidad de móviles.
+
+---
+
+## 20. Error de Conexión a BD en Email Processor (ETIMEDOUT)
+
+**Implementado: 3 Febrero 2026**
+
+### Problema
+El procesador de emails (`emailProcessor.js`) fallaba con error `SequelizeConnectionError: ETIMEDOUT` al intentar conectarse a la base de datos MySQL, impidiendo el envío de notificaciones programadas (descuentos, asignaciones, etc.).
+
+### Síntomas
+```
+❌ Error global en processPendingEmails: ConnectionError [SequelizeConnectionError]
+    at ConnectionManager.connect (/opt/render/project/src/backend/node_modules/sequelize/lib/dialects/mysql/connection-manager.js:102:17)
+{
+  parent: AggregateError [ETIMEDOUT]: 
+  code: 'ETIMEDOUT',
+  fatal: true
+}
+```
+
+**Impacto**:
+- No se envían emails de descuento a pasajeros
+- No se envían notificaciones de asignación de conductor/vehículo
+- El cron job falla cada 60 segundos sin recuperarse
+- Logs de Render saturados con errores de conexión
+
+### Causa
+1. **No hay verificación de conexión**: El processor ejecutaba consultas directamente sin verificar que la BD esté disponible
+2. **Sin reintentos**: Si la conexión inicial fallaba, el error se propagaba sin intentar reconectar
+3. **Timeouts insuficientes**: 60s puede ser insuficiente en Render (especialmente plan gratuito)
+4. **Falta de manejo específico**: Errores de conexión se trataban igual que errores de lógica
+
+### Solución (Febrero 2026)
+
+#### 1. Verificación de Conexión con Reintentos
+
+Se implementó una función `retryWithBackoff()` que intenta conectarse a la BD con backoff exponencial antes de ejecutar consultas.
+
+**Archivo**: `backend/cron/emailProcessor.js`  
+**Líneas**: 7-28 (función helper), 33-38 (verificación)
+
+```javascript
+// Constantes
+const MAX_CONNECTION_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 2000; // 2 segundos
+
+// Función de reintentos con backoff exponencial
+async function retryWithBackoff(fn, retries = MAX_CONNECTION_RETRIES) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            
+            const delay = INITIAL_RETRY_DELAY * Math.pow(2, i);
+            console.log(`⏳ Reintento de conexión ${i + 1}/${retries} en ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
+// Uso en processPendingEmails()
+await retryWithBackoff(async () => {
+    await sequelize.authenticate();
+    console.log("✅ Conexión a BD verificada para email processor");
+});
+```
+
+**Patrón de reintentos**:
+- Intento 1: Inmediato
+- Intento 2: Después de 2 segundos
+- Intento 3: Después de 4 segundos
+- Si falla todo: Lanza error y sale gracefully
+
+#### 2. Manejo Específico de Errores de Conexión
+
+Se agregó detección específica de `SequelizeConnectionError` para salir gracefully sin crashear el proceso.
+
+**Archivo**: `backend/cron/emailProcessor.js`  
+**Líneas**: 194-207
+
+```javascript
+catch (globalError) {
+    // Manejo específico de errores de conexión
+    if (globalError.name === 'SequelizeConnectionError' || globalError.name === 'ConnectionError') {
+        console.error("❌ Error de conexión a BD en email processor:", {
+            error: globalError.message,
+            code: globalError.parent?.code,
+            host: process.env.DB_HOST,
+            timestamp: new Date().toISOString()
+        });
+        console.log("⏭️ Saliendo gracefully. Se reintentará en el próximo ciclo (60s)");
+        return; // Salir sin crashear
+    }
+    
+    // Otros errores globales
+    console.error("❌ Error global en processPendingEmails:", globalError);
+}
+```
+
+**Beneficios**:
+- El cron no crashea si la BD está temporalmente inaccesible
+- Se reintenta automáticamente en el próximo ciclo (60s)
+- Logging detallado para diagnóstico en Render
+
+#### 3. Timeouts Aumentados para Render
+
+Se aumentaron los timeouts de conexión de 60s a 90s para manejar mejor la latencia de Render (especialmente en plan gratuito donde la BD puede estar "dormida").
+
+**Archivo**: `backend/config/database.js`  
+**Líneas**: 15-26
+
+```javascript
+// Habilitar logging condicional para diagnóstico (DB_LOGGING=true en .env)
+logging: process.env.DB_LOGGING === 'true' ? console.log : false,
+pool: {
+    max: 5,
+    min: 0,
+    acquire: 90000, // Aumentado a 90 segundos para Render
+    idle: 10000,
+},
+dialectOptions: {
+    connectTimeout: 90000, // Timeout de conexión: 90 segundos para Render
+    timezone: process.env.DB_TIMEZONE || "-04:00",
+},
+```
+
+**Cambios**:
+- `acquire`: 60s → 90s
+- `connectTimeout`: 60s → 90s
+- Logging condicional con variable de entorno `DB_LOGGING`
+
+### Comportamiento Después de la Solución
+
+**Escenario 1: BD Disponible**
+```
+✅ Conexión a BD verificada para email processor
+🔄 Procesando 3 correos pendientes...
+✅ Correo de descuento enviado para AR-20260203-0001
+```
+
+**Escenario 2: BD Temporalmente Inaccesible**
+```
+⏳ Reintento de conexión 1/3 en 2000ms...
+⏳ Reintento de conexión 2/3 en 4000ms...
+✅ Conexión a BD verificada para email processor
+🔄 Procesando 3 correos pendientes...
+```
+
+**Escenario 3: BD Completamente Caída**
+```
+⏳ Reintento de conexión 1/3 en 2000ms...
+⏳ Reintento de conexión 2/3 en 4000ms...
+⏳ Reintento de conexión 3/3 en 8000ms...
+❌ Error de conexión a BD en email processor: {
+  error: "connect ETIMEDOUT",
+  code: "ETIMEDOUT",
+  host: "srv1551.hstgr.io",
+  timestamp: "2026-02-03T19:15:00.000Z"
+}
+⏭️ Saliendo gracefully. Se reintentará en el próximo ciclo (60s)
+```
+
+### Verificación
+
+**Logs esperados en Render**:
+```bash
+# Conexión exitosa
+✅ Conexión a BD verificada para email processor
+
+# Con reintentos
+⏳ Reintento de conexión 1/3 en 2000ms...
+✅ Conexión a BD verificada para email processor
+
+# Error de conexión (sin crash)
+❌ Error de conexión a BD en email processor
+⏭️ Saliendo gracefully. Se reintentará en el próximo ciclo (60s)
+```
+
+**Monitoreo en Render Dashboard**:
+1. Ir a Logs en tiempo real
+2. Buscar "email processor" o "processPendingEmails"
+3. Verificar que no haya errores `ETIMEDOUT` sin manejo
+4. Confirmar que el proceso no crashea si hay errores de conexión
+
+### Variables de Entorno
+
+**Nueva variable opcional**:
+```bash
+# En .env o Render Environment Variables
+DB_LOGGING=true  # Habilita logging SQL para diagnóstico (solo desarrollo)
+```
+
+### Archivos Modificados
+
+- `backend/cron/emailProcessor.js` (líneas 7-28, 33-38, 194-207)
+- `backend/config/database.js` (líneas 15-26)
+
+> [!IMPORTANT]
+> Esta solución garantiza que el procesador de emails sea resiliente a problemas temporales de conexión a BD, evitando que el sistema de notificaciones falle completamente por timeouts transitorios.
+
+> [!TIP]
+> Si el problema persiste después de esta solución, verificar:
+> - Estado de la BD en Hostinger (srv1551.hstgr.io)
+> - Límites de conexiones simultáneas en el plan de hosting
+> - Firewall o restricciones de red entre Render y Hostinger
+

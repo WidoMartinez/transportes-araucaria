@@ -4,10 +4,38 @@ import axios from "axios";
 import { Op } from "sequelize";
 import sequelize from "../config/database.js";
 
+// Constantes para reintentos de conexión
+const MAX_CONNECTION_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 2000; // 2 segundos
+
+/**
+ * Función helper para reintentos con backoff exponencial
+ * @param {Function} fn - Función async a ejecutar con reintentos
+ * @param {number} retries - Número máximo de reintentos
+ * @returns {Promise} - Resultado de la función o error si todos los reintentos fallan
+ */
+async function retryWithBackoff(fn, retries = MAX_CONNECTION_RETRIES) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            
+            const delay = INITIAL_RETRY_DELAY * Math.pow(2, i);
+            console.log(`⏳ Reintento de conexión ${i + 1}/${retries} en ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+
 // Función para procesar correos pendientes
 export const processPendingEmails = async () => {
     try {
-
+        // VERIFICAR CONEXIÓN A BD ANTES DE CONSULTAS
+        await retryWithBackoff(async () => {
+            await sequelize.authenticate();
+            console.log("✅ Conexión a BD verificada para email processor");
+        });
 
         const now = new Date();
         
@@ -163,6 +191,20 @@ export const processPendingEmails = async () => {
             }
         }
     } catch (globalError) {
+        // Manejo específico de errores de conexión
+        if (globalError.name === 'SequelizeConnectionError' || globalError.name === 'ConnectionError') {
+            console.error("❌ Error de conexión a BD en email processor:", {
+                error: globalError.message,
+                code: globalError.parent?.code,
+                host: process.env.DB_HOST,
+                timestamp: new Date().toISOString(),
+                stack: process.env.NODE_ENV === 'development' ? globalError.stack : undefined
+            });
+            console.log("⏭️ Saliendo gracefully. Se reintentará en el próximo ciclo (60s)");
+            return; // Salir sin crashear, se reintentará en el próximo ciclo
+        }
+        
+        // Otros errores globales
         console.error("❌ Error global en processPendingEmails:", globalError);
     }
 };
