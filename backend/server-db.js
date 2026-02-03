@@ -7864,13 +7864,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		// Responder a Flow
 		res.status(200).send("OK");
 
-		// Solo procesar pagos exitosos (status 2 = pagado)
-		if (payment.status !== 2) {
-			console.log(
-				`ℹ️  Pago no exitoso (status: ${payment.status}), no se actualiza reserva`
-			);
-			return;
-		}
+		// NOTA: Primero identificamos la reserva, luego procesamos según el estado del pago
 
 		// Extraer metadata auxiliar enviada en el optional de Flow
 		let optionalMetadata = {};
@@ -7971,6 +7965,50 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 		if (!reserva) {
 			console.log("⚠️  Reserva no encontrada en la base de datos");
+			return;
+		}
+
+		// Registrar transacción fallida si el pago fue rechazado o anulado
+		if (payment.status === 3 || payment.status === 4) {
+			const statusLabel = payment.status === 3 ? "Rechazado" : "Anulado";
+			console.log(
+				`❌ Pago ${statusLabel} (status: ${payment.status}). Registrando transacción fallida para reserva ${reserva.id}`
+			);
+			
+			try {
+				await Transaccion.create({
+					reservaId: reserva.id,
+					codigoPagoId: codigoPagoId,
+					monto: Number(payment.amount) || 0,
+					gateway: "flow",
+					transaccionId: payment.flowOrder.toString(),
+					referencia: optionalReferenciaPago,
+					tipoPago: optionalTipoPago,
+					estado: "fallido",
+					emailPagador: email,
+					metadata: {
+						flowOrder: payment.flowOrder,
+						status: payment.status,
+						amount: payment.amount,
+						paymentDate: payment.paymentDate,
+						commerceOrder: payment.commerceOrder,
+						payer: payment.payer
+					},
+					notas: `Pago ${statusLabel} por Flow. No se actualizó el estado de la reserva.`
+				});
+				console.log(`💾 Transacción fallida registrada: Flow Order ${payment.flowOrder}`);
+			} catch (transError) {
+				console.error("⚠️ Error registrando transacción fallida:", transError.message);
+			}
+			
+			return;
+		}
+
+		// Solo procesar pagos exitosos (status 2 = pagado)
+		if (payment.status !== 2) {
+			console.log(
+				`ℹ️  Pago no exitoso (status: ${payment.status}), no se actualiza reserva`
+			);
 			return;
 		}
 
