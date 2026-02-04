@@ -468,6 +468,17 @@ SHOW TABLES LIKE 'configuracion';
 SELECT * FROM configuracion WHERE clave = 'whatsapp_intercept_activo';
 ```
 
+#### 04-02-2026: Mejora y Destaque Interfaz "Upgrade a Van"
+- **Problema**: La sección de upgrade era abrumadora e inicialmente costaba distinguirla como una opción premium.
+- **Solución**: Se simplificaron las leyendas y avisos, y luego se aplicó un contorno destacado en tonos café (chocolate) con una leyenda más descriptiva sobre confort y reclinación.
+- **Resultado**: Interfaz limpia pero llamativa que destaca la opción de upgrade de forma elegante.
+
+**Verificación**:
+```javascript
+// En consola del navegador
+localStorage.getItem('token') // Debe retornar un token válido
+```
+
 #### 3. Error de Autenticación en Panel Admin
 **Causa**: El token JWT no es válido o ha expirado al intentar cambiar la configuración.
 
