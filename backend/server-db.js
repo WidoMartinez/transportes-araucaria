@@ -2723,7 +2723,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					direccionOrigen: dirOrigenVuelta,
 					direccionDestino: dirDestinoVuelta,
 					fecha: datosReserva.fechaRegreso, // Fecha regresó original
-					hora: normalizeTimeGlobal(datosReserva.horaRegreso),   // Hora regreso original (NORMALIZADA)
+					hora: datosReserva.horaRegreso || "00:00:00",   // Hora regreso original
 					
 					// Datos financieros (mitad del total)
 					precio: precioVuelta,
