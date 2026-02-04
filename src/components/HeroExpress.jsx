@@ -1084,15 +1084,22 @@ function HeroExpress({
 								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
-								// Precio base de Van (mínimo garantizado)
-								const precioBaseVan = Number(destinoInfo.precios.van.base);
-								const precioVanMinimo = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
-								
-								// Usar el precio ACTUAL de la cotización (con descuentos ya aplicados)
+								// Precio actual del sedan (con descuentos ya aplicados)
 								const precioActualSedan = pricing.totalConDescuento || 0;
 								
-								// La diferencia es simplemente: Precio mínimo Van - Precio actual del Sedan
-								const diferenciaTotal = precioVanMinimo - precioActualSedan;
+								// Si el upgrade YA está activado, el pricing.totalConDescuento
+								// ya contiene el precio de la Van con descuentos
+								// En ese caso, la diferencia es 0 porque ya estamos viendo el precio con upgrade
+								
+								// Si el upgrade NO está activado, necesitamos calcular cuánto MÁS costaría
+								// Para eso, necesitamos saber el precio base de la Van
+								const precioBaseVan = Number(destinoInfo.precios.van.base);
+								const precioVanBase = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
+								
+								// La diferencia APROXIMADA (puede variar con descuentos)
+								// es la diferencia entre el precio base Van y el precio actual
+								// NOTA: Esta es una aproximación, el precio real se calcula en el backend
+								const diferenciaTotal = precioVanBase - precioActualSedan;
 								
 								// No mostrar si la diferencia es negativa o muy pequeña
 								if (diferenciaTotal <= 0) return null;
@@ -1126,16 +1133,18 @@ function HeroExpress({
 															Precio fijo hasta 4 pax
 														</span>
 													</div>
-													<span className="text-base font-bold text-primary whitespace-nowrap">
-														+{formatCurrency(diferenciaTotal)}
-													</span>
+													{!formData.upgradeVan && (
+														<span className="text-sm text-muted-foreground whitespace-nowrap">
+															Ver precio arriba
+														</span>
+													)}
 												</div>
 												
 												<div className="space-y-2">
 													<p className="text-xs text-muted-foreground leading-relaxed">
 														<strong>Más espacio y confort:</strong> Asientos amplios y reclinables<br />
 														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras<br />
-														<strong>Precio total con upgrade:</strong> {formatCurrency(precioVanMinimo)}{formData.idaVuelta && " (ida y vuelta)"}
+														<strong>Precio base Van:</strong> {formatCurrency(precioVanBase)}{formData.idaVuelta && " (ida y vuelta)"}
 													</p>
 													
 													{parseInt(formData.pasajeros) === 3 && (
@@ -1149,7 +1158,7 @@ function HeroExpress({
 													{formData.upgradeVan && (
 														<div className="bg-primary/10 border border-primary/20 rounded px-3 py-2 mt-2">
 															<p className="text-xs text-primary font-medium">
-																✓ Upgrade activado • Descuentos aplicados
+																Upgrade activado - Descuentos aplicados
 															</p>
 														</div>
 													)}
