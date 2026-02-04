@@ -1216,6 +1216,14 @@ function App() {
 	const validarTelefono = (telefono) =>
 		/^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/.test(telefono);
 
+	// Helper para generar observaciones con nota de upgrade
+	const generarObservaciones = (mensaje, upgradeVan) => {
+		if (upgradeVan) {
+			return (mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]";
+		}
+		return mensaje;
+	};
+
 	const validarHorarioReserva = () => {
 		if (!destinoSeleccionado || !formData.fecha || !formData.hora) {
 			return {
@@ -1375,14 +1383,15 @@ function App() {
 					: precioBaseVanMinimo;      // Solo IDA
 				
 				if (totalConDescuento - costoSilla < minimoAbsoluto) {
-					console.log("🚐 UPGRADE VAN: Ajustando al precio base mínimo", {
-						pasajeros: formData.pasajeros,
-						precioBase,
-						descuentosCalculados: descuentoOnlineTotal,
-						totalCalculado: totalConDescuento - costoSilla,
-						minimoGarantizado: minimoAbsoluto,
-						ajuste: minimoAbsoluto - (totalConDescuento - costoSilla)
-					});
+					// Log de debug para desarrollo (comentado en producción)
+					// console.log("🚐 UPGRADE VAN: Ajustando al precio base mínimo", {
+					// 	pasajeros: formData.pasajeros,
+					// 	precioBase,
+					// 	descuentosCalculados: descuentoOnlineTotal,
+					// 	totalCalculado: totalConDescuento - costoSilla,
+					// 	minimoGarantizado: minimoAbsoluto,
+					// 	ajuste: minimoAbsoluto - (totalConDescuento - costoSilla)
+					// });
 					
 					totalConDescuento = minimoAbsoluto + costoSilla;
 				}
@@ -1580,9 +1589,7 @@ function App() {
 			saldoPendiente,
 			source,
 			upgradeVan: formData.upgradeVan || false,
-			observaciones: formData.upgradeVan 
-				? (formData.mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]"
-				: formData.mensaje,
+			observaciones: generarObservaciones(formData.mensaje, formData.upgradeVan),
 		};
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
@@ -1728,9 +1735,7 @@ function App() {
 			totalConDescuento: pricing.totalConDescuento,
 			codigoDescuento: codigoAplicado?.codigo || "",
 			upgradeVan: formData.upgradeVan || false,
-			observaciones: formData.upgradeVan 
-				? (formData.mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]"
-				: formData.mensaje,
+			observaciones: generarObservaciones(formData.mensaje, formData.upgradeVan),
 			// Estado inicial: marcar como pendiente hasta confirmar pago
 			estado: "pendiente",
 			estadoPago: "pendiente",
