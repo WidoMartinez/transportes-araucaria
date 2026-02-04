@@ -1104,8 +1104,8 @@ function HeroExpress({
 									<div className="mt-6 pt-6 border-t border-border">
 										<div className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${
 											formData.upgradeVan 
-												? 'bg-blue-50 border-blue-300 shadow-sm' 
-												: 'bg-blue-50/50 border-blue-200 hover:border-blue-300'
+												? 'bg-muted/50 border-border shadow-sm' 
+												: 'bg-muted/30 border-border hover:bg-muted/40'
 										}`}>
 											<input
 												type="checkbox"
@@ -1117,44 +1117,43 @@ function HeroExpress({
 														upgradeVan: e.target.checked
 													}));
 												}}
-												className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+												className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
 											/>
 											<label htmlFor="upgrade-van" className="flex-1 cursor-pointer">
 												<div className="flex items-center justify-between gap-3 mb-2">
 													<div className="flex items-center gap-2 flex-wrap">
-														<span className="text-sm font-semibold text-gray-900">
-															🚐 Upgrade a Van
+														<span className="text-sm font-semibold text-foreground">
+															Upgrade a Van
 														</span>
-														<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground border border-border">
 															Precio fijo hasta 4 pax
 														</span>
 													</div>
-													<span className="text-base font-bold text-blue-700 whitespace-nowrap">
+													<span className="text-base font-bold text-primary whitespace-nowrap">
 														+{formatCurrency(diferenciaTotal)}
 													</span>
 												</div>
 												
 												<div className="space-y-2">
-													<p className="text-xs text-gray-700 leading-relaxed">
-														✨ <strong>Más espacio y confort</strong> • Asientos amplios y reclinables<br />
-														🧳 <strong>Equipaje extra</strong> • Ideal para maletas grandes o compras<br />
-														💰 <strong>Precio garantizado:</strong> {formatCurrency(precioVanMinimo)} 
-														{formData.idaVuelta && " (ida y vuelta)"} — sin importar descuentos aplicados
+													<p className="text-xs text-muted-foreground leading-relaxed">
+														<strong>Más espacio y confort:</strong> Asientos amplios y reclinables<br />
+														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras<br />
+														<strong>Precio garantizado:</strong> {formatCurrency(precioVanMinimo)} 
+														{formData.idaVuelta && " (ida y vuelta)"} sin importar descuentos aplicados
 													</p>
 													
 													{parseInt(formData.pasajeros) === 3 && (
-														<div className="bg-amber-50 border border-amber-300 rounded px-3 py-2">
-															<p className="text-xs text-amber-900">
-																💡 <strong>Consejo:</strong> Si suman un pasajero más, la Van es obligatoria 
-																por solo un pequeño adicional
+														<div className="bg-muted/50 border border-border rounded px-3 py-2">
+															<p className="text-xs text-muted-foreground">
+																<strong>Nota:</strong> Si suman un pasajero más, la Van es obligatoria por solo un pequeño adicional
 															</p>
 														</div>
 													)}
 													
 													{formData.upgradeVan && (
-														<div className="bg-blue-100 border border-blue-300 rounded px-3 py-2 mt-2">
-															<p className="text-xs text-blue-900 font-medium">
-																✓ Upgrade activado • El precio mínimo de {formatCurrency(precioVanMinimo)} está garantizado
+														<div className="bg-primary/10 border border-primary/20 rounded px-3 py-2 mt-2">
+															<p className="text-xs text-primary font-medium">
+																Upgrade activado • Precio mínimo garantizado: {formatCurrency(precioVanMinimo)}
 															</p>
 														</div>
 													)}
