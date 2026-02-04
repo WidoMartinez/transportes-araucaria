@@ -1138,8 +1138,7 @@ function HeroExpress({
 													<p className="text-xs text-muted-foreground leading-relaxed">
 														<strong>Más espacio y confort:</strong> Asientos amplios y reclinables<br />
 														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras<br />
-														<strong>Precio garantizado:</strong> {formatCurrency(precioVanMinimo)} 
-														{formData.idaVuelta && " (ida y vuelta)"} sin importar descuentos aplicados
+														<strong>Precio garantizado:</strong> {formatCurrency(precioVanMinimo)}{formData.idaVuelta && " (ida y vuelta)"}
 													</p>
 													
 													{parseInt(formData.pasajeros) === 3 && (
