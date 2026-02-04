@@ -1084,25 +1084,52 @@ function HeroExpress({
 								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
-								// Precio actual del sedan (con descuentos ya aplicados)
-								const precioActualSedan = pricing.totalConDescuento || 0;
-								
-								// Si el upgrade YA está activado, el pricing.totalConDescuento
-								// ya contiene el precio de la Van con descuentos
-								// En ese caso, la diferencia es 0 porque ya estamos viendo el precio con upgrade
-								
-								// Si el upgrade NO está activado, necesitamos calcular cuánto MÁS costaría
-								// Para eso, necesitamos saber el precio base de la Van
+								// Precio base de la Van
 								const precioBaseVan = Number(destinoInfo.precios.van.base);
 								const precioVanBase = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
 								
-								// La diferencia APROXIMADA (puede variar con descuentos)
-								// es la diferencia entre el precio base Van y el precio actual
-								// NOTA: Esta es una aproximación, el precio real se calcula en el backend
-								const diferenciaTotal = precioVanBase - precioActualSedan;
+								// Si el upgrade está activado, pricing.totalConDescuento ya tiene el precio de Van con descuentos
+								// Si no está activado, tiene el precio del Sedan con descuentos
+								const precioActual = pricing.totalConDescuento || 0;
+								
+								// Calcular la diferencia REAL
+								let diferenciaTotal;
+								if (formData.upgradeVan) {
+									// Upgrade YA activado: el precio actual ES la Van con descuentos
+									// Necesitamos calcular cuánto MENOS era el Sedan
+									// Para esto, calculamos el precio del Sedan con los mismos descuentos
+									const preciosAuto = destinoInfo.precios.auto;
+									const baseAuto = Number(preciosAuto.base);
+									const adicionales = parseInt(formData.pasajeros) - 1;
+									const precioSedanBase = baseAuto + (adicionales * baseAuto * preciosAuto.porcentajeAdicional);
+									const precioSedanTotal = formData.idaVuelta ? precioSedanBase * 2 : precioSedanBase;
+									
+									// Aplicar el mismo porcentaje de descuento que tiene la Van
+									const porcentajeDescuento = 1 - (precioActual / precioVanBase);
+									const precioSedanConDescuentos = precioSedanTotal * (1 - porcentajeDescuento);
+									
+									diferenciaTotal = precioActual - precioSedanConDescuentos;
+								} else {
+									// Upgrade NO activado: el precio actual ES el Sedan con descuentos
+									// Necesitamos estimar cuánto MÁS costaría la Van con los mismos descuentos
+									
+									// Calcular porcentaje de descuento actual del Sedan
+									const preciosAuto = destinoInfo.precios.auto;
+									const baseAuto = Number(preciosAuto.base);
+									const adicionales = parseInt(formData.pasajeros) - 1;
+									const precioSedanBase = baseAuto + (adicionales * baseAuto * preciosAuto.porcentajeAdicional);
+									const precioSedanTotal = formData.idaVuelta ? precioSedanBase * 2 : precioSedanBase;
+									
+									const porcentajeDescuento = 1 - (precioActual / precioSedanTotal);
+									
+									// Aplicar el mismo porcentaje a la Van
+									const precioVanConDescuentos = precioVanBase * (1 - porcentajeDescuento);
+									
+									diferenciaTotal = precioVanConDescuentos - precioActual;
+								}
 								
 								// No mostrar si la diferencia es negativa o muy pequeña
-								if (diferenciaTotal <= 0) return null;
+								if (diferenciaTotal <= 500) return null;
 								
 								return (
 									<div className="mt-6 pt-6 border-t border-border">
@@ -1133,18 +1160,15 @@ function HeroExpress({
 															Precio fijo hasta 4 pax
 														</span>
 													</div>
-													{!formData.upgradeVan && (
-														<span className="text-sm text-muted-foreground whitespace-nowrap">
-															Ver precio arriba
-														</span>
-													)}
+													<span className="text-base font-bold text-primary whitespace-nowrap">
+														+{formatCurrency(diferenciaTotal)}
+													</span>
 												</div>
 												
 												<div className="space-y-2">
 													<p className="text-xs text-muted-foreground leading-relaxed">
 														<strong>Más espacio y confort:</strong> Asientos amplios y reclinables<br />
-														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras<br />
-														<strong>Precio base Van:</strong> {formatCurrency(precioVanBase)}{formData.idaVuelta && " (ida y vuelta)"}
+														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras
 													</p>
 													
 													{parseInt(formData.pasajeros) === 3 && (
