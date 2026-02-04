@@ -274,6 +274,7 @@ function App() {
 		idaVuelta: false,
 		fechaRegreso: "",
 		horaRegreso: "",
+		upgradeVan: false, // NUEVO CAMPO para upgrade voluntario a Van
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
@@ -1028,42 +1029,69 @@ function App() {
 	}, [formData.fecha, formData.fechaRegreso, formData.idaVuelta]);
 
 	const calcularCotizacion = useCallback(
-		(origen, destino, pasajeros) => {
+		(origen, destino, pasajeros, upgradeVan = false) => {
 			const tramo = [origen, destino].find(
 				(lugar) => lugar !== "Aeropuerto La Araucanía"
 			);
 			const destinoInfo = destinosData.find((d) => d.nombre === tramo);
 
 			if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
-				return { precio: null, vehiculo: null };
+				return { precio: null, vehiculo: null, esUpgradeVanSinAdicionales: false };
 			}
 
 			const numPasajeros = parseInt(pasajeros);
 			
 			let vehiculoAsignado;
-			let precioFinal;
+			let precioFinal = null;
+			let esUpgradeVanSinAdicionales = false;
 
 			if (numPasajeros > 0 && numPasajeros <= 3) {
-				vehiculoAsignado = "Auto Privado";
-				const precios = destinoInfo.precios.auto;
-				if (!precios) return { precio: null, vehiculo: vehiculoAsignado };
+				if (upgradeVan) {
+					// UPGRADE VOLUNTARIO: 1-3 pasajeros eligieron Van
+					vehiculoAsignado = "Van de Pasajeros (Upgrade)";
+					const precios = destinoInfo.precios.van;
+					if (!precios) return { 
+						precio: null, 
+						vehiculo: vehiculoAsignado, 
+						esUpgradeVanSinAdicionales: false 
+					};
+					
+					precioFinal = Number(precios.base);
+					esUpgradeVanSinAdicionales = true; // Activar protección de precio mínimo
+					
+				} else {
+					// SEDAN: Flujo normal para 1-3 pasajeros
+					vehiculoAsignado = "Auto Privado";
+					const precios = destinoInfo.precios.auto;
+					if (!precios) return { 
+						precio: null, 
+						vehiculo: vehiculoAsignado, 
+						esUpgradeVanSinAdicionales: false 
+					};
 
-				const precioBase = Number(precios.base);
-				const pasajerosAdicionales = numPasajeros - 1;
-				const costoAdicional = precioBase * precios.porcentajeAdicional;
-				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
+					const precioBase = Number(precios.base);
+					const pasajerosAdicionales = numPasajeros - 1;
+					const costoAdicional = precioBase * precios.porcentajeAdicional;
+					precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
+				}
 			} else if (
 				numPasajeros >= 4 &&
 				numPasajeros <= destinoInfo.maxPasajeros
 			) {
+				// VAN OBLIGATORIA: 4+ pasajeros (FLUJO ORIGINAL sin cambios)
 				vehiculoAsignado = "Van de Pasajeros";
 				const precios = destinoInfo.precios.van;
-				if (!precios) return { precio: null, vehiculo: "Van (Consultar)" };
+				if (!precios) return { 
+					precio: null, 
+					vehiculo: "Van (Consultar)", 
+					esUpgradeVanSinAdicionales: false 
+				};
 
 				const precioBase = Number(precios.base);
 				const pasajerosAdicionales = numPasajeros - 4;
 				const costoAdicional = precioBase * precios.porcentajeAdicional;
 				precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
+				esUpgradeVanSinAdicionales = false; // NO proteger (flujo original)
 			} else {
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
@@ -1072,6 +1100,7 @@ function App() {
 			return {
 				precio: precioFinal !== null ? Math.round(precioFinal) : null,
 				vehiculo: vehiculoAsignado,
+				esUpgradeVanSinAdicionales
 			};
 		},
 		[destinosData]
@@ -1151,12 +1180,14 @@ function App() {
 		return calcularCotizacion(
 			formData.origen,
 			formData.destino,
-			formData.pasajeros
+			formData.pasajeros,
+			formData.upgradeVan
 		);
 	}, [
 		formData.origen,
 		formData.destino,
 		formData.pasajeros,
+		formData.upgradeVan, // AGREGAR
 		calcularCotizacion,
 	]);
 
@@ -1238,6 +1269,7 @@ function App() {
 			idaVuelta: false,
 			fechaRegreso: "",
 			horaRegreso: "",
+			upgradeVan: false, // NUEVO CAMPO
 		});
 	};
 
@@ -1331,7 +1363,32 @@ function App() {
 		);
 
 		const costoSilla = formData.sillaInfantil ? 5000 : 0;
-		const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
+		let totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
+		
+		// VALIDACIÓN: Solo para upgrade voluntario (1-3 pax con Van)
+		// Obtener precio base mínimo de Van del destino
+		if (cotizacion.esUpgradeVanSinAdicionales && destinoSeleccionado) {
+			const precioBaseVanMinimo = Number(destinoSeleccionado.precios?.van?.base);
+			if (precioBaseVanMinimo) {
+				const minimoAbsoluto = formData.idaVuelta 
+					? precioBaseVanMinimo * 2  // IDA + VUELTA
+					: precioBaseVanMinimo;      // Solo IDA
+				
+				if (totalConDescuento - costoSilla < minimoAbsoluto) {
+					console.log("🚐 UPGRADE VAN: Ajustando al precio base mínimo", {
+						pasajeros: formData.pasajeros,
+						precioBase,
+						descuentosCalculados: descuentoOnlineTotal,
+						totalCalculado: totalConDescuento - costoSilla,
+						minimoGarantizado: minimoAbsoluto,
+						ajuste: minimoAbsoluto - (totalConDescuento - costoSilla)
+					});
+					
+					totalConDescuento = minimoAbsoluto + costoSilla;
+				}
+			}
+		}
+		
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
 
@@ -1387,6 +1444,7 @@ function App() {
 		};
 	}, [
 		cotizacion.precio,
+		cotizacion.esUpgradeVanSinAdicionales, // AGREGAR
 		tarifaDinamica.precioFinal,
 		promotionDiscountRate,
 		roundTripDiscountRate,
@@ -1394,9 +1452,11 @@ function App() {
 		personalizedDiscountRate,
 		formData.idaVuelta,
 		formData.sillaInfantil,
+		formData.pasajeros, // AGREGAR para el log
 		formData.hora,
 		codigoAplicado,
 		oportunidadesRetornoUniversal,
+		destinoSeleccionado, // AGREGAR
 	]);
 
 	const { descuentoOnline, totalConDescuento, abono, saldoPendiente } = pricing;
@@ -1519,6 +1579,10 @@ function App() {
 			abonoSugerido: abono,
 			saldoPendiente,
 			source,
+			upgradeVan: formData.upgradeVan || false,
+			observaciones: formData.upgradeVan 
+				? (formData.mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]"
+				: formData.mensaje,
 		};
 		if (!dataToSend.nombre?.trim()) {
 			dataToSend.nombre = "Cliente Potencial (Cotización Rápida)";
@@ -1663,6 +1727,10 @@ function App() {
 			descuentoOnline: pricing.descuentoOnline,
 			totalConDescuento: pricing.totalConDescuento,
 			codigoDescuento: codigoAplicado?.codigo || "",
+			upgradeVan: formData.upgradeVan || false,
+			observaciones: formData.upgradeVan 
+				? (formData.mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]"
+				: formData.mensaje,
 			// Estado inicial: marcar como pendiente hasta confirmar pago
 			estado: "pendiente",
 			estadoPago: "pendiente",
