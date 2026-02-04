@@ -1084,21 +1084,32 @@ function HeroExpress({
 								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
-								// Calcular precio base del Sedan (sin upgrade) - PRECIO SIN DESCUENTOS
+								// Calcular diferencia basada en precio real con descuentos aplicados
+								// Precio Sedan actual (con descuentos) vs Precio Van para 4 pasajeros (con descuentos)
+								const precioSedanActual = pricing.totalConDescuento || 0;
+								
+								// Calcular precio Van para 4 pasajeros (precio base sin adicionales)
+								const precioBaseVan = Number(destinoInfo.precios.van.base);
+								const precioVan4Pax = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
+								
+								// Aplicar los mismos descuentos que tiene el Sedan al precio de Van para 4 pax
+								// Para esto, calcular el precio base del Sedan sin descuentos
 								const preciosAuto = destinoInfo.precios.auto;
 								const baseAuto = Number(preciosAuto.base);
 								const adicionales = parseInt(formData.pasajeros) - 1;
 								const precioSedanBase = baseAuto + (adicionales * baseAuto * preciosAuto.porcentajeAdicional);
-								const precioSedanTotal = formData.idaVuelta ? precioSedanBase * 2 : precioSedanBase;
+								const precioSedanSinDescuentos = formData.idaVuelta ? precioSedanBase * 2 : precioSedanBase;
 								
-								// Calcular precio base de la Van - PRECIO SIN DESCUENTOS
-								const precioBaseVan = Number(destinoInfo.precios.van.base);
-								const precioVanBase = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
+								// Calcular porcentaje de descuento aplicado al Sedan
+								const porcentajeDescuento = precioSedanSinDescuentos > 0 
+									? 1 - (precioSedanActual / precioSedanSinDescuentos)
+									: 0;
 								
-								// DIFERENCIA FIJA: Mostrar la diferencia de precios BASE (sin considerar descuentos)
-								// Esta es la forma más honesta y simple: cuánto más cuesta la Van vs el Sedan
-								// Los descuentos se aplican al TOTAL, no a la diferencia
-								const diferenciaTotal = precioVanBase - precioSedanTotal;
+								// Aplicar el mismo porcentaje de descuento a la Van para 4 pax
+								const precioVan4PaxConDescuentos = precioVan4Pax * (1 - porcentajeDescuento);
+								
+								// Diferencia = Van 4 pax con descuentos - Sedan actual con descuentos
+								const diferenciaTotal = precioVan4PaxConDescuentos - precioSedanActual;
 								
 								// No mostrar si la diferencia es negativa o muy pequeña
 								if (diferenciaTotal <= 500) return null;
