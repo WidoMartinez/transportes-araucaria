@@ -469,9 +469,9 @@ SELECT * FROM configuracion WHERE clave = 'whatsapp_intercept_activo';
 ```
 
 #### 04-02-2026: Mejora y Destaque Interfaz "Upgrade a Van"
-- **Problema**: La sección de upgrade era abrumadora e inicialmente costaba distinguirla como una opción premium.
-- **Solución**: Se simplificaron las leyendas y avisos, y luego se aplicó un contorno destacado en tonos café (chocolate) con una leyenda más descriptiva sobre confort y reclinación.
-- **Resultado**: Interfaz limpia pero llamativa que destaca la opción de upgrade de forma elegante.
+- **Problema**: La sección de upgrade era abrumadora e inicialmente costaba distinguirla como una opción premium. Además, el upgrade no aparecía en viajes HACIA el aeropuerto.
+- **Solución**: Se simplificaron las leyendas y avisos, se aplicó un contorno destacado en tonos café (chocolate) con una leyenda más descriptiva sobre confort y reclinación. Se corrigió la lógica para usar `targetName` en lugar de `formData.destino`, permitiendo que el upgrade aparezca en ambas direcciones.
+- **Resultado**: Interfaz limpia pero llamativa que destaca la opción de upgrade de forma elegante, disponible tanto para viajes desde como hacia el aeropuerto.
 
 **Verificación**:
 ```javascript

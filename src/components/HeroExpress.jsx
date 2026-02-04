@@ -1081,7 +1081,7 @@ function HeroExpress({
 
 							{/* NUEVO: Opción de upgrade a Van - Solo para 1-3 pasajeros */}
 							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && (() => {
-								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
+								const destinoInfo = destinosData.find(d => d.nombre === targetName);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
 								// CALCULAR SIEMPRE BASÁNDOSE EN EL PRECIO DEL SEDAN, NO EN EL ESTADO ACTUAL
