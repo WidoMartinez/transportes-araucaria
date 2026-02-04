@@ -51,6 +51,7 @@ const generateTimeOptions = () => {
 function HeroExpress({
 	formData,
 	handleInputChange,
+	setFormData,
 	origenes,
 	destinos,
 	destinosData = [], // Data completa para imágenes
@@ -1077,6 +1078,92 @@ function HeroExpress({
 									</div>
 								)}
 							</div>
+
+							{/* NUEVO: Opción de upgrade a Van - Solo para 1-3 pasajeros */}
+							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && (() => {
+								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
+								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
+								
+								// Calcular precios para mostrar la diferencia
+								const precioBaseVan = Number(destinoInfo.precios.van.base);
+								
+								// Calcular precio sedan hipotético
+								const preciosAuto = destinoInfo.precios.auto;
+								const base = Number(preciosAuto.base);
+								const adicionales = parseInt(formData.pasajeros) - 1;
+								const precioSedanCalculado = base + (adicionales * base * preciosAuto.porcentajeAdicional);
+								
+								const precioSedanTotal = formData.idaVuelta ? precioSedanCalculado * 2 : precioSedanCalculado;
+								const precioVanMinimo = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
+								const diferenciaTotal = precioVanMinimo - precioSedanTotal;
+								
+								// No mostrar si la diferencia es negativa o muy pequeña
+								if (diferenciaTotal <= 0) return null;
+								
+								return (
+									<div className="mt-6 pt-6 border-t border-border">
+										<div className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${
+											formData.upgradeVan 
+												? 'bg-blue-50 border-blue-300 shadow-sm' 
+												: 'bg-blue-50/50 border-blue-200 hover:border-blue-300'
+										}`}>
+											<input
+												type="checkbox"
+												id="upgrade-van"
+												checked={formData.upgradeVan || false}
+												onChange={(e) => {
+													setFormData(prev => ({
+														...prev,
+														upgradeVan: e.target.checked
+													}));
+												}}
+												className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+											/>
+											<label htmlFor="upgrade-van" className="flex-1 cursor-pointer">
+												<div className="flex items-center justify-between gap-3 mb-2">
+													<div className="flex items-center gap-2 flex-wrap">
+														<span className="text-sm font-semibold text-gray-900">
+															🚐 Upgrade a Van
+														</span>
+														<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+															Precio fijo hasta 4 pax
+														</span>
+													</div>
+													<span className="text-base font-bold text-blue-700 whitespace-nowrap">
+														+{formatCurrency(diferenciaTotal)}
+													</span>
+												</div>
+												
+												<div className="space-y-2">
+													<p className="text-xs text-gray-700 leading-relaxed">
+														✨ <strong>Más espacio y confort</strong> • Asientos amplios y reclinables<br />
+														🧳 <strong>Equipaje extra</strong> • Ideal para maletas grandes o compras<br />
+														💰 <strong>Precio garantizado:</strong> {formatCurrency(precioVanMinimo)} 
+														{formData.idaVuelta && " (ida y vuelta)"} — sin importar descuentos aplicados
+													</p>
+													
+													{parseInt(formData.pasajeros) === 3 && (
+														<div className="bg-amber-50 border border-amber-300 rounded px-3 py-2">
+															<p className="text-xs text-amber-900">
+																💡 <strong>Consejo:</strong> Si suman un pasajero más, la Van es obligatoria 
+																por solo un pequeño adicional
+															</p>
+														</div>
+													)}
+													
+													{formData.upgradeVan && (
+														<div className="bg-blue-100 border border-blue-300 rounded px-3 py-2 mt-2">
+															<p className="text-xs text-blue-900 font-medium">
+																✓ Upgrade activado • El precio mínimo de {formatCurrency(precioVanMinimo)} está garantizado
+															</p>
+														</div>
+													)}
+												</div>
+											</label>
+										</div>
+									</div>
+								);
+							})()}
 
 							<div className="space-y-4">
 								<div className="space-y-2">

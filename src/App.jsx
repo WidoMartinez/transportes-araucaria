@@ -1992,6 +1992,7 @@ function App() {
 				<HeroExpress
 					formData={formData}
 					handleInputChange={handleInputChange}
+					setFormData={setFormData}
 					origenes={todosLosTramos}
 					destinos={destinosDisponibles}
 					destinosData={destinosData}
