@@ -1373,30 +1373,23 @@ function App() {
 		const costoSilla = formData.sillaInfantil ? 5000 : 0;
 		let totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
 		
-		// VALIDACIÓN: Solo para upgrade voluntario (1-3 pax con Van)
-		// Obtener precio base mínimo de Van del destino
-		if (cotizacion.esUpgradeVanSinAdicionales && destinoSeleccionado) {
-			const precioBaseVanMinimo = Number(destinoSeleccionado.precios?.van?.base);
-			if (precioBaseVanMinimo) {
-				const minimoAbsoluto = formData.idaVuelta 
-					? precioBaseVanMinimo * 2  // IDA + VUELTA
-					: precioBaseVanMinimo;      // Solo IDA
-				
-				if (totalConDescuento - costoSilla < minimoAbsoluto) {
-					// Log de debug para desarrollo (comentado en producción)
-					// console.log("🚐 UPGRADE VAN: Ajustando al precio base mínimo", {
-					// 	pasajeros: formData.pasajeros,
-					// 	precioBase,
-					// 	descuentosCalculados: descuentoOnlineTotal,
-					// 	totalCalculado: totalConDescuento - costoSilla,
-					// 	minimoGarantizado: minimoAbsoluto,
-					// 	ajuste: minimoAbsoluto - (totalConDescuento - costoSilla)
-					// });
-					
-					totalConDescuento = minimoAbsoluto + costoSilla;
-				}
-			}
-		}
+		// VALIDACIÓN DE PRECIO MÍNIMO: ELIMINADA para upgrades voluntarios
+		// Los upgrades de 1-3 pasajeros deben permitir descuentos normalmente
+		// Esto garantiza que 3 pax con upgrade siempre sea más barato que 4+ pax
+		// (desactivado porque causaba precios más altos que Van obligatoria)
+		
+		// if (cotizacion.esUpgradeVanSinAdicionales && destinoSeleccionado) {
+		// 	const precioBaseVanMinimo = Number(destinoSeleccionado.precios?.van?.base);
+		// 	if (precioBaseVanMinimo) {
+		// 		const minimoAbsoluto = formData.idaVuelta 
+		// 			? precioBaseVanMinimo * 2
+		// 			: precioBaseVanMinimo;
+		// 		
+		// 		if (totalConDescuento - costoSilla < minimoAbsoluto) {
+		// 			totalConDescuento = minimoAbsoluto + costoSilla;
+		// 		}
+		// 	}
+		// }
 		
 		const abono = Math.round(totalConDescuento * 0.4);
 		const saldoPendiente = Math.max(totalConDescuento - abono, 0);

@@ -1080,7 +1080,7 @@ function HeroExpress({
 							</div>
 
 							{/* NUEVO: Opción de upgrade a Van - Solo para 1-3 pasajeros */}
-							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && !formData.upgradeVan && (() => {
+							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && (() => {
 								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
@@ -1135,7 +1135,7 @@ function HeroExpress({
 													<p className="text-xs text-muted-foreground leading-relaxed">
 														<strong>Más espacio y confort:</strong> Asientos amplios y reclinables<br />
 														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras<br />
-														<strong>Precio garantizado:</strong> {formatCurrency(precioVanMinimo)}{formData.idaVuelta && " (ida y vuelta)"}
+														<strong>Precio total con upgrade:</strong> {formatCurrency(precioVanMinimo)}{formData.idaVuelta && " (ida y vuelta)"}
 													</p>
 													
 													{parseInt(formData.pasajeros) === 3 && (
@@ -1149,7 +1149,7 @@ function HeroExpress({
 													{formData.upgradeVan && (
 														<div className="bg-primary/10 border border-primary/20 rounded px-3 py-2 mt-2">
 															<p className="text-xs text-primary font-medium">
-																Upgrade activado • Precio mínimo garantizado: {formatCurrency(precioVanMinimo)}
+																✓ Upgrade activado • Descuentos aplicados
 															</p>
 														</div>
 													)}
