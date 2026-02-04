@@ -1080,22 +1080,19 @@ function HeroExpress({
 							</div>
 
 							{/* NUEVO: Opción de upgrade a Van - Solo para 1-3 pasajeros */}
-							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && (() => {
+							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && !formData.upgradeVan && (() => {
 								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
-								// Calcular precios para mostrar la diferencia
+								// Precio base de Van (mínimo garantizado)
 								const precioBaseVan = Number(destinoInfo.precios.van.base);
-								
-								// Calcular precio sedan hipotético
-								const preciosAuto = destinoInfo.precios.auto;
-								const base = Number(preciosAuto.base);
-								const adicionales = parseInt(formData.pasajeros) - 1;
-								const precioSedanCalculado = base + (adicionales * base * preciosAuto.porcentajeAdicional);
-								
-								const precioSedanTotal = formData.idaVuelta ? precioSedanCalculado * 2 : precioSedanCalculado;
 								const precioVanMinimo = formData.idaVuelta ? precioBaseVan * 2 : precioBaseVan;
-								const diferenciaTotal = precioVanMinimo - precioSedanTotal;
+								
+								// Usar el precio ACTUAL de la cotización (con descuentos ya aplicados)
+								const precioActualSedan = pricing.totalConDescuento || 0;
+								
+								// La diferencia es simplemente: Precio mínimo Van - Precio actual del Sedan
+								const diferenciaTotal = precioVanMinimo - precioActualSedan;
 								
 								// No mostrar si la diferencia es negativa o muy pequeña
 								if (diferenciaTotal <= 0) return null;
