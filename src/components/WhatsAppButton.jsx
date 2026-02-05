@@ -26,14 +26,16 @@ const WhatsAppButton = ({
 	const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
 	// Tracking de conversión de Google Ads
+	// Nota: Usa la misma cuenta de Google Ads que el resto del sitio (AW-17529712870)
+	// con la etiqueta específica para clics en WhatsApp (M7-iCN_HtZUbEObh6KZB)
 	const handleClick = () => {
 		if (typeof window !== "undefined" && window.gtag) {
 			window.gtag("event", "conversion", {
-				send_to: "AW-16746932747/OHfECKTK4_4ZEMiWkN49",
+				send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
 				value: 1.0,
 				currency: "CLP",
 			});
-			console.log("Conversión de clic en WhatsApp enviada.");
+			console.log("💬 Conversión de clic en WhatsApp enviada a Google Ads.");
 		}
 	};
 
