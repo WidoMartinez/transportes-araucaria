@@ -639,48 +639,70 @@ function AdminReservas() {
 					<head>
 						<title>Planificación de Viajes</title>
 						<style>
-							body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
-							h1 { text-align: center; margin-bottom: 20px; font-size: 18px; }
-							.dia-block { margin-bottom: 25px; page-break-inside: avoid; }
-							.dia-header { 
-								background-color: #f0f0f0; 
-								padding: 8px; 
-								font-weight: bold; 
-								font-size: 14px;
-								border-bottom: 2px solid #ccc;
-								margin-bottom: 10px;
-							}
-							table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-							th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
-							th { background-color: #f9f9f9; width: 15%; }
-							.reserva-row { page-break-inside: avoid; }
-							.retorno-badge { 
-								background-color: #e6f7ff; 
-								color: #0050b3; 
-								border: 1px solid #91d5ff; 
-								padding: 2px 5px; 
-								border-radius: 4px; 
-								font-size: 10px; 
-								font-weight: bold;
-								display: inline-block;
-								margin-left: 5px;
-							}
-							.ida-badge { 
-								background-color: #f6ffed;
-								color: #389e0d;
-								border: 1px solid #b7eb8f;
-								padding: 2px 5px;
-								border-radius: 4px; 
-								font-size: 10px; 
-								font-weight: bold;
-								display: inline-block;
-								margin-left: 5px;
-							}
-							@media print {
-								.no-print { display: none; }
-								body { margin: 0; }
-							}
-						</style>
+						body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+						h1 { text-align: center; margin-bottom: 20px; font-size: 18px; }
+						.dia-block { margin-bottom: 25px; page-break-inside: avoid; }
+						.dia-header { 
+							background-color: #f0f0f0; 
+							padding: 8px; 
+							font-weight: bold; 
+							font-size: 14px;
+							border-bottom: 2px solid #ccc;
+							margin-bottom: 10px;
+						}
+						.direccion-header {
+						padding: 6px 8px;
+						font-weight: bold;
+						font-size: 12px;
+						margin-top: 10px;
+						margin-bottom: 5px;
+					}
+					.direccion-header.hacia-aero {
+						background-color: #d1f4e0;
+						color: #0d5c2e;
+						border-left: 4px solid #10b981;
+					}
+					.direccion-header.desde-aero {
+						background-color: #dbeafe;
+						color: #1e3a8a;
+						border-left: 4px solid #3b82f6;
+					}
+					.direccion-header.otros {
+						background-color: #f3f4f6;
+						color: #374151;
+						border-left: 4px solid #6b7280;
+					}	
+						table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+						th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+						th { background-color: #f9f9f9; width: 15%; }
+						.reserva-row { page-break-inside: avoid; }
+						.retorno-badge { 
+							background-color: #e6f7ff; 
+							color: #0050b3; 
+							border: 1px solid #91d5ff; 
+							padding: 2px 5px; 
+							border-radius: 4px; 
+							font-size: 10px; 
+							font-weight: bold;
+							display: inline-block;
+							margin-left: 5px;
+						}
+						.ida-badge { 
+							background-color: #f6ffed;
+							color: #389e0d;
+							border: 1px solid #b7eb8f;
+							padding: 2px 5px;
+							border-radius: 4px; 
+							font-size: 10px; 
+							font-weight: bold;
+							display: inline-block;
+							margin-left: 5px;
+						}
+						@media print {
+							.no-print { display: none; }
+							body { margin: 0; }
+						}
+					</style>
 					</head>
 					<body>
 						<h1>Planificación de Viajes: ${new Date(calendarStartDate).toLocaleDateString("es-CL")} - ${new Date(calendarEndDate).toLocaleDateString("es-CL")}</h1>
@@ -691,25 +713,49 @@ function AdminReservas() {
 				}
 
 				fechasOrdenadas.forEach(fecha => {
-					// Formatear fecha amigable (e.g. Lunes 25 de Diciembre)
-					const fechaObj = new Date(fecha + "T00:00:00");
-					const fechaTexto = fechaObj.toLocaleDateString("es-CL", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+				// Formatear fecha amigable (e.g. Lunes 25 de Diciembre)
+				const fechaObj = new Date(fecha + "T00:00:00");
+				const fechaTexto = fechaObj.toLocaleDateString("es-CL", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+				
+				// Clasificar eventos por dirección
+				const eventosDelDia = eventosPorFecha[fecha];
+				const viajesHaciaAero = eventosDelDia.filter(ev => {
+					const destinoNorm = (ev.destino || '').toLowerCase();
+					return destinoNorm === 'aeropuerto la araucanía' || destinoNorm.includes('aeropuerto');
+				});
+				const viajesDesdeAero = eventosDelDia.filter(ev => {
+					const origenNorm = (ev.origen || '').toLowerCase();
+					return origenNorm === 'aeropuerto la araucanía' || origenNorm.includes('aeropuerto');
+				});
+				const otrosViajes = eventosDelDia.filter(ev => 
+					!viajesHaciaAero.includes(ev) && !viajesDesdeAero.includes(ev)
+				);
+				
+				htmlContent += `<div class="dia-block">
+					<div class="dia-header">${fechaTexto.toUpperCase()}</div>`;
+				
+				// Función auxiliar para renderizar un grupo de viajes
+				const renderGrupoViajes = (viajes, tituloGrupo, claseCSS) => {
+					if (viajes.length === 0) return '';
 					
-					htmlContent += `<div class="dia-block">
-						<div class="dia-header">${fechaTexto.toUpperCase()}</div>
-						<table>
-							<thead>
-								<tr>
-									<th style="width: 80px;">Hora</th>
-									<th style="width: 120px;">Número Reserva</th>
-									<th>Cliente / Contacto</th>
-									<th>Ruta / Detalles</th>
-									<th style="width: 150px;">Vehículo / Conductor</th>
-								</tr>
-							</thead>
-							<tbody>`;
+					let html = '';
+					if (tituloGrupo) {
+						html += `<div class="direccion-header ${claseCSS}">${tituloGrupo}</div>`;
+					}
 					
-					eventosPorFecha[fecha].forEach(ev => {
+					html += `<table>
+						<thead>
+							<tr>
+								<th style="width: 80px;">Hora</th>
+								<th style="width: 120px;">Número Reserva</th>
+								<th>Cliente / Contacto</th>
+								<th>Ruta / Detalles</th>
+								<th style="width: 150px;">Vehículo / Conductor</th>
+							</tr>
+						</thead>
+						<tbody>`;
+					
+					viajes.forEach(ev => {
 						const tipoBadge = ev.tipo === "RETORNO" 
 							? `<span class="retorno-badge">RETORNO</span>` 
 							: `<span class="ida-badge">IDA</span>`;
@@ -728,7 +774,7 @@ function AdminReservas() {
 							</div>
 						`;
 
-	
+		
 					let asignacion = `<span style="color:#999;">Sin asignar</span>`;
 					if (ev.vehiculoPatente || ev.conductorNombre) {
 						// Construir información del vehículo
@@ -760,9 +806,9 @@ function AdminReservas() {
 							${ev.conductorId ? '(Conductor asignado)' : ''}
 						`;
 					}
-	
+		
 
-						htmlContent += `
+						html += `
 							<tr class="reserva-row">
 								<td style="font-size:14px; font-weight:bold;">${ev.hora ? ev.hora.substring(0,5) : "--:--"} ${tipoBadge}</td>
 								<td style="font-size:11px; color:#666;">${ev.codigoReserva || '-'}</td>
@@ -773,8 +819,17 @@ function AdminReservas() {
 						`;
 					});
 
-					htmlContent += `</tbody></table></div>`;
-				});
+					html += `</tbody></table>`;
+					return html;
+				};
+				
+				// Renderizar grupos en orden: Hacia Aeropuerto, Desde Aeropuerto, Otros
+				htmlContent += renderGrupoViajes(viajesHaciaAero, '✈️ HACIA EL AEROPUERTO', 'hacia-aero');
+				htmlContent += renderGrupoViajes(viajesDesdeAero, '🏠 DESDE EL AEROPUERTO', 'desde-aero');
+				htmlContent += renderGrupoViajes(otrosViajes, otrosViajes.length > 0 ? '🚗 OTROS VIAJES' : null, 'otros');
+				
+				htmlContent += `</div>`;
+			});
 
 				htmlContent += `
 						<div class="no-print" style="margin-top:20px; text-align:center;">
