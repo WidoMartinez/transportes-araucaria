@@ -13,6 +13,7 @@ import AdminAuditLog from "./AdminAuditLog.js";
 import PendingEmail from "./PendingEmail.js";
 import Transaccion from "./Transaccion.js";
 import CodigoPago from "./CodigoPago.js";
+import Calificacion from "./Calificacion.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -160,6 +161,17 @@ export const setupAssociations = () => {
 	Transaccion.belongsTo(CodigoPago, {
 		foreignKey: "codigoPagoId",
 		as: "codigoPago",
+	});
+
+	// Relación: Reserva -> Calificacion (Una reserva puede tener una calificación)
+	Reserva.hasOne(Calificacion, {
+		foreignKey: "reserva_id",
+		as: "calificacion",
+	});
+
+	Calificacion.belongsTo(Reserva, {
+		foreignKey: "reserva_id",
+		as: "reserva",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
