@@ -21,6 +21,7 @@ import AdminBloqueosAgenda from "./AdminBloqueosAgenda";
 import AdminUsuarios from "./AdminUsuarios";
 import AdminPerfil from "./AdminPerfil";
 import AdminConfiguracion from "./AdminConfiguracion";
+import AdminCalificaciones from "./AdminCalificaciones";
 
 /**
  * Panel de Administración Principal
@@ -139,6 +140,8 @@ function AdminDashboard() {
               <AdminVehiculos />
             ) : active === "conductores" ? (
               <AdminConductores />
+            ) : active === "calificaciones" ? (
+              <AdminCalificaciones />
             ) : active === "productos" ? (
               <AdminProductos />
             ) : active === "gastos" ? (
