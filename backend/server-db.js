@@ -7385,6 +7385,51 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			"a:",
 			estado
 		);
+
+		// Si el estado cambia a "completada", enviar correo automático de calificación
+		if (estado === "completada" && reserva.email && reserva.nombre) {
+			try {
+				console.log(`📧 Enviando correo de calificación para reserva ${id} a ${reserva.email}`);
+				
+				const frontendUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+				const phpMailerUrl = process.env.PHP_MAILER_URL || "https://www.transportesaraucaria.cl";
+				
+				// Datos para el correo de calificación
+				const emailData = {
+					email: reserva.email,
+					nombre: reserva.nombre,
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva || `Reserva #${reserva.id}`,
+					origen: reserva.origen || 'No especificado',
+					destino: reserva.destino || 'No especificado',
+					fecha: reserva.fecha || 'No especificada',
+					baseUrl: frontendUrl
+				};
+
+				// Llamar al script PHP para enviar el correo
+				const response = await axios.post(
+					`${phpMailerUrl}/enviar_calificacion.php`,
+					emailData,
+					{
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						timeout: 10000 // 10 segundos de timeout
+					}
+				);
+
+				if (response.data && response.data.success) {
+					console.log(`✅ Correo de calificación enviado exitosamente para reserva ${id}`);
+				} else {
+					console.warn(`⚠️ El correo de calificación no se envió correctamente para reserva ${id}:`, response.data);
+				}
+			} catch (emailError) {
+				// No fallar la actualización de estado si el correo falla
+				console.error(`❌ Error al enviar correo de calificación para reserva ${id}:`, emailError.message);
+				// Continuar sin lanzar el error para no afectar la actualización del estado
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Estado actualizado",
