@@ -36,6 +36,7 @@ import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
 import PagarConCodigo from "./components/PagarConCodigo";
 import CompraProductos from "./components/CompraProductos";
+import CalificarServicio from "./components/CalificarServicio";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
@@ -220,6 +221,12 @@ const resolveIsTestGoogleAdsView = () => {
 	);
 };
 
+// Resolver si la URL es para calificar servicio
+const resolveIsCalificarView = () => {
+	const hash = window.location.hash.toLowerCase();
+	return hash === "#calificar" || hash.startsWith("#calificar?");
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
@@ -233,6 +240,9 @@ function App() {
 	);
 	const [isTestGoogleAdsView, setIsTestGoogleAdsView] = useState(
 		resolveIsTestGoogleAdsView
+	);
+	const [isCalificarView, setIsCalificarView] = useState(
+		resolveIsCalificarView
 	);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
@@ -410,6 +420,18 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncTestGoogleAds);
 			window.removeEventListener("popstate", syncTestGoogleAds);
+		};
+	}, []);
+
+	// Sincronizar vista de calificar servicio
+	useEffect(() => {
+		const syncCalificar = () =>
+			setIsCalificarView(resolveIsCalificarView());
+		window.addEventListener("hashchange", syncCalificar);
+		window.addEventListener("popstate", syncCalificar);
+		return () => {
+			window.removeEventListener("hashchange", syncCalificar);
+			window.removeEventListener("popstate", syncCalificar);
 		};
 	}, []);
 
@@ -1901,6 +1923,16 @@ function App() {
 
 	if (isTestGoogleAdsView) {
 		return <TestGoogleAds />;
+	}
+
+	if (isCalificarView) {
+		return (
+			<AuthProvider>
+				<div className="min-h-screen bg-gray-50">
+					<CalificarServicio />
+				</div>
+			</AuthProvider>
+		);
 	}
 
 	// Vista para completar detalles después del pago

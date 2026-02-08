@@ -26,6 +26,7 @@ import Festivo from "./models/Festivo.js";
 import PendingEmail from "./models/PendingEmail.js";
 import BloqueoAgenda from "./models/BloqueoAgenda.js";
 import Configuracion from "./models/Configuracion.js";
+import Calificacion from "./models/Calificacion.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -7384,6 +7385,51 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			"a:",
 			estado
 		);
+
+		// Si el estado cambia a "completada", enviar correo automático de calificación
+		if (estado === "completada" && reserva.email && reserva.nombre) {
+			try {
+				console.log(`📧 Enviando correo de calificación para reserva ${id} a ${reserva.email}`);
+				
+				const frontendUrl = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+				const phpMailerUrl = process.env.PHP_MAILER_URL || "https://www.transportesaraucaria.cl";
+				
+				// Datos para el correo de calificación
+				const emailData = {
+					email: reserva.email,
+					nombre: reserva.nombre,
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva || `Reserva #${reserva.id}`,
+					origen: reserva.origen || 'No especificado',
+					destino: reserva.destino || 'No especificado',
+					fecha: reserva.fecha || 'No especificada',
+					baseUrl: frontendUrl
+				};
+
+				// Llamar al script PHP para enviar el correo
+				const response = await axios.post(
+					`${phpMailerUrl}/enviar_calificacion.php`,
+					emailData,
+					{
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						timeout: 10000 // 10 segundos de timeout
+					}
+				);
+
+				if (response.data && response.data.success) {
+					console.log(`✅ Correo de calificación enviado exitosamente para reserva ${id}`);
+				} else {
+					console.warn(`⚠️ El correo de calificación no se envió correctamente para reserva ${id}:`, response.data);
+				}
+			} catch (emailError) {
+				// No fallar la actualización de estado si el correo falla
+				console.error(`❌ Error al enviar correo de calificación para reserva ${id}:`, emailError.message);
+				// Continuar sin lanzar el error para no afectar la actualización del estado
+			}
+		}
+
 		res.json({
 			success: true,
 			message: "Estado actualizado",
@@ -10149,6 +10195,379 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 		res.status(500).json({
 			success: false,
 			error: "Error al obtener transacciones de reserva",
+		});
+	}
+});
+
+// ============================================================================
+// ENDPOINTS DE CALIFICACIONES
+// ============================================================================
+
+// GET /api/calificaciones/:reservaId - Verificar si existe calificación para una reserva
+app.get("/api/calificaciones/:reservaId", async (req, res) => {
+	try {
+		const { reservaId } = req.params;
+
+		// Validar que el ID sea numérico
+		if (!reservaId || isNaN(parseInt(reservaId))) {
+			return res.status(400).json({
+				success: false,
+				error: "ID de reserva inválido",
+			});
+		}
+
+		// Buscar calificación existente
+		const calificacion = await Calificacion.findOne({
+			where: { reserva_id: parseInt(reservaId) },
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+					attributes: ["id", "codigoReserva", "origen", "destino", "estado"],
+				},
+			],
+		});
+
+		if (calificacion) {
+			return res.json({
+				success: true,
+				exists: true,
+				calificacion,
+			});
+		}
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(parseInt(reservaId));
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		res.json({
+			success: true,
+			exists: false,
+			reserva: {
+				id: reserva.id,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				estado: reserva.estado,
+			},
+		});
+	} catch (error) {
+		console.error("Error al verificar calificación:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al verificar calificación",
+		});
+	}
+});
+
+// POST /api/calificaciones - Crear nueva calificación
+app.post("/api/calificaciones", async (req, res) => {
+	try {
+		const {
+			reservaId,
+			puntuacion,
+			comentario,
+			aspectos,
+			ipCliente,
+			dispositivo,
+		} = req.body;
+
+		// Validar campos obligatorios
+		if (!reservaId || !puntuacion) {
+			return res.status(400).json({
+				success: false,
+				error: "Faltan campos obligatorios (reservaId, puntuacion)",
+			});
+		}
+
+		// Validar puntuación
+		const puntuacionNum = parseInt(puntuacion);
+		if (isNaN(puntuacionNum) || puntuacionNum < 1 || puntuacionNum > 5) {
+			return res.status(400).json({
+				success: false,
+				error: "La puntuación debe estar entre 1 y 5",
+			});
+		}
+
+		// Validar longitud del comentario (máximo 500 caracteres)
+		if (comentario && comentario.length > 500) {
+			return res.status(400).json({
+				success: false,
+				error: "El comentario no puede exceder los 500 caracteres",
+			});
+		}
+
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(parseInt(reservaId));
+		if (!reserva) {
+			return res.status(404).json({
+				success: false,
+				error: "Reserva no encontrada",
+			});
+		}
+
+		// Verificar que la reserva está en estado completada
+		if (reserva.estado !== "completada") {
+			return res.status(400).json({
+				success: false,
+				error:
+					"Solo se pueden calificar reservas completadas. Estado actual: " +
+					reserva.estado,
+			});
+		}
+
+		// Verificar que no existe calificación previa
+		const calificacionExistente = await Calificacion.findOne({
+			where: { reserva_id: parseInt(reservaId) },
+		});
+
+		if (calificacionExistente) {
+			return res.status(409).json({
+				success: false,
+				error: "Esta reserva ya ha sido calificada",
+			});
+		}
+
+		// Validar aspectos (si se proporcionan)
+		let aspectosValidados = null;
+		if (aspectos) {
+			// Verificar que sea un objeto
+			if (typeof aspectos !== "object" || Array.isArray(aspectos)) {
+				return res.status(400).json({
+					success: false,
+					error: "Los aspectos deben ser un objeto",
+				});
+			}
+
+			// Validar cada aspecto (debe ser 1-5)
+			const aspectosPermitidos = [
+				"puntualidad",
+				"limpieza",
+				"amabilidad",
+				"conduccion",
+			];
+			aspectosValidados = {};
+
+			for (const [key, value] of Object.entries(aspectos)) {
+				if (aspectosPermitidos.includes(key)) {
+					const valorNum = parseInt(value);
+					if (!isNaN(valorNum) && valorNum >= 1 && valorNum <= 5) {
+						aspectosValidados[key] = valorNum;
+					}
+				}
+			}
+
+			// Si no hay aspectos válidos, dejarlo como null
+			if (Object.keys(aspectosValidados).length === 0) {
+				aspectosValidados = null;
+			}
+		}
+
+		// Crear la calificación
+		const nuevaCalificacion = await Calificacion.create({
+			reserva_id: parseInt(reservaId),
+			puntuacion: puntuacionNum,
+			comentario: comentario || null,
+			aspectos: aspectosValidados,
+			ip_cliente: ipCliente || null,
+			dispositivo: dispositivo || null,
+			fecha_calificacion: new Date(),
+		});
+
+		console.log(`✅ Calificación creada para reserva ${reservaId}: ${puntuacionNum} estrellas`);
+
+		res.status(201).json({
+			success: true,
+			calificacion: nuevaCalificacion,
+			message: "Calificación registrada exitosamente",
+		});
+	} catch (error) {
+		console.error("Error al crear calificación:", error);
+		
+		// Si es un error de constraint único (ya existe calificación)
+		if (error.name === "SequelizeUniqueConstraintError") {
+			return res.status(409).json({
+				success: false,
+				error: "Esta reserva ya ha sido calificada",
+			});
+		}
+
+		res.status(500).json({
+			success: false,
+			error: "Error al crear calificación",
+		});
+	}
+});
+
+// GET /api/admin/calificaciones - Listar todas las calificaciones (admin)
+app.get("/api/admin/calificaciones", authAdmin, async (req, res) => {
+	try {
+		const {
+			minPuntuacion,
+			maxPuntuacion,
+			page = 1,
+			limit = 20,
+		} = req.query;
+
+		// Construir filtros
+		const where = {};
+
+		if (minPuntuacion) {
+			where.puntuacion = { ...where.puntuacion, [Op.gte]: parseInt(minPuntuacion) };
+		}
+
+		if (maxPuntuacion) {
+			where.puntuacion = { ...where.puntuacion, [Op.lte]: parseInt(maxPuntuacion) };
+		}
+
+		// Configurar paginación
+		const pageNum = parseInt(page);
+		const limitNum = parseInt(limit);
+		const offset = (pageNum - 1) * limitNum;
+
+		// Obtener calificaciones con datos de reserva
+		const { count, rows: calificaciones } = await Calificacion.findAndCountAll({
+			where,
+			include: [
+				{
+					model: Reserva,
+					as: "reserva",
+					attributes: [
+						"id",
+						"codigoReserva",
+						"nombre",
+						"email",
+						"origen",
+						"destino",
+						"fecha",
+						"estado",
+					],
+				},
+			],
+			order: [[sequelize.literal("fecha_calificacion"), "DESC"]],
+			limit: limitNum,
+			offset: offset,
+		});
+
+		res.json({
+			success: true,
+			calificaciones,
+			pagination: {
+				total: count,
+				page: pageNum,
+				limit: limitNum,
+				totalPages: Math.ceil(count / limitNum),
+			},
+		});
+	} catch (error) {
+		console.error("Error al listar calificaciones:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al listar calificaciones",
+		});
+	}
+});
+
+// GET /api/admin/calificaciones/estadisticas - Obtener estadísticas de calificaciones (admin)
+app.get("/api/admin/calificaciones/estadisticas", authAdmin, async (req, res) => {
+	try {
+		// Total de calificaciones
+		const totalCalificaciones = await Calificacion.count();
+
+		// Promedio general
+		const resultado = await Calificacion.findOne({
+			attributes: [
+				[sequelize.fn("AVG", sequelize.col("puntuacion")), "promedio"],
+			],
+		});
+
+		const promedioGeneral = resultado
+			? parseFloat(resultado.getDataValue("promedio") || 0).toFixed(2)
+			: 0;
+
+		// Contar por categorías de estrellas
+		const cincoEstrellas = await Calificacion.count({
+			where: { puntuacion: 5 },
+		});
+
+		const cuatroEstrellas = await Calificacion.count({
+			where: { puntuacion: 4 },
+		});
+
+		const tresEstrellas = await Calificacion.count({
+			where: { puntuacion: 3 },
+		});
+
+		const bajoDosEstrellas = await Calificacion.count({
+			where: { puntuacion: { [Op.lte]: 2 } },
+		});
+
+		// Calcular promedios de aspectos (si existen)
+		const calificacionesConAspectos = await Calificacion.findAll({
+			where: {
+				aspectos: { [Op.ne]: null },
+			},
+			attributes: ["aspectos"],
+		});
+
+		const promediosAspectos = {
+			puntualidad: 0,
+			limpieza: 0,
+			amabilidad: 0,
+			conduccion: 0,
+		};
+
+		const conteoAspectos = {
+			puntualidad: 0,
+			limpieza: 0,
+			amabilidad: 0,
+			conduccion: 0,
+		};
+
+		calificacionesConAspectos.forEach((cal) => {
+			const aspectos = cal.aspectos;
+			if (aspectos && typeof aspectos === "object") {
+				Object.keys(promediosAspectos).forEach((aspecto) => {
+					if (aspectos[aspecto] && !isNaN(aspectos[aspecto])) {
+						promediosAspectos[aspecto] += parseInt(aspectos[aspecto]);
+						conteoAspectos[aspecto]++;
+					}
+				});
+			}
+		});
+
+		// Calcular promedios finales
+		Object.keys(promediosAspectos).forEach((aspecto) => {
+			if (conteoAspectos[aspecto] > 0) {
+				promediosAspectos[aspecto] = parseFloat(
+					(promediosAspectos[aspecto] / conteoAspectos[aspecto]).toFixed(2)
+				);
+			}
+		});
+
+		res.json({
+			success: true,
+			estadisticas: {
+				total_calificaciones: totalCalificaciones,
+				promedio_general: parseFloat(promedioGeneral),
+				cinco_estrellas: cincoEstrellas,
+				cuatro_estrellas: cuatroEstrellas,
+				tres_estrellas: tresEstrellas,
+				bajo_dos_estrellas: bajoDosEstrellas,
+				promedios_aspectos: promediosAspectos,
+				conteo_aspectos: conteoAspectos,
+			},
+		});
+	} catch (error) {
+		console.error("Error al obtener estadísticas de calificaciones:", error);
+		res.status(500).json({
+			success: false,
+			error: "Error al obtener estadísticas",
 		});
 	}
 });
