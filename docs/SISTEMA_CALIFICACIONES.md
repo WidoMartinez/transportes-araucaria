@@ -4,9 +4,12 @@
 
 El Sistema de Calificación del Servicio permite a los pasajeros evaluar su experiencia después de completar un viaje con Transportes Araucanía. Este sistema recopila feedback valioso sobre diferentes aspectos del servicio, ayudando a mantener y mejorar la calidad del servicio.
 
+**✨ Envío automático de correos:** El sistema envía automáticamente un correo electrónico al pasajero cuando una reserva se marca como "completada", solicitando su calificación con un enlace personalizado.
+
 ## 🎯 Características Principales
 
 ### Para Pasajeros
+- **Recepción automática de correo** con enlace de calificación
 - Calificación general del servicio (1-5 estrellas) - **OBLIGATORIO**
 - Calificación de aspectos específicos (opcional):
   - Puntualidad
@@ -18,6 +21,7 @@ El Sistema de Calificación del Servicio permite a los pasajeros evaluar su expe
 - Sin necesidad de inicio de sesión
 
 ### Para Administradores
+- **Envío automático de correos** al completar reservas
 - Dashboard con estadísticas generales
 - Visualización de todas las calificaciones
 - Filtros y paginación
@@ -29,8 +33,8 @@ El Sistema de Calificación del Servicio permite a los pasajeros evaluar su expe
 ```mermaid
 graph TD
     A[Pasajero completa viaje] --> B[Admin marca reserva como completada]
-    B --> C[Admin envía enlace de calificación por correo]
-    C --> D[Pasajero accede al enlace]
+    B --> C[Sistema envía correo automático con enlace]
+    C --> D[Pasajero recibe correo y accede al enlace]
     D --> E{¿Reserva ya calificada?}
     E -->|Sí| F[Mostrar mensaje: Ya calificada]
     E -->|No| G[Mostrar formulario]
@@ -297,46 +301,49 @@ Panel administrativo para visualizar y analizar calificaciones.
 3. Cambiar el estado a **"Completada"**
 4. Guardar cambios
 
-### 2. Enviar enlace de calificación
+### 2. Envío automático de correo de calificación
 
-**Opción A: Email manual**
+**El sistema envía automáticamente un correo al pasajero cuando se marca una reserva como "completada".**
 
-Enviar un correo al pasajero con el siguiente contenido:
+#### Qué sucede automáticamente:
 
-```
-Asunto: ¡Gracias por viajar con Transportes Araucanía!
+1. El administrador cambia el estado de la reserva a **"Completada"**
+2. El sistema detecta el cambio de estado
+3. Se envía automáticamente un correo al pasajero con:
+   - Saludo personalizado con su nombre
+   - Detalles de su viaje (código de reserva, ruta, fecha)
+   - Enlace directo al formulario de calificación
+   - Diseño atractivo y profesional
 
-Estimado/a [Nombre del pasajero],
+#### Template del correo enviado:
 
-Esperamos que haya disfrutado de su viaje con nosotros.
+El correo incluye:
+- **Asunto:** 🌟 ¿Cómo fue tu experiencia? - Transportes Araucanía
+- **Contenido:** Mensaje personalizado con detalles del viaje
+- **Botón principal:** "⭐ Calificar mi viaje" que lleva a `https://www.transportesaraucaria.cl/#calificar?reserva=ID`
+- **Información:** Lista de aspectos que puede calificar
 
-Nos encantaría conocer su opinión sobre el servicio. Por favor, tómese 
-un momento para calificar su experiencia:
+#### Requisitos para el envío automático:
 
-[Enlace de calificación]
+- La reserva debe tener un email válido
+- La reserva debe tener el nombre del pasajero
+- El estado debe cambiar a "completada"
 
-Su feedback es muy valioso para nosotros y nos ayuda a mejorar 
-constantemente nuestro servicio.
+#### Configuración:
 
-¡Gracias por preferirnos!
+El sistema usa las siguientes variables de entorno:
+- `FRONTEND_URL`: URL del frontend (default: https://www.transportesaraucaria.cl)
+- `PHP_MAILER_URL`: URL donde está alojado el PHP (default: https://www.transportesaraucaria.cl)
 
-Atentamente,
-Equipo Transportes Araucanía
-```
+**Nota:** El envío de correo no afecta la actualización del estado. Si el correo falla por alguna razón, la reserva se marca como completada de todas formas y se registra un mensaje en los logs.
 
-**Formato del enlace:**
+#### Envío manual (opcional):
+
+Si necesitas reenviar el enlace manualmente, usa:
 ```
 https://www.transportesaraucania.cl/#calificar?reserva=[ID_RESERVA]
 ```
 
-**Ejemplo:**
-```
-https://www.transportesaraucania.cl/#calificar?reserva=123
-```
-
-**Opción B: Integración con sistema de correos (Futuro)**
-
-Se puede integrar el envío automático de correos con el sistema PHPMailer existente.
 
 ### 3. Ver calificaciones
 
