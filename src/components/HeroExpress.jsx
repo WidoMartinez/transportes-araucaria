@@ -74,6 +74,8 @@ function HeroExpress({
 	onAplicarCodigo,
 	onRemoverCodigo,
 	oportunidadesRetornoUniversal, // Recibido desde App.jsx
+	fechaBloqueada, // Estado de validación de fecha bloqueada
+	validandoFecha, // Estado de loading para validación
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
@@ -405,6 +407,14 @@ function HeroExpress({
 		if (!formData.destino) return setStepError("Selecciona el destino.");
 		if (!formData.fecha) return setStepError("Selecciona la fecha.");
 		if (!formData.hora) return setStepError("Selecciona la hora.");
+
+		// Validar si la fecha está bloqueada
+		if (fechaBloqueada?.bloqueada) {
+			const mensajeBloqueo = fechaBloqueada.rangoHorario 
+				? `${fechaBloqueada.mensaje} (${fechaBloqueada.rangoHorario})`
+				: fechaBloqueada.mensaje;
+			return setStepError(mensajeBloqueo);
+		}
 
 		const fechaSeleccionada = new Date(`${formData.fecha}T00:00:00`);
 		const hoy = new Date();
@@ -984,10 +994,10 @@ function HeroExpress({
 							<Button
 								onClick={handleStepOneNext}
 								className="w-full h-14 md:h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg transition-transform active:scale-[0.98] touch-manipulation min-h-[56px]"
-								disabled={isSubmitting || verificandoDisponibilidad}
+								disabled={isSubmitting || verificandoDisponibilidad || fechaBloqueada?.bloqueada || validandoFecha}
 								aria-label="Reservar ahora"
 							>
-								{verificandoDisponibilidad ? (
+								{verificandoDisponibilidad || validandoFecha ? (
 									<LoaderCircle className="h-6 w-6 animate-spin" />
 								) : (
 									<span className="flex items-center gap-2">

@@ -673,3 +673,113 @@ export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
 		};
 	}
 };
+
+/**
+ * Verifica si una fecha/hora está en un rango bloqueado
+ * @param {string} fecha - Fecha en formato YYYY-MM-DD
+ * @param {string} hora - Hora en formato HH:MM:SS (opcional)
+ * @param {string} destino - Nombre del destino (opcional)
+ * @returns {Object} { bloqueada: boolean, motivo: string, mensaje: string, rangoHorario: string }
+ */
+export const verificarFechaBloqueada = async ({ fecha, hora = null, destino = null }) => {
+	try {
+		// Importar Festivo dinámicamente para evitar dependencias circulares
+		const { default: Festivo } = await import("../models/Festivo.js");
+
+		// Buscar festivos que bloqueen reservas en la fecha dada
+		const festivosBloqueantes = await Festivo.findAll({
+			where: {
+				fecha: fecha,
+				bloqueaReservas: true,
+				activo: true,
+			},
+		});
+
+		if (!festivosBloqueantes || festivosBloqueantes.length === 0) {
+			return {
+				bloqueada: false,
+				mensaje: "Fecha disponible para reservas",
+			};
+		}
+
+		// Verificar cada festivo bloqueante
+		for (const festivo of festivosBloqueantes) {
+			// 1. Verificar si aplica solo a destinos específicos
+			if (festivo.aplicaSoloDestinos && Array.isArray(festivo.aplicaSoloDestinos)) {
+				if (festivo.aplicaSoloDestinos.length > 0 && destino) {
+					// Si hay destinos específicos y el destino actual no está en la lista, no aplica bloqueo
+					if (!festivo.aplicaSoloDestinos.includes(destino)) {
+						continue; // Pasar al siguiente festivo
+					}
+				}
+			}
+
+			// 2. Verificar rango horario
+			const tieneRangoHorario = festivo.horaInicio && festivo.horaFin;
+
+			if (!tieneRangoHorario) {
+				// Bloqueo de todo el día
+				const destinosAfectados = festivo.aplicaSoloDestinos && festivo.aplicaSoloDestinos.length > 0
+					? ` para los destinos: ${festivo.aplicaSoloDestinos.join(", ")}`
+					: "";
+
+				return {
+					bloqueada: true,
+					motivo: festivo.nombre,
+					mensaje: `No se pueden crear reservas el ${fecha} - ${festivo.nombre}${destinosAfectados}`,
+					rangoHorario: "Todo el día",
+				};
+			}
+
+			// Si hay hora especificada, verificar si está dentro del rango bloqueado
+			if (hora) {
+				const horaMinutos = horaAMinutos(hora);
+				const inicioMinutos = horaAMinutos(festivo.horaInicio);
+				const finMinutos = horaAMinutos(festivo.horaFin);
+
+				if (horaMinutos >= inicioMinutos && horaMinutos <= finMinutos) {
+					const destinosAfectados = festivo.aplicaSoloDestinos && festivo.aplicaSoloDestinos.length > 0
+						? ` para los destinos: ${festivo.aplicaSoloDestinos.join(", ")}`
+						: "";
+
+					return {
+						bloqueada: true,
+						motivo: festivo.nombre,
+						mensaje: `No se pueden crear reservas el ${fecha} entre ${festivo.horaInicio.substring(0, 5)} y ${festivo.horaFin.substring(0, 5)} - ${festivo.nombre}${destinosAfectados}`,
+						rangoHorario: `${festivo.horaInicio.substring(0, 5)} - ${festivo.horaFin.substring(0, 5)}`,
+					};
+				}
+			} else {
+				// No se especificó hora, pero hay un rango horario bloqueado
+				// Advertir al usuario
+				const destinosAfectados = festivo.aplicaSoloDestinos && festivo.aplicaSoloDestinos.length > 0
+					? ` para los destinos: ${festivo.aplicaSoloDestinos.join(", ")}`
+					: "";
+
+				return {
+					bloqueada: true,
+					motivo: festivo.nombre,
+					mensaje: `Reservas bloqueadas el ${fecha} entre ${festivo.horaInicio.substring(0, 5)} y ${festivo.horaFin.substring(0, 5)} - ${festivo.nombre}${destinosAfectados}. Por favor seleccione una hora fuera de este rango.`,
+					rangoHorario: `${festivo.horaInicio.substring(0, 5)} - ${festivo.horaFin.substring(0, 5)}`,
+				};
+			}
+		}
+
+		// Si llegamos aquí, ningún festivo bloqueante aplica
+		return {
+			bloqueada: false,
+			mensaje: "Fecha disponible para reservas",
+		};
+	} catch (error) {
+		console.error("Error verificando fecha bloqueada:", error);
+		// En caso de error, no bloquear para no afectar la operación normal
+		return {
+			bloqueada: false,
+			mensaje: "Fecha disponible para reservas",
+			error: error.message,
+		};
+	}
+};
+
+// Exportar horaAMinutos si aún no está exportada
+export { horaAMinutos };

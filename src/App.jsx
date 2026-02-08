@@ -292,6 +292,10 @@ function App() {
 	});
 	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
 	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
+	
+	// --- VALIDACIÓN DE FECHAS BLOQUEADAS ---
+	const [fechaBloqueada, setFechaBloqueada] = useState(null);
+	const [validandoFecha, setValidandoFecha] = useState(false);
 
 	// --- LÓGICA DE RETORNOS UNIVERSALES (CENTRALIZADA) ---
 	const buscarRetornosUniversal = async (origen, destino, fecha) => {
@@ -335,6 +339,54 @@ function App() {
 		}
 	};
 
+	// --- VALIDACIÓN DE FECHAS BLOQUEADAS ---
+	const validarFechaSeleccionada = async (fecha, hora, destino) => {
+		// Solo validar si tenemos los 3 campos necesarios
+		if (!fecha || !hora || !destino) {
+			setFechaBloqueada(null);
+			return;
+		}
+
+		// No validar para "Otro" destino ya que es cotización manual
+		if (destino === "Otro") {
+			setFechaBloqueada(null);
+			return;
+		}
+
+		setValidandoFecha(true);
+		try {
+			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const response = await fetch(
+				`${apiUrl}/api/disponibilidad/validar-fecha`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ fecha, hora, destino }),
+				}
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				if (data.bloqueada) {
+					console.log("⚠️ [App.jsx] Fecha bloqueada:", data.mensaje);
+					setFechaBloqueada(data);
+				} else {
+					setFechaBloqueada(null);
+				}
+			} else {
+				// Si falla la validación, no bloqueamos (graceful degradation)
+				console.warn("[App.jsx] Error al validar fecha, permitiendo continuar");
+				setFechaBloqueada(null);
+			}
+		} catch (error) {
+			// Si hay error de red, no bloqueamos el flujo
+			console.error("Error validando fecha bloqueada:", error);
+			setFechaBloqueada(null);
+		} finally {
+			setValidandoFecha(false);
+		}
+	};
+
 	// Efecto para buscar retornos cuando cambian los datos del formulario
 	useEffect(() => {
 		// Debounce pequeño para evitar muchas peticiones mientras se escribe/selecciona
@@ -343,6 +395,15 @@ function App() {
 		}, 500);
 		return () => clearTimeout(timer);
 	}, [formData.origen, formData.destino, formData.fecha]);
+
+	// Efecto para validar fecha bloqueada cuando cambian fecha, hora o destino
+	useEffect(() => {
+		// Debounce para evitar múltiples llamadas mientras se selecciona
+		const timer = setTimeout(() => {
+			validarFechaSeleccionada(formData.fecha, formData.hora, formData.destino);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [formData.fecha, formData.hora, formData.destino]);
 
 	// Sincronizar vista de Fletes cuando cambia el hash o el historial
 	useEffect(() => {
@@ -2013,6 +2074,8 @@ function App() {
 					oportunidadesRetornoUniversal={oportunidadesRetornoUniversal}
 					onAplicarCodigo={validarCodigo}
 					onRemoverCodigo={removerCodigo}
+					fechaBloqueada={fechaBloqueada}
+					validandoFecha={validandoFecha}
 				/>
 				<Servicios />
 				<Destinos />
