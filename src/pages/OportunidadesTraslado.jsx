@@ -77,8 +77,12 @@ fecha: oportunidad.fecha,
 hora: oportunidad.horaAproximada,
 codigoOportunidad: oportunidad.id,
 };
-localStorage.setItem("datosOportunidad", JSON.stringify(datosReserva));
-window.location.href = "#reserva";
+		// Agregar un identificador de oportunidad para tracking
+		datosReserva.codigoOportunidad = oportunidad.id;
+		localStorage.setItem("datosOportunidad", JSON.stringify(datosReserva));
+		
+		// Redirigir a la página principal con el formulario
+		window.location.href = "/";
 };
 
 const origenes = [...new Set(oportunidades.map((op) => op.origen))];

@@ -290,6 +290,7 @@ function App() {
 		fechaRegreso: "",
 		horaRegreso: "",
 		upgradeVan: false, // NUEVO CAMPO para upgrade voluntario a Van
+		codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
@@ -1293,6 +1294,7 @@ function App() {
 			fechaRegreso: "",
 			horaRegreso: "",
 			upgradeVan: false, // NUEVO CAMPO
+		codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
 		});
 	};
 

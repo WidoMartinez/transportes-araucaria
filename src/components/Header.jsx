@@ -10,7 +10,8 @@ import {
   MapPin,
   Calendar,
   Briefcase,
-  Star
+  Star,
+  Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import {
@@ -42,6 +43,7 @@ const MENU_ITEMS = [
   { label: "Destinos", href: "#destinos", icon: MapPin },
   { label: "Tours", href: "#tours", icon: Calendar },
   { label: "Temporada", href: "#destacados", icon: Star },
+  { label: "🔥 Oportunidades", href: "#oportunidades", special: true, icon: Sparkles },
   { label: "Fletes", href: "/#fletes", external: true, icon: Briefcase },
   { label: "Consultar Reserva", href: "#consultar-reserva", highlight: true, icon: Calendar },
   { label: "Pagar con Código", href: "#pagar-con-codigo", highlight: true, icon: Briefcase },
@@ -171,12 +173,14 @@ function Header() {
   return (
     <>
     <motion.header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
-        isScrolled
-          ? "bg-[#6B4423]/95 md:bg-white/90 backdrop-blur-md shadow-sm border-[#8B5A3C]/30 md:border-gray-200/50 py-1 md:py-2"
-          : "bg-[#6B4423] md:bg-transparent md:backdrop-blur-sm border-transparent md:border-transparent py-2 md:py-4"
-      )}
+                className={cn(
+                  "relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
+                  item.special
+                    ? "text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-bold"
+                    : item.highlight
+                    ? "text-primary hover:text-primary-foreground hover:bg-primary/10"
+                    : "text-gray-600 hover:text-primary"
+                )
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
@@ -189,12 +193,14 @@ function Header() {
             <motion.img
               src={logo}
               alt="Transportes Araucaria"
-              className={cn(
-                "transition-all duration-300 object-contain",
-                isScrolled 
-                  ? "h-12 md:h-16 brightness-0 invert md:brightness-100 md:invert-0" 
-                  : "h-20 md:h-20 lg:h-24 brightness-0 invert md:brightness-100 md:invert-0"
-              )}
+                className={cn(
+                  "relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
+                  item.special
+                    ? "text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-bold"
+                    : item.highlight
+                    ? "text-primary hover:text-primary-foreground hover:bg-primary/10"
+                    : "text-gray-600 hover:text-primary"
+                )
               layout
             />
 
@@ -221,10 +227,12 @@ function Header() {
                 variants={navItemVariants}
                 className={cn(
                   "relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
-                  item.highlight
+                  item.special
+                    ? "text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-bold"
+                    : item.highlight
                     ? "text-primary hover:text-primary-foreground hover:bg-primary/10"
                     : "text-gray-600 hover:text-primary"
-                )}
+                )
               >
                 {/* Pill Hover Effect Background */}
                 <span className="absolute inset-0 rounded-full bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10 scale-90 group-hover:scale-100" />
@@ -276,12 +284,14 @@ function Header() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className={cn(
-                    "h-12 w-12 rounded-full transition-colors text-white md:text-gray-800",
-                    isScrolled 
-                      ? "hover:bg-white/20 md:hover:bg-gray-100" 
-                      : "hover:bg-white/20 md:hover:bg-gray-100"
-                  )}
+                className={cn(
+                  "relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
+                  item.special
+                    ? "text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-bold"
+                    : item.highlight
+                    ? "text-primary hover:text-primary-foreground hover:bg-primary/10"
+                    : "text-gray-600 hover:text-primary"
+                )
                 >
                   <Menu className="w-7 h-7" />
                 </Button>
@@ -307,23 +317,23 @@ function Header() {
                           initial="hidden"
                           animate="visible"
                           variants={mobileItemVariants}
-                          className={cn(
-                            "flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200",
-                            item.highlight
-                              ? "bg-primary/5 text-primary hover:bg-primary/10"
-                              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:translate-x-1"
-                          )}
+                className={cn(
+                  "relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
+                  item.special
+                    ? "text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-bold"
+                    : item.highlight
+                    ? "text-primary hover:text-primary-foreground hover:bg-primary/10"
+                    : "text-gray-600 hover:text-primary"
+                )
                         >
-                          <div className={cn(
-                            "p-2 rounded-lg",
-                            item.highlight ? "bg-primary/10 text-primary" : "bg-gray-100 text-gray-500"
-                          )}>
-                            <item.icon className="w-5 h-5" />
-                          </div>
-                          {item.label}
-                        </motion.a>
-                      </SheetClose>
-                    ))}
+                className={cn(
+                  "relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
+                  item.special
+                    ? "text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-bold"
+                    : item.highlight
+                    ? "text-primary hover:text-primary-foreground hover:bg-primary/10"
+                    : "text-gray-600 hover:text-primary"
+                )
                   </nav>
                 </div>
 
