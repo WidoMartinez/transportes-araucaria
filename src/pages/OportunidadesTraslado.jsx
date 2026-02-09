@@ -32,15 +32,24 @@ destino: "",
 fecha: "",
 });
 
-const cargarOportunidades = async () => {
-try {
-setError(null);
-const params = new URLSearchParams();
-if (filtros.origen) params.append("origen", filtros.origen);
-if (filtros.destino) params.append("destino", filtros.destino);
-if (filtros.fecha) params.append("fecha", filtros.fecha);
+  const cargarOportunidades = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = new URLSearchParams();
+      
+      // Solo agregar filtros si no son "todos"
+      if (filtros.origen && filtros.origen !== "todos") {
+        params.append("origen", filtros.origen);
+      }
+      if (filtros.destino && filtros.destino !== "todos") {
+        params.append("destino", filtros.destino);
+      }
+      if (filtros.fecha) {
+        params.append("fecha", filtros.fecha);
+      }
 
-const url = getBackendUrl() + "/api/oportunidades?" + params.toString();
+      const url = `${getBackendUrl()}/api/oportunidades?${params.toString()}`;
 const response = await fetch(url);
 const data = await response.json();
 
@@ -201,7 +210,7 @@ setFiltros({ ...filtros, origen: value })
 <SelectValue placeholder="Origen" />
 </SelectTrigger>
 <SelectContent>
-<SelectItem value="">Todos los orígenes</SelectItem>
+<SelectItem value="todos">Todos los orígenes</SelectItem>
 {origenes.map((origen) => (
 <SelectItem key={origen} value={origen}>
 {origen}
@@ -220,7 +229,7 @@ setFiltros({ ...filtros, destino: value })
 <SelectValue placeholder="Destino" />
 </SelectTrigger>
 <SelectContent>
-<SelectItem value="">Todos los destinos</SelectItem>
+<SelectItem value="todos">Todos los destinos</SelectItem>
 {destinos.map((destino) => (
 <SelectItem key={destino} value={destino}>
 {destino}
