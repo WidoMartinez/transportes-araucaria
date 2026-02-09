@@ -69,20 +69,20 @@ cargarOportunidades();
 return () => clearInterval(intervalId);
 }, [filtros]);
 
-const handleReservar = (oportunidad) => {
-const datosReserva = {
-origen: oportunidad.origen,
-destino: oportunidad.destino,
-fecha: oportunidad.fecha,
-hora: oportunidad.horaAproximada,
-codigoOportunidad: oportunidad.id,
-};
-		
-		localStorage.setItem("datosOportunidad", JSON.stringify(datosReserva));
-		
-		// Redirigir a la página principal con el formulario
-		window.location.href = "/";
-};
+  const handleReservar = (oportunidad) => {
+    const datosReserva = {
+      origen: oportunidad.origen,
+      destino: oportunidad.destino,
+      fecha: oportunidad.fecha,
+      hora: oportunidad.horaAproximada,
+      codigoOportunidad: oportunidad.id,
+    };
+    
+    localStorage.setItem("datosOportunidad", JSON.stringify(datosReserva));
+    
+    // Redirigir a la página principal con el formulario
+    window.location.href = "/";
+  };
 
 const origenes = [...new Set(oportunidades.map((op) => op.origen))];
 const destinos = [...new Set(oportunidades.map((op) => op.destino))];
