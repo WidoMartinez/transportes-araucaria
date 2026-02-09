@@ -34,48 +34,10 @@ export default defineConfig({
 				// manualChunks permite agrupar dependencias en chunks separados.
 				// Aquí agrupamos librerías pesadas y de UI para evitar un único bundle masivo.
 				manualChunks(id) {
-					if (!id) return null;
 					if (id.includes("node_modules")) {
-						// Agrupar React + React DOM juntos
-						if (id.includes("react") || id.includes("react-dom")) {
-							return "vendor-react";
-						}
-						// Agrupar librerías de UI/animación en un chunk separado
-						if (
-							id.includes("framer-motion") ||
-							id.includes("gsap") ||
-							id.includes("recharts")
-						) {
-							return "vendor-animacion";
-						}
-						// Agrupar Radix / Lucide / Sonner / otras utilidades UI
-						if (
-							id.includes("@radix-ui") ||
-							id.includes("lucide-react") ||
-							id.includes("sonner") ||
-							id.includes("cmdk")
-						) {
-							return "vendor-ui";
-						}
-						// Agrupar librerías de utilidades/pesadas como xlsx
-						if (id.includes("xlsx") || id.includes("date-fns")) {
-							return "vendor-utils";
-						}
-						// Por defecto, agrupar resto de node_modules en vendor
+						// Agrupamos todas las dependencias en un solo chunk de vendor 
+						// para evitar ciclos entre vendor-react, vendor-ui, etc.
 						return "vendor";
-					}
-					// Archivos del propio src: si están en components grandes se pueden dividir
-					if (
-						id.includes("/src/components/") &&
-						id.match(/\.(jsx|js|ts|tsx)$/)
-					) {
-						// separar paneles/admin como chunks propios si existen
-						if (
-							id.includes("/src/components/Admin") ||
-							id.includes("/src/components/AdminReservas")
-						) {
-							return "admin-components";
-						}
 					}
 				},
 			},
