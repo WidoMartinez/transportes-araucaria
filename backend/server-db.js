@@ -3427,6 +3427,26 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				"Código:",
 				reservaExpress.codigoReserva
 			);
+
+			// Vincular código de pago con la reserva creada (evita duplicación de reservas)
+			if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
+				try {
+					const codigoPago = await CodigoPago.findOne({
+						where: { codigo: datosReserva.referenciaPago }
+					});
+
+					if (codigoPago && !codigoPago.reservaVinculadaId) {
+						await codigoPago.update({
+							reservaVinculadaId: reservaExpress.id,
+							codigoReservaVinculado: reservaExpress.codigoReserva
+						});
+						console.log(`🔗 Código de pago ${codigoPago.codigo} vinculado con reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`);
+					}
+				} catch (error) {
+					console.error("❌ Error al vincular código de pago con reserva:", error);
+					// No fallar la creación de reserva por este error
+				}
+			}
 		}
 
 		// --- LÓGICA DE TRAMOS VINCULADOS (EXPRESS) ---
