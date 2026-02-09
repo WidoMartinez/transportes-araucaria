@@ -39,6 +39,7 @@ import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
+import OportunidadesTraslado from "./pages/OportunidadesTraslado"; // Página de oportunidades de traslado
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -210,6 +211,17 @@ const resolveIsFlowReturnView = () => {
 };
 
 // Resolver si la URL es la página de prueba de Google Ads
+// Resolver si la URL es la página de oportunidades
+const resolveIsOportunidadesView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/oportunidades" ||
+		pathname.startsWith("/oportunidades/") ||
+		hash === "#oportunidades"
+	);
+};
+
 const resolveIsTestGoogleAdsView = () => {
 	const pathname = window.location.pathname.toLowerCase();
 	const hash = window.location.hash.toLowerCase();
@@ -230,6 +242,9 @@ function App() {
 	);
 	const [isFlowReturnView, setIsFlowReturnView] = useState(
 		resolveIsFlowReturnView
+	);
+	const [isOportunidadesView, setIsOportunidadesView] = useState(
+		resolveIsOportunidadesView
 	);
 	const [isTestGoogleAdsView, setIsTestGoogleAdsView] = useState(
 		resolveIsTestGoogleAdsView
@@ -275,6 +290,7 @@ function App() {
 		fechaRegreso: "",
 		horaRegreso: "",
 		upgradeVan: false, // NUEVO CAMPO para upgrade voluntario a Van
+		codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
@@ -1278,6 +1294,7 @@ function App() {
 			fechaRegreso: "",
 			horaRegreso: "",
 			upgradeVan: false, // NUEVO CAMPO
+		codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
 		});
 	};
 
@@ -1897,6 +1914,10 @@ function App() {
 
 	if (isFlowReturnView) {
 		return <FlowReturn />;
+	}
+
+	if (isOportunidadesView) {
+		return <OportunidadesTraslado />;
 	}
 
 	if (isTestGoogleAdsView) {

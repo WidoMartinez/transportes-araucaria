@@ -1081,7 +1081,7 @@ function HeroExpress({
 
 							{/* NUEVO: Opción de upgrade a Van - Solo para 1-3 pasajeros */}
 							{formData.pasajeros && parseInt(formData.pasajeros) <= 3 && (() => {
-								const destinoInfo = destinosData.find(d => d.nombre === targetName);
+								const destinoInfo = destinosData.find(d => d.nombre === formData.destino);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
 								// CALCULAR SIEMPRE BASÁNDOSE EN EL PRECIO DEL SEDAN, NO EN EL ESTADO ACTUAL
@@ -1131,10 +1131,10 @@ function HeroExpress({
 								
 								return (
 									<div className="mt-6 pt-6 border-t border-border">
-										<div className={`flex items-start gap-3 p-4 rounded-lg border-2 transition-all ${
+										<div className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${
 											formData.upgradeVan 
-												? 'bg-chocolate-50/50 border-chocolate-500 shadow-md ring-1 ring-chocolate-500/20' 
-												: 'bg-muted/30 border-chocolate-300/50 hover:bg-chocolate-50/30'
+												? 'bg-muted/50 border-border shadow-sm' 
+												: 'bg-muted/30 border-border hover:bg-muted/40'
 										}`}>
 											<input
 												type="checkbox"
@@ -1146,22 +1146,44 @@ function HeroExpress({
 														upgradeVan: e.target.checked
 													}));
 												}}
-												className="mt-1 h-5 w-5 rounded border-chocolate-400 text-chocolate-600 focus:ring-chocolate-500 cursor-pointer"
+												className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
 											/>
 											<label htmlFor="upgrade-van" className="flex-1 cursor-pointer">
 												<div className="flex items-center justify-between gap-3 mb-2">
-														<span className="text-base font-bold text-chocolate-900">
+													<div className="flex items-center gap-2 flex-wrap">
+														<span className="text-sm font-semibold text-foreground">
 															Upgrade a Van
 														</span>
-													<span className="text-base font-bold text-chocolate-600 whitespace-nowrap">
+														<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground border border-border">
+															Precio fijo hasta 4 pax
+														</span>
+													</div>
+													<span className="text-base font-bold text-primary whitespace-nowrap">
 														+{formatCurrency(diferenciaTotal)}
 													</span>
 												</div>
 												
 												<div className="space-y-2">
-													<p className="text-sm text-chocolate-800 leading-relaxed font-medium">
-														<strong>Más espacio, confort y reclinación:</strong> Ideal para viajes largos o con equipaje extra.
+													<p className="text-xs text-muted-foreground leading-relaxed">
+														<strong>Más espacio y confort:</strong> Asientos amplios y reclinables<br />
+														<strong>Equipaje extra:</strong> Ideal para maletas grandes o compras
 													</p>
+													
+													{parseInt(formData.pasajeros) === 3 && (
+														<div className="bg-muted/50 border border-border rounded px-3 py-2">
+															<p className="text-xs text-muted-foreground">
+																<strong>Nota:</strong> Si suman un pasajero más, la Van es obligatoria por solo un pequeño adicional
+															</p>
+														</div>
+													)}
+													
+													{formData.upgradeVan && (
+														<div className="bg-primary/10 border border-primary/20 rounded px-3 py-2 mt-2">
+															<p className="text-xs text-primary font-medium">
+																Upgrade activado - Descuentos aplicados
+															</p>
+														</div>
+													)}
 												</div>
 											</label>
 										</div>
