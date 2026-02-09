@@ -3144,6 +3144,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					[Op.in]: ["pendiente", "pendiente_detalles"],
 				},
 				estadoPago: "pendiente",
+				// Excluir reservas que son parte de un viaje ida y vuelta
+				tramoHijoId: null,
+				tramoPadreId: null,
 			},
 			order: [["createdAt", "DESC"]],
 		});
@@ -3427,10 +3430,23 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		}
 
 		// --- LÓGICA DE TRAMOS VINCULADOS (EXPRESS) ---
-		// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
-		if (!esModificacion && datosReserva.idaVuelta) {
-			console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+	// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
+	if (!esModificacion && datosReserva.idaVuelta) {
+		console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+		console.log("📋 [EXPRESS] Datos de los tramos:", {
+			idReservaIda: reservaExpress.id,
+			codigoIda: reservaExpress.codigoReserva,
+			fechaIda: datosReserva.fecha,
+			horaIda: datosReserva.hora,
+			fechaVuelta: datosReserva.fechaRegreso,
+			horaVuelta: datosReserva.horaRegreso,
+		});
 
+			// Validar que existan datos de regreso antes de dividir
+		if (!datosReserva.fechaRegreso) {
+			console.error("❌ [EXPRESS] Error: idaVuelta=true pero falta fechaRegreso. No se dividirá la reserva.");
+			// No dividir, mantener como reserva única con idaVuelta=true
+		} else {
 			try {
 				// 1. Preparar datos para el tramo de vuelta
 				// Invertir origen/destino y direcciones
@@ -3541,6 +3557,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				// No fallar el request completo, pero loguear error crítico
 			}
 		}
+	}
 
 		if (clienteIdAsociado) {
 			try {

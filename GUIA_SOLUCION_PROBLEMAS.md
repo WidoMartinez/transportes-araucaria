@@ -794,6 +794,80 @@ Cuando se agreguen columnas nuevas que tienen índices definidos en el modelo:
 ### Problema
 Los pagos que quedaban en estado "Pendiente" (Flow Status 1) se trataban como exitosos, mostrando la pantalla de "¡Pago Exitoso!" al cliente y registrando conversiones en Google Ads antes de que el dinero estuviera realmente confirmado.
 
+---
+
+## 13. Duplicación de Reservas en Pago con Código Ida y Vuelta
+
+**Implementado: 9 Febrero 2026**
+
+### Problema
+Cuando un cliente usaba un código de pago para una reserva ida y vuelta, el sistema presentaba tres problemas críticos:
+
+1. **Duplicación de reservas**: Se generaban códigos de reserva adicionales cuando el sistema detectaba el tramo de vuelta recién creado como una "reserva existente pendiente" y la modificaba
+2. **Estado pendiente tras pago confirmado**: Las reservas quedaban en estado `pendiente` en lugar de `confirmada`
+3. **Datos de fecha/hora duplicados**: Los datos del tramo de ida se copiaban incorrectamente al tramo de vuelta
+
+### Causa Raíz
+La lógica de "modificación de reserva existente" en `/enviar-reserva-express` buscaba reservas pendientes por email sin excluir tramos vinculados, causando que el tramo de VUELTA recién creado se detectara como "reserva duplicada" y se modificara incorrectamente.
+
+### Solución (Febrero 2026)
+
+**Archivo modificado**: `backend/server-db.js`
+
+**Cambios implementados**:
+
+1. **Excluir tramos vinculados** (líneas 3146-3149):
+```javascript
+const reservaExistente = await Reserva.findOne({
+    where: {
+        email: emailNormalizado,
+        estado: { [Op.in]: ["pendiente", "pendiente_detalles"] },
+        estadoPago: "pendiente",
+        // ✅ Excluir reservas que son parte de un viaje ida y vuelta
+        tramoHijoId: null,
+        tramoPadreId: null,
+    },
+    order: [["createdAt", "DESC"]],
+});
+```
+
+2. **Validación de fechaRegreso** (líneas 3442-3445):
+```javascript
+if (!datosReserva.fechaRegreso) {
+    console.error("❌ [EXPRESS] Error: idaVuelta=true pero falta fechaRegreso");
+    // No dividir, mantener como reserva única
+} else {
+    // Proceder con la división...
+}
+```
+
+3. **Logs mejorados** (líneas 3433-3440): Muestran datos de ida y vuelta antes de crear tramos
+
+### Verificación
+
+**Logs esperados**:
+```
+✅ Reserva express guardada: ID 269
+📋 [EXPRESS] Datos de los tramos: { fechaIda: '2026-02-12', fechaVuelta: '2026-02-16' }
+🔄 [EXPRESS] Procesando reserva Ida y Vuelta...
+✅ [EXPRESS] Tramo de vuelta creado: 270
+✅ Pago CONFIRMADO (Reserva 269)
+```
+
+**NO debe aparecer**: `🔄 Modificando reserva existente ID: 270`
+
+**Resultado en BD**: Exactamente 2 reservas vinculadas, ambas con estado `confirmada` y `estadoPago: pagado`
+
+> [!IMPORTANT]
+> Este fix asegura que los pagos con código para reservas ida y vuelta funcionen correctamente, evitando duplicación de registros y garantizando estados de pago consistentes.
+
+---
+
+**Implementado: 7 Enero 2026**
+
+### Problema
+Los pagos que quedaban en estado "Pendiente" (Flow Status 1) se trataban como exitosos, mostrando la pantalla de "¡Pago Exitoso!" al cliente y registrando conversiones en Google Ads antes de que el dinero estuviera realmente confirmado.
+
 ### Síntomas
 - Cliente ve "¡Pago Exitoso!" pero en el panel de Flow aparece "Pendiente"
 - Conversiones de Google Ads se registran para pagos no confirmados
