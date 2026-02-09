@@ -26,6 +26,8 @@ import Festivo from "./models/Festivo.js";
 import PendingEmail from "./models/PendingEmail.js";
 import BloqueoAgenda from "./models/BloqueoAgenda.js";
 import Configuracion from "./models/Configuracion.js";
+import Oportunidad from "./models/Oportunidad.js";
+import SuscripcionOportunidad from "./models/SuscripcionOportunidad.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -50,10 +52,13 @@ import addColumnVan from "./migrations/add-column-van.js";
 import addConfiguracionTable from "./migrations/add-configuracion-table.js";
 import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
 import addTransaccionesTable from "./migrations/add-transacciones-table.js";
+import addOportunidadesTable from "./migrations/add-oportunidades-table.js";
+import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-oportunidades-table.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
+import setupOportunidadesRoutes from "./routes/oportunidades.js";
 import { authJWT } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
@@ -516,6 +521,9 @@ app.options("*", (req, res) => {
 // --- RUTAS DE AUTENTICACIÓN ---
 app.use("/api/auth", authRoutes);
 
+// Configurar rutas de oportunidades
+setupOportunidadesRoutes(app, authAdmin);
+
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 // Función para ejecutar migración automática del código de reserva
 const ejecutarMigracionCodigoReserva = async () => {
@@ -634,6 +642,8 @@ const initializeDatabase = async () => {
 			DescuentoGlobal,
 			PendingEmail,
 			Transaccion,
+			Oportunidad,
+			SuscripcionOportunidad,
 		]); // false = no forzar recreación
 
 		// Crear o actualizar usuario admin por defecto
@@ -707,6 +717,8 @@ const initializeDatabase = async () => {
 		await addBloqueosAgendaTable(); // Migración para tabla de bloqueos de agenda
 		await addGastosCerradosField(); // Migración para campo gastos_cerrados
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
+		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
+		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices

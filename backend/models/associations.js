@@ -166,3 +166,28 @@ export const setupAssociations = () => {
 };
 
 export default setupAssociations;
+
+// Importar modelos de oportunidades
+import Oportunidad from "./Oportunidad.js";
+
+// Relación: Reserva -> Oportunidades generadas (Una reserva puede generar varias oportunidades)
+Reserva.hasMany(Oportunidad, {
+foreignKey: "reservaRelacionadaId",
+as: "oportunidadesGeneradas",
+});
+
+Oportunidad.belongsTo(Reserva, {
+foreignKey: "reservaRelacionadaId",
+as: "reservaRelacionada",
+});
+
+// Relación: Reserva -> Oportunidad aprovechada (Una reserva puede aprovechar una oportunidad)
+Reserva.hasOne(Oportunidad, {
+foreignKey: "reservaAprovechadaId",
+as: "oportunidadAprovechada",
+});
+
+Oportunidad.belongsTo(Reserva, {
+foreignKey: "reservaAprovechadaId",
+as: "reservaAprovechada",
+});
