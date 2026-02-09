@@ -77,8 +77,7 @@ fecha: oportunidad.fecha,
 hora: oportunidad.horaAproximada,
 codigoOportunidad: oportunidad.id,
 };
-		// Agregar un identificador de oportunidad para tracking
-		datosReserva.codigoOportunidad = oportunidad.id;
+		
 		localStorage.setItem("datosOportunidad", JSON.stringify(datosReserva));
 		
 		// Redirigir a la página principal con el formulario

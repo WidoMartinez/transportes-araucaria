@@ -13,6 +13,7 @@ import AdminAuditLog from "./AdminAuditLog.js";
 import PendingEmail from "./PendingEmail.js";
 import Transaccion from "./Transaccion.js";
 import CodigoPago from "./CodigoPago.js";
+import Oportunidad from "./Oportunidad.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -162,32 +163,29 @@ export const setupAssociations = () => {
 		as: "codigoPago",
 	});
 
+	// Relación: Reserva -> Oportunidades generadas (Una reserva puede generar varias oportunidades)
+	Reserva.hasMany(Oportunidad, {
+		foreignKey: "reservaRelacionadaId",
+		as: "oportunidadesGeneradas",
+	});
+
+	Oportunidad.belongsTo(Reserva, {
+		foreignKey: "reservaRelacionadaId",
+		as: "reservaRelacionada",
+	});
+
+	// Relación: Reserva -> Oportunidad aprovechada (Una reserva puede aprovechar una oportunidad)
+	Reserva.hasOne(Oportunidad, {
+		foreignKey: "reservaAprovechadaId",
+		as: "oportunidadAprovechada",
+	});
+
+	Oportunidad.belongsTo(Reserva, {
+		foreignKey: "reservaAprovechadaId",
+		as: "reservaAprovechada",
+	});
+
 	console.log("✅ Asociaciones de modelos establecidas correctamente");
 };
 
 export default setupAssociations;
-
-// Importar modelos de oportunidades
-import Oportunidad from "./Oportunidad.js";
-
-// Relación: Reserva -> Oportunidades generadas (Una reserva puede generar varias oportunidades)
-Reserva.hasMany(Oportunidad, {
-foreignKey: "reservaRelacionadaId",
-as: "oportunidadesGeneradas",
-});
-
-Oportunidad.belongsTo(Reserva, {
-foreignKey: "reservaRelacionadaId",
-as: "reservaRelacionada",
-});
-
-// Relación: Reserva -> Oportunidad aprovechada (Una reserva puede aprovechar una oportunidad)
-Reserva.hasOne(Oportunidad, {
-foreignKey: "reservaAprovechadaId",
-as: "oportunidadAprovechada",
-});
-
-Oportunidad.belongsTo(Reserva, {
-foreignKey: "reservaAprovechadaId",
-as: "reservaAprovechada",
-});

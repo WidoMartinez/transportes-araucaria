@@ -3,18 +3,44 @@
 // Endpoints para el sistema de oportunidades de traslado
 
 import { Op } from "sequelize";
+import { z } from "zod";
 import Oportunidad from "../models/Oportunidad.js";
 import SuscripcionOportunidad from "../models/SuscripcionOportunidad.js";
 import Reserva from "../models/Reserva.js";
 
-// Función auxiliar para generar código de oportunidad
-const generarCodigoOportunidad = () => {
-const fecha = new Date();
-const year = fecha.getFullYear();
-const month = String(fecha.getMonth() + 1).padStart(2, "0");
-const day = String(fecha.getDate()).padStart(2, "0");
-const random = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
-return `OP-${year}${month}${day}-${random}`;
+// Schema de validación para suscripciones
+const suscripcionSchema = z.object({
+  email: z.string().email("Email inválido"),
+  nombre: z.string().optional(),
+  rutas: z.array(
+    z.object({
+      origen: z.string().min(1, "Origen requerido"),
+      destino: z.string().min(1, "Destino requerido"),
+    })
+  ).min(1, "Debe seleccionar al menos una ruta"),
+  descuentoMinimo: z.number().int().min(30).max(70).optional(),
+});
+
+// Función auxiliar para generar código de oportunidad único
+const generarCodigoOportunidad = async () => {
+  const fecha = new Date();
+  const year = fecha.getFullYear();
+  const month = String(fecha.getMonth() + 1).padStart(2, "0");
+  const day = String(fecha.getDate()).padStart(2, "0");
+  
+  // Generar código único con timestamp y random base36
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+  const codigo = `OP-${year}${month}${day}-${timestamp}${random}`;
+  
+  // Verificar que no exista (por seguridad extra)
+  const existe = await Oportunidad.findOne({ where: { codigo } });
+  if (existe) {
+    // Recursión en caso extremo de colisión
+    return generarCodigoOportunidad();
+  }
+  
+  return codigo;
 };
 
 // Función auxiliar para calcular precio con descuento
@@ -232,14 +258,18 @@ error: "Error al cargar oportunidades",
 // POST /api/oportunidades/suscribir - Suscribirse a alertas
 app.post("/api/oportunidades/suscribir", async (req, res) => {
 try {
-const { email, nombre, rutas, descuentoMinimo } = req.body;
+// Validar entrada con zod
+const validacion = suscripcionSchema.safeParse(req.body);
 
-if (!email || !rutas || !Array.isArray(rutas) || rutas.length === 0) {
+if (!validacion.success) {
 return res.status(400).json({
 success: false,
-error: "Email y rutas son requeridos",
+error: "Datos inválidos",
+detalles: validacion.error.errors,
 });
 }
+
+const { email, nombre, rutas, descuentoMinimo } = validacion.data;
 
 // Verificar si ya existe suscripción
 let suscripcion = await SuscripcionOportunidad.findOne({
@@ -250,7 +280,7 @@ if (suscripcion) {
 // Actualizar suscripción existente
 await suscripcion.update({
 nombre,
-rutas: JSON.stringify(rutas),
+rutas, // Sequelize maneja automáticamente DataTypes.JSON
 descuentoMinimo: descuentoMinimo || 40,
 activa: true,
 });
@@ -259,7 +289,7 @@ activa: true,
 suscripcion = await SuscripcionOportunidad.create({
 email,
 nombre,
-rutas: JSON.stringify(rutas),
+rutas, // Sequelize maneja automáticamente DataTypes.JSON
 descuentoMinimo: descuentoMinimo || 40,
 activa: true,
 });
@@ -271,7 +301,7 @@ message: "Suscripción creada exitosamente",
 suscripcion: {
 email: suscripcion.email,
 nombre: suscripcion.nombre,
-rutas: JSON.parse(suscripcion.rutas),
+rutas: suscripcion.rutas, // Ya es un objeto JS
 descuentoMinimo: suscripcion.descuentoMinimo,
 },
 });
