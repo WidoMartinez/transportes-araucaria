@@ -52,7 +52,8 @@ import { detectarYGenerarOportunidades } from "./routes/oportunidades.js";
 
 import addColumnVan from "./migrations/add-column-van.js";
 import addConfiguracionTable from "./migrations/add-configuracion-table.js";
-import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
+import addDuracionMinutosToCodigosPago from "./migrations/add-duracion-minutos-to-codigos-pago.js";
+import addDuracionMinutosToReservas from "./migrations/add-duracion-minutos-to-reservas.js";
 import addTransaccionesTable from "./migrations/add-transacciones-table.js";
 import addOportunidadesTable from "./migrations/add-oportunidades-table.js";
 import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-oportunidades-table.js";
@@ -628,6 +629,8 @@ const initializeDatabase = async () => {
 		await addCodigosPagoTable();
 		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), sequelize);
 		await addClientDataToCodigosPago();
+		await addDuracionMinutosToCodigosPago();
+		await addDuracionMinutosToReservas();
 		await addTransaccionesTable();
 
 		await syncDatabase(false, [
@@ -3433,6 +3436,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				codigoDescuento: datosReserva.codigoDescuento || "",
 				tipoPago: datosReserva.tipoPago || null,
 				estadoPago: datosReserva.estadoPago || "pendiente",
+				duracionMinutos: datosReserva.duracionMinutos ? parseInt(datosReserva.duracionMinutos) : null,
 			});
 
 			console.log(
@@ -3541,6 +3545,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					estadoPago: reservaExpress.estadoPago, // Hereda estado de pago
 					metodoPago: reservaExpress.metodoPago,
 					referenciaPago: reservaExpress.referenciaPago,
+					duracionMinutos: reservaExpress.duracionMinutos,
 					tipoPago: reservaExpress.tipoPago,
 					
 					// Vinculación y Flags
@@ -3747,6 +3752,8 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			1
 		);
 		const observaciones = body.observaciones || "";
+		// Nueva duración personalizada
+		const duracionMinutos = body.duracionMinutos ? parseInt(body.duracionMinutos) : null;
 
 		// Datos del cliente (opcionales)
 		const nombreCliente = String(body.nombreCliente || "").trim() || null;
@@ -3793,6 +3800,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 			fechaVencimiento,
 			usosMaximos,
 			observaciones,
+			duracionMinutos,
 			// Nuevos campos
 			nombreCliente,
 			emailCliente,

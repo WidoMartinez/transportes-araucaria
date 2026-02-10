@@ -336,6 +336,7 @@ function PagarConCodigo() {
 				saldoPendiente:
 					selectedPaymentType === "abono" ? saldoPendiente : montoTotal,
 				tipoPago: selectedPaymentType,
+				duracionMinutos: codigoValidado.duracionMinutos,
 			};
 
 			// Añadir hora solo si el usuario la proporcionó

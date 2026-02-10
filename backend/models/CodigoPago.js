@@ -133,6 +133,18 @@ const CodigoPago = sequelize.define(
 			field: "fecha_uso",
 			comment: "Fecha y hora en que se usó el código",
 		},
+		duracionMinutos: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			field: "duracion_minutos",
+			comment: "Duración aproximada del viaje en minutos (para destinos personalizados 'Otro')",
+		},
+	duracionMinutos: {
+		type: DataTypes.INTEGER,
+		allowNull: true,
+		field: "duracion_minutos",
+		comment: "Duración aproximada del viaje en minutos (para destinos personalizados 'Otro')",
+	},
 		observaciones: {
 			type: DataTypes.TEXT,
 			allowNull: true,

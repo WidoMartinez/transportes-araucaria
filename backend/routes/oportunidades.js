@@ -137,7 +137,12 @@ const lugarRemoto = reserva.origen === AEROPUERTO ? reserva.destino : reserva.or
 const destinoInfo = await Destino.findOne({
 where: { nombre: lugarRemoto }
 });
-const duracionViajeMinutos = destinoInfo?.duracionIdaMinutos || 60; // Fallback a 60 min
+
+// PRIORIDAD: 
+// 1. duracionMinutos explícita en la reserva (usuario 'Otro' o administrador)
+// 2. duracionIdaMinutos configurada en el destino
+// 3. 60 minutos (fallback)
+const duracionViajeMinutos = reserva.duracionMinutos || destinoInfo?.duracionIdaMinutos || 60;
 
 // Logs de depuración
 console.log(`🔍 DEBUG Oportunidades - Reserva ${reserva.id}:`);
@@ -627,12 +632,12 @@ error: "Error al eliminar oportunidad",
 // POST /api/oportunidades/reservar - Reserva directa y expedita
 app.post("/api/oportunidades/reservar", async (req, res) => {
 try {
-  const { oportunidadId, nombre, email, telefono, pasajeros, direccion } = req.body;
+  const { oportunidadId, nombre, email, telefono, pasajeros, direccion, horaSalida } = req.body;
 
-  if (!oportunidadId || !nombre || !email || !telefono || !pasajeros || !direccion) {
+  if (!oportunidadId || !nombre || !email || !telefono || !pasajeros || !direccion || !horaSalida) {
     return res.status(400).json({
       success: false,
-      error: "Faltan datos requeridos para la reserva",
+      error: "Faltan datos requeridos para la reserva (incluyendo la hora de salida)",
     });
   }
 
@@ -651,6 +656,24 @@ try {
     return res.status(400).json({
       success: false,
       error: "La oportunidad ya no está disponible",
+    });
+  }
+
+  // Validación de rango horario en el backend
+  const timeToMinutes = (t) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const minMin = timeToMinutes(oportunidad.hora);
+  const maxMin = minMin + 60;
+  const currentMin = timeToMinutes(horaSalida);
+
+  if (currentMin < minMin || currentMin > maxMin) {
+    const maxStr = `${Math.floor(maxMin/60).toString().padStart(2,"0")}:${(maxMin%60).toString().padStart(2,"0")}`;
+    return res.status(400).json({
+      success: false,
+      error: `La hora de salida debe estar entre las ${oportunidad.hora} y las ${maxStr}`,
     });
   }
 
@@ -676,10 +699,11 @@ try {
       telefono,
       origen: oportunidad.origen,
       destino: oportunidad.destino,
-      direccionOrigen: oportunidad.tipo === "retorno_vacio" ? direccion : (oportunidad.origen === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : ""),
-      direccionDestino: oportunidad.tipo === "ida_vacia" ? direccion : (oportunidad.destino === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : ""),
+      // Dirección: si es hacia aeropuerto, la dirección es de origen. Si es desde aeropuerto, es de destino.
+      direccionOrigen: oportunidad.origen === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : direccion,
+      direccionDestino: oportunidad.destino === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : direccion,
       fecha: oportunidad.fecha,
-      hora: oportunidad.horaAproximada,
+      hora: horaSalida, // Usar la hora de salida solicitada por el cliente
       pasajeros: parseInt(pasajeros),
       precio: oportunidad.precioFinal,
       totalConDescuento: oportunidad.precioFinal,
@@ -690,7 +714,7 @@ try {
       estadoPago: "pendiente",
       metodoPago: "flow",
       source: "Oportunidad",
-      observaciones: `Reserva expedita de oportunidad ${oportunidad.codigo}. Motivo: ${oportunidad.motivoDescuento}`,
+      observaciones: `Reserva expedita de oportunidad ${oportunidad.codigo}. Hora seleccionada: ${horaSalida}. Motivo: ${oportunidad.motivoDescuento}`,
     }, { transaction: t });
 
     // Actualizar la oportunidad

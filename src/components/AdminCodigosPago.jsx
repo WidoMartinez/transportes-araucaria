@@ -89,6 +89,8 @@ function AdminCodigosPago() {
 		fechaVencimiento: "",
 		usosMaximos: 1,
 		observaciones: "",
+		// Duración personalizada para destinos "Otro"
+		duracionMinutos: "",
 		// Datos del cliente (opcional - pre-llenado)
 		nombreCliente: "",
 		emailCliente: "",
@@ -360,6 +362,11 @@ function AdminCodigosPago() {
 			setError("No se permite un viaje con origen y destino iguales");
 			return;
 		}
+		// Validación: duración obligatoria si origen O destino es "Otro"
+		if ((formData.origen === "Otro" || formData.destino === "Otro") && (!formData.duracionMinutos || parseInt(formData.duracionMinutos) < 15)) {
+			setError("La duración aproximada es obligatoria cuando el origen o destino es 'Otro' (mínimo 15 minutos)");
+			return;
+		}
 		if (!formData.monto || parseFloat(formData.monto) <= 0) {
 			setError("El monto debe ser mayor a 0");
 			return;
@@ -383,6 +390,10 @@ function AdminCodigosPago() {
 					: undefined,
 				usosMaximos: parseInt(formData.usosMaximos) || 1,
 				observaciones: formData.observaciones || "",
+				// Duración personalizada (solo si origen O destino es "Otro")
+				duracionMinutos: (formData.origen === "Otro" || formData.destino === "Otro") 
+					? parseInt(formData.duracionMinutos) 
+					: null,
 				// Datos del cliente (opcionales)
 				nombreCliente: formData.nombreCliente.trim() || null,
 				emailCliente: formData.emailCliente.trim() || null,
@@ -415,6 +426,7 @@ function AdminCodigosPago() {
 				fechaVencimiento: "",
 				usosMaximos: 1,
 				observaciones: "",
+				duracionMinutos: "",
 				// Resetear datos del cliente
 				nombreCliente: "",
 				emailCliente: "",
@@ -776,6 +788,29 @@ function AdminCodigosPago() {
 									/>
 								)}
 							</div>
+							{/* Campo de duración si origen O destino es "Otro" */}
+							{(formData.origen === "Otro" || formData.destino === "Otro") && (
+								<div className="space-y-2 md:col-span-2">
+									<Label htmlFor="duracionMinutos" className="text-base font-semibold text-orange-700">
+										Duración Aproximada (minutos) *
+									</Label>
+									<Input
+										id="duracionMinutos"
+										name="duracionMinutos"
+										type="number"
+										value={formData.duracionMinutos}
+										onChange={handleInputChange}
+										placeholder="Ej: 90"
+										min="15"
+										max="300"
+										required
+										className="h-12 md:h-10 text-base border-orange-300 focus:border-orange-500"
+									/>
+									<p className="text-xs text-gray-600">
+										<strong>Obligatorio:</strong> Tiempo estimado de viaje para calcular oportunidades de retorno
+									</p>
+								</div>
+							)}
 							<div className="space-y-2">
 								<Label htmlFor="vehiculo" className="text-base">Vehículo (opcional)</Label>
 								<Input

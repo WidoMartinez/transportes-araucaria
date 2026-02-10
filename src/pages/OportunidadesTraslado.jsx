@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Car,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import OportunidadCard from "../components/OportunidadCard";
 import SuscripcionOportunidades from "../components/SuscripcionOportunidades";
@@ -48,14 +49,16 @@ const [filtros, setFiltros] = useState({
 const [modalOpen, setModalOpen] = useState(false);
 const [oportunidadSeleccionada, setOportunidadSeleccionada] = useState(null);
 const [submittingReserva, setSubmittingReserva] = useState(false);
-const [reservaFormData, setReservaFormData] = useState({
-  nombre: "",
-  email: "",
-  telefono: "",
-  pasajeros: "1",
-  direccion: "",
-});
-const [phoneError, setPhoneError] = useState("");
+  const [reservaFormData, setReservaFormData] = useState({
+    nombre: "",
+    email: "",
+    telefono: "",
+    pasajeros: "1",
+    direccion: "",
+    horaSalida: "",
+  });
+  const [phoneError, setPhoneError] = useState("");
+  const [horaError, setHoraError] = useState("");
 
   const cargarOportunidades = async () => {
     try {
@@ -111,7 +114,9 @@ return () => clearInterval(intervalId);
       telefono: "",
       pasajeros: "1",
       direccion: "",
+      horaSalida: oportunidad.hora || "",
     });
+    setHoraError("");
     setModalOpen(true);
   };
 
@@ -125,13 +130,32 @@ return () => clearInterval(intervalId);
     /^(\+?56)?(\s?9)\s?(\d{4})\s?(\d{4})$/.test(telefono);
 
   const handleConfirmarReserva = async () => {
-    if (!reservaFormData.nombre || !reservaFormData.email || !reservaFormData.telefono || !reservaFormData.direccion) {
-      alert("Por favor completa todos los campos.");
+    if (!reservaFormData.nombre || !reservaFormData.email || !reservaFormData.telefono || !reservaFormData.direccion || !reservaFormData.horaSalida) {
+      alert("Por favor completa todos los campos obligatorios.");
       return;
     }
 
     if (!validarTelefono(reservaFormData.telefono)) {
       setPhoneError("Formato inválido (ej: +56 9 1234 5678)");
+      return;
+    }
+
+    // Validación de rango horario
+    const opHora = oportunidadSeleccionada.hora;
+    const salidaHora = reservaFormData.horaSalida;
+    
+    const timeToMinutes = (t) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const minMin = timeToMinutes(opHora);
+    const maxMin = minMin + 60;
+    const currentMin = timeToMinutes(salidaHora);
+
+    if (currentMin < minMin || currentMin > maxMin) {
+      const maxStr = `${Math.floor(maxMin/60).toString().padStart(2,"0")}:${(maxMin%60).toString().padStart(2,"0")}`;
+      setHoraError(`La hora debe estar entre las ${opHora} y las ${maxStr}`);
       return;
     }
 
@@ -551,6 +575,46 @@ onReservar={handleReservar}
                     className="h-12 border-gray-200 focus:ring-chocolate-500 rounded-xl"
                   />
                 </div>
+              </div>
+
+              {/* Nueva Fila: Hora de Salida con Validación */}
+              <div className="space-y-2">
+                <Label htmlFor="horaSalida" className="text-sm font-bold text-gray-700">
+                  Hora de Salida Solicitada <span className="text-chocolate-600">(Rango: {oportunidadSeleccionada?.hora || "--:--"} - {
+                    oportunidadSeleccionada?.hora ? (() => {
+                      const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
+                      const total = h * 60 + m + 60;
+                      return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
+                    })() : "--:--"
+                  })</span>
+                </Label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400 z-10" />
+                  <Input
+                    id="horaSalida"
+                    name="horaSalida"
+                    type="time"
+                    value={reservaFormData.horaSalida}
+                    onChange={(e) => {
+                      handleReservaInputChange(e);
+                      setHoraError("");
+                    }}
+                    className={`h-12 pl-10 border-gray-200 focus:ring-chocolate-500 rounded-xl ${horaError ? 'border-red-500' : ''}`}
+                    min={oportunidadSeleccionada?.hora}
+                    max={oportunidadSeleccionada?.hora ? (() => {
+                      const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
+                      const total = h * 60 + m + 60;
+                      return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
+                    })() : undefined}
+                  />
+                </div>
+                {horaError ? (
+                  <p className="text-xs text-red-500 font-medium">{horaError}</p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground italic">
+                    * El vehículo estará disponible desde la hora indicada. Puedes retrasar tu salida hasta 1 hora máximo.
+                  </p>
+                )}
               </div>
             </div>
           </div>
