@@ -48,6 +48,8 @@ import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
 import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
+import { detectarYGenerarOportunidades } from "./routes/oportunidades.js";
+
 import addColumnVan from "./migrations/add-column-van.js";
 import addConfiguracionTable from "./migrations/add-configuracion-table.js";
 import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
@@ -4152,6 +4154,21 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		console.error("❌ Error enviando notificación de detalles al administrador:", adminError.message);
 	}
 
+	// 🎯 NUEVO: Generar oportunidades automáticamente
+	try {
+		console.log(`🎯 Generando oportunidades para reserva ${reservaCompleta.id}...`);
+		const oportunidadesGeneradas = await detectarYGenerarOportunidades(reservaCompleta);
+		if (oportunidadesGeneradas.length > 0) {
+			console.log(`✅ ${oportunidadesGeneradas.length} oportunidades generadas:`, 
+				oportunidadesGeneradas.map(op => op.codigo));
+		} else {
+			console.log(`ℹ️ No se generaron oportunidades para esta reserva`);
+		}
+	} catch (oportunidadError) {
+		// No fallar la confirmación si hay error generando oportunidades
+		console.error("❌ Error generando oportunidades (no crítico):", oportunidadError.message);
+	}
+	
 	return res.json({
 		success: true,
 		message: "Detalles actualizados correctamente",

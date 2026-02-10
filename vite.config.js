@@ -36,7 +36,7 @@ export default defineConfig({
 				manualChunks(id) {
 					if (id.includes("node_modules")) {
 						// Agrupamos todas las dependencias en un solo chunk de vendor 
-						// para evitar ciclos entre vendor-react, vendor-ui, etc.
+						// para evitar ciclos e asegurar que React se inicialice primero.
 						return "vendor";
 					}
 				},
