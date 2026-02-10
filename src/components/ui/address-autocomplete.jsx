@@ -38,6 +38,7 @@ export function AddressAutocomplete({
 	autocompleteOptions = {},
 	...props
 }) {
+
 	const inputRef = useRef(null);
 	const autocompleteRef = useRef(null);
 	const { isLoaded, isAvailable } = useGoogleMaps();

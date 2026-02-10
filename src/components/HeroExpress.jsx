@@ -12,6 +12,7 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
+import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
 import { useIsMobile } from "../hooks/use-mobile";
 import heroVan from "../assets/hero-van.png";
@@ -278,7 +279,7 @@ function HeroExpress({
 				}
 			}
 		} catch (error) {
-			console.error("Error verificando reserva activa:", error);
+			// console.error("Error verificando reserva activa:", error);
 			setReservaActiva(null);
 		} finally {
 			setVerificandoReserva(false);
@@ -393,7 +394,7 @@ function HeroExpress({
 			}
 			return { disponible: true, descuento: null };
 		} catch (error) {
-			console.error("Error verificando disponibilidad y retorno:", error);
+			// console.error("Error verificando disponibilidad y retorno:", error);
 			return { disponible: true, descuento: null };
 		} finally {
 			setVerificandoDisponibilidad(false);
@@ -441,7 +442,7 @@ function HeroExpress({
 				}
 			}
 		} catch (error) {
-			console.error("Error verificando bloqueo:", error);
+			// console.error("Error verificando bloqueo:", error);
 			// Continuar si hay error en la verificación de bloqueo
 		}
 
@@ -644,6 +645,7 @@ function HeroExpress({
 												{origenes.map((o) => (
 													<option key={o} value={o}>{o}</option>
 												))}
+												<option value="Otro">Otro (Ingresar dirección...)</option>
 											</select>
 											{/* Flecha personalizada para mejor visibilidad móvil */}
 											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
@@ -684,6 +686,7 @@ function HeroExpress({
 												{destinos.map((d) => (
 													<option key={d} value={d}>{d}</option>
 												))}
+												<option value="Otro">Otro (Ingresar dirección...)</option>
 											</select>
 											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
 												<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -693,6 +696,47 @@ function HeroExpress({
 										</div>
 									</div>
 								</div>
+
+								{/* Campos de dirección específica para "Otro" */}
+								<AnimatePresence>
+									{formData.origen === "Otro" && (
+										<motion.div
+											initial={{ opacity: 0, height: 0 }}
+											animate={{ opacity: 1, height: "auto" }}
+											exit={{ opacity: 0, height: 0 }}
+											className="space-y-2 overflow-hidden"
+										>
+											<Label htmlFor="otroOrigen" className="text-base md:text-sm font-semibold text-foreground">Dirección de Origen</Label>
+											<AddressAutocomplete
+												id="otroOrigen"
+												name="otroOrigen"
+												value={formData.otroOrigen}
+												onChange={handleInputChange}
+												placeholder="Ej: Av. Alemania 1234, Temuco"
+												className="bg-white"
+											/>
+										</motion.div>
+									)}
+
+									{formData.destino === "Otro" && (
+										<motion.div
+											initial={{ opacity: 0, height: 0 }}
+											animate={{ opacity: 1, height: "auto" }}
+											exit={{ opacity: 0, height: 0 }}
+											className="space-y-2 overflow-hidden"
+										>
+											<Label htmlFor="otroDestino" className="text-base md:text-sm font-semibold text-foreground">Dirección de Destino</Label>
+											<AddressAutocomplete
+												id="otroDestino"
+												name="otroDestino"
+												value={formData.otroDestino}
+												onChange={handleInputChange}
+												placeholder="Ej: Condominio Las Nieves, Corralco"
+												className="bg-white"
+											/>
+										</motion.div>
+									)}
+								</AnimatePresence>
 
 								{/* Fecha y Hora - Optimizados para móvil */}
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">

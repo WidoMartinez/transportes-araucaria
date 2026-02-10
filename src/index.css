@@ -1,0 +1,6 @@
+
+/* Fix para el autocompletado de Google Maps en Modales/Dialogs */
+.pac-container {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}

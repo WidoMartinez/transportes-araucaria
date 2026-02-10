@@ -4330,6 +4330,7 @@ function AdminReservas() {
 														Dirección Específica (Recogida o Llegada)
 													</Label>
 													<AddressAutocomplete
+														id="hotel-edit"
 														name="hotel"
 														value={formData.hotel || ""}
 														placeholder="Ej: Condominio Los Ríos, Loteo 21, Malalcahuello"
