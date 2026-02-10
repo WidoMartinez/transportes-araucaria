@@ -56,8 +56,13 @@ try {
 const oportunidadesGeneradas = [];
 
 // Obtener información del destino para usar duraciones configuradas
+// Para viajes hacia/desde el aeropuerto, necesitamos la duración del lugar remoto (no del aeropuerto)
+const lugarRemoto = reserva.origen === "Aeropuerto La Araucanía" || reserva.origen === "Temuco" 
+  ? reserva.destino 
+  : reserva.origen;
+
 const destinoInfo = await Destino.findOne({
-where: { nombre: reserva.destino }
+where: { nombre: lugarRemoto }
 });
 const duracionViajeMinutos = destinoInfo?.duracionIdaMinutos || 60; // Fallback a 60 min
 
