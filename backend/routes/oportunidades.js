@@ -709,6 +709,102 @@ error: "Error al eliminar oportunidad",
 }
 });
 
+// POST /api/oportunidades/reservar - Reserva directa y expedita
+app.post("/api/oportunidades/reservar", async (req, res) => {
+try {
+  const { oportunidadId, nombre, email, telefono, pasajeros, direccion } = req.body;
+
+  if (!oportunidadId || !nombre || !email || !telefono || !pasajeros || !direccion) {
+    return res.status(400).json({
+      success: false,
+      error: "Faltan datos requeridos para la reserva",
+    });
+  }
+
+  // 1. Buscar la oportunidad
+  const oportunidad = await Oportunidad.findByPk(oportunidadId);
+
+  if (!oportunidad) {
+    return res.status(404).json({
+      success: false,
+      error: "La oportunidad no existe",
+    });
+  }
+
+  // 2. Validar que esté disponible y no haya expirado
+  if (oportunidad.estado !== "disponible") {
+    return res.status(400).json({
+      success: false,
+      error: "La oportunidad ya no está disponible",
+    });
+  }
+
+  if (oportunidad.validoHasta && new Date(oportunidad.validoHasta) < new Date()) {
+    return res.status(400).json({
+      success: false,
+      error: "La oportunidad ha expirado",
+    });
+  }
+
+  // 3. Crear la reserva en una transacción para asegurar consistencia
+  const result = await sequelize.transaction(async (t) => {
+    // Generar código de reserva único (AR-YYYYMMDD-XXXX)
+    const fechaActual = new Date();
+    const prefix = `AR-${fechaActual.getFullYear()}${String(fechaActual.getMonth() + 1).padStart(2, '0')}${String(fechaActual.getDate()).padStart(2, '0')}`;
+    const count = await Reserva.count({ where: { codigoReserva: { [Op.like]: `${prefix}%` } }, transaction: t });
+    const codigoReserva = `${prefix}-${String(count + 1).padStart(4, '0')}`;
+
+    const nuevaReserva = await Reserva.create({
+      codigoReserva,
+      nombre,
+      email,
+      telefono,
+      origen: oportunidad.origen,
+      destino: oportunidad.destino,
+      direccionOrigen: oportunidad.tipo === "retorno_vacio" ? direccion : (oportunidad.origen === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : ""),
+      direccionDestino: oportunidad.tipo === "ida_vacia" ? direccion : (oportunidad.destino === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : ""),
+      fecha: oportunidad.fecha,
+      hora: oportunidad.horaAproximada,
+      pasajeros: parseInt(pasajeros),
+      precio: oportunidad.precioFinal,
+      totalConDescuento: oportunidad.precioFinal,
+      abonoSugerido: Math.round(oportunidad.precioFinal * 0.4),
+      saldoPendiente: Math.round(oportunidad.precioFinal * 0.6),
+      vehiculo: oportunidad.vehiculo,
+      estado: "pendiente",
+      estadoPago: "pendiente",
+      metodoPago: "flow",
+      source: "Oportunidad",
+      observaciones: `Reserva expedita de oportunidad ${oportunidad.codigo}. Motivo: ${oportunidad.motivoDescuento}`,
+    }, { transaction: t });
+
+    // Actualizar la oportunidad
+    await oportunidad.update({
+      estado: "reservada",
+      reservaAprovechadaId: nuevaReserva.id,
+    }, { transaction: t });
+
+    return {
+      reservaId: nuevaReserva.id,
+      codigoReserva: nuevaReserva.codigoReserva,
+      precio: nuevaReserva.totalConDescuento,
+      abono: nuevaReserva.abonoSugerido,
+    };
+  });
+
+  res.json({
+    success: true,
+    ...result
+  });
+} catch (error) {
+  console.error("Error reservando oportunidad:", error);
+  res.status(500).json({
+    success: false,
+    error: "Error interno al procesar la reserva",
+  });
+}
+});
+
 // GET /api/oportunidades/estadisticas - Estadísticas (Admin)
 app.get("/api/oportunidades/estadisticas", authAdmin, async (req, res) => {
 try {

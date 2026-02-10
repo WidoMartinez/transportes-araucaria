@@ -1270,18 +1270,25 @@ Para garantizar precisión operativa y financiera, el sistema utiliza las siguie
   - Si la reserva es para 4-7 pasajeros, se ofrece como **Van**.
 - Esto previene discrepancias operativas (ej. ofrecer una Van a precio de Sedán).
 
-#### Gestión Administrativa
+#### Proceso de Reserva Expedito (Checkout)
 
-El administrador dispone de herramientas en **Configuración** para gestionar el sistema:
+Para reducir la fricción y maximizar las conversiones, las oportunidades cuentan con un flujo de reserva simplificado:
 
-- **Generar Nuevas**: Escanea reservas confirmadas y crea oportunidades solo para aquellas que no tengan una asignada.
-- **Regenerar Todas**: Elimina todas las oportunidades existentes y las recrea. Útil al modificar duraciones de destinos o reglas de tarifa dinámica para actualizar los precios y horarios de las ofertas actuales.
+1.  **Modal de Reserva Directa**: Al hacer clic en "Reservar Ahora", se abre un modal en la misma página de ofertas sin redirigir al usuario.
+2.  **Datos Mínimos Requeridos**:
+    - **Nombre Completo**: Para el voucher de reserva.
+    - **Email**: Para el envío automático de confirmación.
+    - **Teléfono (WhatsApp)**: Para contacto operativo del conductor.
+    - **Pasajeros**: Limitado dinámicamente según la capacidad del vehículo ofertado.
+    - **Dirección**: Recogida (si es retorno) o Llegada (si es ida vacía desde Temuco).
+3.  **Pago Total Automatizado**: El sistema procesa la reserva en estado "Pendiente" e inicia inmediatamente una transacción de **Pago Total** vía Flow. Una vez confirmado el pago, la reserva pasa a "Confirmada" automáticamente.
+4.  **Vinculación de Datos**: La nueva reserva queda vinculada internamente al ID de la oportunidad (`reserva_aprovechada_id`), lo que permite rastrear el éxito del canal de ofertas.
 
 #### Puntos de Integración Técnica
 
--   **Backend**: `backend/routes/oportunidades.js` (Lógica central y cálculos).
--   **Confirmación Automática**: Integrado en `server-db.js` (Webhook de Flow y confirmaciones manuales).
--   **Frontend**: `src/components/AdminConfiguracion.jsx` (Detección y botones de control).
+-   **Backend**: `backend/routes/oportunidades.js` (Endpoint `POST /api/oportunidades/reservar`).
+-   **Frontend**: `src/pages/OportunidadesTraslado.jsx` (Componente `ReservaOportunidadModal` y lógica de integración con Flow).
+-   **Base de Datos**: Transacción atómica que crea la `Reserva` y marca la `Oportunidad` como `reservada`.
 
 ---
 
