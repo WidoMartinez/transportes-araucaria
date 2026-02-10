@@ -5,15 +5,7 @@
 // - cadena vacía ('') en producción para usar llamadas relativas (misma procedencia).
 // Comentarios y nombres en español según las instrucciones del proyecto.
 export function getBackendUrl() {
-	// Preferir la variable de entorno de Vite si está definida
-	const envUrl =
-		import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL;
-	if (envUrl && typeof envUrl === "string" && envUrl.trim() !== "") {
-		// Remover la barra final si existe
-		return envUrl.replace(/\/+$/, "");
-	}
-
-	// Si estamos en desarrollo local devolver el backend por defecto
+	// 1. Si estamos en desarrollo local, devolver el backend local por defecto
 	if (typeof window !== "undefined") {
 		const host = window.location.hostname;
 		if (host === "localhost" || host === "127.0.0.1") {
@@ -21,6 +13,14 @@ export function getBackendUrl() {
 		}
 	}
 
-	// En producción devolvemos cadena vacía para usar rutas relativas
+	// 2. Preferir la variable de entorno de Vite si está definida
+	const envUrl =
+		import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL;
+	if (envUrl && typeof envUrl === "string" && envUrl.trim() !== "") {
+		// Remover la barra final si existe
+		return envUrl.replace(/\/+$/, "");
+	}
+
+	// 3. En producción devolvemos cadena vacía para usar rutas relativas
 	return "";
 }

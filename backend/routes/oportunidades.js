@@ -636,8 +636,8 @@ try {
     });
   }
 
-  // 1. Buscar la oportunidad
-  const oportunidad = await Oportunidad.findByPk(oportunidadId);
+  // 1. Buscar la oportunidad por código (que es lo que envía el frontend como oportunidadId)
+  const oportunidad = await Oportunidad.findOne({ where: { codigo: oportunidadId } });
 
   if (!oportunidad) {
     return res.status(404).json({
