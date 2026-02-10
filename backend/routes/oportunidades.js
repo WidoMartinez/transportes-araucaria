@@ -65,12 +65,17 @@ return precioOriginal * (1 - porcentajeDescuento / 100);
 const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora) => {
 try {
 // 1. Obtener precio base del destino
-const destinoInfo = await Destino.findOne({
+let destinoInfo = await Destino.findOne({
 where: { nombre: nombreDestino }
 });
 
 if (!destinoInfo) {
-console.warn(`⚠️ Destino no encontrado: ${nombreDestino}`);
+console.warn(`⚠️ Destino no encontrado: ${nombreDestino}. Intentando fallback a 'General'...`);
+destinoInfo = await Destino.findOne({ where: { nombre: 'General' } });
+}
+
+if (!destinoInfo) {
+console.error(`❌ Ni el destino ${nombreDestino} ni 'General' existen.`);
 return 0;
 }
 
@@ -85,24 +90,18 @@ order: [["prioridad", "DESC"]],
 // 3. Calcular ajustes aplicables
 let porcentajeTotal = 0;
 
-// Parsear fecha
+// Parsear fecha con offset Chile para días de anticipación
 const [year, month, day] = fecha.split("-");
-const fechaViaje = new Date(
-parseInt(year),
-parseInt(month) - 1,
-parseInt(day)
-);
+const fechaViaje = new Date(`${fecha}T00:00:00-03:00`);
 const diaSemana = fechaViaje.getDay();
 
-// Calcular días de anticipación
-const ahora = new Date();
-const hoyInicio = new Date(
-ahora.getFullYear(),
-ahora.getMonth(),
-ahora.getDate()
-);
+// Calcular días de anticipación relative a Chile
+// Obtener "Hoy" en Chile
+const ahoraChile = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
+const hoyInicioChile = new Date(ahoraChile.getFullYear(), ahoraChile.getMonth(), ahoraChile.getDate());
+
 const diasAnticipacion = Math.floor(
-(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)
+(fechaViaje - hoyInicioChile) / (1000 * 60 * 60 * 24)
 );
 
 // Verificar si es festivo
@@ -252,12 +251,15 @@ console.log(`  - Hora disponible (retorno): ${horaAproximada}`);
 }
 
 // Calcular validez: hasta 2 horas antes del viaje
-const validoHasta = new Date(reserva.fecha);
+// IMPORTANTE: Se construye con offset -03:00 (Chile Invierno/Verano aproximado) para consistencia en servidor UTC
+let validoHasta = null;
 if (horaAproximada) {
-const [h, m] = horaAproximada.split(":");
-validoHasta.setHours(parseInt(h) - 2, parseInt(m));
+  const [h, m] = horaAproximada.split(":");
+  validoHasta = new Date(`${reserva.fecha}T${h}:${m}:00-03:00`);
+  validoHasta.setHours(validoHasta.getHours() - 2);
 } else {
-validoHasta.setHours(validoHasta.getHours() - 2);
+  validoHasta = new Date(`${reserva.fecha}T00:00:00-03:00`);
+  validoHasta.setHours(validoHasta.getHours() - 2);
 }
 
 // Solo crear si es futuro
@@ -320,12 +322,15 @@ horaAproximada = `${String(horaSalidaNecesaria.getHours()).padStart(2, "0")}:${S
 }
 
 // Calcular validez: hasta 3 horas antes del viaje
-const validoHasta = new Date(reserva.fecha);
+// IMPORTANTE: Se construye con offset -03:00 (Chile Invierno/Verano aproximado) para consistencia en servidor UTC
+let validoHasta = null;
 if (reserva.hora) {
-const [h, m] = reserva.hora.split(":");
-validoHasta.setHours(parseInt(h) - 3, parseInt(m));
+  const [h, m] = reserva.hora.split(":");
+  validoHasta = new Date(`${reserva.fecha}T${h}:${m}:00-03:00`);
+  validoHasta.setHours(validoHasta.getHours() - 3);
 } else {
-validoHasta.setHours(validoHasta.getHours() - 3);
+  validoHasta = new Date(`${reserva.fecha}T00:00:00-03:00`);
+  validoHasta.setHours(validoHasta.getHours() - 3);
 }
 
 // Solo crear si es futuro
