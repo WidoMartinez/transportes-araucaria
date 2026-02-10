@@ -60,10 +60,12 @@ return precioOriginal * (1 - porcentajeDescuento / 100);
  * @param {string} nombreDestino - Nombre del destino
  * @param {string} fecha - Fecha del viaje (YYYY-MM-DD)
  * @param {string} hora - Hora del viaje (HH:MM)
+ * @param {string} vehiculo - Tipo de vehículo (Sedán/Van)
+ * @param {number} pasajeros - Cantidad de pasajeros
  * @param {number} precioFallback - Precio de la reserva original para usar si el destino no existe
  * @returns {Promise<number>} Precio base + tarifa dinámica
  */
-const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora, precioFallback = 0) => {
+const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora, vehiculo = "Sedán", pasajeros = 1, precioFallback = 0) => {
 try {
 // 1. Obtener precio base del destino
 let destinoInfo = await Destino.findOne({
@@ -71,9 +73,26 @@ where: { nombre: nombreDestino }
 });
 
 let precioBase = 0;
+let porcentajeAdicional = 0;
+let pasajerosAdicionales = 0;
 
 if (destinoInfo) {
-  precioBase = parseFloat(destinoInfo.precioIda);
+  // Lógica de elección de precio base según vehículo
+  if (vehiculo === "Van" && destinoInfo.precioBaseVan) {
+    precioBase = parseFloat(destinoInfo.precioBaseVan);
+    porcentajeAdicional = parseFloat(destinoInfo.porcentajeAdicionalVan || 0);
+    pasajerosAdicionales = Math.max(0, pasajeros - 5); // Recargo desde el 6to (más de 5)
+  } else {
+    precioBase = parseFloat(destinoInfo.precioIda);
+    porcentajeAdicional = parseFloat(destinoInfo.porcentajeAdicionalAuto || 0);
+    pasajerosAdicionales = Math.max(0, pasajeros - 3); // Recargo desde el 4to (más de 3)
+  }
+  
+  // Aplicar recargo por pasajeros adicionales
+  if (pasajerosAdicionales > 0 && porcentajeAdicional > 0) {
+    const recargo = precioBase * porcentajeAdicional * pasajerosAdicionales;
+    precioBase += recargo;
+  }
 } else {
   console.warn(`⚠️ Destino no encontrado: ${nombreDestino}. Usando precio de reserva original ($${precioFallback}) como base.`);
   precioBase = parseFloat(precioFallback);
@@ -93,12 +112,10 @@ order: [["prioridad", "DESC"]],
 let porcentajeTotal = 0;
 
 // Parsear fecha con offset Chile para días de anticipación
-const [year, month, day] = fecha.split("-");
 const fechaViaje = new Date(`${fecha}T00:00:00-03:00`);
 const diaSemana = fechaViaje.getDay();
 
 // Calcular días de anticipación relative a Chile
-// Obtener "Hoy" en Chile
 const ahoraChile = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
 const hoyInicioChile = new Date(ahoraChile.getFullYear(), ahoraChile.getMonth(), ahoraChile.getDate());
 
@@ -114,10 +131,6 @@ activo: true,
 { fecha: fecha },
 {
 recurrente: true,
-[Op.and]: sequelize.where(
-sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
-sequelize.fn("DATE_FORMAT", fecha, "%m-%d")
-),
 },
 ],
 },
@@ -189,9 +202,9 @@ porcentajeTotal += parseFloat(config.porcentajeAjuste);
 
 // 4. Calcular precio final
 const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
-const precioFinal = Math.max(0, precioBase + ajusteMonto);
+const precioFinal = Math.round(precioBase + ajusteMonto);
 
-console.log(`💰 Precio oportunidad ${nombreDestino}: Base $${precioBase} + Ajuste ${porcentajeTotal}% = $${precioFinal}`);
+console.log(`💰 Precio oportunidad ${nombreDestino}: Base $${precioBase} + Ajuste ${porcentajeTotal}% = $${precioFinal} (${vehiculo}, ${pasajeros} pax)`);
 
 return precioFinal;
 } catch (error) {
@@ -205,12 +218,23 @@ return 0;
 export const detectarYGenerarOportunidades = async (reserva) => {
 try {
 const oportunidadesGeneradas = [];
+const AEROPUERTO = "Aeropuerto La Araucanía";
+const BASE_CIUDAD = "Temuco";
+
+// REGLA DE NEGOCIO: Al menos uno debe ser el aeropuerto
+if (reserva.origen !== AEROPUERTO && reserva.destino !== AEROPUERTO) {
+  console.log(`🚫 Oportunidad omitida: Trayecto no incluye Aeropuerto (${reserva.origen} -> ${reserva.destino})`);
+  return [];
+}
+
+// REGLA DE NEGOCIO: Excluir Temuco Ciudad <-> Aeropuerto
+if (reserva.origen === BASE_CIUDAD || reserva.destino === BASE_CIUDAD) {
+  console.log(`🚫 Oportunidad omitida: Trayecto Temuco <-> Aeropuerto (${reserva.origen} -> ${reserva.destino})`);
+  return [];
+}
 
 // Obtener información del destino para usar duraciones configuradas
-// Para viajes hacia/desde el aeropuerto, necesitamos la duración del lugar remoto (no del aeropuerto)
-const lugarRemoto = reserva.origen === "Aeropuerto La Araucanía" || reserva.origen === "Temuco" 
-  ? reserva.destino 
-  : reserva.origen;
+const lugarRemoto = reserva.origen === AEROPUERTO ? reserva.destino : reserva.origen;
 
 const destinoInfo = await Destino.findOne({
 where: { nombre: lugarRemoto }
@@ -222,9 +246,7 @@ console.log(`🔍 DEBUG Oportunidades - Reserva ${reserva.id}:`);
 console.log(`  - Origen: ${reserva.origen}`);
 console.log(`  - Destino: ${reserva.destino}`);
 console.log(`  - Lugar Remoto: ${lugarRemoto}`);
-console.log(`  - Duración configurada: ${destinoInfo?.duracionIdaMinutos || 'NO ENCONTRADO'} min`);
 console.log(`  - Duración usada: ${duracionViajeMinutos} min`);
-console.log(`  - Hora salida: ${reserva.hora}`);
 
 // 1. RETORNO VACÍO: crear oportunidad de destino → origen
 if (reserva.estado === "confirmada" || reserva.estado === "completada") {
@@ -247,13 +269,9 @@ horaSalida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
 const horaLlegada = new Date(horaSalida.getTime() + duracionViajeMinutos * 60000);
 const horaDisponible = new Date(horaLlegada.getTime() + 30 * 60000);
 horaAproximada = `${String(horaDisponible.getHours()).padStart(2, "0")}:${String(horaDisponible.getMinutes()).padStart(2, "0")}`;
-
-console.log(`  - Hora llegada calculada: ${horaLlegada.getHours()}:${String(horaLlegada.getMinutes()).padStart(2, "0")}`);
-console.log(`  - Hora disponible (retorno): ${horaAproximada}`);
 }
 
 // Calcular validez: hasta 2 horas antes del viaje
-// IMPORTANTE: Se construye con offset -03:00 (Chile Invierno/Verano aproximado) para consistencia en servidor UTC
 let validoHasta = null;
 if (horaAproximada) {
   const [h, m] = horaAproximada.split(":");
@@ -267,13 +285,15 @@ if (horaAproximada) {
 // Solo crear si es futuro
 if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por retorno vacío
+const vehiculoOportunidad = reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van");
 
 // Calcular precio base con tarifa dinámica (sin otros descuentos)
-// Se pasa reserva.precio como fallback si el destino no está en la tabla
 const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
 lugarRemoto,
 reserva.fecha,
 horaAproximada || (reserva.hora || "12:00"),
+vehiculoOportunidad,
+reserva.pasajeros,
 parseFloat(reserva.precio)
 );
 
@@ -287,7 +307,7 @@ horaAproximada,
 descuento,
 precioOriginal: precioSugerido,
 precioFinal: calcularPrecioConDescuento(precioSugerido, descuento),
-vehiculo: reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van"),
+vehiculo: vehiculoOportunidad,
 capacidad: `${reserva.pasajeros} pasajeros`,
 reservaRelacionadaId: reserva.id,
 estado: "disponible",
@@ -300,10 +320,10 @@ oportunidadesGeneradas.push(oportunidadRetorno);
 }
 
 // 2. IDA VACÍA: si el origen NO es la base (Temuco), crear oportunidad base → origen
-const BASE = "Temuco"; // Base de operaciones
+// Nota: La base operativa para "Ida Vacia" es siempre el AEROPUERTO en este modelo
 if (
 (reserva.estado === "confirmada" || reserva.estado === "completada") &&
-reserva.origen !== BASE
+reserva.origen !== AEROPUERTO
 ) {
 const existeIda = await Oportunidad.findOne({
 where: {
@@ -320,13 +340,12 @@ if (reserva.hora) {
 const [horas, minutos] = reserva.hora.split(":");
 const horaRecogida = new Date();
 horaRecogida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
-// Restar duración del viaje + 30 min de buffer para salir de Temuco
+// Restar duración del viaje + 30 min de buffer
 const horaSalidaNecesaria = new Date(horaRecogida.getTime() - duracionViajeMinutos * 60000 - 30 * 60000);
 horaAproximada = `${String(horaSalidaNecesaria.getHours()).padStart(2, "0")}:${String(horaSalidaNecesaria.getMinutes()).padStart(2, "0")}`;
 }
 
 // Calcular validez: hasta 3 horas antes del viaje
-// IMPORTANTE: Se construye con offset -03:00 (Chile Invierno/Verano aproximado) para consistencia en servidor UTC
 let validoHasta = null;
 if (reserva.hora) {
   const [h, m] = reserva.hora.split(":");
@@ -339,28 +358,30 @@ if (reserva.hora) {
 
 // Solo crear si es futuro
 if (validoHasta > new Date()) {
-const descuento = 50; // 50% descuento por ida vacía
+const descuento = 50; 
+const vehiculoOportunidad = reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van");
 
 // Calcular precio base con tarifa dinámica (sin otros descuentos)
-// Se pasa reserva.precio como fallback si el destino no está en la tabla
 const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
 lugarRemoto,
 reserva.fecha,
 horaAproximada || (reserva.hora || "12:00"),
+vehiculoOportunidad,
+reserva.pasajeros,
 parseFloat(reserva.precio)
 );
 
 const oportunidadIda = await Oportunidad.create({
 codigo: await generarCodigoOportunidad(),
 tipo: "ida_vacia",
-origen: BASE,
+origen: AEROPUERTO,
 destino: reserva.origen,
 fecha: reserva.fecha,
 horaAproximada,
 descuento,
 precioOriginal: precioSugerido,
 precioFinal: calcularPrecioConDescuento(precioSugerido, descuento),
-vehiculo: reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van"),
+vehiculo: vehiculoOportunidad,
 capacidad: `${reserva.pasajeros} pasajeros`,
 reservaRelacionadaId: reserva.id,
 estado: "disponible",
