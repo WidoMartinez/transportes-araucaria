@@ -66,6 +66,15 @@ where: { nombre: lugarRemoto }
 });
 const duracionViajeMinutos = destinoInfo?.duracionIdaMinutos || 60; // Fallback a 60 min
 
+// Logs de depuración
+console.log(`🔍 DEBUG Oportunidades - Reserva ${reserva.id}:`);
+console.log(`  - Origen: ${reserva.origen}`);
+console.log(`  - Destino: ${reserva.destino}`);
+console.log(`  - Lugar Remoto: ${lugarRemoto}`);
+console.log(`  - Duración configurada: ${destinoInfo?.duracionIdaMinutos || 'NO ENCONTRADO'} min`);
+console.log(`  - Duración usada: ${duracionViajeMinutos} min`);
+console.log(`  - Hora salida: ${reserva.hora}`);
+
 // 1. RETORNO VACÍO: crear oportunidad de destino → origen
 if (reserva.estado === "confirmada" || reserva.estado === "completada") {
 const existeRetorno = await Oportunidad.findOne({
@@ -87,6 +96,9 @@ horaSalida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
 const horaLlegada = new Date(horaSalida.getTime() + duracionViajeMinutos * 60000);
 const horaDisponible = new Date(horaLlegada.getTime() + 30 * 60000);
 horaAproximada = `${String(horaDisponible.getHours()).padStart(2, "0")}:${String(horaDisponible.getMinutes()).padStart(2, "0")}`;
+
+console.log(`  - Hora llegada calculada: ${horaLlegada.getHours()}:${String(horaLlegada.getMinutes()).padStart(2, "0")}`);
+console.log(`  - Hora disponible (retorno): ${horaAproximada}`);
 }
 
 // Calcular validez: hasta 2 horas antes del viaje
