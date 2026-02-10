@@ -13,6 +13,7 @@ Target
 } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import { getBackendUrl } from "../lib/backend";
 
 
 /**
@@ -39,7 +40,7 @@ const cargarConfiguracion = async () => {
 try {
 setLoading(true);
 const response = await fetch(
-`${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/configuracion/whatsapp-intercept`
+`${getBackendUrl()}/api/configuracion/whatsapp-intercept`
 );
 
 if (!response.ok) {

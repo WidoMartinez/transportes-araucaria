@@ -25,6 +25,7 @@ import logo from "../assets/logo.png";
 import { cn } from "@/lib/utils";
 import WhatsAppInterceptModal from "./WhatsAppInterceptModal";
 import { usePricingData } from "../hooks/usePricingData";
+import { getBackendUrl } from "../lib/backend";
 
 // --- Trackers ---
 const trackWhatsAppClick = () => {
@@ -68,7 +69,7 @@ function Header() {
 
         // Consultar al backend para tener el valor más actualizado
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/configuracion/whatsapp-intercept`
+          `${getBackendUrl()}/api/configuracion/whatsapp-intercept`
         );
 
         if (response.ok) {
