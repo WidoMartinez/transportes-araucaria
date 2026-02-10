@@ -385,6 +385,56 @@ error: "Error al generar oportunidades",
 }
 });
 
+// GET /api/oportunidades/regenerar - TEMPORAL: Eliminar y regenerar todas las oportunidades (Admin)
+app.get("/api/oportunidades/regenerar", authAdmin, async (req, res) => {
+try {
+// 1. Eliminar todas las oportunidades existentes
+const eliminadas = await Oportunidad.destroy({
+where: {},
+});
+
+console.log(`🗑️ Eliminadas ${eliminadas} oportunidades antiguas`);
+
+// 2. Buscar todas las reservas confirmadas futuras
+const reservas = await Reserva.findAll({
+where: {
+estado: ["confirmada", "completada"],
+fecha: { [Op.gte]: new Date() },
+},
+order: [["fecha", "ASC"]],
+});
+
+let totalGeneradas = 0;
+const resultados = [];
+
+// 3. Regenerar oportunidades con cálculos actualizados
+for (const reserva of reservas) {
+const oportunidades = await detectarYGenerarOportunidades(reserva);
+totalGeneradas += oportunidades.length;
+if (oportunidades.length > 0) {
+resultados.push({
+reserva: reserva.codigoReserva,
+oportunidades: oportunidades.map((op) => op.codigo),
+});
+}
+}
+
+res.json({
+success: true,
+message: `Eliminadas ${eliminadas} oportunidades antiguas. Generadas ${totalGeneradas} nuevas oportunidades con cálculos actualizados.`,
+eliminadas,
+totalGeneradas,
+detalles: resultados,
+});
+} catch (error) {
+console.error("Error regenerando oportunidades:", error);
+res.status(500).json({
+success: false,
+error: "Error al regenerar oportunidades",
+});
+}
+});
+
 // GET /api/oportunidades/admin - Lista completa para admin
 app.get("/api/oportunidades/admin", authAdmin, async (req, res) => {
 try {
