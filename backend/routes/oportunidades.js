@@ -86,7 +86,7 @@ validoHasta.setHours(validoHasta.getHours() - 2);
 if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por retorno vacío
 const oportunidadRetorno = await Oportunidad.create({
-codigo: generarCodigoOportunidad(),
+codigo: await generarCodigoOportunidad(),
 tipo: "retorno_vacio",
 origen: reserva.destino,
 destino: reserva.origen,
@@ -144,7 +144,7 @@ validoHasta.setHours(validoHasta.getHours() - 3);
 if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por ida vacía
 const oportunidadIda = await Oportunidad.create({
-codigo: generarCodigoOportunidad(),
+codigo: await generarCodigoOportunidad(),
 tipo: "ida_vacia",
 origen: BASE,
 destino: reserva.origen,
