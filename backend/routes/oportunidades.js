@@ -661,11 +661,13 @@ try {
 
   // Validación de rango horario en el backend
   const timeToMinutes = (t) => {
+    if (!t) return 0;
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
-  const minMin = timeToMinutes(oportunidad.hora);
+  const horaBase = oportunidad.horaAproximada || "00:00";
+  const minMin = timeToMinutes(horaBase);
   const maxMin = minMin + 60;
   const currentMin = timeToMinutes(horaSalida);
 
@@ -673,7 +675,7 @@ try {
     const maxStr = `${Math.floor(maxMin/60).toString().padStart(2,"0")}:${(maxMin%60).toString().padStart(2,"0")}`;
     return res.status(400).json({
       success: false,
-      error: `La hora de salida debe estar entre las ${oportunidad.hora} y las ${maxStr}`,
+      error: `La hora de salida debe estar entre las ${horaBase} y las ${maxStr}`,
     });
   }
 

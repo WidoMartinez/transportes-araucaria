@@ -81,9 +81,14 @@ const [submittingReserva, setSubmittingReserva] = useState(false);
 const response = await fetch(url);
 const data = await response.json();
 
-if (data.success) {
-setOportunidades(data.oportunidades);
-} else {
+        if (data.success) {
+          const opsConHora = data.oportunidades.map(op => ({
+            ...op,
+            // Asegurar que 'hora' exista, tomando de horaAproximada si es necesario
+            hora: op.hora || op.horaAproximada
+          }));
+          setOportunidades(opsConHora);
+        } else {
 setError(data.error || "Error al cargar oportunidades");
 }
 } catch (err) {
@@ -145,6 +150,7 @@ return () => clearInterval(intervalId);
     const salidaHora = reservaFormData.horaSalida;
     
     const timeToMinutes = (t) => {
+      if (!t) return 0;
       const [h, m] = t.split(":").map(Number);
       return h * 60 + m;
     };
