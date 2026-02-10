@@ -55,17 +55,15 @@ return precioOriginal * (1 - porcentajeDescuento / 100);
 };
 
 /**
- * Calcula el precio base con tarifa dinámica para oportunidades
- * NO incluye descuentos de ida/vuelta ni online
+ * Calcula el precio base para oportunidades
+ * NO incluye descuentos de ida/vuelta ni online, ni tarifas dinámicas
  * @param {string} nombreDestino - Nombre del destino
- * @param {string} fecha - Fecha del viaje (YYYY-MM-DD)
- * @param {string} hora - Hora del viaje (HH:MM)
  * @param {string} vehiculo - Tipo de vehículo (Sedán/Van)
  * @param {number} pasajeros - Cantidad de pasajeros
  * @param {number} precioFallback - Precio de la reserva original para usar si el destino no existe
- * @returns {Promise<number>} Precio base + tarifa dinámica
+ * @returns {Promise<number>} Precio base (incluye recargos por pax)
  */
-const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora, vehiculo = "Sedán", pasajeros = 1, precioFallback = 0) => {
+const calcularPrecioBaseOportunidad = async (nombreDestino, vehiculo = "Sedán", pasajeros = 1, precioFallback = 0) => {
 try {
 // 1. Obtener precio base del destino
 let destinoInfo = await Destino.findOne({
@@ -102,113 +100,13 @@ if (precioBase <= 0) {
   return 0;
 }
 
-// 2. Obtener configuraciones de tarifa dinámica activas
-const configuraciones = await ConfiguracionTarifaDinamica.findAll({
-where: { activo: true },
-order: [["prioridad", "DESC"]],
-});
+const precioFinal = Math.round(precioBase);
 
-// 3. Calcular ajustes aplicables
-let porcentajeTotal = 0;
-
-// Parsear fecha con offset Chile para días de anticipación
-const fechaViaje = new Date(`${fecha}T00:00:00-03:00`);
-const diaSemana = fechaViaje.getDay();
-
-// Calcular días de anticipación relative a Chile
-const ahoraChile = new Date(new Date().getTime() - (3 * 60 * 60 * 1000));
-const hoyInicioChile = new Date(ahoraChile.getFullYear(), ahoraChile.getMonth(), ahoraChile.getDate());
-
-const diasAnticipacion = Math.floor(
-(fechaViaje - hoyInicioChile) / (1000 * 60 * 60 * 24)
-);
-
-// Verificar si es festivo
-const festivo = await Festivo.findOne({
-where: {
-activo: true,
-[Op.or]: [
-{ fecha: fecha },
-{
-recurrente: true,
-},
-],
-},
-});
-
-// Aplicar recargo de festivo si existe
-if (festivo && festivo.porcentajeRecargo) {
-porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
-}
-
-// Evaluar configuraciones de tarifa dinámica
-for (const config of configuraciones) {
-// Verificar si el destino está excluido
-if (
-config.destinosExcluidos &&
-Array.isArray(config.destinosExcluidos) &&
-config.destinosExcluidos.includes(nombreDestino)
-) {
-continue;
-}
-
-let aplica = false;
-
-switch (config.tipo) {
-case "anticipacion":
-if (
-diasAnticipacion >= config.diasMinimos &&
-(config.diasMaximos === null ||
-diasAnticipacion <= config.diasMaximos)
-) {
-aplica = true;
-}
-break;
-
-case "dia_semana":
-if (
-config.diasSemana &&
-Array.isArray(config.diasSemana) &&
-config.diasSemana.includes(diaSemana)
-) {
-aplica = true;
-}
-break;
-
-case "horario":
-if (hora && config.horaInicio && config.horaFin) {
-const horaViaje = hora.substring(0, 5);
-const horaInicio = config.horaInicio.substring(0, 5);
-const horaFin = config.horaFin.substring(0, 5);
-
-let dentroRango = false;
-if (horaInicio <= horaFin) {
-dentroRango = horaViaje >= horaInicio && horaViaje <= horaFin;
-} else {
-dentroRango = horaViaje >= horaInicio || horaViaje <= horaFin;
-}
-
-if (dentroRango) {
-aplica = true;
-}
-}
-break;
-}
-
-if (aplica) {
-porcentajeTotal += parseFloat(config.porcentajeAjuste);
-}
-}
-
-// 4. Calcular precio final
-const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
-const precioFinal = Math.round(precioBase + ajusteMonto);
-
-console.log(`💰 Precio oportunidad ${nombreDestino}: Base $${precioBase} + Ajuste ${porcentajeTotal}% = $${precioFinal} (${vehiculo}, ${pasajeros} pax)`);
+console.log(`💰 Precio oportunidad ${nombreDestino}: Base $${precioFinal} (${vehiculo}, ${pasajeros} pax) - Sin tarifa dinámica`);
 
 return precioFinal;
 } catch (error) {
-console.error("Error calculando precio base con tarifa dinámica:", error);
+console.error("Error calculando precio base oportunidad:", error);
 return 0;
 }
 };
@@ -287,11 +185,9 @@ if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por retorno vacío
 const vehiculoOportunidad = reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van");
 
-// Calcular precio base con tarifa dinámica (sin otros descuentos)
-const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
+// Calcular precio base (sin tarifa dinámica, solo base + recargos pax)
+const precioSugerido = await calcularPrecioBaseOportunidad(
 lugarRemoto,
-reserva.fecha,
-horaAproximada || (reserva.hora || "12:00"),
 vehiculoOportunidad,
 reserva.pasajeros,
 parseFloat(reserva.precio)
@@ -361,11 +257,9 @@ if (validoHasta > new Date()) {
 const descuento = 50; 
 const vehiculoOportunidad = reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van");
 
-// Calcular precio base con tarifa dinámica (sin otros descuentos)
-const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
+// Calcular precio base (sin tarifa dinámica, solo base + recargos pax)
+const precioSugerido = await calcularPrecioBaseOportunidad(
 lugarRemoto,
-reserva.fecha,
-horaAproximada || (reserva.hora || "12:00"),
 vehiculoOportunidad,
 reserva.pasajeros,
 parseFloat(reserva.precio)
