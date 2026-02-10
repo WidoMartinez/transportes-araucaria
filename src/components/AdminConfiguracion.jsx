@@ -139,6 +139,40 @@ const handleGenerarOportunidades = async () => {
 	}
 };
 
+const handleRegenerarOportunidades = async () => {
+	try {
+		setGenerandoOportunidades(true);
+		setResultadoOportunidades(null);
+
+		const response = await authenticatedFetch(
+			`/api/oportunidades/regenerar`,
+			{
+				method: "GET",
+			}
+		);
+
+		if (!response.ok) {
+			throw new Error("Error al regenerar oportunidades");
+		}
+
+		const data = await response.json();
+		setResultadoOportunidades(data);
+
+		showFeedback(
+			"success",
+			`✅ Eliminadas ${data.eliminadas} oportunidades antiguas. Generadas ${data.totalGeneradas} nuevas oportunidades`
+		);
+	} catch (error) {
+		console.error("Error regenerando oportunidades:", error);
+		showFeedback("error", "Error al regenerar oportunidades");
+		setResultadoOportunidades({ error: error.message });
+	} finally {
+		setGenerandoOportunidades(false);
+	}
+};
+
+
+
 
 if (loading) {
 return (
@@ -287,25 +321,47 @@ Genera oportunidades de traslado desde reservas confirmadas existentes
 </div>
 </div>
 
-{/* Botón de generación */}
+{/* Botones de generación */}
+<div className="grid grid-cols-2 gap-3">
 <Button
 onClick={handleGenerarOportunidades}
 disabled={generandoOportunidades}
-className="w-full"
+variant="default"
 size="lg"
 >
 {generandoOportunidades ? (
 <>
 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-Generando oportunidades...
+Generando...
 </>
 ) : (
 <>
 <Target className="w-4 h-4 mr-2" />
-Generar Oportunidades Ahora
+Generar Nuevas
 </>
 )}
 </Button>
+
+<Button
+onClick={handleRegenerarOportunidades}
+disabled={generandoOportunidades}
+variant="outline"
+size="lg"
+className="border-purple-300 text-purple-700 hover:bg-purple-50"
+>
+{generandoOportunidades ? (
+<>
+<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+Regenerando...
+</>
+) : (
+<>
+<Target className="w-4 h-4 mr-2" />
+Regenerar Todas
+</>
+)}
+</Button>
+</div>
 
 {/* Resultados */}
 {resultadoOportunidades && !resultadoOportunidades.error && (
