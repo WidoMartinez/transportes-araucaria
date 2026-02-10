@@ -7,6 +7,8 @@ import { z } from "zod";
 import Oportunidad from "../models/Oportunidad.js";
 import SuscripcionOportunidad from "../models/SuscripcionOportunidad.js";
 import Reserva from "../models/Reserva.js";
+import Destino from "../models/Destino.js";
+
 
 // Schema de validación para suscripciones
 const suscripcionSchema = z.object({
@@ -53,6 +55,12 @@ export const detectarYGenerarOportunidades = async (reserva) => {
 try {
 const oportunidadesGeneradas = [];
 
+// Obtener información del destino para usar duraciones configuradas
+const destinoInfo = await Destino.findOne({
+where: { nombre: reserva.destino }
+});
+const duracionViajeMinutos = destinoInfo?.duracionIdaMinutos || 60; // Fallback a 60 min
+
 // 1. RETORNO VACÍO: crear oportunidad de destino → origen
 if (reserva.estado === "confirmada" || reserva.estado === "completada") {
 const existeRetorno = await Oportunidad.findOne({
@@ -64,13 +72,16 @@ estado: ["disponible", "reservada"],
 });
 
 if (!existeRetorno) {
-// Calcular hora aproximada: hora de llegada + 30 minutos
+// Calcular hora aproximada: hora de llegada al destino + 30 minutos
 let horaAproximada = null;
 if (reserva.hora) {
 const [horas, minutos] = reserva.hora.split(":");
-const fechaHora = new Date();
-fechaHora.setHours(parseInt(horas), parseInt(minutos) + 30);
-horaAproximada = `${String(fechaHora.getHours()).padStart(2, "0")}:${String(fechaHora.getMinutes()).padStart(2, "0")}`;
+const horaSalida = new Date();
+horaSalida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+// Sumar duración del viaje + 30 min de buffer
+const horaLlegada = new Date(horaSalida.getTime() + duracionViajeMinutos * 60000);
+const horaDisponible = new Date(horaLlegada.getTime() + 30 * 60000);
+horaAproximada = `${String(horaDisponible.getHours()).padStart(2, "0")}:${String(horaDisponible.getMinutes()).padStart(2, "0")}`;
 }
 
 // Calcular validez: hasta 2 horas antes del viaje
@@ -122,13 +133,15 @@ estado: ["disponible", "reservada"],
 });
 
 if (!existeIda) {
-// Calcular hora aproximada: hora de recogida - 2 horas
+// Calcular hora aproximada: hora de recogida - duración del viaje - 30 min buffer
 let horaAproximada = null;
 if (reserva.hora) {
 const [horas, minutos] = reserva.hora.split(":");
-const fechaHora = new Date();
-fechaHora.setHours(parseInt(horas) - 2, parseInt(minutos));
-horaAproximada = `${String(fechaHora.getHours()).padStart(2, "0")}:${String(fechaHora.getMinutes()).padStart(2, "0")}`;
+const horaRecogida = new Date();
+horaRecogida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+// Restar duración del viaje + 30 min de buffer para salir de Temuco
+const horaSalidaNecesaria = new Date(horaRecogida.getTime() - duracionViajeMinutos * 60000 - 30 * 60000);
+horaAproximada = `${String(horaSalidaNecesaria.getHours()).padStart(2, "0")}:${String(horaSalidaNecesaria.getMinutes()).padStart(2, "0")}`;
 }
 
 // Calcular validez: hasta 3 horas antes del viaje
