@@ -32,6 +32,7 @@ import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
 import addSillaInfantilToCodigosPago from "./migrations/add-silla-infantil-to-codigos-pago.js";
+import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
 import CodigoPago from "./models/CodigoPago.js";
 import Transaccion from "./models/Transaccion.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
