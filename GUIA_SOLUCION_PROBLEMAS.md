@@ -2272,3 +2272,29 @@ DB_LOGGING=true  # Habilita logging SQL para diagnóstico (solo desarrollo)
 > - Límites de conexiones simultáneas en el plan de hosting
 > - Firewall o restricciones de red entre Render y Hostinger
 
+---
+
+## 21. Problemas en el Sistema de Oportunidades (Feb 2026)
+
+Durante el refinamiento del sistema de reserva expedita de oportunidades, se detectaron y corrigieron los siguientes puntos críticos:
+
+### A. Error 404: "La oportunidad no existe"
+**Causa**: El frontend enviaba el `codigo` público (ej: `OP-20260210-001`) como identificador, pero el backend usaba `findByPk(oportunidadId)`, intentando buscar por el ID numérico interno de la base de datos.
+**Solución**: Cambiar la búsqueda en el backend para usar `findOne`:
+```javascript
+// En backend/routes/oportunidades.js
+const oportunidad = await Oportunidad.findOne({ where: { codigo: oportunidadId } });
+```
+
+### B. Error de Conexión: `ERR_CONNECTION_REFUSED` (Puertos 3001 vs 8080)
+**Causa**: Desajuste entre el puerto configurado en el backend (`8080`) y el invocado en el frontend (`3001`). Además, la detección automática de `localhost` impedía conectar con el backend en Render durante el desarrollo local.
+**Solución**: 
+1. Estandarizar el uso de `getBackendUrl()` en todos los componentes.
+2. Ajustar `getBackendUrl` para priorizar variables de entorno (`VITE_API_URL`) antes que el fallback de `localhost`.
+
+### C. Advertencia: "Function components cannot be given refs"
+**Causa**: Componentes de `ui/dialog.jsx` consumidos por Radix UI/Framer Motion sin soporte para `refs`.
+**Solución**: Envolver `DialogOverlay`, `DialogContent`, `DialogTitle` y `DialogDescription` con `React.forwardRef`.
+
+---
+

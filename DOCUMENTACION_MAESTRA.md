@@ -1251,15 +1251,25 @@ El sistema de oportunidades permite maximizar la eficiencia de la flota al ofrec
     - **Hora Calculada**: Hora de recogida - duración del viaje - 30 min de buffer.
     - **Condición**: Solo si el origen de la reserva no es Temuco.
 
-#### Lógica de Cálculo de Tiempos y Precios
+#### Lógica de Cálculo de Tiempos y Precios (Refinamiento Feb 2026)
 
-Para garantizar precisión operativa y financiera, el sistema utiliza las siguientes reglas:
+Para garantizar precisión operativa y ofrecer precios estables, el sistema utiliza las siguientes reglas:
 
-- **Duración del Viaje**: Se obtiene del campo `duracionIdaMinutos` del modelo `Destino` configurado en el panel administrativo.
-- **Precio Base**: Se utiliza el `precioIda` configurado para el destino.
-- **Fallback de Precio**: Si el destino no se encuentra en la tabla de configuraciones, el sistema utiliza automáticamente el precio de la **reserva original** como base para el cálculo.
-- **Tarifa Dinámica**: Se aplican automáticamente recargos por anticipación, día de la semana, horario o festivos configurados en el sistema sobre el precio base obtenido.
-- **Exclusión de Descuentos**: El precio base para oportunidades **no incluye** descuentos por reserva online ni por ida y vuelta de la reserva original. El 50% de descuento se aplica sobre el valor ajustado (Base + Tarifa Dinámica).
+- **Duración del Viaje**: Se obtiene del campo `duracionIdaMinutos` del modelo `Destino`.
+- **Precio Base (Simplificado)**: 
+    - El sistema **ya no utiliza Tarifa Dinámica** (ajustes por festivos, horario o anticipación) para las oportunidades. El precio es estable.
+    - **Sedán**: Usa `precioIda` del destino.
+    - **Van**: Usa `precioBaseVan` del destino (ej: $80.000 para Pucón).
+- **Recargo por Pasajeros**: Se aplica un recargo porcentual por cada pasajero adicional:
+    - **Sedán**: A partir del 4to pasajero (usa `porcentajeAdicionalAuto`).
+    - **Van**: A partir del 6to pasajero (usa `porcentajeAdicionalVan`).
+- **Descuento Fijo**: El 50% de descuento se aplica sobre el valor final calculado (Base + Recargos Pax).
+
+#### Filtrado Estricto de Rutas
+
+Para evitar competencia con servicios estándar y optimizar la logística:
+1. **Aeropuerto Obligatorio**: Toda oportunidad debe tener el "Aeropuerto La Araucanía" como origen o destino.
+2. **Exclusión de Temuco Ciudad**: Se omiten automáticamente trayectos entre la ciudad de Temuco y el Aeropuerto.
 
 #### Restricciones de Vehículo
 
