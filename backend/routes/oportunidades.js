@@ -60,26 +60,28 @@ return precioOriginal * (1 - porcentajeDescuento / 100);
  * @param {string} nombreDestino - Nombre del destino
  * @param {string} fecha - Fecha del viaje (YYYY-MM-DD)
  * @param {string} hora - Hora del viaje (HH:MM)
+ * @param {number} precioFallback - Precio de la reserva original para usar si el destino no existe
  * @returns {Promise<number>} Precio base + tarifa dinámica
  */
-const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora) => {
+const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora, precioFallback = 0) => {
 try {
 // 1. Obtener precio base del destino
 let destinoInfo = await Destino.findOne({
 where: { nombre: nombreDestino }
 });
 
-if (!destinoInfo) {
-console.warn(`⚠️ Destino no encontrado: ${nombreDestino}. Intentando fallback a 'General'...`);
-destinoInfo = await Destino.findOne({ where: { nombre: 'General' } });
+let precioBase = 0;
+
+if (destinoInfo) {
+  precioBase = parseFloat(destinoInfo.precioIda);
+} else {
+  console.warn(`⚠️ Destino no encontrado: ${nombreDestino}. Usando precio de reserva original ($${precioFallback}) como base.`);
+  precioBase = parseFloat(precioFallback);
 }
 
-if (!destinoInfo) {
-console.error(`❌ Ni el destino ${nombreDestino} ni 'General' existen.`);
-return 0;
+if (precioBase <= 0) {
+  return 0;
 }
-
-const precioBase = parseFloat(destinoInfo.precioIda);
 
 // 2. Obtener configuraciones de tarifa dinámica activas
 const configuraciones = await ConfiguracionTarifaDinamica.findAll({
@@ -267,10 +269,12 @@ if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por retorno vacío
 
 // Calcular precio base con tarifa dinámica (sin otros descuentos)
+// Se pasa reserva.precio como fallback si el destino no está en la tabla
 const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
 lugarRemoto,
 reserva.fecha,
-horaAproximada || (reserva.hora || "12:00")
+horaAproximada || (reserva.hora || "12:00"),
+parseFloat(reserva.precio)
 );
 
 const oportunidadRetorno = await Oportunidad.create({
@@ -283,7 +287,7 @@ horaAproximada,
 descuento,
 precioOriginal: precioSugerido,
 precioFinal: calcularPrecioConDescuento(precioSugerido, descuento),
-vehiculo: reserva.vehiculo,
+vehiculo: reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van"),
 capacidad: `${reserva.pasajeros} pasajeros`,
 reservaRelacionadaId: reserva.id,
 estado: "disponible",
@@ -338,10 +342,12 @@ if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por ida vacía
 
 // Calcular precio base con tarifa dinámica (sin otros descuentos)
+// Se pasa reserva.precio como fallback si el destino no está en la tabla
 const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
 lugarRemoto,
 reserva.fecha,
-horaAproximada || (reserva.hora || "12:00")
+horaAproximada || (reserva.hora || "12:00"),
+parseFloat(reserva.precio)
 );
 
 const oportunidadIda = await Oportunidad.create({
@@ -354,7 +360,7 @@ horaAproximada,
 descuento,
 precioOriginal: precioSugerido,
 precioFinal: calcularPrecioConDescuento(precioSugerido, descuento),
-vehiculo: reserva.vehiculo,
+vehiculo: reserva.vehiculo || (reserva.pasajeros <= 3 ? "Sedán" : "Van"),
 capacidad: `${reserva.pasajeros} pasajeros`,
 reservaRelacionadaId: reserva.id,
 estado: "disponible",
