@@ -30,9 +30,11 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Historial de Transacciones](#514-sistema-de-historial-de-transacciones-flow)
    - [Gestión de Vencimiento de Códigos](#515-sistema-de-vencimiento-y-tiempos-restantes-en-códigos-de-pago)
    - [Sistema de Actualización Unificada (Bulk Update)](#516-sistema-de-actualización-unificada-bulk-update)
+   - [Sistema de Oportunidades de Traslado](#517-sistema-de-oportunidades-de-traslado)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
+
 
 ---
 
@@ -1230,6 +1232,49 @@ Anteriormente, guardar una reserva implicaba hasta 6 llamadas HTTP secuenciales 
 - ✅ **Mantenibilidad**: Se elimina la fragmentación lógica de actualizaciones en múltiples rutas de API.
 
 ---
+
+### 5.17 Sistema de Oportunidades de Traslado
+
+**Implementado: Febrero 2026**
+
+El sistema de oportunidades permite maximizar la eficiencia de la flota al ofrecer trayectos que de otro modo se realizarían vacíos (empty legs) con un **50% de descuento**.
+
+#### Tipos de Oportunidades
+
+1.  **Retorno Vacío (destino → origen)**:
+    - Se genera cuando un vehículo deja a un cliente en su destino y debe volver a la base o al aeropuerto vacío.
+    - **Hora Calculada**: Hora de llegada al destino + 30 min de buffer.
+    - **Ejemplo**: Reserva Panguipulli → Aeropuerto (salida 11:00). Oportunidad: Aeropuerto → Panguipulli (~13:50).
+
+2.  **Ida Vacía (Temuco → origen)**:
+    - Se genera cuando un vehículo debe viajar desde la base (Temuco) para recoger a un cliente en una localidad remota.
+    - **Hora Calculada**: Hora de recogida - duración del viaje - 30 min de buffer.
+    - **Condición**: Solo si el origen de la reserva no es Temuco.
+
+#### Lógica de Cálculo de Tiempos y Precios
+
+Para garantizar precisión operativa y financiera, el sistema utiliza las siguientes reglas:
+
+- **Duración del Viaje**: Se obtiene del campo `duracionIdaMinutos` del modelo `Destino` configurado en el panel administrativo.
+- **Precio Base**: Se utiliza el `precioIda` configurado para el destino.
+- **Tarifa Dinámica**: Se aplican automáticamente recargos por anticipación, día de la semana, horario o festivos configurados en el sistema.
+- **Exclusión de Descuentos**: El precio base para oportunidades **no incluye** descuentos por reserva online ni por ida y vuelta. El 50% de descuento se aplica sobre el valor "limpio" (Base + Tarifa Dinámica).
+
+#### Gestión Administrativa
+
+El administrador dispone de herramientas en **Configuración** para gestionar el sistema:
+
+- **Generar Nuevas**: Escanea reservas confirmadas y crea oportunidades solo para aquellas que no tengan una asignada.
+- **Regenerar Todas**: Elimina todas las oportunidades existentes y las recrea. Útil al modificar duraciones de destinos o reglas de tarifa dinámica para actualizar los precios y horarios de las ofertas actuales.
+
+#### Puntos de Integración Técnica
+
+-   **Backend**: `backend/routes/oportunidades.js` (Lógica central y cálculos).
+-   **Confirmación Automática**: Integrado en `server-db.js` (Webhook de Flow y confirmaciones manuales).
+-   **Frontend**: `src/components/AdminConfiguracion.jsx` (Detección y botones de control).
+
+---
+
 
 ## 6. Mantenimiento y Despliegue
 
