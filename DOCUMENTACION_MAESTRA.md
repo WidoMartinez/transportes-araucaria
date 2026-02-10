@@ -1257,8 +1257,18 @@ Para garantizar precisión operativa y financiera, el sistema utiliza las siguie
 
 - **Duración del Viaje**: Se obtiene del campo `duracionIdaMinutos` del modelo `Destino` configurado en el panel administrativo.
 - **Precio Base**: Se utiliza el `precioIda` configurado para el destino.
-- **Tarifa Dinámica**: Se aplican automáticamente recargos por anticipación, día de la semana, horario o festivos configurados en el sistema.
-- **Exclusión de Descuentos**: El precio base para oportunidades **no incluye** descuentos por reserva online ni por ida y vuelta. El 50% de descuento se aplica sobre el valor "limpio" (Base + Tarifa Dinámica).
+- **Fallback de Precio**: Si el destino no se encuentra en la tabla de configuraciones, el sistema utiliza automáticamente el precio de la **reserva original** como base para el cálculo.
+- **Tarifa Dinámica**: Se aplican automáticamente recargos por anticipación, día de la semana, horario o festivos configurados en el sistema sobre el precio base obtenido.
+- **Exclusión de Descuentos**: El precio base para oportunidades **no incluye** descuentos por reserva online ni por ida y vuelta de la reserva original. El 50% de descuento se aplica sobre el valor ajustado (Base + Tarifa Dinámica).
+
+#### Restricciones de Vehículo
+
+- **Consistencia de Flota**: La oportunidad hereda estrictamente el tipo de vehículo asignado a la reserva original.
+- **Lógica de Asignación**: 
+  - Si la reserva tiene un vehículo específico asignado, la oportunidad mostrará ese vehículo.
+  - Si no hay un vehículo asignado pero la reserva es para 1-3 pasajeros, se ofrece como **Sedán**.
+  - Si la reserva es para 4-7 pasajeros, se ofrece como **Van**.
+- Esto previene discrepancias operativas (ej. ofrecer una Van a precio de Sedán).
 
 #### Gestión Administrativa
 
