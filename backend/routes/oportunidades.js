@@ -8,6 +8,10 @@ import Oportunidad from "../models/Oportunidad.js";
 import SuscripcionOportunidad from "../models/SuscripcionOportunidad.js";
 import Reserva from "../models/Reserva.js";
 import Destino from "../models/Destino.js";
+import ConfiguracionTarifaDinamica from "../models/ConfiguracionTarifaDinamica.js";
+import Festivo from "../models/Festivo.js";
+import sequelize from "../config/database.js";
+
 
 
 // Schema de validación para suscripciones
@@ -49,6 +53,152 @@ const generarCodigoOportunidad = async () => {
 const calcularPrecioConDescuento = (precioOriginal, porcentajeDescuento) => {
 return precioOriginal * (1 - porcentajeDescuento / 100);
 };
+
+/**
+ * Calcula el precio base con tarifa dinámica para oportunidades
+ * NO incluye descuentos de ida/vuelta ni online
+ * @param {string} nombreDestino - Nombre del destino
+ * @param {string} fecha - Fecha del viaje (YYYY-MM-DD)
+ * @param {string} hora - Hora del viaje (HH:MM)
+ * @returns {Promise<number>} Precio base + tarifa dinámica
+ */
+const calcularPrecioBaseConTarifaDinamica = async (nombreDestino, fecha, hora) => {
+try {
+// 1. Obtener precio base del destino
+const destinoInfo = await Destino.findOne({
+where: { nombre: nombreDestino }
+});
+
+if (!destinoInfo) {
+console.warn(`⚠️ Destino no encontrado: ${nombreDestino}`);
+return 0;
+}
+
+const precioBase = parseFloat(destinoInfo.precioIda);
+
+// 2. Obtener configuraciones de tarifa dinámica activas
+const configuraciones = await ConfiguracionTarifaDinamica.findAll({
+where: { activo: true },
+order: [["prioridad", "DESC"]],
+});
+
+// 3. Calcular ajustes aplicables
+let porcentajeTotal = 0;
+
+// Parsear fecha
+const [year, month, day] = fecha.split("-");
+const fechaViaje = new Date(
+parseInt(year),
+parseInt(month) - 1,
+parseInt(day)
+);
+const diaSemana = fechaViaje.getDay();
+
+// Calcular días de anticipación
+const ahora = new Date();
+const hoyInicio = new Date(
+ahora.getFullYear(),
+ahora.getMonth(),
+ahora.getDate()
+);
+const diasAnticipacion = Math.floor(
+(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)
+);
+
+// Verificar si es festivo
+const festivo = await Festivo.findOne({
+where: {
+activo: true,
+[Op.or]: [
+{ fecha: fecha },
+{
+recurrente: true,
+[Op.and]: sequelize.where(
+sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
+sequelize.fn("DATE_FORMAT", fecha, "%m-%d")
+),
+},
+],
+},
+});
+
+// Aplicar recargo de festivo si existe
+if (festivo && festivo.porcentajeRecargo) {
+porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
+}
+
+// Evaluar configuraciones de tarifa dinámica
+for (const config of configuraciones) {
+// Verificar si el destino está excluido
+if (
+config.destinosExcluidos &&
+Array.isArray(config.destinosExcluidos) &&
+config.destinosExcluidos.includes(nombreDestino)
+) {
+continue;
+}
+
+let aplica = false;
+
+switch (config.tipo) {
+case "anticipacion":
+if (
+diasAnticipacion >= config.diasMinimos &&
+(config.diasMaximos === null ||
+diasAnticipacion <= config.diasMaximos)
+) {
+aplica = true;
+}
+break;
+
+case "dia_semana":
+if (
+config.diasSemana &&
+Array.isArray(config.diasSemana) &&
+config.diasSemana.includes(diaSemana)
+) {
+aplica = true;
+}
+break;
+
+case "horario":
+if (hora && config.horaInicio && config.horaFin) {
+const horaViaje = hora.substring(0, 5);
+const horaInicio = config.horaInicio.substring(0, 5);
+const horaFin = config.horaFin.substring(0, 5);
+
+let dentroRango = false;
+if (horaInicio <= horaFin) {
+dentroRango = horaViaje >= horaInicio && horaViaje <= horaFin;
+} else {
+dentroRango = horaViaje >= horaInicio || horaViaje <= horaFin;
+}
+
+if (dentroRango) {
+aplica = true;
+}
+}
+break;
+}
+
+if (aplica) {
+porcentajeTotal += parseFloat(config.porcentajeAjuste);
+}
+}
+
+// 4. Calcular precio final
+const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
+const precioFinal = Math.max(0, precioBase + ajusteMonto);
+
+console.log(`💰 Precio oportunidad ${nombreDestino}: Base $${precioBase} + Ajuste ${porcentajeTotal}% = $${precioFinal}`);
+
+return precioFinal;
+} catch (error) {
+console.error("Error calculando precio base con tarifa dinámica:", error);
+return 0;
+}
+};
+
 
 // Función para detectar y generar oportunidades desde reservas confirmadas
 export const detectarYGenerarOportunidades = async (reserva) => {
@@ -113,6 +263,14 @@ validoHasta.setHours(validoHasta.getHours() - 2);
 // Solo crear si es futuro
 if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por retorno vacío
+
+// Calcular precio base con tarifa dinámica (sin otros descuentos)
+const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
+lugarRemoto,
+reserva.fecha,
+horaAproximada || (reserva.hora || "12:00")
+);
+
 const oportunidadRetorno = await Oportunidad.create({
 codigo: await generarCodigoOportunidad(),
 tipo: "retorno_vacio",
@@ -121,8 +279,8 @@ destino: reserva.origen,
 fecha: reserva.fecha,
 horaAproximada,
 descuento,
-precioOriginal: parseFloat(reserva.precio),
-precioFinal: calcularPrecioConDescuento(parseFloat(reserva.precio), descuento),
+precioOriginal: precioSugerido,
+precioFinal: calcularPrecioConDescuento(precioSugerido, descuento),
 vehiculo: reserva.vehiculo,
 capacidad: `${reserva.pasajeros} pasajeros`,
 reservaRelacionadaId: reserva.id,
@@ -173,6 +331,14 @@ validoHasta.setHours(validoHasta.getHours() - 3);
 // Solo crear si es futuro
 if (validoHasta > new Date()) {
 const descuento = 50; // 50% descuento por ida vacía
+
+// Calcular precio base con tarifa dinámica (sin otros descuentos)
+const precioSugerido = await calcularPrecioBaseConTarifaDinamica(
+lugarRemoto,
+reserva.fecha,
+horaAproximada || (reserva.hora || "12:00")
+);
+
 const oportunidadIda = await Oportunidad.create({
 codigo: await generarCodigoOportunidad(),
 tipo: "ida_vacia",
@@ -181,8 +347,8 @@ destino: reserva.origen,
 fecha: reserva.fecha,
 horaAproximada,
 descuento,
-precioOriginal: parseFloat(reserva.precio),
-precioFinal: calcularPrecioConDescuento(parseFloat(reserva.precio), descuento),
+precioOriginal: precioSugerido,
+precioFinal: calcularPrecioConDescuento(precioSugerido, descuento),
 vehiculo: reserva.vehiculo,
 capacidad: `${reserva.pasajeros} pasajeros`,
 reservaRelacionadaId: reserva.id,
