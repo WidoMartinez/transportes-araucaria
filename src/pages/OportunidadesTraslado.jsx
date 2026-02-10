@@ -148,6 +148,7 @@ return () => clearInterval(intervalId);
     // Validación de rango horario
     const opHora = oportunidadSeleccionada.hora;
     const salidaHora = reservaFormData.horaSalida;
+    const esIda = oportunidadSeleccionada.tipo === "ida_vacia";
     
     const timeToMinutes = (t) => {
       if (!t) return 0;
@@ -155,13 +156,14 @@ return () => clearInterval(intervalId);
       return h * 60 + m;
     };
 
-    const minMin = timeToMinutes(opHora);
-    const maxMin = minMin + 60;
+    const timeMinutes = timeToMinutes(opHora);
+    const minMin = esIda ? Math.max(0, timeMinutes - 60) : timeMinutes;
+    const maxMin = esIda ? timeMinutes : timeMinutes + 60;
     const currentMin = timeToMinutes(salidaHora);
 
     if (currentMin < minMin || currentMin > maxMin) {
-      const maxStr = `${Math.floor(maxMin/60).toString().padStart(2,"0")}:${(maxMin%60).toString().padStart(2,"0")}`;
-      setHoraError(`La hora debe estar entre las ${opHora} y las ${maxStr}`);
+      const formatTime = (tm) => `${Math.floor(tm/60).toString().padStart(2,"0")}:${(tm%60).toString().padStart(2,"0")}`;
+      setHoraError(`La hora debe estar entre las ${formatTime(minMin)} y las ${formatTime(maxMin)}`);
       return;
     }
 
@@ -586,11 +588,15 @@ onReservar={handleReservar}
               {/* Nueva Fila: Hora de Salida con Validación */}
               <div className="space-y-2">
                 <Label htmlFor="horaSalida" className="text-sm font-bold text-gray-700">
-                  Hora de Salida Solicitada <span className="text-chocolate-600">(Rango: {oportunidadSeleccionada?.hora || "--:--"} - {
+                  Hora de Salida Solicitada <span className="text-chocolate-600">(Rango: {
                     oportunidadSeleccionada?.hora ? (() => {
                       const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
-                      const total = h * 60 + m + 60;
-                      return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
+                      const t = h * 60 + m;
+                      const esIda = oportunidadSeleccionada.tipo === "ida_vacia";
+                      const minT = esIda ? Math.max(0, t - 60) : t;
+                      const maxT = esIda ? t : t + 60;
+                      const format = (tm) => `${Math.floor(tm/60).toString().padStart(2,"0")}:${(tm%60).toString().padStart(2,"0")}`;
+                      return `${format(minT)} - ${format(maxT)}`;
                     })() : "--:--"
                   })</span>
                 </Label>
@@ -606,19 +612,25 @@ onReservar={handleReservar}
                       setHoraError("");
                     }}
                     className={`h-12 pl-10 border-gray-200 focus:ring-chocolate-500 rounded-xl ${horaError ? 'border-red-500' : ''}`}
-                    min={oportunidadSeleccionada?.hora}
-                    max={oportunidadSeleccionada?.hora ? (() => {
+                    min={oportunidadSeleccionada?.tipo === "ida_vacia" ? (() => {
                       const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
+                      const total = Math.max(0, h * 60 + m - 60);
+                      return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
+                    })() : oportunidadSeleccionada?.hora}
+                    max={oportunidadSeleccionada?.tipo === "ida_vacia" ? oportunidadSeleccionada?.hora : (() => {
+                      const [h, m] = (oportunidadSeleccionada?.hora || "00:00").split(":").map(Number);
                       const total = h * 60 + m + 60;
                       return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
-                    })() : undefined}
+                    })()}
                   />
                 </div>
                 {horaError ? (
                   <p className="text-xs text-red-500 font-medium">{horaError}</p>
                 ) : (
                   <p className="text-[10px] text-muted-foreground italic">
-                    * El vehículo estará disponible desde la hora indicada. Puedes retrasar tu salida hasta 1 hora máximo.
+                    {oportunidadSeleccionada?.tipo === "ida_vacia" 
+                      ? "* Puedes adelantar tu salida hasta 1 hora respecto al horario base."
+                      : "* El vehículo estará disponible desde la hora indicada. Puedes retrasar tu salida hasta 1 hora máximo."}
                   </p>
                 )}
               </div>

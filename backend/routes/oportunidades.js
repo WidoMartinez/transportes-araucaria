@@ -667,15 +667,33 @@ try {
   };
 
   const horaBase = oportunidad.horaAproximada || "00:00";
-  const minMin = timeToMinutes(horaBase);
-  const maxMin = minMin + 60;
+  const timeMinutes = timeToMinutes(horaBase);
+  
+  let minMin, maxMin;
+  if (oportunidad.tipo === "ida_vacia") {
+    // Para ida: hasta 1 hora antes (adelanto)
+    minMin = Math.max(0, timeMinutes - 60);
+    maxMin = timeMinutes;
+  } else {
+    // Para retorno: hasta 1 hora después (retraso)
+    minMin = timeMinutes;
+    maxMin = timeMinutes + 60;
+  }
+  
   const currentMin = timeToMinutes(horaSalida);
 
+  const formatTime = (totalMinutes) => {
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  };
+
   if (currentMin < minMin || currentMin > maxMin) {
-    const maxStr = `${Math.floor(maxMin/60).toString().padStart(2,"0")}:${(maxMin%60).toString().padStart(2,"0")}`;
+    const minStr = formatTime(minMin);
+    const maxStr = formatTime(maxMin);
     return res.status(400).json({
       success: false,
-      error: `La hora de salida debe estar entre las ${horaBase} y las ${maxStr}`,
+      error: `La hora de salida debe estar entre las ${minStr} y las ${maxStr}`,
     });
   }
 
