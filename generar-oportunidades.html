@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generar Oportunidades - Transportes Araucaria</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        
+        .info-box p:last-child {
+            margin-bottom: 0;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .result.active {
+            display: block;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .result h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .result-details {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .oportunidad-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .next-steps {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+        }
+        
+        .next-steps h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .next-steps a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .next-steps a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Generar Oportunidades</h1>
+        <p class="subtitle">Generación manual desde reservas existentes</p>
+        
+        <div class="info-box">
+            <p><strong>¿Qué hace este proceso?</strong></p>
+            <p>Busca todas las reservas confirmadas con fechas futuras y genera oportunidades de traslado con descuento (50%) para:</p>
+            <ul style="margin-left: 20px; margin-top: 8px;">
+                <li>Retornos vacíos (destino → origen)</li>
+                <li>Idas vacías (Temuco → origen, si aplica)</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Nota:</strong> Este proceso solo necesita ejecutarse una vez para reservas existentes. Las nuevas reservas generarán oportunidades automáticamente.</p>
+        </div>
+        
+        <button id="generateBtn" onclick="generarOportunidades()">
+            🚀 Generar Oportunidades Ahora
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Procesando reservas...</p>
+        </div>
+        
+        <div class="result" id="result">
+            <h3 id="resultTitle"></h3>
+            <p id="resultMessage"></p>
+            <div class="result-details" id="resultDetails"></div>
+        </div>
+    </div>
+
+    <script>
+        async function generarOportunidades() {
+            const btn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            const resultDetails = document.getElementById('resultDetails');
+            
+            // Resetear UI
+            btn.disabled = true;
+            loading.classList.add('active');
+            result.classList.remove('active', 'success', 'error');
+            
+            try {
+                // Obtener token del localStorage
+                const token = localStorage.getItem('token');
+                
+                if (!token) {
+                    throw new Error('No se encontró token de autenticación. Por favor, inicia sesión en el panel de administración primero.');
+                }
+                
+                // Llamar al endpoint
+                const response = await fetch('http://localhost:3000/api/oportunidades/generar', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al generar oportunidades');
+                }
+                
+                // Mostrar resultado exitoso
+                result.classList.add('active', 'success');
+                resultTitle.textContent = '✅ Proceso Completado';
+                resultMessage.textContent = data.message || `${data.totalGeneradas} oportunidades generadas`;
+                
+                // Mostrar detalles
+                let detailsHTML = '';
+                
+                if (data.totalGeneradas === 0) {
+                    detailsHTML = '<p>No se generaron oportunidades. Esto puede ser porque:</p>';
+                    detailsHTML += '<ul style="margin-left: 20px; margin-top: 10px;">';
+                    detailsHTML += '<li>No hay reservas confirmadas con fechas futuras</li>';
+                    detailsHTML += '<li>Ya existen oportunidades para todas las reservas</li>';
+                    detailsHTML += '<li>Las reservas no cumplen los criterios (ej: fecha muy cercana)</li>';
+                    detailsHTML += '</ul>';
+                } else {
+                    detailsHTML = `<p><strong>Total generadas:</strong> ${data.totalGeneradas}</p>`;
+                    
+                    if (data.detalles && data.detalles.length > 0) {
+                        detailsHTML += '<div style="margin-top: 15px;"><strong>Detalle por reserva:</strong></div>';
+                        data.detalles.forEach(d => {
+                            detailsHTML += `<div class="oportunidad-item">`;
+                            detailsHTML += `<strong>${d.reserva}</strong><br>`;
+                            detailsHTML += `Oportunidades: ${d.oportunidades.join(', ')}`;
+                            detailsHTML += `</div>`;
+                        });
+                    }
+                    
+                    detailsHTML += '<div class="next-steps">';
+                    detailsHTML += '<h4>📍 Próximo Paso</h4>';
+                    detailsHTML += '<p>Visita <a href="http://localhost:5173/oportunidades" target="_blank">la página de oportunidades</a> para ver las oportunidades generadas.</p>';
+                    detailsHTML += '</div>';
+                }
+                
+                resultDetails.innerHTML = detailsHTML;
+                
+            } catch (error) {
+                // Mostrar error
+                result.classList.add('active', 'error');
+                resultTitle.textContent = '❌ Error';
+                resultMessage.textContent = error.message;
+                
+                let errorHTML = '<p><strong>Soluciones posibles:</strong></p>';
+                errorHTML += '<ul style="margin-left: 20px; margin-top: 10px;">';
+                
+                if (error.message.includes('token')) {
+                    errorHTML += '<li>Abre el <a href="http://localhost:5173/admin" target="_blank">panel de administración</a> e inicia sesión</li>';
+                    errorHTML += '<li>Luego vuelve a esta página y haz clic en el botón nuevamente</li>';
+                } else {
+                    errorHTML += '<li>Verifica que el servidor backend esté corriendo en el puerto 3000</li>';
+                    errorHTML += '<li>Revisa los logs del servidor para más detalles</li>';
+                    errorHTML += '<li>Asegúrate de tener permisos de administrador</li>';
+                }
+                
+                errorHTML += '</ul>';
+                resultDetails.innerHTML = errorHTML;
+            } finally {
+                loading.classList.remove('active');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

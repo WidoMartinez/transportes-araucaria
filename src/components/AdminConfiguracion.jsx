@@ -8,10 +8,12 @@ MessageCircle,
 CheckCircle, 
 XCircle, 
 Loader2,
-AlertCircle 
+AlertCircle,
+Target
 } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+
 
 /**
  * Panel de Configuración General del Sistema
@@ -22,7 +24,10 @@ const [whatsappInterceptActivo, setWhatsappInterceptActivo] = useState(true);
 const [loading, setLoading] = useState(true);
 const [saving, setSaving] = useState(false);
 const [feedback, setFeedback] = useState(null);
+const [generandoOportunidades, setGenerandoOportunidades] = useState(false);
+const [resultadoOportunidades, setResultadoOportunidades] = useState(null);
 const { authenticatedFetch } = useAuthenticatedFetch();
+
 
 // Cargar configuración actual al montar el componente
 useEffect(() => {
@@ -94,6 +99,46 @@ const showFeedback = (type, message) => {
 setFeedback({ type, message });
 setTimeout(() => setFeedback(null), 5000);
 };
+
+const handleGenerarOportunidades = async () => {
+	try {
+		setGenerandoOportunidades(true);
+		setResultadoOportunidades(null);
+
+		const response = await authenticatedFetch(
+			`/api/oportunidades/generar`,
+			{
+				method: "GET",
+			}
+		);
+
+		if (!response.ok) {
+			throw new Error("Error al generar oportunidades");
+		}
+
+		const data = await response.json();
+		setResultadoOportunidades(data);
+
+		if (data.totalGeneradas > 0) {
+			showFeedback(
+				"success",
+				`✅ ${data.totalGeneradas} oportunidades generadas exitosamente`
+			);
+		} else {
+			showFeedback(
+				"success",
+				"No se generaron nuevas oportunidades (ya existen o no hay reservas elegibles)"
+			);
+		}
+	} catch (error) {
+		console.error("Error generando oportunidades:", error);
+		showFeedback("error", "Error al generar oportunidades");
+		setResultadoOportunidades({ error: error.message });
+	} finally {
+		setGenerandoOportunidades(false);
+	}
+};
+
 
 if (loading) {
 return (
@@ -210,6 +255,116 @@ de descuentos y beneficios antes de abrir WhatsApp.
 <strong>Nota:</strong> El tracking de conversiones de Google Ads se mantiene activo en ambos casos.
 </p>
 </div>
+</CardContent>
+</Card>
+
+
+{/* Generación Manual de Oportunidades */}
+<Card>
+<CardHeader>
+<div className="flex items-center gap-3">
+<div className="p-2 bg-purple-100 rounded-lg">
+<Target className="w-5 h-5 text-purple-600" />
+</div>
+<div className="flex-1">
+<CardTitle>Generación Manual de Oportunidades</CardTitle>
+<CardDescription>
+Genera oportunidades de traslado desde reservas confirmadas existentes
+</CardDescription>
+</div>
+</div>
+</CardHeader>
+<CardContent className="space-y-4">
+{/* Información */}
+<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+<h4 className="font-medium text-blue-900 mb-2">ℹ️ ¿Qué hace esto?</h4>
+<div className="text-sm text-blue-800 space-y-1">
+<p>• Busca todas las reservas confirmadas con fechas futuras</p>
+<p>• Genera oportunidades con 50% de descuento para:</p>
+<p className="ml-4">- Retornos vacíos (destino → origen)</p>
+<p className="ml-4">- Idas vacías (Temuco → origen, si aplica)</p>
+<p className="mt-2"><strong>Nota:</strong> Las nuevas reservas generan oportunidades automáticamente. Este botón es solo para reservas existentes.</p>
+</div>
+</div>
+
+{/* Botón de generación */}
+<Button
+onClick={handleGenerarOportunidades}
+disabled={generandoOportunidades}
+className="w-full"
+size="lg"
+>
+{generandoOportunidades ? (
+<>
+<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+Generando oportunidades...
+</>
+) : (
+<>
+<Target className="w-4 h-4 mr-2" />
+Generar Oportunidades Ahora
+</>
+)}
+</Button>
+
+{/* Resultados */}
+{resultadoOportunidades && !resultadoOportunidades.error && (
+<div className="border-t pt-4">
+<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+<div className="flex items-start gap-3">
+<CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+<div className="flex-1">
+<h4 className="font-medium text-green-900 mb-2">
+Proceso Completado
+</h4>
+<p className="text-sm text-green-800 mb-3">
+Total generadas: <strong>{resultadoOportunidades.totalGeneradas}</strong> oportunidades
+</p>
+
+{resultadoOportunidades.detalles && resultadoOportunidades.detalles.length > 0 && (
+<div className="space-y-2">
+<p className="text-sm font-medium text-green-900">Detalle por reserva:</p>
+<div className="max-h-40 overflow-y-auto space-y-1">
+{resultadoOportunidades.detalles.map((detalle, idx) => (
+<div key={idx} className="text-xs bg-white rounded p-2">
+<p className="font-medium text-gray-900">{detalle.reserva}</p>
+<p className="text-gray-600">{detalle.oportunidades.join(', ')}</p>
+</div>
+))}
+</div>
+</div>
+)}
+
+<div className="mt-3 pt-3 border-t border-green-200">
+<a
+href="/oportunidades"
+target="_blank"
+rel="noopener noreferrer"
+className="text-sm text-green-700 hover:text-green-800 font-medium underline"
+>
+→ Ver oportunidades generadas
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+)}
+
+{/* Error */}
+{resultadoOportunidades && resultadoOportunidades.error && (
+<div className="border-t pt-4">
+<div className="bg-red-50 border border-red-200 rounded-lg p-4">
+<div className="flex items-start gap-3">
+<XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+<div>
+<h4 className="font-medium text-red-900 mb-1">Error</h4>
+<p className="text-sm text-red-800">{resultadoOportunidades.error}</p>
+</div>
+</div>
+</div>
+</div>
+)}
 </CardContent>
 </Card>
 
