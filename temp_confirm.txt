@@ -1,0 +1,32 @@
+812:				// Filtrar solo reservas confirmadas
+2295:				? `Direcciones confirmadas:\n${detallesDirecciones.join("\n")}`
+2370:			"confirmada",
+2459:			estadoInicial = "confirmada";
+3011:				? `Direcciones confirmadas:\n${detallesDirecciones.join("\n")}`
+4069:		estado: "confirmada",
+4260:				where: { estado: "confirmada" },
+4263:			console.error("Error contando reservas confirmadas:", error.message);
+4411:				// Solo considerar reservas pendientes/confirmadas
+4414:						[Op.in]: ['pendiente', 'confirmada', 'pendiente_detalles']
+4783:			"confirmada",
+4848:				// Permitir establecer explícitamente "confirmada" incluso si previamente era "completada"
+4849:				if (estadoReservaSolicitado === "confirmada") {
+4850:					nuevoEstadoReserva = "confirmada";
+4855:							: "confirmada";
+4869:					nuevoEstadoReserva = "confirmada";
+4892:						: "confirmada";
+4969:						nuevoEstadoReserva = "confirmada";
+4988:						nuevoEstadoReserva = "confirmada";
+5094:            Reserva.count({ where: { estado: 'confirmada' } }),
+5427:				nuevoEstadoReserva = "confirmada";
+8085:		// Reglas: parcial (>= 40% del total) => confirmada, total => confirmada (estado completada se gestiona manualmente)
+8160:				["pendiente", "pendiente_detalles", "confirmada"].includes(
+8164:				nuevoEstadoReserva = "confirmada";
+8172:				nuevoEstadoReserva = "confirmada";
+8220:					if (["pendiente", "pendiente_detalles", "confirmada"].includes(estadoReservaHija)) {
+8221:						estadoReservaHija = "confirmada";
+8228:							estadoReservaHija = "confirmada";
+9851: * Agregar un producto a una reserva confirmada
+9882:		// Verificar que la reserva está confirmada
+9883:		if (reserva.estado !== "confirmada") {
+9886:				error: "Solo se pueden agregar productos a reservas confirmadas",

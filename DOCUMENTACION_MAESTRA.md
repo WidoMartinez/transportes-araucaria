@@ -404,6 +404,37 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
 
 > **Nota**: Las reservas antiguas (creadas antes de este cambio) mantienen el comportamiento "Legacy" (una sola fila para todo el viaje) y se identifican con el badge **IDA Y VUELTA**.
 
+#### Script de Diagnóstico de Tramos
+
+**Creado: 10 Febrero 2026**
+
+Para verificar la integridad de los datos de reservas ida/vuelta y detectar posibles problemas de asignación de `tipoTramo`, se creó un script de diagnóstico reutilizable.
+
+**Archivo**: [`backend/diagnosticar-tipo-tramo.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/diagnosticar-tipo-tramo.js)
+
+**Funcionalidades**:
+1. Verifica la existencia de la columna `tipo_tramo` en la base de datos
+2. Muestra la distribución de reservas por tipo ('ida', 'vuelta', 'solo_ida')
+3. Lista las últimas 10 reservas vinculadas con sus tipos y relaciones
+4. Detecta automáticamente problemas de integridad:
+   - Reservas hijas (con `tramoPadreId`) que NO sean tipo 'vuelta'
+   - Reservas padres (con `tramoHijoId`) que NO sean tipo 'ida'
+
+**Uso**:
+```bash
+cd backend
+node diagnosticar-tipo-tramo.js
+```
+
+**Hallazgos del Último Diagnóstico (10 Feb 2026)**:
+- ✅ La columna `tipo_tramo` existe y está correctamente configurada
+- ✅ Todas las reservas vinculadas tienen tipos correctos asignados
+- ✅ No se detectaron inconsistencias en los datos actuales
+- ℹ️ El sistema está funcionando correctamente desde la implementación
+
+> [!TIP]
+> **Para Troubleshooting**: Si un usuario reporta problemas con reservas ida/vuelta, ejecutar primero este script de diagnóstico para verificar si el problema está en los datos (backend) o en la visualización (frontend).
+
 
 ### 5.9 Optimización del Modal de Detalles de Reserva
 

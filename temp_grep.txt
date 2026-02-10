@@ -1,0 +1,5 @@
+852:			const esVuelta = r.tipoTramo === 'vuelta';
+2774:					tipoTramo: "vuelta",
+2797:					tipoTramo: "ida",
+3548:					tipoTramo: "vuelta",
+3575:					tipoTramo: "ida",
