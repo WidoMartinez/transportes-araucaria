@@ -7734,7 +7734,8 @@ app.post("/api/payment-result", async (req, res) => {
 					// Codificar datos de usuario en Base64 para mayor privacidad
 					const userDataEncoded = Buffer.from(JSON.stringify(userData)).toString('base64');
 					
-					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${userDataEncoded}`;
+					// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas)
+					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${encodeURIComponent(userDataEncoded)}`;
 					
 					return res.redirect(303, returnUrl);
 				}
@@ -7787,7 +7788,8 @@ app.post("/api/payment-result", async (req, res) => {
 				};
 				const userDataEncodedExpress = Buffer.from(JSON.stringify(userDataExpress)).toString('base64');
 
-				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}&d=${userDataEncodedExpress}`);
+				// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas)
+				return res.redirect(303, `${frontendBase}/?flow_payment=success&reserva_id=${reservaId}&amount=${montoExpress}&d=${encodeURIComponent(userDataEncodedExpress)}`);
 			} else if (reservaId && flowData.status === 1) {
 				// Pago PENDIENTE - No registrar conversión aún
 				console.warn(`⏳ Pago PENDIENTE (Reserva ${reservaId}, Status: ${flowData.status}). Redirigiendo con status=pending.`);

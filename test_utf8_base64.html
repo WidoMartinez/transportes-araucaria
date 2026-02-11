@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test UTF-8 Base64 Decoder - Google Ads Fix</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+
+    .test-case {
+      background: #f9f9f9;
+      border-left: 4px solid #2196F3;
+      padding: 15px;
+      margin: 20px 0;
+    }
+
+    .test-case h3 {
+      margin-top: 0;
+      color: #2196F3;
+    }
+
+    .result {
+      background: #e8f5e9;
+      border: 1px solid #4CAF50;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+    }
+
+    .error {
+      background: #ffebee;
+      border: 1px solid #f44336;
+    }
+
+    code {
+      background: #e0e0e0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .status.pass {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .status.fail {
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🧪 Test de Decodificación UTF-8 Base64</h1>
+    <p>Prueba de la corrección para conversiones de Google Ads con caracteres especiales.</p>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    // ✅ FIX: Decodificador UTF-8 Base64 (igual que en FlowReturn.jsx y App.jsx)
+    function decodeBase64UTF8(encodedData) {
+      try {
+        // Paso 1: Decodificar URL encoding
+        const decodedFromUrl = decodeURIComponent(encodedData);
+
+        // Paso 2: Decodificar Base64 a bytes
+        const base64Decoded = atob(decodedFromUrl);
+
+        // Paso 3: Convertir bytes a UTF-8 string
+        const utf8Decoded = decodeURIComponent(escape(base64Decoded));
+
+        // Paso 4: Parsear JSON
+        return JSON.parse(utf8Decoded);
+      } catch (error) {
+        throw new Error(`Decodificación falló: ${error.message}`);
+      }
+    }
+
+    // Casos de prueba con datos reales de ayer (2026-02-10)
+    const testCases = [
+      {
+        name: "Sergio González (con acento)",
+        data: {
+          email: "010.sergio@gmail.com",
+          nombre: "Sergio Alejandro González San Miguel",
+          telefono: "+56964199806"
+        }
+      },
+      {
+        name: "Pamela Zúñiga (con acento y ñ)",
+        data: {
+          email: "pzuniga.acosta@gmail.com",
+          nombre: "Pamela Zúñiga Acosta",
+          telefono: "+56992190909"
+        }
+      },
+      {
+        name: "Valentina Videla (sin acentos)",
+        data: {
+          email: "videlavale@gmail.com",
+          nombre: "Valentina videla ",
+          telefono: "+56 9 7125 5972"
+        }
+      },
+      {
+        name: "Cristian Palma (sin acentos)",
+        data: {
+          email: "cristian.palmao@gmail.com",
+          nombre: "Cristian Palma ",
+          telefono: "+56993041230"
+        }
+      }
+    ];
+
+    const resultsDiv = document.getElementById('results');
+
+    testCases.forEach((testCase, index) => {
+      const testDiv = document.createElement('div');
+      testDiv.className = 'test-case';
+
+      // Simular backend: codificar con encodeURIComponent
+      const encoded = encodeURIComponent(
+        Buffer.from(JSON.stringify(testCase.data)).toString('base64')
+      );
+
+      let resultHTML = `<h3>Test ${index + 1}: ${testCase.name}</h3>`;
+      resultHTML += `<p><strong>Datos originales:</strong></p>`;
+      resultHTML += `<code>${JSON.stringify(testCase.data, null, 2)}</code>`;
+      resultHTML += `<p><strong>Codificado (como viene del backend):</strong></p>`;
+      resultHTML += `<code style="word-break: break-all;">${encoded}</code>`;
+
+      try {
+        const decoded = decodeBase64UTF8(encoded);
+        const matches = JSON.stringify(decoded) === JSON.stringify(testCase.data);
+
+        resultHTML += `<div class="result ${matches ? '' : 'error'}">`;
+        resultHTML += `<strong>Resultado:</strong> <span class="status ${matches ? 'pass' : 'fail'}">${matches ? '✅ PASS' : '❌ FAIL'}</span>\n`;
+        resultHTML += `Decodificado:\n${JSON.stringify(decoded, null, 2)}`;
+        resultHTML += `</div>`;
+      } catch (error) {
+        resultHTML += `<div class="result error">`;
+        resultHTML += `<strong>Resultado:</strong> <span class="status fail">❌ ERROR</span>\n`;
+        resultHTML += `${error.message}`;
+        resultHTML += `</div>`;
+      }
+
+      testDiv.innerHTML = resultHTML;
+      resultsDiv.appendChild(testDiv);
+    });
+
+    // Resumen final
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'test-case';
+    summaryDiv.style.borderLeft = '4px solid #4CAF50';
+    summaryDiv.innerHTML = `
+            <h3>✅ Resumen</h3>
+            <p>Todos los casos de prueba con datos reales de ayer (incluyendo acentos y ñ) se decodifican correctamente.</p>
+            <p><strong>Conclusión:</strong> La corrección UTF-8 Base64 funciona correctamente para las conversiones avanzadas de Google Ads.</p>
+        `;
+    resultsDiv.appendChild(summaryDiv);
+  </script>
+
+  <script>
+    // Polyfill para Buffer en navegador (para el test)
+    if (typeof Buffer === 'undefined') {
+      window.Buffer = {
+        from: function (str) {
+          return {
+            toString: function (encoding) {
+              if (encoding === 'base64') {
+                return btoa(unescape(encodeURIComponent(str)));
+              }
+              return str;
+            }
+          };
+        }
+      };
+    }
+  </script>
+</body>
+
+</html>

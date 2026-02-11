@@ -140,20 +140,33 @@ function FlowReturn() {
 						const encodedData = urlParams.get('d');
 						if (encodedData) {
 							try {
-								const decodedData = atob(encodedData); // Decodificar Base64
-								const userData = JSON.parse(decodedData);
+								// ✅ FIX: Decodificar Base64 con soporte UTF-8 para caracteres especiales (acentos, ñ, etc.)
+								// Paso 1: Decodificar URL encoding (revertir encodeURIComponent del backend)
+								const decodedFromUrl = decodeURIComponent(encodedData);
 								
-								// Validar que el objeto decodificado tenga la estructura esperada
+								// Paso 2: Decodificar Base64 a bytes
+								const base64Decoded = atob(decodedFromUrl);
+								
+								// Paso 3: Convertir bytes a UTF-8 string (maneja acentos correctamente)
+								const utf8Decoded = decodeURIComponent(escape(base64Decoded));
+								
+								// Paso 4: Parsear JSON
+								const userData = JSON.parse(utf8Decoded);
+								
 								if (userData && typeof userData === 'object') {
 									userEmail = userData.email || '';
 									userName = userData.nombre || '';
 									userPhone = userData.telefono || '';
-									console.log('✅ Datos de usuario decodificados desde parámetro Base64');
+									console.log('✅ Datos de usuario decodificados desde parámetro Base64 (UTF-8)');
+									console.log(`   - Email: ${userEmail}`);
+									console.log(`   - Nombre: ${userName}`);
+									console.log(`   - Teléfono: ${userPhone}`);
 								} else {
 									throw new Error('Estructura de datos inválida');
 								}
 							} catch (error) {
 								console.warn('⚠️ Error decodificando datos de usuario:', error.message);
+								console.warn('   Parámetro d recibido:', encodedData);
 								// Fallback a parámetros individuales (compatibilidad con URLs antiguas)
 								userEmail = urlParams.get('email') || '';
 								userName = urlParams.get('nombre') || '';

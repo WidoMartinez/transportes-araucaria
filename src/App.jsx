@@ -461,15 +461,27 @@ function App() {
 						// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
 						if (encodedData) {
 							try {
-								const decodedData = atob(encodedData);
-								const userData = JSON.parse(decodedData);
+								// ✅ FIX: Decodificar Base64 con soporte UTF-8 para caracteres especiales (acentos, ñ, etc.)
+								// Paso 1: Decodificar URL encoding (revertir encodeURIComponent del backend)
+								const decodedFromUrl = decodeURIComponent(encodedData);
+								
+								// Paso 2: Decodificar Base64 a bytes
+								const base64Decoded = atob(decodedFromUrl);
+								
+								// Paso 3: Convertir bytes a UTF-8 string (maneja acentos correctamente)
+								const utf8Decoded = decodeURIComponent(escape(base64Decoded));
+								
+								// Paso 4: Parsear JSON
+								const userData = JSON.parse(utf8Decoded);
 								if (userData && typeof userData === 'object') {
 									userEmail = userData.email || '';
 									userName = userData.nombre || '';
 									userPhone = userData.telefono || '';
+									console.log('✅ [App.jsx] Datos de usuario decodificados desde parámetro Base64 (UTF-8)');
 								}
 							} catch (e) {
-								console.warn('⚠️ Error decodificando d-param:', e.message);
+								console.warn('⚠️ [App.jsx] Error decodificando d-param:', e.message);
+								console.warn('   Parámetro d recibido:', encodedData);
 							}
 						}
 
