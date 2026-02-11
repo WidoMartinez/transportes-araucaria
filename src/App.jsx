@@ -1757,6 +1757,7 @@ function App() {
 			totalConDescuento: pricing.totalConDescuento,
 			codigoDescuento: codigoAplicado?.codigo || "",
 			upgradeVan: formData.upgradeVan || false,
+			sillaInfantil: formData.sillaInfantil || false,
 			observaciones: generarObservaciones(formData.mensaje, formData.upgradeVan),
 			// Estado inicial: marcar como pendiente hasta confirmar pago
 			estado: "pendiente",
