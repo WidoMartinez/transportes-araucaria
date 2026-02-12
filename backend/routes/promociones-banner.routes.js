@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import PromocionBanner from "../models/PromocionBanner.js";
 import { authJWT } from "../middleware/authJWT.js";
+import { apiLimiter } from "../middleware/rateLimiter.js";
 import { Op } from "sequelize";
 
 const router = express.Router();
@@ -91,7 +92,7 @@ res.status(500).json({ error: "Error al obtener promociones" });
 });
 
 // GET /api/promociones-banner - Obtener todas las promociones (admin)
-router.get("/", authJWT, async (req, res) => {
+router.get("/", apiLimiter, authJWT, async (req, res) => {
 try {
 const promociones = await PromocionBanner.findAll({
 order: [["orden", "ASC"], ["created_at", "DESC"]],
@@ -105,7 +106,7 @@ res.status(500).json({ error: "Error al obtener promociones" });
 });
 
 // GET /api/promociones-banner/:id - Obtener una promoción por ID (admin)
-router.get("/:id", authJWT, async (req, res) => {
+router.get("/:id", apiLimiter, authJWT, async (req, res) => {
 try {
 const promocion = await PromocionBanner.findByPk(req.params.id);
 
@@ -121,7 +122,7 @@ res.status(500).json({ error: "Error al obtener promoción" });
 });
 
 // POST /api/promociones-banner - Crear promoción con imagen (admin)
-router.post("/", authJWT, upload.single("imagen"), async (req, res) => {
+router.post("/", apiLimiter, authJWT, upload.single("imagen"), async (req, res) => {
 try {
 if (!req.file) {
 return res.status(400).json({ error: "La imagen es requerida" });
@@ -182,7 +183,7 @@ res.status(500).json({ error: "Error al crear promoción" });
 });
 
 // PUT /api/promociones-banner/:id - Actualizar promoción (admin)
-router.put("/:id", authJWT, upload.single("imagen"), async (req, res) => {
+router.put("/:id", apiLimiter, authJWT, upload.single("imagen"), async (req, res) => {
 try {
 const promocion = await PromocionBanner.findByPk(req.params.id);
 
@@ -262,7 +263,7 @@ res.status(500).json({ error: "Error al actualizar promoción" });
 });
 
 // DELETE /api/promociones-banner/:id - Eliminar promoción (admin)
-router.delete("/:id", authJWT, async (req, res) => {
+router.delete("/:id", apiLimiter, authJWT, async (req, res) => {
 try {
 const promocion = await PromocionBanner.findByPk(req.params.id);
 
@@ -300,7 +301,7 @@ res.status(500).json({ error: "Error al eliminar promoción" });
 import Reserva from "../models/Reserva.js";
 import Cliente from "../models/Cliente.js";
 
-router.post("/desde-promocion/:id", async (req, res) => {
+router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
 try {
 const promocionId = req.params.id;
 const { nombre, email, telefono, fecha_ida, hora_ida, fecha_vuelta, hora_vuelta } = req.body;
