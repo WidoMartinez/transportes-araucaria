@@ -112,9 +112,9 @@ function HeroExpress({
 
 	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
 	const targetName = useMemo(() => {
-		return formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro"
+		return formData.destino !== "Aeropuerto La Araucanía"
 			? formData.destino
-			: (formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro" ? formData.origen : null);
+			: (formData.origen !== "Aeropuerto La Araucanía" ? formData.origen : null);
 	}, [formData.destino, formData.origen]);
 
 	const timeOptions = useMemo(() => {
@@ -189,9 +189,7 @@ function HeroExpress({
 	}, [formData.fecha]);
 
 	const tieneCotizacionAutomatica = typeof cotizacion.precio === "number";
-	const requiereCotizacionManual =
-		formData.destino === "Otro" ||
-		(formData.destino && !tieneCotizacionAutomatica);
+	const requiereCotizacionManual = formData.destino && !tieneCotizacionAutomatica;
 	const mostrarPrecio = tieneCotizacionAutomatica;
 
 
@@ -234,10 +232,10 @@ function HeroExpress({
 		}
 
 		// Fallback: Textos genéricos basados en selección
-		if (formData.destino && formData.destino !== "Aeropuerto La Araucanía" && formData.destino !== "Otro") {
+		if (formData.destino && formData.destino !== "Aeropuerto La Araucanía") {
 			return { title: `Viaja a ${formData.destino}`, subtitle: "Comodidad y seguridad garantizada." };
 		}
-		if (formData.origen && formData.origen !== "Aeropuerto La Araucanía" && formData.origen !== "Otro") {
+		if (formData.origen && formData.origen !== "Aeropuerto La Araucanía") {
 			return { title: `Viaja desde ${formData.origen}`, subtitle: "Comenzamos el viaje donde tú estés." };
 		}
 
@@ -645,7 +643,7 @@ function HeroExpress({
 												{origenes.map((o) => (
 													<option key={o} value={o}>{o}</option>
 												))}
-												<option value="Otro">Otro (Ingresar dirección...)</option>
+						
 											</select>
 											{/* Flecha personalizada para mejor visibilidad móvil */}
 											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
@@ -686,7 +684,7 @@ function HeroExpress({
 												{destinos.map((d) => (
 													<option key={d} value={d}>{d}</option>
 												))}
-												<option value="Otro">Otro (Ingresar dirección...)</option>
+						
 											</select>
 											<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
 												<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -697,46 +695,6 @@ function HeroExpress({
 									</div>
 								</div>
 
-								{/* Campos de dirección específica para "Otro" */}
-								<AnimatePresence>
-									{formData.origen === "Otro" && (
-										<motion.div
-											initial={{ opacity: 0, height: 0 }}
-											animate={{ opacity: 1, height: "auto" }}
-											exit={{ opacity: 0, height: 0 }}
-											className="space-y-2 overflow-hidden"
-										>
-											<Label htmlFor="otroOrigen" className="text-base md:text-sm font-semibold text-foreground">Dirección de Origen</Label>
-											<AddressAutocomplete
-												id="otroOrigen"
-												name="otroOrigen"
-												value={formData.otroOrigen}
-												onChange={handleInputChange}
-												placeholder="Ej: Av. Alemania 1234, Temuco"
-												className="bg-white"
-											/>
-										</motion.div>
-									)}
-
-									{formData.destino === "Otro" && (
-										<motion.div
-											initial={{ opacity: 0, height: 0 }}
-											animate={{ opacity: 1, height: "auto" }}
-											exit={{ opacity: 0, height: 0 }}
-											className="space-y-2 overflow-hidden"
-										>
-											<Label htmlFor="otroDestino" className="text-base md:text-sm font-semibold text-foreground">Dirección de Destino</Label>
-											<AddressAutocomplete
-												id="otroDestino"
-												name="otroDestino"
-												value={formData.otroDestino}
-												onChange={handleInputChange}
-												placeholder="Ej: Condominio Las Nieves, Corralco"
-												className="bg-white"
-											/>
-										</motion.div>
-									)}
-								</AnimatePresence>
 
 								{/* Fecha y Hora - Optimizados para móvil */}
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">

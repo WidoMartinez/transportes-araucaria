@@ -311,7 +311,7 @@ function App() {
 
 	// --- LÓGICA DE RETORNOS UNIVERSALES (CENTRALIZADA) ---
 	const buscarRetornosUniversal = async (origen, destino, fecha) => {
-		if (!origen || !destino || !fecha || origen === "Otro" || destino === "Otro") {
+		if (!origen || !destino || !fecha) {
 			setOportunidadesRetornoUniversal(null);
 			return;
 		}
