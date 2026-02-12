@@ -23,6 +23,7 @@ import {
   Percent,
   Sliders,
   ChevronLeft,
+  Sparkles,
   ChevronRight as ChevronRightIcon
 } from "lucide-react";
 import { Button } from "../../ui/button";
@@ -110,6 +111,7 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
       color: "text-pink-600",
       bgColor: "bg-pink-50",
       items: [
+        { id: "promociones", label: "Promociones", icon: Sparkles },
         { id: "codigos", label: "Códigos", icon: Tag },
         { id: "codigos-mejorado", label: "Códigos Mejorado", icon: Tag }
       ]

@@ -20,6 +20,7 @@ import { LoaderCircle } from "lucide-react";
 
 // --- Componentes de Sección ---
 import Header from "./components/Header";
+import PromocionBanners from "./components/PromocionBanners";
 // Hero eliminado - solo flujo express disponible
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
@@ -2018,6 +2019,7 @@ function App() {
 			</Dialog>
 
 			<Header />
+			<PromocionBanners />
 
 			<main>
 				{/* Solo flujo express disponible */}
