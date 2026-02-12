@@ -361,6 +361,7 @@ new Date(promo.fecha_inicio).toLocaleDateString("es-CL")}
 <div className="flex items-center justify-between">
 <span className="text-sm text-gray-600">Mostrar en sitio</span>
 <Switch
+									aria-label="Activar o desactivar promoción"
 checked={promo.activo}
 onCheckedChange={() => toggleActivo(promo.id, promo.activo)}
 />
@@ -580,6 +581,7 @@ Mostrar en el carrusel del sitio web
 </p>
 </div>
 <Switch
+									aria-label="Activar o desactivar promoción"
 id="activo"
 checked={formData.activo}
 onCheckedChange={(checked) =>

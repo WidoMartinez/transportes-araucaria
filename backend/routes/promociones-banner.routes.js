@@ -295,7 +295,6 @@ res.status(500).json({ error: "Error al eliminar promoción" });
 }
 });
 
-export default router;
 
 // POST /api/reservas/desde-promocion - Crear reserva desde promoción banner
 import Reserva from "../models/Reserva.js";
@@ -388,3 +387,5 @@ res.status(500).json({ error: "Error al crear reserva" });
 }
 });
 
+
+export default router;

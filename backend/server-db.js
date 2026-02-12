@@ -529,7 +529,7 @@ app.options("*", (req, res) => {
 app.use("/api/auth", authRoutes);
 
 // Configurar rutas de oportunidades
-n// --- RUTAS DE PROMOCIONES BANNER ---
+// --- RUTAS DE PROMOCIONES BANNER ---
 app.use("/api/promociones-banner", promocionesBannerRoutes);
 setupOportunidadesRoutes(app, authAdmin);
 
