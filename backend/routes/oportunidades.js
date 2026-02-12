@@ -152,14 +152,18 @@ console.log(`  - Lugar Remoto: ${lugarRemoto}`);
 console.log(`  - Duración usada: ${duracionViajeMinutos} min`);
 
 // 1. RETORNO VACÍO: crear oportunidad de destino → origen
-if (reserva.estado === "confirmada" || reserva.estado === "completada") {
-const existeRetorno = await Oportunidad.findOne({
-where: {
-reservaRelacionadaId: reserva.id,
-tipo: "retorno_vacio",
-estado: ["disponible", "reservada"],
-},
-});
+// REGLA DE NEGOCIO: Si el destino es el AEROPUERTO, el vehículo ya está en la base, no hay retorno.
+if (
+  (reserva.estado === "confirmada" || reserva.estado === "completada") &&
+  reserva.destino !== AEROPUERTO
+) {
+  const existeRetorno = await Oportunidad.findOne({
+    where: {
+      reservaRelacionadaId: reserva.id,
+      tipo: "retorno_vacio",
+      estado: ["disponible", "reservada"],
+    },
+  });
 
 if (!existeRetorno) {
 // Calcular hora aproximada: hora de llegada al destino + 30 minutos
