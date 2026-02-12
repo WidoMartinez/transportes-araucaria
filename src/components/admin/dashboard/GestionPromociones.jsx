@@ -39,6 +39,7 @@ DollarSign,
 ArrowUpDown,
 } from "lucide-react";
 import { getBackendUrl } from "../../../lib/backend";
+import { destinosBase } from "../../../data/destinos";
 
 /**
  * Panel de administración de promociones banner
@@ -54,7 +55,7 @@ nombre: "",
 precio: "",
 tipo_viaje: "ida",
 destino: "",
-origen: "Temuco",
+origen: "Aeropuerto La Araucanía",
 max_pasajeros: "3",
 activo: true,
 orden: "0",
@@ -64,9 +65,31 @@ fecha_fin: "",
 const [imagenFile, setImagenFile] = useState(null);
 const [previewUrl, setPreviewUrl] = useState("");
 
+	const [destinosDisponibles, setDestinosDisponibles] = useState([]);
+
+	const loadDestinos = async () => {
+		try {
+			const response = await fetch(`${getBackendUrl()}/pricing`);
+			if (response.ok) {
+				const data = await response.json();
+				const destinos = data.destinations || [];
+				const nombresDestinos = destinos.map(d => d.nombre).filter(Boolean);
+				setDestinosDisponibles(["Aeropuerto La Araucanía", ...nombresDestinos]);
+			} else {
+				// Fallback a destinos base
+				setDestinosDisponibles(["Aeropuerto La Araucanía", ...destinosBase.map(d => d.nombre)]);
+			}
+		} catch (error) {
+			console.error("Error al cargar destinos:", error);
+			// Fallback a destinos base
+			setDestinosDisponibles(["Aeropuerto La Araucanía", ...destinosBase.map(d => d.nombre)]);
+		}
+	};
+
 // Cargar promociones
 useEffect(() => {
 loadPromociones();
+		loadDestinos();
 }, []);
 
 const loadPromociones = async () => {
@@ -95,7 +118,7 @@ nombre: "",
 precio: "",
 tipo_viaje: "ida",
 destino: "",
-origen: "Temuco",
+origen: "Aeropuerto La Araucanía",
 max_pasajeros: "3",
 activo: true,
 orden: "0",
@@ -195,6 +218,7 @@ throw new Error(error.error || "Error al guardar promoción");
 }
 
 await loadPromociones();
+		loadDestinos();
 setIsDialogOpen(false);
 alert(
 editingPromocion
@@ -234,6 +258,7 @@ throw new Error("Error al eliminar promoción");
 }
 
 await loadPromociones();
+		loadDestinos();
 alert("Promoción eliminada exitosamente");
 } catch (error) {
 console.error("Error al eliminar promoción:", error);
@@ -267,6 +292,7 @@ throw new Error("Error al actualizar estado");
 }
 
 await loadPromociones();
+		loadDestinos();
 } catch (error) {
 console.error("Error al actualizar estado:", error);
 alert("Error al actualizar estado");
@@ -486,24 +512,42 @@ setFormData({ ...formData, tipo_viaje: value })
 
 <div className="space-y-2">
 <Label htmlFor="origen">Origen</Label>
-<Input
-id="origen"
+<Select
 value={formData.origen}
-onChange={(e) => setFormData({ ...formData, origen: e.target.value })}
-placeholder="Temuco"
-/>
+onValueChange={(value) => setFormData({ ...formData, origen: value })}
+>
+<SelectTrigger>
+<SelectValue placeholder="Seleccionar origen" />
+</SelectTrigger>
+<SelectContent>
+{destinosDisponibles.map((destino) => (
+<SelectItem key={destino} value={destino}>
+{destino}
+</SelectItem>
+))}
+</SelectContent>
+</Select>
 </div>
 
 <div className="space-y-2">
 <Label htmlFor="destino">
 Destino <span className="text-red-500">*</span>
 </Label>
-<Input
-id="destino"
+<Select
 value={formData.destino}
-onChange={(e) => setFormData({ ...formData, destino: e.target.value })}
-placeholder="Pucón"
-/>
+onValueChange={(value) => setFormData({ ...formData, destino: value })}
+>
+<SelectTrigger>
+<SelectValue placeholder="Seleccionar destino" />
+</SelectTrigger>
+<SelectContent>
+{destinosDisponibles.map((destino) => (
+<SelectItem key={destino} value={destino}>
+{destino}
+</SelectItem>
+))}
+</SelectContent>
+</Select>
 </div>
 
 <div className="space-y-2">
