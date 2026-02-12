@@ -5740,6 +5740,16 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			}, { transaction });
 
 			console.log(`✅ [BULK-UPDATE] Estado actualizado: ${nuevoEstado}`);
+
+			// 🎯 NUEVO: Generar oportunidades automáticamente si se confirma
+			if (nuevoEstado === "confirmada") {
+				try {
+					console.log(`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`);
+					await detectarYGenerarOportunidades(reserva);
+				} catch (opErr) {
+					console.error("❌ Error generando oportunidades en Bulk Update:", opErr.message);
+				}
+			}
 		}
 
 		// 6. Re-asignación (si se proporciona)
@@ -7459,6 +7469,16 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			"a:",
 			estado
 		);
+
+		// 🎯 NUEVO: Generar oportunidades automáticamente si se confirma
+		if (estado === "confirmada") {
+			try {
+				console.log(`🎯 Generando oportunidades (Cambio Estado) para reserva ${reserva.id}...`);
+				await detectarYGenerarOportunidades(reserva);
+			} catch (opErr) {
+				console.error("❌ Error generando oportunidades en cambio de estado:", opErr.message);
+			}
+		}
 		res.json({
 			success: true,
 			message: "Estado actualizado",
@@ -8202,6 +8222,16 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			saldoPagado,
 		});
 
+		// 🎯 NUEVO: Generar oportunidades automáticamente para Ida
+		if (nuevoEstadoReserva === "confirmada") {
+			try {
+				console.log(`🎯 Generando oportunidades (Flow Webhook Main) para reserva ${reserva.id}...`);
+				await detectarYGenerarOportunidades(reserva);
+			} catch (opErr) {
+				console.error("❌ Error generando oportunidades en Flow Webhook Main:", opErr.message);
+			}
+		}
+
 		// --- ACTUALIZAR RESERVA VINCULADA (VUELTA) ---
 		// Usar la instancia de reservaHija obtenida previamente
 		if (reservaHija && montoVuelta > 0) {
@@ -8255,6 +8285,16 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					saldoPagado: saldoPagadoHija
 				});
 				console.log(`✅ Reserva vinculada actualizada: Estado ${estadoReservaHija}, Pago ${estadoPagoHija}`);
+
+				// 🎯 NUEVO: Generar oportunidades automáticamente para Vuelta
+				if (estadoReservaHija === "confirmada") {
+					try {
+						console.log(`🎯 Generando oportunidades (Flow Webhook Hija) para reserva ${reservaHija.id}...`);
+						await detectarYGenerarOportunidades(reservaHija);
+					} catch (opErr) {
+						console.error("❌ Error generando oportunidades en Flow Webhook Hija:", opErr.message);
+					}
+				}
 
 			} catch (errVinculada) {
 				console.error("⚠️ Error al actualizar reserva vinculada:", errVinculada.message);
