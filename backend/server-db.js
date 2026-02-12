@@ -60,6 +60,9 @@ import addOportunidadesTable from "./migrations/add-oportunidades-table.js";
 import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-oportunidades-table.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
+import createPromocionesBannerTable from "./migrations/create-promociones-banner-table.js";
+import PromocionBanner from "./models/PromocionBanner.js";
+import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import setupOportunidadesRoutes from "./routes/oportunidades.js";
@@ -526,6 +529,8 @@ app.options("*", (req, res) => {
 app.use("/api/auth", authRoutes);
 
 // Configurar rutas de oportunidades
+n// --- RUTAS DE PROMOCIONES BANNER ---
+app.use("/api/promociones-banner", promocionesBannerRoutes);
 setupOportunidadesRoutes(app, authAdmin);
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
@@ -725,6 +730,7 @@ const initializeDatabase = async () => {
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
+t	await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
