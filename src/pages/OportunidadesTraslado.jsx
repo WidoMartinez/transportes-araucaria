@@ -28,6 +28,7 @@ import {
   Car,
   CheckCircle2,
   Clock,
+  ArrowLeft,
 } from "lucide-react";
 import OportunidadCard from "../components/OportunidadCard";
 import SuscripcionOportunidades from "../components/SuscripcionOportunidades";
@@ -218,13 +219,12 @@ const destinos = [...new Set(oportunidades.map((op) => op.destino))];
 
 return (
 <div className="min-h-screen bg-gray-50">
-<section className="relative bg-chocolate-700 text-white py-32 overflow-hidden">
+<section className="relative bg-chocolate-700 text-white py-20 md:py-32 overflow-hidden">
   <div 
-    className="absolute inset-0 z-0 opacity-40"
+    className="absolute inset-0 z-0 opacity-50 md:opacity-40 bg-center md:bg-[center_80%]"
     style={{
       backgroundImage: vansBg ? `url(${vansBg})` : 'none',
       backgroundSize: 'cover',
-      backgroundPosition: 'center 80%',
       mixBlendMode: 'overlay'
     }}
   ></div>
@@ -302,7 +302,7 @@ precio
 
 <section className="py-16 bg-gray-50">
 <div className="container mx-auto px-4">
-<div className="flex justify-between items-center mb-8">
+<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
 <div>
 <h2 className="text-4xl font-bold text-gray-800">
 Oportunidades Activas
@@ -311,16 +311,26 @@ Oportunidades Activas
 Actualización automática cada 2 minutos
 </p>
 </div>
-<Button
-onClick={() => cargarOportunidades()}
-variant="outline"
-disabled={loading}
->
-<RefreshCw
-className={"h-4 w-4 mr-2 " + (loading ? "animate-spin" : "")}
-/>
-Actualizar
-</Button>
+						<div className="flex items-center gap-2">
+							<Button
+								variant="ghost"
+								className="text-gray-600 hover:text-chocolate-600 font-medium"
+								onClick={() => (window.location.href = "/")}
+							>
+								<ArrowLeft className="h-4 w-4 mr-2" />
+								Volver al Inicio
+							</Button>
+							<Button
+								onClick={() => cargarOportunidades()}
+								variant="outline"
+								disabled={loading}
+							>
+								<RefreshCw
+									className={"h-4 w-4 mr-2 " + (loading ? "animate-spin" : "")}
+								/>
+								Actualizar
+							</Button>
+						</div>
 </div>
 
 <div className="bg-white p-6 rounded-lg shadow-sm mb-8">

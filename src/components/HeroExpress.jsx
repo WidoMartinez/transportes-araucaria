@@ -586,6 +586,24 @@ function HeroExpress({
 							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 						</p>
 
+						{/* 📢 NUEVO: Badge promocional de Tarifas Bajas para Móvil */}
+						<motion.div 
+							initial={{ opacity: 0, scale: 0.9 }}
+							animate={{ opacity: 1, scale: 1 }}
+							transition={{ delay: 0.6 }}
+							className="mt-2 mb-4"
+						>
+							<a 
+								href="/oportunidades" 
+								className="flex items-center gap-2 px-4 py-2 bg-chocolate-600/90 backdrop-blur-md rounded-full border border-chocolate-400 shadow-xl animate-pulse-subtle"
+							>
+								<Sparkles className="h-4 w-4 text-chocolate-100" />
+								<span className="text-sm font-bold text-white">
+									¡Ahorra un 50%! Ver Oportunidades
+								</span>
+							</a>
+						</motion.div>
+
 						{/* Mobile Summary Pill - Tamaño táctil mejorado */}
 						{richInfo.isRich && (
 							<div className="flex flex-wrap justify-center gap-2 mt-2">
@@ -620,9 +638,27 @@ function HeroExpress({
 								<h2 className="text-4xl font-bold tracking-tight text-foreground mb-2">
 									{richInfo.isRich ? richInfo.titulo : richInfo.title}
 								</h2>
-								<p className="text-muted-foreground text-lg">
+								<p className="text-muted-foreground text-lg mb-4">
 									{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 								</p>
+								
+								{/* 📢 NUEVO: Badge promocional de Tarifas Bajas */}
+								<motion.div 
+									initial={{ opacity: 0, y: 10 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{ delay: 0.5 }}
+									className="inline-block"
+								>
+									<a 
+										href="/oportunidades" 
+										className="group flex items-center gap-2 px-3 py-1.5 bg-chocolate-50 border border-chocolate-200 rounded-full hover:bg-chocolate-100 transition-colors cursor-pointer animate-pulse-subtle"
+									>
+										<Sparkles className="h-4 w-4 text-chocolate-600" />
+										<span className="text-sm font-medium text-chocolate-800">
+											¡Ahorra hasta un 50%! Revisa nuestras <span className="font-bold underline decoration-chocolate-400 group-hover:decoration-chocolate-600">tarifas bajas en Oportunidades</span>
+										</span>
+									</a>
+								</motion.div>
 							</div>
 
 							<div className="space-y-5 md:space-y-4">

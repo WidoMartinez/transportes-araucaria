@@ -4,3 +4,19 @@
   z-index: 9999 !important;
   pointer-events: auto !important;
 }
+
+/* Animaciones personalizadas */
+@keyframes pulse-subtle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
