@@ -130,7 +130,7 @@ return null;
                         <div className="flex flex-col gap-1 md:gap-2 mb-4 md:mb-8">
                           <div className="flex items-baseline justify-center md:justify-start gap-2 md:gap-3">
                             <span className="text-3xl md:text-6xl font-black text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.3)]">
-                              ${promo.precio.toLocaleString("es-CL")}
+                              ${Number(promo.precio).toLocaleString("es-CL", { maximumFractionDigits: 0 })}
                             </span>
                           </div>
                           <p className="text-sm md:text-xl md:text-2xl font-medium text-white/90">
