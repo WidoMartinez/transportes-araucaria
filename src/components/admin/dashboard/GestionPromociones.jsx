@@ -88,6 +88,7 @@ export default function GestionPromociones() {
     orden: "0",
     fecha_inicio: "",
     fecha_fin: "",
+    posicion_imagen: "center",
   });
   const [imagenFile, setImagenFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -166,6 +167,7 @@ activo: true,
 orden: "0",
 fecha_inicio: "",
 fecha_fin: "",
+posicion_imagen: "center",
 });
 setImagenFile(null);
 setPreviewUrl("");
@@ -186,6 +188,7 @@ activo: promocion.activo,
 orden: promocion.orden.toString(),
 fecha_inicio: promocion.fecha_inicio || "",
 fecha_fin: promocion.fecha_fin || "",
+posicion_imagen: promocion.posicion_imagen || "center",
 });
 setImagenFile(null);
 setPreviewUrl(`${getBackendUrl()}${promocion.imagen_url}`);
@@ -238,6 +241,7 @@ formDataToSend.append("activo", formData.activo);
 formDataToSend.append("orden", formData.orden);
 formDataToSend.append("fecha_inicio", formData.fecha_inicio);
 formDataToSend.append("fecha_fin", formData.fecha_fin);
+formDataToSend.append("posicion_imagen", formData.posicion_imagen);
 
 if (imagenFile) {
 formDataToSend.append("imagen", imagenFile);
@@ -622,6 +626,28 @@ onChange={(e) => setFormData({ ...formData, orden: e.target.value })}
 placeholder="0"
 />
 <p className="text-xs text-gray-500">Menor número = mayor prioridad</p>
+</div>
+
+<div className="space-y-2">
+<Label htmlFor="posicion_imagen">Posición de Imagen</Label>
+<Select
+value={formData.posicion_imagen}
+onValueChange={(value) => setFormData({ ...formData, posicion_imagen: value })}
+>
+<SelectTrigger>
+<SelectValue placeholder="Seleccionar posición" />
+</SelectTrigger>
+<SelectContent>
+<SelectItem value="center">Centrado (Default)</SelectItem>
+<SelectItem value="top">Superior</SelectItem>
+<SelectItem value="bottom">Inferior</SelectItem>
+<SelectItem value="left">Izquierda</SelectItem>
+<SelectItem value="right">Derecha</SelectItem>
+<SelectItem value="top center">Superior Centro</SelectItem>
+<SelectItem value="bottom center">Inferior Centro</SelectItem>
+</SelectContent>
+</Select>
+<p className="text-xs text-gray-500">Útil si el contenido importante de la foto no está al centro.</p>
 </div>
 </div>
 

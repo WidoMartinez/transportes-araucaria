@@ -80,6 +80,7 @@ return null;
                       src={`${getBackendUrl()}${promo.imagen_url}`}
                       alt={promo.nombre}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/banner:scale-110"
+                      style={{ objectPosition: promo.posicion_imagen || "center" }}
                       onError={(e) => {
                         e.target.src = "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=2000";
                       }}

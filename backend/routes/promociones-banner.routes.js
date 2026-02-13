@@ -141,6 +141,7 @@ activo,
 orden,
 fecha_inicio,
 fecha_fin,
+posicion_imagen,
 } = req.body;
 
 // Validaciones básicas
@@ -167,6 +168,7 @@ activo: activo === "true" || activo === true,
 orden: orden ? parseInt(orden) : 0,
 fecha_inicio: fecha_inicio || null,
 fecha_fin: fecha_fin || null,
+posicion_imagen: posicion_imagen || "center",
 });
 
 res.status(201).json(promocion);
@@ -208,6 +210,7 @@ activo,
 orden,
 fecha_inicio,
 fecha_fin,
+posicion_imagen,
 } = req.body;
 
 // Preparar datos de actualización
@@ -226,6 +229,8 @@ if (orden !== undefined) updateData.orden = parseInt(orden);
 if (fecha_inicio !== undefined)
 updateData.fecha_inicio = fecha_inicio || null;
 if (fecha_fin !== undefined) updateData.fecha_fin = fecha_fin || null;
+if (posicion_imagen !== undefined)
+updateData.posicion_imagen = posicion_imagen || "center";
 
 // Si hay nueva imagen, actualizar URL y eliminar imagen anterior
 if (req.file) {

@@ -64,6 +64,11 @@ type: DataTypes.DATEONLY,
 allowNull: true,
 comment: "Fecha de fin de vigencia (opcional)",
 },
+posicion_imagen: {
+type: DataTypes.STRING(50),
+defaultValue: "center",
+comment: "Posición de la imagen (object-position)",
+},
 },
 {
 tableName: "promociones_banner",

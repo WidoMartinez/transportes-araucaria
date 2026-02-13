@@ -63,6 +63,7 @@ import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-o
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import createPromocionesBannerTable from "./migrations/create-promociones-banner-table.js";
+import addPosicionImagenToPromocionesBanner from "./migrations/add-posicion-imagen-to-promociones-banner.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
@@ -742,6 +743,7 @@ const initializeDatabase = async () => {
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
 	await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
+	await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), sequelize); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
