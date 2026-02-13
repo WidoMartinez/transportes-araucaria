@@ -278,18 +278,24 @@ function AdminCodigosPago() {
 			nuevoForm.origen = type === "checkbox" ? checked : value;
 			// Si el origen es Aeropuerto, destino se fuerza a cualquier destino distinto de Aeropuerto
 			if (value === "Aeropuerto La Araucanía") {
-				nuevoForm.destino = "";
-			} else {
-				// Si el origen es cualquier destino, destino se fuerza a Aeropuerto
+				// Si el origen pasa a ser Aeropuerto y el destino ya era Aeropuerto, limpiar destino
+				if (formData.destino === "Aeropuerto La Araucanía") {
+					nuevoForm.destino = "";
+				}
+			} else if (value !== "Otro") {
+				// Si el origen es cualquier destino (no aeropuerto ni otro), el destino suele ser Aeropuerto
 				nuevoForm.destino = "Aeropuerto La Araucanía";
 			}
 		} else if (name === "destino") {
 			nuevoForm.destino = type === "checkbox" ? checked : value;
-			// Si el destino es Aeropuerto, origen se fuerza a cualquier destino distinto de Aeropuerto
+			// Restricción: No ambos Aeropuerto
 			if (value === "Aeropuerto La Araucanía") {
-				nuevoForm.origen = "";
-			} else {
-				// Si el destino es cualquier destino, origen se fuerza a Aeropuerto
+				// Si el destino pasa a ser Aeropuerto y el origen ya era Aeropuerto, limpiar origen
+				if (formData.origen === "Aeropuerto La Araucanía") {
+					nuevoForm.origen = "";
+				}
+			} else if (value !== "Otro") {
+				// Si el destino es cualquier destino (no aeropuerto ni otro), el origen suele ser Aeropuerto
 				nuevoForm.origen = "Aeropuerto La Araucanía";
 			}
 		} else {
@@ -812,15 +818,19 @@ function AdminCodigosPago() {
 								</div>
 							)}
 							<div className="space-y-2">
-								<Label htmlFor="vehiculo" className="text-base">Vehículo (opcional)</Label>
-								<Input
+								<Label htmlFor="vehiculo" className="text-base">Vehículo</Label>
+								<select
 									id="vehiculo"
 									name="vehiculo"
 									value={formData.vehiculo}
 									onChange={handleInputChange}
-									placeholder="Sedan, Van, etc."
-									className="h-12 md:h-10 text-base"
-								/>
+									className="h-12 md:h-10 border rounded px-3 w-full text-base"
+								>
+									<option value="">Seleccionar tipo...</option>
+									<option value="sedan">Sedan</option>
+									<option value="van">Van</option>
+									<option value="minibus">Minibus</option>
+								</select>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="pasajeros" className="text-base">Pasajeros</Label>
