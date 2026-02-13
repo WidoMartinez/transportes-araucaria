@@ -3,6 +3,8 @@
 // backend/server-db.js - Servidor con base de datos MySQL
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import axios from "axios";
 import crypto from "crypto";
@@ -93,7 +95,16 @@ const signParams = (params) => {
 	return crypto.createHmac("sha256", secretKey).update(toSign).digest("hex");
 };
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
+
+// Servir archivos estáticos de banners
+app.use("/banners", express.static(path.join(__dirname, "../public/banners")));
+
+// También servir desde la raíz por si acaso
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Configurar trust proxy para que Express confíe en los proxies (Render.com, nginx, etc.)
 // Esto es necesario para que express-rate-limit y otras librerías puedan leer correctamente
