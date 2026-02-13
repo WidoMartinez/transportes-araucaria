@@ -2019,7 +2019,6 @@ function App() {
 			</Dialog>
 
 			<Header />
-			<PromocionBanners />
 
 			<main>
 				{/* Solo flujo express disponible */}
@@ -2050,6 +2049,9 @@ function App() {
 					onAplicarCodigo={validarCodigo}
 					onRemoverCodigo={removerCodigo}
 				/>
+
+				<PromocionBanners />
+
 				<Servicios />
 				<Destinos />
 				<Destacados destinos={destacadosData} />
