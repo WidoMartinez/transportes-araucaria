@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { LogOut, User, Shield, Bell } from "lucide-react";
 import AdminSidebar from "./admin/layout/AdminSidebar";
 import DashboardHome from "./admin/dashboard/DashboardHome";
+import GestionPromociones from "./admin/dashboard/GestionPromociones";
 import AdminPricing from "./AdminPricing";
 import AdminCodigos from "./AdminCodigos";
 import AdminCodigosMejorado from "./AdminCodigosMejorado";
@@ -153,6 +154,8 @@ function AdminDashboard() {
               <AdminFestivos />
             ) : active === "bloqueos" ? (
               <AdminBloqueosAgenda />
+            ) : active === "promociones" ? (
+              <GestionPromociones />
             ) : active === "codigos" ? (
               <AdminCodigos />
             ) : active === "codigos-mejorado" ? (

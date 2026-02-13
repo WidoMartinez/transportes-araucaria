@@ -31,6 +31,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Gestión de Vencimiento de Códigos](#515-sistema-de-vencimiento-y-tiempos-restantes-en-códigos-de-pago)
    - [Sistema de Actualización Unificada (Bulk Update)](#516-sistema-de-actualización-unificada-bulk-update)
    - [Sistema de Oportunidades de Traslado](#517-sistema-de-oportunidades-de-traslado)
+   - [Sistema de Banners Promocionales](#518-sistema-de-banners-promocionales)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
@@ -1332,6 +1333,24 @@ Para reducir la fricción y maximizar las conversiones, las oportunidades cuenta
 -   **Base de Datos**: Transacción atómica que crea la `Reserva` y marca la `Oportunidad` como `reservada`.
 
 ---
+
+
+### 5.18 Sistema de Banners Promocionales
+
+**Implementado: Febrero 2026**
+
+Sistema integral para crear y administrar ofertas especiales con imágenes, desplegadas en un carrusel público y con flujo de reserva rápida.
+
+#### Características Clave
+- **Admin**: CRUD completo de banners con upload de imágenes.
+- **Frontend**: Carrusel auto-gestionable en Home.
+- **Reserva**: Modal de captura rápida de datos + Pago diferido.
+
+#### Flujo de Pago
+El sistema utiliza una redirección automática a Flow (`/create-payment`) inmediatamente después de crear la reserva, garantizando que las promos se paguen al instante.
+
+> [!NOTE]
+> Para detalles técnicos profundos (Modelo de datos, API, Configuración), consultar la **[Guía de Deployment y Arquitectura de Banners](./GUIA_DEPLOYMENT_BANNERS.md)**.
 
 
 ## 6. Mantenimiento y Despliegue
