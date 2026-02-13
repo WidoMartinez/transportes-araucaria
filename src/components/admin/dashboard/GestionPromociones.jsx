@@ -97,9 +97,12 @@ const [previewUrl, setPreviewUrl] = useState("");
 			const response = await fetch(`${getBackendUrl()}/pricing`);
 			if (response.ok) {
 				const data = await response.json();
-				const destinos = data.destinations || [];
+				// Usar 'destinos' (español) como en App.jsx, no 'destinations'
+				const destinos = data.destinos || [];
 				const nombresDestinos = destinos.map(d => d.nombre).filter(Boolean);
-				setDestinosDisponibles(["Aeropuerto La Araucanía", ...nombresDestinos]);
+				// Asegurar que "Aeropuerto La Araucanía" esté siempre disponible
+				const destinosUnicos = ["Aeropuerto La Araucanía", ...nombresDestinos.filter(n => n !== "Aeropuerto La Araucanía")];
+				setDestinosDisponibles(destinosUnicos);
 			} else {
 				// Fallback a destinos base
 				setDestinosDisponibles(["Aeropuerto La Araucanía", ...destinosBase.map(d => d.nombre)]);
