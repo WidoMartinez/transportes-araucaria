@@ -4,13 +4,20 @@
 import "./App.css";
 import { useState, useEffect, useMemo, useCallback } from "react";
 
+// --- UTILIDADES ---
+function normalizePhoneToE164(phone) {
+	if (!phone) return '';
+	let cleaned = phone.replace(/[\s\-()]/g, '');
+	if (cleaned.startsWith('+56')) return cleaned;
+	if (cleaned.startsWith('56')) return '+' + cleaned;
+	if (cleaned.startsWith('9') && cleaned.length >= 9) return '+56' + cleaned;
+	return '+56' + cleaned;
+}
+
 // --- Componentes UI ---
 import {
 	Dialog,
 	DialogClose,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "./components/ui/dialog";
@@ -494,7 +501,10 @@ function App() {
 						};
 
 						if (userEmail) conversionData.email = userEmail.toLowerCase().trim();
-						if (userPhone) conversionData.phone_number = userPhone.trim(); // Se puede mejorar con normalizador
+						if (userPhone) {
+							// ✅ FIX: Normalizar teléfono al formato E.164 (+56...) para mejores conversiones
+							conversionData.phone_number = normalizePhoneToE164(userPhone);
+						}
 						if (userName) {
 							const nameParts = userName.trim().split(' ');
 							conversionData.address = {

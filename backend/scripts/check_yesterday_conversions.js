@@ -9,14 +9,14 @@ import sequelize from '../config/database.js';
 async function check() {
     try {
         setupAssociations();
-        console.log("🔍 Buscando transacciones del 2026-02-10 (ayer)...");
+        console.log("🔍 Buscando transacciones del 2026-02-13 (hoy)...");
         
-        const yesterday = "2026-02-10";
+        const today = "2026-02-13";
         const txs = await Transaccion.findAll({
             where: {
                 created_at: {
-                    [Op.gte]: new Date(yesterday + "T00:00:00Z"),
-                    [Op.lt]: new Date(yesterday + "T23:59:59Z")
+                    [Op.gte]: new Date(today + "T00:00:00Z"),
+                    [Op.lt]: new Date(today + "T23:59:59Z")
                 },
                 estado: 'aprobado'
             },

@@ -6,7 +6,7 @@ import { CheckCircle, Loader2, AlertCircle, Clock } from "lucide-react";
 import logo from "../assets/logo.png";
 
 // Configuración
-const PAYMENT_VERIFICATION_DELAY_MS = 1000; // Tiempo de espera antes de confirmar el pago
+const PAYMENT_VERIFICATION_DELAY_MS = 100; // Tiempo de espera antes de confirmar el pago (reducido para GA)
 
 /**
  * Normaliza un número de teléfono al formato E.164 internacional
