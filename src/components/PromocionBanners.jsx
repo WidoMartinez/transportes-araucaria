@@ -24,16 +24,29 @@ const [emblaRef, emblaApi] = useEmblaCarousel(
 
 // Cargar promociones activas
 useEffect(() => {
-fetch(`${getBackendUrl()}/api/promociones-banner/activas`)
-.then((res) => res.json())
-.then((data) => {
-if (Array.isArray(data) && data.length > 0) {
-setPromociones(data);
-}
-})
-.catch((error) => {
-console.error("Error al cargar promociones:", error);
-});
+  fetch(`${getBackendUrl()}/api/promociones-banner/activas`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (Array.isArray(data)) {
+        setPromociones(data);
+
+        // Lógica de Deep Link: abrir modal si viene ?promo=ID en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const promoIdFromUrl = urlParams.get("promo");
+        
+        if (promoIdFromUrl && data.length > 0) {
+          const matchingPromo = data.find(p => p.id.toString() === promoIdFromUrl);
+          if (matchingPromo) {
+            console.log("🔗 Deep Link detectado: Abriendo promoción", matchingPromo.nombre);
+            setSelectedPromocion(matchingPromo);
+            setIsModalOpen(true);
+          }
+        }
+      }
+    })
+    .catch((error) => {
+      console.error("Error al cargar promociones:", error);
+    });
 }, []);
 
 // Navegar al banner anterior
@@ -60,8 +73,19 @@ return null;
   return (
     <>
 
-    <section className="bg-white py-8 md:py-12 overflow-hidden">
+    <section className="bg-white py-8 md:py-16 overflow-hidden">
       <div className="container mx-auto px-4">
+        {/* Encabezado de la Sección */}
+        <div className="text-center mb-10 md:mb-16">
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-4 tracking-tight">
+            Ofertas <span className="text-emerald-500">Especiales</span>
+          </h2>
+          <div className="w-24 h-1.5 bg-emerald-500 mx-auto rounded-full mb-6" />
+          <p className="text-slate-600 text-lg md:text-xl font-medium max-w-2xl mx-auto px-4">
+            Aprovecha nuestros traslados en promoción y viaja con la comodidad de siempre al mejor precio.
+          </p>
+        </div>
+
         <div className="relative group/carousel">
           {/* Carrusel */}
           <div className="overflow-hidden rounded-3xl" ref={emblaRef}>

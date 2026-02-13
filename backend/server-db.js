@@ -9,7 +9,7 @@ import dotenv from "dotenv";
 import axios from "axios";
 import crypto from "crypto";
 import { testConnection, syncDatabase } from "./config/database.js";
-import { Op } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import sequelize from "./config/database.js";
 import CodigoDescuento from "./models/CodigoDescuento.js";
 import Destino from "./models/Destino.js";
@@ -645,7 +645,7 @@ const initializeDatabase = async () => {
 		
 		// Migraciones CRÍTICAS de estructura (deben correr antes de syncDatabase)
 		await addCodigosPagoTable();
-		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), sequelize);
+		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), Sequelize);
 		await addClientDataToCodigosPago();
 		await addDuracionMinutosToCodigosPago();
 		await addDuracionMinutosToReservas();
@@ -727,7 +727,6 @@ const initializeDatabase = async () => {
 		await addPaymentFields();
 		await addTipoPagoColumn();
 		await addAbonoFlags();
-		await addAbonoFlags();
 		// Migraciones de CodigosPago movidas al inicio
 		await addGastosTable();
 		await addProductosTables(); // Migración para tablas de productos
@@ -742,8 +741,8 @@ const initializeDatabase = async () => {
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
-	await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
-	await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), sequelize); // Migración para añadir posición de imagen
+		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
+		await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), Sequelize); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
