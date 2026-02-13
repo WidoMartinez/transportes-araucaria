@@ -730,7 +730,7 @@ const initializeDatabase = async () => {
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
-t	await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
+	await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
