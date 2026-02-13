@@ -299,10 +299,9 @@ res.status(500).json({ error: "Error al eliminar promoción" });
 });
 
 
-// POST /api/reservas/desde-promocion - Crear reserva desde promoción banner
-import Reserva from "../models/Reserva.js";
-import Cliente from "../models/Cliente.js";
 
+
+// POST /api/reservas/desde-promocion - Crear reserva desde promoción banner
 router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
 try {
 const promocionId = req.params.id;
