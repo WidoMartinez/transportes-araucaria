@@ -361,6 +361,9 @@ const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9
     const reserva = await Reserva.create({
       codigoReserva: codigoReserva,
       clienteId: cliente.id,
+      nombre,
+      email,
+      telefono,
       origen: promocion.origen,
       destino: promocion.destino,
       fecha: fecha_ida,
@@ -372,7 +375,6 @@ const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9
       precio: promocion.precio,
       totalConDescuento: promocion.precio,
       estado: "pendiente",
-      confirmada: false,
     });
 
     res.status(201).json({
