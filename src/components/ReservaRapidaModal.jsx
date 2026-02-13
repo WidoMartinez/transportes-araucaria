@@ -114,6 +114,7 @@ setFormData((prev) => ({ ...prev, [name]: value }));
           reservaId: data.reserva.id,
           codigoReserva: data.reserva.codigo_reserva,
           tipoPago: "total",
+          paymentOrigin: "banner_promocional", // Identificar origen para conversiones GA
         }),
       });
 

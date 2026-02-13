@@ -380,6 +380,7 @@ const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9
       precio: parseFloat(promocion.precio),
       totalConDescuento: parseFloat(promocion.precio),
       estado: "pendiente",
+      source: "banner_promocional", // Identificar origen para conversiones de Google Ads
     });
 
     res.status(201).json({
