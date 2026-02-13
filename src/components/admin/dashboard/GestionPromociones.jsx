@@ -40,8 +40,9 @@ ArrowUpDown,
 } from "lucide-react";
 import { getBackendUrl } from "../../../lib/backend";
 
-// Destinos base para fallback
+// Destinos base para fallback (lista completa de destinos turísticos)
 const destinosBase = [
+  { nombre: "Aeropuerto La Araucanía" },
   { nombre: "Temuco" },
   { nombre: "Pucón" },
   { nombre: "Villarrica" },
@@ -50,6 +51,19 @@ const destinosBase = [
   { nombre: "Curarrehue" },
   { nombre: "Melipeuco" },
   { nombre: "Cunco" },
+  { nombre: "Malalcahuello" },
+  { nombre: "Corralco" },
+  { nombre: "Lonquimay" },
+  { nombre: "Conguillío" },
+  { nombre: "Huilo Huilo" },
+  { nombre: "Neltume" },
+  { nombre: "Puerto Fuy" },
+  { nombre: "Choshuenco" },
+  { nombre: "Panguipulli" },
+  { nombre: "Valdivia" },
+  { nombre: "Osorno" },
+  { nombre: "Puerto Varas" },
+  { nombre: "Puerto Montt" },
 ];
 
 /**
