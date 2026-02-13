@@ -379,6 +379,7 @@ Nueva Promoción
 src={`${getBackendUrl()}${promo.imagen_url}`}
 alt={promo.nombre}
 className="w-full h-48 object-cover"
+style={{ objectPosition: promo.posicion_imagen || "center" }}
 />
 
 {/* Badge de estado */}
@@ -397,10 +398,13 @@ Inactivo
 </div>
 
 {/* Badge de orden */}
-<div className="absolute top-2 left-2">
-<span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
+<div className="absolute top-2 left-2 flex gap-1">
+<span className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 shadow-sm">
 <ArrowUpDown className="h-3 w-3" />
 {promo.orden}
+</span>
+<span className="bg-black/70 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shadow-sm backdrop-blur-sm">
+ID: {promo.id}
 </span>
 </div>
 </div>
@@ -479,8 +483,13 @@ No hay promociones creadas. Haz clic en "Nueva Promoción" para comenzar.
 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
 <DialogHeader>
-<DialogTitle>
-{editingPromocion ? "Editar Promoción" : "Nueva Promoción"}
+<DialogTitle className="flex justify-between items-center">
+<span>{editingPromocion ? "Editar Promoción" : "Nueva Promoción"}</span>
+{editingPromocion && (
+<span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">
+ID: {editingPromocion.id}
+</span>
+)}
 </DialogTitle>
 <DialogDescription>
 {editingPromocion
@@ -490,10 +499,42 @@ No hay promociones creadas. Haz clic en "Nueva Promoción" para comenzar.
 </DialogHeader>
 
 <div className="space-y-4">
-{/* Vista previa de imagen */}
+{/* Doble vista previa: PC y Móvil */}
 {previewUrl && (
-<div className="border rounded-lg overflow-hidden">
-<img src={previewUrl} alt="Preview" className="w-full h-64 object-cover" />
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-xl p-4 bg-gray-50/50 shadow-inner">
+<div className="space-y-2">
+<p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
+<ImageIcon className="h-3 w-3" /> Vista Desktop (21:9)
+</p>
+<div className="relative aspect-[21/9] w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+<img 
+src={previewUrl} 
+alt="Preview PC" 
+className="absolute inset-0 w-full h-full object-cover" 
+style={{ 
+  objectPosition: formData.posicion_imagen || "center",
+  transformOrigin: formData.posicion_imagen || "center" 
+}}
+/>
+</div>
+</div>
+
+<div className="space-y-2">
+<p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
+<Plus className="h-3 w-3 rotate-45" /> Vista Móvil (4:5)
+</p>
+<div className="relative aspect-[4/5] h-48 mx-auto overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+<img 
+src={previewUrl} 
+alt="Preview Mobile" 
+className="absolute inset-0 w-full h-full object-cover" 
+style={{ 
+  objectPosition: formData.posicion_imagen || "center",
+  transformOrigin: formData.posicion_imagen || "center" 
+}}
+/>
+</div>
+</div>
 </div>
 )}
 
@@ -645,6 +686,12 @@ onValueChange={(value) => setFormData({ ...formData, posicion_imagen: value })}
 <SelectItem value="right">Derecha</SelectItem>
 <SelectItem value="top center">Superior Centro</SelectItem>
 <SelectItem value="bottom center">Inferior Centro</SelectItem>
+<SelectItem value="center left">Centro Izquierda</SelectItem>
+<SelectItem value="center right">Centro Derecha</SelectItem>
+<SelectItem value="top left">Superior Izquierda</SelectItem>
+<SelectItem value="top right">Superior Derecha</SelectItem>
+<SelectItem value="bottom left">Inferior Izquierda</SelectItem>
+<SelectItem value="bottom right">Inferior Derecha</SelectItem>
 </SelectContent>
 </Select>
 <p className="text-xs text-gray-500">Útil si el contenido importante de la foto no está al centro.</p>
