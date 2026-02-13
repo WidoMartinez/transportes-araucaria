@@ -18,6 +18,9 @@ function normalizePhoneToE164(phone) {
 import {
 	Dialog,
 	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "./components/ui/dialog";
