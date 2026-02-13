@@ -372,8 +372,8 @@ const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9
       horaRegreso: hora_vuelta || null,
       idaVuelta: promocion.tipo_viaje === "ida_vuelta",
       pasajeros: 1, 
-      precio: promocion.precio,
-      totalConDescuento: promocion.precio,
+      precio: parseFloat(promocion.precio),
+      totalConDescuento: parseFloat(promocion.precio),
       estado: "pendiente",
     });
 
@@ -382,12 +382,16 @@ const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9
       reserva: {
         id: reserva.id,
         codigo_reserva: reserva.codigoReserva,
-        precio_total: reserva.precio,
+        precio_total: parseFloat(reserva.precio),
       },
     });
 } catch (error) {
 console.error("Error al crear reserva desde promoción:", error);
-res.status(500).json({ error: "Error al crear reserva" });
+res.status(500).json({ 
+  error: "Error al crear reserva", 
+  details: error.message,
+  sql: error.sql || null 
+});
 }
 });
 
