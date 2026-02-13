@@ -39,7 +39,18 @@ DollarSign,
 ArrowUpDown,
 } from "lucide-react";
 import { getBackendUrl } from "../../../lib/backend";
-import { destinosBase } from "../../../data/destinos";
+
+// Destinos base para fallback
+const destinosBase = [
+  { nombre: "Temuco" },
+  { nombre: "Pucón" },
+  { nombre: "Villarrica" },
+  { nombre: "Lican Ray" },
+  { nombre: "Coñaripe" },
+  { nombre: "Curarrehue" },
+  { nombre: "Melipeuco" },
+  { nombre: "Cunco" },
+];
 
 /**
  * Panel de administración de promociones banner
