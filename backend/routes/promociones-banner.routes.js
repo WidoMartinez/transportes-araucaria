@@ -6,6 +6,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import PromocionBanner from "../models/PromocionBanner.js";
+import Reserva from "../models/Reserva.js";
+import Cliente from "../models/Cliente.js";
 import { authJWT } from "../middleware/authJWT.js";
 import { apiLimiter } from "../middleware/rateLimiter.js";
 import { Op } from "sequelize";
@@ -356,32 +358,32 @@ telefono,
 // Generar código de reserva único
 const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-// Crear reserva
-const reserva = await Reserva.create({
-codigo_reserva: codigoReserva,
-cliente_id: cliente.id,
-origen: promocion.origen,
-destino: promocion.destino,
-fecha_ida,
-hora_ida,
-fecha_vuelta: fecha_vuelta || null,
-hora_vuelta: hora_vuelta || null,
-tipo_viaje: promocion.tipo_viaje,
-num_pasajeros: 1, // Por defecto 1, se puede ajustar en el modal
-precio_total: promocion.precio,
-estado: "pendiente_pago",
-tipo_reserva: "promocion",
-confirmada: false,
-});
+    // Crear reserva
+    const reserva = await Reserva.create({
+      codigoReserva: codigoReserva,
+      clienteId: cliente.id,
+      origen: promocion.origen,
+      destino: promocion.destino,
+      fecha: fecha_ida,
+      hora: hora_ida,
+      fechaRegreso: fecha_vuelta || null,
+      horaRegreso: hora_vuelta || null,
+      idaVuelta: promocion.tipo_viaje === "ida_vuelta",
+      pasajeros: 1, 
+      precio: promocion.precio,
+      totalConDescuento: promocion.precio,
+      estado: "pendiente",
+      confirmada: false,
+    });
 
-res.status(201).json({
-message: "Reserva creada exitosamente",
-reserva: {
-id: reserva.id,
-codigo_reserva: reserva.codigo_reserva,
-precio_total: reserva.precio_total,
-},
-});
+    res.status(201).json({
+      message: "Reserva creada exitosamente",
+      reserva: {
+        id: reserva.id,
+        codigo_reserva: reserva.codigoReserva,
+        precio_total: reserva.precio,
+      },
+    });
 } catch (error) {
 console.error("Error al crear reserva desde promoción:", error);
 res.status(500).json({ error: "Error al crear reserva" });

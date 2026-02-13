@@ -340,19 +340,103 @@ Antes de considerar el deployment completo, verificar:
 - [ ] `tipo_reserva = 'promocion'`
 - [ ] `estado = 'pendiente_pago'`
 
-## 🎉 Siguiente Paso: Integración con Flow
+## 🎉 Integración con Flow (Completada)
 
-Actualmente, el sistema crea la reserva pero falta la redirección automática a Flow para el pago. 
+El sistema ahora redirige automáticamente a la pasarela de pago Flow después de crear la reserva.
 
-**Próxima iteración**:
-1. Obtener `reserva.codigo_reserva` de la respuesta
-2. Redirigir a `/completar-detalles?codigo=${codigo_reserva}`
-3. O directamente a Flow con los datos de la reserva
+**Flujo de Usuario**:
+1. Usuario completa formulario en modal.
+2. Click en "Pagar".
+3. Reserva se crea en backend (`estado: pendiente`).
+4. Backend retorna datos de reserva.
+5. Frontend solicita `/create-payment` automáticamente.
+6. Usuario es redirigido a Flow para pagar.
+7. Al completar pago, Flow notifica al backend (`/api/flow-confirmation`) y redirige al usuario.
 
-Esta integración se puede hacer en un PR separado después de verificar que el sistema básico funciona correctamente.
+**Requerimientos**:
+- Variables de entorno `FLOW_API_KEY` y `FLOW_SECRET_KEY` configuradas en Render.
+- `FRONTEND_URL` y `BACKEND_URL` correctamente definidos.
 
 ---
 
 **Documentación creada**: 2024-02-12  
 **Autor**: GitHub Copilot  
-**Versión**: 1.0
+**Versión**: 1.1
+
+---
+
+## 🏗️ Arquitectura Técnica y Datos para IA
+
+Esta sección detalla la implementación interna del sistema de banners para facilitar futuras intervenciones por desarrolladores o agentes de IA.
+
+### 1. Modelo de Datos (`MySQL`)
+
+**Tabla**: `promociones_banner`
+
+| Columna | Tipo | Descripción |
+|---------|------|-------------|
+| `id` | INT (PK) | Identificador único |
+| `nombre` | VARCHAR(255) | Nombre interno/público de la promoción |
+| `imagen_url` | VARCHAR(500) | Ruta relativa a la imagen (`/banners/imagen.jpg`) |
+| `precio` | DECIMAL(10,2) | Precio ofertado (sobrescribe tarifa dinámica) |
+| `tipo_viaje` | ENUM | `'ida'` o `'ida_vuelta'` |
+| `origen` | VARCHAR(100) | Default: 'Temuco' |
+| `destino` | VARCHAR(100) | Destino específico |
+| `max_pasajeros` | INT | Default: 3 |
+| `activo` | BOOLEAN | Control de visibilidad |
+| `orden` | INT | Para ordenar el carrusel (ASC) |
+| `fecha_inicio` | DATE | Opcional: inicio de vigencia |
+| `fecha_fin` | DATE | Opcional: fin de vigencia |
+
+**Relación con Reservas**:
+Las reservas creadas desde este sistema tienen:
+- `tipo_reserva = 'promocion'`
+- `origen/destino` copiados de la promoción
+- `precio_total` fijo según la promoción (sin cálculos de distancia)
+
+### 2. API Endpoints (`Backend`)
+
+**Base**: `/api/promociones-banner`
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `GET` | `/activas` | Público | Retorna JSON con promociones vigentes (`activo=1` y fechas válidas) |
+| `POST` | `/` | JWT Admin | Crea nueva promoción. Usa `multer` para upload de imagen ("imagen") |
+| `POST` | `/desde-promocion/:id` | Público | Crea reserva pendiente. **Body**: `{nombre, email, telefono, fecha_ida, ...}` |
+| `PUT` | `/:id` | JWT Admin | Actualiza datos. Si se envía nueva imagen, reemplaza la anterior |
+| `PUT` | `/:id/toggle` | JWT Admin | Cambia estado `activo` (true/false) |
+| `DELETE` | `/:id` | JWT Admin | Elimina registro y borra archivo de imagen asociado |
+
+### 3. Flujo Crítico: Pago y Confirmación
+
+El sistema usa un flujo de "Pago Diferido Frontend" para banners:
+
+1.  **Frontend (`ReservaRapidaModal`)**: Envía datos a API → Crea Reserva (`pendiente`).
+2.  **Frontend**: Recibe ID de reserva → Llama a `/create-payment` (Generic Flow Endpoint).
+3.  **Flow**: Procesa pago.
+4.  **Webhook (`/api/flow-confirmation`)**: 
+    - Recibe notificación de Flow.
+    - Busca reserva por `reservaId` o `codigoReserva` (enviados en metadata).
+    - Actualiza estado a `pagado` y `confirmada: true`.
+    - **Nota**: No activa lógica compleja de asignación de conductores inmediatamente (simplificado para promos).
+
+### 4. Componentes Clave (`Frontend`)
+
+- **`PromocionBanners.jsx`**: Carrusel público. Usa `embla-carousel-react`.
+    - *Lógica*: Fetch `/activas`, renderiza slides, maneja click para abrir modal.
+- **`ReservaRapidaModal.jsx`**: Formulario de captura rápida.
+    - *Lógica*: Pre-llena datos de la promo. Al enviar, encadena `createReserva` + `createPayment` + `window.location.href`.
+- **`GestionPromociones.jsx`**: CRUD Admin.
+    - *Ubicación*: `src/components/admin/dashboard/`.
+    - *Detalle*: Maneja `FormData` para envío de archivos.
+
+### 5. Notas para Agentes IA (Mantenimiento)
+
+- **Integración de Imágenes**: Las imágenes se sirven estáticamente desde `public/banners`. Si se migra el hosting, asegurar que esa carpeta sea persistente y accesible públicamente.
+- **Validación de Fechas**: El backend filtra automáticamente por `fecha_inicio` y `fecha_fin`. Para debugging, verificar la zona horaria del servidor.
+- **Modificación de Campos**: Si agregas campos a `PromocionBanner`, recuerda actualizar:
+    1. Migración (`backend/migrations`)
+    2. Modelo (`backend/models/PromocionBanner.js`)
+    3. Validación en Router (`promociones-banner.routes.js`)
+    4. Formulario Admin (`GestionPromociones.jsx`)
+    5. Modal Público (`ReservaRapidaModal.jsx`)

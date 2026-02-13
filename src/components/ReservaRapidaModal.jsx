@@ -36,40 +36,60 @@ const { name, value } = e.target;
 setFormData((prev) => ({ ...prev, [name]: value }));
 };
 
-const handleSubmit = async (e) => {
-e.preventDefault();
-setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-try {
-const response = await fetch(
-`${getBackendUrl()}/api/promociones-banner/desde-promocion/${promocion.id}`,
-{
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-},
-body: JSON.stringify(formData),
-}
-);
+    try {
+      const response = await fetch(
+        `${getBackendUrl()}/api/promociones-banner/desde-promocion/${promocion.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
-if (!response.ok) {
-const error = await response.json();
-throw new Error(error.error || "Error al crear reserva");
-}
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error al crear reserva");
+      }
 
-const data = await response.json();
+      const data = await response.json();
 
-// Redirigir a Flow para pago
-// TODO: Integrar con el flujo de pago existente
-alert(`Reserva creada: ${data.reserva.codigo_reserva}`);
-onClose();
-} catch (error) {
-console.error("Error al crear reserva:", error);
-alert(error.message || "Error al crear reserva. Por favor, intente nuevamente.");
-} finally {
-setLoading(false);
-}
-};
+      // Proceder al pago automáticamente con Flow
+      const paymentResponse = await fetch(`${getBackendUrl()}/create-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gateway: "flow",
+          amount: promocion.precio,
+          description: `Promoción ${promocion.nombre} - ${promocion.origen} a ${promocion.destino}`,
+          email: formData.email,
+          reservaId: data.reserva.id,
+          codigoReserva: data.reserva.codigo_reserva,
+          tipoPago: "total",
+        }),
+      });
+
+      const paymentData = await paymentResponse.json();
+      
+      if (paymentData.url) {
+        // Redirigir a Flow para completar el pago
+        window.location.href = paymentData.url;
+      } else {
+        alert(`Reserva creada: ${data.reserva.codigo_reserva}. Por favor contacta a soporte para completar el pago.`);
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error al crear reserva:", error);
+      alert(error.message || "Error al crear reserva. Por favor, intente nuevamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 return (
 <Dialog open={isOpen} onOpenChange={onClose}>
