@@ -35,9 +35,10 @@ EyeOff,
 Calendar,
 MapPin,
 Users,
-DollarSign,
-ArrowUpDown,
+  DollarSign,
+  ArrowUpDown,
 } from "lucide-react";
+import { useAuth } from "../../../contexts/AuthContext";
 import { getBackendUrl } from "../../../lib/backend";
 
 // Destinos base para fallback (lista completa de destinos turísticos)
@@ -71,63 +72,76 @@ const destinosBase = [
  * Permite crear, editar, eliminar y ordenar banners promocionales
  */
 export default function GestionPromociones() {
-const [promociones, setPromociones] = useState([]);
-const [loading, setLoading] = useState(false);
-const [isDialogOpen, setIsDialogOpen] = useState(false);
-const [editingPromocion, setEditingPromocion] = useState(null);
-const [formData, setFormData] = useState({
-nombre: "",
-precio: "",
-tipo_viaje: "ida",
-destino: "",
-origen: "Aeropuerto La Araucanía",
-max_pasajeros: "3",
-activo: true,
-orden: "0",
-fecha_inicio: "",
-fecha_fin: "",
-});
-const [imagenFile, setImagenFile] = useState(null);
-const [previewUrl, setPreviewUrl] = useState("");
+  const { accessToken } = useAuth();
+  const [promociones, setPromociones] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPromocion, setEditingPromocion] = useState(null);
+  const [formData, setFormData] = useState({
+    nombre: "",
+    precio: "",
+    tipo_viaje: "ida",
+    destino: "",
+    origen: "Aeropuerto La Araucanía",
+    max_pasajeros: "3",
+    activo: true,
+    orden: "0",
+    fecha_inicio: "",
+    fecha_fin: "",
+  });
+  const [imagenFile, setImagenFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
 
-	const [destinosDisponibles, setDestinosDisponibles] = useState([]);
+  const [destinosDisponibles, setDestinosDisponibles] = useState([]);
 
-	const loadDestinos = async () => {
-		try {
-			const response = await fetch(`${getBackendUrl()}/pricing`);
-			if (response.ok) {
-				const data = await response.json();
-				// Usar 'destinos' (español) como en App.jsx, no 'destinations'
-				const destinos = data.destinos || [];
-				const nombresDestinos = destinos.map(d => d.nombre).filter(Boolean);
-				// Asegurar que "Aeropuerto La Araucanía" esté siempre disponible
-				const destinosUnicos = ["Aeropuerto La Araucanía", ...nombresDestinos.filter(n => n !== "Aeropuerto La Araucanía")];
-				setDestinosDisponibles(destinosUnicos);
-			} else {
-				// Fallback a destinos base
-				setDestinosDisponibles(["Aeropuerto La Araucanía", ...destinosBase.map(d => d.nombre)]);
-			}
-		} catch (error) {
-			console.error("Error al cargar destinos:", error);
-			// Fallback a destinos base
-			setDestinosDisponibles(["Aeropuerto La Araucanía", ...destinosBase.map(d => d.nombre)]);
-		}
-	};
+  const loadDestinos = async () => {
+    try {
+      const response = await fetch(`${getBackendUrl()}/pricing`);
+      if (response.ok) {
+        const data = await response.json();
+        // Usar 'destinos' (español) como en App.jsx, no 'destinations'
+        const destinos = data.destinos || [];
+        const nombresDestinos = destinos.map((d) => d.nombre).filter(Boolean);
+        // Asegurar que "Aeropuerto La Araucanía" esté siempre disponible
+        const destinosUnicos = [
+          "Aeropuerto La Araucanía",
+          ...nombresDestinos.filter((n) => n !== "Aeropuerto La Araucanía"),
+        ];
+        setDestinosDisponibles(destinosUnicos);
+      } else {
+        // Fallback a destinos base
+        setDestinosDisponibles([
+          "Aeropuerto La Araucanía",
+          ...destinosBase.map((d) => d.nombre),
+        ]);
+      }
+    } catch (error) {
+      console.error("Error al cargar destinos:", error);
+      // Fallback a destinos base
+      setDestinosDisponibles([
+        "Aeropuerto La Araucanía",
+        ...destinosBase.map((d) => d.nombre),
+      ]);
+    }
+  };
 
-// Cargar promociones
-useEffect(() => {
-loadPromociones();
-		loadDestinos();
-}, []);
+  // Cargar promociones
+  useEffect(() => {
+    if (accessToken) {
+      loadPromociones();
+    }
+    loadDestinos();
+  }, [accessToken]);
 
-const loadPromociones = async () => {
-try {
-const token = localStorage.getItem("token");
-const response = await fetch(`${getBackendUrl()}/api/promociones-banner`, {
-headers: {
-Authorization: `Bearer ${token}`,
-},
-});
+  const loadPromociones = async () => {
+    try {
+      if (!accessToken) return;
+      
+      const response = await fetch(`${getBackendUrl()}/api/promociones-banner`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
 if (response.ok) {
 const data = await response.json();
@@ -193,9 +207,12 @@ reader.readAsDataURL(file);
 
 // Guardar promoción (crear o editar)
 const handleSave = async () => {
-try {
-setLoading(true);
-const token = localStorage.getItem("token");
+  try {
+    setLoading(true);
+    if (!accessToken) {
+      alert("Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.");
+      return;
+    }
 
 // Validar campos requeridos
 if (!formData.nombre || !formData.precio || !formData.destino) {
@@ -233,11 +250,11 @@ const url = editingPromocion
 const method = editingPromocion ? "PUT" : "POST";
 
 const response = await fetch(url, {
-method,
-headers: {
-Authorization: `Bearer ${token}`,
-},
-body: formDataToSend,
+  method,
+  headers: {
+    Authorization: `Bearer ${accessToken}`,
+  },
+  body: formDataToSend,
 });
 
 if (!response.ok) {
@@ -267,19 +284,22 @@ if (!confirm("¿Está seguro que desea eliminar esta promoción?")) {
 return;
 }
 
-try {
-setLoading(true);
-const token = localStorage.getItem("token");
+    try {
+      setLoading(true);
+      if (!accessToken) {
+        alert("Tu sesión ha expirado");
+        return;
+      }
 
-const response = await fetch(
-`${getBackendUrl()}/api/promociones-banner/${id}`,
-{
-method: "DELETE",
-headers: {
-Authorization: `Bearer ${token}`,
-},
-}
-);
+      const response = await fetch(
+        `${getBackendUrl()}/api/promociones-banner/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
 if (!response.ok) {
 throw new Error("Error al eliminar promoción");
@@ -298,22 +318,22 @@ setLoading(false);
 
 // Alternar estado activo
 const toggleActivo = async (id, activo) => {
-try {
-const token = localStorage.getItem("token");
+    try {
+      if (!accessToken) return;
 
-const formDataToSend = new FormData();
-formDataToSend.append("activo", !activo);
+      const formDataToSend = new FormData();
+      formDataToSend.append("activo", !activo);
 
-const response = await fetch(
-`${getBackendUrl()}/api/promociones-banner/${id}`,
-{
-method: "PUT",
-headers: {
-Authorization: `Bearer ${token}`,
-},
-body: formDataToSend,
-}
-);
+      const response = await fetch(
+        `${getBackendUrl()}/api/promociones-banner/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formDataToSend,
+        }
+      );
 
 if (!response.ok) {
 throw new Error("Error al actualizar estado");
