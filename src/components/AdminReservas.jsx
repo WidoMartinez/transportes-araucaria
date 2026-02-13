@@ -918,9 +918,18 @@ function AdminReservas() {
 	};
 
 	// Abrir diÃ¡logo de asignaciÃ³n
+	// Abrir diÃ¡logo de asignaciÃ³n
 	const handleAsignar = async (reserva) => {
 		setSelectedReserva(reserva);
 		
+		// RESETEAR ESTADO VISUAL DE ASIGNACIÓN ANTERIOR
+		// Esto es crucial para que no aparezcan deshabilitados vehículos/conductores
+		// de la reserva que se vio anteriormente si la actual no tiene asignación.
+		setAssignedPatente("");
+		setAssignedVehiculoId(null);
+		setAssignedConductorNombre("");
+		setAssignedConductorId(null);
+
 		// 1. Detectar si tiene reserva vinculada (VUELTA)
 		let reservaVueltaData = null;
 		if (reserva.tramoHijoId) {
