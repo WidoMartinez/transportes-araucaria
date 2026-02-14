@@ -52,6 +52,17 @@ setFormData((prev) => ({ ...prev, [name]: value }));
   // Lógica de opciones de hora sincronizada con HeroExpress
   const getTimeOptions = (fechaSeleccionada) => {
     let options = generateTimeOptions();
+
+    // Filtrar por rango horario de la promoción (si existe)
+    if (promocion.hora_inicio || promocion.hora_fin) {
+      options = options.filter(opt => {
+        const timeVal = opt.value; // "HH:MM"
+        // Asegurar formato HH:MM comparando strings (funciona para 24h)
+        const inicio = promocion.hora_inicio ? promocion.hora_inicio.slice(0, 5) : "00:00";
+        const fin = promocion.hora_fin ? promocion.hora_fin.slice(0, 5) : "23:59";
+        return timeVal >= inicio && timeVal <= fin;
+      });
+    }
     
     // Filtrado por anticipación mínima (5 horas) para hoy
     const hoy = new Date();
@@ -181,8 +192,12 @@ Reserva Rápida
 <div>
 <p className="text-[10px] md:text-xs text-green-700 uppercase font-bold tracking-wider">Tipo</p>
 <p className="text-sm md:text-base font-bold text-gray-800">
-{promocion.tipo_viaje === "ida_vuelta" ? "Ida/Vta" : "Solo Ida"}
-</p>
+                {promocion.tipo_viaje === "ida_vuelta" 
+                  ? "Ida/Vta" 
+                  : promocion.tipo_viaje === "desde_aeropuerto" 
+                    ? "Desde Aeropuerto" 
+                    : "Hacia Aeropuerto"}
+              </p>
 </div>
 </div>
 

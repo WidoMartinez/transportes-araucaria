@@ -82,14 +82,17 @@ export default function GestionPromociones() {
   const [formData, setFormData] = useState({
     nombre: "",
     precio: "",
-    tipo_viaje: "ida",
+    tipo_viaje: "ida_vuelta",
     destino: "",
     origen: "Aeropuerto La Araucanía",
     max_pasajeros: "3",
+    min_pasajeros: "1",
     activo: true,
     orden: "0",
     fecha_inicio: "",
     fecha_fin: "",
+    hora_inicio: "",
+    hora_fin: "",
     posicion_imagen: "center",
   });
   const [imagenFile, setImagenFile] = useState(null);
@@ -136,6 +139,15 @@ export default function GestionPromociones() {
     loadDestinos();
   }, [accessToken]);
 
+  // Efecto para manejar bloqueo de origen/destino según tipo de viaje
+  useEffect(() => {
+    if (formData.tipo_viaje === "desde_aeropuerto") {
+      setFormData(prev => ({ ...prev, origen: "Aeropuerto La Araucanía" }));
+    } else if (formData.tipo_viaje === "hacia_aeropuerto") {
+      setFormData(prev => ({ ...prev, destino: "Aeropuerto La Araucanía" }));
+    }
+  }, [formData.tipo_viaje]);
+
   const loadPromociones = async () => {
     try {
       if (!accessToken) return;
@@ -159,18 +171,21 @@ console.error("Error al cargar promociones:", error);
 const handleCreate = () => {
 setEditingPromocion(null);
 setFormData({
-nombre: "",
-precio: "",
-tipo_viaje: "ida",
-destino: "",
-origen: "Aeropuerto La Araucanía",
-max_pasajeros: "3",
-activo: true,
-orden: "0",
-fecha_inicio: "",
-fecha_fin: "",
-posicion_imagen: "center",
-});
+      nombre: "",
+      precio: "",
+      tipo_viaje: "ida_vuelta",
+      destino: "",
+      origen: "Aeropuerto La Araucanía",
+      max_pasajeros: "3",
+      min_pasajeros: "1",
+      activo: true,
+      orden: "0",
+      fecha_inicio: "",
+      fecha_fin: "",
+      hora_inicio: "",
+      hora_fin: "",
+      posicion_imagen: "center",
+    });
 setImagenFile(null);
 setPreviewUrl("");
 setIsDialogOpen(true);
@@ -180,18 +195,21 @@ setIsDialogOpen(true);
 const handleEdit = (promocion) => {
 setEditingPromocion(promocion);
 setFormData({
-nombre: promocion.nombre,
-precio: promocion.precio.toString(),
-tipo_viaje: promocion.tipo_viaje,
-destino: promocion.destino,
-origen: promocion.origen,
-max_pasajeros: promocion.max_pasajeros.toString(),
-activo: promocion.activo,
-orden: promocion.orden.toString(),
-fecha_inicio: promocion.fecha_inicio || "",
-fecha_fin: promocion.fecha_fin || "",
-posicion_imagen: promocion.posicion_imagen || "center",
-});
+      nombre: promocion.nombre,
+      precio: promocion.precio.toString(),
+      tipo_viaje: promocion.tipo_viaje,
+      destino: promocion.destino,
+      origen: promocion.origen,
+      max_pasajeros: promocion.max_pasajeros.toString(),
+      min_pasajeros: (promocion.min_pasajeros || "1").toString(),
+      activo: promocion.activo,
+      orden: promocion.orden.toString(),
+      fecha_inicio: promocion.fecha_inicio || "",
+      fecha_fin: promocion.fecha_fin || "",
+      hora_inicio: promocion.hora_inicio || "",
+      hora_fin: promocion.hora_fin || "",
+      posicion_imagen: promocion.posicion_imagen || "center",
+    });
 setImagenFile(null);
 setPreviewUrl(`${getBackendUrl()}${promocion.imagen_url}`);
 setIsDialogOpen(true);
@@ -225,6 +243,12 @@ alert("Por favor, complete todos los campos requeridos");
 return;
 }
 
+      // Validar origen != destino
+      if (formData.origen === formData.destino) {
+        alert("El origen y el destino no pueden ser iguales");
+        return;
+      }
+
 // Validar imagen en crear
 if (!editingPromocion && !imagenFile) {
 alert("Por favor, seleccione una imagen");
@@ -238,12 +262,15 @@ formDataToSend.append("precio", formData.precio);
 formDataToSend.append("tipo_viaje", formData.tipo_viaje);
 formDataToSend.append("destino", formData.destino);
 formDataToSend.append("origen", formData.origen);
-formDataToSend.append("max_pasajeros", formData.max_pasajeros);
-formDataToSend.append("activo", formData.activo);
-formDataToSend.append("orden", formData.orden);
-formDataToSend.append("fecha_inicio", formData.fecha_inicio);
-formDataToSend.append("fecha_fin", formData.fecha_fin);
-formDataToSend.append("posicion_imagen", formData.posicion_imagen);
+      formDataToSend.append("max_pasajeros", formData.max_pasajeros);
+      formDataToSend.append("min_pasajeros", formData.min_pasajeros);
+      formDataToSend.append("activo", formData.activo);
+      formDataToSend.append("orden", formData.orden);
+      formDataToSend.append("fecha_inicio", formData.fecha_inicio);
+      formDataToSend.append("fecha_fin", formData.fecha_fin);
+      formDataToSend.append("hora_inicio", formData.hora_inicio);
+      formDataToSend.append("hora_fin", formData.hora_fin);
+      formDataToSend.append("posicion_imagen", formData.posicion_imagen);
 
 if (imagenFile) {
 formDataToSend.append("imagen", imagenFile);
@@ -426,13 +453,18 @@ ID: {promo.id}
 </div>
 <div className="flex items-center gap-2 text-sm">
 <DollarSign className="h-4 w-4" />
-${promo.precio.toLocaleString("es-CL")} •{" "}
-{promo.tipo_viaje === "ida_vuelta" ? "Ida y Vuelta" : "Solo Ida"}
-</div>
+                          ${promo.precio.toLocaleString("es-CL")} •{" "}
+                          {promo.tipo_viaje === "ida_vuelta" 
+                            ? "Ida y Vuelta" 
+                            : promo.tipo_viaje === "desde_aeropuerto" 
+                              ? "Desde Aeropuerto" 
+                              : "Hacia Aeropuerto"}
+                        </div>
 <div className="flex items-center gap-2 text-sm">
 <Users className="h-4 w-4" />
-Hasta {promo.max_pasajeros} pasajeros
-</div>
+                          {promo.min_pasajeros && promo.min_pasajeros > 1 ? `${promo.min_pasajeros} - ` : ""}
+                          Hasta {promo.max_pasajeros} pasajeros
+                        </div>
 {(promo.fecha_inicio || promo.fecha_fin) && (
 <div className="flex items-center gap-2 text-sm">
 <Calendar className="h-4 w-4" />
@@ -633,19 +665,21 @@ setFormData({ ...formData, tipo_viaje: value })
 <SelectTrigger>
 <SelectValue />
 </SelectTrigger>
-<SelectContent>
-<SelectItem value="ida">Solo Ida</SelectItem>
-<SelectItem value="ida_vuelta">Ida y Vuelta</SelectItem>
-</SelectContent>
+              <SelectContent>
+                <SelectItem value="desde_aeropuerto">Desde Aeropuerto</SelectItem>
+                <SelectItem value="hacia_aeropuerto">Hacia Aeropuerto</SelectItem>
+                <SelectItem value="ida_vuelta">Ida y Vuelta</SelectItem>
+              </SelectContent>
 </Select>
 </div>
 
 <div className="space-y-2">
 <Label htmlFor="origen">Origen</Label>
-<Select
-value={formData.origen}
-onValueChange={(value) => setFormData({ ...formData, origen: value })}
->
+              <Select
+                value={formData.origen}
+                disabled={formData.tipo_viaje === "desde_aeropuerto"}
+                onValueChange={(value) => setFormData({ ...formData, origen: value })}
+              >
 <SelectTrigger>
 <SelectValue placeholder="Seleccionar origen" />
 </SelectTrigger>
@@ -663,10 +697,11 @@ onValueChange={(value) => setFormData({ ...formData, origen: value })}
 <Label htmlFor="destino">
 Destino <span className="text-red-500">*</span>
 </Label>
-<Select
-value={formData.destino}
-onValueChange={(value) => setFormData({ ...formData, destino: value })}
->
+              <Select
+                value={formData.destino}
+                disabled={formData.tipo_viaje === "hacia_aeropuerto"}
+                onValueChange={(value) => setFormData({ ...formData, destino: value })}
+              >
 <SelectTrigger>
 <SelectValue placeholder="Seleccionar destino" />
 </SelectTrigger>
@@ -680,19 +715,34 @@ onValueChange={(value) => setFormData({ ...formData, destino: value })}
 </Select>
 </div>
 
-<div className="space-y-2">
-<Label htmlFor="max_pasajeros">Máx. Pasajeros</Label>
-<Input
-id="max_pasajeros"
-type="number"
-min="1"
-max="10"
-value={formData.max_pasajeros}
-onChange={(e) =>
-setFormData({ ...formData, max_pasajeros: e.target.value })
-}
-/>
-</div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="min_pasajeros">Mín. Pasajeros</Label>
+                <Input
+                  id="min_pasajeros"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formData.min_pasajeros}
+                  onChange={(e) =>
+                    setFormData({ ...formData, min_pasajeros: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max_pasajeros">Máx. Pasajeros</Label>
+                <Input
+                  id="max_pasajeros"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formData.max_pasajeros}
+                  onChange={(e) =>
+                    setFormData({ ...formData, max_pasajeros: e.target.value })
+                  }
+                />
+              </div>
+            </div>
 
 <div className="space-y-2">
 <Label htmlFor="orden">Orden de Visualización</Label>
@@ -735,42 +785,68 @@ onValueChange={(value) => setFormData({ ...formData, posicion_imagen: value })}
 </div>
 </div>
 
-{/* Fechas de vigencia */}
-<div className="space-y-2">
-<Label>Vigencia (Opcional)</Label>
-<div className="grid grid-cols-2 gap-4">
-<div className="space-y-2">
-<Label htmlFor="fecha_inicio" className="text-sm text-gray-600">
-Desde
-</Label>
-<Input
-id="fecha_inicio"
-type="date"
-value={formData.fecha_inicio}
-onChange={(e) =>
-setFormData({ ...formData, fecha_inicio: e.target.value })
-}
-/>
-</div>
-<div className="space-y-2">
-<Label htmlFor="fecha_fin" className="text-sm text-gray-600">
-Hasta
-</Label>
-<Input
-id="fecha_fin"
-type="date"
-value={formData.fecha_fin}
-onChange={(e) =>
-setFormData({ ...formData, fecha_fin: e.target.value })
-}
-min={formData.fecha_inicio}
-/>
-</div>
-</div>
-<p className="text-xs text-gray-500">
-Si no se especifica, la promoción estará siempre disponible
-</p>
-</div>
+        {/* Fechas de vigencia */}
+        <div className="space-y-2">
+          <Label>Vigencia y Horarios (Opcional)</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fecha_inicio" className="text-sm text-gray-600">
+                Desde Fecha
+              </Label>
+              <Input
+                id="fecha_inicio"
+                type="date"
+                value={formData.fecha_inicio}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_inicio: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fecha_fin" className="text-sm text-gray-600">
+                Hasta Fecha
+              </Label>
+              <Input
+                id="fecha_fin"
+                type="date"
+                value={formData.fecha_fin}
+                onChange={(e) =>
+                  setFormData({ ...formData, fecha_fin: e.target.value })
+                }
+                min={formData.fecha_inicio}
+              />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="hora_inicio" className="text-sm text-gray-600">
+                Hora Inicio
+              </Label>
+              <Input
+                id="hora_inicio"
+                type="time"
+                value={formData.hora_inicio}
+                onChange={(e) =>
+                  setFormData({ ...formData, hora_inicio: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="hora_fin" className="text-sm text-gray-600">
+                Hora Fin
+              </Label>
+              <Input
+                id="hora_fin"
+                type="time"
+                value={formData.hora_fin}
+                onChange={(e) =>
+                  setFormData({ ...formData, hora_fin: e.target.value })
+                }
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">
+            Si no se especifica, la promoción estará siempre disponible en cualquier horario
+          </p>
+        </div>
 
 {/* Estado activo */}
 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">

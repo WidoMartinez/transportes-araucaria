@@ -25,9 +25,9 @@ allowNull: false,
 comment: "Precio promocional",
 },
 tipo_viaje: {
-type: DataTypes.ENUM("ida", "ida_vuelta"),
+type: DataTypes.STRING(50),
 allowNull: false,
-comment: "Tipo de viaje de la promoción",
+comment: "Tipo de viaje: ida_vuelta, desde_aeropuerto, hacia_aeropuerto",
 },
 destino: {
 type: DataTypes.STRING(100),
@@ -43,6 +43,11 @@ max_pasajeros: {
 type: DataTypes.INTEGER,
 defaultValue: 3,
 comment: "Número máximo de pasajeros",
+},
+min_pasajeros: {
+type: DataTypes.INTEGER,
+defaultValue: 1,
+comment: "Número mínimo de pasajeros",
 },
 activo: {
 type: DataTypes.BOOLEAN,
@@ -63,6 +68,16 @@ fecha_fin: {
 type: DataTypes.DATEONLY,
 allowNull: true,
 comment: "Fecha de fin de vigencia (opcional)",
+},
+hora_inicio: {
+type: DataTypes.TIME,
+allowNull: true,
+comment: "Hora de inicio para reservar (opcional)",
+},
+hora_fin: {
+type: DataTypes.TIME,
+allowNull: true,
+comment: "Hora de fin para reservar (opcional)",
 },
 posicion_imagen: {
 type: DataTypes.STRING(50),

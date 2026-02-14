@@ -137,10 +137,13 @@ tipo_viaje,
 destino,
 origen,
 max_pasajeros,
+min_pasajeros,
 activo,
 orden,
 fecha_inicio,
 fecha_fin,
+hora_inicio,
+hora_fin,
 posicion_imagen,
 } = req.body;
 
@@ -164,10 +167,13 @@ tipo_viaje,
 destino,
 origen: origen || "Temuco",
 max_pasajeros: max_pasajeros ? parseInt(max_pasajeros) : 3,
+min_pasajeros: min_pasajeros ? parseInt(min_pasajeros) : 1,
 activo: activo === "true" || activo === true,
 orden: orden ? parseInt(orden) : 0,
 fecha_inicio: fecha_inicio || null,
 fecha_fin: fecha_fin || null,
+hora_inicio: hora_inicio || null,
+hora_fin: hora_fin || null,
 posicion_imagen: posicion_imagen || "center",
 });
 
@@ -206,10 +212,13 @@ tipo_viaje,
 destino,
 origen,
 max_pasajeros,
+min_pasajeros,
 activo,
 orden,
 fecha_inicio,
 fecha_fin,
+hora_inicio,
+hora_fin,
 posicion_imagen,
 } = req.body;
 
@@ -223,12 +232,18 @@ if (destino !== undefined) updateData.destino = destino;
 if (origen !== undefined) updateData.origen = origen;
 if (max_pasajeros !== undefined)
 updateData.max_pasajeros = parseInt(max_pasajeros);
+if (min_pasajeros !== undefined)
+updateData.min_pasajeros = parseInt(min_pasajeros);
 if (activo !== undefined)
 updateData.activo = activo === "true" || activo === true;
 if (orden !== undefined) updateData.orden = parseInt(orden);
 if (fecha_inicio !== undefined)
 updateData.fecha_inicio = fecha_inicio || null;
 if (fecha_fin !== undefined) updateData.fecha_fin = fecha_fin || null;
+if (hora_inicio !== undefined)
+updateData.hora_inicio = hora_inicio || null;
+if (hora_fin !== undefined)
+updateData.hora_fin = hora_fin || null;
 if (posicion_imagen !== undefined)
 updateData.posicion_imagen = posicion_imagen || "center";
 
