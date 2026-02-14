@@ -4154,7 +4154,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 				// Campos que deben ser idénticos en ambos tramos (logística compartida)
 				const camposComunes = {
 					hotel: datosActualizados.hotel,
-					numeroVuelo: datosActualizados.numeroVuelo,
+					// numeroVuelo: datosActualizados.numeroVuelo, // NO propagar, son vuelos distintos
 					equipajeEspecial: datosActualizados.equipajeEspecial,
 					sillaInfantil: datosActualizados.sillaInfantil,
 					// No propagamos fecha/hora ya que son específicas de cada tramo
