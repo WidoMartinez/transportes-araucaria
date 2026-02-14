@@ -7561,7 +7561,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: Number(amount),
-			email: email,
+			email: email ? email.trim().toLowerCase() : email,
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			// Modificado: Flow hace un POST al retorno. React no puede leer el body del POST desde la navegación.
 			// Solución: Retornar a un endpoint del backend que reciba el POST y redirija al frontend con GET.
