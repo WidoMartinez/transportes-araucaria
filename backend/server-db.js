@@ -849,6 +849,7 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 		const reservasVueltaLegacy = await Reserva.findAll({
 			where: {
 				idaVuelta: true, // Solo las que aún se marcan como round-trip monolítico
+				tipoTramo: 'solo_ida', // SEGURIDAD: Solo procesar como legacy si no ha sido dividida
 				fechaRegreso: {
 					[Op.gte]: startDate,
 					[Op.lte]: endDateInclusive,
