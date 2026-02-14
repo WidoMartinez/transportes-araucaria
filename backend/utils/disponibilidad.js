@@ -370,25 +370,31 @@ export const buscarOportunidadesRetorno = async ({
 
 			// Verificar que cumple con holgura mínima y máxima
 			// En posicionamiento, tiempoEspera positivo significa salir ANTES de lo necesario.
-			if (
-				tiempoEsperaMinutos >= config.holguraMinima && // Al menos X min de margen
-				tiempoEsperaMinutos <= config.holguraMaximaDescuento
-			) {
-				const rangoHolgura =
-					config.holguraMaximaDescuento - config.holguraMinima;
-				const rangoDescuento = config.descuentoMaximo - config.descuentoMinimo;
+			// Verificar coincidencia estricta con horarios recomendados
+			let offsets = [];
+			const tolerance = 5;
 
-				let porcentajeProgreso;
-				if (tiempoEsperaMinutos <= config.holguraOptima) {
-					porcentajeProgreso =
-						(tiempoEsperaMinutos - config.holguraMinima) /
-						(config.holguraOptima - config.holguraMinima);
-				} else {
-					porcentajeProgreso = 1;
-				}
+			if (esSolicitudHaciaBase) {
+				// Retorno (Post-Trip): +30, +45, +60
+				offsets = [
+					{ min: 30, descuento: 50 },
+					{ min: 45, descuento: 30 },
+					{ min: 60, descuento: 20 }
+				];
+			} else {
+				// Posicionamiento (Pre-Trip): 0, +15, +30 (donde + diff significa salir ANTES)
+				offsets = [
+					{ min: 0, descuento: 50 },
+					{ min: 15, descuento: 30 },
+					{ min: 30, descuento: 20 }
+				];
+			}
 
-				const descuento =
-					config.descuentoMinimo + rangoDescuento * porcentajeProgreso;
+			// Buscar si coincide con alguno de los offsets permitidos
+			const match = offsets.find(opt => Math.abs(tiempoEsperaMinutos - opt.min) <= tolerance);
+
+			if (match) {
+				const descuento = match.descuento;
 
 				if (descuento > mejorDescuento) {
 					mejorDescuento = descuento;
@@ -521,6 +527,7 @@ export const validarHorarioMinimo = async ({
 		};
 	}
 };
+
 
 /**
  * Busca retornos disponibles para cualquier cliente (sin requerir email)

@@ -2298,3 +2298,28 @@ const oportunidad = await Oportunidad.findOne({ where: { codigo: oportunidadId }
 
 ---
 
+
+## 14. Descuentos por Retorno Aplicados Incorrectamente
+
+**Implementado: 14 Febrero 2026**
+
+### Problema
+El sistema aplicaba descuentos por retorno (ej: 50%, 30%) a cualquier horario seleccionado por el usuario siempre que estuviera dentro de una ventana amplia de 3 horas (holgura máxima). Esto permitía que usuarios seleccionaran horarios no óptimos (ej: 15:30 cuando la recomendación era 18:30) y aun así recibieran el descuento, generando inconsistencias operativas y financieras.
+
+### Causa Raíz
+La función `buscarOportunidadesRetorno` en `backend/utils/disponibilidad.js` utilizaba una validación por rango (`tiempoEspera >= min && tiempoEspera <= max`) que era demasiado permisiva, en lugar de verificar si el horario seleccionado coincidía con las opciones específicas ofrecidas (tarjetas verdes).
+
+### Solución (Febrero 2026)
+Se modificó la lógica de validación en el backend para ser estricta y solo permitir descuentos si el horario seleccionado coincide con los "offsets" estandarizados, con una tolerancia de 5 minutos.
+
+**Offsets Válidos:**
+- **Retorno (Post-Trip)**: +30 min (50%), +45 min (30%), +60 min (20%)
+- **Posicionamiento (Pre-Trip)**: 0 min (50%), +15 min (30%), +30 min (20%) [salir antes]
+
+**Archivo modificado:** `backend/utils/disponibilidad.js`
+
+### Verificación
+1. **Frontend**: Al seleccionar una hora exacta sugerida (ej: 18:30), el descuento se aplica.
+2. **Frontend**: Al seleccionar una hora manual arbitraria (ej: 15:00) aunque esté cerca, si no calza con los offsets (+/- 5 min), el descuento NO se aplica.
+3. **Backend**: La API de validación responde con `hayOportunidad: false` para horarios fuera de los slots permitidos.
+
