@@ -1483,6 +1483,7 @@ function App() {
 			descuentosPersonalizados,
 			descuentoCodigo,
 			descuentoOnline: descuentoOnlineTotal,
+			descuentoRetornoUniversal, // Exponer nuevo descuento
 			totalConDescuento,
 			abono,
 			saldoPendiente,

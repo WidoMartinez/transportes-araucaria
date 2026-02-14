@@ -1111,7 +1111,7 @@ function HeroExpress({
 										)}
 									</div>
 								</div>
-								{descuentoRetorno && (
+								{(descuentoRetorno || (pricing?.descuentoRetornoUniversal > 0)) && (
 									<div className="flex items-center gap-2 text-xs font-medium text-accent bg-accent/10 p-2 rounded-lg">
 										<CheckCircle2 className="h-4 w-4" />
 										¡Descuento por retorno aplicado!

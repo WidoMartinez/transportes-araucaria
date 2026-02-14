@@ -2323,3 +2323,6 @@ Se modificó la lógica de validación en el backend para ser estricta y solo pe
 2. **Frontend**: Al seleccionar una hora manual arbitraria (ej: 15:00) aunque esté cerca, si no calza con los offsets (+/- 5 min), el descuento NO se aplica.
 3. **Backend**: La API de validación responde con `hayOportunidad: false` para horarios fuera de los slots permitidos.
 
+**Actualización UI (14 Feb 2026):**
+Se corrigió un bug en `HeroExpress.jsx` donde el mensaje "¡Descuento por retorno aplicado!" dependía de un estado local desincronizado. Ahora el mensaje se activa directamente verificando `pricing.descuentoRetornoUniversal > 0` (expuesto en `App.jsx`), asegurando que si hay descuento en el precio, siempre haya aviso visual.
+
