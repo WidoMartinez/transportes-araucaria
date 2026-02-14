@@ -37,6 +37,8 @@ MapPin,
 Users,
   DollarSign,
   ArrowUpDown,
+  Link,
+  Copy,
 } from "lucide-react";
 import { useAuth } from "../../../contexts/AuthContext";
 import { getBackendUrl } from "../../../lib/backend";
@@ -350,6 +352,11 @@ console.error("Error al actualizar estado:", error);
 alert("Error al actualizar estado");
 }
 };
+  const copyPromoLink = (id) => {
+    const link = `${window.location.origin}/?promo=${id}`;
+    navigator.clipboard.writeText(link);
+    alert("Link copiado al portapapeles: " + link);
+  };
 
 return (
 <div className="space-y-6">
@@ -450,24 +457,32 @@ onCheckedChange={() => toggleActivo(promo.id, promo.activo)}
 </div>
 
 <div className="flex gap-2 pt-2">
-<Button
-variant="outline"
-size="sm"
-className="flex-1"
-onClick={() => handleEdit(promo)}
->
-<Edit className="h-4 w-4 mr-1" />
-Editar
-</Button>
-<Button
-variant="destructive"
-size="sm"
-onClick={() => handleDelete(promo.id)}
-disabled={loading}
->
-<Trash2 className="h-4 w-4" />
-</Button>
-</div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyPromoLink(promo.id)}
+                title="Copiar Link Directo"
+              >
+                <Link className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => handleEdit(promo)}
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Editar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDelete(promo.id)}
+                disabled={loading}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
 </CardContent>
 </Card>
 ))}
@@ -498,8 +513,30 @@ ID: {editingPromocion.id}
 </DialogDescription>
 </DialogHeader>
 
-<div className="space-y-4">
-{/* Doble vista previa: PC y Móvil */}
+        <div className="space-y-4">
+          {/* Link directo (Solo en edición) */}
+          {editingPromocion && (
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-blue-700 mb-1 flex items-center gap-1">
+                  <Link className="h-3 w-3" /> Link Directo (Google Ads)
+                </p>
+                <code className="text-xs text-blue-600 block truncate">
+                  {`${window.location.origin}/?promo=${editingPromocion.id}`}
+                </code>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                onClick={() => copyPromoLink(editingPromocion.id)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Doble vista previa: PC y Móvil */}
 {previewUrl && (
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-xl p-4 bg-gray-50/50 shadow-inner">
 <div className="space-y-2">
