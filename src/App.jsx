@@ -1758,6 +1758,9 @@ function App() {
 			pasajeros: formData.pasajeros,
 			idaVuelta: formData.idaVuelta,
 			fechaRegreso: formData.fechaRegreso,
+			horaRegreso: formData.horaRegreso,
+			direccionOrigen: formData.origen === "Otro" ? formData.otroOrigen : (formData.direccionOrigen || ""),
+			direccionDestino: formData.destino === "Otro" ? formData.otroDestino : (formData.direccionDestino || ""),
 			source,
 
 			// Datos de pricing calculados

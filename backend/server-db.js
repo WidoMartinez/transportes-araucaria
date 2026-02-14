@@ -413,7 +413,7 @@ const obtenerClienteParaReservaExpress = async ({
 	return cliente;
 };
 
-// Función para generar código único de reserva
+// Función para generar código único de reserva (Robustecida con verificación)
 const generarCodigoReserva = async () => {
 	try {
 		// Obtener fecha actual
@@ -422,38 +422,66 @@ const generarCodigoReserva = async () => {
 		const mes = String(fecha.getMonth() + 1).padStart(2, "0");
 		const dia = String(fecha.getDate()).padStart(2, "0");
 		const fechaStr = `${año}${mes}${dia}`;
+		const prefix = `AR-${fechaStr}-`; // Prefijo: AR-YYYYMMDD-
 
-		// Calcular inicio y fin del día actual
-		const inicioDelDia = new Date(fecha);
-		inicioDelDia.setHours(0, 0, 0, 0);
-
-		const finDelDia = new Date(fecha);
-		finDelDia.setHours(23, 59, 59, 999);
-
-		// Contar reservas creadas hoy
-		const reservasDelDia = await Reserva.count({
+		// 1. Buscar la última reserva creada HOY para tener un punto de partida
+		const ultimaReserva = await Reserva.findOne({
 			where: {
-				createdAt: {
-					[Op.gte]: inicioDelDia,
-					[Op.lte]: finDelDia,
-				},
+				codigoReserva: {
+					[Op.like]: `${prefix}%`
+				}
 			},
+			order: [["codigoReserva", "DESC"]], 
+			attributes: ["codigoReserva"]
 		});
 
-		// Generar consecutivo (siguiente número del día)
-		const consecutivo = String(reservasDelDia + 1).padStart(4, "0");
+		let consecutivo = 1;
 
-		// Formato: AR-YYYYMMDD-XXXX
-		const codigoReserva = `AR-${fechaStr}-${consecutivo}`;
+		if (ultimaReserva && ultimaReserva.codigoReserva) {
+			const parts = ultimaReserva.codigoReserva.split("-");
+			if (parts.length === 3) {
+				const lastNum = parseInt(parts[2], 10);
+				if (!isNaN(lastNum)) {
+					consecutivo = lastNum + 1;
+				}
+			}
+		}
 
-		console.log(`📋 Código de reserva generado: ${codigoReserva}`);
+		// 2. Loop de verificación seguridad para garantizar unicidad
+		let codigoReserva = "";
+		let disponible = false;
+		let intentos = 0;
+
+		while (!disponible && intentos < 10) {
+			codigoReserva = `${prefix}${String(consecutivo).padStart(4, "0")}`;
+			
+			// Verificar si existe realmente
+			const existe = await Reserva.count({
+				where: { codigoReserva: codigoReserva }
+			});
+
+			if (existe === 0) {
+				disponible = true;
+			} else {
+				console.log(`⚠️ Código ${codigoReserva} ya existe (colisión), probando siguiente...`);
+				consecutivo++;
+				intentos++;
+			}
+		}
+
+		if (!disponible) {
+			// Fallback extremo: usar timestamp si no encontramos hueco tras 10 intentos
+			console.warn("⚠️ No se encontró hueco consecutivo tras 10 intentos, usando timestamp.");
+			return `AR-${Date.now()}`; 
+		}
+
+		console.log(`📋 Código de reserva generado: ${codigoReserva} (Consecutivo: ${consecutivo})`);
 
 		return codigoReserva;
 	} catch (error) {
-		console.error("Error generando código de reserva:", error);
-		// Generar código de respaldo con timestamp si falla la consulta
-		const timestamp = Date.now();
-		return `AR-${timestamp}`;
+		console.error("Error generarCodigoReserva:", error);
+		// Fallback de emergencia
+		return `AR-${Date.now()}`;
 	}
 };
 
@@ -3488,8 +3516,13 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		}
 
 		// --- LÓGICA DE TRAMOS VINCULADOS (EXPRESS) ---
-	// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
-	if (!esModificacion && datosReserva.idaVuelta) {
+	// Si es una reserva de ida y vuelta (nueva o modificada que era solo ida), dividirla en dos tramos vinculados
+	const debeDividirse = datosReserva.idaVuelta && 
+						 reservaExpress.tipoTramo === 'solo_ida' && 
+						 !reservaExpress.tramoHijoId && 
+						 !reservaExpress.tramoPadreId;
+
+	if (debeDividirse) {
 		console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
 		console.log("📋 [EXPRESS] Datos de los tramos:", {
 			idReservaIda: reservaExpress.id,
@@ -3514,13 +3547,25 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				const dirDestinoVuelta = datosReserva.direccionOrigen || "";
 				
 				// Generar nuevo código para la vuelta
-				const codigoVuelta = await generarCodigoReserva();
+				let codigoVuelta = await generarCodigoReserva();
+
+				// 🛡️ GUARDIA COLISIÓN: Si el código generado es igual al de ida (sucede en llamadas casi simultáneas)
+				if (codigoVuelta === reservaExpress.codigoReserva) {
+					console.log(`⚠️ Colisión de código detectada (${codigoVuelta}), ajustando para el tramo de vuelta...`);
+					const parts = codigoVuelta.split("-");
+					if (parts.length === 3) {
+						const nextNum = parseInt(parts[2], 10) + 1;
+						codigoVuelta = `${parts[0]}-${parts[1]}-${String(nextNum).padStart(4, "0")}`;
+					} else {
+						codigoVuelta += "-R"; // Fallback seguro
+					}
+				}
 				
 				// Dividir costos (50/50 para simplificar asignación inicial)
-				const precioIda = Number(reservaExpress.precio) / 2;
-				const precioVuelta = Number(reservaExpress.precio) / 2;
-				const totalIda = Number(reservaExpress.totalConDescuento) / 2;
-				const totalVuelta = Number(reservaExpress.totalConDescuento) / 2;
+				const precioIda = (Number(reservaExpress.precio) || 0) / 2;
+				const precioVuelta = (Number(reservaExpress.precio) || 0) / 2;
+				const totalIda = (Number(reservaExpress.totalConDescuento) || 0) / 2;
+				const totalVuelta = (Number(reservaExpress.totalConDescuento) || 0) / 2;
 
 				// 2. Crear reserva de VUELTA (Hijo)
 				const reservaVuelta = await Reserva.create({
@@ -3544,12 +3589,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					// Datos financieros (mitad del total)
 					precio: precioVuelta,
 					totalConDescuento: totalVuelta,
-					descuentoBase: Number(reservaExpress.descuentoBase) / 2,
-					descuentoPromocion: Number(reservaExpress.descuentoPromocion) / 2,
-					descuentoRoundTrip: Number(reservaExpress.descuentoRoundTrip) / 2,
-					descuentoOnline: Number(reservaExpress.descuentoOnline) / 2,
-					abonoSugerido: Number(reservaExpress.abonoSugerido) / 2,
-					saldoPendiente: Number(reservaExpress.saldoPendiente) / 2,
+					descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
+					descuentoPromocion: (Number(reservaExpress.descuentoPromocion) || 0) / 2,
+					descuentoRoundTrip: (Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
+					descuentoOnline: (Number(reservaExpress.descuentoOnline) || 0) / 2,
+					abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
+					saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
 					
 					// Datos operativos
 					vehiculo: reservaExpress.vehiculo, // Copiar preferencia de vehículo
@@ -3588,12 +3633,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				await reservaExpress.update({
 					precio: precioIda,
 					totalConDescuento: totalIda,
-					abonoSugerido: Number(reservaExpress.abonoSugerido) / 2,
-					saldoPendiente: Number(reservaExpress.saldoPendiente) / 2,
-					descuentoBase: Number(reservaExpress.descuentoBase) / 2,
-					descuentoPromocion: Number(reservaExpress.descuentoPromocion) / 2,
-					descuentoRoundTrip: Number(reservaExpress.descuentoRoundTrip) / 2,
-					descuentoOnline: Number(reservaExpress.descuentoOnline) / 2,
+					abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
+					saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
+					descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
+					descuentoPromocion: (Number(reservaExpress.descuentoPromocion) || 0) / 2,
+					descuentoRoundTrip: (Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
+					descuentoOnline: (Number(reservaExpress.descuentoOnline) || 0) / 2,
 					
 					// Vinculación y Flags
 					idaVuelta: false, // Convertir a tramo único
@@ -4098,6 +4143,32 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 	};
 
 		await reserva.update(datosActualizados);
+
+		// 🎯 PROPAGACIÓN A TRAMOS VINCULADOS
+		// Si la reserva tiene un tramo vinculado (hijo o padre), actualizar campos comunes
+		try {
+			const vinculadoId = reserva.tramoHijoId || reserva.tramoPadreId;
+			if (vinculadoId) {
+				console.log(`🔗 Propagando campos comunes a reserva vinculada ${vinculadoId}...`);
+				
+				// Campos que deben ser idénticos en ambos tramos (logística compartida)
+				const camposComunes = {
+					hotel: datosActualizados.hotel,
+					numeroVuelo: datosActualizados.numeroVuelo,
+					equipajeEspecial: datosActualizados.equipajeEspecial,
+					sillaInfantil: datosActualizados.sillaInfantil,
+					// No propagamos fecha/hora ya que son específicas de cada tramo
+				};
+
+				await Reserva.update(camposComunes, {
+					where: { id: vinculadoId }
+				});
+				console.log(`✅ Propagación exitosa a reserva ${vinculadoId}`);
+			}
+		} catch (propError) {
+			console.error("❌ Error al propagar detalles a reserva vinculada:", propError.message);
+			// No bloqueamos la respuesta principal por esto
+		}
 
 	console.log(`✅ Detalles completados para reserva ${id}`);
 
@@ -5233,7 +5304,6 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                 transaction
             }
         );
-
         await transaction.commit();
 
         // Enviar notificación por correo al cliente si se solicitó
