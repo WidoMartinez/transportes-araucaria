@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -742,7 +742,8 @@ function HeroExpress({
 												id="fecha"
 												type="date"
 												name="fecha"
-												value={formData.fecha}
+												ref={fechaInputRef}
+												defaultValue={formData.fecha}
 												onChange={handleInputChange}
 												min={minDateTime}
 												aria-label="Seleccionar fecha del viaje"
@@ -963,7 +964,8 @@ function HeroExpress({
 												<input
 													type="date"
 													name="fechaRegreso"
-													value={formData.fechaRegreso}
+													ref={fechaRegresoInputRef}
+													defaultValue={formData.fechaRegreso}
 													onChange={handleInputChange}
 													min={formData.fecha || minDateTime}
 													aria-label="Seleccionar fecha de regreso"
