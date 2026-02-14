@@ -189,7 +189,7 @@ Reserva Rápida
 <div className="col-span-2 md:col-span-1 md:text-right pt-2 border-t md:border-t-0 border-green-200/50 mt-1 md:mt-0 flex justify-between md:flex-col items-center md:items-end">
 <p className="text-sm font-medium text-green-800">Total Promocional</p>
 <span className="text-2xl font-black text-green-600">
-${promocion.precio.toLocaleString("es-CL")}
+${Number(promocion.precio).toLocaleString("es-CL", { maximumFractionDigits: 0 })}
 </span>
 </div>
 </div>
@@ -392,11 +392,12 @@ type="submit"
 disabled={loading} 
 className="w-full md:w-auto md:px-10 h-12 md:h-11 bg-green-600 hover:bg-green-700 text-white font-bold text-lg md:text-base shadow-md transition-all active:scale-[0.98]"
 >
-{loading ? "Procesando..." : `Pagar $${promocion.precio.toLocaleString("es-CL")}`}
+{loading ? "Procesando..." : `Pagar $${Number(promocion.precio).toLocaleString("es-CL", { maximumFractionDigits: 0 })}`}
 </Button>
 </div>
 </form>
 </DialogContent>
 </Dialog>
+
 );
 }
