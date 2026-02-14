@@ -391,7 +391,7 @@ const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9
       fechaRegreso: fecha_vuelta || null,
       horaRegreso: hora_vuelta || null,
       idaVuelta: promocion.tipo_viaje === "ida_vuelta",
-      pasajeros: 1, 
+      pasajeros: req.body.cantidad_pasajeros ? parseInt(req.body.cantidad_pasajeros) : 1,
       precio: parseFloat(promocion.precio),
       totalConDescuento: parseFloat(promocion.precio),
       estado: "pendiente",

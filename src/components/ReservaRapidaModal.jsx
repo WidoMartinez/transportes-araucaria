@@ -42,6 +42,7 @@ fecha_ida: "",
 hora_ida: "",
 fecha_vuelta: "",
 hora_vuelta: "",
+cantidad_pasajeros: promocion ? (promocion.min_pasajeros || 1) : 1,
 });
 
 const handleChange = (e) => {
@@ -52,6 +53,8 @@ setFormData((prev) => ({ ...prev, [name]: value }));
   // Lógica de opciones de hora sincronizada con HeroExpress
   const getTimeOptions = (fechaSeleccionada) => {
     let options = generateTimeOptions();
+
+    if (!promocion) return options;
 
     // Filtrar por rango horario de la promoción (si existe)
     if (promocion.hora_inicio || promocion.hora_fin) {
@@ -247,24 +250,52 @@ className="h-12 md:h-11 bg-gray-50/50"
 />
 </div>
 
-<div className="space-y-2 md:col-span-2">
-<Label htmlFor="telefono" className="text-sm font-semibold">
-Teléfono <span className="text-red-500">*</span>
-</Label>
-<Input
-id="telefono"
-name="telefono"
-type="tel"
-inputMode="tel"
-value={formData.telefono}
-onChange={handleChange}
-required
-placeholder="+56 9 1234 5678"
-className="h-12 md:h-11 bg-gray-50/50"
-/>
-</div>
-</div>
-</div>
+      <div className="space-y-2 md:col-span-2">
+        <Label htmlFor="telefono" className="text-sm font-semibold">
+          Teléfono <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="telefono"
+          name="telefono"
+          type="tel"
+          inputMode="tel"
+          value={formData.telefono}
+          onChange={handleChange}
+          required
+          placeholder="+56 9 1234 5678"
+          className="h-12 md:h-11 bg-gray-50/50"
+        />
+      </div>
+
+       <div className="space-y-2 md:col-span-2">
+        <Label htmlFor="cantidad_pasajeros" className="text-sm font-semibold">
+          Número de Pasajeros <span className="text-red-500">*</span>
+        </Label>
+        <div className="relative">
+          <select
+            id="cantidad_pasajeros"
+            name="cantidad_pasajeros"
+            value={formData.cantidad_pasajeros || promocion.min_pasajeros || 1}
+            onChange={handleChange}
+            required
+            className="w-full h-12 md:h-11 px-3 bg-gray-50/50 border border-gray-200 rounded-md text-sm focus:ring-2 focus:ring-green-500/20 focus:border-green-500 appearance-none cursor-pointer"
+          >
+            {Array.from(
+              { length: Math.max(1, (promocion.max_pasajeros || 3) - (promocion.min_pasajeros || 1) + 1) },
+              (_, i) => (promocion.min_pasajeros || 1) + i
+            ).map((num) => (
+              <option key={num} value={num}>
+                {num} {num === 1 ? "Pasajero" : "Pasajeros"}
+              </option>
+            ))}
+          </select>
+          <div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none text-gray-400">
+             <Users className="h-4 w-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 {/* Fechas y horarios - Rediseñado para ser menos invasivo */}
 <div className="space-y-4">

@@ -816,31 +816,63 @@ onValueChange={(value) => setFormData({ ...formData, posicion_imagen: value })}
                 min={formData.fecha_inicio}
               />
             </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="hora_inicio" className="text-sm text-gray-600">
                 Hora Inicio
               </Label>
-              <Input
-                id="hora_inicio"
-                type="time"
+              <Select
                 value={formData.hora_inicio}
-                onChange={(e) =>
-                  setFormData({ ...formData, hora_inicio: e.target.value })
+                onValueChange={(value) =>
+                  setFormData({ ...formData, hora_inicio: value })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="--:--" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                   {/* Generar opciones cada 15 min */}
+                   {Array.from({ length: 96 }).map((_, i) => {
+                      const h = Math.floor(i / 4).toString().padStart(2, '0');
+                      const m = ((i % 4) * 15).toString().padStart(2, '0');
+                      const time = `${h}:${m}`; // "00:00", "00:15"...
+                      // Formato HH:MM:00 para guardar en DB TIME
+                      const val = `${time}:00`; 
+                      return (
+                        <SelectItem key={val} value={val}>
+                          {time}
+                        </SelectItem>
+                      );
+                   })}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="hora_fin" className="text-sm text-gray-600">
                 Hora Fin
               </Label>
-              <Input
-                id="hora_fin"
-                type="time"
+               <Select
                 value={formData.hora_fin}
-                onChange={(e) =>
-                  setFormData({ ...formData, hora_fin: e.target.value })
+                onValueChange={(value) =>
+                  setFormData({ ...formData, hora_fin: value })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="--:--" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                   {Array.from({ length: 96 }).map((_, i) => {
+                      const h = Math.floor(i / 4).toString().padStart(2, '0');
+                      const m = ((i % 4) * 15).toString().padStart(2, '0');
+                      const time = `${h}:${m}`;
+                      const val = `${time}:00`;
+                      return (
+                        <SelectItem key={val} value={val}>
+                          {time}
+                        </SelectItem>
+                      );
+                   })}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <p className="text-xs text-gray-500">
