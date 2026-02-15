@@ -2101,6 +2101,7 @@ const [configSillas, setConfigSillas] = useState({
 					oportunidadesRetornoUniversal={oportunidadesRetornoUniversal}
 					onAplicarCodigo={validarCodigo}
 					onRemoverCodigo={removerCodigo}
+					configSillas={configSillas}
 				/>
 
 				<PromocionBanners />

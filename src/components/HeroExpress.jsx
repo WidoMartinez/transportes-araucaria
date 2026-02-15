@@ -11,7 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
-import { LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
+import { Baby, LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -932,27 +932,6 @@ function HeroExpress({
 												</span>
 											)}
 										</div>
-									</div>
-
-									<div
-										className={`flex items-center space-x-3 p-4 md:p-3 rounded-xl md:rounded-lg border-2 transition-all cursor-pointer touch-manipulation min-h-[52px] ${formData.sillaInfantil ? 'bg-muted border-primary shadow-sm' : 'border-border hover:bg-muted/50 active:bg-muted/70'}`}
-										onClick={() => handleInputChange({ target: { name: "sillaInfantil", value: !formData.sillaInfantil } })}
-										role="checkbox"
-										aria-checked={formData.sillaInfantil}
-										tabIndex={0}
-										onKeyDown={(e) => {
-											if (e.key === 'Enter' || e.key === ' ') {
-												e.preventDefault();
-												handleInputChange({ target: { name: "sillaInfantil", value: !formData.sillaInfantil } });
-											}
-										}}
-									>
-										<Checkbox
-											id="sillaInfantil"
-											checked={formData.sillaInfantil}
-											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-5 md:size-4"
-										/>
-										<Label htmlFor="sillaInfantil" className="cursor-pointer font-medium text-foreground text-base md:text-sm">Silla de niño</Label>
 									</div>
 								</div>
 
