@@ -94,6 +94,10 @@ export default function GestionPromociones() {
     hora_inicio: "",
     hora_fin: "",
     posicion_imagen: "center",
+    permite_sillas: false,
+    max_sillas: "0",
+    valor_silla: "0",
+    anticipacion_minima: "3",
   });
   const [imagenFile, setImagenFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -185,6 +189,10 @@ setFormData({
       hora_inicio: "",
       hora_fin: "",
       posicion_imagen: "center",
+      permite_sillas: false,
+      max_sillas: "0",
+      valor_silla: "0",
+      anticipacion_minima: "3",
     });
 setImagenFile(null);
 setPreviewUrl("");
@@ -209,6 +217,10 @@ setFormData({
       hora_inicio: promocion.hora_inicio || "",
       hora_fin: promocion.hora_fin || "",
       posicion_imagen: promocion.posicion_imagen || "center",
+      permite_sillas: promocion.permite_sillas || false,
+      max_sillas: (promocion.max_sillas || "0").toString(),
+      valor_silla: (promocion.valor_silla || "0").toString(),
+      anticipacion_minima: (promocion.anticipacion_minima || "3").toString(),
     });
 setImagenFile(null);
 setPreviewUrl(`${getBackendUrl()}${promocion.imagen_url}`);
@@ -271,6 +283,10 @@ formDataToSend.append("origen", formData.origen);
       formDataToSend.append("hora_inicio", formData.hora_inicio);
       formDataToSend.append("hora_fin", formData.hora_fin);
       formDataToSend.append("posicion_imagen", formData.posicion_imagen);
+      formDataToSend.append("permite_sillas", formData.permite_sillas);
+      formDataToSend.append("max_sillas", formData.max_sillas);
+      formDataToSend.append("valor_silla", formData.valor_silla);
+      formDataToSend.append("anticipacion_minima", formData.anticipacion_minima);
 
 if (imagenFile) {
 formDataToSend.append("imagen", imagenFile);
@@ -781,9 +797,81 @@ onValueChange={(value) => setFormData({ ...formData, posicion_imagen: value })}
 <SelectItem value="bottom right">Inferior Derecha</SelectItem>
 </SelectContent>
 </Select>
-<p className="text-xs text-gray-500">Útil si el contenido importante de la foto no está al centro.</p>
-</div>
-</div>
+                <p className="text-xs text-gray-500">Útil si el contenido importante de la foto no está al centro.</p>
+            </div>
+
+            {/* Configuración Avanzada - Full Width */}
+            <div className="col-span-1 border-t pt-4 mt-2">
+              <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="bg-gray-100 p-1 rounded">⚙️</span> Configuración Avanzada
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                
+                <div className="space-y-4">
+                   <div className="space-y-2">
+                     <Label htmlFor="anticipacion_minima" className="font-semibold text-gray-700">Anticipación Mínima</Label>
+                     <div className="relative">
+                       <Input
+                         id="anticipacion_minima"
+                         type="number"
+                         min="0"
+                         value={formData.anticipacion_minima}
+                         onChange={(e) => setFormData({ ...formData, anticipacion_minima: e.target.value })}
+                         className="pl-5"
+                       />
+                       <span className="absolute right-3 top-2.5 text-gray-400 text-xs font-medium">Horas</span>
+                     </div>
+                     <p className="text-[11px] text-gray-500 leading-tight">Tiempo mínimo entre la reserva y el viaje.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="permite_sillas" className="text-sm font-semibold text-gray-700 cursor-pointer">Sillas Infantiles</Label>
+                      <p className="text-[11px] text-gray-500">Permitir agregar sillas a la reserva</p>
+                    </div>
+                    <Switch
+                      id="permite_sillas"
+                      checked={formData.permite_sillas}
+                      onCheckedChange={(checked) => setFormData({ ...formData, permite_sillas: checked })}
+                    />
+                  </div>
+
+                  {formData.permite_sillas && (
+                    <div className="grid grid-cols-2 gap-3 pl-2 border-l-2 border-green-500/20 animate-in fade-in slide-in-from-top-1">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="max_sillas" className="text-xs font-medium text-gray-600">Máx. Cantidad</Label>
+                        <Input
+                          id="max_sillas"
+                          type="number"
+                          min="1"
+                          value={formData.max_sillas}
+                          onChange={(e) => setFormData({ ...formData, max_sillas: e.target.value })}
+                          className="h-9 bg-white"
+                        />
+                      </div>
+                       <div className="space-y-1.5">
+                        <Label htmlFor="valor_silla" className="text-xs font-medium text-gray-600">Valor Unitario</Label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-2 text-gray-400 text-xs">$</span>
+                          <Input
+                            id="valor_silla"
+                            type="number"
+                            min="0"
+                            value={formData.valor_silla}
+                            onChange={(e) => setFormData({ ...formData, valor_silla: e.target.value })}
+                             className="h-9 pl-5 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
         {/* Fechas de vigencia */}
         <div className="space-y-2">

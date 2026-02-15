@@ -65,6 +65,7 @@ import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-o
 import addAddressColumns from "./migrations/add-address-columns.js";
 import createPromocionesBannerTable from "./migrations/create-promociones-banner-table.js";
 import addPosicionImagenToPromocionesBanner from "./migrations/add-posicion-imagen-to-promociones-banner.js";
+import addAdvancedPromoConfig from "./migrations/add-advanced-promo-config.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
@@ -10486,6 +10487,7 @@ const startServer = async () => {
 		await addArchivadaColumn();
 		await addColumnVan();
 		await addConfiguracionTable();
+		await addAdvancedPromoConfig();
 		await initializeDatabase();
 		console.log("📊 Base de datos MySQL conectada");
 
