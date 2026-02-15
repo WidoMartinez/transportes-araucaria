@@ -2380,3 +2380,43 @@ Se implementó una estrategia de "defensa en profundidad" tanto en frontend como
 
 > [!IMPORTANT]
 > **Regla de Oro**: Una conversión con valor 1.0 es infinitamente mejor que ninguna conversión. El sistema ahora prioriza capturar el evento sobre la precisión del monto en casos de fallo de datos.
+
+---
+
+## 12. Optimización Premium y Móvil de HeroExpress
+
+**Implementado: 15 Febrero 2026**
+
+### Problema
+El componente `HeroExpress` presentaba una experiencia de usuario subóptima en dispositivos móviles y falta de armonía visual en PC:
+- **Móvil**: Los selectores de cantidad de sillas usaban botones pequeños (32px), difíciles de accionar. Los checkboxes eran menos intuitivos que los interruptores (Switches) para activar opciones.
+- **PC**: La disposición vertical de las opciones extra ("Regreso" y "Sillas") generaba espacios vacíos y anchos desiguales, rompiendo la estética premium.
+- **Visual**: Había problemas de "clipping" (recorte) en los anillos de enfoque/selección debido a contenedores con `overflow-hidden`.
+
+### Solución
+Se realizó un rediseño integral enfocado en **Accesibilidad Táctil** y **Armonía Visual**:
+
+1. **Controles de Interacción**:
+   - Reemplazo de `Checkbox` por `Switch` para "Necesito regreso" y "¿Silla para niños?". Los switches son más ergonómicos para el pulgar en móviles.
+   - **Target Táctil de 48px**: Se aumentó el tamaño de los botones numéricos a 48x48px (mínimo recomendado para accesibilidad) con anillos de enfoque de 4px para un feedback claro.
+
+2. **Disposición Adaptativa (Grid)**:
+   - **Móvil**: Estructura vertical optimizada.
+   - **PC**: Implementación de `grid-cols-2` para agrupar las opciones extra en una sola fila simétrica, logrando una disposición equilibrada junto al botón principal.
+
+3. **Manejo de Animaciones y Clipping**:
+   - Se cambió `overflow-hidden` por `overflow-visible` en los contenedores de animación de Framer Motion.
+   - Se añadió padding interno (`p-1`) para permitir que los efectos de sombra (shadow-lg) y anillos de selección (ring-4) se visualicen completos sin recortes.
+
+4. **Identidad Visual**:
+   - Corrección de paleta de colores: Cambio de Ámbar por **Chocolate Brown** (`#4A3728`) para alinearse con la estética premium de la marca en todas las secciones de interacción.
+
+### Gotchas Técnicas
+- **Propagación de Clicks**: Al usar `Switch` dentro de un contenedor con `onClick`, fue necesario usar `e.stopPropagation()` o clases como `no-click-prop` para evitar disparos dobles del toggle.
+- **Z-Index en Móvil**: La tarjeta del formulario usa `-mt-6` y `z-10` para superponerse elegantemente a la imagen de cabecera en móviles, proporcionando una sensación de profundidad.
+
+**Archivos modificados**:
+- `src/components/HeroExpress.jsx`: Lógica de componentes, estilos de grid y targets táctiles.
+- `src/App.css`: Definición de la paleta `chocolate`.
+
+---
