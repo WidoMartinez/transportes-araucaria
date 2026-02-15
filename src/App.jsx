@@ -596,6 +596,10 @@ const [configSillas, setConfigSillas] = useState({
 			return true;
 		}
 
+		if (data.configSillas) {
+			setConfigSillas(data.configSillas);
+		}
+
 		if (data.descuentosGlobales) {
 			const nuevosDescuentos = {
 				descuentoOnline: {

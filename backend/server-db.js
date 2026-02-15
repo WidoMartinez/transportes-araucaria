@@ -1096,7 +1096,7 @@ const buildPromotionEntries = (promocion) => {
 };
 
 const buildPricingPayload = async () => {
-	const [destinos, dayPromotions, descuentosGlobales, codigosDescuento] =
+	const [destinos, dayPromotions, descuentosGlobales, codigosDescuento, configSillas] =
 		await Promise.all([
 			Destino.findAll({
 				order: [
@@ -1110,6 +1110,11 @@ const buildPricingPayload = async () => {
 			DescuentoGlobal.findAll(),
 			CodigoDescuento.findAll({
 				order: [["fechaCreacion", "DESC"]],
+			}),
+			Configuracion.getValorParseado("config_sillas", {
+				habilitado: false,
+				maxSillas: 2,
+				precioPorSilla: 5000,
 			}),
 		]);
 
@@ -1254,6 +1259,7 @@ const buildPricingPayload = async () => {
 		dayPromotions: dayPromotionsFormatted,
 		descuentosGlobales: descuentosFormatted,
 		codigosDescuento: codigosFormateados,
+		configSillas: configSillas,
 		updatedAt: new Date().toISOString(),
 	};
 };
