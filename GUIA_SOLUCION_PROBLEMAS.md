@@ -267,6 +267,31 @@ node test-split-logic.js
 
 ---
 
+## 1.2. Visibilidad y Paginación de Reservas Ida/Vuelta en Admin
+
+**Implementado: 15 Febrero 2026**
+
+### Problema
+Tras la implementación de la separación de tramos (Ver 1.0), el panel administrativo mostraba comportamientos erróneos en la paginación:
+- **Síntoma**: Al cargar la sección "Reservas", la tabla aparecía vacía o con muy pocos resultados, obligando a pulsar "Siguiente" para ver datos.
+- **Causa**: El backend paginaba los resultados (ej. 20 por página) incluyendo tanto "Idas" como "Vueltas". Si las reservas más recientes eran mayoritariamente "Vueltas", estas llenaban la página 1. El frontend, que filtraba ocultando las "Vueltas" para evitar duplicados visuales, terminaba ocultando la mayoría de los resultados de esa página.
+
+### Solución
+Se movió la lógica de filtrado del Cliente al Servidor.
+
+**Backend (`server-db.js`)**:
+- El endpoint `GET /api/reservas` ahora excluye por defecto los registros con `tipoTramo = 'vuelta'`.
+- Esto asegura que cada página de resultados contenga 20 reservas "Principales" (Idas o Solo Ida) visibles.
+
+**Frontend (`AdminReservas.jsx`)**:
+- Se eliminó el filtro cliente `r.tipoTramo !== "vuelta"`, ya que el backend entrega los datos depurados.
+
+**Resultado**:
+- La paginación es precisa y la vista inicial siempre muestra datos.
+- Las "Vueltas" siguen siendo accesibles al ver los detalles de su reserva "Ida" vinculada o mediante búsqueda directa.
+
+---
+
 ## 2. Problemas de Rutas y Backend (Error 500)
 
 
@@ -2326,3 +2351,32 @@ Se modificó la lógica de validación en el backend para ser estricta y solo pe
 **Actualización UI (14 Feb 2026):**
 Se corrigió un bug en `HeroExpress.jsx` donde el mensaje "¡Descuento por retorno aplicado!" dependía de un estado local desincronizado. Ahora el mensaje se activa directamente verificando `pricing.descuentoRetornoUniversal > 0` (expuesto en `App.jsx`), asegurando que si hay descuento en el precio, siempre haya aviso visual.
 
+
+---
+
+## 22. Conversiones Google Ads con Valor Cero (Robustez de Monto)
+
+**Implementado: 15 Febrero 2026**
+
+### Problema
+Algunas conversiones de Google Ads se registraban con valor 0 o no se registraban cuando el parámetro `amount` fallaba en la redirección desde Flow, causando que Google Ads descartara la conversión o la registrara sin valor económico.
+
+### Causa
+El sistema dependía estrictamente de que el parámetro `amount` llegara correctamente en la URL. Si llegaba vacío, null o 0, el sistema enviaba ese valor a Google.
+
+### Solución
+Se implementó una estrategia de "defensa en profundidad" tanto en frontend como backend:
+
+1.  **Backend (`server-db.js`)**: Si el monto de Flow falla, busca en la BD (`totalConDescuento` o `reserva.total`). Si todo falla, usa `1.0` como fallback. Validaciones estrictas antes de redirigir.
+2.  **Frontend (`App.jsx` y `FlowReturn.jsx`)**:
+    *   Parsea el monto con `parseFloat`.
+    *   Si el resultado es falsy o 0, fuerza el valor a `1.0`.
+    *   **Conversiones Mejoradas**: Se envía `email` y `telefono` hasheados (SHA256) para mejorar la atribución.
+
+### Archivos Modificados
+*   `backend/server-db.js`
+*   `src/App.jsx`
+*   `src/components/FlowReturn.jsx`
+
+> [!IMPORTANT]
+> **Regla de Oro**: Una conversión con valor 1.0 es infinitamente mejor que ninguna conversión. El sistema ahora prioriza capturar el evento sobre la precisión del monto en casos de fallo de datos.

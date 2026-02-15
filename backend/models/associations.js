@@ -28,6 +28,17 @@ export const setupAssociations = () => {
 		as: "cliente",
 	});
 
+	// Relación: Reserva -> Reserva (Vinculación Ida/Vuelta)
+	Reserva.belongsTo(Reserva, {
+		foreignKey: "tramoHijoId",
+		as: "tramoHijo",
+	});
+	
+	Reserva.belongsTo(Reserva, {
+		foreignKey: "tramoPadreId",
+		as: "tramoPadre",
+	});
+
 	// Relación: Vehiculo -> Reservas (Un vehículo puede tener muchas reservas)
 	Vehiculo.hasMany(Reserva, {
 		foreignKey: "vehiculoId",

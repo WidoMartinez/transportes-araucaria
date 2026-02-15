@@ -4465,6 +4465,8 @@ app.get("/api/reservas", async (req, res) => {
 			fecha_desde,
 			fecha_hasta,
 			incluir_cerradas,
+			sort,
+			order,
 		} = req.query;
 
 		const whereClause = {};
@@ -4496,6 +4498,16 @@ app.get("/api/reservas", async (req, res) => {
 			}
 		}
 
+		// SOLUCIÓN: Excluir reservas de "VUELTA" del listado principal para evitar duplicados y problemas de paginación
+		// Las reservas de vuelta se acceden a través de la reserva de IDA correspondiente.
+		// Solo mostramos "ida" y "solo_ida" (o null/default).
+		// Si se requiere listar explicitamente las vueltas, se podría añadir un flag tipo `incluir_vueltas=true`
+		if (!req.query.incluir_vueltas) {
+			whereClause.tipoTramo = {
+				[Op.ne]: 'vuelta'
+			};
+		}
+
 		// Filtro: Estado Avanzado (Incompletas)
 		if (req.query.estado_avanzado === 'incompletas') {
 			whereClause[Op.and] = [
@@ -4524,10 +4536,21 @@ app.get("/api/reservas", async (req, res) => {
 			whereClause.archivada = false;
 		}
 
+		// Lógica de ordenamiento
+		let orderClause = [["created_at", "DESC"]]; // Default
+		if (sort && order) {
+			const direction = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
+			if (sort === "fecha") {
+				orderClause = [["fecha", direction], ["hora", "ASC"]];
+			} else if (sort === "created_at") {
+				orderClause = [["created_at", direction]];
+			}
+		}
+
 		// Configurar opciones de consulta
 		const queryOptions = {
 			where: whereClause,
-			order: [["created_at", "DESC"]],
+			order: orderClause,
 			include: [
 				{
 					model: Cliente,
@@ -4542,6 +4565,12 @@ app.get("/api/reservas", async (req, res) => {
 						"totalReservas",
 					],
 				},
+				{
+					model: Reserva,
+					as: "tramoHijo",
+					attributes: ["id", "fecha", "hora", "numeroVuelo"],
+					required: false, // Left Join
+				}
 			],
 		};
 
@@ -7946,6 +7975,7 @@ app.post("/api/payment-result", async (req, res) => {
 				const userEmail = flowData.payerEmail || flowData.email || '';
 				const userDataEncoded = Buffer.from(JSON.stringify({ email: userEmail })).toString('base64');
 				
+				// Incluir warning param para debugging en frontend
 				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${userDataEncoded}&warning=no_reserva_id`);
 			}
 

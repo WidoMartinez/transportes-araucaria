@@ -447,23 +447,41 @@ function App() {
 		const reservaId = url.searchParams.get("reserva_id");
 		const amount = url.searchParams.get("amount");
 		const encodedData = url.searchParams.get("d");
+		// Capturar warning si existe (e.g. no_reserva_id)
+		const warning = url.searchParams.get("warning");
 
-		if (flowSuccess && reservaId) {
+		if (flowSuccess) {
 			console.log(
-				`✅ Retorno de pago exitoso detectado para reserva ID: ${reservaId}, Monto: ${amount}`
+				`✅ [App.jsx] Retorno de pago exitoso detectado.`,
+				`Reserva ID: ${reservaId || 'No disponible'}`,
+				`Monto URL: ${amount}`,
+				`Warning: ${warning || 'Ninguno'}`
 			);
 			
 			// DISPARAR CONVERSIÓN DE GOOGLE ADS (Estandarización con FlowReturn)
 			if (typeof window.gtag === "function") {
 				try {
+					// Usar timestamp si no hay reservaId para evitar colisiones en pagos sin reserva
 					const transactionId = reservaId || `exp_${Date.now()}`;
+					
+					// Clave única para sessionStorage (evita duplicados al recargar)
 					const conversionKey = `flow_conversion_express_${transactionId}`;
 					
 					if (!sessionStorage.getItem(conversionKey)) {
-						const parsedAmount = (amount !== null && amount !== undefined && amount !== "") 
-							? Number(amount) 
-							: 0;
-						const conversionValue = parsedAmount > 0 ? parsedAmount : 1.0;
+						// Lógica de monto robusta
+						let conversionValue = 0;
+						if (amount !== null && amount !== undefined && amount !== "") {
+							const parsed = Number(amount);
+							if (!isNaN(parsed) && parsed > 0) {
+								conversionValue = parsed;
+							}
+						}
+						
+						// Si el monto sigue siendo 0 (error de parseo o no venía), usar valor por defecto 1.0 para registrar la conversión
+						if (conversionValue <= 0) {
+							console.warn("⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.");
+							conversionValue = 1.0;
+						}
 
 						let userEmail = '';
 						let userName = '';
@@ -472,42 +490,36 @@ function App() {
 						// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
 						if (encodedData) {
 							try {
-								// ✅ FIX: Decodificar Base64 con soporte UTF-8 para caracteres especiales (acentos, ñ, etc.)
-								// Paso 1: Decodificar URL encoding (revertir encodeURIComponent del backend)
+								// Paso 1: Decodificar URL encoding
 								const decodedFromUrl = decodeURIComponent(encodedData);
-								
 								// Paso 2: Decodificar Base64 a bytes
 								const base64Decoded = atob(decodedFromUrl);
-								
-								// Paso 3: Convertir bytes a UTF-8 string (maneja acentos correctamente)
+								// Paso 3: Convertir bytes a UTF-8 string
 								const utf8Decoded = decodeURIComponent(escape(base64Decoded));
-								
 								// Paso 4: Parsear JSON
 								const userData = JSON.parse(utf8Decoded);
+								
 								if (userData && typeof userData === 'object') {
 									userEmail = userData.email || '';
 									userName = userData.nombre || '';
 									userPhone = userData.telefono || '';
-									console.log('✅ [App.jsx] Datos de usuario decodificados desde parámetro Base64 (UTF-8)');
+									console.log('✅ [App.jsx] Datos de usuario recuperados para Enhanced Conversions');
 								}
 							} catch (e) {
-								console.warn('⚠️ [App.jsx] Error decodificando d-param:', e.message);
-								console.warn('   Parámetro d recibido:', encodedData);
+								console.warn('⚠️ [App.jsx] Error decodificando datos de usuario:', e.message);
 							}
 						}
 
 						const conversionData = {
-							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB", // Etiqueta estándarizada
+							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB", // Etiqueta conversión compra
 							value: conversionValue,
 							currency: "CLP",
 							transaction_id: transactionId,
 						};
 
+						// Agregar Enhanced Conversions data si existe
 						if (userEmail) conversionData.email = userEmail.toLowerCase().trim();
-						if (userPhone) {
-							// ✅ FIX: Normalizar teléfono al formato E.164 (+56...) para mejores conversiones
-							conversionData.phone_number = normalizePhoneToE164(userPhone);
-						}
+						if (userPhone) conversionData.phone_number = normalizePhoneToE164(userPhone);
 						if (userName) {
 							const nameParts = userName.trim().split(' ');
 							conversionData.address = {
@@ -517,23 +529,33 @@ function App() {
 							};
 						}
 
+						console.log(`🚀 [App.jsx] Disparando conversión Google Ads:`, conversionData);
 						window.gtag("event", "conversion", conversionData);
+						
+						// Marcar como enviada
 						sessionStorage.setItem(conversionKey, 'true');
 
+					} else {
+						console.log("ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.");
 					}
 				} catch (conversionError) {
-					console.error("❌ Error disparando conversión en App.jsx:", conversionError);
+					console.error("❌ [App.jsx] Error crítico disparando conversión:", conversionError);
 				}
+			} else {
+				console.warn("⚠️ [App.jsx] window.gtag no está definido. No se pudo disparar la conversión.");
 			}
 
-			setVistaCompletarDetalles({
-				activo: true,
-				reservaId: reservaId,
-				initialAmount: amount,
-			});
+			// Solo mostrar detalles si hay reservaId válido
+			if (reservaId) {
+				setVistaCompletarDetalles({
+					activo: true,
+					reservaId: reservaId,
+					initialAmount: amount,
+				});
+			}
 
-			// Limpiar URL para evitar reactivación
-			window.history.replaceState(null, "", window.location.pathname);
+			// Limpiar URL para evitar reactivación al recargar, pero mantener estado interno
+			// window.history.replaceState(null, "", window.location.pathname);
 		}
 	}, []);
 

@@ -74,6 +74,8 @@ function FlowReturn() {
 			// Pequeño delay artificial para UX
 			await new Promise(resolve => setTimeout(resolve, PAYMENT_VERIFICATION_DELAY_MS));
 			
+			console.log(`🔍 [FlowReturn] Verificando estado: Status=${statusParam}, Error=${errorParam}, Amount=${amountParam}`);
+
 			// Si el backend nos dice explícitamente que hubo error
 			if (statusParam === "error" || errorParam) {
 				console.warn(`❌ Error en pago detectado. Status: ${statusParam}, Error: ${errorParam}, FlowStatus: ${flowStatusParam}`);
@@ -106,23 +108,28 @@ function FlowReturn() {
 		const triggerConversion = (amount, id, tkn) => {
 			try {
 				if (typeof window.gtag === "function") {
+					// Usar ID de reserva, token o generar uno temporal
 					const transactionId = id || tkn || `manual_${Date.now()}`;
+					
 					// ESTRATEGIA B: amount contiene el valor TOTAL de la reserva
 					// Lógica robusta: asegurarse que no sea null, undefined ni string vacío antes de convertir
-					const parsedAmount = (amount !== null && amount !== undefined && amount !== "") 
-						? Number(amount) 
-						: 0;
-					const conversionValue = parsedAmount > 0 ? parsedAmount : 1.0;
+					let conversionValue = 0;
+					if (amount !== null && amount !== undefined && amount !== "") {
+						const parsed = Number(amount);
+						if (!isNaN(parsed) && parsed > 0) {
+							conversionValue = parsed;
+						}
+					}
 
-					// Log de advertencia
-					if (conversionValue === 1.0) {
+					// Log de advertencia si el monto es inválido
+					if (conversionValue <= 0) {
 						console.warn(
-							'⚠️ No se recibió monto válido en la URL. Usando valor por defecto 1.0.',
-							'amount recibido:', amount,
-							'parsedAmount:', parsedAmount
+							'⚠️ [FlowReturn] No se recibió monto válido en la URL. Usando valor por defecto 1.0.',
+							'amount recibido:', amount
 						);
+						conversionValue = 1.0;
 					} else {
-						console.log('✅ Valor total de conversión:', conversionValue);
+						console.log('✅ [FlowReturn] Valor total de conversión:', conversionValue);
 					}
 					
 					// Usar sessionStorage para evitar duplicados en recargas
@@ -157,16 +164,10 @@ function FlowReturn() {
 									userEmail = userData.email || '';
 									userName = userData.nombre || '';
 									userPhone = userData.telefono || '';
-									console.log('✅ Datos de usuario decodificados desde parámetro Base64 (UTF-8)');
-									console.log(`   - Email: ${userEmail}`);
-									console.log(`   - Nombre: ${userName}`);
-									console.log(`   - Teléfono: ${userPhone}`);
-								} else {
-									throw new Error('Estructura de datos inválida');
+									console.log('✅ [FlowReturn] Datos de usuario decodificados desde parámetro Base64 (UTF-8)');
 								}
 							} catch (error) {
-								console.warn('⚠️ Error decodificando datos de usuario:', error.message);
-								console.warn('   Parámetro d recibido:', encodedData);
+								console.warn('⚠️ [FlowReturn] Error decodificando datos de usuario:', error.message);
 								// Fallback a parámetros individuales (compatibilidad con URLs antiguas)
 								userEmail = urlParams.get('email') || '';
 								userName = urlParams.get('nombre') || '';
@@ -211,26 +212,18 @@ function FlowReturn() {
 							};
 						}
 
+						console.log(`🚀 [FlowReturn] Disparando conversión Google Ads:`, conversionData);
 						window.gtag("event", "conversion", conversionData);
 						sessionStorage.setItem(conversionKey, 'true');
 						
-						// Log mejorado mostrando datos adicionales
-						console.log(`✅ Evento de conversión Google Ads disparado (ID: ${transactionId}, Valor: ${conversionValue})`);
-						if (userEmail) console.log(`   - email: ${conversionData.email}`);
-						if (userPhone) console.log(`   - phone_number: ${conversionData.phone_number}`);
-						if (userName) {
-							console.log(`   - address.first_name: ${conversionData.address.first_name}`);
-							console.log(`   - address.last_name: ${conversionData.address.last_name}`);
-							console.log(`   - address.country: ${conversionData.address.country}`);
-						}
 					} else {
-						console.log("ℹ️ Conversión ya registrada para esta sesión:", transactionId);
+						console.log("ℹ️ [FlowReturn] Conversión ya registrada para esta sesión:", transactionId);
 					}
 				} else {
-					console.warn("gtag no está disponible para tracking de conversión");
+					console.warn("⚠️ [FlowReturn] gtag no está disponible para tracking de conversión");
 				}
 			} catch (error) {
-				console.error("Error al disparar evento de conversión:", error);
+				console.error("❌ [FlowReturn] Error al disparar evento de conversión:", error);
 			}
 		};
 

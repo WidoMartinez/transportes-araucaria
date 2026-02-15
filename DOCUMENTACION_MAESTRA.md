@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 8 Enero 2026
-> **Versión**: 1.5
+> **Última Actualización**: 15 Febrero 2026
+> **Versión**: 1.6
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -24,14 +24,16 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Bloqueos de Fecha](#58-sistema-de-bloqueos-de-fecha)
    - [Gestión de Clientes Frecuentes](#59-gestión-de-clientes-frecuentes)
    - [Descuentos Personalizados](#510-sistema-de-descuentos-personalizados)
-   - [Integración con Google Ads](#511-seguimiento-de-conversiones)
-   - [Sistema de Auditoría](#512-sistema-de-auditoria)
+   - [Ajuste de Umbrales de Pasajeros](#511-ajuste-de-umbrales-de-pasajeros-por-tipo-de-vehículo)
+   - [Solución UI/UX Modal](#512-solución-de-uiux-crítica-modal-de-intercepción-y-stacking-contexts)
    - [Sistema de Migraciones](#513-sistema-de-migraciones-de-base-de-datos)
    - [Historial de Transacciones](#514-sistema-de-historial-de-transacciones-flow)
    - [Gestión de Vencimiento de Códigos](#515-sistema-de-vencimiento-y-tiempos-restantes-en-códigos-de-pago)
    - [Sistema de Actualización Unificada (Bulk Update)](#516-sistema-de-actualización-unificada-bulk-update)
    - [Sistema de Oportunidades de Traslado](#517-sistema-de-oportunidades-de-traslado)
    - [Sistema de Banners Promocionales](#518-sistema-de-banners-promocionales)
+   - [Sistema de Seguimiento de Conversiones (Google Ads)](#519-sistema-de-seguimiento-de-conversiones-google-ads)
+   - [Mejoras en la Gestión y Visualización de Reservas (Panel Admin)](#520-mejoras-en-la-gestión-y-visualización-de-reservas-panel-admin)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
@@ -403,7 +405,9 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
     - Badge **RETORNO** (Azul): Indica el segundo tramo.
 - **Acciones**: Puede completar y cerrar la "Ida" (y registrar sus gastos) mientras la "Vuelta" permanece pendiente para días futuros.
 
-> **Nota**: Las reservas antiguas (creadas antes de este cambio) mantienen el comportamiento "Legacy" (una sola fila para todo el viaje) y se identifican con el badge **IDA Y VUELTA**.
+> **Nota**: Desde Feb 2026, la vista principal **oculta por defecto** las reservas de tipo "Vuelta" para evitar duplicados en la lista. Se accede a ellas a través de la reserva de "Ida" vinculada.
+
+> **Nota Legacy**: Las reservas antiguas (creadas antes de este cambio) mantienen el comportamiento "Legacy" (una sola fila para todo el viaje) y se identifican con el badge **IDA Y VUELTA**.
 
 #### Script de Diagnóstico de Tramos
 
@@ -1353,6 +1357,42 @@ El sistema utiliza una redirección automática a Flow (`/create-payment`) inmed
 > Para detalles técnicos profundos (Modelo de datos, API, Configuración), consultar la **[Guía de Deployment y Arquitectura de Banners](./GUIA_DEPLOYMENT_BANNERS.md)**.
 
 
+
+### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
+
+**Implementado: Febrero 2026**
+
+Sistema robusto para rastrear conversiones de marketing con alta precisión, diseñado para resistir fallos en la transmisión de datos y mejorar la atribución mediante "Enhanced Conversions".
+
+#### Componentes del Rastreo
+
+1.  **Evento de Conversión (`gtag`)**:
+    *   Se dispara únicamente en las páginas de éxito (`FlowReturn.jsx`, `App.jsx`).
+    *   **ID de Conversión**: `AW-17529712870/M7-iCN_HtZUbEObh6KZB`.
+    *   **Protección de Duplicados**: Utiliza `sessionStorage` para asegurar que cada transacción solo cuente una vez, incluso si el usuario recarga la página.
+
+2.  **Conversiones Mejoradas (Enhanced Conversions)**:
+    *   Envía datos de cliente (Email, Teléfono) hasheados con SHA256.
+    *   Permite a Google atribuir ventas cross-device y recuperar conversiones donde las cookies han expirado.
+    *   **Mecanismo**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica y hashea antes de enviarlos.
+
+3.  **Robustez del Valor Monetario**:
+    *   **Problema**: Flujos de pago interrumpidos a veces resultan en montos `0` o `null`.
+    *   **Solución**: El sistema implementa una cascada de fallbacks:
+        1. Monto reportado por Flow.
+        2. Monto registrado en base de datos.
+        3. **Valor Centinela (1.0)**: Si todo fallo, se envía 1.0 para garantizar que la conversión se registre.
+
+#### Flujos Soportados
+*   **Reserva Web**: `App.jsx` maneja el retorno.
+*   **Pagar con Código**: `FlowReturn.jsx` maneja el retorno.
+*   **Pago de Saldo**: `FlowReturn.jsx` maneja el retorno.
+*   **Banner Promocional**: `FlowReturn.jsx` maneja el retorno.
+
+> [!IMPORTANT]
+> **Defensa en Profundidad**: El sistema prioriza **capturar el evento** sobre la precisión del dato. Es preferible registrar una venta con valor $1 que perder la señal de que un cliente compró.
+
+
 ## 6. Mantenimiento y Despliegue
 
 ### Frontend
@@ -1421,3 +1461,32 @@ El sistema de promociones permite crear ofertas atractivas con imágenes que se 
     -   **API**: `POST /api/promociones-banner/desde-promocion/:id` crea la reserva.
     -   **Frontend**: `ReservaRapidaModal.jsx` maneja la interfaz de usuario simplificada.
     -   **Panel Admin**: `GestionPromociones.jsx` permite crear, editar y activar/desactivar promociones.
+
+### 5.20 Mejoras en la Gestión y Visualización de Reservas (Panel Admin)
+
+**Implementado: 15 Febrero 2026**
+
+Se han realizado mejoras significativas en el panel de administración de reservas para facilitar la búsqueda, el ordenamiento y la identificación de servicios especiales (sillas infantiles) y retornos vinculados.
+
+#### 1. Ordenamiento Dinámico de la Tabla
+Anteriormente, la lista de reservas era estática. Se ha implementado un sistema de ordenamiento que permite al administrador organizar la información según sus necesidades:
+- **Columnas Ordenables**: "Fecha/Hora Viaje" ("fecha") y "Fecha Creación" ("created_at").
+- **Estados**: Ascendente y Descendente con indicadores visuales (flechas ^|^v).
+- **Persistencia**: El ordenamiento se realiza directamente en la base de datos a través de la API para mantener el rendimiento con grandes volúmenes de datos.
+
+#### 2. Visualización Mejorada de Viajes de Regreso
+Para las reservas marcadas como "Ida y Vuelta", el panel ahora muestra información del tramo de regreso directamente en la tabla:
+- **Datos Visibles**: Fecha y Hora de regreso (si están disponibles).
+- **Asociación Técnica**: Se utiliza la asociación "tramoHijo" en el backend para recuperar automáticamente los datos vinculados del tramo de vuelta.
+
+#### 3. Indicador de Silla Infantil (Baby Seat)
+Se ha añadido un identificador visual crítico para la logística de los conductores:
+- **Icono**: Icono de "Baby" ("lucide-react") resaltado en color café junto al número de pasajeros.
+- **Activación**: Se muestra automáticamente si la reserva tiene el campo "sillaInfantil: true".
+
+#### 4. Detalles Técnicos (Backend)
+- **Asociaciones**: Se implementó "tramoHijo" y "tramoPadre" en "associations.js" para vincular reservas del mismo viaje.
+- **API "GET /api/reservas"**: 
+    - Soporta parámetros "sort" (columna) y "order" ("asc"/"desc").
+    - Incluye por defecto la asociación "tramoHijo".
+    - Orden predeterminado: "created_at" DESC (reservas más nuevas primero).

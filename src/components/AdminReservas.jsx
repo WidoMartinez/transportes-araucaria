@@ -67,6 +67,8 @@ import {
 	Printer,
 	Car,
 	Copy,
+	ArrowUpDown,
+	Baby, // Icono para silla de bebé
 } from "lucide-react";
 
 // Helper para generar texto formateado para conductor (WhatsApp)
@@ -227,8 +229,20 @@ function AdminReservas() {
 	const [fechaDesde, setFechaDesde] = useState("");
 	const [fechaHasta, setFechaHasta] = useState("");
 	// Nuevo selector de rango y filtros inteligentes
-	const [rangoFecha, setRangoFecha] = useState("todos"); // 'hoy', 'ayer', 'semana', 'mes', 'personalizado', 'todos'
 	const [filtroInteligente, setFiltroInteligente] = useState("todos"); // 'sin_asignacion', 'incompletas', 'archivadas'
+	const [rangoFecha, setRangoFecha] = useState("todos");
+	
+	// Estado de ordenamiento
+	const [sortConfig, setSortConfig] = useState({ key: "created_at", direction: "desc" });
+	
+	// Función para manejar el ordenamiento
+	const handleSort = (key) => {
+		let direction = "asc";
+		if (sortConfig.key === key && sortConfig.direction === "asc") {
+			direction = "desc";
+		}
+		setSortConfig({ key, direction });
+	};
 
 	// Manejar cambio de rango de fechas
 	const handleRangoFechaChange = (valor) => {
@@ -1207,6 +1221,12 @@ function AdminReservas() {
 
 			params.append("incluir_cerradas", "true");
 
+			// Agregar parámetros de ordenamiento
+			if (sortConfig.key) {
+				params.append("sort", sortConfig.key);
+				params.append("order", sortConfig.direction);
+			}
+
 			const response = await fetch(`${apiUrl}/api/reservas?${params}`);
 
 			if (!response.ok) {
@@ -1249,7 +1269,7 @@ function AdminReservas() {
 		fetchReservas();
 		fetchEstadisticas();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage, filtroInteligente]);
+	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage, filtroInteligente, sortConfig]);
 
 	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
@@ -1271,10 +1291,6 @@ function AdminReservas() {
 		if (estadoPagoFiltro !== "todos") {
 			filtered = filtered.filter((r) => r.estadoPago === estadoPagoFiltro);
 		}
-
-		// SOLUCIÓN C: Ocultar reservas de tipo "vuelta" para evitar duplicados en la tabla
-		// Las reservas de vuelta se mostrarán dentro del modal de la reserva de ida
-		filtered = filtered.filter((r) => r.tipoTramo !== "vuelta");
 
 		return filtered;
 	}, [reservas, searchTerm, estadoPagoFiltro]);
@@ -2993,10 +3009,28 @@ function AdminReservas() {
 									{columnasVisibles.numViajes && <TableHead>Viajes</TableHead>}
 									{columnasVisibles.ruta && <TableHead>Ruta</TableHead>}
 									{columnasVisibles.fechaHora && (
-										<TableHead>Fecha/Hora Viaje</TableHead>
+										<TableHead>
+											<Button 
+												variant="ghost" 
+												onClick={() => handleSort("fecha")}
+												className="h-8 px-2 -ml-2 hover:bg-accent hover:text-accent-foreground font-bold"
+											>
+												Fecha/Hora Viaje
+												<ArrowUpDown className="ml-2 h-4 w-4" />
+											</Button>
+										</TableHead>
 									)}
 									{columnasVisibles.fechaCreacion && (
-										<TableHead>Fecha Creación</TableHead>
+										<TableHead>
+											<Button 
+												variant="ghost" 
+												onClick={() => handleSort("created_at")}
+												className="h-8 px-2 -ml-2 hover:bg-accent hover:text-accent-foreground font-bold"
+											>
+												Fecha Creación
+												<ArrowUpDown className="ml-2 h-4 w-4" />
+											</Button>
+										</TableHead>
 									)}
 									{columnasVisibles.pasajeros && (
 										<TableHead>Pasajeros</TableHead>
@@ -3206,12 +3240,30 @@ function AdminReservas() {
 													<div className="space-y-1 text-sm">
 														<div className="flex items-center gap-1">
 															<Calendar className="w-3 h-3 text-muted-foreground" />
-															<span>{formatDate(reserva.fecha)}</span>
+															<span className="font-semibold">{formatDate(reserva.fecha)}</span>
 														</div>
 														<div className="flex items-center gap-1">
 															<Clock className="w-3 h-3 text-muted-foreground" />
 															<span>{reserva.hora || "-"}</span>
 														</div>
+														{/* Mostrar fecha de vuelta si existe y es roundtrip */}
+														{reserva.idaVuelta && (reserva.tramoHijo || reserva.fechaRegreso) && (
+															<div className="mt-1 pt-1 border-t border-dashed border-gray-200">
+																<div className="text-xs text-muted-foreground flex items-center gap-1">
+																	<span className="text-[10px] font-bold text-blue-600">VUELTA:</span>
+																</div>
+																<div className="flex items-center gap-1 text-xs">
+																	<Calendar className="w-3 h-3 text-blue-400" />
+																	<span>
+																		{formatDate(reserva.tramoHijo?.fecha || reserva.fechaRegreso)}
+																	</span>
+																</div>
+																<div className="flex items-center gap-1 text-xs">
+																	<Clock className="w-3 h-3 text-blue-400" />
+																	<span>{reserva.tramoHijo?.hora || reserva.horaRegreso || "-"}</span>
+																</div>
+															</div>
+														)}
 													</div>
 												</TableCell>
 											)}
@@ -3236,11 +3288,19 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.pasajeros && (
 												<TableCell>
-													<div className="flex items-center gap-1">
-														<Users className="w-4 h-4 text-muted-foreground" />
-														<span className="font-medium">
-															{reserva.pasajeros}
-														</span>
+													<div className="flex flex-col gap-1">
+														<div className="flex items-center gap-1">
+															<Users className="w-4 h-4 text-muted-foreground" />
+															<span className="font-medium">
+																{reserva.pasajeros}
+															</span>
+														</div>
+														{reserva.sillaInfantil && (
+															<div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 w-fit">
+																<Baby className="w-3 h-3" />
+																<span className="text-[10px] font-medium">Silla</span>
+															</div>
+														)}
 													</div>
 												</TableCell>
 											)}
