@@ -8,6 +8,7 @@ import Oportunidad from "../models/Oportunidad.js";
 import SuscripcionOportunidad from "../models/SuscripcionOportunidad.js";
 import Reserva from "../models/Reserva.js";
 import Destino from "../models/Destino.js";
+import Configuracion from "../models/Configuracion.js";
 import ConfiguracionTarifaDinamica from "../models/ConfiguracionTarifaDinamica.js";
 import Festivo from "../models/Festivo.js";
 import sequelize from "../config/database.js";
@@ -138,6 +139,12 @@ const destinoInfo = await Destino.findOne({
 where: { nombre: lugarRemoto }
 });
 
+// Obtener configuración de anticipación
+const configOfertas = await Configuracion.getValorParseado("config_ofertas", {
+  anticipacionRetorno: 2,
+  anticipacionIda: 3
+});
+
 // PRIORIDAD: 
 // 1. duracionMinutos explícita en la reserva (usuario 'Otro' o administrador)
 // 2. duracionIdaMinutos configurada en el destino
@@ -178,15 +185,16 @@ const horaDisponible = new Date(horaLlegada.getTime() + 30 * 60000);
 horaAproximada = `${String(horaDisponible.getHours()).padStart(2, "0")}:${String(horaDisponible.getMinutes()).padStart(2, "0")}`;
 }
 
-// Calcular validez: hasta 2 horas antes del viaje
+// Calcular validez: hasta X horas antes del viaje (desde configuración)
 let validoHasta = null;
+const horasAnticipacionRetorno = configOfertas.anticipacionRetorno || 2;
 if (horaAproximada) {
   const [h, m] = horaAproximada.split(":");
   validoHasta = new Date(`${reserva.fecha}T${h}:${m}:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - 2);
+  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionRetorno);
 } else {
   validoHasta = new Date(`${reserva.fecha}T00:00:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - 2);
+  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionRetorno);
 }
 
 // Solo crear si es futuro
@@ -250,15 +258,16 @@ const horaSalidaNecesaria = new Date(horaRecogida.getTime() - duracionViajeMinut
 horaAproximada = `${String(horaSalidaNecesaria.getHours()).padStart(2, "0")}:${String(horaSalidaNecesaria.getMinutes()).padStart(2, "0")}`;
 }
 
-// Calcular validez: hasta 3 horas antes del viaje
+// Calcular validez: hasta X horas antes del viaje (desde configuración)
 let validoHasta = null;
+const horasAnticipacionIda = configOfertas.anticipacionIda || 3;
 if (reserva.hora) {
   const [h, m] = reserva.hora.split(":");
   validoHasta = new Date(`${reserva.fecha}T${h}:${m}:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - 3);
+  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionIda);
 } else {
   validoHasta = new Date(`${reserva.fecha}T00:00:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - 3);
+  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionIda);
 }
 
 // Solo crear si es futuro

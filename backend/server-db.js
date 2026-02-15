@@ -1513,6 +1513,58 @@ app.put("/api/configuracion/whatsapp-intercept", authAdmin, async (req, res) => 
 	}
 });
 
+/**
+ * GET /api/configuracion/ofertas-sillas
+ * Obtiene configuraciones de anticipación de ofertas y sillas infantiles
+ */
+app.get("/api/configuracion/ofertas-sillas", async (req, res) => {
+	try {
+		const configOfertas = await Configuracion.getValorParseado("config_ofertas", {
+			anticipacionRetorno: 2,
+			anticipacionIda: 3
+		});
+		const configSillas = await Configuracion.getValorParseado("config_sillas", {
+			habilitado: false,
+			maxSillas: 2,
+			precioPorSilla: 5000
+		});
+
+		res.json({
+			success: true,
+			ofertas: configOfertas,
+			sillas: configSillas
+		});
+	} catch (error) {
+		console.error("Error obteniendo configuración ofertas/sillas:", error);
+		res.status(500).json({ error: "Error al obtener configuración" });
+	}
+});
+
+/**
+ * PUT /api/configuracion/ofertas-sillas
+ * Actualiza configuraciones de anticipación de ofertas y sillas infantiles
+ */
+app.put("/api/configuracion/ofertas-sillas", authAdmin, async (req, res) => {
+	try {
+		const { ofertas, sillas } = req.body;
+
+		if (ofertas) {
+			await Configuracion.setValor("config_ofertas", ofertas, "json", "Configuración de anticipación para ofertas");
+		}
+		if (sillas) {
+			await Configuracion.setValor("config_sillas", sillas, "json", "Configuración de disponibilidad y precio de sillas infantiles");
+		}
+
+		res.json({
+			success: true,
+			mensaje: "Configuración actualizada correctamente"
+		});
+	} catch (error) {
+		console.error("Error actualizando configuración ofertas/sillas:", error);
+		res.status(500).json({ error: "Error al actualizar configuración" });
+	}
+});
+
 // --- ENDPOINTS PARA CODIGOS DE DESCUENTO ---
 app.get("/api/codigos", async (req, res) => {
 	try {

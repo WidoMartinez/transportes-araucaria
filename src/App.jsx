@@ -270,9 +270,15 @@ function App() {
 
 	// Estado para vista de completar detalles post-pago
 	const [vistaCompletarDetalles, setVistaCompletarDetalles] = useState({
-		activo: false,
-		reservaId: null,
-	});
+    activo: false,
+    reservaId: null,
+});
+
+const [configSillas, setConfigSillas] = useState({
+    habilitado: false,
+    maxSillas: 2,
+    precioPorSilla: 5000
+});
 
 	// Estados para códigos de descuento
 	const [codigoAplicado, setCodigoAplicado] = useState(null);
@@ -296,6 +302,7 @@ function App() {
 		hotel: "",
 		equipajeEspecial: "",
 		sillaInfantil: false,
+		cantidadSillasInfantiles: 0,
 		mensaje: "",
 		idaVuelta: false,
 		fechaRegreso: "",
@@ -1337,6 +1344,7 @@ function App() {
 			hotel: "",
 			equipajeEspecial: "",
 			sillaInfantil: false,
+			cantidadSillasInfantiles: 0,
 			mensaje: "",
 			idaVuelta: false,
 			fechaRegreso: "",
@@ -1435,8 +1443,13 @@ function App() {
 			descuentoMaximo
 		);
 
-		const costoSilla = formData.sillaInfantil ? 5000 : 0;
-		let totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
+		const costoSillaUnitario = configSillas.precioPorSilla || 5000;
+		const cantidadSillas = formData.sillaInfantil ? (formData.cantidadSillasInfantiles || 1) : 0;
+		const costoSillasTotal = cantidadSillas * costoSillaUnitario;
+
+		let totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSillasTotal;
+		// Asegurar redondeo para evitar decimales en el total
+		totalConDescuento = Math.round(totalConDescuento);
 		
 		// VALIDACIÓN DE PRECIO MÍNIMO: ELIMINADA para upgrades voluntarios
 		// Los upgrades de 1-3 pasajeros deben permitir descuentos normalmente
@@ -1798,6 +1811,7 @@ function App() {
 			codigoDescuento: codigoAplicado?.codigo || "",
 			upgradeVan: formData.upgradeVan || false,
 			sillaInfantil: formData.sillaInfantil || false,
+			cantidadSillasInfantiles: formData.cantidadSillasInfantiles || 0,
 			observaciones: generarObservaciones(formData.mensaje, formData.upgradeVan),
 			// Estado inicial: marcar como pendiente hasta confirmar pago
 			estado: "pendiente",

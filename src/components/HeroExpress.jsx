@@ -75,6 +75,7 @@ function HeroExpress({
 	onAplicarCodigo,
 	onRemoverCodigo,
 	oportunidadesRetornoUniversal, // Recibido desde App.jsx
+	configSillas = { habilitado: false, maxSillas: 2, precioPorSilla: 5000 },
 }) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [stepError, setStepError] = useState("");
@@ -1003,6 +1004,70 @@ function HeroExpress({
 										</div>
 									</motion.div>
 								)}
+
+								{/* Selector de Sillas Infantiles (Nuevo) */}
+								{configSillas.habilitado && (
+									<motion.div
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										className="p-4 bg-amber-50/50 border border-amber-100 rounded-xl space-y-3"
+									>
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2">
+												<div className="p-1.5 bg-amber-100 rounded-lg">
+													<Baby className="h-4 w-4 text-amber-600" />
+												</div>
+												<div>
+													<p className="text-sm font-semibold text-amber-900">¿Necesitas silla para niños?</p>
+													<p className="text-xs text-amber-700">Opcional - {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(configSillas.precioPorSilla)} c/u</p>
+												</div>
+											</div>
+											<Checkbox
+												id="silla-infantil-toggle"
+												checked={formData.sillaInfantil}
+												onCheckedChange={(checked) => {
+													setFormData(prev => ({ 
+														...prev, 
+														sillaInfantil: !!checked,
+														cantidadSillasInfantiles: checked ? 1 : 0 
+													}));
+												}}
+												className="data-[state=checked]:bg-amber-600 border-amber-300"
+											/>
+										</div>
+
+										<AnimatePresence>
+											{formData.sillaInfantil && (
+												<motion.div
+													initial={{ height: 0, opacity: 0 }}
+													animate={{ height: "auto", opacity: 1 }}
+													exit={{ height: 0, opacity: 0 }}
+													className="overflow-hidden pt-2"
+												>
+													<div className="flex items-center justify-between gap-4">
+														<Label htmlFor="cantidad-sillas" className="text-xs font-medium text-amber-800">Cantidad de sillas</Label>
+														<div className="flex items-center gap-1">
+															{[...Array(configSillas.maxSillas)].map((_, i) => (
+																<button
+																	key={i + 1}
+																	type="button"
+																	onClick={() => setFormData(prev => ({ ...prev, cantidadSillasInfantiles: i + 1 }))}
+																	className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+																		formData.cantidadSillasInfantiles === (i + 1)
+																			? 'bg-amber-600 text-white shadow-sm'
+																			: 'bg-white text-amber-900 border border-amber-200 hover:bg-amber-50'
+																	}`}
+																>
+																	{i + 1}
+																</button>
+															))}
+														</div>
+													</div>
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</motion.div>
+								)}
 							</div>							{stepError && (
 								<div className="mt-4 p-4 md:p-3 bg-destructive/10 text-destructive rounded-xl md:rounded-lg text-sm animate-in fade-in space-y-3">
 									<p>{stepError}</p>
@@ -1088,6 +1153,12 @@ function HeroExpress({
 											<p className="font-medium text-sm mt-1">
 												<span className="text-muted-foreground text-xs block">Retorno:</span>
 												{new Date(`${formData.fechaRegreso}T00:00:00`).toLocaleDateString("es-CL", { dateStyle: "long" })}
+											</p>
+										)}
+										{formData.sillaInfantil && formData.cantidadSillasInfantiles > 0 && (
+											<p className="text-xs font-medium text-amber-700 flex items-center gap-1 mt-1">
+												<Baby className="w-3 h-3" />
+												{formData.cantidadSillasInfantiles} {formData.cantidadSillasInfantiles === 1 ? 'silla infantil' : 'sillas infantiles'}
 											</p>
 										)}
 									</div>

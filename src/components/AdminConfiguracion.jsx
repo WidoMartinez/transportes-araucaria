@@ -9,9 +9,12 @@ CheckCircle,
 XCircle, 
 Loader2,
 AlertCircle,
-Target
+Target,
+Clock,
+Baby
 } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
+import { Input } from "./ui/input";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { getBackendUrl } from "../lib/backend";
 
@@ -27,6 +30,8 @@ const [saving, setSaving] = useState(false);
 const [feedback, setFeedback] = useState(null);
 const [generandoOportunidades, setGenerandoOportunidades] = useState(false);
 const [resultadoOportunidades, setResultadoOportunidades] = useState(null);
+const [configOfertas, setConfigOfertas] = useState({ anticipacionRetorno: 2, anticipacionIda: 3 });
+const [configSillas, setConfigSillas] = useState({ habilitado: false, maxSillas: 2, precioPorSilla: 5000 });
 const { authenticatedFetch } = useAuthenticatedFetch();
 
 
@@ -49,12 +54,40 @@ throw new Error("Error al cargar configuración");
 
 const data = await response.json();
 setWhatsappInterceptActivo(data.activo);
+
+// Cargar ofertas y sillas
+const resExtra = await fetch(`${getBackendUrl()}/api/configuracion/ofertas-sillas`);
+if (resExtra.ok) {
+    const dataExtra = await resExtra.json();
+    if (dataExtra.ofertas) setConfigOfertas(dataExtra.ofertas);
+    if (dataExtra.sillas) setConfigSillas(dataExtra.sillas);
+}
 } catch (error) {
 console.error("Error cargando configuración:", error);
 showFeedback("error", "Error al cargar la configuración");
 } finally {
 setLoading(false);
 }
+};
+
+const handleSaveExtras = async () => {
+    try {
+        setSaving(true);
+        const response = await authenticatedFetch(`/api/configuracion/ofertas-sillas`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ofertas: configOfertas, sillas: configSillas }),
+        });
+
+        if (!response.ok) throw new Error("Error al guardar configuración");
+
+        showFeedback("success", "Configuración de ofertas y sillas guardada correctamente");
+    } catch (error) {
+        console.error("Error guardando extras:", error);
+        showFeedback("error", "Error al guardar la configuración");
+    } finally {
+        setSaving(false);
+    }
 };
 
 const handleToggleWhatsApp = async () => {
@@ -425,14 +458,99 @@ className="text-sm text-green-700 hover:text-green-800 font-medium underline"
 </CardContent>
 </Card>
 
-{/* Sección para futuras configuraciones */}
-<Card className="border-dashed">
-<CardContent className="py-8 text-center">
-<Settings className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-<p className="text-gray-500 text-sm">
-Más configuraciones estarán disponibles próximamente
-</p>
-</CardContent>
+{/* Configuración de Ofertas (Anticipación) */}
+<Card>
+    <CardHeader>
+        <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+                <Clock className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+                <CardTitle>Anticipación de Ofertas</CardTitle>
+                <CardDescription>
+                    Define cuántas horas antes del viaje deben expirar las ofertas automáticamente
+                </CardDescription>
+            </div>
+        </div>
+    </CardHeader>
+    <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Anticipación Retornos (horas)</label>
+                <Input 
+                    type="number" 
+                    value={configOfertas.anticipacionRetorno} 
+                    onChange={(e) => setConfigOfertas({...configOfertas, anticipacionRetorno: parseInt(e.target.value)})}
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Anticipación Idas (horas)</label>
+                <Input 
+                    type="number" 
+                    value={configOfertas.anticipacionIda} 
+                    onChange={(e) => setConfigOfertas({...configOfertas, anticipacionIda: parseInt(e.target.value)})}
+                />
+            </div>
+        </div>
+        <Button onClick={handleSaveExtras} disabled={saving} className="w-full">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
+            Guardar Configuración de Ofertas
+        </Button>
+    </CardContent>
+</Card>
+
+{/* Configuración de Sillas Infantiles */}
+<Card>
+    <CardHeader>
+        <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 rounded-lg">
+                <Baby className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+                <CardTitle>Sillas Infantiles</CardTitle>
+                <CardDescription>
+                    Gestiona la disponibilidad y el costo adicional de sillas para niños
+                </CardDescription>
+            </div>
+        </div>
+    </CardHeader>
+    <CardContent className="space-y-6">
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+                <p className="font-medium text-gray-900">Ofrecer Silla Infantil</p>
+                <p className="text-sm text-gray-600">Habilitar la opción en el formulario de reserva</p>
+            </div>
+            <Switch
+                checked={configSillas.habilitado}
+                onCheckedChange={(val) => setConfigSillas({...configSillas, habilitado: val})}
+                disabled={saving}
+            />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Máximo de Sillas por Reserva</label>
+                <Input 
+                    type="number" 
+                    value={configSillas.maxSillas} 
+                    onChange={(e) => setConfigSillas({...configSillas, maxSillas: parseInt(e.target.value)})}
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="text-sm font-medium">Precio por Silla (CLP)</label>
+                <Input 
+                    type="number" 
+                    value={configSillas.precioPorSilla} 
+                    onChange={(e) => setConfigSillas({...configSillas, precioPorSilla: parseInt(e.target.value)})}
+                />
+            </div>
+        </div>
+
+        <Button onClick={handleSaveExtras} disabled={saving} variant="outline" className="w-full border-amber-200 text-amber-900 hover:bg-amber-50">
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
+            Guardar Configuración de Sillas
+        </Button>
+    </CardContent>
 </Card>
 </div>
 );

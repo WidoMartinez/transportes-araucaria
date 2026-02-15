@@ -103,6 +103,13 @@ const Reserva = sequelize.define(
 			type: DataTypes.BOOLEAN,
 			defaultValue: false,
 		},
+		cantidadSillasInfantiles: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			defaultValue: 0,
+			field: "cantidad_sillas_infantiles",
+			comment: "Cantidad de sillas infantiles solicitadas",
+		},
 		idaVuelta: {
 			type: DataTypes.BOOLEAN,
 			defaultValue: false,
