@@ -94,6 +94,10 @@ function HeroExpress({
 	// Hook para detectar si es dispositivo móvil
 	const isMobile = useIsMobile();
 
+	// Refs para inputs de fecha
+	const fechaInputRef = useRef(null);
+	const fechaRegresoInputRef = useRef(null);
+
 	// Resetear error de imagen cuando cambia el destino/imagen seleccionada
 
 
