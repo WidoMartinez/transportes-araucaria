@@ -50,6 +50,7 @@ import addBloqueosAgendaTable from "./migrations/add-bloqueos-agenda-table.js";
 import addGastosCerradosField from "./migrations/add-gastos-cerrados-field.js";
 import addTramosFields from "./migrations/add-tramos-fields.js";
 import addArchivadaColumn from "./migrations/add-archivada-column.js";
+import addSillaInfantilCountToReservas from "./migrations/20260215000000-add-silla-infantil-count-to-reservas.js";
 import addPorcentajeAdicionalColumns from "./migrations/add-porcentaje-adicional-columns.js";
 import { detectarYGenerarOportunidades } from "./routes/oportunidades.js";
 
@@ -769,6 +770,7 @@ const initializeDatabase = async () => {
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
+		await addSillaInfantilCountToReservas(); // Migración para columna cantidad_sillas_infantiles en reservas
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), Sequelize); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio
