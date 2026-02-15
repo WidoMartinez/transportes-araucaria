@@ -998,7 +998,7 @@ function HeroExpress({
 												</div>
 												<div>
 													<p className="text-sm font-semibold text-amber-900">¿Necesitas silla para niños?</p>
-													<p className="text-xs text-amber-700">Opcional - {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(configSillas.precioPorSilla)} c/u</p>
+													<p className="text-xs text-amber-700">Opcional</p>
 												</div>
 											</div>
 											<Checkbox
