@@ -11,6 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import { Switch } from "./ui/switch";
 import { Baby, LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
@@ -892,149 +893,164 @@ function HeroExpress({
 									);
 								})()}
 
-								{/* Checkboxes Row - Optimizados para interacción táctil móvil */}
-								<div className="flex flex-col sm:flex-row gap-3 pt-3 md:pt-2">
+								{/* Grupo de Opciones Extra (Regreso y Sillas) - Armonizado para PC */}
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+									{/* Control de Regreso */}
 									<div
-										className={`flex items-center space-x-3 p-4 md:p-3 rounded-xl md:rounded-lg border-2 transition-all cursor-pointer touch-manipulation min-h-[52px] ${formData.idaVuelta ? 'bg-muted border-primary shadow-sm' : 'border-border hover:bg-muted/50 active:bg-muted/70'}`}
+										className={`group flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer touch-manipulation min-h-[76px] ${
+											formData.idaVuelta 
+												? 'bg-primary/5 border-primary shadow-sm' 
+												: 'bg-muted/30 border-border hover:bg-muted/50 active:bg-muted/70'
+										}`}
 										onClick={(e) => {
-											// Evitar doble toggle cuando se hace click en el Label (que dispara click en Checkbox)
-											// Si el click viene del label, lo ignoramos y dejamos que el evento del checkbox (sintetizado) lo maneje
-											if (e.target.tagName === 'LABEL') return;
-
+											if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
 											const newValue = !formData.idaVuelta;
 											handleInputChange({ target: { name: "idaVuelta", value: newValue } });
 											if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
 											else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
 										}}
-										role="checkbox"
-										aria-checked={formData.idaVuelta}
-										tabIndex={0}
-										onKeyDown={(e) => {
-											if (e.key === 'Enter' || e.key === ' ') {
-												e.preventDefault();
-												const newValue = !formData.idaVuelta;
-												handleInputChange({ target: { name: "idaVuelta", value: newValue } });
-												if (!newValue) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
-												else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
-											}
-										}}
 									>
-										<Checkbox
+										<div className="flex flex-col flex-1 mr-3">
+											<Label htmlFor="idaVuelta" className="cursor-pointer font-bold text-foreground text-sm leading-tight mb-1">Necesito regreso</Label>
+											<span className="text-[11px] text-muted-foreground font-medium leading-none">
+												{formData.idaVuelta ? "Regreso reservado" : "Ahorra ida y vuelta"}
+											</span>
+										</div>
+										<Switch
 											id="idaVuelta"
 											checked={formData.idaVuelta}
-											className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground size-5 md:size-4"
+											onCheckedChange={(checked) => {
+												handleInputChange({ target: { name: "idaVuelta", value: checked } });
+												if (!checked) handleInputChange({ target: { name: "fechaRegreso", value: "" } });
+												else if (formData.fecha) handleInputChange({ target: { name: "fechaRegreso", value: formData.fecha } });
+											}}
 										/>
-										<div className="flex flex-col">
-											<Label htmlFor="idaVuelta" className="cursor-pointer font-medium text-foreground text-base md:text-sm leading-tight">Necesito regreso</Label>
-											{!formData.idaVuelta && tieneCotizacionAutomatica && (
-												<span className="text-[11px] md:text-xs text-emerald-600 font-medium animate-in fade-in slide-in-from-left-2 mt-0.5">
-													Precio especial si reservas ida y vuelta
-												</span>
-											)}
-										</div>
 									</div>
+
+									{/* Selector de Sillas Infantiles (Optimizado Móvil + PC) */}
+									{configSillas.habilitado && (
+										<div
+											className={`group flex flex-col justify-center p-4 rounded-2xl border-2 transition-all cursor-pointer touch-manipulation min-h-[76px] ${
+												formData.sillaInfantil 
+													? 'bg-chocolate-500/10 border-chocolate-500 shadow-sm' 
+													: 'bg-chocolate-50/50 border-chocolate-200/50 hover:bg-chocolate-50 active:bg-chocolate-100'
+											}`}
+											onClick={(e) => {
+												if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('.no-click-prop')) return;
+												const newValue = !formData.sillaInfantil;
+												setFormData(prev => ({ 
+													...prev, 
+													sillaInfantil: newValue,
+													cantidadSillasInfantiles: newValue ? 1 : 0 
+												}));
+											}}
+										>
+											<div className="flex items-center justify-between w-full">
+												<div className="flex items-center gap-2 flex-1 mr-3">
+													<div className={`p-1.5 rounded-lg transition-colors ${formData.sillaInfantil ? 'bg-chocolate-500 text-white' : 'bg-chocolate-100 text-chocolate-600'}`}>
+														<Baby className="h-4" />
+													</div>
+													<div className="flex flex-col">
+														<p className="text-sm font-bold text-foreground leading-tight">¿Silla niños?</p>
+														<p className="text-[11px] text-muted-foreground font-medium leading-none">Gratis</p>
+													</div>
+												</div>
+												<div className="no-click-prop">
+													<Switch
+														id="silla-infantil-toggle"
+														checked={formData.sillaInfantil}
+														onCheckedChange={(checked) => {
+															setFormData(prev => ({ 
+																...prev, 
+																sillaInfantil: checked,
+																cantidadSillasInfantiles: checked ? 1 : 0 
+															}));
+														}}
+													/>
+												</div>
+											</div>
+										</div>
+									)}
 								</div>
 
-								{formData.idaVuelta && (
-									<motion.div
-										initial={{ opacity: 0, height: 0 }}
-										animate={{ opacity: 1, height: "auto" }}
-										className="space-y-4 pt-2"
-									>
-										<div className="space-y-2">
-											<Label className="text-base md:text-sm font-semibold text-foreground">Fecha de Regreso</Label>
-											<div className="relative">
-												<Calendar className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
-												<input
-													type="date"
-													name="fechaRegreso"
-													ref={fechaRegresoInputRef}
-													defaultValue={formData.fechaRegreso}
-													onChange={handleInputChange}
-													min={formData.fecha || minDateTime}
-													aria-label="Seleccionar fecha de regreso"
-													className="w-full h-12 md:h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent touch-manipulation"
-												/>
-											</div>
-										</div>
-										<div className="space-y-2">
-											<Label htmlFor="horaRegreso" className="text-base md:text-sm font-semibold text-foreground">Hora de Regreso</Label>
-											<div className="relative">
-												<Clock className="absolute left-3 top-3.5 md:top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
-												<select
-													id="horaRegreso"
-													name="horaRegreso"
-													value={formData.horaRegreso || ""}
-													onChange={handleInputChange}
-													aria-label="Seleccionar hora de regreso"
-													className="w-full h-12 md:h-11 pl-10 pr-8 bg-muted/50 border border-input rounded-xl md:rounded-lg text-base md:text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none cursor-pointer touch-manipulation"
-												>
-													<option value="" disabled>Seleccionar...</option>
-													{timeOptions.map((t) => (
-														<option key={t.value} value={t.value}>{t.label}</option>
-													))}
-												</select>
-												<div className="absolute right-3 top-3.5 md:top-3 h-5 w-5 pointer-events-none">
-													<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-													</svg>
+								{/* Detalles de Regreso (Expansión) */}
+								<AnimatePresence>
+									{formData.idaVuelta && (
+										<motion.div
+											initial={{ opacity: 0, height: 0 }}
+											animate={{ opacity: 1, height: "auto" }}
+											exit={{ opacity: 0, height: 0 }}
+											className="space-y-4 pt-2 overflow-hidden"
+										>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-2xl border border-border">
+												<div className="space-y-2">
+													<Label className="text-xs font-bold text-muted-foreground uppercase tracking-tight">Fecha de Regreso</Label>
+													<div className="relative">
+														<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
+														<input
+															type="date"
+															name="fechaRegreso"
+															ref={fechaRegresoInputRef}
+															defaultValue={formData.fechaRegreso}
+															onChange={handleInputChange}
+															min={formData.fecha || minDateTime}
+															aria-label="Seleccionar fecha de regreso"
+															className="w-full h-11 pl-10 pr-4 bg-white border border-input rounded-xl text-sm md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary touch-manipulation"
+														/>
+													</div>
+												</div>
+												<div className="space-y-2">
+													<Label htmlFor="horaRegreso" className="text-xs font-bold text-muted-foreground uppercase tracking-tight">Hora de Regreso</Label>
+													<div className="relative">
+														<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
+														<select
+															id="horaRegreso"
+															name="horaRegreso"
+															value={formData.horaRegreso || ""}
+															onChange={handleInputChange}
+															aria-label="Seleccionar hora de regreso"
+															className="w-full h-11 pl-10 pr-8 bg-white border border-input rounded-xl text-sm md:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary appearance-none cursor-pointer touch-manipulation"
+														>
+															<option value="" disabled>Seleccionar...</option>
+															{timeOptions.map((t) => (
+																<option key={t.value} value={t.value}>{t.label}</option>
+															))}
+														</select>
+														<div className="absolute right-3 top-3 h-5 w-5 pointer-events-none">
+															<svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+															</svg>
+														</div>
+													</div>
 												</div>
 											</div>
-										</div>
-									</motion.div>
-								)}
+										</motion.div>
+									)}
+								</AnimatePresence>
 
-								{/* Selector de Sillas Infantiles (Nuevo) */}
+								{/* Expansión de Cantidad de Sillas */}
 								{configSillas.habilitado && (
-									<motion.div
-										initial={{ opacity: 0, y: 10 }}
-										animate={{ opacity: 1, y: 0 }}
-										className="p-4 bg-amber-50/50 border border-amber-100 rounded-xl space-y-3"
-									>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<div className="p-1.5 bg-amber-100 rounded-lg">
-													<Baby className="h-4 w-4 text-amber-600" />
-												</div>
-												<div>
-													<p className="text-sm font-semibold text-amber-900">¿Necesitas silla para niños?</p>
-													<p className="text-xs text-amber-700">Opcional</p>
-												</div>
-											</div>
-											<Checkbox
-												id="silla-infantil-toggle"
-												checked={formData.sillaInfantil}
-												onCheckedChange={(checked) => {
-													setFormData(prev => ({ 
-														...prev, 
-														sillaInfantil: !!checked,
-														cantidadSillasInfantiles: checked ? 1 : 0 
-													}));
-												}}
-												className="data-[state=checked]:bg-amber-600 border-amber-300"
-											/>
-										</div>
-
-										<AnimatePresence>
-											{formData.sillaInfantil && (
-												<motion.div
-													initial={{ height: 0, opacity: 0 }}
-													animate={{ height: "auto", opacity: 1 }}
-													exit={{ height: 0, opacity: 0 }}
-													className="overflow-hidden pt-2"
-												>
-													<div className="flex items-center justify-between gap-4">
-														<Label htmlFor="cantidad-sillas" className="text-xs font-medium text-amber-800">Cantidad de sillas</Label>
-														<div className="flex items-center gap-1">
+									<AnimatePresence>
+										{formData.sillaInfantil && (
+											<motion.div
+												initial={{ height: 0, opacity: 0 }}
+												animate={{ height: "auto", opacity: 1 }}
+												exit={{ height: 0, opacity: 0 }}
+												className="overflow-visible"
+											>
+												<div className="mt-2 p-4 bg-chocolate-500/5 rounded-2xl border border-chocolate-200/30">
+													<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+														<Label htmlFor="cantidad-sillas" className="text-xs font-bold text-chocolate-800 uppercase tracking-tight">Cantidad de sillas</Label>
+														<div className="flex items-center gap-3 p-1">
 															{[...Array(configSillas.maxSillas)].map((_, i) => (
 																<button
 																	key={i + 1}
 																	type="button"
 																	onClick={() => setFormData(prev => ({ ...prev, cantidadSillasInfantiles: i + 1 }))}
-																	className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+																	className={`w-14 h-14 md:w-12 md:h-12 rounded-xl text-sm font-black transition-all active:scale-90 touch-manipulation flex items-center justify-center ${
 																		formData.cantidadSillasInfantiles === (i + 1)
-																			? 'bg-amber-600 text-white shadow-sm'
-																			: 'bg-white text-amber-900 border border-amber-200 hover:bg-amber-50'
+																			? 'bg-chocolate-600 text-white shadow-lg shadow-chocolate-200 ring-4 ring-chocolate-500/30'
+																			: 'bg-white text-chocolate-900 border-2 border-chocolate-100 hover:border-chocolate-200 active:bg-chocolate-50'
 																	}`}
 																>
 																	{i + 1}
@@ -1042,10 +1058,10 @@ function HeroExpress({
 															))}
 														</div>
 													</div>
-												</motion.div>
-											)}
-										</AnimatePresence>
-									</motion.div>
+												</div>
+											</motion.div>
+										)}
+									</AnimatePresence>
 								)}
 							</div>							{stepError && (
 								<div className="mt-4 p-4 md:p-3 bg-destructive/10 text-destructive rounded-xl md:rounded-lg text-sm animate-in fade-in space-y-3">
@@ -1135,7 +1151,7 @@ function HeroExpress({
 											</p>
 										)}
 										{formData.sillaInfantil && formData.cantidadSillasInfantiles > 0 && (
-											<p className="text-xs font-medium text-amber-700 flex items-center gap-1 mt-1">
+											<p className="text-xs font-medium text-chocolate-700 flex items-center gap-1 mt-1">
 												<Baby className="w-3 h-3" />
 												{formData.cantidadSillasInfantiles} {formData.cantidadSillasInfantiles === 1 ? 'silla infantil' : 'sillas infantiles'}
 											</p>
