@@ -34,6 +34,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Banners Promocionales](#518-sistema-de-banners-promocionales)
    - [Sistema de Seguimiento de Conversiones (Google Ads)](#519-sistema-de-seguimiento-de-conversiones-google-ads)
    - [Mejoras en la Gestión y Visualización de Reservas (Panel Admin)](#520-mejoras-en-la-gestión-y-visualización-de-reservas-panel-admin)
+   - [Sistema de Auditoría y Logs](#521-sistema-de-auditoría-y-logs-adminauditlog)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
@@ -1490,3 +1491,35 @@ Se ha añadido un identificador visual crítico para la logística de los conduc
     - Soporta parámetros "sort" (columna) y "order" ("asc"/"desc").
     - Incluye por defecto la asociación "tramoHijo".
     - Orden predeterminado: "created_at" DESC (reservas más nuevas primero).
+
+---
+
+## 5.21 Sistema de Auditoría y Logs (AdminAuditLog)
+
+El sistema cuenta con un mecanismo de auditoría (`AdminAuditLog`) diseñado para registrar acciones críticas realizadas por usuarios administradores. Este registro es esencial para la seguridad, trazabilidad y depuración de incidentes.
+
+### Funcionalidad
+Cada vez que se realiza una acción sensible en el panel administrativo, el backend crea un registro en la tabla `admin_audit_logs` con la siguiente información:
+- **Actor**: ID del administrador (`adminUserId`)
+- **Acción**: Tipo de evento (ej: `login`, `eliminar`, `update_config`)
+- **Entidad**: Objeto afectado (ej: `Reserva`, `Configuracion`)
+- **Detalles**: Snapshot JSON de los datos relevantes (ej: backup de una reserva eliminada)
+- **Contexto**: Dirección IP y User Agent
+
+### Eventos Registrados Actualmente
+1. **Seguridad**:
+    - Inicio de sesión (`login`)
+    - Cierre de sesión (`logout`)
+2. **Configuración**:
+    - Cambios en variables globales (`update_config`), como activar/desactivar el modal de WhatsApp anterior.
+3. **Gestión de Reservas**:
+    - **Eliminación (`accion: eliminar`)**: Implementado en Febrero 2026 tras incidente de pérdida de datos. Registra todos los detalles de la reserva eliminada para permitir su recuperación manual si fuera necesario.
+
+### Consultas de Auditoría
+Actualmente los logs se pueden consultar directamente en la base de datos:
+```sql
+SELECT * FROM admin_audit_logs ORDER BY created_at DESC;
+```
+
+> [!IMPORTANT]
+> **Recuperación de Datos**: Si una reserva es eliminada accidentalmente, buscar en este log el evento `accion='eliminar'` y `entidadId=[ID]`. El campo `detalles` contendrá el JSON con la información necesaria para restaurarla.

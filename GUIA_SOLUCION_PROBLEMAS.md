@@ -2420,3 +2420,33 @@ Se realizó un rediseño integral enfocado en **Accesibilidad Táctil** y **Armo
 - `src/App.css`: Definición de la paleta `chocolate`.
 
 ---
+
+---
+
+## 13. Reservas Huérfanas (Invisible en Panel pero visible en Planificación)
+
+**Detectado: 16 Febrero 2026**
+
+### Problema
+Ciertas reservas de retorno confirmadas desaparecen del listado principal del panel administrativo ("Reservas"), pero siguen apareciendo en la vista de "Planificación" y existen en la base de datos.
+
+### Causa Raíz
+1. **Eliminación Parcial**: El tramo de IDA (padre) fue eliminado físicamente de la base de datos, dejando el tramo de VUELTA (hijo) huérfano.
+2. **Filtrado de UI**: El endpoint `/api/reservas` y el frontend están diseñados para ocultar los tramos de vuelta (para mostrarlos anidados bajo su padre, como `tramoHijo`). Al ser eliminada la Ida (padre), la Vuelta no tiene referencia para mostrarse.
+3. **Planificación sin Filtro**: El endpoint de calendario no aplica este filtro jerárquico y consulta todas las reservas del día, por lo que muestra la reserva huérfana.
+4. **Falta de Auditoría**: La eliminación original no dejó rastro en `admin_audit_logs` porque el endpoint `DELETE` no tenía implementado el registro de acciones.
+
+### Solución (Febrero 2026)
+
+**1. Recuperación de Datos (Script)**
+Se creó un script (`backend/restore-reserva.js`) para "adoptar" las reservas huérfanas creando un nuevo tramo de ida genérico que actúe como padre y las vincule correctamente (`tramoPadreId`).
+
+**2. Mejora de Seguridad y Auditoría**
+Se modificó `backend/server-db.js` el endpoint `DELETE /api/reservas/:id`:
+- **Autenticación Obligatoria**: Se agregó middleware `authAdmin` para requerir token de administrador.
+- **Auditoría**: Se implementó `AdminAuditLog.create()` para registrar **quién** inició la eliminación, **cuándo** y los detalles de la reserva eliminada (incluyendo sus IDs vinculados).
+
+**Prevención**:
+El sistema ahora impide eliminaciones anónimas y deja un rastro claro de auditoría, facilitando la investigación de cualquier futura desaparición de reservas.
+
+---

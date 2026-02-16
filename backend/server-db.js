@@ -8704,7 +8704,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				fecha: reserva.fecha,
 				hora: reserva.hora,
 				origen: reserva.origen,
-				destino: reserva.motivoPago ? `${reserva.destino} (Motivo: ${reserva.motivoPago})` : reserva.destino,
+				destino: (reserva.motivoPago ? `${reserva.destino} (Motivo: ${reserva.motivoPago})` : reserva.destino) + 
+					(reservaHija ? ` | 🔄 RETORNO: ${reservaHija.fecha} ${reservaHija.hora} (${reservaHija.origen} ➝ ${reservaHija.destino})` : ""),
 				idaVuelta: reserva.idaVuelta,
 				motivo: reserva.motivoPago || ""
 			}, {
