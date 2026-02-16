@@ -12,6 +12,7 @@ import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Calendar, Clock, Users, MapPin, ArrowRight } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+import WhatsAppButton from "./WhatsAppButton";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 10:00 PM)
 const generateTimeOptions = () => {
@@ -516,15 +517,23 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 
           {/* Botones de acción - Stacked en Móvil, Row en PC */}
           <div className="flex flex-col-reverse md:flex-row gap-3 pt-4 border-t md:justify-end sticky md:relative bottom-0 bg-white/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none pb-1 mt-6">
-            <Button 
+          <Button 
               type="button" 
               variant="outline" 
               onClick={onClose} 
-              className="w-full md:w-auto md:px-8 h-12 md:h-11 font-semibold"
+              className="w-full md:w-auto md:px-6 h-12 md:h-11 font-semibold"
               disabled={loading}
             >
               Cancelar
             </Button>
+            
+            <WhatsAppButton
+              message={`Hola, tengo una consulta sobre la promoción ${promocion.nombre} de ${promocion.origen} a ${promocion.destino}`}
+              variant="secondary"
+              className="w-full md:w-auto h-12 md:h-11 bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 font-semibold"
+            >
+              Consultar
+            </WhatsAppButton>
             <Button 
               type="submit" 
               disabled={loading} 
