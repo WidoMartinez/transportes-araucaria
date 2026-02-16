@@ -95,15 +95,21 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
   const timeOptionsIda = useMemo(() => getTimeOptions(formData.fecha_ida), [formData.fecha_ida]);
   const timeOptionsVuelta = useMemo(() => getTimeOptions(formData.fecha_vuelta), [formData.fecha_vuelta]);
 
-  // Calcular precio total dinámico
-  const precioTotal = useMemo(() => {
-    if (!promocion) return 0;
-    let total = Number(promocion.precio);
+  // Calcular precio total dinámico y desglose
+  const { precioTotal, desgloseSillas } = useMemo(() => {
+    if (!promocion) return { precioTotal: 0, desgloseSillas: 0 };
+    
+    const precioBase = Number(promocion.precio);
+    let total = precioBase;
+    let extraSillas = 0;
+    
     if (formData.sillaInfantil && promocion.permite_sillas) {
       const valorSilla = Number(promocion.valor_silla || 0);
-      total += valorSilla * (formData.cantidadSillasInfantiles || 1);
+      const cantidad = Number(formData.cantidadSillasInfantiles || 1);
+      extraSillas = valorSilla * cantidad;
+      total += extraSillas;
     }
-    return total;
+    return { precioTotal: total, desgloseSillas: extraSillas };
   }, [promocion, formData.sillaInfantil, formData.cantidadSillasInfantiles]);
 
   if (!promocion) return null;
@@ -221,9 +227,16 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 
               <div className="col-span-2 md:col-span-1 md:text-right pt-2 border-t md:border-t-0 border-green-200/50 mt-1 md:mt-0 flex justify-between md:flex-col items-center md:items-end">
                 <p className="text-sm font-medium text-green-800">Total Promocional</p>
-                <span className="text-2xl font-black text-green-600">
-                  ${precioTotal.toLocaleString("es-CL", { maximumFractionDigits: 0 })}
-                </span>
+                <div className="flex flex-col items-end">
+                  <span className="text-2xl font-black text-green-600 leading-none">
+                    ${precioTotal.toLocaleString("es-CL", { maximumFractionDigits: 0 })}
+                  </span>
+                  {desgloseSillas > 0 && (
+                    <span className="text-[10px] text-green-700/80 font-medium mt-0.5">
+                      Incluido: +${desgloseSillas.toLocaleString("es-CL")} (Sillas)
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

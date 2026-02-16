@@ -801,7 +801,7 @@ onValueChange={(value) => setFormData({ ...formData, posicion_imagen: value })}
             </div>
 
             {/* Configuración Avanzada - Full Width */}
-            <div className="col-span-1 border-t pt-4 mt-2">
+            <div className="col-span-2 border-t pt-4 mt-2">
               <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <span className="bg-gray-100 p-1 rounded">⚙️</span> Configuración Avanzada
               </h3>
