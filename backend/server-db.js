@@ -7560,13 +7560,36 @@ app.post("/api/disponibilidad/validar-horario", async (req, res) => {
 // ============================================
 
 // Eliminar una reserva
-app.delete("/api/reservas/:id", async (req, res) => {
+app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
 			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Registrar en auditoría antes de eliminar
+		try {
+			if (req.user) {
+				await AdminAuditLog.create({
+					adminUserId: req.user.id,
+					accion: "eliminar",
+					entidad: "Reserva",
+					entidadId: id,
+					detalles: JSON.stringify({
+						codigoReserva: reserva.codigoReserva,
+						nombre: reserva.nombre,
+						fecha: reserva.fecha,
+						tramoPadreId: reserva.tramoPadreId,
+						tramoHijoId: reserva.tramoHijoId
+					}),
+					ip: req.ip || req.connection.remoteAddress,
+					userAgent: req.get('User-Agent')
+				});
+			}
+		} catch (auditError) {
+			console.error("Error registrando auditoría de eliminación:", auditError);
 		}
 
 		// Eliminar registros dependientes para evitar errores de clave foránea
