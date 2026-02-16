@@ -5782,6 +5782,8 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			reasignacion,
 		} = req.body;
 
+		let shouldGenerateOpportunities = false;
+
 		console.log(`🔄 [BULK-UPDATE] Iniciando actualización unificada para reserva ${id}`);
 
 		// 1. Buscar reserva
@@ -5922,12 +5924,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 
 			// 🎯 NUEVO: Generar oportunidades automáticamente si se confirma
 			if (nuevoEstado === "confirmada") {
-				try {
-					console.log(`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`);
-					await detectarYGenerarOportunidades(reserva);
-				} catch (opErr) {
-					console.error("❌ Error generando oportunidades en Bulk Update:", opErr.message);
-				}
+				shouldGenerateOpportunities = true;
 			}
 		}
 
@@ -5943,6 +5940,15 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 
 		// Recargar reserva con datos actualizados
 		await reserva.reload();
+
+		if (shouldGenerateOpportunities) {
+			try {
+				console.log(`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`);
+				await detectarYGenerarOportunidades(reserva);
+			} catch (opErr) {
+				console.error("❌ Error generando oportunidades en Bulk Update:", opErr.message);
+			}
+		}
 
 		console.log(`✅ [BULK-UPDATE] Actualización completada exitosamente para reserva ${id}`);
 
