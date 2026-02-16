@@ -1848,23 +1848,10 @@ function AdminReservas() {
 			variant = "secondary";
 		}
 
-		// Mostrar badge con etiqueta y, opcionalmente, info de montos en texto pequeÃ±o
-		const montoInfo =
-			montoPagado > 0
-				? ` (${new Intl.NumberFormat("es-CL", {
-						style: "currency",
-						currency: "CLP",
-				  }).format(montoPagado)})`
-				: "";
 
 		return (
 			<div className="flex flex-col text-sm">
 				<Badge variant={variant}>{label}</Badge>
-				{montoInfo ? (
-					<span className="text-xs text-muted-foreground mt-1">
-						Pagó: {montoInfo}
-					</span>
-				) : null}
 			</div>
 		);
 	};
