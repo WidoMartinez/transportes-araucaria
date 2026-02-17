@@ -7709,6 +7709,15 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
+		// 🎯 RESTRICCIÓN: No permitir eliminar reservas confirmadas
+		if (reserva.estado === "confirmada") {
+			console.log(`🚫 Intento bloqueado: Eliminación de reserva CONFIRMADA #${id}`);
+			return res.status(400).json({
+				error: "No se permite eliminar reservas confirmadas. Por favor, cámbiela a 'cancelada' primero si desea eliminarla.",
+				codigo: "RESTRICTED_DELETE_CONFIRMED"
+			});
+		}
+
 		console.log(`🗑️ Eliminando reserva #${id} (${reserva.codigoReserva}) solicitada por admin`);
 
 		// Registrar en auditoría antes de eliminar

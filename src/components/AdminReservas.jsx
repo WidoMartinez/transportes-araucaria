@@ -1628,24 +1628,11 @@ function AdminReservas() {
 			const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
 			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
 
-			if (tipo === "saldo" || tipo === "total") {
-				const restante = Math.max(totalReserva - pagoPrevio, 0);
-				montoPagadoValue = restante > 0 ? restante : null;
-			} else if (tipo === "abono") {
-				const necesario = Math.max(umbralAbono - pagoPrevio, 0);
-				montoPagadoValue = necesario > 0 ? necesario : null;
-				if (estadoFinal === "pendiente" || estadoFinal === "pendiente_detalles") {
-					estadoFinal = "confirmada";
-				}
-				if (estadoPagoSolicitado === "pendiente") {
-					estadoPagoSolicitado = "parcial";
-				}
-			}
+			// 🎯 FIX: No recalcular automáticamente montoPagadoValue basado en tipo o estado aquí,
+			// ya que causa que reservas sin pagos se marquen como pagadas al editarlas (ej. cambiar email).
+			// El monto ya viene en formData.montoPagado si el usuario lo cambió en el select de tipoPago
+			// o lo ingresó manualmente.
 
-			if (estadoFinal === "completada") {
-				const restante = Math.max(totalReserva - pagoPrevio, 0);
-				if (restante > 0) montoPagadoValue = restante;
-			}
 
 			// 3. Payload UNIFICADO
 			const bulkPayload = {
@@ -2345,11 +2332,36 @@ function AdminReservas() {
 
 	// Eliminar reservas seleccionadas
 	const handleBulkDelete = async () => {
+		// Validar si hay reservas confirmadas seleccionadas
+		const reservasAVerificar = reservas.filter(r => selectedReservas.includes(r.id));
+		const confirmadas = reservasAVerificar.filter(r => r.estado === "confirmada");
+		
+		if (confirmadas.length > 0) {
+			const names = confirmadas.map(r => `#${r.id}`).join(", ");
+			alert(`No se pueden eliminar reservas con estado "Confirmada" (${names}).\n\nPor favor, cámbielas a "Cancelada" primero si realmente desea eliminarlas.`);
+			
+			// Si solo había confirmadas, salir
+			if (confirmadas.length === selectedReservas.length) {
+				setShowBulkDeleteDialog(false);
+				return;
+			}
+			
+			// Si hay mezcla, preguntar si proceder con el resto
+			if (!confirm(`Hay ${confirmadas.length} reservas confirmadas que NO se eliminarán. ¿Deseas proceder con la eliminación de las otras ${selectedReservas.length - confirmadas.length} reserva(s)?`)) {
+				return;
+			}
+		}
+
+		// Filtrar solo las que NO están confirmadas para enviar al backend
+		const idsAEliminar = reservasAVerificar
+			.filter(r => r.estado !== "confirmada")
+			.map(r => r.id);
+
 		setProcessingBulk(true);
 		try {
 			// USAR authenticatedFetch para incluir cabeceras de seguridad
 			const results = await Promise.all(
-				selectedReservas.map((id) =>
+				idsAEliminar.map((id) =>
 					authenticatedFetch(`/api/reservas/${id}`, {
 						method: "DELETE",
 					})
@@ -2357,17 +2369,30 @@ function AdminReservas() {
 			);
 
 			// Verificar si todas las peticiones fueron exitosas
-			const failures = results.filter((r) => !r.ok);
+			const failures = [];
+			for (let i = 0; i < results.length; i++) {
+				if (!results[i].ok) {
+					const errorData = await results[i].json().catch(() => ({}));
+					failures.push({
+						id: idsAEliminar[i],
+						status: results[i].status,
+						error: errorData.error || "Error desconocido"
+					});
+				}
+			}
+
 			if (failures.length > 0) {
 				console.error(`❌ Fallaron ${failures.length} eliminaciones:`, failures);
-				throw new Error(`No se pudieron eliminar ${failures.length} reserva(s)`);
+				const errorMsgs = failures.map(f => `Reserva #${f.id}: ${f.error}`).join("\n");
+				alert(`Hubo errores al eliminar algunas reservas:\n\n${errorMsgs}`);
+			} else {
+				alert(`${idsAEliminar.length} reserva(s) eliminada(s) exitosamente`);
 			}
 
 			await fetchReservas();
 			await fetchEstadisticas();
 			setSelectedReservas([]);
 			setShowBulkDeleteDialog(false);
-			alert(`${selectedReservas.length} reserva(s) eliminada(s) exitosamente`);
 		} catch (error) {
 			console.error("Error eliminando reservas:", error);
 			alert("Error al eliminar algunas reservas: " + error.message);
