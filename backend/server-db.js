@@ -3756,11 +3756,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					}
 				}
 				
-				// Dividir costos (50/50 para simplificar asignación inicial)
+				// Dividir costos y pagos (50/50 para simplificar asignación inicial)
+				const totalOriginal = Number(reservaExpress.totalConDescuento) || 0;
+				const pagoOriginal = Number(reservaExpress.pagoMonto) || 0;
+				
 				const precioIda = (Number(reservaExpress.precio) || 0) / 2;
 				const precioVuelta = (Number(reservaExpress.precio) || 0) / 2;
-				const totalIda = (Number(reservaExpress.totalConDescuento) || 0) / 2;
-				const totalVuelta = (Number(reservaExpress.totalConDescuento) || 0) / 2;
+				const totalIda = totalOriginal / 2;
+				const totalVuelta = totalOriginal / 2;
+				const pagoIda = pagoOriginal / 2;
+				const pagoVuelta = pagoOriginal / 2;
 
 				// 2. Crear reserva de VUELTA (Hijo)
 				const reservaVuelta = await Reserva.create({
@@ -3781,9 +3786,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					fecha: datosReserva.fechaRegreso, // Fecha regreso original
 					hora: normalizeTimeGlobal(datosReserva.horaRegreso),   // Hora regreso original
 					
-					// Datos financieros (mitad del total)
+					// Datos financieros (mitad del total y pago)
 					precio: precioVuelta,
 					totalConDescuento: totalVuelta,
+					pagoMonto: pagoVuelta,
+					abonoPagado: reservaExpress.abonoPagado,
+					saldoPagado: reservaExpress.saldoPagado,
 					descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
 					descuentoPromocion: (Number(reservaExpress.descuentoPromocion) || 0) / 2,
 					descuentoRoundTrip: (Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
@@ -3828,6 +3836,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				await reservaExpress.update({
 					precio: precioIda,
 					totalConDescuento: totalIda,
+					pagoMonto: pagoIda,
 					abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
 					saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
 					descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
