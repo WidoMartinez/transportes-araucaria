@@ -35,6 +35,7 @@ import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
 import addSillaInfantilToCodigosPago from "./migrations/add-silla-infantil-to-codigos-pago.js";
 import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-pago.js";
+import addEnProcesoEstado from "./migrations/add-en-proceso-estado-codigo-pago.js";
 import CodigoPago from "./models/CodigoPago.js";
 import Transaccion from "./models/Transaccion.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
@@ -690,6 +691,7 @@ const initializeDatabase = async () => {
 		await addCodigosPagoTable();
 		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), Sequelize);
 		await addClientDataToCodigosPago();
+		await addEnProcesoEstado(); // Migración para agregar estado 'en_proceso' al ENUM
 		await addDuracionMinutosToCodigosPago();
 		await addDuracionMinutosToReservas();
 		await addTransaccionesTable();
@@ -3377,6 +3379,38 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
+		// 🔍 VALIDACIÓN PREVENTIVA: Si es pago con código, verificar primero si ya tiene reserva vinculada
+		if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
+			const codigoPagoExistente = await CodigoPago.findOne({
+				where: { codigo: datosReserva.referenciaPago }
+			});
+
+			if (!codigoPagoExistente) {
+				return res.status(404).json({
+					success: false,
+					message: "Código de pago no encontrado"
+				});
+			}
+
+			// 🚨 CRÍTICO: Si ya está vinculado a una reserva, reutilizarla
+			if (codigoPagoExistente.reservaVinculadaId) {
+				const reservaVinculada = await Reserva.findByPk(codigoPagoExistente.reservaVinculadaId);
+
+				if (reservaVinculada) {
+					console.log(`♻️ Reutilizando reserva existente ${reservaVinculada.id} para código ${codigoPagoExistente.codigo}`);
+					
+					return res.json({
+						success: true,
+						message: "Reserva ya existe para este código",
+						reservaId: reservaVinculada.id,
+						codigoReserva: reservaVinculada.codigoReserva,
+						tipo: "express",
+						esReutilizada: true
+					});
+				}
+			}
+		}
+
 		const clienteAsociado = await obtenerClienteParaReservaExpress({
 			clienteId: datosReserva.clienteId,
 			rutFormateado,
@@ -3561,152 +3595,181 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`
 			);
 		} else {
-			// CREAR nueva reserva
-			const codigoReserva = await generarCodigoReserva();
-			console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
-
-			// Calcular totales y abono para decidir saldo guardado.
-			const totalCalculadoExpress = parsePositiveDecimal(
-				datosReserva.totalConDescuento,
-				"totalConDescuento",
-				parsePositiveDecimal(datosReserva.precio, "precio", 0)
-			);
-			const abonoCalculadoExpress = parsePositiveDecimal(
-				datosReserva.abonoSugerido,
-				"abonoSugerido",
-				0
-			);
-
-			const pagoMontoProvidedExpress =
-				datosReserva.pagoMonto !== undefined &&
-				datosReserva.pagoMonto !== null &&
-				datosReserva.pagoMonto !== "" &&
-				parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
-
-			let saldoPendienteParaGuardar;
-			if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
-				// Si frontend informó un saldo explícito y hay pago indicado, respetarlo
-				saldoPendienteParaGuardar = parsePositiveDecimal(
-					datosReserva.saldoPendiente,
-					"saldoPendiente",
-					Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
-				);
-			} else {
-				// No hay evidencia de pago: saldo = total
-				saldoPendienteParaGuardar = totalCalculadoExpress;
-			}
-
-			// Log temporal para depuración del flujo express
-			console.log("[DEBUG] /enviar-reserva-express - cálculos financieros:", {
-				totalCalculadoExpress,
-				abonoCalculadoExpress,
-				pagoMontoProvidedExpress,
-				saldoPendienteParaGuardar,
-				estadoPago: datosReserva.estadoPago,
-			});
-
-			reservaExpress = await Reserva.create({
-				codigoReserva: codigoReserva,
-				nombre: datosReserva.nombre,
-				email: emailNormalizado,
-				telefono: datosReserva.telefono,
-				clienteId: clienteIdAsociado,
-				rut: rutFormateado,
-				origen: datosReserva.origen,
-				destino: datosReserva.destino,
-				fecha: datosReserva.fecha,
-				// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
-				hora: normalizeTimeGlobal(datosReserva.hora),
-				pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
-				precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
-				vehiculo: datosReserva.vehiculo || "",
-				referenciaPago: datosReserva.referenciaPago || null,
-
-				// Campos que se completarán después del pago (opcionales por ahora)
-				numeroVuelo: numeroVueloCliente,
-				hotel: direccionEspecifica,
-				equipajeEspecial: equipajeEspecialCliente,
-				sillaInfantil:
-					sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
-				idaVuelta: Boolean(datosReserva.idaVuelta),
-				fechaRegreso: datosReserva.fechaRegreso || null,
-				horaRegreso: normalizeTimeGlobal(datosReserva.horaRegreso),
-
-				// Campos financieros con validación
-				abonoSugerido: abonoCalculadoExpress,
-				saldoPendiente: saldoPendienteParaGuardar,
-				descuentoBase: parsePositiveDecimal(
-					datosReserva.descuentoBase,
-					"descuentoBase",
-					0
-				),
-				descuentoPromocion: parsePositiveDecimal(
-					datosReserva.descuentoPromocion,
-					"descuentoPromocion",
-					0
-				),
-				descuentoRoundTrip: parsePositiveDecimal(
-					datosReserva.descuentoRoundTrip,
-					"descuentoRoundTrip",
-					0
-				),
-				descuentoOnline: parsePositiveDecimal(
-					datosReserva.descuentoOnline,
-					"descuentoOnline",
-					0
-				),
-				totalConDescuento: parsePositiveDecimal(
-					datosReserva.totalConDescuento,
-					"totalConDescuento",
-					0
-				),
-				mensaje: mensajeParaGuardar ?? "",
-
-				// Metadata del sistema
-				source: datosReserva.source || "express_web",
-				// Respetar el estado enviado por el frontend si existe.
-				// Si la reserva se crea desde un pago con código (source === 'codigo_pago')
-				// queremos mantenerla en 'pendiente' hasta la confirmación del pago
-				// (webhook). Por compatibilidad con el flujo express por defecto,
-				// usamos 'pendiente_detalles' sólo si no se indica lo contrario.
-				estado:
-					datosReserva.estado ||
-					(datosReserva.source === "codigo_pago"
-						? "pendiente"
-						: "pendiente_detalles"),
-				ipAddress: req.ip || req.connection.remoteAddress || "",
-				userAgent: req.get("User-Agent") || "",
-				codigoDescuento: datosReserva.codigoDescuento || "",
-				tipoPago: datosReserva.tipoPago || null,
-				estadoPago: datosReserva.estadoPago || "pendiente",
-				duracionMinutos: datosReserva.duracionMinutos ? parseInt(datosReserva.duracionMinutos) : null,
-			});
-
-			console.log(
-				"✅ Reserva express guardada en base de datos con ID:",
-				reservaExpress.id,
-				"Código:",
-				reservaExpress.codigoReserva
-			);
-
-			// Vincular código de pago con la reserva creada (evita duplicación de reservas)
-			if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
-				try {
-					const codigoPago = await CodigoPago.findOne({
-						where: { codigo: datosReserva.referenciaPago }
+			// CREAR nueva reserva con transacción SQL para prevenir duplicados
+			const t = await sequelize.transaction();
+			
+			try {
+				// 🔒 Si es pago con código, marcar como "en_proceso" dentro de la transacción
+				if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
+					const codigoPagoParaMarcar = await CodigoPago.findOne({
+						where: { codigo: datosReserva.referenciaPago },
+						transaction: t
 					});
 
-					if (codigoPago && !codigoPago.reservaVinculadaId) {
+					if (codigoPagoParaMarcar) {
+						await codigoPagoParaMarcar.update({
+							estado: "en_proceso"
+						}, { transaction: t });
+						console.log(`🔒 Código ${codigoPagoParaMarcar.codigo} marcado como 'en_proceso'`);
+					}
+				}
+
+				const codigoReserva = await generarCodigoReserva();
+				console.log(`➕ Creando nueva reserva con código: ${codigoReserva}`);
+
+				// Calcular totales y abono para decidir saldo guardado.
+				const totalCalculadoExpress = parsePositiveDecimal(
+					datosReserva.totalConDescuento,
+					"totalConDescuento",
+					parsePositiveDecimal(datosReserva.precio, "precio", 0)
+				);
+				const abonoCalculadoExpress = parsePositiveDecimal(
+					datosReserva.abonoSugerido,
+					"abonoSugerido",
+					0
+				);
+
+				const pagoMontoProvidedExpress =
+					datosReserva.pagoMonto !== undefined &&
+					datosReserva.pagoMonto !== null &&
+					datosReserva.pagoMonto !== "" &&
+					parsePositiveDecimal(datosReserva.pagoMonto, "pagoMonto", 0) > 0;
+
+				let saldoPendienteParaGuardar;
+				if (pagoMontoProvidedExpress || datosReserva.estadoPago === "pagado") {
+					// Si frontend informó un saldo explícito y hay pago indicado, respetarlo
+					saldoPendienteParaGuardar = parsePositiveDecimal(
+						datosReserva.saldoPendiente,
+						"saldoPendiente",
+						Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
+					);
+				} else {
+					// No hay evidencia de pago: saldo = total
+					saldoPendienteParaGuardar = totalCalculadoExpress;
+				}
+
+				// Log temporal para depuración del flujo express
+				console.log("[DEBUG] /enviar-reserva-express - cálculos financieros:", {
+					totalCalculadoExpress,
+					abonoCalculadoExpress,
+					pagoMontoProvidedExpress,
+					saldoPendienteParaGuardar,
+					estadoPago: datosReserva.estadoPago,
+				});
+
+				reservaExpress = await Reserva.create({
+					codigoReserva: codigoReserva,
+					nombre: datosReserva.nombre,
+					email: emailNormalizado,
+					telefono: datosReserva.telefono,
+					clienteId: clienteIdAsociado,
+					rut: rutFormateado,
+					origen: datosReserva.origen,
+					destino: datosReserva.destino,
+					fecha: datosReserva.fecha,
+					// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
+					hora: normalizeTimeGlobal(datosReserva.hora),
+					pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
+					precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+					vehiculo: datosReserva.vehiculo || "",
+					referenciaPago: datosReserva.referenciaPago || null,
+
+					// Campos que se completarán después del pago (opcionales por ahora)
+					numeroVuelo: numeroVueloCliente,
+					hotel: direccionEspecifica,
+					equipajeEspecial: equipajeEspecialCliente,
+					sillaInfantil:
+						sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
+					idaVuelta: Boolean(datosReserva.idaVuelta),
+					fechaRegreso: datosReserva.fechaRegreso || null,
+					horaRegreso: normalizeTimeGlobal(datosReserva.horaRegreso),
+
+					// Campos financieros con validación
+					abonoSugerido: abonoCalculadoExpress,
+					saldoPendiente: saldoPendienteParaGuardar,
+					descuentoBase: parsePositiveDecimal(
+						datosReserva.descuentoBase,
+						"descuentoBase",
+						0
+					),
+					descuentoPromocion: parsePositiveDecimal(
+						datosReserva.descuentoPromocion,
+						"descuentoPromocion",
+						0
+					),
+					descuentoRoundTrip: parsePositiveDecimal(
+						datosReserva.descuentoRoundTrip,
+						"descuentoRoundTrip",
+						0
+					),
+					descuentoOnline: parsePositiveDecimal(
+						datosReserva.descuentoOnline,
+						"descuentoOnline",
+						0
+					),
+					totalConDescuento: parsePositiveDecimal(
+						datosReserva.totalConDescuento,
+						"totalConDescuento",
+						0
+					),
+					mensaje: mensajeParaGuardar ?? "",
+
+					// Metadata del sistema
+					source: datosReserva.source || "express_web",
+					// Respetar el estado enviado por el frontend si existe.
+					// Si la reserva se crea desde un pago con código (source === 'codigo_pago')
+					// queremos mantenerla en 'pendiente' hasta la confirmación del pago
+					// (webhook). Por compatibilidad con el flujo express por defecto,
+					// usamos 'pendiente_detalles' sólo si no se indica lo contrario.
+					estado:
+						datosReserva.estado ||
+						(datosReserva.source === "codigo_pago"
+							? "pendiente"
+							: "pendiente_detalles"),
+					ipAddress: req.ip || req.connection.remoteAddress || "",
+					userAgent: req.get("User-Agent") || "",
+					codigoDescuento: datosReserva.codigoDescuento || "",
+					tipoPago: datosReserva.tipoPago || null,
+					estadoPago: datosReserva.estadoPago || "pendiente",
+					duracionMinutos: datosReserva.duracionMinutos ? parseInt(datosReserva.duracionMinutos) : null,
+				}, { transaction: t });
+
+				console.log(
+					"✅ Reserva express guardada en base de datos con ID:",
+					reservaExpress.id,
+					"Código:",
+					reservaExpress.codigoReserva
+				);
+
+				// 🔗 VINCULAR INMEDIATAMENTE dentro de la transacción
+				if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
+					const codigoPago = await CodigoPago.findOne({
+						where: { codigo: datosReserva.referenciaPago },
+						transaction: t
+					});
+
+					if (codigoPago) {
 						await codigoPago.update({
 							reservaVinculadaId: reservaExpress.id,
-							codigoReservaVinculado: reservaExpress.codigoReserva
-						});
-						console.log(`🔗 Código de pago ${codigoPago.codigo} vinculado con reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`);
+							codigoReservaVinculado: reservaExpress.codigoReserva,
+							estado: "usado",
+							usosActuales: (codigoPago.usosActuales || 0) + 1,
+							fechaUso: new Date(),
+							emailCliente: emailNormalizado || codigoPago.emailCliente
+						}, { transaction: t });
+						
+						console.log(`🔗 Código de pago ${codigoPago.codigo} vinculado a reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`);
 					}
-				} catch (error) {
-					console.error("❌ Error al vincular código de pago con reserva:", error);
-					// No fallar la creación de reserva por este error
 				}
+
+				// Confirmar transacción
+				await t.commit();
+				console.log("✅ Transacción confirmada exitosamente");
+
+			} catch (transactionError) {
+				await t.rollback();
+				console.error("❌ Error en transacción, rollback ejecutado:", transactionError);
+				throw transactionError;
 			}
 		}
 
