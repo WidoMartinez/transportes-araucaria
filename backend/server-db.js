@@ -6032,7 +6032,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 				: reserva.observaciones;
 
 			// Validar que no se pueda cambiar a pendiente si ya hay pagos
-			if (nuevoEstado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+			if (nuevoEstado === "pendiente" && (reserva.pagoMonto || 0) > 0 && reserva.estado !== "pendiente") {
 				await transaction.rollback();
 				return res.status(400).json({
 					error: "No se puede cambiar a pendiente una reserva que ya tiene pagos realizados"
@@ -7771,7 +7771,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		}
 
 		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
-		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0) {
+		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0 && reserva.estado !== "pendiente") {
 			console.log(
 				"Intento de cambiar a pendiente con pagos:",
 				reserva.pagoMonto
