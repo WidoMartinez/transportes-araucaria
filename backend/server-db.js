@@ -7709,6 +7709,8 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
+		console.log(`🗑️ Eliminando reserva #${id} (${reserva.codigoReserva}) solicitada por admin`);
+
 		// Registrar en auditoría antes de eliminar
 		try {
 			if (req.user) {
@@ -7722,7 +7724,8 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 						nombre: reserva.nombre,
 						fecha: reserva.fecha,
 						tramoPadreId: reserva.tramoPadreId,
-						tramoHijoId: reserva.tramoHijoId
+						tramoHijoId: reserva.tramoHijoId,
+						motivo: "Eliminación manual desde panel admin"
 					}),
 					ip: req.ip || req.connection.remoteAddress,
 					userAgent: req.get('User-Agent')
@@ -7732,33 +7735,64 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 			console.error("Error registrando auditoría de eliminación:", auditError);
 		}
 
-		// Eliminar registros dependientes para evitar errores de clave foránea
-		// 1. Eliminar correos pendientes asociados
+		// Identificar tramos vinculados
+		const tramoHijoId = reserva.tramoHijoId;
+		const tramoPadreId = reserva.tramoPadreId;
+
+		// 1. Limpieza de datos asociados a la reserva principal
 		await PendingEmail.destroy({
 			where: { reservaId: id }
 		});
+		
+		// 🎯 NUEVO: Si tiene un tramo hijo (es una IDA que tiene VUELTA vinculada)
+		// Eliminar también el tramo de vuelta para evitar huérfanos
+		if (tramoHijoId) {
+			console.log(`🧹 Iniciando limpieza de tramo hijo vinculado: ${tramoHijoId}`);
+			try {
+				await PendingEmail.destroy({ where: { reservaId: tramoHijoId } });
+				await Reserva.destroy({ where: { id: tramoHijoId } });
+				console.log(`✅ Tramo hijo ${tramoHijoId} eliminado exitosamente`);
+			} catch (childErr) {
+				console.error(`❌ Error eliminando tramo hijo ${tramoHijoId}:`, childErr.message);
+				// No fallar la operación principal si falla el borrado del hijo
+			}
+		}
 
-		// 2. Eliminar la reserva
+		// 🎯 NUEVO: Si es un tramo hijo (es una VUELTA), desvincular del padre
+		if (tramoPadreId) {
+			console.log(`🔗 Desvinculando del tramo padre: ${tramoPadreId}`);
+			try {
+				await Reserva.update(
+					{ tramoHijoId: null },
+					{ where: { id: tramoPadreId } }
+				);
+			} catch (parentErr) {
+				console.warn(`⚠️ No se pudo desvincular del padre ${tramoPadreId}:`, parentErr.message);
+			}
+		}
+
+		// 2. Eliminar la reserva principal
 		await reserva.destroy();
 
-		console.log(`✅ Reserva ${id} eliminada exitosamente (incluyendo ${await PendingEmail.count({ where: { reservaId: id } })} correos pendientes)`);
+		console.log(`✅ Reserva ${id} eliminada exitosamente`);
 
 		res.json({
 			success: true,
-			message: "Reserva eliminada exitosamente",
+			message: "Reserva y datos vinculados eliminados exitosamente",
+			deletedId: id,
+			linkedDeleted: !!tramoHijoId
 		});
 	} catch (error) {
 		console.error("Error eliminando reserva:", error);
 		
-		// Proporcionar mensaje de error más específico
 		if (error.name === "SequelizeForeignKeyConstraintError") {
 			return res.status(409).json({ 
-				error: "No se puede eliminar la reserva debido a restricciones de integridad referencial",
+				error: "No se puede eliminar la reserva debido a restricciones de integridad referencial (pagos o transacciones asociadas)",
 				details: error.message 
 			});
 		}
 		
-		res.status(500).json({ error: "Error interno del servidor" });
+		res.status(500).json({ error: "Error interno del servidor", details: error.message });
 	}
 });
 

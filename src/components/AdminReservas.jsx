@@ -2347,13 +2347,21 @@ function AdminReservas() {
 	const handleBulkDelete = async () => {
 		setProcessingBulk(true);
 		try {
-			const promises = selectedReservas.map((id) =>
-				fetch(`${apiUrl}/api/reservas/${id}`, {
-					method: "DELETE",
-				})
+			// USAR authenticatedFetch para incluir cabeceras de seguridad
+			const results = await Promise.all(
+				selectedReservas.map((id) =>
+					authenticatedFetch(`/api/reservas/${id}`, {
+						method: "DELETE",
+					})
+				)
 			);
 
-			await Promise.all(promises);
+			// Verificar si todas las peticiones fueron exitosas
+			const failures = results.filter((r) => !r.ok);
+			if (failures.length > 0) {
+				console.error(`❌ Fallaron ${failures.length} eliminaciones:`, failures);
+				throw new Error(`No se pudieron eliminar ${failures.length} reserva(s)`);
+			}
 
 			await fetchReservas();
 			await fetchEstadisticas();
@@ -2362,7 +2370,7 @@ function AdminReservas() {
 			alert(`${selectedReservas.length} reserva(s) eliminada(s) exitosamente`);
 		} catch (error) {
 			console.error("Error eliminando reservas:", error);
-			alert("Error al eliminar algunas reservas");
+			alert("Error al eliminar algunas reservas: " + error.message);
 		} finally {
 			setProcessingBulk(false);
 		}
