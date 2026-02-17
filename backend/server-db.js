@@ -5999,8 +5999,16 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 
 			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
 
-			// Si se registra un nuevo pago
-			if (montoPago !== null && montoPago > 0) {
+			// 🎯 NUEVO: Soporte para reseteo de pago (montoPago === 0)
+			if (montoPago === 0) {
+				pagoTotalNuevo = 0;
+				nuevoSaldoPendiente = totalReserva;
+				nuevoEstadoPago = "pendiente";
+				abonoPagado = false;
+				saldoPagado = false;
+				console.log(`🧹 [BULK-UPDATE] Reseteando pagos para reserva ${id}`);
+			} else if (montoPago !== null && montoPago > 0) {
+				// Si se registra un nuevo pago
 				pagoTotalNuevo = pagoPrevio + montoPago;
 				nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
 

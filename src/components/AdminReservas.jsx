@@ -1328,10 +1328,7 @@ function AdminReservas() {
 			metodoPago: reserva.metodoPago || "",
 			referenciaPago: reserva.referenciaPago || "",
 			tipoPago: reserva.tipoPago || "",
-			montoPagado:
-				reserva.pagoMonto !== undefined && reserva.pagoMonto !== null
-					? String(reserva.pagoMonto)
-					: "",
+			montoPagado: "", // FIX: Iniciar siempre vacío para evitar duplicación accidental al guardar cambios generales
 			observaciones: reserva.observaciones || "",
 			numeroVuelo: reserva.numeroVuelo || "",
 			hotel: reserva.hotel || "",
@@ -4735,13 +4732,36 @@ function AdminReservas() {
 
 							{/* Monto del pago */}
 							<div className="space-y-2">
-								{/* Mostrar monto registrado actual (solo informativo). Los pagos manuales se registran en el apartado 'Registrar pago'. */}
-								<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
+								<div className="flex justify-between items-center">
+									<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
+									{(selectedReserva?.pagoMonto || 0) > 0 && (
+										<Button 
+											type="button" 
+											variant="ghost" 
+											size="sm" 
+											className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+											onClick={() => {
+												if (confirm("¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.")) {
+													setFormData({
+														...formData,
+														montoPagado: "0",
+														estadoPago: "pendiente",
+														estado: "pendiente"
+													});
+												}
+											}}
+										>
+											<RefreshCw className="w-3 h-3" />
+											Resetear Pago (Volver a $0)
+										</Button>
+									)}
+								</div>
 								<Input
 									id="montoPagado"
 									type="number"
 									step="1"
 									min="0"
+									placeholder="Ingresa monto solo si deseas sumar un pago manual"
 									value={
 										formData.montoPagado !== undefined &&
 										formData.montoPagado !== null
@@ -4753,15 +4773,20 @@ function AdminReservas() {
 									}
 								/>
 								<div className="text-xs text-muted-foreground mt-1">
-									<div>
+									<p>
 										Registrado en sistema:{" "}
-										{selectedReserva.pagoMonto
-											? new Intl.NumberFormat("es-CL", {
-													style: "currency",
-													currency: "CLP",
-											  }).format(selectedReserva.pagoMonto)
-											: "-"}
-									</div>
+										<span className="font-semibold">
+											{selectedReserva.pagoMonto
+												? new Intl.NumberFormat("es-CL", {
+														style: "currency",
+														currency: "CLP",
+												  }).format(selectedReserva.pagoMonto)
+												: "$0"}
+										</span>
+									</p>
+									<p className="text-[10px] mt-0.5">
+										* Solo ingresa un monto si deseas <strong>sumar</strong> un pago al total ya registrado.
+									</p>
 								</div>
 							</div>
 
