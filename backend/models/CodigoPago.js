@@ -66,9 +66,9 @@ const CodigoPago = sequelize.define(
 			comment: "Si incluye silla de niño",
 		},
 		estado: {
-			type: DataTypes.ENUM("activo", "usado", "vencido", "cancelado"),
+			type: DataTypes.ENUM("activo", "en_proceso", "usado", "vencido", "cancelado"),
 			defaultValue: "activo",
-			comment: "Estado del código de pago",
+			comment: "Estado del código de pago (en_proceso previene duplicados)",
 		},
 		fechaVencimiento: {
 			type: DataTypes.DATE,
