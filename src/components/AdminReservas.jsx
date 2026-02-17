@@ -3331,26 +3331,42 @@ function AdminReservas() {
 											)}
 											{columnasVisibles.total && (
 												<TableCell className="font-semibold">
-													{formatCurrency(reserva.totalConDescuento)}
+													{formatCurrency(
+														(reserva.totalConDescuento || 0) + 
+														(reserva.tramoHijo?.totalConDescuento || 0)
+													)}
 												</TableCell>
 											)}
 											{columnasVisibles.estado && (
 												<TableCell>{getEstadoBadge(reserva.estado)}</TableCell>
 											)}
 											{columnasVisibles.pago && (
-												<TableCell>{getEstadoPagoBadge(reserva)}</TableCell>
+												<TableCell>
+													{/* Cuando hay tramo hijo, calculamos un badge de estado de pago agregado o mostramos el del padre con indicación */}
+													{getEstadoPagoBadge({
+														...reserva,
+														pagoMonto: (reserva.pagoMonto || 0) + (reserva.tramoHijo?.pagoMonto || 0),
+														totalConDescuento: (reserva.totalConDescuento || 0) + (reserva.tramoHijo?.totalConDescuento || 0),
+														saldoPendiente: (reserva.saldoPendiente || 0) + (reserva.tramoHijo?.saldoPendiente || 0)
+													})}
+												</TableCell>
 											)}
 											{columnasVisibles.saldo && (
 												<TableCell>
-													<span
-														className={
-															reserva.saldoPendiente > 0
-																? "text-red-600 font-semibold"
-																: "text-green-600 font-semibold"
-														}
-													>
-														{formatCurrency(reserva.saldoPendiente)}
-													</span>
+													{(() => {
+														const saldoTotal = (reserva.saldoPendiente || 0) + (reserva.tramoHijo?.saldoPendiente || 0);
+														return (
+															<span
+																className={
+																	saldoTotal > 0
+																		? "text-red-600 font-semibold"
+																		: "text-green-600 font-semibold"
+																}
+															>
+																{formatCurrency(saldoTotal)}
+															</span>
+														);
+													})()}
 												</TableCell>
 											)}
 											{columnasVisibles.acciones && (

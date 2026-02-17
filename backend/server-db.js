@@ -4772,7 +4772,7 @@ app.get("/api/reservas", async (req, res) => {
 				{
 					model: Reserva,
 					as: "tramoHijo",
-					attributes: ["id", "fecha", "hora", "numeroVuelo"],
+					attributes: ["id", "fecha", "hora", "numeroVuelo", "pagoMonto", "totalConDescuento", "saldoPendiente"],
 					required: false, // Left Join
 				}
 			],
