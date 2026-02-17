@@ -103,6 +103,7 @@ const generarTextoConductor = (reserva) => {
 	
 	// info adicional
 	const vueloStr = reserva.numeroVuelo ? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}` : "";
+	const observacionesStr = reserva.observaciones ? `\n📝 *Obs:* ${reserva.observaciones}` : "";
 	
 	// Construir líneas de Maps (origen y destino por separado)
 	const mapsLines = [];
@@ -117,7 +118,7 @@ const generarTextoConductor = (reserva) => {
 👤 *Pasajero:* ${reserva.nombre || "Sin nombre"}
 📍 *Origen:* ${origenStr}
 🏁 *Destino:* ${destinoStr}${mapsStr}
-👥 *Pax:* ${reserva.pasajeros || 1}${vueloStr}`;
+👥 *Pax:* ${reserva.pasajeros || 1}${vueloStr}${observacionesStr}`;
 };
 import {
 	AlertDialog,
