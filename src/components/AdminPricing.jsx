@@ -565,19 +565,34 @@ function AdminPricing() {
 		setNewDestino(null);
 	};
 
-	const handleRemoveDestino = (nombre) => {
+	const handleRemoveDestino = async (nombre, id) => {
 		if (
 			window.confirm(
 				`¿Estás seguro de que quieres eliminar el destino "${nombre}"?`
 			)
 		) {
-			setPricing((prev) => ({
-				...prev,
-				destinos: prev.destinos.filter((d) => d.nombre !== nombre),
-				dayPromotions: prev.dayPromotions.filter(
-					(promo) => promo.destino !== nombre
-				),
-			}));
+			try {
+				if (id) {
+					// Si tiene ID, eliminar del backend
+					const response = await authenticatedFetch(`/api/destinos/${id}`, {
+						method: "DELETE",
+					});
+					if (!response.ok) {
+						throw new Error("Error eliminando destino");
+					}
+				}
+
+				setPricing((prev) => ({
+					...prev,
+					destinos: prev.destinos.filter((d) => d.nombre !== nombre),
+					dayPromotions: prev.dayPromotions.filter(
+						(promo) => promo.destino !== nombre
+					),
+				}));
+			} catch (error) {
+				console.error("Error al eliminar destino:", error);
+				alert("Hubo un error al eliminar el destino. Inténtalo de nuevo.");
+			}
 		}
 	};
 
@@ -1530,7 +1545,7 @@ function AdminPricing() {
 												</h3>
 												<button
 													type="button"
-													onClick={() => handleRemoveDestino(destino.nombre)}
+													onClick={() => handleRemoveDestino(destino.nombre, destino.id)}
 													className="rounded-md border border-red-400/50 px-3 py-1 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
 												>
 													Eliminar

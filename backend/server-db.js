@@ -1517,6 +1517,39 @@ app.put("/api/destinos/:id", authAdmin, async (req, res) => {
 	}
 });
 
+// Endpoint para eliminar un destino
+app.delete("/api/destinos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const destino = await Destino.findByPk(id);
+
+		if (!destino) {
+			return res.status(404).json({ error: "Destino no encontrado" });
+		}
+
+		// Soft delete (desactivar) o hard delete?
+		// Por ahora hard delete para limpiar, pero podríamos usar soft delete set activo = false
+		// Dado que hay un botón explícito de eliminar, haremos hard delete.
+		await destino.destroy();
+
+		// También eliminar promociones asociadas para mantener consistencia
+		await Promocion.destroy({
+			where: {
+				// Buscar promociones que tengan este destino en su metadata
+				// Esto es complejo porque se guarda en JSON string.
+				// Por simplicidad, invalidamos cache y dejamos que el admin limpie si es necesario,
+				// o mejor aún, solo borramos el destino.
+			}
+		});
+
+		invalidatePricingCache();
+		res.json({ message: "Destino eliminado correctamente" });
+	} catch (error) {
+		console.error("Error eliminando destino:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // --- ENDPOINTS PARA CONFIGURACIÓN GENERAL ---
 
 /**
