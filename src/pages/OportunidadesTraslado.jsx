@@ -33,6 +33,7 @@ import {
 import OportunidadCard from "../components/OportunidadCard";
 import SuscripcionOportunidades from "../components/SuscripcionOportunidades";
 import { getBackendUrl } from "../lib/backend";
+import { validatePaymentAmount } from "../utils/paymentValidation";
 import imagenOportunidades from "../assets/imagenoportunidades.png";
 const vansBg = imagenOportunidades;
 
@@ -182,13 +183,30 @@ return () => clearInterval(intervalId);
       const data = await response.json();
 
       if (data.success) {
+        // Validación del precio antes de generar pago
+        const precioValidado = validatePaymentAmount(data.precio);
+        
+        if (precioValidado <= 0) {
+          alert("Error: No se pudo determinar el precio de la oportunidad. Contacta a soporte.");
+          return;
+        }
+        
+        console.log(`💰 [Oportunidades] Iniciando pago:`, {
+          precioOriginal: data.precio,
+          precioValidado: precioValidado,
+          oportunidadId: oportunidadSeleccionada.id,
+          reservaId: data.reservaId,
+          codigoReserva: data.codigoReserva,
+          email: reservaFormData.email
+        });
+        
         // Proceder al pago automáticamente (Flow Total)
         const paymentResponse = await fetch(`${getBackendUrl()}/create-payment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             gateway: "flow",
-            amount: data.precio,
+            amount: precioValidado,
             description: `Reserva Oportunidad ${oportunidadSeleccionada.codigo} - ${oportunidadSeleccionada.origen} a ${oportunidadSeleccionada.destino}`,
             email: reservaFormData.email,
             reservaId: data.reservaId,
