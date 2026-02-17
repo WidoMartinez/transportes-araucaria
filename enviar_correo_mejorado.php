@@ -123,7 +123,11 @@ if (!$data) {
 
 // Extrae y sanitiza los datos
 $nombre = htmlspecialchars($data['nombre'] ?? 'No especificado');
-$emailInput = trim($data['email'] ?? '');
+$emailInput = $data['email'] ?? '';
+// Sanitización robusta: eliminar caracteres no ASCII y espacios
+$emailInput = preg_replace('/[^\x20-\x7E]/', '', $emailInput);
+$emailInput = str_replace(' ', '', trim($emailInput));
+$emailInput = strtolower($emailInput);
 $email = filter_var($emailInput, FILTER_VALIDATE_EMAIL) ?: '';
 $emailDisplay = htmlspecialchars($email ?: $emailInput ?: 'No especificado', ENT_QUOTES, 'UTF-8');
 $emailHref = $email ?: '#';

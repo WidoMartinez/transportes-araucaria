@@ -87,6 +87,19 @@ setupAssociations();
 import { processPendingEmails } from "./cron/emailProcessor.js";
 import { cleanOldEmails, getEmailStats } from "./cron/cleanOldEmails.js";
 
+// --- UTILIDADES DE LIMPIEZA ---
+const sanitizarEmailRobusto = (email) => {
+	if (!email || typeof email !== "string") return "";
+	// 1. Eliminar espacios accidentales al inicio/final y convertir a minúsculas
+	let limpio = email.trim().toLowerCase();
+	// 2. Eliminar cualquier carácter que no sea ASCII imprimible (0x20-0x7E)
+	// Esto elimina ZWJ, NBSP, y otros caracteres invisibles
+	limpio = limpio.replace(/[^\x20-\x7E]/g, "");
+	// 3. Eliminar espacios internos DE UN EMAIL (no debería tener espacios)
+	limpio = limpio.replace(/\s+/g, "");
+	return limpio;
+};
+
 // --- FUNCIÓN PARA FIRMAR PARÁMETROS DE FLOW ---
 const signParams = (params) => {
 	const secretKey = process.env.FLOW_SECRET_KEY;
@@ -3276,9 +3289,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		const rutFormateado = datosReserva.rut
 			? formatearRUT(datosReserva.rut)
 			: null;
-		const emailNormalizado = datosReserva.email
-			? datosReserva.email.toLowerCase().trim()
-			: "";
+		const emailNormalizado = sanitizarEmailRobusto(datosReserva.email);
 
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
@@ -7864,7 +7875,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: Number(amount),
-			email: email ? email.trim().toLowerCase() : email,
+			email: sanitizarEmailRobusto(email),
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			// Modificado: Flow hace un POST al retorno. React no puede leer el body del POST desde la navegación.
 			// Solución: Retornar a un endpoint del backend que reciba el POST y redirija al frontend con GET.
@@ -8175,7 +8186,7 @@ app.post("/api/payment-result", async (req, res) => {
 				console.log(`💰 [CONVERSIÓN GA - Sin Reserva] Monto final: ${montoFlow} CLP`);
 				
 				// Intento de recuperar email de flowData si existe
-				const userEmail = flowData.payerEmail || flowData.email || '';
+				const userEmail = sanitizarEmailRobusto(flowData.payerEmail || flowData.email);
 				const userDataEncoded = Buffer.from(JSON.stringify({ email: userEmail })).toString('base64');
 				
 				// Incluir warning param para debugging en frontend
