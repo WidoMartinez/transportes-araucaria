@@ -251,7 +251,7 @@ function AdminPricing() {
 							...dest.precios,
 							[vehiculo]: {
 								...dest.precios[vehiculo],
-								[field]: Number(value) || 0,
+								[field]: value === "" ? "" : value,
 							},
 						},
 					};
@@ -265,11 +265,10 @@ function AdminPricing() {
 	};
 
 	const handleGeneralDestinoChange = (nombre, field, value) => {
-		const numValue = Number(value);
 		setPricing((prev) => ({
 			...prev,
 			destinos: prev.destinos.map((dest) =>
-				dest.nombre === nombre ? { ...dest, [field]: numValue || 0 } : dest
+				dest.nombre === nombre ? { ...dest, [field]: value === "" ? "" : value } : dest
 			),
 		}));
 	};
@@ -457,7 +456,7 @@ function AdminPricing() {
 					...prev.descuentosGlobales[tipo],
 					[field]:
 						field === "valor"
-							? Math.min(Math.max(Number(value) || 0, 0), 100)
+							? value === "" ? "" : value
 							: value,
 				},
 			},
@@ -510,7 +509,7 @@ function AdminPricing() {
 									...desc,
 									[field]:
 										field === "valor"
-											? Math.min(Math.max(Number(value) || 0, 0), 100)
+											? value === "" ? "" : value
 											: value,
 							  }
 							: desc
@@ -938,18 +937,18 @@ function AdminPricing() {
                                                 />
                                             </td>
                                             <td className="py-2 pr-2">
-                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIda || 0}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIda: Number(e.target.value) || 0 } : x))}
+                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIda}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIda: e.target.value === "" ? "" : e.target.value } : x))}
                                                 />
                                             </td>
                                             <td className="py-2 pr-2">
-                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioVuelta || 0}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioVuelta: Number(e.target.value) || 0 } : x))}
+                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioVuelta}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioVuelta: e.target.value === "" ? "" : e.target.value } : x))}
                                                 />
                                             </td>
                                             <td className="py-2 pr-2">
-                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIdaVuelta || 0}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIdaVuelta: Number(e.target.value) || 0 } : x))}
+                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIdaVuelta}
+                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIdaVuelta: e.target.value === "" ? "" : e.target.value } : x))}
                                                 />
                                             </td>
                                             <td className="py-2 pr-2">
@@ -966,9 +965,9 @@ function AdminPricing() {
                                                                 method: "PUT",
                                                                 body: JSON.stringify({
                                                                     nombre: d.nombre,
-                                                                    precioIda: d.precioIda,
-                                                                    precioVuelta: d.precioVuelta,
-                                                                    precioIdaVuelta: d.precioIdaVuelta,
+                                                                    precioIda: d.precioIda === "" ? 0 : Number(d.precioIda),
+                                                                    precioVuelta: d.precioVuelta === "" ? 0 : Number(d.precioVuelta),
+                                                                    precioIdaVuelta: d.precioIdaVuelta === "" ? 0 : Number(d.precioIdaVuelta),
                                                                     activo: d.activo,
                                                                 }),
                                                             });
@@ -1415,7 +1414,7 @@ function AdminPricing() {
 																	...d.precios,
 																	auto: {
 																		...d.precios.auto,
-																		base: Number(e.target.value),
+																		base: e.target.value === "" ? "" : e.target.value,
 																	},
 																},
 															}))
@@ -1438,7 +1437,7 @@ function AdminPricing() {
 																	...d.precios,
 																	auto: {
 																		...d.precios.auto,
-																		porcentajeAdicional: Number(e.target.value),
+																		porcentajeAdicional: e.target.value === "" ? "" : e.target.value,
 																	},
 																},
 															}))
@@ -1462,7 +1461,7 @@ function AdminPricing() {
 															...d.precios,
 															van: {
 																...d.precios.van,
-																base: Number(e.target.value),
+																base: e.target.value === "" ? "" : e.target.value,
 															},
 														},
 													}))
@@ -1485,7 +1484,7 @@ function AdminPricing() {
 															...d.precios,
 															van: {
 																...d.precios.van,
-																porcentajeAdicional: Number(e.target.value),
+																porcentajeAdicional: e.target.value === "" ? "" : e.target.value,
 															},
 														},
 													}))

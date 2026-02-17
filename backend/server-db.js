@@ -1437,6 +1437,86 @@ app.put("/pricing", async (req, res) => {
 	}
 });
 
+// --- ENDPOINTS PARA GESTIÓN DE DESTINOS (NUEVO) ---
+
+// Endpoint para obtener destinos (con filtro opcional de activos)
+app.get("/api/destinos", async (req, res) => {
+	try {
+		const { activos } = req.query;
+		const whereClause = {};
+
+		if (activos !== undefined) {
+			whereClause.activo = activos === "true";
+		}
+
+		const destinos = await Destino.findAll({
+			where: whereClause,
+			order: [
+				["orden", "ASC"],
+				["nombre", "ASC"],
+			],
+		});
+
+		// Formatear respuesta para que coincida con lo esperado por el frontend
+		// Nota: El frontend espera "destinos" dentro del objeto respuesta para la vista de inactivos
+		// según: setInactiveDestinos(Array.isArray(data.destinos) ? data.destinos : []);
+		res.json({ destinos });
+	} catch (error) {
+		console.error("Error obteniendo destinos:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para actualizar un destino específico
+app.put("/api/destinos/:id", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const datos = req.body;
+
+		const destino = await Destino.findByPk(id);
+		if (!destino) {
+			return res.status(404).json({ error: "Destino no encontrado" });
+		}
+
+		// Actualizar campos permitidos
+		const camposActualizables = [
+			"nombre",
+			"precioIda",
+			"precioVuelta",
+			"precioIdaVuelta",
+			"activo",
+			"orden",
+			"descripcion",
+			"tiempo",
+			"imagen",
+			"maxPasajeros",
+			"minHorasAnticipacion",
+			"duracionIdaMinutos",
+			"duracionVueltaMinutos",
+			"porcentajeAdicionalAuto",
+			"porcentajeAdicionalVan",
+			"precioBaseVan"
+		];
+
+		const payload = {};
+		camposActualizables.forEach(campo => {
+			if (datos[campo] !== undefined) {
+				payload[campo] = datos[campo];
+			}
+		});
+
+		await destino.update(payload);
+
+		// Invalidar cache de precios
+		invalidatePricingCache();
+
+		res.json({ message: "Destino actualizado correctamente", destino });
+	} catch (error) {
+		console.error("Error actualizando destino:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
 // --- ENDPOINTS PARA CONFIGURACIÓN GENERAL ---
 
 /**
