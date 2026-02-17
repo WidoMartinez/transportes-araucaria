@@ -116,7 +116,7 @@ export const isAmountInRange = (amount, min = 500, max = 10000000) => {
  * 
  * @example
  * formatAmount(1500) // "$1.500"
- * formatAmount(1500.50, 'CLP') // "CLP 1.500,50"
+ * formatAmount(1500.50, 'CLP') // "CLP1.500,50"
  */
 export const formatAmount = (amount, currency = '$') => {
     const parsed = Number(amount);
