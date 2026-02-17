@@ -25,6 +25,7 @@ import {
 	Info
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+import { validatePaymentAmount } from "../utils/paymentValidation";
 
 // Formateador de moneda para pesos chilenos
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-CL", {
@@ -292,7 +293,10 @@ function PagarConCodigo() {
 		setLoadingGateway("flow");
 		setError("");
 
-		if (!montoSeleccionado || montoSeleccionado <= 0) {
+		// Validación robusta del monto usando utilidad centralizada
+		const montoValidado = validatePaymentAmount(montoSeleccionado);
+		
+		if (montoValidado <= 0) {
 			setError(
 				"El monto a pagar no es válido. Contacta a soporte para obtener ayuda."
 			);
@@ -300,6 +304,14 @@ function PagarConCodigo() {
 			setLoadingGateway(null);
 			return;
 		}
+
+		console.log(`💰 [PagarConCodigo] Iniciando pago:`, {
+			montoOriginal: montoSeleccionado,
+			montoValidado: montoValidado,
+			codigoPago: codigoValidado.codigo,
+			email: formData.email,
+			tipoPago: selectedPaymentType
+		});
 
 		const descripcionPago =
 			selectedPaymentType === "abono"
@@ -394,7 +406,7 @@ function PagarConCodigo() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					gateway: "flow",
-					amount: parseFloat(montoSeleccionado),
+					amount: montoValidado,
 					description: `${description} • ${descripcionPago}`,
 					email: formData.email,
 					reservaId,

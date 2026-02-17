@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import { getBackendUrl } from "../lib/backend";
+import { validatePaymentAmount } from "../utils/paymentValidation";
 import ProductosReserva from "./ProductosReserva";
 
 const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
@@ -80,9 +81,22 @@ function ConsultarReserva() {
 			const apiBase =
 				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
-			if (!monto || monto <= 0) {
+			// Validación más robusta del monto
+			const montoValidado = validatePaymentAmount(monto);
+			
+			if (montoValidado <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
+			
+			console.log(`💰 [ConsultarReserva] Iniciando pago:`, {
+				tipo,
+				montoOriginal: monto,
+				montoValidado: montoValidado,
+				reservaId: reserva.id,
+				codigoReserva: reserva.codigoReserva,
+				email: reserva.email
+			});
+			
 			const description =
 				tipo === "total"
 					? `Pago total reserva ${reserva.codigoReserva} (${reserva.destino})`
@@ -97,7 +111,7 @@ function ConsultarReserva() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					gateway: "flow",
-					amount: monto,
+					amount: montoValidado,
 					description,
 					email: reserva.email,
 					reservaId: reserva.id,
@@ -115,6 +129,7 @@ function ConsultarReserva() {
 				throw new Error("Respuesta inválida del servidor de pagos");
 			window.location.href = data.url;
 		} catch (e) {
+			console.error(`❌ [ConsultarReserva] Error en pago:`, e);
 			setPayError(e.message || "No se pudo iniciar el pago");
 		} finally {
 			setPaying(false);

@@ -458,12 +458,13 @@ const [configSillas, setConfigSillas] = useState({
 		const warning = url.searchParams.get("warning");
 
 		if (flowSuccess) {
-			console.log(
-				`✅ [App.jsx] Retorno de pago exitoso detectado.`,
-				`Reserva ID: ${reservaId || 'No disponible'}`,
-				`Monto URL: ${amount}`,
-				`Warning: ${warning || 'Ninguno'}`
-			);
+			console.log(`🔍 [App.jsx] Datos de conversión recibidos:`, {
+				token,
+				amount,
+				reservaId,
+				warning,
+				encodedData: encodedData ? 'presente' : 'ausente'
+			});
 			
 			// DISPARAR CONVERSIÓN DE GOOGLE ADS (Estandarización con FlowReturn)
 			if (typeof window.gtag === "function") {
@@ -481,7 +482,12 @@ const [configSillas, setConfigSillas] = useState({
 							const parsed = Number(amount);
 							if (!isNaN(parsed) && parsed > 0) {
 								conversionValue = parsed;
+								console.log(`✅ [App.jsx] Valor de conversión parseado: ${conversionValue}`);
+							} else {
+								console.warn(`⚠️ [App.jsx] Parseo falló. amount="${amount}", parsed=${parsed}`);
 							}
+						} else {
+							console.warn(`⚠️ [App.jsx] Amount no presente en URL. amount=${amount}`);
 						}
 						
 						// Si el monto sigue siendo 0 (error de parseo o no venía), usar valor por defecto 1.0 para registrar la conversión
