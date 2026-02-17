@@ -7843,6 +7843,27 @@ app.post("/create-payment", async (req, res) => {
 				"Faltan parametros requeridos: gateway, amount, description, email.",
 		});
 	}
+	
+	// Validación del monto en backend
+	const amountNum = Number(amount);
+	if (isNaN(amountNum) || amountNum <= 0) {
+		console.error(`❌ [create-payment] Monto inválido recibido: ${amount}`);
+		return res.status(400).json({
+			success: false,
+			error: "Monto de pago inválido",
+			message: "El monto debe ser mayor a 0"
+		});
+	}
+	
+	console.log(`💰 [create-payment] Solicitud de pago:`, {
+		gateway,
+		amount: amountNum,
+		reservaId,
+		codigoReserva,
+		tipoPago,
+		paymentOrigin,
+		email
+	});
 
 	const frontendBase =
 		process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
@@ -7874,7 +7895,7 @@ app.post("/create-payment", async (req, res) => {
 			commerceOrder,
 			subject: description,
 			currency: "CLP",
-			amount: Number(amount),
+			amount: amountNum,
 			email: sanitizarEmailRobusto(email),
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			// Modificado: Flow hace un POST al retorno. React no puede leer el body del POST desde la navegación.

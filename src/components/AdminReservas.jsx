@@ -2090,12 +2090,20 @@ function AdminReservas() {
 
 		// Validaciones de pago inicial
 		if (newReservaForm.registrarPagoInicial) {
-			const monto = parseFloat(newReservaForm.pagoMonto) || 0;
-
-			if (monto <= 0) {
-				alert("⚠️ El monto del pago debe ser mayor a 0");
+			const monto = parseFloat(newReservaForm.pagoMonto);
+			
+			// Validar NaN además de <= 0
+			if (isNaN(monto) || monto <= 0) {
+				alert("⚠️ El monto del pago no es válido o debe ser mayor a 0");
 				return;
 			}
+			
+			console.log(`💰 [AdminReservas] Registrando pago inicial:`, {
+				monto,
+				reservaNombre: newReservaForm.nombre,
+				estadoPago: newReservaForm.estadoPago,
+				total: parseFloat(newReservaForm.precio) || 0
+			});
 
 			// Validar coherencia con estado de pago
 			const total = parseFloat(newReservaForm.precio) || 0;
@@ -2103,7 +2111,7 @@ function AdminReservas() {
 			// Si marca como "Pagado Completo" pero el monto es menor al total
 			if (newReservaForm.estadoPago === "pagado" && monto < total) {
 				const confirmar = confirm(
-					`El monto pagado ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}).\n\n¿Continuar de todos modos?`
+					`⚠️ Advertencia:\n\nMarcaste como "Pagado Completo" pero el monto ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}).\n\n¿Deseas continuar de todas formas?`
 				);
 				if (!confirmar) {
 					return;
