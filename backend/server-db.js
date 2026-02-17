@@ -3386,18 +3386,28 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		});
 		const clienteIdAsociado = clienteAsociado ? clienteAsociado.id : null;
 
-		// Verificar si existe una reserva activa sin pagar para este email
-		const reservaExistente = await Reserva.findOne({
-			where: {
-				email: emailNormalizado,
-				estado: {
-					[Op.in]: ["pendiente", "pendiente_detalles"],
-				},
-				estadoPago: "pendiente",
-				// Excluir reservas que son parte de un viaje ida y vuelta
-				tramoHijoId: null,
-				tramoPadreId: null,
+		// Verificar si existe una reserva activa sin pagar para este email o referencia de pago
+		const whereClause = {
+			estado: {
+				[Op.in]: ["pendiente", "pendiente_detalles"],
 			},
+			estadoPago: "pendiente",
+		};
+
+		// PRIORIDAD 1: Si viene de un código de pago, buscar por referencia de pago
+		if (datosReserva.source === "codigo_pago" && datosReserva.referenciaPago) {
+			whereClause.referenciaPago = datosReserva.referenciaPago;
+			console.log(`🔍 Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`);
+		} else {
+			// PRIORIDAD 2: Búsqueda por email tradicional (solo para reservas simples que no son tramos)
+			whereClause.email = emailNormalizado;
+			whereClause.tramoHijoId = null;
+			whereClause.tramoPadreId = null;
+			console.log(`🔍 Buscando reserva existente por email: ${emailNormalizado}`);
+		}
+
+		const reservaExistente = await Reserva.findOne({
+			where: whereClause,
 			order: [["createdAt", "DESC"]],
 		});
 
@@ -7881,7 +7891,7 @@ app.post("/create-payment", async (req, res) => {
 
 		// Incluir datos auxiliares para que el webhook identifique la reserva sin depender del correo
 		const optionalPayload = {};
-		if (email) optionalPayload.email = email;
+		if (email) optionalPayload.email = sanitizarEmailRobusto(email);
 		if (reservaId) optionalPayload.reservaId = reservaId;
 		if (codigoReservaNormalizado)
 			optionalPayload.codigoReserva = codigoReservaNormalizado;
@@ -7920,6 +7930,8 @@ app.post("/create-payment", async (req, res) => {
 		}
 
 		params.s = signParams(params);
+		
+		console.log("🚀 Payload final enviado a Flow (POST):", JSON.stringify(params, null, 2));
 
 		try {
 			const response = await axios.post(
