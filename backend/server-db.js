@@ -62,6 +62,7 @@ import addDuracionMinutosToReservas from "./migrations/add-duracion-minutos-to-r
 import addTransaccionesTable from "./migrations/add-transacciones-table.js";
 import addOportunidadesTable from "./migrations/add-oportunidades-table.js";
 import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-oportunidades-table.js";
+import addUpgradeVanToReservas from "./migrations/add-upgrade-van-to-reservas.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
 import createPromocionesBannerTable from "./migrations/create-promociones-banner-table.js";
@@ -789,6 +790,7 @@ const initializeDatabase = async () => {
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
 		await addSillaInfantilCountToReservas(); // Migración para columna cantidad_sillas_infantiles en reservas
+		await addUpgradeVanToReservas(); // Migración para columna upgrade_van en reservas
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), Sequelize); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio
@@ -3590,6 +3592,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				referenciaPago:
 					datosReserva.referenciaPago || reservaExistente.referenciaPago,
 				tipoPago: datosReserva.tipoPago || reservaExistente.tipoPago,
+				upgradeVan: datosReserva.upgradeVan !== undefined ? Boolean(datosReserva.upgradeVan) : reservaExistente.upgradeVan,
 			});
 
 			reservaExpress = reservaExistente;
@@ -3732,6 +3735,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					userAgent: req.get("User-Agent") || "",
 					codigoDescuento: datosReserva.codigoDescuento || "",
 					tipoPago: datosReserva.tipoPago || null,
+					upgradeVan: Boolean(datosReserva.upgradeVan),
 					estadoPago: datosReserva.estadoPago || "pendiente",
 					duracionMinutos: datosReserva.duracionMinutos ? parseInt(datosReserva.duracionMinutos) : null,
 				}, { transaction: t });
@@ -4525,6 +4529,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			numeroVuelo: reservaCompleta.numeroVuelo,
 			hora: reservaCompleta.hora,
 			idaVuelta: reservaCompleta.idaVuelta,
+			upgradeVan: reservaCompleta.upgradeVan,
 			fechaRegreso: reservaCompleta.fechaRegreso,
 			horaRegreso: reservaCompleta.horaRegreso,
 			equipajeEspecial: reservaCompleta.equipajeEspecial
@@ -5642,6 +5647,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     fecha: reserva.fecha,
                     hora: reserva.hora,
                     pasajeros: reserva.pasajeros,
+                    upgradeVan: reserva.upgradeVan,
                     conductorNombre: conductor ? conductor.nombre : "",
                     estadoPago: reserva.estadoPago || "pendiente" // CRÍTICO: El script PHP valida esto
                 };
@@ -5687,6 +5693,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     hora: reserva.hora,
                     pasajeros: reserva.pasajeros,
                     vehiculo: vehiculoStr,
+                    upgradeVan: reserva.upgradeVan,
                     observaciones: reserva.observaciones || "",
                     numeroVuelo: reserva.numeroVuelo || "",
                     hotel: reserva.hotel || ""
@@ -6224,6 +6231,7 @@ app.post("/api/reservas/:id/solicitar-detalles", authAdmin, async (req, res) => 
 			destino: reserva.destino,
 			fecha: reserva.fecha,
 			hora: reserva.hora,
+			upgradeVan: reserva.upgradeVan,
 			action: "request_missing_details"
 		};
 
@@ -9042,6 +9050,9 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				paymentId: payment.flowOrder.toString(),
 				estadoPago: "approved",
 				idaVuelta: reserva.idaVuelta,
+				fechaRegreso: reserva.fechaRegreso || "",
+				horaRegreso: reserva.horaRegreso || "",
+				upgradeVan: reserva.upgradeVan,
 				motivo: reserva.motivoPago || ""
 			};
 
@@ -9077,6 +9088,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				destino: (reserva.motivoPago ? `${reserva.destino} (Motivo: ${reserva.motivoPago})` : reserva.destino) + 
 					(reservaHija ? ` | 🔄 RETORNO: ${reservaHija.fecha} ${reservaHija.hora} (${reservaHija.origen} ➝ ${reservaHija.destino})` : ""),
 				idaVuelta: reserva.idaVuelta,
+				upgradeVan: reserva.upgradeVan,
 				motivo: reserva.motivoPago || ""
 			}, {
 				headers: { "Content-Type": "application/json" },

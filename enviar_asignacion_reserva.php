@@ -51,6 +51,10 @@ $fecha = $data['fecha'] ?? '';
 $hora = $data['hora'] ?? '';
 $pasajeros = $data['pasajeros'] ?? '';
 $conductorNombre = $data['conductorNombre'] ?? '';
+$upgradeVan = $data['upgradeVan'] ?? false;
+$idaVuelta = $data['idaVuelta'] ?? false;
+$fechaRegreso = $data['fechaRegreso'] ?? '';
+$horaRegreso = $data['horaRegreso'] ?? '';
 // Por privacidad, no mostraremos RUT del conductor en el correo
 
 // Verificar estado de pago - solo enviar correo a clientes que han pagado
@@ -159,11 +163,31 @@ try {
                         . (!empty($vehiculoPatenteLast4) ? " <span style='color:#6b7280'>(patente •••{$vehiculoPatenteLast4})</span>" : "") .
                         "</td>
                     </tr>
+                    " . ($upgradeVan ? "
+                    <tr>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Premium:</strong></td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#7c2d12;font-weight:bold'>✨ Upgrade a Van</td>
+                    </tr>" : "") . "
+                    " . ($idaVuelta && $fechaRegreso ? "
+                    <tr>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Regreso:</strong></td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#7c3aed;font-weight:600'>🔄 {$fechaRegreso} a las {$horaRegreso}</td>
+                    </tr>" : "") . "
                     {$conductorHtml}
                 </table>
                 <p style='color:#374151;font-size:14px'>
                     Si necesitas actualizar algún detalle (número de vuelo, hotel, etc.), responde a este correo.
                 </p>
+                <!-- Contacto -->
+                <div style='background-color:#f9fafb;padding:16px;border-radius:4px;text-align:center;margin-top:20px'>
+                    <p style='margin:0 0 8px 0;color:#6b7280;font-size:13px'>
+                        ¿Necesitas ayuda? Contáctanos:
+                    </p>
+                    <p style='margin:0;color:#111827;font-size:14px'>
+                        📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#3b82f6;text-decoration:none'>contacto@transportesaraucaria.cl</a><br>
+                        📱 <a href='tel:+56936643540' style='color:#3b82f6;text-decoration:none'>+56 9 3664 3540</a>
+                    </p>
+                </div>
                 <p style='color:#6b7280;font-size:12px;margin-top:16px'>
                     Gracias por elegir Transportes Araucaria.
                 </p>

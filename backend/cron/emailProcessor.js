@@ -107,6 +107,7 @@ export const processPendingEmails = async () => {
                     totalConDescuento: reserva.totalConDescuento,
                     precio: reserva.precio,
                     estadoPago: reserva.estadoPago,
+                    upgradeVan: reserva.upgradeVan,
                     action: "send_discount_offer" // Acción específica para el PHP
                 };
 
@@ -168,7 +169,8 @@ export const processPendingEmails = async () => {
                                 nombre: reserva.nombre,
                                 origen: reserva.origen,
                                 destino: reserva.destino,
-                                fecha: reserva.fecha
+                                fecha: reserva.fecha,
+                                upgradeVan: reserva.upgradeVan
                             }, {
                                 headers: { "Content-Type": "application/json" },
                                 timeout: 10000

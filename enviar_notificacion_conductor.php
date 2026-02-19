@@ -54,6 +54,7 @@ $vehiculo = htmlspecialchars($data['vehiculo'] ?? 'No asignado');
 $observaciones = htmlspecialchars($data['observaciones'] ?? '');
 $numeroVuelo = htmlspecialchars($data['numeroVuelo'] ?? '');
 $hotel = htmlspecialchars($data['hotel'] ?? '');
+$upgradeVan = $data['upgradeVan'] ?? false;
 
 // Cargar config correo
 $configFile = __DIR__ . '/config_reservas.php';
@@ -214,6 +215,11 @@ try {
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Vehículo:</strong></td>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vehiculo}</td>
                     </tr>
+                    " . ($upgradeVan ? "
+                    <tr>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Premium:</strong></td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#7c2d12;font-weight:bold'>✨ Upgrade a Van</td>
+                    </tr>" : "") . "
                     {$detallesAdicionales}
                 </table>
                 <div style='background-color:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:16px;margin:20px 0;text-align:center'>
@@ -223,6 +229,14 @@ try {
                 <p style='color:#374151;font-size:14px'>
                     Si tienes alguna duda o necesitas modificar algo, contacta a la oficina.
                 </p>
+                <!-- Contacto Oficina para Conductor -->
+                <div style='background-color:#f9fafb;padding:12px;border-radius:4px;text-align:center;margin-top:16px;border:1px solid #e5e7eb'>
+                    <p style='margin:0 0 5px 0;color:#6b7280;font-size:12px'>Contacto Oficina:</p>
+                    <p style='margin:0;color:#111827;font-size:13px'>
+                        📱 <a href='tel:+56936643540' style='color:#059669;text-decoration:none'>+56 9 3664 3540</a> | 
+                        📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#059669;text-decoration:none'>contacto@transportesaraucaria.cl</a>
+                    </p>
+                </div>
                 <p style='color:#6b7280;font-size:12px;margin-top:16px'>
                     Gracias por tu profesionalismo.<br>
                     <strong>Transportes Araucaria</strong>

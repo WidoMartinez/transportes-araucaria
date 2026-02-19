@@ -126,6 +126,7 @@ $totalConDescuento = $data['totalConDescuento'] ?? $precio;
 $otroOrigen = htmlspecialchars($data['otroOrigen'] ?? '');
 $otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
 $codigoReserva = htmlspecialchars($data['codigoReserva'] ?? '');
+$upgradeVan = $data['upgradeVan'] ?? false;
 
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 $formattedTotalConDescuento = $totalConDescuento ? '$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP' : 'A consultar';
@@ -159,7 +160,8 @@ $reservaCompleta = [
     'descuentoPromocion' => $descuentoPromocion,
     'descuentoRoundTrip' => $descuentoRoundTrip,
     'descuentoOnline' => $descuentoOnline,
-    'totalConDescuento' => $totalConDescuento
+    'totalConDescuento' => $totalConDescuento,
+    'upgradeVan' => $upgradeVan
 ];
 
 // Intentar guardar la reserva ANTES de enviar el correo
@@ -226,6 +228,7 @@ if ($totalConDescuento != $precio && $totalConDescuento > 0) {
 $emailHtml .= "
             </div>
             <p style='margin: 15px 0 5px; font-size: 16px; color: #0c4a6e;'><strong>Vehículo:</strong> {$vehiculo}</p>
+            " . ($upgradeVan ? "<p style='margin: 5px 0 0; font-size: 14px; color: #7c2d12; font-weight: bold;'>✨ OPCIÓN PREMIUM: UPGRADE A VAN</p>" : "") . "
             " . ($idaVuelta ? "<p style='margin: 5px 0 0; font-size: 14px; color: #7c3aed; font-weight: 600;'>🔄 VIAJE DE IDA Y VUELTA</p>" : "") . "
         </div>
 
@@ -395,7 +398,18 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         </div>";
 }
 
-// Mensaje del Cliente
+        </div>";
+}
+
+$emailHtml .= "
+        <!-- Contacto Oficina -->
+        <div style='background-color:#f8fafc; padding:20px; border-radius:10px; text-align:center; margin-bottom:25px; border:1px solid #e2e8f0'>
+            <p style='margin:0 0 10px 0; color:#64748b; font-size:14px; font-weight:600'>Transportes Araucaria - Contacto Oficial</p>
+            <p style='margin:0; color:#1e3a8a; font-size:16px; font-weight:700'>
+                📱 +56 9 3664 3540 | 📧 contacto@transportesaraucaria.cl
+            </p>
+        </div>";
+
 if ($mensaje) {
     $emailHtml .= "
         <!-- Mensaje del Cliente -->

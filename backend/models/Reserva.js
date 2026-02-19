@@ -331,6 +331,12 @@ const Reserva = sequelize.define(
 			field: "ultima_solicitud_detalles",
 			comment: "Fecha y hora del último correo de solicitud de detalles enviado",
 		},
+		upgradeVan: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			field: "upgrade_van",
+			comment: "Indica si el cliente solicitó un upgrade voluntario a Van",
+		},
 	},
 	{
 		tableName: "reservas",

@@ -89,6 +89,10 @@ $gateway = $data['gateway'] ?? 'MercadoPago';
 $paymentId = $data['paymentId'] ?? '';
 $estadoPago = $data['estadoPago'] ?? 'approved';
 $motivo = $data['motivo'] ?? ''; // Nuevo campo para el motivo del pago
+$upgradeVan = $data['upgradeVan'] ?? false;
+$idaVuelta = $data['idaVuelta'] ?? false;
+$fechaRegreso = $data['fechaRegreso'] ?? '';
+$horaRegreso = $data['horaRegreso'] ?? '';
 
 // Formatear monto
 $montoFormateado = '$' . number_format($monto, 0, ',', '.') . ' CLP';
@@ -230,6 +234,24 @@ try {
                             {$vehiculo}
                         </td>
                     </tr>
+                    " . ($upgradeVan ? "
+                    <tr>
+                        <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:14px'>
+                            <strong>Premium:</strong>
+                        </td>
+                        <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#7c2d12;font-size:14px;font-weight:bold'>
+                            ✨ Upgrade a Van
+                        </td>
+                    </tr>" : "") . "
+                    " . ($idaVuelta && $fechaRegreso ? "
+                    <tr>
+                        <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:14px'>
+                            <strong>Regreso:</strong>
+                        </td>
+                        <td style='padding:12px 0;border-bottom:1px solid #e5e7eb;color:#7c3aed;font-size:14px;font-weight:600'>
+                            🔄 {$fechaRegreso} a las {$horaRegreso}
+                        </td>
+                    </tr>" : "") . "
                 </table>
 
                 <!-- Detalles del pago -->
@@ -295,7 +317,7 @@ try {
                     </p>
                     <p style='margin:0;color:#111827;font-size:14px'>
                         📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#3b82f6;text-decoration:none'>contacto@transportesaraucaria.cl</a><br>
-                        📱 <a href='tel:+56936643540' style='color:#3b82f6;text-decoration:none'>+569 3664 3540</a>
+                        📱 <a href='tel:+56936643540' style='color:#3b82f6;text-decoration:none'>+56 9 3664 3540</a>
                     </p>
                 </div>
 
@@ -337,6 +359,8 @@ try {
     - Hora: {$hora}
     - Pasajeros: {$pasajeros}
     - Vehículo: {$vehiculo}
+    " . ($upgradeVan ? "- Premium: ✨ Upgrade a Van" : "") . "
+    " . ($idaVuelta && $fechaRegreso ? "- Regreso: 🔄 {$fechaRegreso} a las {$horaRegreso}" : "") . "
     
     DETALLES DEL PAGO:
     - Monto Pagado: {$montoFormateado}
@@ -353,7 +377,7 @@ try {
     
     ¿Necesitas ayuda?
     Email: contacto@transportesaraucaria.cl
-    Teléfono: +569 3664 3540
+    Teléfono: +56 9 3664 3540
     
     © 2025 Transportes Araucaria
     ";

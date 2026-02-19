@@ -160,6 +160,7 @@ $descuentoPromocion = $data['descuentoPromocion'] ?? 0;
 $descuentoRoundTrip = $data['descuentoRoundTrip'] ?? 0;
 $descuentoOnline = $data['descuentoOnline'] ?? 0;
 $totalConDescuento = $data['totalConDescuento'] ?? $precio;
+$upgradeVan = $data['upgradeVan'] ?? false;
 
 // Datos adicionales opcionales del formulario
 $descuentosPersonalizados = $data['descuentosPersonalizados'] ?? [];
@@ -210,6 +211,7 @@ $reservaCompleta = [
     'descuentoRoundTrip' => $descuentoRoundTrip,
     'descuentoOnline' => $descuentoOnline,
     'totalConDescuento' => $totalConDescuento,
+    'upgradeVan' => $upgradeVan,
     'descuentosPersonalizados' => $descuentosPersonalizados,
     'otroOrigen' => $otroOrigen,
     'otroDestino' => $otroDestino,
@@ -264,6 +266,7 @@ $emailHtml = "
                 <p style='margin: 5px 0; font-size: 18px;'><strong>Valor:</strong> <span style='font-size: 22px; font-weight: bold;'>{$formattedPrice}</span></p>
                 <p style='margin: 5px 0; font-size: 16px;'><strong>Vehículo:</strong> {$vehiculo}</p>
                 " . ($idaVuelta ? "<p style='margin: 5px 0; font-size: 14px; color: #0066cc;'><strong>🔄 Viaje de ida y vuelta</strong></p>" : "") . "
+                " . ($upgradeVan ? "<p style='margin: 5px 0; font-size: 14px; color: #7c2d12; font-weight: bold;'>✨ Opción Premium: Upgrade a Van</p>" : "") . "
             </div>
             
             <h2>Detalles del Viaje</h2>
@@ -427,6 +430,8 @@ try {
                             <p style='margin:6px 0'><strong>Pasajeros:</strong> {$pasajeros}</p>
                             <p style='margin:6px 0'><strong>Vehículo:</strong> {$vehiculo}</p>
                             <p style='margin:6px 0'><strong>Valor estimado:</strong> {$totalHtml}</p>
+                            " . ($upgradeVan ? "<p style='margin:6px 0; color: #7c2d12; font-weight: bold;'>✨ Upgrade a Van</p>" : "") . "
+                            " . ($idaVuelta && $fechaRegreso ? "<p style='margin:6px 0; color: #7c3aed; font-weight: 600;'>🔄 Regreso: {$fechaRegreso} {$horaRegreso}</p>" : "") . "
                             " . ($abonoHtml ? "<p style='margin:6px 0'><strong>Abono sugerido:</strong> {$abonoHtml}</p>" : "") . "
                         </div>
 
@@ -474,6 +479,7 @@ try {
                             <p style='margin:6px 0'><strong>Fecha y hora:</strong> {$fecha} {$hora}</p>
                             <p style='margin:6px 0'><strong>Pasajeros:</strong> {$pasajeros}</p>
                             <p style='margin:6px 0'><strong>Vehículo:</strong> {$vehiculo}</p>
+                            " . ($upgradeVan ? "<p style='margin:6px 0; color: #7c2d12; font-weight: bold;'>✨ Upgrade a Van Incluido</p>" : "") . "
                         </div>
 
                         <div style='text-align:center; margin:24px 0;'>

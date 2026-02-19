@@ -471,6 +471,7 @@ function AdminReservas() {
 		{ key: "saldo", label: "Saldo", defaultVisible: true },
 		{ key: "esCliente", label: "Es Cliente", defaultVisible: false },
 		{ key: "numViajes", label: "Núm. Viajes", defaultVisible: false },
+		{ key: "upgrade", label: "Upgrade", defaultVisible: true },
 		{ key: "acciones", label: "Acciones", defaultVisible: true },
 	];
 
@@ -3104,6 +3105,7 @@ function AdminReservas() {
 									{columnasVisibles.estado && <TableHead>Estado</TableHead>}
 									{columnasVisibles.pago && <TableHead>Pago</TableHead>}
 									{columnasVisibles.saldo && <TableHead>Saldo</TableHead>}
+									{columnasVisibles.upgrade && <TableHead>Upgrade</TableHead>}
 									{columnasVisibles.acciones && <TableHead>Acciones</TableHead>}
 								</TableRow>
 							</TableHeader>
@@ -3416,6 +3418,18 @@ function AdminReservas() {
 															</span>
 														);
 													})()}
+												</TableCell>
+											)}
+											{columnasVisibles.upgrade && (
+												<TableCell>
+													{reserva.upgradeVan ? (
+														<Badge className="bg-chocolate-600 text-white hover:bg-chocolate-700 whitespace-nowrap">
+															<Star className="w-3 h-3 mr-1 fill-white" />
+															Van Upgrade
+														</Badge>
+													) : (
+														<span className="text-muted-foreground text-xs">-</span>
+													)}
 												</TableCell>
 											)}
 											{columnasVisibles.acciones && (
@@ -3883,6 +3897,15 @@ function AdminReservas() {
 										<div>
 											<Label className="text-muted-foreground">🚙 Vehículo</Label>
 											<p className="font-medium">{selectedReserva.vehiculo}</p>
+										</div>
+									)}
+									{selectedReserva.upgradeVan && (
+										<div>
+											<Label className="text-muted-foreground italic">✨ Opción Premium</Label>
+											<p className="font-semibold text-chocolate-700 flex items-center gap-1">
+												<Star className="w-4 h-4 fill-chocolate-700" />
+												Upgrade a Van
+											</p>
 										</div>
 									)}
 								</div>

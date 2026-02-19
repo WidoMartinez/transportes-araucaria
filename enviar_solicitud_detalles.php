@@ -59,6 +59,7 @@ $origen = htmlspecialchars($data['origen'] ?? '');
 $destino = htmlspecialchars($data['destino'] ?? '');
 $fecha = htmlspecialchars($data['fecha'] ?? '');
 $hora = htmlspecialchars($data['hora'] ?? '');
+$upgradeVan = $data['upgradeVan'] ?? false;
 
 // Generar link de consulta (usa el hash para navegar en React)
 $linkReserva = "https://www.transportesaraucaria.cl/#consultar-reserva?id={$codigoReserva}&email=" . urlencode($email);
@@ -84,6 +85,7 @@ $emailHtml = "
             <li>📍 <strong>Ruta:</strong> {$origen} → {$destino}</li>
             <li>📅 <strong>Fecha:</strong> {$fecha}</li>
             <li>⏰ <strong>Hora:</strong> {$hora}</li>
+            " . ($upgradeVan ? "<li>✨ <strong>Opción Premium:</strong> Upgrade a Van</li>" : "") . "
         </ul>
 
         <div style='text-align: center; margin: 35px 0;'>
@@ -96,6 +98,15 @@ $emailHtml = "
         <p style='font-size: 14px; border-top: 1px solid #f3f4f6; padding-top: 20px;'>Si tienes alguna duda, puedes responder a este correo o contactarnos vía WhatsApp.</p>
         
         <p style='margin-bottom: 0;'>Saludos,<br><strong>Equipo de {$brandName}</strong></p>
+    </div>
+
+    <!-- Contacto -->
+    <div style='background-color:#f9fafb;padding:16px;border-radius:4px;text-align:center;margin:0 24px 20px 24px;border:1px solid #e5e7eb'>
+        <p style='margin:0 0 8px 0;color:#6b7280;font-size:13px'>¿Necesitas ayuda inmediata? Contáctanos:</p>
+        <p style='margin:0;color:#111827;font-size:14px'>
+            📱 <a href='tel:+56936643540' style='color:#3b82f6;text-decoration:none'>+56 9 3664 3540</a><br>
+            📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#3b82f6;text-decoration:none'>contacto@transportesaraucaria.cl</a>
+        </p>
     </div>
     
     <div style='background: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #9ca3af;'>
