@@ -6231,11 +6231,14 @@ app.post("/api/reservas/:id/solicitar-detalles", authAdmin, async (req, res) => 
 			timeout: 10000
 		});
 
+		// Registrar la fecha de solicitud en la reserva
+		await reserva.update({ ultimaSolicitudDetalles: new Date() });
+
 		// Registrar la acción en los logs (si existe el sistema de auditoría)
 		try {
 			if (typeof AdminAuditLog !== 'undefined' && req.user) {
 				await AdminAuditLog.create({
-					usuarioId: req.user.id,
+					adminUserId: req.user.id,
 					accion: 'solicitar_detalles',
 					entidad: 'reserva',
 					entidadId: id,

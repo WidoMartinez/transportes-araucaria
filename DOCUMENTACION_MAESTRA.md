@@ -1454,13 +1454,30 @@ El sistema de promociones permite crear ofertas atractivas con imágenes que se 
 4.  **Generación de Leads e Integración**:
     -   **Link Directo**: Cada promoción tiene un link único (`/?promo=ID`) para campañas de marketing (Google Ads, Facebook).
     -   **Conversiones**: Las reservas generadas se marcan con `source: "banner_promocional"` para tracking de efectividad.
-
-5.  **Flujo Técnico**:
-    -   **Modelo**: `PromocionBanner.js` (MySQL).
-    -   **API**: `POST /api/promociones-banner/desde-promocion/:id` crea la reserva.
     -   **Frontend**: `ReservaRapidaModal.jsx` maneja la interfaz de usuario simplificada.
     -   **Panel Admin**: `GestionPromociones.jsx` permite crear, editar y activar/desactivar promociones.
 
+### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
+
+**Actualizado: 19 Febrero 2026**
+
+El sistema utiliza Google gtag.js para el seguimiento de conversiones de "Compra" (reservas pagadas). Para maximizar la precisión (Enhanced Conversions), los datos se capturan tanto en el flujo de retorno estándar como en el flujo rápido express.
+
+#### Arquitectura del Seguimiento
+1.  **Captura de Datos (Backend)**: El servidor consulta el estado del pago en Flow. Si es exitoso, extrae el monto real, el ID de reserva y los datos del usuario (email, nombre, teléfono), los codifica en Base64 (`d`) y los inyecta en la URL de retorno.
+2.  **Disparo de Evento (Frontend)**: Tanto `App.jsx` (para el flujo express) como `FlowReturn.jsx` (para flujos de código/consulta) detectan estos parámetros, decodifican los datos y disparan el evento `conversion`.
+3.  **De-duplicación**: Se utiliza `sessionStorage` con una clave basada en el ID de la transacción para evitar registrar la misma conversión si el usuario recarga la página.
+
+#### Especificaciones Técnicas
+- **Conversion ID**: `AW-17529712870/yZz-CJqiicUbEObh6KZB`
+- **Moneda**: `CLP`
+- **Enhanced Conversions**: Se envían `email`, `phone_number` y `address` (nombre/apellido) normalizados para mejorar la atribución en Google Ads.
+
+> [!WARNING]
+> **Nota de Mantenimiento Crítica (19 Feb 2026)**:
+> Se ha identificado que errores de referencia (`ReferenceError`) en el bloque de tracking de `App.jsx` pueden detener el disparo de la conversión de forma silenciosa. Siempre verificar que las variables utilizadas en logs o lógica dentro de los `useEffect` de retorno estén debidamente definidas o capturadas de la URL.
+
+---
 ### 5.20 Mejoras en la Gestión y Visualización de Reservas (Panel Admin)
 
 **Implementado: 15 Febrero 2026**

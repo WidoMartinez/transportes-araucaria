@@ -325,6 +325,12 @@ const Reserva = sequelize.define(
 			field: "tipo_tramo",
 			comment: "Tipo de tramo de la reserva",
 		},
+		ultimaSolicitudDetalles: {
+			type: DataTypes.DATE,
+			allowNull: true,
+			field: "ultima_solicitud_detalles",
+			comment: "Fecha y hora del último correo de solicitud de detalles enviado",
+		},
 	},
 	{
 		tableName: "reservas",

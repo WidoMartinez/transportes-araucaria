@@ -3579,15 +3579,22 @@ function AdminReservas() {
 								</Button>
 
 								{!selectedReserva?.detallesCompletos && (
-									<Button
-										size="sm"
-										variant="destructive"
-										className="gap-2"
-										onClick={() => handleSolicitarDetalles(selectedReserva)}
-									>
-										<Mail className="w-4 h-4" />
-										Solicitar Datos Faltantes
-									</Button>
+									<div className="flex flex-col items-end gap-1">
+										<Button
+											size="sm"
+											variant="destructive"
+											className="gap-2"
+											onClick={() => handleSolicitarDetalles(selectedReserva)}
+										>
+											<Mail className="w-4 h-4" />
+											Solicitar Datos Faltantes
+										</Button>
+										{selectedReserva?.ultimaSolicitudDetalles && (
+											<span className="text-[10px] text-muted-foreground italic">
+												Último envío: {new Date(selectedReserva.ultimaSolicitudDetalles).toLocaleString()}
+											</span>
+										)}
+									</div>
 								)}
 							</div>
 							{/* Botones de copiar info conductor - separados para IDA y VUELTA */}
