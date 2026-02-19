@@ -67,6 +67,7 @@ import addAddressColumns from "./migrations/add-address-columns.js";
 import createPromocionesBannerTable from "./migrations/create-promociones-banner-table.js";
 import addPosicionImagenToPromocionesBanner from "./migrations/add-posicion-imagen-to-promociones-banner.js";
 import addAdvancedPromoConfig from "./migrations/add-advanced-promo-config.js";
+import addUltimaSolicitudDetalles from "./migrations/add-ultima-solicitud-detalles.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
@@ -695,6 +696,7 @@ const initializeDatabase = async () => {
 		await addDuracionMinutosToCodigosPago();
 		await addDuracionMinutosToReservas();
 		await addTransaccionesTable();
+		await addUltimaSolicitudDetalles();
 
 		await syncDatabase(false, [
 			AdminUser, // Primero los usuarios admin
