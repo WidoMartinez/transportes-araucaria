@@ -441,11 +441,25 @@ function ConsultarReserva() {
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
 											<Label className="text-green-700 font-medium">Origen</Label>
-											<p className="font-semibold text-gray-900">{reserva.origen}</p>
+											<p className="font-semibold text-gray-900">
+												{reserva.origen}
+												{reserva.direccionOrigen && (
+													<span className="block text-sm font-normal text-gray-600 italic">
+														({reserva.direccionOrigen})
+													</span>
+												)}
+											</p>
 										</div>
 										<div>
 											<Label className="text-green-700 font-medium">Destino</Label>
-											<p className="font-semibold text-gray-900">{reserva.destino}</p>
+											<p className="font-semibold text-gray-900">
+												{reserva.destino}
+												{reserva.direccionDestino && (
+													<span className="block text-sm font-normal text-gray-600 italic">
+														({reserva.direccionDestino})
+													</span>
+												)}
+											</p>
 										</div>
 										<div>
 											<Label className="text-green-700 font-medium">📅 Fecha</Label>
@@ -476,11 +490,25 @@ function ConsultarReserva() {
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 											<div>
 												<Label className="text-blue-700 font-medium">Origen</Label>
-												<p className="font-semibold text-gray-900">{reserva.destino}</p>
+												<p className="font-semibold text-gray-900">
+													{reserva.destino}
+													{reserva.direccionDestino && (
+														<span className="block text-sm font-normal text-gray-600 italic">
+															({reserva.direccionDestino})
+														</span>
+													)}
+												</p>
 											</div>
 											<div>
 												<Label className="text-blue-700 font-medium">Destino</Label>
-												<p className="font-semibold text-gray-900">{reserva.origen}</p>
+												<p className="font-semibold text-gray-900">
+													{reserva.origen}
+													{reserva.direccionOrigen && (
+														<span className="block text-sm font-normal text-gray-600 italic">
+															({reserva.direccionOrigen})
+														</span>
+													)}
+												</p>
 											</div>
 											<div>
 												<Label className="text-blue-700 font-medium">📅 Fecha de Regreso</Label>
@@ -652,7 +680,7 @@ function ConsultarReserva() {
 										)}
 										{reserva.hotel && (
 											<div>
-												<Label className="text-muted-foreground">Hotel</Label>
+												<Label className="text-muted-foreground">Referencia / Hotel</Label>
 												<p className="font-medium">{reserva.hotel}</p>
 											</div>
 										)}

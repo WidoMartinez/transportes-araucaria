@@ -75,6 +75,8 @@ import {
 const generarTextoConductor = (reserva) => {
 	if (!reserva) return "";
 	
+	const AEROPUERTO_BUSQUEDA = "aeropuerto";
+	
 	// Formato de fecha y hora local
 	const fechaStr = reserva.fecha 
 		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL") 
@@ -82,34 +84,44 @@ const generarTextoConductor = (reserva) => {
 	
 	const horaStr = reserva.hora || "Sin hora";
 	
+	// Referencia (Hotel, etc)
+	const hotelRefStr = reserva.hotel ? ` [${reserva.hotel}]` : "";
+
 	// Construir dirección de origem y destino con detalles si existen
 	let origenStr = reserva.origen || "Sin origen";
-	if (reserva.direccionOrigen) origenStr += ` (${reserva.direccionOrigen})`;
+	if (reserva.direccionOrigen) {
+		origenStr += ` (${reserva.direccionOrigen})`;
+	}
+	// Si el origen NO es aeropuerto, añadir referencia
+	if (!origenStr.toLowerCase().includes(AEROPUERTO_BUSQUEDA)) {
+		origenStr += hotelRefStr;
+	}
 
 	let destinoStr = reserva.destino || "Sin destino";
-	if (reserva.direccionDestino) destinoStr += ` (${reserva.direccionDestino})`;
+	if (reserva.direccionDestino) {
+		destinoStr += ` (${reserva.direccionDestino})`;
+	}
+	// Si el destino NO es aeropuerto, añadir referencia
+	if (!destinoStr.toLowerCase().includes(AEROPUERTO_BUSQUEDA)) {
+		destinoStr += hotelRefStr;
+	}
 
-	// Generar enlaces de Google Maps para ORIGEN y DESTINO
-	// El conductor necesita ambos: primero para recoger (origen) y luego para entregar (destino)
-	const addressOrigen = reserva.direccionOrigen || reserva.origen || "";
-	const mapsLinkOrigen = addressOrigen 
-		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressOrigen)}` 
-		: "";
+	// Generar enlaces de Google Maps para el punto "específico" (el que no es aeropuerto)
+	const esOrigenAero = (reserva.origen || "").toLowerCase().includes(AEROPUERTO_BUSQUEDA);
 	
-	const addressDestino = reserva.direccionDestino || reserva.destino || "";
-	const mapsLinkDestino = addressDestino 
-		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressDestino)}` 
+	const addressEspecifica = esOrigenAero 
+		? (reserva.direccionDestino || reserva.destino || "")
+		: (reserva.direccionOrigen || reserva.origen || "");
+
+	const mapsLink = addressEspecifica 
+		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressEspecifica)}` 
 		: "";
 	
 	// info adicional
 	const vueloStr = reserva.numeroVuelo ? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}` : "";
 	const observacionesStr = reserva.observaciones ? `\n📝 *Obs:* ${reserva.observaciones}` : "";
 	
-	// Construir líneas de Maps (origen y destino por separado)
-	const mapsLines = [];
-	if (mapsLinkOrigen) mapsLines.push(`📍 *Maps Origen:* ${mapsLinkOrigen}`);
-	if (mapsLinkDestino) mapsLines.push(`🗺 *Maps Destino:* ${mapsLinkDestino}`);
-	const mapsStr = mapsLines.length > 0 ? `\n${mapsLines.join("\n")}` : "";
+	const mapsStr = mapsLink ? `\n📍 *Maps:* ${mapsLink}` : "";
 	
 	return `*NUEVO SERVICIO ASIGNADO* 🚖
 
@@ -4037,7 +4049,7 @@ function AdminReservas() {
 										)}
 										{selectedReserva.hotel && (
 											<div>
-												<Label className="text-muted-foreground">Hotel</Label>
+												<Label className="text-muted-foreground">Referencia / Hotel</Label>
 												<p className="font-medium">
 													{selectedReserva.hotel}
 												</p>
@@ -4435,41 +4447,49 @@ function AdminReservas() {
 										</Select>
 									</div>
 											<>
-												<div className="space-y-1 md:col-span-2">
-													<Label className="flex items-center gap-2">
-														<MapPin className="h-4 w-4" />
-														Dirección Específica (Recogida o Llegada)
-													</Label>
-													<AddressAutocomplete
-														id="hotel-edit"
-														name="hotel"
-														value={formData.hotel || ""}
-														placeholder="Ej: Condominio Los Ríos, Loteo 21, Malalcahuello"
-														onChange={(e) => {
-															const newVal = e.target.value;
-															const isFromAirport =
-																formData.origen === "Aeropuerto La Araucanía";
-															const isToAirport =
-																formData.destino === "Aeropuerto La Araucanía";
+												<div className="space-y-4 md:col-span-2">
+													<div className="space-y-1">
+														<Label className="flex items-center gap-2">
+															<MapPin className="h-4 w-4" />
+															Dirección Específica (Ubicación Google) *
+														</Label>
+														<AddressAutocomplete
+															id="hotel-edit"
+															name="hotel"
+															value={formData.direccionOrigen || formData.direccionDestino || ""}
+															placeholder="Busca la dirección exacta en Google Maps..."
+															onChange={(e) => {
+																const newVal = e.target.value;
+																const isFromAirport =
+																	formData.origen === "Aeropuerto La Araucanía";
+																const isToAirport =
+																	formData.destino === "Aeropuerto La Araucanía";
 
-															setFormData({
-																...formData,
-																hotel: newVal,
-																// Sincronizar direcciÃ³n especÃ­fica segÃºn el sentido del viaje
-																// para que coincida con lo que se muestra en el modal de detalles
-																direccionDestino: isFromAirport
-																	? newVal
-																	: formData.direccionDestino,
-																direccionOrigen: isToAirport
-																	? newVal
-																	: formData.direccionOrigen,
-															});
-														}}
-														className="bg-white"
-													/>
-													<p className="text-xs text-muted-foreground mt-1">
-														Esta es la dirección única que verá el conductor para llegar al punto exacto.
-													</p>
+																setFormData({
+																	...formData,
+																	// Sincronizar dirección específica según el sentido del viaje
+																	direccionDestino: isFromAirport
+																		? newVal
+																		: formData.direccionDestino,
+																	direccionOrigen: isToAirport
+																		? newVal
+																		: formData.direccionOrigen,
+																});
+															}}
+															className="bg-white"
+														/>
+													</div>
+													<div className="space-y-1">
+														<Label>Referencia / Hotel (Opcional)</Label>
+														<Input
+															value={formData.hotel || ""}
+															placeholder="Ej: Hotel Antumalal, Depto 201"
+															onChange={(e) =>
+																setFormData({ ...formData, hotel: e.target.value })
+															}
+															className="bg-white"
+														/>
+													</div>
 												</div>
 											</>
 

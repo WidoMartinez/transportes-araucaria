@@ -52,7 +52,8 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 	const [detalles, setDetalles] = useState({
 		hora: "",
 		numeroVuelo: "",
-		hotel: "",
+		direccionGoogle: "", // Dirección obligatoria de Google Maps
+		hotel: "",           // Referencia opcional (Hotel, depto, etc)
 		sillaInfantil: "no",
 		equipajeEspecial: "",
 		idaVuelta: false,
@@ -86,6 +87,7 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 				setDetalles({
 					hora: data.reserva?.hora || "",
 					numeroVuelo: data.reserva?.numeroVuelo || "",
+					direccionGoogle: data.reserva?.direccionOrigen || data.reserva?.direccionDestino || "",
 					hotel: data.reserva?.hotel || "",
 					sillaInfantil: data.reserva?.sillaInfantil ? "si" : "no",
 					equipajeEspecial: data.reserva?.equipajeEspecial || "",
@@ -160,8 +162,8 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 			return;
 		}
 
-		if (!detalles.hotel || !detalles.hotel.trim()) {
-			setError("Por favor, ingresa la dirección específica.");
+		if (!detalles.direccionGoogle || !detalles.direccionGoogle.trim()) {
+			setError("La dirección de recogida o llegada es obligatoria.");
 			setSubmitting(false);
 			return;
 		}
@@ -418,24 +420,43 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 									</p>
 								</div>
 
-								<div className="space-y-2">
-									<Label htmlFor="hotel" className="text-base font-medium">
-										<span className="flex items-center gap-2">
-											<MapPin className="h-4 w-4" />
-											Dirección Específica *
-										</span>
-									</Label>
-									<AddressAutocomplete
-										id="hotel"
-										name="hotel"
-										value={detalles.hotel}
-										onChange={(e) => handleInputChange("hotel", e.target.value)}
-										placeholder="Ej: Condominio Los Ríos, Loteo 21, Malalcahuello"
-										className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
-									/>
-									<p className="text-sm text-muted-foreground">
-										Dirección exacta de recogida o llegada (según tu ruta)
-									</p>
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="direccionGoogle" className="text-base font-medium">
+											<span className="flex items-center gap-2">
+												<MapPin className="h-4 w-4" />
+												Dirección de Recogida o Llegada *
+											</span>
+										</Label>
+										<AddressAutocomplete
+											id="direccionGoogle"
+											name="direccionGoogle"
+											value={detalles.direccionGoogle}
+											onChange={(e) => handleInputChange("direccionGoogle", e.target.value)}
+											placeholder="Busca tu dirección exacta..."
+											className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
+										/>
+										<p className="text-sm text-muted-foreground">
+											Ubicación exacta de recogida o destino para el GPS
+										</p>
+									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="hotel" className="text-base font-medium">
+											<span>Hotel / Nombre de Lugar / Dpto (Opcional)</span>
+										</Label>
+										<Input
+											id="hotel"
+											name="hotel"
+											value={detalles.hotel}
+											onChange={(e) => handleInputChange("hotel", e.target.value)}
+											placeholder="Ej: Hotel Antumalal, Edificio Los Robles Depto 402"
+											className="bg-muted/50 border-input h-12 md:h-11 text-base touch-manipulation"
+										/>
+										<p className="text-sm text-muted-foreground">
+											Referencia adicional para ayudar al conductor
+										</p>
+									</div>
 								</div>
 							</div>
 

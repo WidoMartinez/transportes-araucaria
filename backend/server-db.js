@@ -4384,28 +4384,43 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		});
 	}
 
-	// Validar que se proporcione la dirección específica (Regla de Oro)
-	if (!detalles.hotel || !detalles.hotel.trim()) {
+	// Validar que se proporcione la dirección de Google (obligatoria)
+	if (!detalles.direccionGoogle || !detalles.direccionGoogle.trim()) {
 		return res.status(400).json({
 			success: false,
-			message: "La dirección específica es obligatoria para completar la reserva",
+			message: "La dirección geográfica es obligatoria para completar la reserva",
 		});
+	}
+
+	// Determinar sentido del viaje para asignar la dirección de Google al campo correcto
+	let direccionOrigen = reserva.direccionOrigen;
+	let direccionDestino = reserva.direccionDestino;
+
+	if (reserva.origen === "Aeropuerto La Araucanía") {
+		// Viaje DESDE el aeropuerto -> La dirección es el DESTINO
+		direccionDestino = detalles.direccionGoogle.trim();
+	} else if (reserva.destino === "Aeropuerto La Araucanía") {
+		// Viaje HACIA el aeropuerto -> La dirección es el ORIGEN
+		direccionOrigen = detalles.direccionGoogle.trim();
+	} else {
+		// Caso secundario: Si ninguno es aeropuerto, por defecto lo guardamos en destino
+		direccionDestino = detalles.direccionGoogle.trim();
 	}
 
 	// Actualizar con los detalles proporcionados
 	const datosActualizados = {
 		hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
-		// Permitir actualizar la fecha explicitamente si la envía el cliente
 		fecha: detalles.fecha || reserva.fecha,
 		numeroVuelo: detalles.numeroVuelo || "",
-		hotel: detalles.hotel.trim(),
+		direccionOrigen,
+		direccionDestino,
+		hotel: detalles.hotel ? detalles.hotel.trim() : "", // Ahora es opcional (referencia)
 		equipajeEspecial: detalles.equipajeEspecial || "",
-		sillaInfantil: detalles.sillaInfantil || reserva.sillaInfantil,
+		sillaInfantil: detalles.sillaInfantil === "si" || detalles.sillaInfantil === true,
 		idaVuelta: Boolean(detalles.idaVuelta),
 		fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
 		horaRegreso:
 			normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
-		// No escribir campos virtuales; solo estado
 		estado: "confirmada",
 	};
 
@@ -4421,10 +4436,10 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 				// Campos que deben ser idénticos en ambos tramos (logística compartida)
 				const camposComunes = {
 					hotel: datosActualizados.hotel,
-					// numeroVuelo: datosActualizados.numeroVuelo, // NO propagar, son vuelos distintos
+					direccionOrigen: datosActualizados.direccionOrigen,
+					direccionDestino: datosActualizados.direccionDestino,
 					equipajeEspecial: datosActualizados.equipajeEspecial,
 					sillaInfantil: datosActualizados.sillaInfantil,
-					// No propagamos fecha/hora ya que son específicas de cada tramo
 				};
 
 				await Reserva.update(camposComunes, {
