@@ -193,14 +193,13 @@ const Reserva = sequelize.define(
 		detallesCompletos: {
 			type: DataTypes.VIRTUAL,
 			get() {
-				// Una reserva tiene detalles completos si tiene al menos el número de vuelo o hotel
-				const tieneNumeroVuelo =
-					this.getDataValue("numeroVuelo") &&
-					this.getDataValue("numeroVuelo").trim() !== "";
-				const tieneHotel =
-					this.getDataValue("hotel") &&
-					this.getDataValue("hotel").trim() !== "";
-				return tieneNumeroVuelo || tieneHotel;
+				// Una reserva tiene detalles completos si tiene una dirección geográfica mapeada
+				// (direccionOrigen o direccionDestino) según el sentido del viaje.
+				const tieneDireccionMapa = 
+					(this.getDataValue("direccionOrigen") && this.getDataValue("direccionOrigen").trim() !== "") ||
+					(this.getDataValue("direccionDestino") && this.getDataValue("direccionDestino").trim() !== "");
+				
+				return tieneDireccionMapa;
 			},
 		},
 		ipAddress: {

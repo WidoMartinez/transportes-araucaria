@@ -888,6 +888,67 @@ if (!datosReserva.fechaRegreso) {
 
 ---
 
+## 14. Conversiones de Google Ads No Registradas (ReferenceError en App.jsx)
+
+**Detectado: 19 Febrero 2026**
+
+### Problema
+Las conversiones de Google Ads no se registraban para el flujo express (el flujo principal de reservas del sitio). El problema era silencioso: ningún error visible en el frontend, pero las conversiones simplemente no llegaban a Google Ads.
+
+### Síntomas
+- Google Ads muestra conversiones con valor $0 o directamente no registra conversiones del día
+- El flujo de pago completa la reserva correctamente (reservas sí se crean en BD)
+- No hay errores visibles en la UI para el usuario
+
+### Causa Raíz
+En `src/App.jsx`, dentro del `useEffect` que maneja el retorno de pago Flow, existía un `console.log` que referenciaba la variable `token` sin haberla definido previamente:
+
+```javascript
+// ❌ CÓDIGO CON BUG
+if (flowSuccess) {
+    console.log(`🔍 [App.jsx] Datos de conversión recibidos:`, {
+        token,         // <--- ReferenceError: token is not defined
+        amount,
+        reservaId,
+        // ...
+    });
+    // Todo el código posterior (incluido el gtag) NUNCA se ejecuta
+    if (typeof window.gtag === "function") { ... }
+}
+```
+
+En JavaScript, el `ReferenceError` lanzado por `token` interrumpe silenciosamente la ejecución del `useEffect` completo, haciendo que la llamada a `window.gtag("event", "conversion", ...)` nunca se ejecute.
+
+### Solución (Febrero 2026)
+
+**Archivo modificado**: `src/App.jsx` (línea ~462)
+
+**Cambio**: Remover la variable `token` del `console.log` (la variable no existe en este bloque; el token pertenece al flujo de `FlowReturn.jsx`).
+
+```javascript
+// ✅ CÓDIGO CORREGIDO
+console.log(`🔍 [App.jsx] Datos de conversión recibidos:`, {
+    amount,
+    reservaId,
+    warning,
+    encodedData: encodedData ? 'presente' : 'ausente'
+});
+```
+
+### Verificación
+
+Navegar a `/?flow_payment=success&reserva_id=<ID>&amount=<MONTO>&d=<BASE64>` y verificar en la consola del navegador que aparezca:
+```
+🔍 [App.jsx] Datos de conversión recibidos: { amount: "59670", ... }
+✅ [App.jsx] Valor de conversión parseado: 59670
+🚀 [App.jsx] Disparando conversión Google Ads: { send_to: ..., value: 59670, currency: "CLP", ... }
+```
+
+**Sin el fix**: El `console.log` con `token` lanzaba `ReferenceError` y nada de lo anterior aparecía.
+
+> [!IMPORTANT]
+> Este fix asegura que los pagos con código para reservas ida y vuelta funcionen correctamente, evitando duplicación de registros y garantizando estados de pago consistentes.
+
 **Implementado: 7 Enero 2026**
 
 ### Problema
@@ -2450,3 +2511,38 @@ Se modificó `backend/server-db.js` el endpoint `DELETE /api/reservas/:id`:
 El sistema ahora impide eliminaciones anónimas y deja un rastro claro de auditoría, facilitando la investigación de cualquier futura desaparición de reservas.
 
 ---
+
+---
+
+## 14. Direcciones Vagas o Faltantes en Flujo Express
+
+**Implementado: 18 Febrero 2026**
+
+### Problema
+En el flujo Express, el cliente paga primero y completa los detalles (dirección, vuelo, etc.) en una ventana posterior al pago. 
+- **Síntoma**: Reservas que aparecen en el administrador marcadas como "Pagado/Confirmado" pero con la columna de Ruta vacía.
+- **Causa**: El cliente cierra el navegador o la pestaña tras ver la confirmación del pago, saltándose el paso de "Completar Detalles".
+
+### Solución (Febrero 2026)
+
+Se implementó un sistema de **Recuperación de Detalles Incompletos**.
+
+#### 1. Identificación Logística
+Se separó el dato de **Dirección Geográfica** (Google Maps) del dato de **Referencia** (Hotel).
+- El campo virtual `detallesCompletos` en `Reserva.js` ahora valida específicamente que exista una dirección en los campos de ruta (`direccionOrigen` / `Destino`).
+- En el panel Admin, las reservas incompletas se destacan con un **Badge Rojo ⚠️ Detalles Incompletos**.
+
+#### 2. Flujo de Recuperación
+Se añadió un mecanismo para que el administrador solicite los datos faltantes:
+- **Botón "📧 Solicitar Datos Faltantes"**: Disponible en el modal de detalles de la reserva.
+- **Email Automatizado**: Envía un correo elegante al cliente con un enlace directo a su consulta de reserva (`#consultar-reserva`).
+- **Update Autónomo**: El cliente puede rellenar el formulario de detalles desde la página pública sin necesidad de loguearse.
+
+### Cómo Verificar
+1. Si ves una reserva con el badge rojo, haz clic en ella.
+2. Pulsa el botón del sobre para enviar el recordatorio.
+3. El sistema registrará el envío en el historial de la reserva.
+4. Cuando el cliente complete los datos, el badge rojo desaparecerá automáticamente y verás la dirección en la columna de Ruta.
+
+> [!TIP]
+> Este sistema reduce la carga operativa de llamar manualmente a cada cliente que olvida completar su dirección tras el pago.

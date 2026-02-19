@@ -447,6 +447,27 @@ const [configSillas, setConfigSillas] = useState({
 		};
 	}, []);
 
+	// Sincronizar vista de COMPLETAR DETALLES vía HASH (para el flujo de recuperación)
+	useEffect(() => {
+		const handleHashParams = () => {
+			const hash = window.location.hash;
+			if (hash.startsWith("#completar-detalles")) {
+				const params = new URLSearchParams(hash.split("?")[1]);
+				const id = params.get("id");
+				if (id) {
+					setVistaCompletarDetalles({
+						activo: true,
+						reservaId: id,
+						initialAmount: 0 
+					});
+				}
+			}
+		};
+		window.addEventListener("hashchange", handleHashParams);
+		handleHashParams(); // Verificar al montar
+		return () => window.removeEventListener("hashchange", handleHashParams);
+	}, []);
+
 	// --- LÓGICA PARA MANEJAR RETORNO DE PAGO ---
 	useEffect(() => {
 		const url = new URL(window.location.href);
@@ -459,7 +480,6 @@ const [configSillas, setConfigSillas] = useState({
 
 		if (flowSuccess) {
 			console.log(`🔍 [App.jsx] Datos de conversión recibidos:`, {
-				token,
 				amount,
 				reservaId,
 				warning,

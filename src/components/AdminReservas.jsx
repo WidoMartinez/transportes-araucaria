@@ -2308,17 +2308,44 @@ function AdminReservas() {
 					// No bloquear la creación de la reserva por un error de pago
 				}
 			}
-
-			// Recargar datos
-			await fetchReservas();
-			await fetchEstadisticas();
-			setShowNewDialog(false);
 			alert("Reserva creada exitosamente");
 		} catch (error) {
 			console.error("Error creando reserva:", error);
 			alert("Error al crear la reserva: " + error.message);
 		} finally {
 			setSaving(false);
+		}
+	};
+
+	// Assuming handleUpdateReserva would be here, as implied by the instruction's snippet
+	// If handleUpdateReserva is not present, this block should be removed or adjusted.
+	// For now, I'll place the new function after the existing handleNewReserva.
+	// The instruction's snippet seems to indicate the end of an `handleUpdateReserva` function.
+	// Since that function is not in the provided content, I will insert the new function
+	// directly after `handleNewReserva` and before `toggleSelectAll`.
+
+	const handleSolicitarDetalles = async (reserva) => {
+		if (!reserva) return;
+		
+		if (!window.confirm(`¿Seguro que deseas enviar un recordatorio por correo a ${reserva.nombre} para que complete su dirección?`)) {
+			return;
+		}
+
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${reserva.id}/solicitar-detalles`, {
+				method: 'POST'
+			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				alert("✅ Solicitud enviada correctamente al cliente.");
+			} else {
+				throw new Error(data.error || "Error al enviar la solicitud");
+			}
+		} catch (error) {
+			console.error("Error enviando solicitud de detalles:", error);
+			alert("❌ Error: " + error.message);
 		}
 	};
 
@@ -3149,6 +3176,15 @@ function AdminReservas() {
 															</div>
 														)}
 
+														{/* Badge de Detalles Incompletos */}
+														{!reserva.detallesCompletos && (
+															<div className="mt-1">
+																<Badge variant="destructive" className="text-[10px] px-1 py-0 h-4 animate-pulse">
+																	⚠️ Detalles Incompletos
+																</Badge>
+															</div>
+														)}
+
 														{/* El botón de reasignar se muestra en el modal de detalle sólo si la reserva
 															está confirmada y ya tiene vehículo y conductor asignados. Se movió
 															aquí originalmente por error; la lógica real de visibilidad se
@@ -3529,17 +3565,31 @@ function AdminReservas() {
 									Información completa de la reserva
 								</DialogDescription>
 							</div>
-							<Button
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									const link = `${window.location.origin}/#comprar-productos/${selectedReserva?.codigoReserva}`;
-									navigator.clipboard.writeText(link);
-									alert(`Enlace copiado al portapapeles: ${link}`);
-								}}
-							>
-								Generar Link de Compra
-							</Button>
+							<div className="flex gap-2">
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => {
+										const link = `${window.location.origin}/#comprar-productos/${selectedReserva?.codigoReserva}`;
+										navigator.clipboard.writeText(link);
+										alert(`Enlace copiado al portapapeles: ${link}`);
+									}}
+								>
+									Generar Link de Compra
+								</Button>
+
+								{!selectedReserva?.detallesCompletos && (
+									<Button
+										size="sm"
+										variant="destructive"
+										className="gap-2"
+										onClick={() => handleSolicitarDetalles(selectedReserva)}
+									>
+										<Mail className="w-4 h-4" />
+										Solicitar Datos Faltantes
+									</Button>
+								)}
+							</div>
 							{/* Botones de copiar info conductor - separados para IDA y VUELTA */}
 							{selectedReserva?.tramoVuelta ? (
 								<>

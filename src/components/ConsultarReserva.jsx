@@ -373,6 +373,33 @@ function ConsultarReserva() {
 							</CardContent>
 						</Card>
 
+						{/* Alerta de Detalles Incompletos */}
+						{!reserva.detallesCompletos && (
+							<Card className="border-l-4 border-l-red-500 bg-red-50">
+								<CardContent className="pt-6">
+									<div className="flex flex-col md:flex-row items-center gap-4 justify-between">
+										<div className="flex items-center gap-3">
+											<div className="bg-red-100 p-2 rounded-full">
+												<MapPin className="w-6 h-6 text-red-600 animate-bounce" />
+											</div>
+											<div>
+												<h3 className="font-bold text-red-900">⚠️ ¡Dirección faltante!</h3>
+												<p className="text-sm text-red-700">Aún no has proporcionado la dirección exacta para tu reserva. Pulsa el botón para completarla.</p>
+											</div>
+										</div>
+										<Button 
+											className="bg-red-600 hover:bg-red-700 text-white font-bold"
+											onClick={() => {
+												window.location.hash = `#completar-detalles?id=${reserva.id}`;
+											}}
+										>
+											📍 Completar Dirección Ahora
+										</Button>
+									</div>
+								</CardContent>
+							</Card>
+						)}
+
 						{/* Información del Cliente */}
 						<Card>
 							<CardHeader>

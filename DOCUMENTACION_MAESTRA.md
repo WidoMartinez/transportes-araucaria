@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 15 Febrero 2026
-> **Versión**: 1.6
+> **Última Actualización**: 18 Febrero 2026
+> **Versión**: 1.7
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -35,6 +35,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Seguimiento de Conversiones (Google Ads)](#519-sistema-de-seguimiento-de-conversiones-google-ads)
    - [Mejoras en la Gestión y Visualización de Reservas (Panel Admin)](#520-mejoras-en-la-gestión-y-visualización-de-reservas-panel-admin)
    - [Sistema de Auditoría y Logs](#521-sistema-de-auditoría-y-logs-adminauditlog)
+   - [Sistema de Recuperación de Detalles Incompletos](#522-sistema-de-recuperación-de-detalles-incompletos)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
@@ -273,15 +274,12 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 
 #### 🛠️ Directrices Técnicas Generales
 
-1.  **Regla de Oro: Dirección Específica Única**:
-    - **Principio**: Existe UN SOLO campo de ubicación preciso para la logística (`direccionEspecifica`), que corresponde al punto que **NO** es el aeropuerto.
-    - **Frontend**: El cliente completa un solo campo "Dirección Específica *" (anteriormente `hotel`).
-    - **Backend**: El sistema determina inteligentemente si esta dirección corresponde a la *Recogida* (viajes AL aeropuerto) o *Llegada* (viajes DESDE el aeropuerto).
-    - **Notificación Conductor**: El correo debe mostrar SOLO:
-        - Origen (Referencia general)
-        - Destino (Referencia general)
-        - **Dirección Específica** (El dato exacto para GPS)
-    - **Evitar Redundancia**: No enviar `direccionRecogida`, `hotel` y `destino` por separado si representan lo mismo.
+1.  **Regla de Oro: División entre Logística y Referencia**:
+    - **Principio**: Se deben capturar dos datos distintos para evitar ambigüedades.
+    - **Dirección Específica (Logística)**: Capturada vía `AddressAutocomplete` (Google Maps). Se almacena internamente en `direccionOrigen` o `direccionDestino` para navegación y visualización en Ruta.
+    - **Referencia / Hotel (Opcional)**: Campo de texto libre para detalles descriptivos (ej: "Dpto 402", "Casa Amarilla"). Se almacena en el campo `hotel`.
+    - **Mapeo Automático**: El backend determina si la dirección de Google corresponde al origen o destino basándose en el sentido del viaje respecto al aeropuerto.
+    - **Notificación Conductor**: El mensaje concatena ambos datos para máxima precisión: `Ruta (Dirección Google) [Referencia]`.
 
 2.  **Google Ads (Conversiones Avanzadas)**:
     - **Backend**: El endpoint de redirección (`/api/payment-result`) siempre debe inyectar el parámetro `d` en la URL de retorno. Este parámetro es un JSON Base64 con `{email, nombre, telefono}`.
@@ -1523,3 +1521,21 @@ SELECT * FROM admin_audit_logs ORDER BY created_at DESC;
 
 > [!IMPORTANT]
 > **Recuperación de Datos**: Si una reserva es eliminada accidentalmente, buscar en este log el evento `accion='eliminar'` y `entidadId=[ID]`. El campo `detalles` contendrá el JSON con la información necesaria para restaurarla.
+
+### 5.22 Sistema de Recuperación de Detalles Incompletos
+
+Implementado en Febrero 2026 para gestionar el escenario donde un cliente completa un pago Express pero cierra la ventana antes de rellenar la dirección logística.
+
+#### Componentes del Sistema
+
+1.  **Identificación Visual (Panel Admin)**:
+    - El campo virtual `detallesCompletos` en el modelo `Reserva` detecta la falta de dirección geográfica.
+    - En `AdminReservas`, estas reservas se marcan con un badge rojo **"⚠️ Detalles Incompletos"**.
+
+2.  **Mecanismo de Solicitud**:
+    - Botón **"📧 Solicitar Datos Faltantes"** en el modal de detalles del Administrador.
+    - Envía un correo automático con un enlace personalizado que lleva al cliente directamente a su reserva.
+
+3.  **Actualización Autónoma**:
+    - El cliente accede a `ConsultarReserva.jsx`, ve un aviso destacado y puede abrir el formulario de `CompletarDetalles` sin necesidad de login adicional.
+    - Una vez guardados los datos, la reserva se actualiza en tiempo real y desaparece la alerta roja en el panel del administrador.

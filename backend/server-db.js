@@ -6197,6 +6197,70 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 	}
 });
 
+// Solicitar detalles faltantes al cliente (enviar correo con link)
+app.post("/api/reservas/:id/solicitar-detalles", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const reserva = await Reserva.findByPk(id);
+
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		if (reserva.detallesCompletos) {
+			return res.status(400).json({ error: "La reserva ya tiene los detalles completos" });
+		}
+
+		// Preparar datos para el script PHP
+		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_solicitud_detalles.php";
+		
+		const emailData = {
+			nombre: reserva.nombre,
+			email: reserva.email,
+			codigoReserva: reserva.codigoReserva,
+			origen: reserva.origen,
+			destino: reserva.destino,
+			fecha: reserva.fecha,
+			hora: reserva.hora,
+			action: "request_missing_details"
+		};
+
+		// Enviar petición al script PHP
+		const response = await axios.post(phpUrl, emailData, {
+			headers: { "Content-Type": "application/json" },
+			timeout: 10000
+		});
+
+		// Registrar la acción en los logs (si existe el sistema de auditoría)
+		try {
+			if (typeof AdminAuditLog !== 'undefined' && req.user) {
+				await AdminAuditLog.create({
+					usuarioId: req.user.id,
+					accion: 'solicitar_detalles',
+					entidad: 'reserva',
+					entidadId: id,
+					detalles: JSON.stringify({ email: reserva.email, codigo: reserva.codigoReserva })
+				});
+			}
+		} catch (logError) {
+			console.error("Error registrando auditoría de solicitud de detalles:", logError);
+		}
+
+		res.json({ 
+			success: true, 
+			message: "Solicitud enviada correctamente", 
+			phpResponse: response.data 
+		});
+
+	} catch (error) {
+		console.error("Error solicitando detalles de reserva:", error);
+		res.status(500).json({ 
+			error: "Error al enviar la solicitud", 
+			details: error.message 
+		});
+	}
+});
+
 // Actualizar ruta (origen/destino) de una reserva
 app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
 	try {
