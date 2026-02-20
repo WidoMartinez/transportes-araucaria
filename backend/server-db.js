@@ -8168,9 +8168,24 @@ app.post("/create-payment", async (req, res) => {
 		const comercioBase = codigoReservaNormalizado || "ORDEN";
 		const commerceOrder = `${comercioBase}-${Date.now()}`;
 
+		// --- SANITIZACIÓN Y VALIDACIÓN DEL EMAIL ---
+		const emailSanitizado = sanitizarEmailRobusto(email);
+		console.log(`📧 [Flow] Email recibido: "${String(email || '').slice(0,3)}***" → sanitizado: "${emailSanitizado.slice(0,3)}***@${emailSanitizado.split('@')[1] || '?'}", longitud: ${emailSanitizado.length}`);
+
+		// Validar que el email sanitizado tenga formato válido para Flow
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailSanitizado || !emailRegex.test(emailSanitizado)) {
+			console.error(`❌ [Flow] Email inválido para Flow después de sanitizar: "${emailSanitizado}" (original: typeof ${typeof email})`);
+			return res.status(400).json({
+				success: false,
+				error: "Email inválido",
+				message: "El email de la reserva no tiene un formato válido. Por favor contacta a soporte."
+			});
+		}
+
 		// Incluir datos auxiliares para que el webhook identifique la reserva sin depender del correo
 		const optionalPayload = {};
-		if (email) optionalPayload.email = sanitizarEmailRobusto(email);
+		optionalPayload.email = emailSanitizado;
 		if (reservaId) optionalPayload.reservaId = reservaId;
 		if (codigoReservaNormalizado)
 			optionalPayload.codigoReserva = codigoReservaNormalizado;
@@ -8185,7 +8200,7 @@ app.post("/create-payment", async (req, res) => {
 			subject: description,
 			currency: "CLP",
 			amount: amountNum,
-			email: sanitizarEmailRobusto(email),
+			email: emailSanitizado,
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			// Modificado: Flow hace un POST al retorno. React no puede leer el body del POST desde la navegación.
 			// Solución: Retornar a un endpoint del backend que reciba el POST y redirija al frontend con GET.

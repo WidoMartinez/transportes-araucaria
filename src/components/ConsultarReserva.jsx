@@ -121,8 +121,15 @@ function ConsultarReserva() {
 				}),
 			});
 			if (!resp.ok) {
-				const detail = await resp.text().catch(() => "");
-				throw new Error(`Error al generar pago (${resp.status}) ${detail}`);
+				let errorMsg = `Error al generar pago (${resp.status})`;
+				try {
+					const errData = await resp.json();
+					if (errData.message) errorMsg = errData.message;
+				} catch {
+					const detail = await resp.text().catch(() => "");
+					if (detail) errorMsg += ` ${detail}`;
+				}
+				throw new Error(errorMsg);
 			}
 			const data = await resp.json();
 			if (!data.url)
