@@ -4348,8 +4348,8 @@ app.put("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
 		}
 		if (body.fechaVencimiento !== undefined) {
 			updates.fechaVencimiento = body.fechaVencimiento ? new Date(body.fechaVencimiento) : null;
-			// Si se extiende la fecha, reactivar si estaba vencido
-			if (updates.fechaVencimiento && updates.fechaVencimiento > new Date() && registro.estado === "vencido") {
+			// Si se extiende la fecha, reactivar si estaba vencido o cancelado
+			if (updates.fechaVencimiento && updates.fechaVencimiento > new Date() && (registro.estado === "vencido" || registro.estado === "cancelado")) {
 				updates.estado = "activo";
 			}
 		}

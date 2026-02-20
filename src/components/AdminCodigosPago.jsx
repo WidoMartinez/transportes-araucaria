@@ -83,6 +83,33 @@ const obtenerFechaLocal = (minutosAdelante) => {
 	return `${año}-${mes}-${dia}T${horas}:${minutosStr}`;
 };
 
+const formatCurrency = (value) =>
+	new Intl.NumberFormat("es-CL", {
+		style: "currency",
+		currency: "CLP",
+	}).format(value || 0);
+
+const formatDate = (date) => {
+	if (!date) return "-";
+	return new Date(date).toLocaleDateString("es-CL", {
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+};
+
+const generarMensaje = (codigo) => {
+	const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
+	let mensaje = `Hola, aquí tienes tu código de pago:\n\n${codigo.codigo}\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+	if (codigo.idaVuelta) mensaje += `\nTipo: Ida y vuelta`;
+	if (codigo.fechaVencimiento) {
+		mensaje += `\n\n⏰ Válido hasta: ${formatDate(codigo.fechaVencimiento)}`;
+	}
+	return mensaje;
+};
+
 const FORM_INICIAL = {
 	origen: AEROPUERTO,
 	otroOrigen: "",
@@ -206,22 +233,7 @@ function AdminCodigosPago() {
 		[destinos, formData.origen]
 	);
 
-	const formatCurrency = (value) =>
-		new Intl.NumberFormat("es-CL", {
-			style: "currency",
-			currency: "CLP",
-		}).format(value || 0);
 
-	const formatDate = (date) => {
-		if (!date) return "-";
-		return new Date(date).toLocaleDateString("es-CL", {
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-			hour: "2-digit",
-			minute: "2-digit",
-		});
-	};
 
 	// Calcular tiempo restante hasta el vencimiento
 	const calcularTiempoRestante = useCallback((fechaVencimiento) => {
@@ -352,15 +364,10 @@ function AdminCodigosPago() {
 				if (!prev.fechaVencimiento) {
 					updates.fechaVencimiento = obtenerFechaLocal(VEINTICUATRO_HORAS);
 				}
-				if (!prev.destino || prev.destino === prev.origen) {
-					updates.destino = prev.origen === AEROPUERTO
-						? (destinosOpciones[0] || "Temuco")
-						: AEROPUERTO;
-				}
 				return Object.keys(updates).length ? { ...prev, ...updates } : prev;
 			});
 		}
-	}, [showCrearDialog, destinosOpciones]);
+	}, [showCrearDialog]);
 
 	const generarCodigoLocal = () => {
 		const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/1/O/I
@@ -371,15 +378,7 @@ function AdminCodigosPago() {
 		return `PX-${rand}`;
 	};
 
-	const generarMensaje = (codigo) => {
-		const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
-		let mensaje = `Hola, aquí tienes tu código de pago:\n\n${codigo.codigo}\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
-		if (codigo.idaVuelta) mensaje += `\nTipo: Ida y vuelta`;
-		if (codigo.fechaVencimiento) {
-			mensaje += `\n\n⏰ Válido hasta: ${formatDate(codigo.fechaVencimiento)}`;
-		}
-		return mensaje;
-	};
+
 
 	const copiarAlPortapapeles = (codigo) => {
 		const texto = typeof codigo === "object" ? generarMensaje(codigo) : codigo;
@@ -570,7 +569,8 @@ function AdminCodigosPago() {
 	const renderAcciones = (c, compact = false) => {
 		const puedeEliminar = c.estado !== "usado";
 		const puedeCancelar = c.estado !== "usado" && c.estado !== "cancelado";
-		const puedeEditar = c.estado !== "usado";
+		const puedeEditar = c.estado !== "usado" && c.estado !== "cancelado";
+		const puedeReactivar = c.estado === "cancelado";
 		const size = compact ? "sm" : "sm";
 		const ghost = compact ? "ghost" : "ghost";
 		return (
@@ -584,6 +584,11 @@ function AdminCodigosPago() {
 				{puedeEditar && (
 					<Button variant={ghost} size={size} title="Editar código" onClick={() => abrirEdicion(c)}>
 						<Pencil className={compact ? "h-5 w-5" : "h-4 w-4 text-yellow-600"} />
+					</Button>
+				)}
+				{puedeReactivar && (
+					<Button variant={ghost} size={size} title="Reactivar código" onClick={() => abrirEdicion(c)}>
+						<CheckCircle2 className={compact ? "h-5 w-5" : "h-4 w-4 text-green-600"} />
 					</Button>
 				)}
 				{puedeCancelar && (
@@ -847,29 +852,120 @@ function AdminCodigosPago() {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{/* Monto */}
 							<div className="space-y-2">
-								<Label htmlFor="monto" className="text-base">Monto</Label>
-								<Input id="monto" name="monto" type="number" value={formData.monto} onChange={handleInputChange} placeholder="35000" min="0" step="1" required className="h-12 md:h-10 text-base" />
+								<Label htmlFor="monto" className="text-base font-semibold">Monto del Servicio</Label>
+								<div className="relative">
+									<DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+									<Input id="monto" name="monto" type="number" value={formData.monto} onChange={handleInputChange} placeholder="Ej: 35000" min="0" step="1" required className="pl-9 h-12 md:h-10 text-base border-slate-300" />
+								</div>
 							</div>
-							{/* Origen */}
+
+							{/* Sentido de Dirección */}
 							<div className="space-y-2">
-								<Label htmlFor="origen" className="text-base">Origen</Label>
-								<select id="origen" name="origen" value={formData.origen} onChange={handleInputChange} className="h-12 md:h-10 border rounded px-3 w-full text-base">
-									{origenes.map((o) => <option key={o} value={o}>{o}</option>)}
-								</select>
-								{formData.origen === OPCION_OTRO && (
-									<Input id="otroOrigen" name="otroOrigen" value={formData.otroOrigen} onChange={handleInputChange} placeholder="Especifica el origen" className="h-12 md:h-10 text-base" />
+								<Label className="text-base">Dirección del Viaje</Label>
+								<div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+									<Button
+										type="button"
+										variant={formData.origen === AEROPUERTO ? "default" : "ghost"}
+										className="flex-1 h-10 text-xs md:text-sm px-2"
+										onClick={() => {
+											setFormData(prev => ({
+												...prev,
+												origen: AEROPUERTO,
+												destino: prev.destino === AEROPUERTO ? (destinosOpciones.find(d => d === "Pucón") || destinosOpciones[0] || "Temuco") : prev.destino
+											}));
+										}}
+									>
+										Desde Aeropuerto
+									</Button>
+									<Button
+										type="button"
+										variant={formData.destino === AEROPUERTO ? "default" : "ghost"}
+										className="flex-1 h-10 text-xs md:text-sm px-2"
+										onClick={() => {
+											setFormData(prev => ({
+												...prev,
+												origen: prev.origen === AEROPUERTO ? (destinosOpciones.find(d => d === "Pucón") || destinosOpciones[0] || "Temuco") : prev.origen,
+												destino: AEROPUERTO
+											}));
+										}}
+									>
+										Hacia Aeropuerto
+									</Button>
+								</div>
+							</div>
+						</div>
+
+						{/* Selectores de Ruta Inteligentes */}
+						<div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-2">
+							<div className="flex items-center gap-3 mb-4 text-slate-500 font-medium text-sm">
+								<MapPin className="h-4 w-4" />
+								{formData.origen === AEROPUERTO ? "Origen: Aeropuerto" : formData.destino === AEROPUERTO ? "Destino: Aeropuerto" : "Ruta personalizada"}
+							</div>
+
+							<div className="grid grid-cols-1 gap-4">
+								{/* Selector de Destino (Solo si el origen es Aeropuerto) */}
+								{formData.origen === AEROPUERTO && (
+									<div className="space-y-2">
+										<Label htmlFor="destino" className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Destino</Label>
+										<select
+											id="destino"
+											name="destino"
+											value={formData.destino}
+											onChange={handleInputChange}
+											className="h-12 md:h-10 border border-slate-300 rounded-lg px-3 w-full text-lg font-medium bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
+										>
+											<option value="">Selecciona destino...</option>
+											{destinosFiltrados.filter(d => d !== OPCION_OTRO).map((d) => <option key={d} value={d}>{d}</option>)}
+											<option value={OPCION_OTRO}>Otro (Especificar)</option>
+										</select>
+										{formData.destino === OPCION_OTRO && (
+											<Input id="otroDestino" name="otroDestino" value={formData.otroDestino} onChange={handleInputChange} placeholder="¿A dónde vamos?" className="mt-2 h-12 md:h-10 text-base" />
+										)}
+									</div>
+								)}
+
+								{/* Selector de Origen (Solo si el destino es Aeropuerto) */}
+								{formData.destino === AEROPUERTO && (
+									<div className="space-y-2">
+										<Label htmlFor="origen" className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Origen</Label>
+										<select
+											id="origen"
+											name="origen"
+											value={formData.origen}
+											onChange={handleInputChange}
+											className="h-12 md:h-10 border border-slate-300 rounded-lg px-3 w-full text-lg font-medium bg-white shadow-sm focus:ring-2 focus:ring-blue-500"
+										>
+											<option value="">Selecciona origen...</option>
+											{origenes.filter(o => o !== AEROPUERTO && o !== OPCION_OTRO).map((o) => <option key={o} value={o}>{o}</option>)}
+											<option value={OPCION_OTRO}>Otro (Especificar)</option>
+										</select>
+										{formData.origen === OPCION_OTRO && (
+											<Input id="otroOrigen" name="otroOrigen" value={formData.otroOrigen} onChange={handleInputChange} placeholder="¿Desde dónde salimos?" className="mt-2 h-12 md:h-10 text-base" />
+										)}
+									</div>
+								)}
+
+								{/* Fallback por si acaso no hay aeropuerto en ninguno (ruta custom) */}
+								{formData.origen !== AEROPUERTO && formData.destino !== AEROPUERTO && (
+									<div className="grid grid-cols-2 gap-4">
+										<div className="space-y-2">
+											<Label htmlFor="origen">Origen</Label>
+											<select id="origen" name="origen" value={formData.origen} onChange={handleInputChange} className="w-full border p-2 rounded bg-white">
+												{origenes.map(o => <option key={o} value={o}>{o}</option>)}
+											</select>
+										</div>
+										<div className="space-y-2">
+											<Label htmlFor="destino">Destino</Label>
+											<select id="destino" name="destino" value={formData.destino} onChange={handleInputChange} className="w-full border p-2 rounded bg-white">
+												{destinosFiltrados.map(d => <option key={d} value={d}>{d}</option>)}
+											</select>
+										</div>
+									</div>
 								)}
 							</div>
-							{/* Destino */}
-							<div className="space-y-2">
-								<Label htmlFor="destino" className="text-base">Destino</Label>
-								<select id="destino" name="destino" value={formData.destino} onChange={handleInputChange} className="h-12 md:h-10 border rounded px-3 w-full text-base">
-									{destinosFiltrados.map((d) => <option key={d} value={d}>{d}</option>)}
-								</select>
-								{formData.destino === OPCION_OTRO && (
-									<Input id="otroDestino" name="otroDestino" value={formData.otroDestino} onChange={handleInputChange} placeholder="Especifica el destino" className="h-12 md:h-10 text-base" />
-								)}
-							</div>
+						</div>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							{/* Duración (si origen o destino es Otro) */}
 							{(formData.origen === OPCION_OTRO || formData.destino === OPCION_OTRO) && (
 								<div className="space-y-2 md:col-span-2">
@@ -1013,8 +1109,12 @@ function AdminCodigosPago() {
 			<Dialog open={!!codigoEditando} onOpenChange={(open) => { if (!open) setCodigoEditando(null); }}>
 				<DialogContent className="w-[95vw] md:max-w-md">
 					<DialogHeader>
-						<DialogTitle>Editar {codigoEditando?.codigo}</DialogTitle>
-						<DialogDescription>Modifica el monto, vencimiento, usos máximos u observaciones del código.</DialogDescription>
+						<DialogTitle>{codigoEditando?.estado === 'cancelado' ? `Reactivar código ${codigoEditando?.codigo}` : `Editar ${codigoEditando?.codigo}`}</DialogTitle>
+						<DialogDescription>
+							{codigoEditando?.estado === 'cancelado' 
+								? "Para reactivar este código, ajusta su vencimiento a una fecha futura y pulsa Guardar."
+								: "Modifica el monto, vencimiento, usos máximos u observaciones del código."}
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-2">
 						<div className="space-y-2">

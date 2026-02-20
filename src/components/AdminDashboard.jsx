@@ -22,6 +22,7 @@ import AdminBloqueosAgenda from "./AdminBloqueosAgenda";
 import AdminUsuarios from "./AdminUsuarios";
 import AdminPerfil from "./AdminPerfil";
 import AdminConfiguracion from "./AdminConfiguracion";
+import { Toaster } from "./ui/sonner";
 
 /**
  * Panel de Administración Principal
@@ -67,6 +68,7 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      <Toaster position="top-right" richColors />
       {/* Sidebar de navegación */}
       <AdminSidebar 
         activePanel={active}
