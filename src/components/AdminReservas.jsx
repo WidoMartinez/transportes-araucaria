@@ -4005,13 +4005,9 @@ function AdminReservas() {
 													{transacciones.map((trans) => (
 														<tr key={trans.id} className="hover:bg-gray-50">
 															<td className="px-4 py-2">
-																{new Date(trans.createdAt).toLocaleString('es-CL', {
-																	day: '2-digit',
-																	month: '2-digit',
-																	year: 'numeric',
-																	hour: '2-digit',
-																	minute: '2-digit'
-																})}
+																{trans.createdAt
+																	? (() => { try { const d = new Date(trans.createdAt); return isNaN(d.getTime()) ? "-" : d.toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch { return "-"; } })()
+																	: "-"}
 															</td>
 															<td className="px-4 py-2 font-medium">
 																{formatCurrency(trans.monto)}
@@ -4101,7 +4097,9 @@ function AdminReservas() {
 														)}
 													</span>
 													<span className="text-muted-foreground">
-														{new Date(h.created_at).toLocaleString("es-CL")}
+														{h.created_at
+															? (() => { try { const d = new Date(h.created_at); return isNaN(d.getTime()) ? "-" : d.toLocaleString("es-CL"); } catch { return "-"; } })()
+															: "-"}
 													</span>
 												</div>
 											</div>

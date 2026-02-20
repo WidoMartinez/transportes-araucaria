@@ -732,9 +732,11 @@ try {
       telefono,
       origen: oportunidad.origen,
       destino: oportunidad.destino,
-      // Dirección: si es hacia aeropuerto, la dirección es de origen. Si es desde aeropuerto, es de destino.
-      direccionOrigen: oportunidad.origen === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : direccion,
-      direccionDestino: oportunidad.destino === "Aeropuerto La Araucanía" ? "Aeropuerto La Araucanía" : direccion,
+      // Dirección: basarse en el tipo de oportunidad para asignar correctamente.
+      // retorno_vacio: el vehículo regresa desde el destino → el cliente se sube en el "origen" (dirección específica es de origen).
+      // ida_vacia: el vehículo va hacia el destino del cliente → el cliente se baja en el "destino" (dirección específica es de destino).
+      direccionOrigen: oportunidad.tipo === "retorno_vacio" ? direccion : (oportunidad.origen || ""),
+      direccionDestino: oportunidad.tipo === "ida_vacia" ? direccion : (oportunidad.destino || ""),
       fecha: oportunidad.fecha,
       hora: horaSalida, // Usar la hora de salida solicitada por el cliente
       pasajeros: parseInt(pasajeros),

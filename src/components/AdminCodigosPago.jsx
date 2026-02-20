@@ -181,9 +181,8 @@ function AdminCodigosPago() {
 		[destinosOpciones]
 	);
 	const destinosFiltrados = useMemo(() => {
-		return destinos.filter(
-			(d) => d === "Aeropuerto La Araucanía" || d !== formData.origen
-		);
+		// Excluir siempre el valor actual de origen para evitar origen === destino
+		return destinos.filter((d) => d !== formData.origen);
 	}, [destinos, formData.origen]);
 	const formatCurrency = (value) =>
 		new Intl.NumberFormat("es-CL", {
@@ -276,27 +275,33 @@ function AdminCodigosPago() {
 		let nuevoForm = { ...formData };
 		if (name === "origen") {
 			nuevoForm.origen = type === "checkbox" ? checked : value;
-			// Si el origen es Aeropuerto, destino se fuerza a cualquier destino distinto de Aeropuerto
 			if (value === "Aeropuerto La Araucanía") {
-				// Si el origen pasa a ser Aeropuerto y el destino ya era Aeropuerto, limpiar destino
+				// Origen = Aeropuerto: si el destino también era aeropuerto, cambiar destino al primer destino base
 				if (formData.destino === "Aeropuerto La Araucanía") {
-					nuevoForm.destino = "";
+					nuevoForm.destino = destinosOpciones[0] || "Temuco";
 				}
-			} else if (value !== "Otro") {
-				// Si el origen es cualquier destino (no aeropuerto ni otro), el destino suele ser Aeropuerto
+			} else if (value === "Otro") {
+				// Origen = Otro: fijar destino a Aeropuerto para garantizar un destino válido
+				nuevoForm.destino = "Aeropuerto La Araucanía";
+			} else {
+				// Origen = destino conocido: el destino lógico es el aeropuerto
 				nuevoForm.destino = "Aeropuerto La Araucanía";
 			}
 		} else if (name === "destino") {
 			nuevoForm.destino = type === "checkbox" ? checked : value;
-			// Restricción: No ambos Aeropuerto
 			if (value === "Aeropuerto La Araucanía") {
-				// Si el destino pasa a ser Aeropuerto y el origen ya era Aeropuerto, limpiar origen
+				// Destino = Aeropuerto: si el origen también era aeropuerto, cambiar origen al primer destino base
 				if (formData.origen === "Aeropuerto La Araucanía") {
-					nuevoForm.origen = "";
+					nuevoForm.origen = destinosOpciones[0] || "Temuco";
 				}
-			} else if (value !== "Otro") {
-				// Si el destino es cualquier destino (no aeropuerto ni otro), el origen suele ser Aeropuerto
+			} else if (value === "Otro") {
+				// Destino = Otro: fijar origen a Aeropuerto para garantizar un origen válido
 				nuevoForm.origen = "Aeropuerto La Araucanía";
+			} else {
+				// Destino = destino conocido: si coincide con el origen, cambiar origen a Aeropuerto
+				if (formData.origen === value) {
+					nuevoForm.origen = "Aeropuerto La Araucanía";
+				}
 			}
 		} else {
 			nuevoForm[name] = type === "checkbox" ? checked : value;
@@ -304,13 +309,26 @@ function AdminCodigosPago() {
 		setFormData(nuevoForm);
 	};
 
-	// Efecto para establecer fecha de vencimiento por defecto al abrir el modal
+	// Efecto para establecer valores por defecto al abrir el modal
 	useEffect(() => {
-		if (showCrearDialog && !formData.fechaVencimiento) {
-			const fechaStr = obtenerFechaLocal(VEINTICUATRO_HORAS); // 24 horas por defecto
-			setFormData((prev) => ({ ...prev, fechaVencimiento: fechaStr }));
+		if (showCrearDialog) {
+			setFormData((prev) => {
+				const updates = {};
+				// Fecha de vencimiento por defecto: 24 horas
+				if (!prev.fechaVencimiento) {
+					updates.fechaVencimiento = obtenerFechaLocal(VEINTICUATRO_HORAS);
+				}
+				// Destino por defecto: asegurar que sea distinto al origen
+				if (!prev.destino || prev.destino === prev.origen) {
+					// Si el origen es Aeropuerto → primer destino base; de lo contrario → Aeropuerto
+					updates.destino = prev.origen === AEROPUERTO
+						? (destinosOpciones[0] || "Temuco")
+						: AEROPUERTO;
+				}
+				return Object.keys(updates).length ? { ...prev, ...updates } : prev;
+			});
 		}
-	}, [showCrearDialog, formData.fechaVencimiento]);
+	}, [showCrearDialog, destinosOpciones]);
 
 	const generarCodigoLocal = () => {
 		const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/1/O/I
