@@ -4326,6 +4326,70 @@ app.put("/api/codigos-pago/:codigo/usar", async (req, res) => {
 	}
 });
 
+// Editar un código de pago (Admin) - cambia monto, vencimiento y observaciones
+app.put("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
+	try {
+		const codigo = String(req.params.codigo || "").trim().toUpperCase();
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res.status(404).json({ success: false, message: "Código de pago no encontrado" });
+		}
+		if (registro.estado === "usado") {
+			return res.status(400).json({ success: false, message: "No se puede editar un código ya usado" });
+		}
+		const body = req.body || {};
+		const updates = {};
+		if (body.monto !== undefined) {
+			const monto = parseFloat(body.monto);
+			if (!isFinite(monto) || monto <= 0) {
+				return res.status(400).json({ success: false, message: "El monto debe ser mayor a 0" });
+			}
+			updates.monto = monto;
+		}
+		if (body.fechaVencimiento !== undefined) {
+			updates.fechaVencimiento = body.fechaVencimiento ? new Date(body.fechaVencimiento) : null;
+			// Si se extiende la fecha, reactivar si estaba vencido
+			if (updates.fechaVencimiento && updates.fechaVencimiento > new Date() && registro.estado === "vencido") {
+				updates.estado = "activo";
+			}
+		}
+		if (body.observaciones !== undefined) {
+			updates.observaciones = String(body.observaciones || "").trim();
+		}
+		if (body.usosMaximos !== undefined) {
+			const usosMaximos = parseInt(body.usosMaximos, 10);
+			if (isFinite(usosMaximos) && usosMaximos >= 1) {
+				updates.usosMaximos = usosMaximos;
+			}
+		}
+		await registro.update(updates);
+		const actualizado = await CodigoPago.findOne({ where: { codigo } });
+		return res.json({ success: true, codigoPago: actualizado });
+	} catch (error) {
+		console.error("Error editando código de pago:", error);
+		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
+// Cancelar un código de pago sin eliminarlo (Admin)
+app.put("/api/codigos-pago/:codigo/cancelar", authAdmin, async (req, res) => {
+	try {
+		const codigo = String(req.params.codigo || "").trim().toUpperCase();
+		const registro = await CodigoPago.findOne({ where: { codigo } });
+		if (!registro) {
+			return res.status(404).json({ success: false, message: "Código de pago no encontrado" });
+		}
+		if (registro.estado === "usado") {
+			return res.status(400).json({ success: false, message: "No se puede cancelar un código ya usado" });
+		}
+		await registro.update({ estado: "cancelado" });
+		return res.json({ success: true, message: "Código cancelado correctamente" });
+	} catch (error) {
+		console.error("Error cancelando código de pago:", error);
+		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
 // Eliminar un código de pago (Admin)
 app.delete("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
 	try {
