@@ -132,12 +132,31 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 				}
 				
 				console.log("📊 Disparando conversión de respaldo en CompletarDetalles con valor:", value);
-				window.gtag('event', 'conversion', {
+				
+				const conversionPayload = {
 					'send_to': 'AW-17529712870/yZz-CJqiicUbEObh6KZB',
 					'value': value,
 					'currency': 'CLP',
 					'transaction_id': reservaId.toString()
-				});
+				};
+				
+				// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data'
+				if (reserva) {
+					const ud = {};
+					if (reserva.email) ud.email = reserva.email.toLowerCase().trim();
+					if (reserva.telefono) ud.phone_number = reserva.telefono.replace(/\s+/g, '').startsWith('+') ? reserva.telefono.replace(/\s+/g,'') : `+56${reserva.telefono.replace(/^0|^56|\s+/g,'').replace(/[^0-9]/g,'')}`;
+					if (reserva.nombre) {
+						const parts = reserva.nombre.trim().split(' ');
+						ud.address = {
+							first_name: (parts[0] || '').toLowerCase(),
+							last_name: (parts.slice(1).join(' ') || '').toLowerCase(),
+							country: 'CL'
+						};
+					}
+					if (Object.keys(ud).length > 0) conversionPayload.user_data = ud;
+				}
+				
+				window.gtag('event', 'conversion', conversionPayload);
 				sessionStorage.setItem(conversionKey, 'true');
 			}
 		}

@@ -127,6 +127,14 @@ function ConsultarReserva() {
 			const data = await resp.json();
 			if (!data.url)
 				throw new Error("Respuesta inválida del servidor de pagos");
+			// ✅ Lead: registrar intención de pago antes de redirigir a Flow
+			if (typeof window.gtag === "function") {
+				window.gtag("event", "conversion", {
+					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+					value: montoValidado,
+					currency: "CLP",
+				});
+			}
 			window.location.href = data.url;
 		} catch (e) {
 			console.error(`❌ [ConsultarReserva] Error en pago:`, e);

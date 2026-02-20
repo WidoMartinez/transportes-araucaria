@@ -217,6 +217,14 @@ return () => clearInterval(intervalId);
 
         const paymentData = await paymentResponse.json();
         if (paymentData.url) {
+          // ✅ Lead: registrar intención de pago antes de redirigir a Flow
+          if (typeof window.gtag === "function") {
+            window.gtag("event", "conversion", {
+              send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+              value: precioValidado,
+              currency: "CLP",
+            });
+          }
           window.location.href = paymentData.url;
         } else {
           alert("Reserva creada pero no se pudo generar el enlace de pago. Contacta a soporte.");

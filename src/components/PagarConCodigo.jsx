@@ -419,6 +419,15 @@ function PagarConCodigo() {
 			});
 			const pj = await p.json();
 			if (p.ok && pj.url) {
+				// ✅ Lead: registrar intención de pago antes de redirigir a Flow
+				// Si el usuario no completa el pago, Google queda con el Lead; si completa, se suma el Purchase al regresar.
+				if (typeof gtag === "function") {
+					gtag("event", "conversion", {
+						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+						value: montoValidado,
+						currency: "CLP",
+					});
+				}
 				window.location.href = pj.url;
 			} else {
 				throw new Error(pj.message || "No se pudo generar el enlace de pago");
