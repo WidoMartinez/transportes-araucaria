@@ -550,16 +550,20 @@ const [configSillas, setConfigSillas] = useState({
 							transaction_id: transactionId,
 						};
 
-						// Agregar Enhanced Conversions data si existe
-						if (userEmail) conversionData.email = userEmail.toLowerCase().trim();
-						if (userPhone) conversionData.phone_number = normalizePhoneToE164(userPhone);
+						// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data' (formato oficial Google Ads)
+						const userData = {};
+						if (userEmail) userData.email = userEmail.toLowerCase().trim();
+						if (userPhone) userData.phone_number = normalizePhoneToE164(userPhone);
 						if (userName) {
 							const nameParts = userName.trim().split(' ');
-							conversionData.address = {
+							userData.address = {
 								first_name: nameParts[0]?.toLowerCase() || '',
 								last_name: nameParts.slice(1).join(' ')?.toLowerCase() || '',
 								country: 'CL'
 							};
+						}
+						if (Object.keys(userData).length > 0) {
+							conversionData.user_data = userData;
 						}
 
 						console.log(`🚀 [App.jsx] Disparando conversión Google Ads:`, conversionData);
@@ -1747,8 +1751,11 @@ const [configSillas, setConfigSillas] = useState({
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof gtag === "function") {
+				// Lead: valor potencial de la reserva para que Google Ads tenga datos incluso si el usuario no regresa tras pagar
 				gtag("event", "conversion", {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
+					value: Number(totalConDescuento) || Number(cotizacion?.precio) || 0,
+					currency: "CLP",
 				});
 			}
 

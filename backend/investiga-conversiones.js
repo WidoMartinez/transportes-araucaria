@@ -11,12 +11,14 @@ import Reserva from './models/Reserva.js';
 import { Op } from 'sequelize';
 
 async function investigaConversiones() {
-    console.log('--- Investigando reservas del 2026-02-18 ---');
+    const dateFilter = '2026-02-19';
+    console.log(`🔍 Buscando reservas del día: ${dateFilter}`);
     try {
         const reservas = await Reserva.findAll({
             where: {
-                createdAt: {
-                    [Op.between]: ['2026-02-18 00:00:00', '2026-02-18 23:59:59']
+                created_at: {
+                    [Op.gte]: new Date(`${dateFilter}T00:00:00`),
+                    [Op.lte]: new Date(`${dateFilter}T23:59:59`)
                 }
             },
             order: [['createdAt', 'DESC']]

@@ -181,40 +181,35 @@ function FlowReturn() {
 						}
 
 						// Preparar datos de conversión básicos
-						const conversionData = {
-							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
-							value: conversionValue,
-							currency: "CLP",
-							transaction_id: transactionId,
+					const conversionData = {
+						send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
+						value: conversionValue,
+						currency: "CLP",
+						transaction_id: transactionId,
+					};
+
+					// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data' (formato oficial Google Ads)
+					const userData = {};
+					if (userEmail) userData.email = userEmail.toLowerCase().trim();
+					if (userPhone) {
+						const phoneNormalized = normalizePhoneToE164(userPhone);
+						userData.phone_number = phoneNormalized;
+					}
+					if (userName && userName.trim()) {
+						const nameParts = userName.trim().split(' ');
+						userData.address = {
+							first_name: (nameParts[0] || '').toLowerCase(),
+							last_name: (nameParts.slice(1).join(' ') || '').toLowerCase(),
+							country: 'CL'
 						};
+					}
+					if (Object.keys(userData).length > 0) {
+						conversionData.user_data = userData;
+					}	
 
-						// Agregar datos de usuario si están disponibles (Google los hashea automáticamente)
-						if (userEmail) {
-							conversionData.email = userEmail.toLowerCase().trim();
-						}
-
-						if (userPhone) {
-							// Normalizar teléfono al formato E.164 (+56...)
-							const phoneNormalized = normalizePhoneToE164(userPhone);
-							conversionData.phone_number = phoneNormalized;
-						}
-
-						if (userName && userName.trim()) {
-							// Separar nombre completo en first_name y last_name
-							const nameParts = userName.trim().split(' ');
-							const firstName = nameParts[0] || '';
-							const lastName = nameParts.slice(1).join(' ') || '';
-							
-							conversionData.address = {
-								first_name: firstName.toLowerCase(),
-								last_name: lastName.toLowerCase(),
-								country: 'CL' // Chile
-							};
-						}
-
-						console.log(`🚀 [FlowReturn] Disparando conversión Google Ads:`, conversionData);
-						window.gtag("event", "conversion", conversionData);
-						sessionStorage.setItem(conversionKey, 'true');
+					console.log(`🚀 [FlowReturn] Disparando conversión Google Ads:`, conversionData);
+					window.gtag("event", "conversion", conversionData);
+					sessionStorage.setItem(conversionKey, 'true');
 						
 					} else {
 						console.log("ℹ️ [FlowReturn] Conversión ya registrada para esta sesión:", transactionId);
