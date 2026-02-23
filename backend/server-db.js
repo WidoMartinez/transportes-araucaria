@@ -5688,22 +5688,58 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
         );
         await transaction.commit();
 
-        // Enviar notificación por correo al cliente si se solicitó
+        // ====================================================================
+        // LÓGICA DE NOTIFICACIONES
+        // ====================================================================
+        // Regla simple: SIEMPRE notificar por el tramo que se está asignando.
+        // Si el tramo asignado es VUELTA (tramoPadreId), se adjunta contexto de
+        // la IDA al correo del conductor para dar más información, pero no se
+        // suprime ni retrasa ninguna notificación.
+        // ====================================================================
+
+        const esTramoVuelta = Boolean(reserva.tramoPadreId); // VUELTA de ida-vuelta
+
+        // Obtener datos del tramo IDA si éste es un tramo VUELTA (para más contexto)
+        let reservaIda = null;
+        let conductorIda = null;
+        let vehiculoIdaStr = null;
+
+        if (esTramoVuelta) {
+            try {
+                reservaIda = await Reserva.findByPk(reserva.tramoPadreId);
+                if (reservaIda && reservaIda.conductorId) {
+                    conductorIda = await Conductor.findByPk(reservaIda.conductorId);
+                }
+                if (reservaIda && reservaIda.vehiculoId) {
+                    const vehiculoIda = await Vehiculo.findByPk(reservaIda.vehiculoId);
+                    vehiculoIdaStr = vehiculoIda
+                        ? `${vehiculoIda.tipo} (patente ${vehiculoIda.patente})`
+                        : (reservaIda.vehiculo || null);
+                } else {
+                    vehiculoIdaStr = reservaIda ? (reservaIda.vehiculo || null) : null;
+                }
+            } catch (err) {
+                console.warn("⚠️ No se pudo obtener datos del tramo IDA:", err.message);
+            }
+        }
+
+        // -------------------------------------------------------------------
+        // Notificación al PASAJERO
+        // -------------------------------------------------------------------
+        // Siempre se envía por el tramo actual.
+        // Si es VUELTA e incluimos tamoVuelta en el payload → el PHP mostrará
+        // ambos tramos en el correo (para que el pasajero tenga todo el contexto).
+        // -------------------------------------------------------------------
         if (sendEmail) {
             try {
-                // Preparar datos para el correo usando el script específico de asignación
-                // Asumimos que el script está en la raíz pública o accesible vía URL
                 const phpUrl = process.env.PHP_ASSIGNMENT_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
-                
-                // Extraer patente (últimos 4 caracteres) y tipo para el formato del correo
                 const last4Patente = vehiculo.patente ? vehiculo.patente.slice(-4) : "";
-                
-                // Payload específico para enviar_asignacion_reserva.php
+
                 const emailPayload = {
                     email: reserva.email,
                     nombre: reserva.nombre,
                     codigoReserva: reserva.codigoReserva,
-                    vehiculo: vehiculoStr, // String completo para fallback
+                    vehiculo: vehiculoStr,
                     vehiculoTipo: vehiculo.tipo,
                     vehiculoPatenteLast4: last4Patente,
                     origen: reserva.origen,
@@ -5713,35 +5749,51 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     pasajeros: reserva.pasajeros,
                     upgradeVan: reserva.upgradeVan,
                     conductorNombre: conductor ? conductor.nombre : "",
-                    estadoPago: reserva.estadoPago || "pendiente" // CRÍTICO: El script PHP valida esto
+                    estadoPago: reserva.estadoPago || "pendiente",
                 };
+
+                // Si es VUELTA y ya existe la IDA asignada, incluir datos de la IDA
+                // para que el correo de vuelta muestre el contexto completo de ambos tramos.
+                if (esTramoVuelta && reservaIda) {
+                    emailPayload.esTramoVuelta = true; // indica que este correo es del tramo vuelta
+                    emailPayload.tramoIda = {
+                        origen: reservaIda.origen,
+                        destino: reservaIda.destino,
+                        fecha: reservaIda.fecha,
+                        hora: reservaIda.hora,
+                        vehiculo: vehiculoIdaStr || reservaIda.vehiculo || "",
+                        conductorNombre: conductorIda ? conductorIda.nombre : "",
+                    };
+                }
 
                 await axios.post(phpUrl, emailPayload, {
                     headers: { "Content-Type": "application/json" },
                     timeout: 10000
                 });
-                
-                console.log(`📧 Notificación de asignación enviada al cliente para reserva ${reserva.codigoReserva}`);
+
+                const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
+                console.log(`📧 Notificación [${tipoTramo}] enviada al cliente para reserva ${reserva.codigoReserva}`);
             } catch (emailError) {
                 console.error("❌ Error enviando notificación al cliente:", emailError.message);
-                // No fallamos la request si el email falla
             }
         }
 
-        // Enviar notificación al conductor si tiene email y el flag está activado
+        // -------------------------------------------------------------------
+        // Notificación al CONDUCTOR
+        // -------------------------------------------------------------------
+        // Siempre se notifica al conductor del tramo actual.
+        // Si es VUELTA y el conductor es el MISMO que la IDA, incluimos el
+        // contexto de la IDA en el correo para que sepa que tiene ambos viajes.
+        // -------------------------------------------------------------------
         if (sendEmailDriver && conductor && conductor.email) {
             try {
                 const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
-                
-                // Lógica de Dirección Inteligente (Smart Address) para evitar enviar el aeropuerto
-                // Prioridad: 1. Hotel (Google Maps) > 2. Punto específico de origen/destino (No Aeropuerto)
-                const origenEsAeropuerto = (reserva.origen || "").toLowerCase().includes("aeropuerto");
-                const smartAddress = reserva.hotel || 
-                    (origenEsAeropuerto 
-                        ? (reserva.direccionDestino || reserva.destino) 
-                        : (reserva.direccionOrigen || reserva.origen));
 
-                let calendarLocation = smartAddress;
+                const origenEsAeropuerto = (reserva.origen || "").toLowerCase().includes("aeropuerto");
+                const smartAddress = reserva.hotel ||
+                    (origenEsAeropuerto
+                        ? (reserva.direccionDestino || reserva.destino)
+                        : (reserva.direccionOrigen || reserva.origen));
 
                 const conductorPayload = {
                     conductorEmail: conductor.email,
@@ -5749,10 +5801,10 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     codigoReserva: reserva.codigoReserva,
                     pasajeroNombre: reserva.nombre,
                     pasajeroTelefono: reserva.telefono,
-                    origen: reserva.origen, // Referencia general
-                    destino: reserva.destino, // Referencia general
-                    direccionEspecifica: smartAddress, // LA ÚNICA dirección específica
-                    calendarLocation: smartAddress, // Consistente para el archivo ICS
+                    origen: reserva.origen,
+                    destino: reserva.destino,
+                    direccionEspecifica: smartAddress,
+                    calendarLocation: smartAddress,
                     fecha: reserva.fecha,
                     hora: reserva.hora,
                     pasajeros: reserva.pasajeros,
@@ -5763,12 +5815,32 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     hotel: reserva.hotel || ""
                 };
 
+                // Si es VUELTA y el mismo conductor hizo la IDA:
+                // agregar el contexto de la IDA al correo para que el conductor
+                // tenga en un único correo todo el contexto de ambos viajes que realizará.
+                const mismoConductor = esTramoVuelta && conductorIda && conductorIda.id === conductor.id;
+                if (mismoConductor && reservaIda) {
+                    const origenIdaEsAeropuerto = (reservaIda.origen || "").toLowerCase().includes("aeropuerto");
+                    const smartAddressIda = reservaIda.hotel ||
+                        (origenIdaEsAeropuerto
+                            ? (reservaIda.direccionDestino || reservaIda.destino)
+                            : (reservaIda.direccionOrigen || reservaIda.origen));
+
+                    conductorPayload.tramoIda = {
+                        origen: reservaIda.origen,
+                        destino: reservaIda.destino,
+                        fecha: reservaIda.fecha,
+                        hora: reservaIda.hora,
+                        direccionEspecifica: smartAddressIda,
+                        vehiculo: vehiculoIdaStr || reservaIda.vehiculo || vehiculoStr,
+                    };
+                    console.log(`📧 [INFO] Mismo conductor en IDA y VUELTA → incluyendo contexto IDA en correo VUELTA`);
+                }
+
                 console.log("📧 [DEBUG] Enviando Notificación Conductor:", {
                     reservaId: reserva.id,
-                    dbDireccionOrigen: reserva.direccionOrigen,
-                    dbDireccionDestino: reserva.direccionDestino,
-                    dbOrigen: reserva.origen,
-                    dbDestino: reserva.destino,
+                    esTramoVuelta,
+                    mismoConductor: Boolean(mismoConductor),
                     payloadOrigen: conductorPayload.origen,
                     payloadDestino: conductorPayload.destino
                 });
@@ -5778,10 +5850,10 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
                     timeout: 10000
                 });
 
-                console.log(`📧 Notificación enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`);
+                const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
+                console.log(`📧 Notificación [${tipoTramo}] enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`);
             } catch (conductorEmailError) {
                 console.error("❌ Error enviando notificación al conductor:", conductorEmailError.message);
-                // No fallamos la request si el email al conductor falla
             }
         }
 

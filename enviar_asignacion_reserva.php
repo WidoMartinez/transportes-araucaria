@@ -45,28 +45,30 @@ $codigoReserva = $data['codigoReserva'];
 $vehiculo = $data['vehiculo'];
 $vehiculoTipo = $data['vehiculoTipo'] ?? '';
 $vehiculoPatenteLast4 = $data['vehiculoPatenteLast4'] ?? '';
-$origen = $data['origen'] ?? 'No especificado';
-$destino = $data['destino'] ?? 'No especificado';
+$origen = htmlspecialchars($data['origen'] ?? 'No especificado');
+$destino = htmlspecialchars($data['destino'] ?? 'No especificado');
 $fecha = $data['fecha'] ?? '';
 $hora = $data['hora'] ?? '';
 $pasajeros = $data['pasajeros'] ?? '';
 $conductorNombre = $data['conductorNombre'] ?? '';
 $upgradeVan = $data['upgradeVan'] ?? false;
+// Correo enviado para el tramo de VUELTA (incluye contexto tramo IDA)
+$esTramoVuelta = $data['esTramoVuelta'] ?? false;
+$tramoIda = $data['tramoIda'] ?? null;       // Datos de la IDA (si este correo es de la VUELTA)
+// Retrocompatibilidad: campo anterior tramoVuelta / idaVuelta
+$tramoVuelta = $data['tramoVuelta'] ?? null;
 $idaVuelta = $data['idaVuelta'] ?? false;
 $fechaRegreso = $data['fechaRegreso'] ?? '';
 $horaRegreso = $data['horaRegreso'] ?? '';
-// Por privacidad, no mostraremos RUT del conductor en el correo
 
 // Verificar estado de pago - solo enviar correo a clientes que han pagado
 $estadoPago = $data['estadoPago'] ?? 'pendiente';
 $clienteHaPagado = in_array($estadoPago, ['aprobado', 'pagado', 'parcial']);
 
-// Si el cliente NO ha pagado, no enviar correo de asignación
 if (!$clienteHaPagado) {
     echo json_encode([
         'success' => true, 
-        'message' => 'Correo de asignación omitido - cliente sin pago confirmado',
-        'razón' => 'El cliente no ha completado el pago del servicio'
+        'message' => 'Correo de asignación omitido - cliente sin pago confirmado'
     ]);
     exit;
 }
@@ -111,16 +113,127 @@ try {
     }
 
     $mail->isHTML(true);
-    $mail->Subject = "🚐 Asignación de Vehículo - Reserva {$codigoReserva}";
 
+    // Determinar si el correo trae contexto de otro tramo
+    $tieneContextoIda = !empty($tramoIda);
+    $tieneContextoVuelta = !empty($tramoVuelta) || ($idaVuelta && $fechaRegreso); // retrocompat
+
+    if ($esTramoVuelta) {
+        $mail->Subject = "🚐 Asignación de Vuelta Confirmada - Reserva {$codigoReserva}";
+        $tituloSeccionActual = "🔄 Viaje de Vuelta";
+    } elseif ($tieneContextoVuelta) {
+        // Retrocompatibilidad: correo enviado cuando se asigna la vuelta en el modelo anterior
+        $mail->Subject = "🚐 Asignación de Vehículo (Ida y Vuelta) - Reserva {$codigoReserva}";
+        $tituloSeccionActual = "✈️ Viaje de Ida";
+    } else {
+        $mail->Subject = "🚐 Asignación de Vehículo - Reserva {$codigoReserva}";
+        $tituloSeccionActual = "Detalles de tu Viaje";
+    }
+
+    // HTML conductor del tramo actual
     $conductorHtml = '';
     if ($conductorNombre) {
         $conductorHtml = "
             <tr>
                 <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Conductor:</strong></td>
-                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$conductorNombre}</td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>" . htmlspecialchars($conductorNombre) . "</td>
             </tr>";
     }
+
+    // --- Bloque HTML del tramo IDA (contexto, cuando el correo es de VUELTA) ---
+    $tramoPrevioHtml = '';
+    if ($tieneContextoIda) {
+        $idaOrigen    = htmlspecialchars($tramoIda['origen'] ?? 'No especificado');
+        $idaDestino   = htmlspecialchars($tramoIda['destino'] ?? 'No especificado');
+        $idaFecha     = htmlspecialchars($tramoIda['fecha'] ?? '');
+        $idaHora      = htmlspecialchars($tramoIda['hora'] ?? '');
+        $idaVehiculo  = htmlspecialchars($tramoIda['vehiculo'] ?? '');
+        $idaConductor = htmlspecialchars($tramoIda['conductorNombre'] ?? '');
+        $idaConductorHtml = $idaConductor
+            ? "<tr><td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Conductor:</strong></td>
+               <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$idaConductor}</td></tr>"
+            : '';
+
+        $tramoPrevioHtml = "
+        <h2 style='color:#0f172a;font-size:18px;margin:0 0 12px 0;border-bottom:2px solid #e5e7eb;padding-bottom:8px'>
+            ✈️ Viaje de Ida (ya confirmado)
+        </h2>
+        <table style='width:100%;border-collapse:collapse;margin-bottom:20px;opacity:0.85'>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Ruta:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$idaOrigen} → {$idaDestino}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Fecha:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$idaFecha}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Hora:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$idaHora}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Vehículo:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$idaVehiculo}</td>
+            </tr>
+            {$idaConductorHtml}
+        </table>
+        <hr style='border:none;border-top:2px solid #7c3aed;margin:16px 0'>
+        ";
+    }
+
+    // --- Bloque HTML del tramo VUELTA (retrocompat: cuando se envía desde la IDA en el formato anterior) ---
+    $tramoSecundarioHtml = '';
+    if (!empty($tramoVuelta)) {
+        $vtOrigen    = htmlspecialchars($tramoVuelta['origen'] ?? 'No especificado');
+        $vtDestino   = htmlspecialchars($tramoVuelta['destino'] ?? 'No especificado');
+        $vtFecha     = htmlspecialchars($tramoVuelta['fecha'] ?? '');
+        $vtHora      = htmlspecialchars($tramoVuelta['hora'] ?? '');
+        $vtVehiculo  = htmlspecialchars($tramoVuelta['vehiculo'] ?? $vehiculo);
+        $vtConductor = htmlspecialchars($tramoVuelta['conductorNombre'] ?? '');
+        $vtConductorHtml = $vtConductor
+            ? "<tr><td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Conductor:</strong></td>
+               <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vtConductor}</td></tr>"
+            : '';
+
+        $tramoSecundarioHtml = "
+        <h2 style='color:#0f172a;font-size:18px;margin:24px 0 12px 0;border-bottom:2px solid #7c3aed;padding-bottom:8px'>
+            🔄 Viaje de Vuelta
+        </h2>
+        <table style='width:100%;border-collapse:collapse;margin-bottom:16px'>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Ruta:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vtOrigen} → {$vtDestino}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Fecha:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vtFecha}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Hora:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vtHora}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Vehículo:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vtVehiculo}</td>
+            </tr>
+            {$vtConductorHtml}
+        </table>";
+    } elseif ($idaVuelta && $fechaRegreso) {
+        // Retrocompatibilidad: fechaRegreso/horaRegreso
+        $tramoSecundarioHtml = "
+        <h2 style='color:#0f172a;font-size:18px;margin:24px 0 12px 0;border-bottom:2px solid #7c3aed;padding-bottom:8px'>
+            🔄 Viaje de Vuelta
+        </h2>
+        <table style='width:100%;border-collapse:collapse;margin-bottom:16px'>
+            <tr>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Fecha Regreso:</strong></td>
+                <td style='padding:8px 0;border-bottom:1px solid #eee;color:#7c3aed;font-weight:600'>🔄 {$fechaRegreso} a las {$horaRegreso}</td>
+            </tr>
+        </table>";
+    }
+
+    $vehiculoDisplay = (!empty($vehiculoTipo) ? $vehiculoTipo : (explode(' ', trim($vehiculo))[0] ?? $vehiculo))
+        . (!empty($vehiculoPatenteLast4) ? " <span style='color:#6b7280'>(patente •••{$vehiculoPatenteLast4})</span>" : "");
 
     $mail->Body = "
     <!DOCTYPE html>
@@ -138,7 +251,10 @@ try {
                 <div style='background-color:#eff6ff;border-left:4px solid #3b82f6;padding:12px 16px;margin-bottom:20px;border-radius:4px;color:#1e40af'>
                     Estimad@ <strong>{$nombre}</strong>, tu traslado ha sido programado con el siguiente vehículo.
                 </div>
-                <h2 style='color:#0f172a;font-size:18px;margin:0 0 12px 0;border-bottom:2px solid #e5e7eb;padding-bottom:8px'>Detalles de tu Viaje</h2>
+                {$tramoPrevioHtml}
+                <h2 style='color:#0f172a;font-size:18px;margin:0 0 12px 0;border-bottom:2px solid #e5e7eb;padding-bottom:8px'>
+                    {$tituloSeccionActual}
+                </h2>
                 <table style='width:100%;border-collapse:collapse;margin-bottom:16px'>
                     <tr>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Ruta:</strong></td>
@@ -158,39 +274,27 @@ try {
                     </tr>
                     <tr>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Vehículo:</strong></td>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>"
-                        . (!empty($vehiculoTipo) ? $vehiculoTipo : (explode(' ', trim($vehiculo))[0] ?? $vehiculo))
-                        . (!empty($vehiculoPatenteLast4) ? " <span style='color:#6b7280'>(patente •••{$vehiculoPatenteLast4})</span>" : "") .
-                        "</td>
+                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#111827'>{$vehiculoDisplay}</td>
                     </tr>
                     " . ($upgradeVan ? "
                     <tr>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280'><strong>Premium:</strong></td>
                         <td style='padding:8px 0;border-bottom:1px solid #eee;color:#7c2d12;font-weight:bold'>✨ Upgrade a Van</td>
                     </tr>" : "") . "
-                    " . ($idaVuelta && $fechaRegreso ? "
-                    <tr>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#6b7280;width:40%'><strong>Regreso:</strong></td>
-                        <td style='padding:8px 0;border-bottom:1px solid #eee;color:#7c3aed;font-weight:600'>🔄 {$fechaRegreso} a las {$horaRegreso}</td>
-                    </tr>" : "") . "
                     {$conductorHtml}
                 </table>
+                {$tramoSecundarioHtml}
                 <p style='color:#374151;font-size:14px'>
                     Si necesitas actualizar algún detalle (número de vuelo, hotel, etc.), responde a este correo.
                 </p>
-                <!-- Contacto -->
                 <div style='background-color:#f9fafb;padding:16px;border-radius:4px;text-align:center;margin-top:20px'>
-                    <p style='margin:0 0 8px 0;color:#6b7280;font-size:13px'>
-                        ¿Necesitas ayuda? Contáctanos:
-                    </p>
+                    <p style='margin:0 0 8px 0;color:#6b7280;font-size:13px'>¿Necesitas ayuda? Contáctanos:</p>
                     <p style='margin:0;color:#111827;font-size:14px'>
                         📧 <a href='mailto:contacto@transportesaraucaria.cl' style='color:#3b82f6;text-decoration:none'>contacto@transportesaraucaria.cl</a><br>
                         📱 <a href='tel:+56936643540' style='color:#3b82f6;text-decoration:none'>+56 9 3664 3540</a>
                     </p>
                 </div>
-                <p style='color:#6b7280;font-size:12px;margin-top:16px'>
-                    Gracias por elegir Transportes Araucaria.
-                </p>
+                <p style='color:#6b7280;font-size:12px;margin-top:16px'>Gracias por elegir Transportes Araucaria.</p>
             </div>
         </div>
     </body>
