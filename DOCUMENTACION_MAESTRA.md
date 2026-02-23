@@ -196,9 +196,24 @@ Usa **JWT (JSON Web Tokens)**.
 ### 5.3 Notificaciones vía Email
 El sistema utiliza una arquitectura híbrida:
 1. **Backend Node** recibe la solicitud de envío.
-2. **Backend Node** hace POST a script PHP en Hostinger (`enviar_email_avanzado.php`).
+2. **Backend Node** hace POST a script PHP en Hostinger.
 3. **PHP** utiliza `PHPMailer` autenticado para el envío final.
-*Motivo: Mejor entregabilidad y uso de infraestructura de correo existente en Hostinger.*
+*Archivos Clave*: `enviar_asignacion_reserva.php` (Pasajero) y `enviar_notificacion_conductor.php` (Conductor).
+
+#### 5.3.1 Notificaciones para Reservas de Tramos Vinculados (Ida y Vuelta)
+
+**Implementado: Febrero 2026**
+
+Para mejorar la claridad en reservas de ida y vuelta (donde la reserva se divide en dos registros independientes), se implementó una lógica de notificaciones con contexto:
+
+1.  **Regla de Notificación**: Cada tramo se notifica de forma independiente en el momento de su asignación. Esto permite flexibilidad si no se conocen ambos conductores al mismo tiempo.
+2.  **Contexto en el Correo de Vuelta**:
+    *   Si se asigna el tramo de **VUELTA** y el tramo de **IDA** ya tiene conductor/vehículo asignado, el correo al pasajero incluirá automáticamente una sección de "✈️ Viaje de Ida (ya confirmado)" arriba del viaje actual.
+    *   Esto garantiza que el cliente tenga siempre a mano la información completa del servicio unificado.
+3.  **Notificación al Conductor**:
+    *   Si el **mismo conductor** es asignado a ambos tramos, recibirá un correo unificado con los detalles de la ida y la vuelta.
+    *   El archivo `.ics` (calendario) adjunto contendrá **dos eventos** (ida y vuelta) para facilitar su agendamiento.
+    *   Si son conductores distintos, cada uno recibe su notificación individual por el tramo que le corresponde.
 
 ### 5.4 Integraciones Externas
 - **Google Ads**: Conversiones mejoradas implementadas en flujos de pago.

@@ -267,6 +267,39 @@ node test-split-logic.js
 
 ---
 
+## 1.1. Estrategia de Notificaciones para Tramos Vinculados (Ida y Vuelta)
+
+**Implementado: Febrero 2026**
+
+### Contexto
+Tras separar las reservas en dos tramos (IDA y VUELTA), surgió el reto de cómo notificar al cliente: ¿Dos correos separados o uno unificado?
+
+### Primera Versión (Rígida)
+Inicialmente se intentó postergar la notificación de la IDA hasta que se asignara la VUELTA para enviar un único correo unificado.
+*   **Problema**: En la práctica, a veces se conoce al conductor de la ida días antes que al de la vuelta. Esto bloqueaba la información necesaria para el primer viaje.
+
+### Solución Final (Flexible y con Contexto)
+Se implementó una lógica que siempre notifica el tramo actual pero añade contexto si está disponible.
+
+**Lógica Implementada:**
+1.  **Independencia**: Siempre que se hace clic en "Guardar y Notificar" en un tramo, el sistema envía el correo.
+2.  **Contexto Inteligente (Pasajero)**:
+    *   Si el correo es del tramo **VUELTA**, el sistema busca si la **IDA** ya tiene asignación.
+    *   Si existe la IDA, el correo de vuelta se renderiza con una sección superior que resume el viaje de ida.
+3.  **Eficiencia para el Conductor**:
+    *   Si el **mismo conductor** hace ambos viajes, recibe un único correo unificado con ambos tramos y un `.ics` con 2 eventos.
+    *   Si los conductores son distintos, cada uno recibe su notificación individual del tramo que le corresponde.
+
+**Archivos Clave:**
+- `backend/server-db.js`: Lógica de detección de contexto y armado del payload.
+- `enviar_asignacion_reserva.php`: Renderizado de secciones Ida/Vuelta.
+- `enviar_notificacion_conductor.php`: Renderizado unificado y generación de `.ics` doble.
+
+> [!TIP]
+> Esta estrategia permite que el cliente reciba su confirmación de ida apenas esté lista, y una confirmación de vuelta que "recuerda" y valida todo el servicio completo cuando se asigna el segundo tramo.
+
+---
+
 ## 1.2. Visibilidad y Paginación de Reservas Ida/Vuelta en Admin
 
 **Implementado: 15 Febrero 2026**

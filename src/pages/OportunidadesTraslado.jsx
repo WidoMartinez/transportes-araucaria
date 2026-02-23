@@ -10,8 +10,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "../components/ui/dialog";
+import { ScrollArea } from "../components/ui/scroll-area";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Checkbox } from "../components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -29,11 +31,15 @@ import {
   CheckCircle2,
   Clock,
   ArrowLeft,
+  Calendar,
+  ShieldAlert,
+  Info,
 } from "lucide-react";
 import OportunidadCard from "../components/OportunidadCard";
 import SuscripcionOportunidades from "../components/SuscripcionOportunidades";
 import { getBackendUrl } from "../lib/backend";
 import { validatePaymentAmount } from "../utils/paymentValidation";
+import { TERMINOS_CONDICIONES } from "../data/legal";
 import imagenOportunidades from "../assets/imagenoportunidades.png";
 const vansBg = imagenOportunidades;
 
@@ -61,6 +67,8 @@ const [submittingReserva, setSubmittingReserva] = useState(false);
   });
   const [phoneError, setPhoneError] = useState("");
   const [horaError, setHoraError] = useState("");
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [terminosError, setTerminosError] = useState("");
 
   const cargarOportunidades = async () => {
     try {
@@ -124,6 +132,8 @@ return () => clearInterval(intervalId);
       horaSalida: oportunidad.hora || "",
     });
     setHoraError("");
+    setAceptaTerminos(false);
+    setTerminosError("");
     setModalOpen(true);
   };
 
@@ -139,6 +149,11 @@ return () => clearInterval(intervalId);
   const handleConfirmarReserva = async () => {
     if (!reservaFormData.nombre || !reservaFormData.email || !reservaFormData.telefono || !reservaFormData.direccion || !reservaFormData.horaSalida) {
       alert("Por favor completa todos los campos obligatorios.");
+      return;
+    }
+
+    if (!aceptaTerminos) {
+      setTerminosError("Debes aceptar los términos y condiciones para continuar.");
       return;
     }
 
@@ -517,52 +532,71 @@ onReservar={handleReservar}
 
       {/* Modal de Reserva Expedita */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="bg-chocolate-600 p-8 text-white relative">
-            <DialogTitle className="text-3xl font-bold flex items-center gap-3 text-white">
-              <Sparkles className="h-8 w-8 text-yellow-400 animate-pulse" />
+        <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden rounded-t-2xl sm:rounded-2xl border-none shadow-2xl max-h-[95vh] flex flex-col">
+          <DialogHeader className="bg-chocolate-600 p-4 sm:p-6 text-white relative shrink-0">
+            <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
+              <Sparkles className="h-5 w-5 sm:h-6 sm:h-6 text-yellow-400 animate-pulse" />
               ¡Reserva tu Oferta!
             </DialogTitle>
-            <DialogDescription className="text-chocolate-100 text-lg opacity-90 mt-2">
-              Completa estos datos mínimos para asegurar tu traslado con descuento.
+            <DialogDescription className="text-chocolate-100 text-xs sm:text-base opacity-90 mt-0.5 sm:mt-1">
+              Completa los datos para asegurar tu traslado con descuento.
             </DialogDescription>
-            <div className="absolute -bottom-4 right-8 bg-yellow-400 text-chocolate-900 px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
+            <div className="absolute top-4 sm:top-6 right-10 sm:right-6 bg-yellow-400 text-chocolate-900 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
               {oportunidadSeleccionada && `${Math.round((1 - oportunidadSeleccionada.precioFinal / oportunidadSeleccionada.precioOriginal) * 100)}% DCTO.`}
             </div>
           </DialogHeader>
 
-          <div className="p-8 space-y-6 bg-white overflow-y-auto max-h-[60vh]">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-chocolate-50 p-4 rounded-xl border border-chocolate-100">
-                <p className="text-xs text-chocolate-600 font-bold uppercase tracking-wider mb-1">Viaje</p>
+          <div className="p-4 sm:p-5 space-y-3 bg-white overflow-y-auto max-h-[75vh] sm:max-h-[60vh] flex-grow">
+
+            {/* Resumen de viaje consolidado con fecha y hora */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-chocolate-50 p-3 rounded-xl border border-chocolate-100">
+                <p className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider mb-0.5">Ruta</p>
                 <p className="text-sm font-semibold text-chocolate-900 line-clamp-1">
                   {oportunidadSeleccionada?.origen} → {oportunidadSeleccionada?.destino}
                 </p>
               </div>
-              <div className="bg-chocolate-50 p-4 rounded-xl border border-chocolate-100">
-                <p className="text-xs text-chocolate-600 font-bold uppercase tracking-wider mb-1">Precio</p>
-                <p className="text-lg font-bold text-chocolate-700">
+              <div className="bg-chocolate-50 p-3 rounded-xl border border-chocolate-100">
+                <p className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider mb-0.5">Precio Oferta</p>
+                <p className="text-lg font-bold text-chocolate-700 leading-tight">
                   ${oportunidadSeleccionada?.precioFinal.toLocaleString()}
                 </p>
               </div>
+              {oportunidadSeleccionada?.fecha && (
+                <div className="bg-blue-50 p-3 rounded-xl border border-blue-200 col-span-2 relative">
+                  <p className="text-[10px] text-blue-700 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" /> Fecha y Hora del Servicio
+                  </p>
+                  <p className="text-sm font-bold text-blue-900">
+                    {new Date(`${oportunidadSeleccionada.fecha}T00:00:00`).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
+                    {oportunidadSeleccionada?.hora && ` — ${oportunidadSeleccionada.hora} hrs`}
+                  </p>
+                  <div className="flex items-start gap-1.5 mt-1.5 pt-1.5 border-t border-blue-100">
+                    <ShieldAlert className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-blue-700 font-medium leading-tight">
+                      <strong>Precio exclusivo:</strong> Válido solo para esta fecha y hora.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nombre" className="text-sm font-bold text-gray-700">Tu Nombre Completo</Label>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="nombre" className="text-xs font-bold text-gray-700">Tu Nombre Completo</Label>
                 <Input
                   id="nombre"
                   name="nombre"
                   placeholder="Ej: Juan Pérez"
                   value={reservaFormData.nombre}
                   onChange={handleReservaInputChange}
-                  className="h-12 border-gray-200 focus:ring-chocolate-500 rounded-xl"
+                  className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-bold text-gray-700">Email</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs font-bold text-gray-700">Email</Label>
                   <Input
                     id="email"
                     name="email"
@@ -570,31 +604,31 @@ onReservar={handleReservar}
                     placeholder="tucorreo@ejemplo.com"
                     value={reservaFormData.email}
                     onChange={handleReservaInputChange}
-                    className="h-12 border-gray-200 focus:ring-chocolate-500 rounded-xl"
+                    className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefono" className="text-sm font-bold text-gray-700">Teléfono (WhatsApp)</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="telefono" className="text-xs font-bold text-gray-700">Teléfono (WhatsApp)</Label>
                   <Input
                     id="telefono"
                     name="telefono"
                     placeholder="+56 9 1234 5678"
                     value={reservaFormData.telefono}
                     onChange={handleReservaInputChange}
-                    className={`h-12 border-gray-200 focus:ring-chocolate-500 rounded-xl ${phoneError ? 'border-red-500' : ''}`}
+                    className={`h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm ${phoneError ? 'border-red-500' : ''}`}
                   />
-                  {phoneError && <p className="text-xs text-red-500 font-medium">{phoneError}</p>}
+                  {phoneError && <p className="text-[10px] text-red-500 font-medium">{phoneError}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pasajeros" className="text-sm font-bold text-gray-700">Pasajeros</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pasajeros" className="text-xs font-bold text-gray-700">Pasajeros</Label>
                   <Select
                     value={reservaFormData.pasajeros}
                     onValueChange={(value) => setReservaFormData(prev => ({ ...prev, pasajeros: value }))}
                   >
-                    <SelectTrigger className="h-12 border-gray-200 focus:ring-chocolate-500 rounded-xl">
+                    <SelectTrigger className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm">
                       <SelectValue placeholder="Cuántos son" />
                     </SelectTrigger>
                     <SelectContent>
@@ -606,25 +640,25 @@ onReservar={handleReservar}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="direccion" className="text-sm font-bold text-gray-700">
-                    {oportunidadSeleccionada?.tipo === "retorno_vacio" ? "Dirección de Recogida" : "Dirección de Llegada"}
+                <div className="space-y-1.5">
+                  <Label htmlFor="direccion" className="text-xs font-bold text-gray-700">
+                    {oportunidadSeleccionada?.tipo === "retorno_vacio" ? "Recogida" : "Llegada"}
                   </Label>
                   <Input
                     id="direccion"
                     name="direccion"
-                    placeholder="Hotel, Edificio, etc."
+                    placeholder="Hotel, Calle, etc."
                     value={reservaFormData.direccion}
                     onChange={handleReservaInputChange}
-                    className="h-12 border-gray-200 focus:ring-chocolate-500 rounded-xl"
+                    className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm"
                   />
                 </div>
               </div>
 
               {/* Nueva Fila: Hora de Salida con Validación */}
-              <div className="space-y-2">
-                <Label htmlFor="horaSalida" className="text-sm font-bold text-gray-700">
-                  Hora de Salida Solicitada <span className="text-chocolate-600">(Rango: {
+              <div className="space-y-1.5">
+                <Label htmlFor="horaSalida" className="text-xs font-bold text-gray-700">
+                  Hora de Salida Solicitada <span className="text-chocolate-600 font-medium text-[10px]">(Rango sugerido: {
                     oportunidadSeleccionada?.hora ? (() => {
                       const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
                       const t = h * 60 + m;
@@ -632,12 +666,12 @@ onReservar={handleReservar}
                       const minT = esIda ? Math.max(0, t - 60) : t;
                       const maxT = esIda ? t : t + 60;
                       const format = (tm) => `${Math.floor(tm/60).toString().padStart(2,"0")}:${(tm%60).toString().padStart(2,"0")}`;
-                      return `${format(minT)} - ${format(maxT)}`;
+                      return `${format(minT)}h - ${format(maxT)}h`;
                     })() : "--:--"
                   })</span>
                 </Label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-3.5 h-5 w-5 text-gray-400 z-10" />
+                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 z-10" />
                   <Input
                     id="horaSalida"
                     name="horaSalida"
@@ -647,47 +681,69 @@ onReservar={handleReservar}
                       handleReservaInputChange(e);
                       setHoraError("");
                     }}
-                    className={`h-12 pl-10 border-gray-200 focus:ring-chocolate-500 rounded-xl ${horaError ? 'border-red-500' : ''}`}
-                    min={oportunidadSeleccionada?.tipo === "ida_vacia" ? (() => {
-                      const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
-                      const total = Math.max(0, h * 60 + m - 60);
-                      return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
-                    })() : oportunidadSeleccionada?.hora}
-                    max={oportunidadSeleccionada?.tipo === "ida_vacia" ? oportunidadSeleccionada?.hora : (() => {
-                      const [h, m] = (oportunidadSeleccionada?.hora || "00:00").split(":").map(Number);
-                      const total = h * 60 + m + 60;
-                      return `${Math.floor(total/60).toString().padStart(2,"0")}:${(total%60).toString().padStart(2,"0")}`;
-                    })()}
+                    className={`h-10 pl-9 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm ${horaError ? 'border-red-500' : ''}`}
                   />
                 </div>
-                {horaError ? (
-                  <p className="text-xs text-red-500 font-medium">{horaError}</p>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground italic">
-                    {oportunidadSeleccionada?.tipo === "ida_vacia" 
-                      ? "* Puedes adelantar tu salida hasta 1 hora respecto al horario base."
-                      : "* El vehículo estará disponible desde la hora indicada. Puedes retrasar tu salida hasta 1 hora máximo."}
-                  </p>
+                {horaError && (
+                  <p className="text-[10px] text-red-500 font-medium">{horaError}</p>
                 )}
               </div>
             </div>
           </div>
 
-          <DialogFooter className="p-8 pt-0 bg-white">
+          <DialogFooter className="p-4 sm:p-5 pt-0 bg-white flex flex-col items-stretch space-y-2 sm:flex-col sm:space-x-0 shrink-0">
+            {/* Política de cancelación resumida */}
+            <div className="w-full bg-gray-50 rounded-xl border border-gray-200 p-3">
+              <p className="text-[10px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                <Info className="h-3 w-3 text-gray-500" />
+                Política de Cancelación
+              </p>
+              <ul className="text-[10px] text-gray-600 space-y-0.5">
+                {TERMINOS_CONDICIONES.find(t => t.titulo === "Cambios y Cancelaciones")?.contenido.slice(0, 2).map((item, i) => (
+                  <li key={i} className="flex items-start gap-1">
+                    <span className="text-chocolate-500 shrink-0">•</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Checkbox de consentimiento */}
+            <div className="w-full flex items-start gap-2.5">
+              <Checkbox
+                id="aceptaTerminos"
+                checked={aceptaTerminos}
+                onCheckedChange={(checked) => {
+                  setAceptaTerminos(checked);
+                  if (checked) setTerminosError("");
+                }}
+                className="mt-0.5 h-4 w-4"
+              />
+              <label htmlFor="aceptaTerminos" className="text-[10px] text-gray-600 cursor-pointer leading-tight">
+                Acepto los <strong>Términos y Condiciones</strong> y la política de exclusividad de precio para esta fecha/hora.
+              </label>
+            </div>
+            {terminosError && (
+              <p className="w-full text-[10px] text-red-500 font-medium flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {terminosError}
+              </p>
+            )}
+
             <Button
-              className="w-full h-14 text-xl font-bold bg-chocolate-600 hover:bg-chocolate-700 text-white rounded-2xl shadow-xl transition-all hover:scale-[1.01]"
+              className="w-full h-12 text-lg font-bold bg-chocolate-600 hover:bg-chocolate-700 text-white rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleConfirmarReserva}
-              disabled={submittingReserva}
+              disabled={submittingReserva || !aceptaTerminos}
             >
               {submittingReserva ? (
                 <>
-                  <RefreshCw className="mr-3 h-6 w-6 animate-spin text-white" />
+                  <RefreshCw className="mr-2 h-5 w-5 animate-spin text-white" />
                   Procesando...
                 </>
               ) : (
                 <>
-                  Pagar Ahora ${oportunidadSeleccionada?.precioFinal.toLocaleString()}
-                  <Car className="ml-3 h-6 w-6" />
+                  Pagar ${oportunidadSeleccionada?.precioFinal.toLocaleString()}
+                  <Car className="ml-2 h-5 w-5" />
                 </>
               )}
             </Button>

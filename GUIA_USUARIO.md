@@ -77,6 +77,19 @@ Acceder a la vista de calendario para ver:
 
 **Imprimir**: Click en "Imprimir Planificación" para generar reporte.
 
+### Notificaciones de Ida y Vuelta
+
+**Actualización: Febrero 2026**
+
+Cuando gestionas una reserva que tiene tramos vinculados (Ida y Vuelta), el sistema actúa de la siguiente manera:
+
+1.  **Asignación del Tramo IDA**: Al asignar conductor/vehículo a la ida, se envía el correo normal al pasajero y conductor.
+2.  **Asignación del Tramo VUELTA**: 
+    *   Al asignar el regreso, el sistema detecta que es una vuelta.
+    *   **Pasajero**: Recibe un correo unificado que muestra primero el "Viaje de Ida" (para contexto) y luego el "Viaje de Vuelta".
+    *   **Conductor**: Si es el mismo de la ida, recibe un único correo descriptivo con ambos tramos y un evento de calendario dual.
+3.  **Flexibilidad**: Puedes asignar la ida hoy y la vuelta mañana; el sistema enviará las notificaciones correspondientes en cada momento sin perder el contexto.
+
 ---
 
 ## 3. Configuración del Sistema
