@@ -2546,3 +2546,41 @@ Se añadió un mecanismo para que el administrador solicite los datos faltantes:
 
 > [!TIP]
 > Este sistema reduce la carga operativa de llamar manualmente a cada cliente que olvida completar su dirección tras el pago.
+
+---
+
+## 15. Error Flow 1620 (The userEmail: ... is not valid)
+
+**Implementado: 20 Febrero 2026**
+
+### Problema
+Al intentar generar un pago desde la "Consulta de Reserva" o "Pagar con Código", el sistema arrojaba el error `code: 1620` de Flow, indicando que el email del usuario no es válido.
+
+### Síntomas
+- El usuario pulsa "Pagar" y recibe un mensaje: "Error al generar pago (500) Error al generar el pago con Flow".
+- En los logs del servidor se observa: `Error al crear el pago con Flow: { code: 1620, message: 'The userEmail: ... is not valid.' }`.
+
+### Causa Raíz
+1. **Emails Nulos**: En algunas reservas antiguas o manuales, el campo `email` podía ser `null`. La función de sanitización devolvía un string vacío, el cual Flow rechaza.
+2. **Caracteres Invisibles/Especiales**: Emails capturados con espacios incrustados o caracteres no-ASCII que Flow no procesa correctamente.
+
+### Solución (Febrero 2026)
+
+Se implementó un sistema de **Sanitización y Validación Robusta** antes de enviar cualquier dato a Flow.
+
+#### 1. Backend (`backend/server-db.js`)
+- **Sanitización Previa**: Se utiliza `sanitizarEmailRobusto(email)` que elimina espacios, convierte a minúsculas y quita caracteres no-ASCII.
+- **Validación de Formato**: Se agregó un Regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` para verificar el email *después* de ser sanitizado. 
+- **Filtro de Seguridad**: Si el email es inválido o está vacío, el servidor detiene el proceso y retorna un error `400 Bad Request` con el mensaje: "El email de la reserva no tiene un formato válido. Por favor contacta a soporte". Esto evita llamadas fallidas a la API de Flow.
+- **Log Diagnóstico**: Se agregó un log detallado que muestra la longitud y dominio del email para facilitar el debug de casos específicos.
+
+#### 2. Frontend (`src/components/ConsultarReserva.jsx`)
+- Se mejoró el manejo de errores para capturar y mostrar el mensaje detallado enviado por el servidor (`errData.message`).
+
+### Cómo Verificar
+1. Busca una reserva en "Consultar Reserva".
+2. Si el email es inválido, ahora verás un mensaje claro en lugar de un error genérico 500.
+3. En los logs de Render aparecerá: `❌ [Flow] Email inválido para Flow después de sanitizar`.
+
+> [!IMPORTANT]
+> Esta mejora garantiza que no se pierdan intentos de pago por errores de formato simples y proporciona feedback inmediato al administrador y al cliente.

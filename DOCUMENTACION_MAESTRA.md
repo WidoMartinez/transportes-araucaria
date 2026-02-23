@@ -190,6 +190,8 @@ Usa **JWT (JSON Web Tokens)**.
   - **Vencimiento Inteligente**: Los códigos se marcan automáticamente como "vencido" al expirar.
   - **Feedback Visual**: Contadores de tiempo restante con alertas por colores según urgencia.
   - **Asociación Directa**: Vinculación a reservas existentes para cobro de saldos.
+- **Validación de Datos**:
+  - **Emails**: Se aplica sanitización robusta (vía `sanitizarEmailRobusto`) y validación de formato Regex antes de cualquier interacción con Flow para prevenir el error 1620.
 
 ### 5.3 Notificaciones vía Email
 El sistema utiliza una arquitectura híbrida:
