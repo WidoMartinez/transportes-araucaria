@@ -907,8 +907,7 @@ function AdminReservas() {
 				});
 			}
 		} catch (error) {
-			console.error("Error cargando estadÃ­sticas:", error);
-			// Establecer estadÃ­sticas por defecto en caso de error
+			console.error("Error cargando estadísticas:", error);
 			setEstadisticas({
 				totalReservas: 0,
 				reservasPendientes: 0,
@@ -919,7 +918,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Cargar vehÃ­culos disponibles
+	// Cargar vehículos disponibles
 	const fetchVehiculos = async () => {
 		try {
 			const response = await authenticatedFetch(`/api/vehiculos`);
@@ -928,7 +927,7 @@ function AdminReservas() {
 				setVehiculos(data.vehiculos || []);
 			}
 		} catch (error) {
-			console.error("Error cargando vehÃ­culos:", error);
+			console.error("Error cargando vehículos:", error);
 		}
 	};
 
@@ -945,8 +944,7 @@ function AdminReservas() {
 		}
 	};
 
-	// Abrir diÃ¡logo de asignaciÃ³n
-	// Abrir diÃ¡logo de asignaciÃ³n
+	// Abrir diálogo de asignación
 	const handleAsignar = async (reserva) => {
 		setSelectedReserva(reserva);
 		
@@ -974,6 +972,70 @@ function AdminReservas() {
 				}
 			} catch (error) {
 				console.error("Error cargando reserva de vuelta:", error);
+				setReservaVuelta(null);
+			}
+		} else if (reserva.tramoPadreId) {
+			// Se abrió desde la VUELTA → cargar la IDA como reserva principal del modal
+			// para que la UI siempre muestre IDA arriba y VUELTA abajo.
+			try {
+				const responseIda = await authenticatedFetch(`/api/reservas/${reserva.tramoPadreId}`);
+				if (responseIda.ok) {
+					const reservaIdaData = await responseIda.json();
+					// Intercambiar: la IDA es la principal, la VUELTA (actual) es la secundaria
+					setSelectedReserva(reservaIdaData);
+					reservaVueltaData = reserva; // la reserva original (vuelta) pasa a ser la vuelta
+					setReservaVuelta(reserva);
+					
+					// Verificar mismo conductor/vehículo
+					const mismoConductor = reservaIdaData.conductorId && reservaIdaData.conductorId === reserva.conductorId;
+					const mismoVehiculo = reservaIdaData.vehiculoId && reservaIdaData.vehiculoId === reserva.vehiculoId;
+					setAsignarAmbas(mismoConductor && mismoVehiculo);
+
+					// Pre-cargar selección para IDA (reservaIdaData)
+					let preVehIda = "";
+					if (vehiculos.length > 0 && reservaIdaData.vehiculoId) {
+						const foundIda = vehiculos.find(v => v.id === reservaIdaData.vehiculoId);
+						if (foundIda) {
+							preVehIda = foundIda.id.toString();
+							setAssignedVehiculoId(foundIda.id);
+						}
+					}
+					setVehiculoSeleccionado(preVehIda);
+
+					let preConIda = "none";
+					if (conductores.length > 0 && reservaIdaData.conductorId) {
+						const foundConIda = conductores.find(c => c.id === reservaIdaData.conductorId);
+						if (foundConIda) {
+							preConIda = foundConIda.id.toString();
+							setAssignedConductorId(foundConIda.id);
+						}
+					}
+					setConductorSeleccionado(preConIda);
+
+					// Pre-cargar selección para VUELTA (reserva original)
+					let preVehVuelta = "";
+					if (vehiculos.length > 0 && reserva.vehiculoId) {
+						const foundVuelta = vehiculos.find(v => v.id === reserva.vehiculoId);
+						if (foundVuelta) preVehVuelta = foundVuelta.id.toString();
+					}
+					setVueltaVehiculoSeleccionado(preVehVuelta);
+
+					let preConVuelta = "none";
+					if (conductores.length > 0 && reserva.conductorId) {
+						const foundConVuelta = conductores.find(c => c.id === reserva.conductorId);
+						if (foundConVuelta) preConVuelta = foundConVuelta.id.toString();
+					}
+					setVueltaConductorSeleccionado(preConVuelta);
+
+					setEnviarNotificacion(true);
+					setEnviarNotificacionConductor(true);
+					setShowAsignarDialog(true);
+					if (vehiculos.length === 0) fetchVehiculos();
+					if (conductores.length === 0) fetchConductores();
+					return; // ya procesamos todo, salir temprano
+				}
+			} catch (error) {
+				console.error("Error cargando reserva de ida vinculada:", error);
 				setReservaVuelta(null);
 			}
 		} else {
@@ -1010,6 +1072,14 @@ function AdminReservas() {
 				setAssignedVehiculoId(found.id);
 			}
 		}
+		// Si no encontró por patente, intentar por vehiculoId directo
+		if (!preVeh && vehiculos.length > 0 && reserva.vehiculoId) {
+			const foundById = vehiculos.find(v => v.id === reserva.vehiculoId);
+			if (foundById) {
+				preVeh = foundById.id.toString();
+				setAssignedVehiculoId(foundById.id);
+			}
+		}
 		let preCon = "none";
 		if (conductores.length > 0 && nombreCon) {
 			const foundC = conductores.find(
@@ -1020,6 +1090,14 @@ function AdminReservas() {
 			if (foundC) {
 				preCon = foundC.id.toString();
 				setAssignedConductorId(foundC.id);
+			}
+		}
+		// Si no encontró por nombre, intentar por conductorId directo
+		if (preCon === "none" && conductores.length > 0 && reserva.conductorId) {
+			const foundCById = conductores.find(c => c.id === reserva.conductorId);
+			if (foundCById) {
+				preCon = foundCById.id.toString();
+				setAssignedConductorId(foundCById.id);
 			}
 		}
 		setVehiculoSeleccionado(preVeh);
