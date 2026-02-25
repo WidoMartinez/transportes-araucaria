@@ -1,10 +1,12 @@
 <?php
 // enviar_correo_mejorado.php
 // Versión mejorada que envía correo Y guarda los datos de reserva
-// Habilitar la visualización de errores para depuración
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// En producción, NO mostrar errores en la salida para no corromper el JSON
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
+// Los errores se registran en el log del servidor, no en la salida
+@ini_set('log_errors', 1);
 
 // --- ¡CARGA MANUAL DE PHPMailer CON LA RUTA CORRECTA! ---
 // Se asume que la carpeta 'PHPMailer' está en el mismo directorio que este archivo.
@@ -224,16 +226,106 @@ $reservaCompleta = [
 
 // --- LÓGICA DE ENVÍO SEGÚN ACCIÓN ---
 
-// 1. Si es 'send_discount_offer', saltamos directamente al envío de descuento
+// Inicializar variables de estado
+$reservaGuardada = false;
+$adminEmailEnviado = false;
+$confirmacionEnviada = false;
+
+// =========================================================
+// RAMA: send_discount_offer — solo correo de descuento al cliente
+// =========================================================
 if ($action === 'send_discount_offer') {
-    goto enviar_descuento;
+    // Verificar que el cliente tenga email válido
+    if (!$hasValidCustomerEmail) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Email del cliente inválido o vacío.']);
+        exit;
+    }
+
+    $mail2 = new PHPMailer(true);
+    try {
+        $mail2->isSMTP();
+        $mail2->Host       = $emailHost;
+        $mail2->SMTPAuth   = true;
+        $mail2->Username   = $emailUser;
+        $mail2->Password   = $emailPass;
+        $mail2->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail2->Port       = $emailPort;
+        $mail2->CharSet    = 'UTF-8';
+
+        $mail2->setFrom($emailUser, $brandName);
+        $mail2->addAddress($email, $nombre ?: 'Cliente');
+        $mail2->addBcc($emailTo); // Copia al admin
+        $mail2->addReplyTo($emailUser, $brandName);
+        $mail2->isHTML(true);
+
+        $precioHtml  = $precio ? ('$' . number_format($precio, 0, ',', '.') . ' CLP') : 'A consultar';
+        $totalHtml   = $totalConDescuento ? ('$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP') : $precioHtml;
+        $precioBase  = $totalConDescuento > 0 ? $totalConDescuento : $precio;
+        $precioConDescuentoEspecial = $precioBase > 0
+            ? round($precioBase * (1 - $DESCUENTO_OFERTA_ESPECIAL / 100))
+            : 0;
+        $precioConDescuentoHtml = '$' . number_format($precioConDescuentoEspecial, 0, ',', '.') . ' CLP';
+
+        $mail2->Subject = "🎉 ¡Oferta Exclusiva! {$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu traslado - {$brandName}";
+        $mail2->Body = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
+            <div style='background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:#fff; padding:24px 22px; text-align:center;'>
+                <h2 style='margin:0; font-size:24px;'>🎉 ¡Oferta Exclusiva para Ti!</h2>
+                <p style='margin:8px 0 0; font-size:16px; opacity:0.95;'>{$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu próximo traslado</p>
+            </div>
+            <div style='padding:20px;'>
+                <p>Hola <strong>" . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                <p>Notamos que tu reserva <strong>(Código: {$codigoReserva})</strong> aún está pendiente de pago. ¡Tenemos una oferta especial para <strong>esta misma reserva</strong>!</p>
+                <div style='background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border:2px solid #10b981; border-radius:12px; padding:20px; margin:16px 0; text-align:center;'>
+                    <p style='margin:0 0 8px; font-size:14px; color:#065f46;'>PRECIO ORIGINAL</p>
+                    <p style='margin:0; font-size:18px; text-decoration:line-through; color:#6b7280;'>{$totalHtml}</p>
+                    <p style='margin:16px 0 8px; font-size:14px; color:#065f46;'>TU PRECIO ESPECIAL</p>
+                    <p style='margin:0; font-size:32px; font-weight:bold; color:#059669;'>{$precioConDescuentoHtml}</p>
+                    <p style='margin:8px 0 0; font-size:12px; color:#059669;'>¡Ahorras {$DESCUENTO_OFERTA_ESPECIAL}%!</p>
+                </div>
+                <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin:12px 0;'>
+                    <h3 style='margin:0 0 12px; color:#1e293b; font-size:16px;'>📋 Detalles de tu reserva:</h3>
+                    <p style='margin:6px 0'><strong>Origen:</strong> {$origen}</p>
+                    <p style='margin:6px 0'><strong>Destino:</strong> {$destino}</p>
+                    <p style='margin:6px 0'><strong>Fecha y hora:</strong> {$fecha} {$hora}</p>
+                    <p style='margin:6px 0'><strong>Pasajeros:</strong> {$pasajeros}</p>
+                    <p style='margin:6px 0'><strong>Vehículo:</strong> {$vehiculo}</p>
+                    " . ($upgradeVan ? "<p style='margin:6px 0; color: #7c2d12; font-weight: bold;'>✨ Upgrade a Van Incluido</p>" : "") . "
+                </div>
+                <div style='text-align:center; margin:24px 0;'>
+                    <p style='margin:0 0 16px; font-size:14px; color:#374151;'>Para obtener este descuento, completa tu pago respondiendo a este correo o contáctanos por WhatsApp:</p>
+                    <a href='https://wa.me/56936643540?text=Hola,%20quiero%20confirmar%20mi%20reserva%20{$codigoReserva}%20con%20descuento' style='background-color:#25D366; color:white; padding:12px 24px; text-decoration:none; border-radius:50px; font-weight:bold; font-size:16px; display:inline-block;'>
+                        📱 Confirmar por WhatsApp
+                    </a>
+                    <p style='margin:16px 0 0; font-size:14px;'>O escríbenos a: <a href='mailto:contacto@transportesaraucaria.cl' style='color:#059669;'>contacto@transportesaraucaria.cl</a></p>
+                </div>
+                <p style='font-size:12px; color:#6b7280; text-align:center; margin-top:20px;'>*Esta oferta es válida por tiempo limitado.</p>
+                <p style='margin-top:16px;'>Saludos,<br><strong>{$brandName}</strong></p>
+            </div>
+        </div>";
+
+        $mail2->send();
+        echo json_encode([
+            'success'                  => true,
+            'message'                  => 'Correo de descuento enviado.',
+            'correo_cliente_enviado'   => true
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success'  => false,
+            'message'  => 'Error al enviar correo de descuento: ' . $mail2->ErrorInfo,
+        ]);
+    }
+    exit;
 }
 
-// 2. Si es 'notify_admin_only' o 'normal', enviamos al admin primero
+// =========================================================
+// RAMA: normal / notify_admin_only — envío al admin primero
+// =========================================================
 
 
 // Intentar guardar la reserva ANTES de enviar el correo
-$reservaGuardada = false;
 try {
     // Generar ID para poder referenciar luego
     if (empty($reservaCompleta['id'])) {
@@ -444,7 +536,6 @@ try {
                 $mail->send();
                 $confirmacionEnviada = true;
             } else {
-                enviar_descuento:
                 // Cliente NO HA PAGADO - Enviar correo único de descuento para captar atención
                 // Usar el precio disponible (totalConDescuento o precio original como fallback)
                 $precioBase = $totalConDescuento > 0 ? $totalConDescuento : $precio;
@@ -510,19 +601,21 @@ try {
 
     // Respuesta exitosa
     echo json_encode([
-        'message' => 'Mensaje enviado exitosamente.',
-        'reserva_guardada' => $reservaGuardada,
-        'id_reserva' => $reservaCompleta['id'] ?? null,
-        'correo_admin_enviado' => $adminEmailEnviado,
-        'correo_cliente_enviado' => $confirmacionEnviada
+        'success'               => true,
+        'message'               => 'Mensaje enviado exitosamente.',
+        'reserva_guardada'      => $reservaGuardada,
+        'id_reserva'            => $reservaCompleta['id'] ?? null,
+        'correo_admin_enviado'  => $adminEmailEnviado,
+        'correo_cliente_enviado'=> $confirmacionEnviada
     ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
-        'message' => "Error al enviar el correo: {$mail->ErrorInfo}",
-        'reserva_guardada' => $reservaGuardada,
-        'id_reserva' => $reservaCompleta['id'] ?? null,
-        'correo_admin_enviado' => $adminEmailEnviado,
-        'correo_cliente_enviado' => $confirmacionEnviada
+        'success'               => false,
+        'message'               => "Error al enviar el correo: {$mail->ErrorInfo}",
+        'reserva_guardada'      => $reservaGuardada,
+        'id_reserva'            => $reservaCompleta['id'] ?? null,
+        'correo_admin_enviado'  => $adminEmailEnviado,
+        'correo_cliente_enviado'=> $confirmacionEnviada
     ]);
 }

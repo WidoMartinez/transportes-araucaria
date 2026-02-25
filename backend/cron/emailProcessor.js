@@ -123,7 +123,11 @@ export const processPendingEmails = async () => {
                     });
                     console.log(`✅ Correo de descuento enviado para ${reserva.codigoReserva}`);
                 } else {
-                    throw new Error(response.data?.message || "Error desconocido del PHP");
+                    // Loguear la respuesta completa del PHP para diagnóstico
+                    const phpResponse = typeof response.data === 'string' 
+                        ? response.data.substring(0, 500) // Truncar si es texto largo (ej. PHP warnings)
+                        : JSON.stringify(response.data);
+                    throw new Error(response.data?.message || `Respuesta PHP sin success. Body: ${phpResponse}`);
                 }
 
             } catch (error) {
