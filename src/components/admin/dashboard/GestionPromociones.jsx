@@ -150,6 +150,7 @@ export default function GestionPromociones() {
     } else if (formData.tipo_viaje === "hacia_aeropuerto") {
       setFormData(prev => ({ ...prev, destino: "Aeropuerto La Araucanía" }));
     }
+    // Para 'solo_ida' e 'ida_vuelta', el admin elige ambos libremente
   }, [formData.tipo_viaje]);
 
   const loadPromociones = async () => {
@@ -473,8 +474,10 @@ ID: {promo.id}
                           {promo.tipo_viaje === "ida_vuelta" 
                             ? "Ida y Vuelta" 
                             : promo.tipo_viaje === "desde_aeropuerto" 
-                              ? "Desde Aeropuerto" 
-                              : "Hacia Aeropuerto"}
+                              ? "Desde Aeropuerto"
+                              : promo.tipo_viaje === "solo_ida"
+                                ? "Solo Ida (Cualquier sentido)"
+                                : "Hacia Aeropuerto"}
                         </div>
 <div className="flex items-center gap-2 text-sm">
 <Users className="h-4 w-4" />
@@ -639,7 +642,7 @@ className="flex-1"
 <ImageIcon className="h-5 w-5 text-gray-400" />
 </div>
 <p className="text-xs text-gray-500">
-Formatos: JPG, PNG, GIF, WebP. Máximo 5MB.
+Formatos: JPG, PNG, GIF, WebP. Máximo 20MB.
 </p>
 </div>
 
@@ -685,6 +688,7 @@ setFormData({ ...formData, tipo_viaje: value })
                 <SelectItem value="desde_aeropuerto">Desde Aeropuerto</SelectItem>
                 <SelectItem value="hacia_aeropuerto">Hacia Aeropuerto</SelectItem>
                 <SelectItem value="ida_vuelta">Ida y Vuelta</SelectItem>
+                <SelectItem value="solo_ida">Solo ida (Cualquier sentido)</SelectItem>
               </SelectContent>
 </Select>
 </div>

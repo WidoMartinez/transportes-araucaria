@@ -36,6 +36,7 @@ const generateTimeOptions = () => {
  */
 export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
   const [loading, setLoading] = useState(false);
+  const [rutaInvertida, setRutaInvertida] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -115,6 +116,10 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 
   if (!promocion) return null;
 
+  // Calcular origen y destino según si la ruta está invertida
+  const origenMostrado = rutaInvertida ? promocion.destino : promocion.origen;
+  const destinoMostrado = rutaInvertida ? promocion.origen : promocion.destino;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -127,7 +132,12 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+      body: JSON.stringify({
+          ...formData,
+          // Para 'solo_ida': enviar el sentido elegido por el usuario
+          origen_elegido: origenMostrado,
+          destino_elegido: destinoMostrado,
+        }),
         }
       );
 
@@ -191,12 +201,21 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
                 <div className="p-2 bg-white rounded-lg shadow-sm">
                   <MapPin className="h-4 w-4 text-green-600" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-[10px] md:text-xs text-green-700 uppercase font-bold tracking-wider">Ruta</p>
                   <p className="text-sm md:text-base font-bold text-gray-800 leading-tight">
-                    {promocion.origen} <ArrowRight className="inline h-3 w-3 md:h-4 md:w-4 mx-0.5" />{" "}
-                    {promocion.destino}
+                    {origenMostrado} <ArrowRight className="inline h-3 w-3 md:h-4 md:w-4 mx-0.5" />{" "}
+                    {destinoMostrado}
                   </p>
+                  {promocion.tipo_viaje === "solo_ida" && (
+                    <button
+                      type="button"
+                      onClick={() => setRutaInvertida(prev => !prev)}
+                      className="mt-1 text-[10px] font-bold text-green-700 underline hover:text-green-900 transition-colors"
+                    >
+                      ⇄ Cambiar sentido
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -220,8 +239,10 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
                     {promocion.tipo_viaje === "ida_vuelta" 
                       ? "Ida/Vta" 
                       : promocion.tipo_viaje === "desde_aeropuerto" 
-                        ? "Desde Aeropuerto" 
-                        : "Hacia Aeropuerto"}
+                        ? "Desde Aeropuerto"
+                        : promocion.tipo_viaje === "solo_ida"
+                          ? "Solo Ida"
+                          : "Hacia Aeropuerto"}
                   </p>
                 </div>
               </div>

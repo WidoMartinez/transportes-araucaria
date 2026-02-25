@@ -49,9 +49,22 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB máximo
   fileFilter: fileFilter,
 });
+
+// Middleware para manejar errores de Multer y devolver JSON
+const handleMulterError = (err, req, res, next) => {
+  if (err && err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({
+      error: "La imagen es demasiado grande. El límite máximo es 20MB.",
+    });
+  }
+  if (err && err.name === "MulterError") {
+    return res.status(400).json({ error: `Error al subir imagen: ${err.message}` });
+  }
+  next(err);
+};
 
 // GET /api/promociones-banner/activas - Obtener promociones activas (público)
 router.get("/activas", async (req, res) => {
@@ -124,7 +137,7 @@ router.get("/:id", apiLimiter, authJWT, async (req, res) => {
 });
 
 // POST /api/promociones-banner - Crear promoción con imagen (admin)
-router.post("/", apiLimiter, authJWT, upload.single("imagen"), async (req, res) => {
+router.post("/", apiLimiter, authJWT, upload.single("imagen"), handleMulterError, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "La imagen es requerida" });
@@ -201,7 +214,7 @@ router.post("/", apiLimiter, authJWT, upload.single("imagen"), async (req, res) 
 });
 
 // PUT /api/promociones-banner/:id - Actualizar promoción (admin)
-router.put("/:id", apiLimiter, authJWT, upload.single("imagen"), async (req, res) => {
+router.put("/:id", apiLimiter, authJWT, upload.single("imagen"), handleMulterError, async (req, res) => {
   try {
     const promocion = await PromocionBanner.findByPk(req.params.id);
 
@@ -374,6 +387,10 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
       });
     }
 
+    // Para 'solo_ida', el cliente puede elegir el sentido; invertir origen/destino si se indica
+    const origenFinal = req.body.origen_elegido || promocion.origen;
+    const destinoFinal = req.body.destino_elegido || promocion.destino;
+
     // Validar anticipación mínima
     const anticipacionMinima = promocion.anticipacion_minima || 3;
     const ahora = new Date();
@@ -442,8 +459,8 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
       nombre,
       email,
       telefono,
-      origen: promocion.origen,
-      destino: promocion.destino,
+      origen: origenFinal,
+      destino: destinoFinal,
       fecha: fecha_ida,
       hora: hora_ida,
       fechaRegreso: fecha_vuelta || null,

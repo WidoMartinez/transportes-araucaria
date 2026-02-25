@@ -1953,12 +1953,21 @@ function AdminReservas() {
 				isAsignada(selectedReserva))
 	);
 
+	// Extraer nombre del conductor desde observaciones (formato legacy: "Conductor asignado: NOMBRE")
+	const getConductorFromObs = (obs) => {
+		if (!obs) return null;
+		const match = obs.match(/Conductor asignado:\s*(.+)/i);
+		return match ? match[1].trim() : null;
+	};
+	const conductorEnObsIda = getConductorFromObs(selectedReserva?.observaciones);
+
 	const hasConductorAsignado = Boolean(
 		selectedReserva &&
 			(selectedReserva.conductor_asignado ||
 				selectedReserva.conductorId ||
 				(selectedReserva.conductor &&
-					selectedReserva.conductor !== "Por asignar"))
+					selectedReserva.conductor !== "Por asignar") ||
+				conductorEnObsIda)
 	);
 
 	// Formatear moneda
@@ -6363,43 +6372,67 @@ function AdminReservas() {
 						</div>
 
 						{/* Mostrar info de asignación solo si la reserva confirmada ya tiene vehículo */}
-						{selectedReserva?.estado === "confirmada" &&
-							hasVehiculoAsignado && (
-								<div className="bg-chocolate-50 p-3 rounded-lg space-y-1 text-sm">
-									<p className="font-semibold">Asignación actual:</p>
-									{selectedReserva.vehiculo_asignado ? (
+				{selectedReserva?.estado === "confirmada" &&
+					hasVehiculoAsignado && (
+						<div className="bg-chocolate-50 p-3 rounded-lg space-y-2 text-sm">
+							<p className="font-semibold">Asignación actual:</p>
+
+							{/* IDA */}
+							<div className={reservaVuelta ? "border-b pb-2" : ""}>
+								{reservaVuelta && (
+									<p className="text-xs font-medium text-green-700 mb-1">↗ IDA</p>
+								)}
+								{selectedReserva.vehiculo_asignado ? (
+									<p>
+										🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} (
+										{selectedReserva.vehiculo_asignado.patente})
+									</p>
+								) : selectedReserva?.vehiculo ? (
+									<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
+								) : null}
+								{hasConductorAsignado ? (
+									selectedReserva.conductor_asignado ? (
 										<p>
-											🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} (
-											{selectedReserva.vehiculo_asignado.patente})
+											👤 Conductor:{" "}
+											{selectedReserva.conductor_asignado.nombre}
 										</p>
-									) : selectedReserva?.vehiculo ? (
-										<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
+									) : selectedReserva?.conductor && selectedReserva.conductor !== "Por asignar" ? (
+										<p>👤 Conductor: {selectedReserva.conductor}</p>
+									) : conductorEnObsIda ? (
+										<p>👤 Conductor: {conductorEnObsIda}</p>
+									) : null
+								) : (
+									<p className="text-muted-foreground">
+										No hay conductor asignado actualmente.
+									</p>
+								)}
+							</div>
+
+							{/* VUELTA (si existe y tiene algo asignado) */}
+							{reservaVuelta && (reservaVuelta.vehiculo || reservaVuelta.vehiculoId) && (
+								<div className="pt-1">
+									<p className="text-xs font-medium text-blue-700 mb-1">↩ VUELTA</p>
+									{reservaVuelta.vehiculo ? (
+										<p>🚗 Vehículo: {reservaVuelta.vehiculo}</p>
 									) : null}
-									{hasConductorAsignado ? (
-										selectedReserva.conductor_asignado ? (
-											<p>
-												👤 Conductor:{" "}
-												{selectedReserva.conductor_asignado.nombre}
-											</p>
-										) : selectedReserva?.conductor ? (
-											<p>👤 Conductor: {selectedReserva.conductor}</p>
-										) : null
+									{(() => {
+									const conductorEnObsVuelta = getConductorFromObs(reservaVuelta?.observaciones);
+									const nombreConductorVuelta = conductores.find(c => c.id === reservaVuelta?.conductorId)?.nombre ||
+										reservaVuelta?.conductor ||
+										conductorEnObsVuelta;
+									return nombreConductorVuelta ? (
+										<p>👤 Conductor: {nombreConductorVuelta}</p>
 									) : (
 										<p className="text-muted-foreground">
 											No hay conductor asignado actualmente.
 										</p>
-									)}
-									<div className="mt-2">
-										<Button
-											size="sm"
-											variant="outline"
-											onClick={() => handleAsignar(selectedReserva)}
-										>
-											Reasignar vehículo / conductor
-										</Button>
-									</div>
+									);
+								})()}
 								</div>
 							)}
+
+						</div>
+					)}
 
 						<div className="flex justify-end gap-2">
 							<Button
