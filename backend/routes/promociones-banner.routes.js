@@ -69,7 +69,8 @@ const handleMulterError = (err, req, res, next) => {
 // GET /api/promociones-banner/activas - Obtener promociones activas (público)
 router.get("/activas", async (req, res) => {
   try {
-    const hoy = new Date().toISOString().split("T")[0];
+    const optionsHoy = { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' };
+    const hoyChile = new Intl.DateTimeFormat('fr-CA', optionsHoy).format(new Date()); 
 
     const promociones = await PromocionBanner.findAll({
       where: {
@@ -86,11 +87,11 @@ router.get("/activas", async (req, res) => {
               {
                 [Op.or]: [
                   { fecha_inicio: null },
-                  { fecha_inicio: { [Op.lte]: hoy } },
+                  { fecha_inicio: { [Op.lte]: hoyChile } },
                 ],
               },
               {
-                [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: hoy } }],
+                [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: hoyChile } }],
               },
             ],
           },
@@ -372,11 +373,13 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
     }
 
     // Validar vigencia
-    const hoy = new Date().toISOString().split("T")[0];
-    if (promocion.fecha_inicio && promocion.fecha_inicio > hoy) {
+    const optionsHoy = { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' };
+    const hoyChile = new Intl.DateTimeFormat('fr-CA', optionsHoy).format(new Date()); 
+
+    if (promocion.fecha_inicio && promocion.fecha_inicio > hoyChile) {
       return res.status(400).json({ error: "Promoción aún no vigente" });
     }
-    if (promocion.fecha_fin && promocion.fecha_fin < hoy) {
+    if (promocion.fecha_fin && promocion.fecha_fin < hoyChile) {
       return res.status(400).json({ error: "Promoción expirada" });
     }
 
@@ -393,22 +396,18 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
 
     // Validar anticipación mínima
     const anticipacionMinima = promocion.anticipacion_minima || 3;
-    const ahora = new Date();
-    const [h, m] = hora_ida.split(":").map(Number);
-    const fechaReserva = new Date(fecha_ida);
-    fechaReserva.setHours(h, m, 0, 0);
-
-    // Ajustar fechaReserva a zona horaria local si es necesario, 
-    // pero asumiendo que server y cliente están alineados o fecha_ida es yyyy-mm-dd
-    // La fecha 'fecha_ida' viene como string, new Date crea en UTC a menos que se especifique hora
-    // Mejor usar un método más robusto para comparar horas:
-    // Convertir fecha_ida + hora_ida a Date object
+    
+    // Obtener "ahora" en Chile para comparaciones matemáticas
+    const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
+    
+    // Convertir fecha_ida + hora_ida a Date object (sin Z, Node lo interpreta como local/server-time)
     const fechaHoraReserva = new Date(`${fecha_ida}T${hora_ida}:00`);
     
     // Calcular diferencia en horas
-    const diffHoras = (fechaHoraReserva - ahora) / (1000 * 60 * 60);
+    const diffHoras = (fechaHoraReserva - ahoraChile) / (1000 * 60 * 60);
 
-    if (diffHoras < anticipacionMinima && fecha_ida === hoy) {
+    // Solo validar anticipación si la reserva es para hoy (en Chile)
+    if (diffHoras < anticipacionMinima && fecha_ida === hoyChile) {
         return res.status(400).json({
             error: `La reserva debe realizarse con al menos ${anticipacionMinima} horas de anticipación.`,
         });
