@@ -74,24 +74,28 @@ router.get("/activas", async (req, res) => {
 
     const promociones = await PromocionBanner.findAll({
       where: {
-        activo: true,
-        [Op.or]: [
-          // Sin fechas de vigencia
+        [Op.and]: [
+          { activo: true },
           {
-            fecha_inicio: null,
-            fecha_fin: null,
-          },
-          // Dentro del rango de vigencia
-          {
-            [Op.and]: [
+            [Op.or]: [
+              // Sin fechas de vigencia: se muestran siempre (si activo=true)
               {
-                [Op.or]: [
-                  { fecha_inicio: null },
-                  { fecha_inicio: { [Op.lte]: hoyChile } },
-                ],
+                fecha_inicio: null,
+                fecha_fin: null,
               },
+              // Dentro del rango de vigencia
               {
-                [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: hoyChile } }],
+                [Op.and]: [
+                  {
+                    [Op.or]: [
+                      { fecha_inicio: null },
+                      { fecha_inicio: { [Op.lte]: hoyChile } },
+                    ],
+                  },
+                  {
+                    [Op.or]: [{ fecha_fin: null }, { fecha_fin: { [Op.gte]: hoyChile } }],
+                  },
+                ],
               },
             ],
           },
