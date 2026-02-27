@@ -475,6 +475,8 @@ const [configSillas, setConfigSillas] = useState({
 		const reservaId = url.searchParams.get("reserva_id");
 		const amount = url.searchParams.get("amount");
 		const encodedData = url.searchParams.get("d");
+		// Extraer token de Flow si viene (puede venir de pasarela o ser nulo)
+		const flowToken = url.searchParams.get("token");
 		// Capturar warning si existe (e.g. no_reserva_id)
 		const warning = url.searchParams.get("warning");
 
@@ -483,14 +485,17 @@ const [configSillas, setConfigSillas] = useState({
 				amount,
 				reservaId,
 				warning,
+				flowToken: flowToken ? 'presente' : 'ausente',
 				encodedData: encodedData ? 'presente' : 'ausente'
 			});
 			
 			// DISPARAR CONVERSIÓN DE GOOGLE ADS (Estandarización con FlowReturn)
 			if (typeof window.gtag === "function") {
 				try {
-					// Usar timestamp si no hay reservaId para evitar colisiones en pagos sin reserva
-					const transactionId = reservaId || `exp_${Date.now()}`;
+					// Usar ID de reserva y token (o timestamp) para evitar deduplicación de compras múltiples sucesivas
+					// Google Ads puede descartar reservas con el mismo email en corto tiempo sin transaction_id fuerte y único
+					const uniqueSuffix = flowToken ? flowToken.substring(0,8) : Date.now().toString().substring(7);
+					const transactionId = reservaId ? `${reservaId}_${uniqueSuffix}` : `exp_${Date.now()}`;
 					
 					// Clave única para sessionStorage (evita duplicados al recargar)
 					const conversionKey = `flow_conversion_express_${transactionId}`;

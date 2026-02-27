@@ -108,8 +108,9 @@ function FlowReturn() {
 		const triggerConversion = (amount, id, tkn) => {
 			try {
 				if (typeof window.gtag === "function") {
-					// Usar ID de reserva, token o generar uno temporal
-					const transactionId = id || tkn || `manual_${Date.now()}`;
+					// Usar ID de reserva y token para asegurar unicidad absoluta en Google Ads
+					// Evita deduplicación errónea de reservas múltiples del mismo usuario
+					const transactionId = (id && tkn) ? `${id}_${tkn.substring(0,8)}` : (id || tkn || `manual_${Date.now()}`);
 					
 					// ESTRATEGIA B: amount contiene el valor TOTAL de la reserva
 					// Lógica robusta: asegurarse que no sea null, undefined ni string vacío antes de convertir
@@ -129,7 +130,7 @@ function FlowReturn() {
 						);
 						conversionValue = 1.0;
 					} else {
-						console.log('✅ [FlowReturn] Valor total de conversión:', conversionValue);
+						console.log(`✅ [FlowReturn] Valor total de conversión: ${conversionValue}, Transaction ID: ${transactionId}`);
 					}
 					
 					// Usar sessionStorage para evitar duplicados en recargas

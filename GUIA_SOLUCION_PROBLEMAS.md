@@ -2617,3 +2617,21 @@ Se implementó un sistema de **Sanitización y Validación Robusta** antes de en
 
 > [!IMPORTANT]
 > Esta mejora garantiza que no se pierdan intentos de pago por errores de formato simples y proporciona feedback inmediato al administrador y al cliente.
+
+## 5. Problemas de Google Ads
+
+### 5.1 Deduplicación Incorrecta de Reservas Consecutivas
+
+**Implementado: 27 Febrero 2026**
+
+**Problema Identificado**:
+Cuando un usuario realizaba dos reservas "Solo Ida" consecutivas en un periodo muy corto de tiempo, Google Ads ocasionalmente descartaba la segunda conversión. Al revisar ambas compras, los pagos (`pago_id`) e IDs de reserva (`reserva_id`) eran distintos, sin embargo, la etiqueta global `gtag` estaba enviando únicamente el `reservaId` como el `transaction_id`.
+
+**Causa Raíz**:
+Google Ads procesa la unicidad de las conversiones (deduplication) basado en el `transaction_id`. Si por algún motivo de la sesión activa, recargas de página o sincronización de los metadatos de "Enhanced Conversions" (como el mismo correo electrónico en periodos muy breves) se interpretaba una colisión de ventana, el ID simple (`509`) podría fusionarse o sobrescribirse inadvertidamente si el `window.gtag` de la recarga previa bloqueaba el scope. 
+
+Además, los callbacks de Flow a veces redirigen con la falta del `reserva_id`, provocando que el timestamp temporal sea usado.
+
+**Solución Implementada**:
+Para forzar una diferenciación absoluta de `transaction_id` entre compras consecutivas reales del mismo cliente, se modificaron los archivos `src/App.jsx` y `src/components/FlowReturn.jsx`.
+Ahora, el `transaction_id` combina el ID de la reserva con un substring del token único de Flow (ej: `509_8fA2bC1`), generando una huella criptográfica inequívoca para cada transacción pagada en la ventana activa.
