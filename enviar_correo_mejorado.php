@@ -157,6 +157,7 @@ $fechaRegreso = htmlspecialchars($data['fechaRegreso'] ?? '');
 $horaRegreso = htmlspecialchars($data['horaRegreso'] ?? '');
 $abonoSugerido = $data['abonoSugerido'] ?? 0;
 $saldoPendiente = $data['saldoPendiente'] ?? 0;
+$pagoMonto = $data['pagoMonto'] ?? 0; // NUEVO
 $descuentoBase = $data['descuentoBase'] ?? 0;
 $descuentoPromocion = $data['descuentoPromocion'] ?? 0;
 $descuentoRoundTrip = $data['descuentoRoundTrip'] ?? 0;
@@ -407,20 +408,40 @@ if ($numeroVuelo || $hotel || $equipajeEspecial || $sillaInfantil === 'si') {
     $emailHtml .= "</table>";
 }
 
-// Información financiera si hay descuentos o abonos
-if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
+// Información financiera si hay descuentos o pagos
+if ($totalConDescuento != $precio || $pagoMonto > 0) {
     $emailHtml .= "
             <h2>Información Financiera</h2>
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>";
 
-    if ($totalConDescuento != $precio) {
-        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Precio Original:</td><td style='padding: 8px;'>$" . number_format($precio, 0, ',', '.') . " CLP</td></tr>";
-        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Precio con Descuentos:</td><td style='padding: 8px;'>$" . number_format($totalConDescuento, 0, ',', '.') . " CLP</td></tr>";
+    if ($precio > 0) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #a16207;'>Precio Base:</td><td style='padding: 8px;'>$" . number_format($precio, 0, ',', '.') . " CLP</td></tr>";
     }
 
-    if ($abonoSugerido > 0) {
-        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold;'>Abono Sugerido:</td><td style='padding: 8px;'>$" . number_format($abonoSugerido, 0, ',', '.') . " CLP</td></tr>";
-        $emailHtml .= "<tr><td style='padding: 8px; font-weight: bold;'>Saldo Pendiente:</td><td style='padding: 8px;'>$" . number_format($saldoPendiente, 0, ',', '.') . " CLP</td></tr>";
+    if ($descuentoBase > 0) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #a16207;'>Descuento Base:</td><td style='padding: 8px;'>-$" . number_format($descuentoBase, 0, ',', '.') . " CLP</td></tr>";
+    }
+    if ($descuentoPromocion > 0) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #a16207;'>Descuento Promoción:</td><td style='padding: 8px;'>-$" . number_format($descuentoPromocion, 0, ',', '.') . " CLP</td></tr>";
+    }
+    if ($descuentoRoundTrip > 0 && $idaVuelta) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #a16207;'>Descuento Ida y Vuelta:</td><td style='padding: 8px;'>-$" . number_format($descuentoRoundTrip, 0, ',', '.') . " CLP</td></tr>";
+    }
+    if ($descuentoOnline > 0) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #a16207;'>Descuento Online:</td><td style='padding: 8px;'>-$" . number_format($descuentoOnline, 0, ',', '.') . " CLP</td></tr>";
+    }
+
+    if ($totalConDescuento > 0 && $totalConDescuento != $precio) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #84cc16;'>Precio Final:</td><td style='padding: 8px; font-weight: bold;'>$" . number_format($totalConDescuento, 0, ',', '.') . " CLP</td></tr>";
+    }
+
+    if ($pagoMonto > 0) {
+        $emailHtml .= "<tr style='border-bottom: 1px solid #eee;'><td style='padding: 8px; font-weight: bold; color: #22c55e;'>Monto Pagado:</td><td style='padding: 8px; font-weight: bold;'>$" . number_format($pagoMonto, 0, ',', '.') . " CLP</td></tr>";
+    }
+
+    $saldoCalculado = max(0, $totalConDescuento - $pagoMonto);
+    if ($saldoCalculado > 0) {
+        $emailHtml .= "<tr><td style='padding: 8px; font-weight: bold; color: #ef4444;'>Saldo Pendiente:</td><td style='padding: 8px; font-weight: bold; color: #ef4444;'>$" . number_format($saldoCalculado, 0, ',', '.') . " CLP</td></tr>";
     }
 
     $emailHtml .= "</table>";

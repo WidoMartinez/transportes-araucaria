@@ -116,6 +116,7 @@ $horaRegreso = htmlspecialchars($data['horaRegreso'] ?? '');
 // Datos financieros
 $abonoSugerido = $data['abonoSugerido'] ?? 0;
 $saldoPendiente = $data['saldoPendiente'] ?? 0;
+$pagoMonto = $data['pagoMonto'] ?? 0;
 $descuentoBase = $data['descuentoBase'] ?? 0;
 $descuentoPromocion = $data['descuentoPromocion'] ?? 0;
 $descuentoRoundTrip = $data['descuentoRoundTrip'] ?? 0;
@@ -349,7 +350,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         $emailHtml .= "
                 <div>
                     <p style='margin: 8px 0 4px; font-weight: 600; color: #a16207;'>Descuento Base:</p>
-                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoBase}%</p>
+                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($descuentoBase, 0, ',', '.') . " CLP</p>
                 </div>";
     }
 
@@ -357,7 +358,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         $emailHtml .= "
                 <div>
                     <p style='margin: 8px 0 4px; font-weight: 600; color: #a16207;'>Descuento Promoción:</p>
-                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoPromocion}%</p>
+                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($descuentoPromocion, 0, ',', '.') . " CLP</p>
                 </div>";
     }
 
@@ -365,7 +366,7 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         $emailHtml .= "
                 <div>
                     <p style='margin: 8px 0 4px; font-weight: 600; color: #a16207;'>Descuento Ida y Vuelta:</p>
-                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoRoundTrip}%</p>
+                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($descuentoRoundTrip, 0, ',', '.') . " CLP</p>
                 </div>";
     }
 
@@ -373,23 +374,32 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         $emailHtml .= "
                 <div>
                     <p style='margin: 8px 0 4px; font-weight: 600; color: #a16207;'>Descuento Online:</p>
-                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>{$descuentoOnline}%</p>
+                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($descuentoOnline, 0, ',', '.') . " CLP</p>
                 </div>";
     }
 
-    if ($abonoSugerido > 0) {
+    if ($totalConDescuento > 0 && $totalConDescuento != $precio) {
         $emailHtml .= "
-                <div>
-                    <p style='margin: 8px 0 4px; font-weight: 600; color: #a16207;'>Abono Sugerido:</p>
-                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($abonoSugerido, 0, ',', '.') . " CLP</p>
+                <div style='grid-column: 1 / -1; margin-top: 5px; border-top: 1px solid #fde047; padding-top: 10px;'>
+                    <p style='margin: 8px 0 4px; font-weight: bold; color: #a16207;'>Precio Final:</p>
+                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #84cc16; font-size: 16px; font-weight: bold;'>$" . number_format($totalConDescuento, 0, ',', '.') . " CLP</p>
                 </div>";
     }
 
-    if ($saldoPendiente > 0) {
+    if ($pagoMonto > 0) {
         $emailHtml .= "
-                <div>
-                    <p style='margin: 8px 0 4px; font-weight: 600; color: #a16207;'>Saldo Pendiente:</p>
-                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #eab308;'>$" . number_format($saldoPendiente, 0, ',', '.') . " CLP</p>
+                <div style='grid-column: 1 / -1; margin-top: 5px;'>
+                    <p style='margin: 8px 0 4px; font-weight: bold; color: #a16207;'>Monto Pagado:</p>
+                    <p style='margin: 0; padding: 8px 12px; background: white; border-radius: 6px; border-left: 4px solid #22c55e; font-size: 16px; font-weight: bold;'>$" . number_format($pagoMonto, 0, ',', '.') . " CLP</p>
+                </div>";
+    }
+
+    $saldoCalculado = max(0, $totalConDescuento - $pagoMonto);
+    if ($saldoCalculado > 0) {
+        $emailHtml .= "
+                <div style='grid-column: 1 / -1; margin-top: 5px; border-top: 2px dashed #fde047; padding-top: 10px;'>
+                    <p style='margin: 8px 0 4px; font-weight: bold; color: #9a3412;'>Saldo Pendiente:</p>
+                    <p style='margin: 0; padding: 10px 12px; background: white; border-radius: 6px; border-left: 5px solid #ef4444; font-size: 18px; font-weight: bold; color: #ef4444;'>$" . number_format($saldoCalculado, 0, ',', '.') . " CLP</p>
                 </div>";
     }
 

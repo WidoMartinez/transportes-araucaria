@@ -3079,6 +3079,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					rut: rutFormateado,
 					// Incluir estado de pago para determinar tipo de correo al cliente
 					estadoPago: reservaGuardada.estadoPago || estadoPagoInicial,
+					pagoMonto: montoPagadoCalculado,
 				};
 
 				console.log("📧 Enviando email de confirmación al PHP...");
@@ -3136,6 +3137,7 @@ app.post("/enviar-reserva", async (req, res) => {
 						codigoReserva: reservaGuardada.codigoReserva,
 						rut: rutFormateado,
 						estadoPago: "pendiente",
+						pagoMonto: montoPagadoCalculado,
 						action: "notify_admin_only" // NUEVO PARÁMETRO
 					}, {
 						headers: { "Content-Type": "application/json" },
