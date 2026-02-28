@@ -180,9 +180,7 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
         // ✅ Lead: registrar intención de pago antes de redirigir a Flow
         if (typeof window.gtag === "function") {
           const conversionData = {
-            send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-            value: precioTotal,
-            currency: "CLP",
+            send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB"
           };
 
           // Enhanced Conversions

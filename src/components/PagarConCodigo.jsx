@@ -424,8 +424,6 @@ function PagarConCodigo() {
 				if (typeof gtag === "function") {
 					gtag("event", "conversion", {
 						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-						value: montoValidado,
-						currency: "CLP",
 					});
 				}
 				window.location.href = pj.url;

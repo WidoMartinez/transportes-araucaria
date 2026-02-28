@@ -245,9 +245,7 @@ return () => clearInterval(intervalId);
           // ✅ Lead: registrar intención de pago antes de redirigir a Flow
           if (typeof window.gtag === "function") {
             const conversionData = {
-              send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-              value: precioValidado,
-              currency: "CLP",
+              send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB"
             };
 
             const userData = {};

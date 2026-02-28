@@ -38,12 +38,10 @@ const initialFormState = {
 
 const REQUIRED_FIELDS = ["nombre", "telefono", "email", "origen", "destino"];
 
-const trackWhatsAppClick = (context) => {
+const trackWhatsAppClick = () => {
 	if (typeof gtag === "function") {
 		gtag("event", "conversion", {
 			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-			value: context?.value || 1,
-			currency: "CLP",
 		});
 	}
 };
@@ -164,8 +162,6 @@ Tipo: Flete Nacional`,
 			if (typeof gtag === "function") {
 				gtag("event", "conversion", {
 					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-					value: 1,
-					currency: "CLP",
 				});
 			}
 

@@ -138,8 +138,6 @@ function ConsultarReserva() {
 			if (typeof window.gtag === "function") {
 				window.gtag("event", "conversion", {
 					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-					value: montoValidado,
-					currency: "CLP",
 				});
 			}
 			window.location.href = data.url;
