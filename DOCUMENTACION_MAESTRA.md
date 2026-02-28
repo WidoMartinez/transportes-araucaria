@@ -1476,23 +1476,30 @@ El sistema de promociones permite crear ofertas atractivas con imágenes que se 
 
 ### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
 
-**Actualizado: 19 Febrero 2026**
+**Actualizado: 28 Febrero 2026**
 
-El sistema utiliza Google gtag.js para el seguimiento de conversiones de "Compra" (reservas pagadas). Para maximizar la precisión (Enhanced Conversions), los datos se capturan tanto en el flujo de retorno estándar como en el flujo rápido express.
+El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google Ads, diferenciando entre eventos de "Lead" (intención de compra) y "Purchase" (reserva pagada). Para maximizar la precisión, se utiliza el estándar de **Enhanced Conversions** en ambos eventos de la cascada y a través de múltiples componentes.
 
 #### Arquitectura del Seguimiento
-1.  **Captura de Datos (Backend)**: El servidor consulta el estado del pago en Flow. Si es exitoso, extrae el monto real, el ID de reserva y los datos del usuario (email, nombre, teléfono), los codifica en Base64 (`d`) y los inyecta en la URL de retorno.
-2.  **Disparo de Evento (Frontend)**: Tanto `App.jsx` (para el flujo express) como `FlowReturn.jsx` (para flujos de código/consulta) detectan estos parámetros, decodifican los datos y disparan el evento `conversion`.
-3.  **De-duplicación**: Se utiliza `sessionStorage` con una clave basada en el ID de la transacción para evitar registrar la misma conversión si el usuario recarga la página.
+
+1.  **Eventos de Lead (Intención de Pago)**:
+    *   Se disparan inmediatamente antes de redirigir al usuario a la pasarela Flow (ej. en `PagarConCodigo.jsx`, `ReservaRapidaModal.jsx`, `OportunidadesTraslado.jsx`).
+    *   **ID de Conversión**: `AW-17529712870/8GVlCLP-05MbEObh6KZB`.
+    *   **Enhanced Conversions**: Captura y envía inmediatamente los datos del formulario (Email, Teléfono formateado a E.164, y Nombre dividido en first/last_name) mediante el objeto `user_data`.
+2.  **Eventos de Purchase (Compra Exitosa)**:
+    *   Se disparan únicamente en los puntos de retorno de éxito (`FlowReturn.jsx`, `App.jsx`).
+    *   **ID de Conversión**: `AW-17529712870/yZz-CJqiicUbEObh6KZB` (Moneda: `CLP`).
+    *   **Enhanced Conversions**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica para pasarlos a `user_data` al disparar el evento.
+3.  **Protección de Duplicados (Purchase)**: 
+    *   Se utiliza `sessionStorage` con una clave basada en el ID de la transacción (`id_reserva_token`) para evitar registrar la misma conversión repetida si el usuario recarga la página. Conversiones con un nuevo pago por el mismo cliente (abono + saldo pago restante) se registrarán como 2 transacciones diferentes (lo cual es correcto).
 
 #### Especificaciones Técnicas
-- **Conversion ID**: `AW-17529712870/yZz-CJqiicUbEObh6KZB`
-- **Moneda**: `CLP`
-- **Enhanced Conversions**: Se envían `email`, `phone_number` y `address` (nombre/apellido) normalizados para mejorar la atribución en Google Ads.
+- **Normalización Telefónica**: Es esencial usar la función local `normalizePhoneToE164` para los números al montar los payloads de Enhanced Conversions.
+- **Robustez del Valor Monetario**: El evento *Purchase* implementa fallbacks progresivos (Parámetro Flow -> Respuesta Backend -> Centinela `1.0`) para prevenir que problemas de red eviten notificar la conversión.
 
 > [!WARNING]
-> **Nota de Mantenimiento Crítica (19 Feb 2026)**:
-> Se ha identificado que errores de referencia (`ReferenceError`) en el bloque de tracking de `App.jsx` pueden detener el disparo de la conversión de forma silenciosa. Siempre verificar que las variables utilizadas en logs o lógica dentro de los `useEffect` de retorno estén debidamente definidas o capturadas de la URL.
+> **Nota de Mantenimiento Crítica**:
+> Se han corregido errores de referencia histórica (ej. variables no declaradas como variables cortas `gtag`) en el tracking que detenían el embudo de manera silenciosa. **Se obliga siempre** invocar globalmente con `window.gtag` envuelto en un paso de verificación segurizado `if (typeof window.gtag === "function") { ... }`.
 
 ---
 ### 5.20 Mejoras en la Gestión y Visualización de Reservas (Panel Admin)
