@@ -29,6 +29,16 @@ const generateTimeOptions = () => {
   return options;
 };
 
+// Normaliza un número de teléfono al formato E.164 internacional
+const normalizePhoneToE164 = (phone) => {
+  if (!phone) return "";
+  let cleaned = phone.replace(/[\s\-()]/g, "");
+  if (cleaned.startsWith("+56")) return cleaned;
+  if (cleaned.startsWith("56")) return "+" + cleaned;
+  if (cleaned.startsWith("9") && cleaned.length >= 9) return "+56" + cleaned;
+  return "+56" + cleaned;
+};
+
 /**
  * Modal de reserva rápida desde banner promocional
  * Muestra datos pre-cargados de la promoción
@@ -167,6 +177,34 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
       const paymentData = await paymentResponse.json();
       
       if (paymentData.url) {
+        // ✅ Lead: registrar intención de pago antes de redirigir a Flow
+        if (typeof window.gtag === "function") {
+          const conversionData = {
+            send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+            value: precioTotal,
+            currency: "CLP",
+          };
+
+          // Enhanced Conversions
+          const userData = {};
+          if (formData.email) userData.email = formData.email.toLowerCase().trim();
+          if (formData.telefono) userData.phone_number = normalizePhoneToE164(formData.telefono);
+          if (formData.nombre) {
+            const nameParts = formData.nombre.trim().split(" ");
+            userData.address = {
+              first_name: nameParts[0]?.toLowerCase() || "",
+              last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+              country: "CL",
+            };
+          }
+
+          if (Object.keys(userData).length > 0) {
+            conversionData.user_data = userData;
+          }
+
+          window.gtag("event", "conversion", conversionData);
+        }
+
         // Redirigir a Flow para completar el pago
         window.location.href = paymentData.url;
       } else {

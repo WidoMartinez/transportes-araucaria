@@ -43,6 +43,16 @@ import { TERMINOS_CONDICIONES } from "../data/legal";
 import imagenOportunidades from "../assets/imagenoportunidades.png";
 const vansBg = imagenOportunidades;
 
+// Normaliza un número de teléfono al formato E.164 internacional
+const normalizePhoneToE164 = (phone) => {
+  if (!phone) return "";
+  let cleaned = phone.replace(/[\s\-()]/g, "");
+  if (cleaned.startsWith("+56")) return cleaned;
+  if (cleaned.startsWith("56")) return "+" + cleaned;
+  if (cleaned.startsWith("9") && cleaned.length >= 9) return "+56" + cleaned;
+  return "+56" + cleaned;
+};
+
 function OportunidadesTraslado() {
 const [oportunidades, setOportunidades] = useState([]);
 const [loading, setLoading] = useState(true);
@@ -234,11 +244,29 @@ return () => clearInterval(intervalId);
         if (paymentData.url) {
           // ✅ Lead: registrar intención de pago antes de redirigir a Flow
           if (typeof window.gtag === "function") {
-            window.gtag("event", "conversion", {
+            const conversionData = {
               send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
               value: precioValidado,
               currency: "CLP",
-            });
+            };
+
+            const userData = {};
+            if (reservaFormData.email) userData.email = reservaFormData.email.toLowerCase().trim();
+            if (reservaFormData.telefono) userData.phone_number = normalizePhoneToE164(reservaFormData.telefono);
+            if (reservaFormData.nombre) {
+              const nameParts = reservaFormData.nombre.trim().split(" ");
+              userData.address = {
+                first_name: nameParts[0]?.toLowerCase() || "",
+                last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+                country: "CL",
+              };
+            }
+
+            if (Object.keys(userData).length > 0) {
+              conversionData.user_data = userData;
+            }
+
+            window.gtag("event", "conversion", conversionData);
           }
           window.location.href = paymentData.url;
         } else {
