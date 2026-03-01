@@ -3439,10 +3439,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			whereClause.referenciaPago = datosReserva.referenciaPago;
 			console.log(`🔍 Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`);
 		} else {
-			// PRIORIDAD 2: Búsqueda por email tradicional (solo para reservas simples que no son tramos)
+			// PRIORIDAD 2: Búsqueda por email tradicional (buscamos la principal)
 			whereClause.email = emailNormalizado;
-			whereClause.tramoHijoId = null;
-			whereClause.tramoPadreId = null;
+			// whereClause.tramoHijoId = null; // ELIMINADO: Permitir encontrar reserva matriz dividida
+			whereClause.tramoPadreId = null; // Solo principal (no el retorno)
 			console.log(`🔍 Buscando reserva existente por email: ${emailNormalizado}`);
 		}
 
@@ -3460,6 +3460,19 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`
 			);
 			esModificacion = true;
+
+			// Novedad: Si la reserva era ida y vuelta y ya tenía un tramo de vuelta separado,
+			// eliminamos el tramo de vuelta y reseteamos el padre para que la lógica de separación vuelva a ejecutarse limpia.
+			if (reservaExistente.tramoHijoId) {
+				try {
+					console.log(`🧹 Eliminando tramo de retorno antiguo (ID ${reservaExistente.tramoHijoId}) para recalcular`);
+					await Reserva.destroy({ where: { id: reservaExistente.tramoHijoId } });
+					reservaExistente.tramoHijoId = null;
+					reservaExistente.tipoTramo = 'solo_ida';
+				} catch (err) {
+					console.error("❌ Error al eliminar tramo hijo durante modificación:", err.message);
+				}
+			}
 
 			// Actualizar la reserva existente con los nuevos datos (incluir hora si viene del cliente)
 			// Calcular totales y abono para la modificación: no aceptar saldo enviado
