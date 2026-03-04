@@ -707,7 +707,7 @@ function AdminProductos() {
                                                                                 )
                                                                         }
                                                                         rows={3}
-                                                                        placeholder="Ejemplo: sedan, van, minibus"
+                                                                        placeholder="Ejemplo: sedan, van, suv"
                                                                 />
                                                                 <p className="text-xs text-muted-foreground">
                                                                         Separa los tipos con comas. Deja vacío para habilitar en todos los vehículos.

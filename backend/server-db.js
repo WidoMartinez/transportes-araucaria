@@ -69,6 +69,7 @@ import createPromocionesBannerTable from "./migrations/create-promociones-banner
 import addPosicionImagenToPromocionesBanner from "./migrations/add-posicion-imagen-to-promociones-banner.js";
 import addAdvancedPromoConfig from "./migrations/add-advanced-promo-config.js";
 import addUltimaSolicitudDetalles from "./migrations/add-ultima-solicitud-detalles.js";
+import updateVehiculosMinibusToSuv from "./migrations/update-vehiculos-minibus-to-suv.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
@@ -791,6 +792,7 @@ const initializeDatabase = async () => {
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
 		await addSillaInfantilCountToReservas(); // Migración para columna cantidad_sillas_infantiles en reservas
 		await addUpgradeVanToReservas(); // Migración para columna upgrade_van en reservas
+		await updateVehiculosMinibusToSuv(); // Migración para renombrar tipo minibus → suv en vehículos
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), Sequelize); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio

@@ -5463,7 +5463,7 @@ function AdminReservas() {
 										<SelectContent>
 											<SelectItem value="sedan">Sedan</SelectItem>
 											<SelectItem value="van">Van</SelectItem>
-											<SelectItem value="minibus">Minibus</SelectItem>
+											<SelectItem value="suv">SUV</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>

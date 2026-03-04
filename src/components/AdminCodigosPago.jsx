@@ -981,7 +981,7 @@ function AdminCodigosPago() {
 									<option value="">Seleccionar tipo...</option>
 									<option value="sedan">Sedan</option>
 									<option value="van">Van</option>
-									<option value="minibus">Minibus</option>
+									<option value="suv">SUV</option>
 								</select>
 							</div>
 							{/* Pasajeros */}

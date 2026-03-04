@@ -239,7 +239,7 @@ function AdminVehiculos() {
 		const labels = {
 			sedan: "Sedan",
 			van: "Van",
-			minibus: "Minibus",
+			suv: "SUV",
 		};
 		return labels[tipo] || tipo;
 	};
@@ -297,7 +297,7 @@ function AdminVehiculos() {
 										<SelectItem value="todos">Todos</SelectItem>
 										<SelectItem value="sedan">Sedan</SelectItem>
 										<SelectItem value="van">Van</SelectItem>
-										<SelectItem value="minibus">Minibus</SelectItem>
+										<SelectItem value="suv">SUV</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>
@@ -441,7 +441,7 @@ function AdminVehiculos() {
 									<SelectContent>
 										<SelectItem value="sedan">Sedan</SelectItem>
 										<SelectItem value="van">Van</SelectItem>
-										<SelectItem value="minibus">Minibus</SelectItem>
+										<SelectItem value="suv">SUV</SelectItem>
 									</SelectContent>
 								</Select>
 							</div>

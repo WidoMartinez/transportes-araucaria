@@ -73,9 +73,8 @@ $DESTINOS_PRINCIPALES = [
 // === CONFIGURACIÓN DE VEHÍCULOS ===
 $TIPOS_VEHICULOS = [
     'Sedan' => ['capacidad' => 4, 'equipaje' => 'Estándar'],
-    'SUV' => ['capacidad' => 7, 'equipaje' => 'Extra'],
     'Van' => ['capacidad' => 12, 'equipaje' => 'Múltiple'],
-    'Minibus' => ['capacidad' => 20, 'equipaje' => 'Comercial']
+    'SUV' => ['capacidad' => 4, 'equipaje' => 'Extra']
 ];
 
 // === CONFIGURACIÓN DE MENSAJES ===

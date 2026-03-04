@@ -19,7 +19,7 @@ const Vehiculo = sequelize.define(
 			},
 		},
 		tipo: {
-			type: DataTypes.ENUM("sedan", "van", "minibus"),
+			type: DataTypes.ENUM("sedan", "van", "suv"),
 			allowNull: false,
 			defaultValue: "sedan",
 		},
