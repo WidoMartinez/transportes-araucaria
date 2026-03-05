@@ -5669,8 +5669,20 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
             }
         }
 
+        // Función auxiliar para capitalizar tipo de vehículo
+        const formatVehiculoTipo = (tipo) => {
+            if (!tipo) return "";
+            const mapping = {
+                'sedan': 'Sedán',
+                'van': 'Van',
+                'suv': 'SUV'
+            };
+            return mapping[tipo.toLowerCase()] || tipo;
+        };
+
         // Construir string de vehículo (formato: "TIPO (patente PATENTE)")
-        const vehiculoStr = `${vehiculo.tipo} (patente ${vehiculo.patente})`.trim();
+        const tipoFormateado = formatVehiculoTipo(vehiculo.tipo);
+        const vehiculoStr = `${tipoFormateado} (patente ${vehiculo.patente})`.trim();
         
         // Actualizar observaciones con el conductor
         let nuevasObservaciones = reserva.observaciones || "";
