@@ -147,6 +147,18 @@ const AEROPUERTO_LABEL = "Aeropuerto La Araucanía";
 const normalizeDestino = (value) =>
 	(value || "").toString().trim().toLowerCase();
 
+// Opciones de hora en intervalos de 15 minutos (00:00 - 23:45)
+const TIME_OPTIONS = (() => {
+	const options = [];
+	for (let hour = 0; hour <= 23; hour++) {
+		for (let minute = 0; minute < 60; minute += 15) {
+			const horaStr = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+			options.push(horaStr);
+		}
+	}
+	return options;
+})();
+
 function AdminReservas() {
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
@@ -384,12 +396,14 @@ function AdminReservas() {
 		pagoReferencia: "",
 	});
 
-	// CatÃ¡logo de destinos (para selects)
+	// Catálogo de destinos (para selects)
 	const [destinosCatalog, setDestinosCatalog] = useState([]);
 	const [origenEsOtro, setOrigenEsOtro] = useState(false);
 	const [destinoEsOtro, setDestinoEsOtro] = useState(false);
 	const [otroOrigen, setOtroOrigen] = useState("");
 	const [otroDestino, setOtroDestino] = useState("");
+	// Sentido del viaje para nueva reserva: 'hacia_aeropuerto' | 'desde_aeropuerto' | 'otro'
+	const [sentidoViaje, setSentidoViaje] = useState("hacia_aeropuerto");
 
 	const fetchDestinosCatalog = async () => {
 		try {
@@ -2140,6 +2154,7 @@ function AdminReservas() {
 		setDestinoEsOtro(false);
 		setOtroOrigen("");
 		setOtroDestino("");
+		setSentidoViaje("hacia_aeropuerto");
 		setShowNewDialog(true);
 		fetchDestinosCatalog();
 	};
@@ -2157,12 +2172,8 @@ function AdminReservas() {
 			);
 			return;
 		}
-		const origenFinal = origenEsOtro
-			? otroOrigen || newReservaForm.origen
-			: newReservaForm.origen;
-		const destinoFinal = destinoEsOtro
-			? otroDestino || newReservaForm.destino
-			: newReservaForm.destino;
+		const origenFinal = newReservaForm.origen;
+		const destinoFinal = newReservaForm.destino;
 
 		if (!origenFinal || !destinoFinal) {
 			alert("Por favor completa los campos obligatorios: Origen y Destino");
@@ -5336,12 +5347,66 @@ function AdminReservas() {
 							<h3 className="font-semibold text-lg border-b pb-2">
 								Detalles del Viaje
 							</h3>
+							{/* Selector de sentido del viaje */}
+							<div className="space-y-3">
+								<Label>Sentido del Viaje</Label>
+								<div className="flex flex-wrap gap-4">
+									<label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+										<input
+											type="radio"
+											name="sentido-viaje"
+											value="hacia_aeropuerto"
+											checked={sentidoViaje === "hacia_aeropuerto"}
+											onChange={() => {
+												setSentidoViaje("hacia_aeropuerto");
+												setNewReservaForm({ ...newReservaForm, origen: "", destino: AEROPUERTO_LABEL });
+											}}
+										/>
+										Hacia Aeropuerto
+									</label>
+									<label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+										<input
+											type="radio"
+											name="sentido-viaje"
+											value="desde_aeropuerto"
+											checked={sentidoViaje === "desde_aeropuerto"}
+											onChange={() => {
+												setSentidoViaje("desde_aeropuerto");
+												setNewReservaForm({ ...newReservaForm, origen: AEROPUERTO_LABEL, destino: "" });
+											}}
+										/>
+										Desde Aeropuerto
+									</label>
+									<label className="inline-flex items-center gap-2 cursor-pointer text-sm">
+										<input
+											type="radio"
+											name="sentido-viaje"
+											value="otro"
+											checked={sentidoViaje === "otro"}
+											onChange={() => {
+												setSentidoViaje("otro");
+												setNewReservaForm({ ...newReservaForm, origen: "", destino: "" });
+											}}
+										/>
+										Interurbano / Otro
+									</label>
+								</div>
+							</div>
+
+							{/* Origen y Destino */}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-2">
 									<Label htmlFor="new-origen">
 										Origen <span className="text-red-500">*</span>
 									</Label>
-									{!origenEsOtro ? (
+									{sentidoViaje === "desde_aeropuerto" ? (
+										<Input
+											id="new-origen"
+											value={AEROPUERTO_LABEL}
+											disabled
+											className="bg-muted text-muted-foreground"
+										/>
+									) : (
 										<select
 											id="new-origen"
 											className="border rounded-md h-10 px-3 w-full"
@@ -5354,36 +5419,28 @@ function AdminReservas() {
 											}
 										>
 											<option value="">Seleccionar origen</option>
-											{destinosOptions.map((n) => (
-												<option key={n} value={n}>
-													{n}
-												</option>
-											))}
+											{destinosOptions
+												.filter((n) => n !== AEROPUERTO_LABEL)
+												.map((n) => (
+													<option key={n} value={n}>
+														{n}
+													</option>
+												))}
 										</select>
-									) : (
-										<Input
-											id="new-origen-otro"
-											placeholder="Especificar origen"
-											value={otroOrigen}
-											onChange={(e) => setOtroOrigen(e.target.value)}
-										/>
 									)}
-									<div className="text-xs text-muted-foreground">
-										<label className="inline-flex items-center gap-2 cursor-pointer">
-											<input
-												type="checkbox"
-												checked={origenEsOtro}
-												onChange={(e) => setOrigenEsOtro(e.target.checked)}
-											/>
-											Origen no está en la lista
-										</label>
-									</div>
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="new-destino">
 										Destino <span className="text-red-500">*</span>
 									</Label>
-									{!destinoEsOtro ? (
+									{sentidoViaje === "hacia_aeropuerto" ? (
+										<Input
+											id="new-destino"
+											value={AEROPUERTO_LABEL}
+											disabled
+											className="bg-muted text-muted-foreground"
+										/>
+									) : (
 										<select
 											id="new-destino"
 											className="border rounded-md h-10 px-3 w-full"
@@ -5396,31 +5453,15 @@ function AdminReservas() {
 											}
 										>
 											<option value="">Seleccionar destino</option>
-											{destinosOptions.map((n) => (
-												<option key={n} value={n}>
-													{n}
-												</option>
-											))}
+											{destinosOptions
+												.filter((n) => n !== AEROPUERTO_LABEL)
+												.map((n) => (
+													<option key={n} value={n}>
+														{n}
+													</option>
+												))}
 										</select>
-									) : (
-										<Input
-											id="new-destino-otro"
-											placeholder="Especificar destino"
-											value={otroDestino}
-											onChange={(e) => setOtroDestino(e.target.value)}
-										/>
 									)}
-									<div className="text-xs text-muted-foreground">
-										<label className="inline-flex items-center gap-2 cursor-pointer">
-											<input
-												type="checkbox"
-												checked={destinoEsOtro}
-												onChange={(e) => setDestinoEsOtro(e.target.checked)}
-											/>
-											Destino no está en la lista (se agregará a la base de
-											datos como inactivo)
-										</label>
-									</div>
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="new-fecha">
@@ -5440,9 +5481,9 @@ function AdminReservas() {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="new-hora">Hora</Label>
-									<Input
+									<select
 										id="new-hora"
-										type="time"
+										className="border rounded-md h-10 px-3 w-full"
 										value={newReservaForm.hora}
 										onChange={(e) =>
 											setNewReservaForm({
@@ -5450,7 +5491,12 @@ function AdminReservas() {
 												hora: e.target.value,
 											})
 										}
-									/>
+									>
+										<option value="">Seleccionar...</option>
+										{TIME_OPTIONS.map((h) => (
+											<option key={h} value={h}>{h}</option>
+										))}
+									</select>
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="new-pasajeros">Pasajeros</Label>
@@ -5522,9 +5568,9 @@ function AdminReservas() {
 									</div>
 									<div className="space-y-2">
 										<Label htmlFor="new-horaregreso">Hora Regreso</Label>
-										<Input
+										<select
 											id="new-horaregreso"
-											type="time"
+											className="border rounded-md h-10 px-3 w-full"
 											value={newReservaForm.horaRegreso}
 											onChange={(e) =>
 												setNewReservaForm({
@@ -5532,7 +5578,12 @@ function AdminReservas() {
 													horaRegreso: e.target.value,
 												})
 											}
-										/>
+										>
+											<option value="">Seleccionar...</option>
+											{TIME_OPTIONS.map((h) => (
+												<option key={`regreso-${h}`} value={h}>{h}</option>
+											))}
+										</select>
 									</div>
 								</div>
 							)}
