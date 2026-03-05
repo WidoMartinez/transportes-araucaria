@@ -4565,6 +4565,24 @@ function AdminReservas() {
 										}
 									/>
 								</div>
+								<div className="space-y-1">
+									<Label>Vehículo</Label>
+									<Select
+										value={formData.vehiculo || "auto"}
+										onValueChange={(value) =>
+											setFormData({ ...formData, vehiculo: value })
+										}
+									>
+										<SelectTrigger className="bg-white">
+											<SelectValue placeholder="Seleccionar..." />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="auto">Auto / Sedán</SelectItem>
+											<SelectItem value="van">Van</SelectItem>
+											<SelectItem value="suv">SUV</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
 							</div>
 
 							{/* Detalles del Trayecto */}

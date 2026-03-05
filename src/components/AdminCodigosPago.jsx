@@ -103,6 +103,11 @@ const formatDate = (date) => {
 const generarMensaje = (codigo) => {
 	const urlPago = `https://www.transportesaraucaria.cl/#pagar-con-codigo`;
 	let mensaje = `Hola, aquí tienes tu código de pago:\n\n${codigo.codigo}\n\nPuedes realizar el pago en el siguiente enlace:\n${urlPago}\n\nDetalles:\nOrigen: ${codigo.origen}\nDestino: ${codigo.destino}\nMonto: ${formatCurrency(codigo.monto)}`;
+	if (codigo.vehiculo) {
+		const nombresVehi = { 'sedan': 'Sedán', 'van': 'Van', 'suv': 'SUV' };
+		const nV = nombresVehi[codigo.vehiculo.toLowerCase()] || codigo.vehiculo;
+		mensaje += `\nVehículo: ${nV}`;
+	}
 	if (codigo.idaVuelta) mensaje += `\nTipo: Ida y vuelta`;
 	if (codigo.fechaVencimiento) {
 		mensaje += `\n\n⏰ Válido hasta: ${formatDate(codigo.fechaVencimiento)}`;
@@ -502,6 +507,7 @@ function AdminCodigosPago() {
 		setCodigoEditando(c);
 		setFormEdicion({
 			monto: String(c.monto || ""),
+			vehiculo: c.vehiculo || "",
 			fechaVencimiento: c.fechaVencimiento ? obtenerFechaLocal(0).slice(0, 16) : "",
 			usosMaximos: String(c.usosMaximos || 1),
 			observaciones: c.observaciones || "",
@@ -529,6 +535,7 @@ function AdminCodigosPago() {
 		try {
 			const payload = {
 				monto,
+				vehiculo: formEdicion.vehiculo,
 				usosMaximos: parseInt(formEdicion.usosMaximos) || 1,
 				observaciones: formEdicion.observaciones,
 				fechaVencimiento: formEdicion.fechaVencimiento
@@ -761,6 +768,7 @@ function AdminCodigosPago() {
 												Monto <ArrowUpDown className="h-3 w-3" />
 											</button>
 										</TableHead>
+										<TableHead>Vehículo</TableHead>
 										<TableHead>Tipo</TableHead>
 										<TableHead>
 											<button className="flex items-center gap-1 hover:text-foreground" onClick={() => handleSort("estado")}>
@@ -789,6 +797,9 @@ function AdminCodigosPago() {
 												</div>
 											</TableCell>
 											<TableCell>{formatCurrency(c.monto)}</TableCell>
+											<TableCell>
+												{c.vehiculo ? <Badge variant="secondary" className="uppercase">{c.vehiculo}</Badge> : <span className="text-gray-400 px-2">—</span>}
+											</TableCell>
 											<TableCell>
 												{c.idaVuelta ? (
 													<Badge className="bg-purple-600 text-white">Ida y vuelta</Badge>
@@ -1117,9 +1128,20 @@ function AdminCodigosPago() {
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-2">
-						<div className="space-y-2">
-							<Label htmlFor="edit-monto">Monto</Label>
-							<Input id="edit-monto" type="number" value={formEdicion.monto} onChange={(e) => setFormEdicion((p) => ({ ...p, monto: e.target.value }))} min="0" className="h-10" />
+						<div className="grid grid-cols-2 gap-4">
+							<div className="space-y-2">
+								<Label htmlFor="edit-monto">Monto</Label>
+								<Input id="edit-monto" type="number" value={formEdicion.monto} onChange={(e) => setFormEdicion((p) => ({ ...p, monto: e.target.value }))} min="0" className="h-10" />
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="edit-vehiculo">Vehículo</Label>
+								<select id="edit-vehiculo" value={formEdicion.vehiculo} onChange={(e) => setFormEdicion((p) => ({ ...p, vehiculo: e.target.value }))} className="h-10 w-full border rounded px-3 text-sm">
+									<option value="">(Sin asignar)</option>
+									<option value="sedan">Sedán</option>
+									<option value="van">Van</option>
+									<option value="suv">SUV</option>
+								</select>
+							</div>
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="edit-usos">Usos Máximos</Label>

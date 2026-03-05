@@ -1155,9 +1155,9 @@ const [configSillas, setConfigSillas] = useState({
 			let precioFinal = null;
 			let esUpgradeVanSinAdicionales = false;
 
-			if (numPasajeros > 0 && numPasajeros <= 3) {
+			if (numPasajeros > 0 && numPasajeros <= 4) {
 				if (upgradeVan) {
-					// UPGRADE VOLUNTARIO: 1-3 pasajeros eligieron Van
+					// UPGRADE VOLUNTARIO: 1-4 pasajeros eligieron Van
 					vehiculoAsignado = "Van de Pasajeros (Upgrade)";
 					const precios = destinoInfo.precios.van;
 					if (!precios) return { 
@@ -1170,8 +1170,8 @@ const [configSillas, setConfigSillas] = useState({
 					esUpgradeVanSinAdicionales = true; // Activar protección de precio mínimo
 					
 				} else {
-					// SEDAN: Flujo normal para 1-3 pasajeros
-					vehiculoAsignado = "Auto Privado";
+					// SEDAN / SUV: Flujo normal para 1-4 pasajeros
+					vehiculoAsignado = numPasajeros === 4 ? "SUV" : "Auto Privado";
 					const precios = destinoInfo.precios.auto;
 					if (!precios) return { 
 						precio: null, 
@@ -1185,10 +1185,10 @@ const [configSillas, setConfigSillas] = useState({
 					precioFinal = precioBase + pasajerosAdicionales * costoAdicional;
 				}
 			} else if (
-				numPasajeros >= 4 &&
+				numPasajeros >= 5 &&
 				numPasajeros <= destinoInfo.maxPasajeros
 			) {
-				// VAN OBLIGATORIA: 4+ pasajeros (FLUJO ORIGINAL sin cambios)
+				// VAN OBLIGATORIA: 5+ pasajeros (FLUJO ORIGINAL adaptado)
 				vehiculoAsignado = "Van de Pasajeros";
 				const precios = destinoInfo.precios.van;
 				if (!precios) return { 

@@ -587,6 +587,12 @@ function PagarConCodigo() {
 									<span className="text-sm text-muted-foreground">Pasajeros:</span>
 									<span className="font-medium">{codigoValidado.pasajeros} persona(s)</span>
 								</div>
+								{codigoValidado.vehiculo && (
+									<div className="flex justify-between items-center">
+										<span className="text-sm text-muted-foreground">Vehículo:</span>
+										<Badge variant="outline" className="uppercase bg-white">{codigoValidado.vehiculo}</Badge>
+									</div>
+								)}
 								{esIdaVuelta && (
 									<div className="flex justify-between items-center">
 										<span className="text-sm text-muted-foreground">Tipo:</span>
