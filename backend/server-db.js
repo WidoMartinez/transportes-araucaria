@@ -3429,29 +3429,41 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		const clienteIdAsociado = clienteAsociado ? clienteAsociado.id : null;
 
 		// Verificar si existe una reserva activa sin pagar para este email o referencia de pago
-		const whereClause = {
-			estado: {
-				[Op.in]: ["pendiente", "pendiente_detalles"],
-			},
-			estadoPago: "pendiente",
-		};
+		// BÚSQUEDA EN DOS PASOS para evitar duplicados:
+		// 1. Buscar por referenciaPago (si se proporciona)
+		// 2. Si no se encuentra, hacer fallback por email (incluso en flujo codigo_pago)
+		let reservaExistente = null;
 
-		// PRIORIDAD 1: Si viene de un código de pago, buscar por referencia de pago
-		if (datosReserva.source === "codigo_pago" && datosReserva.referenciaPago) {
-			whereClause.referenciaPago = datosReserva.referenciaPago;
-			console.log(`🔍 Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`);
-		} else {
-			// PRIORIDAD 2: Búsqueda por email tradicional (buscamos la principal)
-			whereClause.email = emailNormalizado;
-			// whereClause.tramoHijoId = null; // ELIMINADO: Permitir encontrar reserva matriz dividida
-			whereClause.tramoPadreId = null; // Solo principal (no el retorno)
-			console.log(`🔍 Buscando reserva existente por email: ${emailNormalizado}`);
+		if (datosReserva.referenciaPago) {
+			// PASO 1: Buscar por referencia de pago (máxima prioridad)
+			console.log(`🔍 [PASO 1] Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`);
+			reservaExistente = await Reserva.findOne({
+				where: {
+					referenciaPago: datosReserva.referenciaPago,
+					estado: { [Op.in]: ["pendiente", "pendiente_detalles"] },
+					estadoPago: "pendiente",
+				},
+				order: [["createdAt", "DESC"]],
+			});
 		}
 
-		const reservaExistente = await Reserva.findOne({
-			where: whereClause,
-			order: [["createdAt", "DESC"]],
-		});
+		if (!reservaExistente && emailNormalizado) {
+			// PASO 2: Fallback por email (captura reservas hechas antes por web sin código vinculado)
+			console.log(`🔍 [PASO 2] Fallback: buscando reserva existente por email: ${emailNormalizado}`);
+			reservaExistente = await Reserva.findOne({
+				where: {
+					email: emailNormalizado,
+					estado: { [Op.in]: ["pendiente", "pendiente_detalles"] },
+					estadoPago: "pendiente",
+					tramoPadreId: null, // Solo reserva principal (no tramo de retorno)
+				},
+				order: [["createdAt", "DESC"]],
+			});
+
+			if (reservaExistente) {
+				console.log(`✅ [PASO 2] Reserva pendiente encontrada por email (ID: ${reservaExistente.id}). Se actualizará en lugar de crear una nueva.`);
+			}
+		}
 
 		let reservaExpress;
 		let esModificacion = false;
