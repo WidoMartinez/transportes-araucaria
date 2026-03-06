@@ -6353,7 +6353,7 @@ function AdminReservas() {
 								</Badge>
 								{reservaVuelta.origen} → {reservaVuelta.destino}
 							</div>
-							
+
 							{/* Selector de vehículo VUELTA */}
 							<div className="space-y-2">
 								<Label htmlFor="vehiculo-vuelta">

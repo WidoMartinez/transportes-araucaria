@@ -456,35 +456,99 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
     const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // Crear reserva
-    const reserva = await Reserva.create({
-      codigoReserva: codigoReserva,
-      clienteId: cliente.id,
-      nombre,
-      email,
-      telefono,
-      origen: origenFinal,
-      destino: destinoFinal,
-      fecha: fecha_ida,
-      hora: hora_ida,
-      fechaRegreso: fecha_vuelta || null,
-      horaRegreso: hora_vuelta || null,
-      idaVuelta: promocion.tipo_viaje === "ida_vuelta",
-      pasajeros: req.body.cantidad_pasajeros ? parseInt(req.body.cantidad_pasajeros) : 1,
-      precio: precioTotal, // Usar precio calculado con sillas
-      totalConDescuento: precioTotal, // Usar precio calculado con sillas
-      estado: "pendiente",
-      source: "banner_promocional", // Identificar origen para conversiones de Google Ads
-      sillaInfantil: cantidadSillas > 0,
-      cantidadSillasInfantiles: cantidadSillas,
-      comentarios: cantidadSillas > 0 ? `Incluye ${cantidadSillas} silla(s) infantil(es)` : null
-    });
+    const esIdaVuelta = promocion.tipo_viaje === "ida_vuelta";
+    const pasajeros = req.body.cantidad_pasajeros ? parseInt(req.body.cantidad_pasajeros) : 1;
+    const sillaBool = cantidadSillas > 0;
+    const comentariosSilla = cantidadSillas > 0 ? `Incluye ${cantidadSillas} silla(s) infantil(es)` : null;
+
+    let reserva;
+
+    if (!esIdaVuelta) {
+      // 1. Caso Solo Ida
+      reserva = await Reserva.create({
+        codigoReserva: codigoReserva,
+        clienteId: cliente.id,
+        nombre,
+        email,
+        telefono,
+        origen: origenFinal,
+        destino: destinoFinal,
+        fecha: fecha_ida,
+        hora: hora_ida,
+        idaVuelta: false,
+        tipoTramo: "ida",
+        pasajeros: pasajeros,
+        precio: precioTotal,
+        totalConDescuento: precioTotal,
+        estado: "pendiente",
+        source: "banner_promocional",
+        sillaInfantil: sillaBool,
+        cantidadSillasInfantiles: cantidadSillas,
+        comentarios: comentariosSilla
+      });
+    } else {
+      // 2. Caso Ida y Vuelta: Crear dos tramos independientes vinculados
+      // a) Precio dividido
+      const precioTramo = precioTotal / 2;
+
+      // b) Crear tramo IDA (Padre) inicialmente sin tramoHijoId
+      reserva = await Reserva.create({
+        codigoReserva: codigoReserva,
+        clienteId: cliente.id,
+        nombre,
+        email,
+        telefono,
+        origen: origenFinal,
+        destino: destinoFinal,
+        fecha: fecha_ida,
+        hora: hora_ida,
+        idaVuelta: false,
+        tipoTramo: "ida",
+        pasajeros: pasajeros,
+        precio: precioTramo,
+        totalConDescuento: precioTramo,
+        estado: "pendiente",
+        source: "banner_promocional",
+        sillaInfantil: sillaBool,
+        cantidadSillasInfantiles: cantidadSillas,
+        comentarios: comentariosSilla
+      });
+
+      // c) Crear tramo VUELTA (Hijo)
+      const reservaVuelta = await Reserva.create({
+        codigoReserva: `${codigoReserva}-V`, // Sufijo opcional para distinguir
+        clienteId: cliente.id,
+        nombre,
+        email,
+        telefono,
+        origen: destinoFinal, // Invertir origen/destino
+        destino: origenFinal,
+        fecha: fecha_vuelta,
+        hora: hora_vuelta,
+        idaVuelta: false,
+        tipoTramo: "vuelta",
+        tramoPadreId: reserva.id,
+        pasajeros: pasajeros,
+        precio: precioTramo,
+        totalConDescuento: precioTramo,
+        estado: "pendiente",
+        source: "banner_promocional",
+        sillaInfantil: sillaBool,
+        cantidadSillasInfantiles: cantidadSillas,
+        comentarios: comentariosSilla
+      });
+
+      // d) Actualizar IDA con el ID del hijo
+      await reserva.update({ tramoHijoId: reservaVuelta.id });
+    }
 
     res.status(201).json({
       message: "Reserva creada exitosamente",
       reserva: {
         id: reserva.id,
         codigo_reserva: reserva.codigoReserva,
-        precio_total: parseFloat(reserva.precio),
+        // Mantener interfaz: devolver precio total
+        precio_total: precioTotal, 
       },
     });
   } catch (error) {
