@@ -103,6 +103,10 @@ $hora = htmlspecialchars($data['hora'] ?? 'No especificada');
 $pasajeros = htmlspecialchars($data['pasajeros'] ?? 'No especificado');
 $precio = $data['precio'] ?? 0;
 $vehiculo = htmlspecialchars($data['vehiculo'] ?? 'No asignado');
+// Normalizar nomenclatura
+if (strtolower($vehiculo) === 'sedan' || $vehiculo === 'Auto Privado') {
+    $vehiculo = 'Sedán';
+}
 
 // Datos adicionales para las reservas
 $numeroVuelo = htmlspecialchars($data['numeroVuelo'] ?? '');
@@ -128,6 +132,10 @@ $otroOrigen = htmlspecialchars($data['otroOrigen'] ?? '');
 $otroDestino = htmlspecialchars($data['otroDestino'] ?? '');
 $codigoReserva = htmlspecialchars($data['codigoReserva'] ?? '');
 $upgradeVan = $data['upgradeVan'] ?? false;
+
+// Determinar el icono del vehículo dinámicamente
+$esVan = (stripos($vehiculo, 'van') !== false);
+$vehiculoIcono = $esVan ? '🚐' : '🚗';
 
 $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
 $formattedTotalConDescuento = $totalConDescuento ? '$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP' : 'A consultar';
@@ -178,7 +186,7 @@ $emailHtml = "
 <div style='font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;'>
     <!-- Header -->
     <div style='background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 30px 25px; text-align: center;'>
-        <h1 style='margin: 0; font-size: 28px; font-weight: 700;'>🚐 Nueva Reserva de Transfer</h1>
+        <h1 style='margin: 0; font-size: 28px; font-weight: 700;'>{$vehiculoIcono} Nueva Reserva de Transfer</h1>
         <p style='margin: 10px 0 5px; font-size: 16px; opacity: 0.95;'>Fuente: <strong>{$source}</strong></p>
         <p style='margin: 5px 0 0; font-size: 13px; opacity: 0.8;'>" . date('d/m/Y H:i:s') . "</p>
         <div style='margin-top: 15px; padding: 10px; border-radius: 6px; " .
@@ -466,7 +474,7 @@ try {
 
     // Contenido
     $mail->isHTML(true);
-    $mail->Subject = "🚐 Nueva Reserva: {$destino} - " . ($reservaGuardada ? "GUARDADA" : "NO GUARDADA") . " - " . $nombre;
+    $mail->Subject = "{$vehiculoIcono} Nueva Reserva: " . ($codigoReserva ?: $destino) . " - " . ($reservaGuardada ? "GUARDADA" : "NO GUARDADA") . " - " . $nombre;
     $mail->Body    = $emailHtml;
 
     $mail->send();

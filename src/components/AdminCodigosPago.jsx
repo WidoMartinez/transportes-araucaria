@@ -990,7 +990,7 @@ function AdminCodigosPago() {
 								<Label htmlFor="vehiculo" className="text-base">Vehículo</Label>
 								<select id="vehiculo" name="vehiculo" value={formData.vehiculo} onChange={handleInputChange} className="h-12 md:h-10 border rounded px-3 w-full text-base">
 									<option value="">Seleccionar tipo...</option>
-									<option value="sedan">Sedan</option>
+									<option value="sedan">Sedán</option>
 									<option value="van">Van</option>
 									<option value="suv">SUV</option>
 								</select>

@@ -146,6 +146,10 @@ $hora = htmlspecialchars($data['hora'] ?? 'No especificada');
 $pasajeros = htmlspecialchars($data['pasajeros'] ?? 'No especificado');
 $precio = $data['precio'] ?? 0;
 $vehiculo = htmlspecialchars($data['vehiculo'] ?? 'No asignado');
+// Normalizar nomenclatura
+if (strtolower($vehiculo) === 'sedan' || $vehiculo === 'Auto Privado') {
+    $vehiculo = 'Sedán';
+}
 
 // Datos adicionales para las reservas
 $numeroVuelo = htmlspecialchars($data['numeroVuelo'] ?? '');
@@ -164,6 +168,10 @@ $descuentoRoundTrip = $data['descuentoRoundTrip'] ?? 0;
 $descuentoOnline = $data['descuentoOnline'] ?? 0;
 $totalConDescuento = $data['totalConDescuento'] ?? $precio;
 $upgradeVan = $data['upgradeVan'] ?? false;
+
+// Determinar el icono del vehículo dinámicamente
+$esVan = (stripos($vehiculo, 'van') !== false);
+$vehiculoIcono = $esVan ? '🚐' : '🚗';
 
 // Datos adicionales opcionales del formulario
 $descuentosPersonalizados = $data['descuentosPersonalizados'] ?? [];
@@ -271,7 +279,7 @@ if ($action === 'send_discount_offer') {
         $mail2->Subject = "🎉 ¡Oferta Exclusiva! {$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu traslado - {$brandName}";
         $mail2->Body = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
             <div style='background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:#fff; padding:24px 22px; text-align:center;'>
-                <h2 style='margin:0; font-size:24px;'>🎉 ¡Oferta Exclusiva para Ti!</h2>
+                <h2 style='margin:0; font-size:24px;'>{$vehiculoIcono} ¡Oferta Exclusiva para Ti!</h2>
                 <p style='margin:8px 0 0; font-size:16px; opacity:0.95;'>{$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu próximo traslado</p>
             </div>
             <div style='padding:20px;'>
@@ -341,7 +349,7 @@ try {
 $emailHtml = "
     <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px;'>
         <div style='background-color: #003366; color: white; padding: 20px; text-align: center;'>
-            <h1 style='margin: 0;'>Nueva Solicitud de Cotización</h1>
+            <h1 style='margin: 0;'>{$vehiculoIcono} Nueva Solicitud de Cotización</h1>
             <p style='margin: 5px 0 0;'>Recibida desde: {$source}</p>
             " . ($reservaGuardada ? "<p style='margin: 5px 0 0; font-size: 12px;'>✅ Reserva guardada en sistema</p>" : "<p style='margin: 5px 0 0; font-size: 12px; color: #ffeb3b;'>⚠️ Reserva NO guardada en sistema</p>") . "
         </div>
@@ -489,7 +497,7 @@ try {
 
     // Contenido
     $mail->isHTML(true);
-    $mail->Subject = "Nueva Cotización de Transfer: {$destino} - " . ($reservaGuardada ? "GUARDADA" : "NO GUARDADA");
+    $mail->Subject = "{$vehiculoIcono} Nueva Cotización de Transfer: {$destino} - " . ($reservaGuardada ? "GUARDADA" : "NO GUARDADA");
     $mail->Body    = $emailHtml;
 
     $mail->send();
@@ -529,7 +537,7 @@ try {
 
                 $clienteHtml = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
                     <div style='background:#0f172a; color:#fff; padding:18px 22px;'>
-                        <h2 style='margin:0; font-size:18px;'>{$brandName}</h2>
+                        <h2 style='margin:0; font-size:18px;'>{$vehiculoIcono} {$brandName}</h2>
                         <p style='margin:4px 0 0; font-size:13px;'>Hemos recibido tu solicitud de traslado</p>
                     </div>
                     <div style='padding:20px;'>
@@ -569,7 +577,7 @@ try {
 
                 $descuentoHtml = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
                     <div style='background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:#fff; padding:24px 22px; text-align:center;'>
-                        <h2 style='margin:0; font-size:24px;'>🎉 ¡Oferta Exclusiva para Ti!</h2>
+                        <h2 style='margin:0; font-size:24px;'>{$vehiculoIcono} ¡Oferta Exclusiva para Ti!</h2>
                         <p style='margin:8px 0 0; font-size:16px; opacity:0.95;'>{$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu próximo traslado</p>
                     </div>
                     <div style='padding:20px;'>

@@ -1952,7 +1952,7 @@ function AdminReservas() {
 	// (sin patente real) indican que aÃºn no se ha asignado uno real.
 	const isAsignada = (reserva) => {
 		const v = (reserva?.vehiculo || "").trim().toLowerCase();
-		if (!v || v === "por asignar" || v === "auto privado") return false;
+		if (!v || ["por asignar", "auto privado", "sedan", "sedán"].includes(v)) return false;
 		const parts = v.split(" ");
 		if (parts.length < 2) return false;
 		const last = parts[parts.length - 1];
@@ -4588,7 +4588,7 @@ function AdminReservas() {
 											<SelectValue placeholder="Seleccionar..." />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="auto">Auto / Sedán</SelectItem>
+											<SelectItem value="auto">Sedán</SelectItem>
 											<SelectItem value="van">Van</SelectItem>
 											<SelectItem value="suv">SUV</SelectItem>
 										</SelectContent>
@@ -5525,7 +5525,7 @@ function AdminReservas() {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="sedan">Sedan</SelectItem>
+											<SelectItem value="sedan">Sedán</SelectItem>
 											<SelectItem value="van">Van</SelectItem>
 											<SelectItem value="suv">SUV</SelectItem>
 										</SelectContent>

@@ -1195,20 +1195,20 @@ function HeroExpress({
 								const destinoInfo = destinosData.find(d => d.nombre === tramo);
 								if (!destinoInfo || !destinoInfo.precios?.van?.base) return null;
 								
-								// CALCULAR SIEMPRE BASÁNDOSE EN EL PRECIO DEL SEDAN, NO EN EL ESTADO ACTUAL
-								// Calcular precio base del Sedan sin descuentos
+								// CALCULAR SIEMPRE BASÁNDOSE EN EL PRECIO DEL SEDÁN, NO EN EL ESTADO ACTUAL
+								// Calcular precio base del Sedán sin descuentos
 								const preciosAuto = destinoInfo.precios.auto;
 								const baseAuto = Number(preciosAuto.base);
 								const adicionales = parseInt(formData.pasajeros) - 1;
 								const precioSedanBase = baseAuto + (adicionales * baseAuto * preciosAuto.porcentajeAdicional);
 								const precioSedanSinDescuentos = formData.idaVuelta ? precioSedanBase * 2 : precioSedanBase;
 								
-								// Calcular precio Sedan CON descuentos (usando pricing solo si NO está en modo upgrade)
+								// Calcular precio Sedán CON descuentos (usando pricing solo si NO está en modo upgrade)
 								// Si upgrade está activado, usar cotización inversa
 								let precioSedanConDescuentos;
 								if (formData.upgradeVan) {
 									// Si upgrade activado, calcular desde el precio total actual
-									// El pricing.totalConDescuento es de la Van, necesitamos recalcular el Sedan
+									// El pricing.totalConDescuento es de la Van, necesitamos recalcular el Sedán
 									// Usar mismo porcentaje de descuento
 									const precioActualVan = pricing.totalConDescuento || 0;
 									const precioBaseVan = Number(destinoInfo.precios.van.base);
@@ -1234,7 +1234,7 @@ function HeroExpress({
 								// Aplicar el mismo porcentaje de descuento a la Van para 4 pax
 								const precioVan4PaxConDescuentos = precioVan4PaxSinDescuentos * (1 - porcentajeDescuento);
 								
-								// Diferencia = Van 4 pax con descuentos - Sedan con descuentos (SIEMPRE FIJA)
+								// Diferencia = Van 4 pax con descuentos - Sedán con descuentos (SIEMPRE FIJA)
 								const diferenciaTotal = precioVan4PaxConDescuentos - precioSedanConDescuentos;
 								
 								// No mostrar si la diferencia es negativa o muy pequeña

@@ -237,7 +237,7 @@ function AdminVehiculos() {
 
 	const getTipoLabel = (tipo) => {
 		const labels = {
-			sedan: "Sedan",
+			sedan: "Sedán",
 			van: "Van",
 			suv: "SUV",
 		};
@@ -295,7 +295,7 @@ function AdminVehiculos() {
 									</SelectTrigger>
 									<SelectContent>
 										<SelectItem value="todos">Todos</SelectItem>
-										<SelectItem value="sedan">Sedan</SelectItem>
+										<SelectItem value="sedan">Sedán</SelectItem>
 										<SelectItem value="van">Van</SelectItem>
 										<SelectItem value="suv">SUV</SelectItem>
 									</SelectContent>
@@ -439,7 +439,7 @@ function AdminVehiculos() {
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="sedan">Sedan</SelectItem>
+										<SelectItem value="sedan">Sedán</SelectItem>
 										<SelectItem value="van">Van</SelectItem>
 										<SelectItem value="suv">SUV</SelectItem>
 									</SelectContent>
