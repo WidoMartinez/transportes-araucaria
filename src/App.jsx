@@ -576,6 +576,12 @@ const [configSillas, setConfigSillas] = useState({
 						
 						// Marcar como enviada
 						sessionStorage.setItem(conversionKey, 'true');
+						// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también por ID de reserva
+						// para que CompletarDetalles.jsx no dispare una segunda conversión de "respaldo" 
+						// con el monto base y la sobrescriba.
+						if (reservaId) {
+							sessionStorage.setItem(`flow_conversion_express_${reservaId}`, 'true');
+						}
 
 					} else {
 						console.log("ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.");

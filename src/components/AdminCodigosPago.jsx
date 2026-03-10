@@ -5,6 +5,7 @@ import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Switch } from "./ui/switch";
 import {
 	Table,
 	TableBody,
@@ -505,14 +506,8 @@ function AdminCodigosPago() {
 	// ── Editar ────────────────────────────────────────────────────────────────
 	const abrirEdicion = (c) => {
 		setCodigoEditando(c);
-		setFormEdicion({
-			monto: String(c.monto || ""),
-			vehiculo: c.vehiculo || "",
-			fechaVencimiento: c.fechaVencimiento ? obtenerFechaLocal(0).slice(0, 16) : "",
-			usosMaximos: String(c.usosMaximos || 1),
-			observaciones: c.observaciones || "",
-		});
-		// Pre-cargar fecha real del registro
+		
+		let fechaVencFormateada = "";
 		if (c.fechaVencimiento) {
 			const d = new Date(c.fechaVencimiento);
 			const año = d.getFullYear();
@@ -520,8 +515,16 @@ function AdminCodigosPago() {
 			const dia = String(d.getDate()).padStart(2, "0");
 			const h = String(d.getHours()).padStart(2, "0");
 			const m = String(d.getMinutes()).padStart(2, "0");
-			setFormEdicion((prev) => ({ ...prev, fechaVencimiento: `${año}-${mes}-${dia}T${h}:${m}` }));
+			fechaVencFormateada = `${año}-${mes}-${dia}T${h}:${m}`;
 		}
+		
+		setFormEdicion({
+			monto: String(c.monto || ""),
+			vehiculo: c.vehiculo || "",
+			fechaVencimiento: fechaVencFormateada,
+			usosMaximos: String(c.usosMaximos || 1),
+			observaciones: c.observaciones || "",
+		});
 	};
 
 	const guardarEdicion = async () => {
@@ -1004,7 +1007,7 @@ function AdminCodigosPago() {
 							<div className="space-y-2 md:col-span-2">
 								<Label htmlFor="idaVuelta">Tipo de viaje</Label>
 								<div className="flex items-start gap-3 rounded border p-3">
-									<input type="checkbox" id="idaVuelta" name="idaVuelta" checked={formData.idaVuelta} onChange={handleInputChange} className="mt-1 h-4 w-4" />
+									<Switch id="idaVuelta" checked={formData.idaVuelta} onCheckedChange={(checked) => setFormData(p => ({ ...p, idaVuelta: checked }))} className="mt-1" />
 									<div>
 										<p className="font-medium">Incluir viaje de regreso</p>
 										<p className="text-sm text-gray-500">Los clientes seguirán el flujo completo e ingresarán la fecha y hora del regreso al usar el código.</p>
@@ -1016,14 +1019,14 @@ function AdminCodigosPago() {
 								<Label>Opciones de Pago</Label>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="flex items-start gap-3 rounded border p-3">
-										<input type="checkbox" id="permitirAbono" name="permitirAbono" checked={formData.permitirAbono} onChange={handleInputChange} className="mt-1 h-4 w-4" />
+										<Switch id="permitirAbono" checked={formData.permitirAbono} onCheckedChange={(checked) => setFormData(p => ({ ...p, permitirAbono: checked }))} className="mt-1" />
 										<div>
 											<p className="font-medium">Permitir abono del 40%</p>
 											<p className="text-xs text-gray-500">Cliente puede pagar solo el 40% para reservar.</p>
 										</div>
 									</div>
 									<div className="flex items-start gap-3 rounded border p-3 bg-blue-50 border-blue-100">
-										<input type="checkbox" id="sillaInfantil" name="sillaInfantil" checked={formData.sillaInfantil} onChange={handleInputChange} className="mt-1 h-4 w-4" />
+										<Switch id="sillaInfantil" checked={formData.sillaInfantil} onCheckedChange={(checked) => setFormData(p => ({ ...p, sillaInfantil: checked }))} className="mt-1" />
 										<div>
 											<p className="font-medium text-blue-900">Incluir Silla de Niño</p>
 											<p className="text-xs text-blue-700">Se marcará en la reserva que requiere silla.</p>

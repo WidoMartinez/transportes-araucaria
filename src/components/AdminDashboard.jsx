@@ -1,28 +1,32 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { Button } from "./ui/button";
-import { LogOut, User, Shield, Bell } from "lucide-react";
 import AdminSidebar from "./admin/layout/AdminSidebar";
 import DashboardHome from "./admin/dashboard/DashboardHome";
-import GestionPromociones from "./admin/dashboard/GestionPromociones";
-import AdminPricing from "./AdminPricing";
-import AdminCodigos from "./AdminCodigos";
-import AdminCodigosMejorado from "./AdminCodigosMejorado";
-import AdminReservas from "./AdminReservas";
-import AdminVehiculos from "./AdminVehiculos";
-import AdminConductores from "./AdminConductores";
-import AdminCodigosPago from "./AdminCodigosPago";
-import AdminGastos from "./AdminGastos";
-import AdminEstadisticas from "./AdminEstadisticas";
-import AdminProductos from "./AdminProductos";
-import AdminTarifaDinamica from "./AdminTarifaDinamica";
-import AdminDisponibilidad from "./AdminDisponibilidad";
-import AdminFestivos from "./AdminFestivos";
-import AdminBloqueosAgenda from "./AdminBloqueosAgenda";
-import AdminUsuarios from "./AdminUsuarios";
-import AdminPerfil from "./AdminPerfil";
-import AdminConfiguracion from "./AdminConfiguracion";
 import { Toaster } from "./ui/sonner";
+
+// Componentes estáticos principales y UI
+import { Button } from "./ui/button";
+import { LogOut, User, Shield, Bell, LoaderCircle } from "lucide-react";
+
+// Lazy loading para los módulos del panel
+const GestionPromociones = lazy(() => import("./admin/dashboard/GestionPromociones"));
+const AdminPricing = lazy(() => import("./AdminPricing"));
+const AdminCodigos = lazy(() => import("./AdminCodigos"));
+const AdminCodigosMejorado = lazy(() => import("./AdminCodigosMejorado"));
+const AdminReservas = lazy(() => import("./AdminReservas"));
+const AdminVehiculos = lazy(() => import("./AdminVehiculos"));
+const AdminConductores = lazy(() => import("./AdminConductores"));
+const AdminCodigosPago = lazy(() => import("./AdminCodigosPago"));
+const AdminGastos = lazy(() => import("./AdminGastos"));
+const AdminEstadisticas = lazy(() => import("./AdminEstadisticas"));
+const AdminProductos = lazy(() => import("./AdminProductos"));
+const AdminTarifaDinamica = lazy(() => import("./AdminTarifaDinamica"));
+const AdminDisponibilidad = lazy(() => import("./AdminDisponibilidad"));
+const AdminFestivos = lazy(() => import("./AdminFestivos"));
+const AdminBloqueosAgenda = lazy(() => import("./AdminBloqueosAgenda"));
+const AdminUsuarios = lazy(() => import("./AdminUsuarios"));
+const AdminPerfil = lazy(() => import("./AdminPerfil"));
+const AdminConfiguracion = lazy(() => import("./AdminConfiguracion"));
 
 /**
  * Panel de Administración Principal
@@ -134,48 +138,54 @@ function AdminDashboard() {
             px-6 py-6
           `}>
             {/* Renderizar el componente activo */}
-            {active === "dashboard" ? (
-              <DashboardHome onNavigate={setPanel} />
-            ) : active === "reservas" ? (
-              <AdminReservas />
-            ) : active === "vehiculos" ? (
-              <AdminVehiculos />
-            ) : active === "conductores" ? (
-              <AdminConductores />
-            ) : active === "productos" ? (
-              <AdminProductos />
-            ) : active === "gastos" ? (
-              <AdminGastos />
-            ) : active === "estadisticas" ? (
-              <AdminEstadisticas />
-            ) : active === "tarifa-dinamica" ? (
-              <AdminTarifaDinamica />
-            ) : active === "disponibilidad" ? (
-              <AdminDisponibilidad />
-            ) : active === "festivos" ? (
-              <AdminFestivos />
-            ) : active === "bloqueos" ? (
-              <AdminBloqueosAgenda />
-            ) : active === "promociones" ? (
-              <GestionPromociones />
-            ) : active === "codigos" ? (
-              <AdminCodigos />
-            ) : active === "codigos-mejorado" ? (
-              <AdminCodigosMejorado />
-            ) : active === "codigos-pago" ? (
-              <AdminCodigosPago />
-            ) : active === "pricing" ? (
-              <AdminPricing />
-            ) : active === "usuarios" ? (
-              <AdminUsuarios />
-            ) : active === "perfil" ? (
-              <AdminPerfil />
-            ) : active === "configuracion" ? (
-              <AdminConfiguracion />
-            ) : (
-              // Fallback al dashboard si el panel no existe
-              <DashboardHome onNavigate={setPanel} />
-            )}
+            <Suspense fallback={
+              <div className="flex h-64 items-center justify-center">
+                <LoaderCircle className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            }>
+              {active === "dashboard" ? (
+                <DashboardHome onNavigate={setPanel} />
+              ) : active === "reservas" ? (
+                <AdminReservas />
+              ) : active === "vehiculos" ? (
+                <AdminVehiculos />
+              ) : active === "conductores" ? (
+                <AdminConductores />
+              ) : active === "productos" ? (
+                <AdminProductos />
+              ) : active === "gastos" ? (
+                <AdminGastos />
+              ) : active === "estadisticas" ? (
+                <AdminEstadisticas />
+              ) : active === "tarifa-dinamica" ? (
+                <AdminTarifaDinamica />
+              ) : active === "disponibilidad" ? (
+                <AdminDisponibilidad />
+              ) : active === "festivos" ? (
+                <AdminFestivos />
+              ) : active === "bloqueos" ? (
+                <AdminBloqueosAgenda />
+              ) : active === "promociones" ? (
+                <GestionPromociones />
+              ) : active === "codigos" ? (
+                <AdminCodigos />
+              ) : active === "codigos-mejorado" ? (
+                <AdminCodigosMejorado />
+              ) : active === "codigos-pago" ? (
+                <AdminCodigosPago />
+              ) : active === "pricing" ? (
+                <AdminPricing />
+              ) : active === "usuarios" ? (
+                <AdminUsuarios />
+              ) : active === "perfil" ? (
+                <AdminPerfil />
+              ) : active === "configuracion" ? (
+                <AdminConfiguracion />
+              ) : (
+                // Fallback al dashboard si el panel no existe
+                <DashboardHome onNavigate={setPanel} />
+              )}
+            </Suspense>
           </div>
         </main>
       </div>
