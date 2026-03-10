@@ -4515,6 +4515,33 @@ function AdminReservas() {
 
 					{selectedReserva && (
 						<div className="space-y-4">
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+								<div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+									<p className="text-xs text-blue-700 font-medium mb-1">Planificación</p>
+									<div className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+										<Calendar className="h-4 w-4" />
+										{formData.fecha || "Sin fecha"} · {formData.hora || "Sin hora"}
+									</div>
+								</div>
+								<div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+									<p className="text-xs text-emerald-700 font-medium mb-1">Trayecto</p>
+									<div className="text-sm font-semibold text-emerald-900 flex items-center gap-2">
+										<MapPin className="h-4 w-4" />
+										{formData.origen || "Origen"} → {formData.destino || "Destino"}
+									</div>
+								</div>
+								<div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+									<p className="text-xs text-amber-700 font-medium mb-1">Pago actual</p>
+									<div className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+										<DollarSign className="h-4 w-4" />
+										{formData.estadoPago || "pendiente"}
+									</div>
+								</div>
+							</div>
+
+							<div className="px-3 py-2 bg-muted/50 rounded-md border text-xs text-muted-foreground">
+								Edita primero cliente/trayecto y luego estados/pagos para reducir errores operativos.
+							</div>
 							{/* InformaciÃ³n del Cliente (editable) */}
 							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
@@ -4761,45 +4788,46 @@ function AdminReservas() {
 								)}
 							</div>
 
-							{/* Estado */}
-							<div className="space-y-2">
-								<Label htmlFor="estado">Estado de la Reserva</Label>
-								<Select
-									value={formData.estado}
-									onValueChange={(value) =>
-										setFormData({ ...formData, estado: value })
-									}
-								>
-									<SelectTrigger id="estado">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem
-											value="pendiente"
-											disabled={(selectedReserva?.pagoMonto || 0) > 0}
+							<div className="bg-muted p-4 rounded-lg space-y-4">
+								<h3 className="font-semibold border-b pb-2">Estados y Pagos</h3>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="space-y-2">
+										<Label htmlFor="estado">Estado de la Reserva</Label>
+										<Select
+											value={formData.estado}
+											onValueChange={(value) =>
+												setFormData({ ...formData, estado: value })
+											}
 										>
-											Pendiente
-										</SelectItem>
-										<SelectItem value="pendiente_detalles">
-											Pendiente Detalles
-										</SelectItem>
-										<SelectItem value="confirmada">Confirmada</SelectItem>
-										<SelectItem value="cancelada">Cancelada</SelectItem>
-										<SelectItem value="completada">Completada</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
+											<SelectTrigger id="estado">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem
+													value="pendiente"
+													disabled={(selectedReserva?.pagoMonto || 0) > 0}
+												>
+													Pendiente
+												</SelectItem>
+												<SelectItem value="pendiente_detalles">
+													Pendiente Detalles
+												</SelectItem>
+												<SelectItem value="confirmada">Confirmada</SelectItem>
+												<SelectItem value="cancelada">Cancelada</SelectItem>
+												<SelectItem value="completada">Completada</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
 
-							{/* Estado de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="estadoPago">Estado de Pago</Label>
-								<Select
-									value={formData.estadoPago}
-									onValueChange={(value) =>
-										setFormData((prev) => {
-											let nextEstado = prev.estado;
-											if (value === "reembolsado") {
-												nextEstado = "cancelada";
+									<div className="space-y-2">
+										<Label htmlFor="estadoPago">Estado de Pago</Label>
+										<Select
+											value={formData.estadoPago}
+											onValueChange={(value) =>
+												setFormData((prev) => {
+													let nextEstado = prev.estado;
+													if (value === "reembolsado") {
+														nextEstado = "cancelada";
 											} else if (value === "fallido") {
 												nextEstado =
 													prev.estado === "pendiente_detalles"
@@ -4814,24 +4842,26 @@ function AdminReservas() {
 													nextEstado = "pendiente";
 												}
 											}
-											return {
-												...prev,
-												estadoPago: value,
-												estado: nextEstado,
-											};
-										})
-									}
-								>
-									<SelectTrigger id="estadoPago">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="pendiente">Pendiente</SelectItem>
-										<SelectItem value="pagado">Pagado</SelectItem>
-										<SelectItem value="fallido">Fallido</SelectItem>
-										<SelectItem value="reembolsado">Reembolsado</SelectItem>
-									</SelectContent>
-								</Select>
+													return {
+														...prev,
+														estadoPago: value,
+														estado: nextEstado,
+													};
+												})
+											}
+										>
+											<SelectTrigger id="estadoPago">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="pendiente">Pendiente</SelectItem>
+												<SelectItem value="pagado">Pagado</SelectItem>
+												<SelectItem value="fallido">Fallido</SelectItem>
+												<SelectItem value="reembolsado">Reembolsado</SelectItem>
+											</SelectContent>
+										</Select>
+									</div>
+								</div>
 							</div>
 
 							{/* Método de Pago */}
@@ -5166,7 +5196,7 @@ function AdminReservas() {
 							</div>
 
 							{/* Botones */}
-							<div className="flex justify-end gap-2 pt-4">
+							<div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t pt-4 pb-1 flex justify-end gap-2">
 								<Button
 									variant="outline"
 									onClick={() => setShowEditDialog(false)}
