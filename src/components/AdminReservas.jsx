@@ -4547,11 +4547,11 @@ function AdminReservas() {
 
 			{/* Modal de Edición - Reorganizado en pestañas para mayor eficiencia */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-				<DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+				<DialogContent className="w-full h-full sm:w-auto sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-none sm:rounded-lg flex flex-col p-0 gap-0">
 					{/* Cabecera del modal */}
-					<DialogHeader className="px-6 pt-5 pb-3 border-b">
-						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
-						<DialogDescription>
+					<DialogHeader className="px-3 sm:px-6 pt-4 pb-2 sm:pt-5 sm:pb-3 border-b">
+						<DialogTitle className="text-base sm:text-lg">Editar Reserva #{selectedReserva?.id}</DialogTitle>
+						<DialogDescription className="text-xs sm:text-sm">
 							{selectedReserva?.codigo ? `Código: ${selectedReserva.codigo}` : "Actualiza los detalles de la reserva"}
 						</DialogDescription>
 					</DialogHeader>
@@ -4571,17 +4571,17 @@ function AdminReservas() {
 								{editModalIndicadorTiempo && (
 									<span className={`text-xs ${editModalIndicadorTiempo.clase}`}>{editModalIndicadorTiempo.texto}</span>
 								)}
-								{/* Botones de acción rápida */}
-								<div className="ml-auto flex gap-2 flex-wrap">
+								{/* Botones de acción rápida — solo íconos en móvil, texto en desktop */}
+								<div className="ml-auto flex gap-1.5 sm:gap-2">
 									{formData.telefono && (
 										<a
 											href={`https://wa.me/56${String(formData.telefono).replace(/\D/g, "")}`}
 											target="_blank"
 											rel="noopener noreferrer"
 										>
-											<Button type="button" variant="outline" size="sm" className="h-7 text-xs gap-1">
-												<Phone className="w-3 h-3" />
-												WhatsApp
+											<Button type="button" variant="outline" size="sm" className="h-9 w-9 sm:h-7 sm:w-auto sm:px-3 p-0 sm:gap-1">
+												<Phone className="w-4 h-4 sm:w-3 sm:h-3" />
+												<span className="hidden sm:inline text-xs">WhatsApp</span>
 											</Button>
 										</a>
 									)}
@@ -4589,33 +4589,33 @@ function AdminReservas() {
 										type="button"
 										variant="outline"
 										size="sm"
-										className="h-7 text-xs gap-1"
+										className="h-9 w-9 sm:h-7 sm:w-auto sm:px-3 p-0 sm:gap-1"
 										onClick={() => {
 											navigator.clipboard.writeText(generarTextoConductor(selectedReserva))
 												.then(() => alert("Texto copiado al portapapeles"))
 												.catch(() => alert("No se pudo copiar al portapapeles"));
 										}}
 									>
-										<Copy className="w-3 h-3" />
-										Copiar conductor
+										<Copy className="w-4 h-4 sm:w-3 sm:h-3" />
+										<span className="hidden sm:inline text-xs">Copiar conductor</span>
 									</Button>
 								</div>
 							</div>
-						{/* Fila inferior: resumen financiero en una línea */}
-						<div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+						{/* Fila inferior: resumen financiero en 3 columnas equidistantes */}
+						<div className="grid grid-cols-3 text-xs text-muted-foreground">
 							<span>
 								Total:{" "}
 								<span className="font-semibold text-foreground">
 									{formatCurrency(selectedReserva.totalConDescuento)}
 								</span>
 							</span>
-							<span>
+							<span className="text-center">
 								Pagado:{" "}
 								<span className="font-semibold text-foreground">
 									{formatCurrency(selectedReserva.pagoMonto || 0)}
 								</span>
 							</span>
-							<span>
+							<span className="text-right">
 								Saldo:{" "}
 								<span className={`font-semibold ${(selectedReserva.saldoPendiente || 0) > 0 ? "text-red-600" : "text-green-600"}`}>
 									{formatCurrency(selectedReserva.saldoPendiente || 0)}
@@ -4627,31 +4627,31 @@ function AdminReservas() {
 								{/* Sistema de pestañas */}
 								<Tabs value={editTab} onValueChange={setEditTab} className="flex flex-col flex-1 min-h-0">
 									{/* Lista de pestañas */}
-									<div className="px-6 pt-3 border-b">
-										<TabsList className="w-full h-auto flex flex-wrap gap-1 bg-transparent p-0 justify-start">
-											<TabsTrigger value="general" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md">
+									<div className="px-3 sm:px-6 pt-2 sm:pt-3 border-b overflow-x-auto">
+										<TabsList className="h-auto flex flex-nowrap gap-0.5 sm:gap-1 bg-transparent p-0 min-w-max sm:min-w-0 sm:flex-wrap sm:justify-start pb-1">
+											<TabsTrigger value="general" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
 												📋 General
 											</TabsTrigger>
-											<TabsTrigger value="cliente" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md">
+											<TabsTrigger value="cliente" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
 												👤 Cliente
 											</TabsTrigger>
-											<TabsTrigger value="trayecto" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md">
+											<TabsTrigger value="trayecto" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
 												🗺️ Trayecto
 											</TabsTrigger>
-											<TabsTrigger value="servicio" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md">
+											<TabsTrigger value="servicio" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
 												📅 Servicio
 											</TabsTrigger>
-											<TabsTrigger value="pagos" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md">
+											<TabsTrigger value="pagos" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
 												💰 Pagos
 											</TabsTrigger>
-											<TabsTrigger value="notas" className="text-xs px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md">
+											<TabsTrigger value="notas" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
 												📝 Notas
 											</TabsTrigger>
 										</TabsList>
 									</div>
 
 									{/* Área de contenido con scroll */}
-									<div className="flex-1 overflow-y-auto px-6 py-4">
+									<div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4">
 
 										{/* ─── PESTAÑA GENERAL ─── */}
 										<TabsContent value="general" className="mt-0 space-y-4">
@@ -5417,15 +5417,16 @@ function AdminReservas() {
 								</Tabs>
 
 								{/* Footer fijo con botones siempre visibles */}
-								<div className="flex justify-end gap-2 px-6 py-4 border-t bg-background">
+								<div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background">
 									<Button
 										variant="outline"
 										onClick={() => setShowEditDialog(false)}
 										disabled={saving}
+										className="sm:w-auto"
 									>
 										Cancelar
 									</Button>
-									<Button onClick={handleSave} disabled={saving}>
+									<Button onClick={handleSave} disabled={saving} className="sm:w-auto">
 										{saving ? (
 											<>
 												<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
