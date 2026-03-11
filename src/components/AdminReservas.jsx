@@ -4730,42 +4730,150 @@ function AdminReservas() {
 												</div>
 											</div>
 
-											{/* Resumen financiero detallado */}
-											<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
-												<h4 className="font-semibold mb-2 text-chocolate-900">Resumen Financiero</h4>
-												<div className="space-y-1 text-sm">
-													<div className="flex justify-between">
-														<span>Total:</span>
-														<span className="font-semibold">
-															{formatCurrency(selectedReserva.totalConDescuento)}
-														</span>
+											{/* Resumen financiero mejorado con desglose real */}
+											{(() => {
+												const total = Number(selectedReserva.totalConDescuento || 0);
+												const pagado = Number(selectedReserva.pagoMonto || 0);
+												const saldo = Math.max(total - pagado, 0);
+												const porcentajePagado = total > 0 ? Math.min(Math.round((pagado / total) * 100), 100) : 0;
+
+												// Montos del abono 40%
+												const abonoSugerido = Number(selectedReserva.abonoSugerido || 0);
+												const umbralAbono = Math.max(total * 0.4, abonoSugerido);
+												const abonoEfectivoPagado = selectedReserva.abonoPagado
+													? Math.min(pagado, umbralAbono)
+													: 0;
+												const saldoPostAbono = Math.max(total - umbralAbono, 0);
+
+												// Descuentos aplicados
+												const precioBase = Number(selectedReserva.precio || 0);
+												const descuentos = [
+													{ label: "Descuento base", monto: Number(selectedReserva.descuentoBase || 0) },
+													{ label: "Descuento promoción", monto: Number(selectedReserva.descuentoPromocion || 0) },
+													{ label: "Descuento round trip", monto: Number(selectedReserva.descuentoRoundTrip || 0) },
+													{ label: "Descuento online", monto: Number(selectedReserva.descuentoOnline || 0) },
+												].filter((d) => d.monto > 0);
+												const hayDescuentos = descuentos.length > 0;
+
+												return (
+													<div className="bg-chocolate-50 rounded-lg border border-chocolate-200 overflow-hidden">
+														<div className="px-4 py-3 border-b border-chocolate-200">
+															<h4 className="font-semibold text-chocolate-900">Desglose Financiero</h4>
+														</div>
+														<div className="p-4 space-y-3 text-sm">
+
+															{/* Bloque 1: Precio y descuentos */}
+															{hayDescuentos && (
+																<div className="space-y-1">
+																	<div className="flex justify-between text-muted-foreground">
+																		<span>Precio base:</span>
+																		<span>{formatCurrency(precioBase)}</span>
+																	</div>
+																	{descuentos.map((d, i) => (
+																		<div key={i} className="flex justify-between text-green-700">
+																			<span>- {d.label}:</span>
+																			<span>-{formatCurrency(d.monto)}</span>
+																		</div>
+																	))}
+																	{selectedReserva.codigoDescuento && (
+																		<div className="flex justify-between text-green-700">
+																			<span className="flex items-center gap-1">
+																				- Código: <span className="font-mono bg-green-100 px-1 rounded text-xs">{selectedReserva.codigoDescuento}</span>
+																			</span>
+																		</div>
+																	)}
+																	<div className="flex justify-between font-bold text-base border-t border-chocolate-300 pt-1 mt-1">
+																		<span>Total a pagar:</span>
+																		<span>{formatCurrency(total)}</span>
+																	</div>
+																</div>
+															)}
+
+															{!hayDescuentos && (
+																<div className="flex justify-between font-bold text-base">
+																	<span>Total a pagar:</span>
+																	<span>{formatCurrency(total)}</span>
+																</div>
+															)}
+
+															{/* Bloque 2: Barra de progreso del pago */}
+															<div className="space-y-1">
+																<div className="flex justify-between text-xs text-muted-foreground">
+																	<span>{porcentajePagado}% pagado</span>
+																	<span>{100 - porcentajePagado}% pendiente</span>
+																</div>
+																<div className="h-2 bg-chocolate-200 rounded-full overflow-hidden">
+																	<div
+																		className={`h-full rounded-full transition-all ${porcentajePagado >= 100 ? "bg-green-500" : porcentajePagado >= 40 ? "bg-blue-500" : "bg-orange-400"}`}
+																		style={{ width: `${porcentajePagado}%` }}
+																	/>
+																</div>
+															</div>
+
+															{/* Bloque 3: Desglose de pagos - Abono / Saldo */}
+															<div className="space-y-1.5 border-t border-chocolate-200 pt-2">
+																{/* Abono 40% */}
+																<div className="flex justify-between items-center">
+																	<span className="flex items-center gap-1.5">
+																		{selectedReserva.abonoPagado
+																			? <span className="text-green-600">✅</span>
+																			: <span className="text-orange-500">⏳</span>}
+																		Abono 40% ({formatCurrency(umbralAbono)}):
+																	</span>
+																	<span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${selectedReserva.abonoPagado ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
+																		{selectedReserva.abonoPagado ? "Pagado" : "Pendiente"}
+																	</span>
+																</div>
+																{/* Saldo restante */}
+																<div className="flex justify-between items-center">
+																	<span className="flex items-center gap-1.5">
+																		{selectedReserva.saldoPagado
+																			? <span className="text-green-600">✅</span>
+																			: saldo > 0
+																				? <span className="text-red-500">⏳</span>
+																				: <span className="text-green-600">✅</span>}
+																		Saldo restante ({formatCurrency(saldoPostAbono)}):
+																	</span>
+																	<span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${selectedReserva.saldoPagado ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+																		{selectedReserva.saldoPagado ? "Pagado" : "Pendiente"}
+																	</span>
+																</div>
+															</div>
+
+															{/* Bloque 4: Totales finales */}
+															<div className="border-t border-chocolate-300 pt-2 space-y-1">
+																<div className="flex justify-between text-green-700">
+																	<span className="font-medium">Total pagado:</span>
+																	<span className="font-bold">{formatCurrency(pagado)}</span>
+																</div>
+																<div className={`flex justify-between ${saldo > 0 ? "text-red-600" : "text-green-600"}`}>
+																	<span className="font-medium">Saldo por cobrar:</span>
+																	<span className="font-bold">{formatCurrency(saldo)}</span>
+																</div>
+															</div>
+
+															{/* Bloque 5: Historial de pagos compacto */}
+															{pagoHistorial && pagoHistorial.length > 0 && (
+																<div className="border-t border-chocolate-200 pt-2 space-y-1">
+																	<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pagos registrados</p>
+																	{pagoHistorial.map((p, i) => (
+																		<div key={p.id || i} className="flex justify-between items-center text-xs bg-white/60 rounded px-2 py-1">
+																			<div className="flex items-center gap-1.5">
+																				<span className="text-muted-foreground">{new Date(p.createdAt).toLocaleDateString("es-CL")}</span>
+																				<span className="text-muted-foreground">·</span>
+																				<span className="capitalize">{p.metodo || (p.source === "web" ? "web" : "manual")}</span>
+																			</div>
+																			<span className="font-semibold text-green-700">
+																				+{new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(p.amount)}
+																			</span>
+																		</div>
+																	))}
+																</div>
+															)}
+														</div>
 													</div>
-													<div className="flex justify-between">
-														<span>Abono Sugerido:</span>
-														<span className="font-semibold">
-															{formatCurrency(selectedReserva.abonoSugerido)}
-														</span>
-													</div>
-													<div className="flex justify-between border-t border-chocolate-300 pt-1">
-														<span className="font-semibold">Saldo Pendiente:</span>
-														<span className={`font-bold ${(selectedReserva.saldoPendiente || 0) > 0 ? "text-red-600" : "text-green-600"}`}>
-															{formatCurrency(selectedReserva.saldoPendiente || 0)}
-														</span>
-													</div>
-													<div className="flex justify-between pt-1">
-														<span>Estado del Abono:</span>
-														<Badge variant={selectedReserva.abonoPagado ? "default" : "secondary"}>
-															{selectedReserva.abonoPagado ? "Abono pagado" : "Pendiente"}
-														</Badge>
-													</div>
-													<div className="flex justify-between">
-														<span>Estado del Saldo:</span>
-														<Badge variant={selectedReserva.saldoPagado ? "default" : "secondary"}>
-															{selectedReserva.saldoPagado ? "Saldo pagado" : "Pendiente"}
-														</Badge>
-													</div>
-												</div>
-											</div>
+												);
+											})()}
 										</TabsContent>
 
 										{/* ─── PESTAÑA CLIENTE ─── */}
