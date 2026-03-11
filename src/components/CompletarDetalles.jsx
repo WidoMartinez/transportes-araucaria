@@ -108,58 +108,85 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 	}, [reservaId]);
 
 	// Tracking de conversión como respaldo (por si FlowReturn falló)
+	// Usa polling para esperar a que gtag.js cargue de forma asíncrona (evita race condition)
 	useEffect(() => {
-		// Esperar a que la reserva esté cargada para tener el valor real
-		if (reservaId && reserva && typeof window.gtag === 'function') {
-			// ✅ SINCRONIZACIÓN: Usar la misma clave que App.jsx para evitar duplicados
-			// Si la conversión ya se disparó en App.jsx (flujo Express), no volver a dispararla
-			const conversionKey = `flow_conversion_express_${reservaId}`;
-			if (!sessionStorage.getItem(conversionKey)) {
-				// Determinar el valor de la conversión
-				// Determinar el valor de la conversión
-				// FIXED: Priorizar initialAmount si existe (viene de la transacción real)
-				let value = Number(initialAmount);
-				
-				// Si no hay initialAmount, usar fallback de reserva
-				if (!value || value <= 0) {
-					value = Number(reserva.totalConDescuento || reserva.precio || reserva.abonoSugerido || 0);
-				}
-				
-				// Blindaje final: Nunca enviar 0 a Google Ads
-				if (value <= 0) { 
-					value = 1.0;
-					console.warn("⚠️ Valor de conversión era 0, ajustado a 1.0 para tracking");
-				}
-				
-				console.log("📊 Disparando conversión de respaldo en CompletarDetalles con valor:", value);
-				
-				const conversionPayload = {
-					'send_to': 'AW-17529712870/yZz-CJqiicUbEObh6KZB',
-					'value': value,
-					'currency': 'CLP',
-					'transaction_id': reservaId.toString()
-				};
-				
-				// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data'
-				if (reserva) {
-					const ud = {};
-					if (reserva.email) ud.email = reserva.email.toLowerCase().trim();
-					if (reserva.telefono) ud.phone_number = reserva.telefono.replace(/\s+/g, '').startsWith('+') ? reserva.telefono.replace(/\s+/g,'') : `+56${reserva.telefono.replace(/^0|^56|\s+/g,'').replace(/[^0-9]/g,'')}`;
-					if (reserva.nombre) {
-						const parts = reserva.nombre.trim().split(' ');
-						ud.address = {
-							first_name: (parts[0] || '').toLowerCase(),
-							last_name: (parts.slice(1).join(' ') || '').toLowerCase(),
-							country: 'CL'
-						};
-					}
-					if (Object.keys(ud).length > 0) conversionPayload.user_data = ud;
-				}
-				
-				window.gtag('event', 'conversion', conversionPayload);
-				sessionStorage.setItem(conversionKey, 'true');
+		if (!reservaId || !reserva) return;
+
+		const waitForGtag = () => new Promise((resolve) => {
+			if (typeof window.gtag === 'function') {
+				resolve(true);
+				return;
 			}
-		}
+			const startTime = Date.now();
+			const interval = setInterval(() => {
+				if (typeof window.gtag === 'function') {
+					clearInterval(interval);
+					console.log(`✅ [CompletarDetalles] gtag disponible tras ${Date.now() - startTime}ms`);
+					resolve(true);
+				} else if (Date.now() - startTime >= 5000) {
+					clearInterval(interval);
+					console.warn("⚠️ [CompletarDetalles] Timeout esperando gtag (5s). Conversión de respaldo no disparada.");
+					resolve(false);
+				}
+			}, 100);
+		});
+
+		const dispararConversionRespaldo = async () => {
+			// ✅ SINCRONIZACIÓN: Usar la misma clave que App.jsx para evitar duplicados
+			const conversionKey = `flow_conversion_express_${reservaId}`;
+			if (sessionStorage.getItem(conversionKey)) {
+				// La conversión ya se disparó en App.jsx (flujo Express), no volver a dispararla
+				return;
+			}
+
+			// Determinar el valor de la conversión
+			// FIXED: Priorizar initialAmount si existe (viene de la transacción real)
+			let value = Number(initialAmount);
+
+			// Si no hay initialAmount, usar fallback de reserva
+			if (!value || value <= 0) {
+				value = Number(reserva.totalConDescuento || reserva.precio || reserva.abonoSugerido || 0);
+			}
+
+			// Blindaje final: Nunca enviar 0 a Google Ads
+			if (value <= 0) {
+				value = 1.0;
+				console.warn("⚠️ Valor de conversión era 0, ajustado a 1.0 para tracking");
+			}
+
+			const conversionPayload = {
+				'send_to': 'AW-17529712870/yZz-CJqiicUbEObh6KZB',
+				'value': value,
+				'currency': 'CLP',
+				'transaction_id': reservaId.toString()
+			};
+
+			// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data'
+			if (reserva) {
+				const ud = {};
+				if (reserva.email) ud.email = reserva.email.toLowerCase().trim();
+				if (reserva.telefono) ud.phone_number = reserva.telefono.replace(/\s+/g, '').startsWith('+') ? reserva.telefono.replace(/\s+/g,'') : `+56${reserva.telefono.replace(/^0|^56|\s+/g,'').replace(/[^0-9]/g,'')}`;
+				if (reserva.nombre) {
+					const parts = reserva.nombre.trim().split(' ');
+					ud.address = {
+						first_name: (parts[0] || '').toLowerCase(),
+						last_name: (parts.slice(1).join(' ') || '').toLowerCase(),
+						country: 'CL'
+					};
+				}
+				if (Object.keys(ud).length > 0) conversionPayload.user_data = ud;
+			}
+
+			// Esperar a que gtag esté listo antes de disparar
+			const gtagListo = await waitForGtag();
+			if (!gtagListo) return;
+
+			console.log("📊 Disparando conversión de respaldo en CompletarDetalles con valor:", value);
+			window.gtag('event', 'conversion', conversionPayload);
+			sessionStorage.setItem(conversionKey, 'true');
+		};
+
+		dispararConversionRespaldo();
 	}, [reservaId, reserva]);
 
 	const handleInputChange = (field, value) => {

@@ -488,110 +488,122 @@ const [configSillas, setConfigSillas] = useState({
 				flowToken: flowToken ? 'presente' : 'ausente',
 				encodedData: encodedData ? 'presente' : 'ausente'
 			});
-			
-			// DISPARAR CONVERSIÓN DE GOOGLE ADS (Estandarización con FlowReturn)
-			if (typeof window.gtag === "function") {
+
+			// DISPARAR CONVERSIÓN DE GOOGLE ADS (con polling para evitar race condition con gtag.js)
+			// gtag.js se carga de forma asíncrona; si aún no está disponible, esperamos hasta 5 segundos.
+			const waitForGtag = () => new Promise((resolve) => {
+				if (typeof window.gtag === "function") {
+					resolve(true);
+					return;
+				}
+				const startTime = Date.now();
+				const interval = setInterval(() => {
+					if (typeof window.gtag === "function") {
+						clearInterval(interval);
+						console.log(`✅ [App.jsx] gtag disponible tras ${Date.now() - startTime}ms`);
+						resolve(true);
+					} else if (Date.now() - startTime >= 5000) {
+						clearInterval(interval);
+						console.warn("⚠️ [App.jsx] Timeout esperando gtag (5s). No se pudo disparar la conversión.");
+						resolve(false);
+					}
+				}, 100);
+			});
+
+			const dispararConversionExpress = async () => {
 				try {
-					// Usar ID de reserva y token (o timestamp) para evitar deduplicación de compras múltiples sucesivas
-					// Google Ads puede descartar reservas con el mismo email en corto tiempo sin transaction_id fuerte y único
 					const uniqueSuffix = flowToken ? flowToken.substring(0,8) : Date.now().toString().substring(7);
 					const transactionId = reservaId ? `${reservaId}_${uniqueSuffix}` : `exp_${Date.now()}`;
-					
-					// Clave única para sessionStorage (evita duplicados al recargar)
 					const conversionKey = `flow_conversion_express_${transactionId}`;
-					
-					if (!sessionStorage.getItem(conversionKey)) {
-						// Lógica de monto robusta
-						let conversionValue = 0;
-						if (amount !== null && amount !== undefined && amount !== "") {
-							const parsed = Number(amount);
-							if (!isNaN(parsed) && parsed > 0) {
-								conversionValue = parsed;
-								console.log(`✅ [App.jsx] Valor de conversión parseado: ${conversionValue}`);
-							} else {
-								console.warn(`⚠️ [App.jsx] Parseo falló. amount="${amount}", parsed=${parsed}`);
-							}
-						} else {
-							console.warn(`⚠️ [App.jsx] Amount no presente en URL. amount=${amount}`);
-						}
-						
-						// Si el monto sigue siendo 0 (error de parseo o no venía), usar valor por defecto 1.0 para registrar la conversión
-						if (conversionValue <= 0) {
-							console.warn("⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.");
-							conversionValue = 1.0;
-						}
 
-						let userEmail = '';
-						let userName = '';
-						let userPhone = '';
-
-						// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
-						if (encodedData) {
-							try {
-								// Paso 1: Decodificar URL encoding
-								const decodedFromUrl = decodeURIComponent(encodedData);
-								// Paso 2: Decodificar Base64 a bytes
-								const base64Decoded = atob(decodedFromUrl);
-								// Paso 3: Convertir bytes a UTF-8 string
-								const utf8Decoded = decodeURIComponent(escape(base64Decoded));
-								// Paso 4: Parsear JSON
-								const userData = JSON.parse(utf8Decoded);
-								
-								if (userData && typeof userData === 'object') {
-									userEmail = userData.email || '';
-									userName = userData.nombre || '';
-									userPhone = userData.telefono || '';
-									console.log('✅ [App.jsx] Datos de usuario recuperados para Enhanced Conversions');
-								}
-							} catch (e) {
-								console.warn('⚠️ [App.jsx] Error decodificando datos de usuario:', e.message);
-							}
-						}
-
-						const conversionData = {
-							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB", // Etiqueta conversión compra
-							value: conversionValue,
-							currency: "CLP",
-							transaction_id: transactionId,
-						};
-
-						// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data' (formato oficial Google Ads)
-						const userData = {};
-						if (userEmail) userData.email = userEmail.toLowerCase().trim();
-						if (userPhone) userData.phone_number = normalizePhoneToE164(userPhone);
-						if (userName) {
-							const nameParts = userName.trim().split(' ');
-							userData.address = {
-								first_name: nameParts[0]?.toLowerCase() || '',
-								last_name: nameParts.slice(1).join(' ')?.toLowerCase() || '',
-								country: 'CL'
-							};
-						}
-						if (Object.keys(userData).length > 0) {
-							conversionData.user_data = userData;
-						}
-
-						console.log(`🚀 [App.jsx] Disparando conversión Google Ads:`, conversionData);
-						window.gtag("event", "conversion", conversionData);
-						
-						// Marcar como enviada
-						sessionStorage.setItem(conversionKey, 'true');
-						// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también por ID de reserva
-						// para que CompletarDetalles.jsx no dispare una segunda conversión de "respaldo" 
-						// con el monto base y la sobrescriba.
-						if (reservaId) {
-							sessionStorage.setItem(`flow_conversion_express_${reservaId}`, 'true');
-						}
-
-					} else {
+					if (sessionStorage.getItem(conversionKey)) {
 						console.log("ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.");
+						return;
+					}
+
+					// Lógica de monto robusta
+					let conversionValue = 0;
+					if (amount !== null && amount !== undefined && amount !== "") {
+						const parsed = Number(amount);
+						if (!isNaN(parsed) && parsed > 0) {
+							conversionValue = parsed;
+							console.log(`✅ [App.jsx] Valor de conversión parseado: ${conversionValue}`);
+						} else {
+							console.warn(`⚠️ [App.jsx] Parseo falló. amount="${amount}", parsed=${parsed}`);
+						}
+					} else {
+						console.warn(`⚠️ [App.jsx] Amount no presente en URL. amount=${amount}`);
+					}
+
+					if (conversionValue <= 0) {
+						console.warn("⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.");
+						conversionValue = 1.0;
+					}
+
+					let userEmail = '';
+					let userName = '';
+					let userPhone = '';
+
+					// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
+					if (encodedData) {
+						try {
+							const decodedFromUrl = decodeURIComponent(encodedData);
+							const base64Decoded = atob(decodedFromUrl);
+							const utf8Decoded = decodeURIComponent(escape(base64Decoded));
+							const userData = JSON.parse(utf8Decoded);
+							if (userData && typeof userData === 'object') {
+								userEmail = userData.email || '';
+								userName = userData.nombre || '';
+								userPhone = userData.telefono || '';
+								console.log('✅ [App.jsx] Datos de usuario recuperados para Enhanced Conversions');
+							}
+						} catch (e) {
+							console.warn('⚠️ [App.jsx] Error decodificando datos de usuario:', e.message);
+						}
+					}
+
+					const conversionData = {
+						send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB", // Etiqueta conversión compra
+						value: conversionValue,
+						currency: "CLP",
+						transaction_id: transactionId,
+					};
+
+					// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data'
+					const userData = {};
+					if (userEmail) userData.email = userEmail.toLowerCase().trim();
+					if (userPhone) userData.phone_number = normalizePhoneToE164(userPhone);
+					if (userName) {
+						const nameParts = userName.trim().split(' ');
+						userData.address = {
+							first_name: nameParts[0]?.toLowerCase() || '',
+							last_name: nameParts.slice(1).join(' ')?.toLowerCase() || '',
+							country: 'CL'
+						};
+					}
+					if (Object.keys(userData).length > 0) {
+						conversionData.user_data = userData;
+					}
+
+					// Esperar a que gtag esté listo antes de disparar
+					const gtagListo = await waitForGtag();
+					if (!gtagListo) return;
+
+					console.log(`🚀 [App.jsx] Disparando conversión Google Ads:`, conversionData);
+					window.gtag("event", "conversion", conversionData);
+
+					// Marcar como enviada para evitar duplicados
+					sessionStorage.setItem(conversionKey, 'true');
+					// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también por ID de reserva
+					if (reservaId) {
+						sessionStorage.setItem(`flow_conversion_express_${reservaId}`, 'true');
 					}
 				} catch (conversionError) {
 					console.error("❌ [App.jsx] Error crítico disparando conversión:", conversionError);
 				}
-			} else {
-				console.warn("⚠️ [App.jsx] window.gtag no está definido. No se pudo disparar la conversión.");
-			}
+			};
+
+			dispararConversionExpress();
 
 			// Solo mostrar detalles si hay reservaId válido
 			if (reservaId) {
