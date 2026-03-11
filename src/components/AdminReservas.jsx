@@ -20,6 +20,7 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import {
 	Dialog,
 	DialogContent,
@@ -178,6 +179,8 @@ function AdminReservas() {
 	const [loadingTransacciones, setLoadingTransacciones] = useState(false);
 	const [showNewDialog, setShowNewDialog] = useState(false);
 	const [saving, setSaving] = useState(false);
+	// Pestaña activa en el modal de edición
+	const [editTab, setEditTab] = useState("general");
 	// Estados para editar ruta con 'otro'
 	const [editOrigenEsOtro, setEditOrigenEsOtro] = useState(false);
 	const [editDestinoEsOtro, setEditDestinoEsOtro] = useState(false);
@@ -1457,6 +1460,8 @@ function AdminReservas() {
 		setEditOtroOrigen("");
 		setEditOtroDestino("");
 		setEnviarActualizacionConductor(false);
+		// Reiniciar pestaña activa al abrir el modal
+		setEditTab("general");
 		// Cargar catálogo de destinos para selects
 		fetchDestinosCatalog();
 		setShowEditDialog(true);
@@ -2618,6 +2623,43 @@ function AdminReservas() {
 			</div>
 		);
 	}
+
+	// ─── Valores derivados para el modal de edición ───
+	// Calculados aquí para evitar IIFE dentro del JSX
+	const editModalIndicadorTiempo = (() => {
+		const fecha = formData.fecha || selectedReserva?.fecha;
+		if (!fecha) return null;
+		const hoy = new Date();
+		hoy.setHours(0, 0, 0, 0);
+		const fechaViaje = new Date(fecha + "T00:00:00");
+		fechaViaje.setHours(0, 0, 0, 0);
+		const diffDias = Math.round((fechaViaje - hoy) / (1000 * 60 * 60 * 24));
+		if (diffDias < 0) return { texto: "PASADO", clase: "text-gray-500 font-medium" };
+		if (diffDias === 0) return { texto: "HOY ⚠️", clase: "text-red-600 font-bold" };
+		if (diffDias === 1) return { texto: "Mañana", clase: "text-orange-500 font-semibold" };
+		return { texto: `En ${diffDias} días`, clase: "text-muted-foreground" };
+	})();
+
+	const editModalEstadoClase = {
+		pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
+		pendiente_detalles: "bg-orange-100 text-orange-800 border-orange-200",
+		confirmada: "bg-green-100 text-green-800 border-green-200",
+		cancelada: "bg-red-100 text-red-800 border-red-200",
+		completada: "bg-blue-100 text-blue-800 border-blue-200",
+	}[formData.estado] || "bg-gray-100 text-gray-800 border-gray-200";
+
+	const editModalPagoClase = {
+		pendiente: "bg-yellow-100 text-yellow-800 border-yellow-200",
+		pagado: "bg-green-100 text-green-800 border-green-200",
+		fallido: "bg-red-100 text-red-800 border-red-200",
+		reembolsado: "bg-gray-100 text-gray-800 border-gray-200",
+	}[formData.estadoPago] || "bg-gray-100 text-gray-800 border-gray-200";
+
+	// Mostrar dirección específica solo si al menos un extremo no es el aeropuerto
+	const editModalMostrarDireccion = !(
+		formData.origen === "Aeropuerto La Araucanía" &&
+		formData.destino === "Aeropuerto La Araucanía"
+	);
 
 	return (
 		<div className="space-y-6">
@@ -4503,149 +4545,421 @@ function AdminReservas() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Modal de EdiciÃ³n */}
+			{/* Modal de Edición - Reorganizado en pestañas para mayor eficiencia */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-				<DialogContent className="sm:max-w-5xl md:max-w-5xl lg:max-w-5xl max-h-[85vh] overflow-y-auto">
-					<DialogHeader>
-						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
-						<DialogDescription>
-							Actualiza el estado, pago y detalles de la reserva
+				<DialogContent className="w-full h-full sm:w-auto sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-none sm:rounded-lg flex flex-col p-0 gap-0">
+					{/* Cabecera del modal */}
+					<DialogHeader className="px-3 sm:px-6 pt-4 pb-2 sm:pt-5 sm:pb-3 border-b">
+						<DialogTitle className="text-base sm:text-lg">Editar Reserva #{selectedReserva?.id}</DialogTitle>
+						<DialogDescription className="text-xs sm:text-sm">
+							{selectedReserva?.codigo ? `Código: ${selectedReserva.codigo}` : "Actualiza los detalles de la reserva"}
 						</DialogDescription>
 					</DialogHeader>
 
 					{selectedReserva && (
-						<div className="space-y-4">
-							{/* InformaciÃ³n del Cliente (editable) */}
-							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div className="space-y-1">
-									<Label>Nombre</Label>
-									<Input
-										value={formData.nombre || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, nombre: e.target.value })
-										}
-									/>
-								</div>
-								<div className="space-y-1">
-									<Label>Email</Label>
-									<Input
-										type="email"
-										value={formData.email || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, email: e.target.value })
-										}
-									/>
-								</div>
-								<div className="space-y-1">
-									<Label>Teléfono</Label>
-									<Input
-										value={formData.telefono || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, telefono: e.target.value })
-										}
-									/>
-								</div>
-								<div className="space-y-1">
-									<Label>Fecha</Label>
-									<Input
-										type="date"
-										value={formData.fecha || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, fecha: e.target.value })
-										}
-									/>
-								</div>
-								<div className="space-y-1">
-									<Label>Hora</Label>
-									<Input
-										type="time"
-										value={formData.hora || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, hora: e.target.value })
-										}
-									/>
-								</div>
-								<div className="space-y-1">
-									<Label>Pasajeros</Label>
-									<Input
-										type="number"
-										min="1"
-										value={formData.pasajeros || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, pasajeros: e.target.value })
-										}
-									/>
-								</div>
-								<div className="space-y-1">
-									<Label>Vehículo</Label>
-									<Select
-										value={formData.vehiculo || "auto"}
-										onValueChange={(value) =>
-											setFormData({ ...formData, vehiculo: value })
-										}
+					<>
+						{/* Barra de resumen fija: siempre visible independiente de la pestaña */}
+						<div className="px-6 py-3 bg-muted/40 border-b space-y-2">
+							{/* Fila superior: badges + indicador temporal + acciones rápidas */}
+							<div className="flex flex-wrap items-center gap-2">
+								<span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${editModalEstadoClase}`}>
+									{formData.estado === "pendiente_detalles" ? "Pendiente Detalles" : (formData.estado || "Sin estado")}
+								</span>
+								<span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${editModalPagoClase}`}>
+									{formData.estadoPago || "Sin estado pago"}
+								</span>
+								{editModalIndicadorTiempo && (
+									<span className={`text-xs ${editModalIndicadorTiempo.clase}`}>{editModalIndicadorTiempo.texto}</span>
+								)}
+								{/* Botones de acción rápida — solo íconos en móvil, texto en desktop */}
+								<div className="ml-auto flex gap-1.5 sm:gap-2">
+									{formData.telefono && (
+										<a
+											href={`https://wa.me/56${String(formData.telefono).replace(/\D/g, "")}`}
+											target="_blank"
+											rel="noopener noreferrer"
+										>
+											<Button type="button" variant="outline" size="sm" className="h-9 w-9 sm:h-7 sm:w-auto sm:px-3 p-0 sm:gap-1">
+												<Phone className="w-4 h-4 sm:w-3 sm:h-3" />
+												<span className="hidden sm:inline text-xs">WhatsApp</span>
+											</Button>
+										</a>
+									)}
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										className="h-9 w-9 sm:h-7 sm:w-auto sm:px-3 p-0 sm:gap-1"
+										onClick={() => {
+											navigator.clipboard.writeText(generarTextoConductor(selectedReserva))
+												.then(() => alert("Texto copiado al portapapeles"))
+												.catch(() => alert("No se pudo copiar al portapapeles"));
+										}}
 									>
-										<SelectTrigger className="bg-white">
-											<SelectValue placeholder="Seleccionar..." />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="auto">Sedán</SelectItem>
-											<SelectItem value="van">Van</SelectItem>
-											<SelectItem value="suv">SUV</SelectItem>
-										</SelectContent>
-									</Select>
+										<Copy className="w-4 h-4 sm:w-3 sm:h-3" />
+										<span className="hidden sm:inline text-xs">Copiar conductor</span>
+									</Button>
 								</div>
 							</div>
+						{/* Fila inferior: resumen financiero en 3 columnas equidistantes */}
+						<div className="grid grid-cols-3 text-xs text-muted-foreground">
+							<span>
+								Total:{" "}
+								<span className="font-semibold text-foreground">
+									{formatCurrency(selectedReserva.totalConDescuento)}
+								</span>
+							</span>
+							<span className="text-center">
+								Pagado:{" "}
+								<span className="font-semibold text-foreground">
+									{formatCurrency(selectedReserva.pagoMonto || 0)}
+								</span>
+							</span>
+							<span className="text-right">
+								Saldo:{" "}
+								<span className={`font-semibold ${(selectedReserva.saldoPendiente || 0) > 0 ? "text-red-600" : "text-green-600"}`}>
+									{formatCurrency(selectedReserva.saldoPendiente || 0)}
+								</span>
+							</span>
+						</div>
+					</div>
 
-							{/* Detalles del Trayecto */}
-							<div className="bg-muted p-4 rounded-lg space-y-4">
-								<h3 className="font-semibold border-b pb-2">Detalles del Trayecto</h3>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div className="space-y-1">
-										<Label>Origen General</Label>
-										<Select
-											value={formData.origen || ""}
-											onValueChange={(value) =>
-												setFormData({ ...formData, origen: value })
-											}
-										>
-											<SelectTrigger className="bg-white">
-												<SelectValue placeholder="Seleccionar origen" />
-											</SelectTrigger>
-											<SelectContent>
-												{destinosCatalog.map((destino, index) => (
-													<SelectItem key={`orig-${index}`} value={destino}>
-														{destino}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+								{/* Sistema de pestañas */}
+								<Tabs value={editTab} onValueChange={setEditTab} className="flex flex-col flex-1 min-h-0">
+									{/* Lista de pestañas */}
+									<div className="px-3 sm:px-6 pt-2 sm:pt-3 border-b overflow-x-auto">
+										<TabsList className="h-auto flex flex-nowrap gap-0.5 sm:gap-1 bg-transparent p-0 min-w-max sm:min-w-0 sm:flex-wrap sm:justify-start pb-1">
+											<TabsTrigger value="general" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
+												📋 General
+											</TabsTrigger>
+											<TabsTrigger value="cliente" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
+												👤 Cliente
+											</TabsTrigger>
+											<TabsTrigger value="trayecto" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
+												🗺️ Trayecto
+											</TabsTrigger>
+											<TabsTrigger value="servicio" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
+												📅 Servicio
+											</TabsTrigger>
+											<TabsTrigger value="pagos" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
+												💰 Pagos
+											</TabsTrigger>
+											<TabsTrigger value="notas" className="text-xs px-2.5 sm:px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-md whitespace-nowrap">
+												📝 Notas
+											</TabsTrigger>
+										</TabsList>
 									</div>
-									<div className="space-y-1">
-										<Label>Destino General</Label>
-										<Select
-											value={formData.destino || ""}
-											onValueChange={(value) =>
-												setFormData({ ...formData, destino: value })
-											}
-										>
-											<SelectTrigger className="bg-white">
-												<SelectValue placeholder="Seleccionar destino" />
-											</SelectTrigger>
-											<SelectContent>
-												{destinosCatalog.map((destino, index) => (
-													<SelectItem key={`dest-${index}`} value={destino}>
-														{destino}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-											<>
-												<div className="space-y-4 md:col-span-2">
-													<div className="space-y-1">
+
+									{/* Área de contenido con scroll */}
+									<div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4">
+
+										{/* ─── PESTAÑA GENERAL ─── */}
+										<TabsContent value="general" className="mt-0 space-y-4">
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												{/* Estado de la Reserva */}
+												<div className="space-y-2">
+													<Label htmlFor="estado">Estado de la Reserva</Label>
+													<Select
+														value={formData.estado}
+														onValueChange={(value) =>
+															setFormData({ ...formData, estado: value })
+														}
+													>
+														<SelectTrigger id="estado">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem
+																value="pendiente"
+																disabled={(selectedReserva?.pagoMonto || 0) > 0}
+															>
+																Pendiente
+															</SelectItem>
+															<SelectItem value="pendiente_detalles">
+																Pendiente Detalles
+															</SelectItem>
+															<SelectItem value="confirmada">Confirmada</SelectItem>
+															<SelectItem value="cancelada">Cancelada</SelectItem>
+															<SelectItem value="completada">Completada</SelectItem>
+														</SelectContent>
+													</Select>
+												</div>
+
+												{/* Estado de Pago */}
+												<div className="space-y-2">
+													<Label htmlFor="estadoPago">Estado de Pago</Label>
+													<Select
+														value={formData.estadoPago}
+														onValueChange={(value) =>
+															setFormData((prev) => {
+																let nextEstado = prev.estado;
+																if (value === "reembolsado") {
+																	nextEstado = "cancelada";
+																} else if (value === "fallido") {
+																	nextEstado =
+																		prev.estado === "pendiente_detalles"
+																			? "pendiente_detalles"
+																			: "pendiente";
+																} else if (value === "pendiente") {
+																	if (
+																		["confirmada", "completada", "cancelada"].includes(
+																			prev.estado
+																		)
+																	) {
+																		nextEstado = "pendiente";
+																	}
+																}
+																return {
+																	...prev,
+																	estadoPago: value,
+																	estado: nextEstado,
+																};
+															})
+														}
+													>
+														<SelectTrigger id="estadoPago">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="pendiente">Pendiente</SelectItem>
+															<SelectItem value="pagado">Pagado</SelectItem>
+															<SelectItem value="fallido">Fallido</SelectItem>
+															<SelectItem value="reembolsado">Reembolsado</SelectItem>
+														</SelectContent>
+													</Select>
+												</div>
+											</div>
+
+											{/* Resumen financiero mejorado con desglose real */}
+											{(() => {
+												const total = Number(selectedReserva.totalConDescuento || 0);
+												const pagado = Number(selectedReserva.pagoMonto || 0);
+												const saldo = Math.max(total - pagado, 0);
+												const porcentajePagado = total > 0 ? Math.min(Math.round((pagado / total) * 100), 100) : 0;
+
+												// Montos del abono 40%
+												const abonoSugerido = Number(selectedReserva.abonoSugerido || 0);
+												const umbralAbono = Math.max(total * 0.4, abonoSugerido);
+												const abonoEfectivoPagado = selectedReserva.abonoPagado
+													? Math.min(pagado, umbralAbono)
+													: 0;
+												const saldoPostAbono = Math.max(total - umbralAbono, 0);
+
+												// Descuentos aplicados
+												const precioBase = Number(selectedReserva.precio || 0);
+												const descuentos = [
+													{ label: "Descuento base", monto: Number(selectedReserva.descuentoBase || 0) },
+													{ label: "Descuento promoción", monto: Number(selectedReserva.descuentoPromocion || 0) },
+													{ label: "Descuento round trip", monto: Number(selectedReserva.descuentoRoundTrip || 0) },
+													{ label: "Descuento online", monto: Number(selectedReserva.descuentoOnline || 0) },
+												].filter((d) => d.monto > 0);
+												const hayDescuentos = descuentos.length > 0;
+
+												return (
+													<div className="bg-chocolate-50 rounded-lg border border-chocolate-200 overflow-hidden">
+														<div className="px-4 py-3 border-b border-chocolate-200">
+															<h4 className="font-semibold text-chocolate-900">Desglose Financiero</h4>
+														</div>
+														<div className="p-4 space-y-3 text-sm">
+
+															{/* Bloque 1: Precio y descuentos */}
+															{hayDescuentos && (
+																<div className="space-y-1">
+																	<div className="flex justify-between text-muted-foreground">
+																		<span>Precio base:</span>
+																		<span>{formatCurrency(precioBase)}</span>
+																	</div>
+																	{descuentos.map((d, i) => (
+																		<div key={i} className="flex justify-between text-green-700">
+																			<span>- {d.label}:</span>
+																			<span>-{formatCurrency(d.monto)}</span>
+																		</div>
+																	))}
+																	{selectedReserva.codigoDescuento && (
+																		<div className="flex justify-between text-green-700">
+																			<span className="flex items-center gap-1">
+																				- Código: <span className="font-mono bg-green-100 px-1 rounded text-xs">{selectedReserva.codigoDescuento}</span>
+																			</span>
+																		</div>
+																	)}
+																	<div className="flex justify-between font-bold text-base border-t border-chocolate-300 pt-1 mt-1">
+																		<span>Total a pagar:</span>
+																		<span>{formatCurrency(total)}</span>
+																	</div>
+																</div>
+															)}
+
+															{!hayDescuentos && (
+																<div className="flex justify-between font-bold text-base">
+																	<span>Total a pagar:</span>
+																	<span>{formatCurrency(total)}</span>
+																</div>
+															)}
+
+															{/* Bloque 2: Barra de progreso del pago */}
+															<div className="space-y-1">
+																<div className="flex justify-between text-xs text-muted-foreground">
+																	<span>{porcentajePagado}% pagado</span>
+																	<span>{100 - porcentajePagado}% pendiente</span>
+																</div>
+																<div className="h-2 bg-chocolate-200 rounded-full overflow-hidden">
+																	<div
+																		className={`h-full rounded-full transition-all ${porcentajePagado >= 100 ? "bg-green-500" : porcentajePagado >= 40 ? "bg-blue-500" : "bg-orange-400"}`}
+																		style={{ width: `${porcentajePagado}%` }}
+																	/>
+																</div>
+															</div>
+
+															{/* Bloque 3: Desglose de pagos - Abono / Saldo */}
+															<div className="space-y-1.5 border-t border-chocolate-200 pt-2">
+																{/* Abono 40% */}
+																<div className="flex justify-between items-center">
+																	<span className="flex items-center gap-1.5">
+																		{selectedReserva.abonoPagado
+																			? <span className="text-green-600">✅</span>
+																			: <span className="text-orange-500">⏳</span>}
+																		Abono 40% ({formatCurrency(umbralAbono)}):
+																	</span>
+																	<span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${selectedReserva.abonoPagado ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
+																		{selectedReserva.abonoPagado ? "Pagado" : "Pendiente"}
+																	</span>
+																</div>
+																{/* Saldo restante */}
+																<div className="flex justify-between items-center">
+																	<span className="flex items-center gap-1.5">
+																		{selectedReserva.saldoPagado
+																			? <span className="text-green-600">✅</span>
+																			: saldo > 0
+																				? <span className="text-red-500">⏳</span>
+																				: <span className="text-green-600">✅</span>}
+																		Saldo restante ({formatCurrency(saldoPostAbono)}):
+																	</span>
+																	<span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${selectedReserva.saldoPagado ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+																		{selectedReserva.saldoPagado ? "Pagado" : "Pendiente"}
+																	</span>
+																</div>
+															</div>
+
+															{/* Bloque 4: Totales finales */}
+															<div className="border-t border-chocolate-300 pt-2 space-y-1">
+																<div className="flex justify-between text-green-700">
+																	<span className="font-medium">Total pagado:</span>
+																	<span className="font-bold">{formatCurrency(pagado)}</span>
+																</div>
+																<div className={`flex justify-between ${saldo > 0 ? "text-red-600" : "text-green-600"}`}>
+																	<span className="font-medium">Saldo por cobrar:</span>
+																	<span className="font-bold">{formatCurrency(saldo)}</span>
+																</div>
+															</div>
+
+															{/* Bloque 5: Historial de pagos compacto */}
+															{pagoHistorial && pagoHistorial.length > 0 && (
+																<div className="border-t border-chocolate-200 pt-2 space-y-1">
+																	<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pagos registrados</p>
+																	{pagoHistorial.map((p, i) => (
+																		<div key={p.id || i} className="flex justify-between items-center text-xs bg-white/60 rounded px-2 py-1">
+																			<div className="flex items-center gap-1.5">
+																				<span className="text-muted-foreground">{new Date(p.createdAt).toLocaleDateString("es-CL")}</span>
+																				<span className="text-muted-foreground">·</span>
+																				<span className="capitalize">{p.metodo || (p.source === "web" ? "web" : "manual")}</span>
+																			</div>
+																			<span className="font-semibold text-green-700">
+																				+{new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }).format(p.amount)}
+																			</span>
+																		</div>
+																	))}
+																</div>
+															)}
+														</div>
+													</div>
+												);
+											})()}
+										</TabsContent>
+
+										{/* ─── PESTAÑA CLIENTE ─── */}
+										<TabsContent value="cliente" className="mt-0">
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												<div className="space-y-1">
+													<Label>Nombre</Label>
+													<Input
+														value={formData.nombre || ""}
+														onChange={(e) =>
+															setFormData({ ...formData, nombre: e.target.value })
+														}
+													/>
+												</div>
+												<div className="space-y-1">
+													<Label>Email</Label>
+													<Input
+														type="email"
+														value={formData.email || ""}
+														onChange={(e) =>
+															setFormData({ ...formData, email: e.target.value })
+														}
+													/>
+												</div>
+												<div className="space-y-1">
+													<Label>Teléfono</Label>
+													<Input
+														value={formData.telefono || ""}
+														onChange={(e) =>
+															setFormData({ ...formData, telefono: e.target.value })
+														}
+													/>
+												</div>
+											</div>
+										</TabsContent>
+
+										{/* ─── PESTAÑA TRAYECTO ─── */}
+										<TabsContent value="trayecto" className="mt-0 space-y-4">
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												<div className="space-y-1">
+													<Label>Origen General</Label>
+													<Select
+														value={formData.origen || ""}
+														onValueChange={(value) =>
+															setFormData({ ...formData, origen: value })
+														}
+													>
+														<SelectTrigger className="bg-white">
+															<SelectValue placeholder="Seleccionar origen" />
+														</SelectTrigger>
+														<SelectContent>
+															{destinosCatalog.map((destino, index) => (
+																<SelectItem key={`orig-${index}`} value={destino}>
+																	{destino}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<div className="space-y-1">
+													<Label>Destino General</Label>
+													<Select
+														value={formData.destino || ""}
+														onValueChange={(value) =>
+															setFormData({ ...formData, destino: value })
+														}
+													>
+														<SelectTrigger className="bg-white">
+															<SelectValue placeholder="Seleccionar destino" />
+														</SelectTrigger>
+														<SelectContent>
+															{destinosCatalog.map((destino, index) => (
+																<SelectItem key={`dest-${index}`} value={destino}>
+																	{destino}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+
+												{/* Dirección específica: se oculta si ambos extremos son el aeropuerto */}
+												{editModalMostrarDireccion && (
+													<div className="space-y-1 md:col-span-2">
 														<Label className="flex items-center gap-2">
 															<MapPin className="h-4 w-4" />
-															Dirección Específica (Ubicación Google) *
+															Dirección Específica (Ubicación Google)
 														</Label>
 														<AddressAutocomplete
 															id="hotel-edit"
@@ -4658,7 +4972,6 @@ function AdminReservas() {
 																	formData.origen === "Aeropuerto La Araucanía";
 																const isToAirport =
 																	formData.destino === "Aeropuerto La Araucanía";
-
 																setFormData({
 																	...formData,
 																	// Sincronizar dirección específica según el sentido del viaje
@@ -4673,519 +4986,458 @@ function AdminReservas() {
 															className="bg-white"
 														/>
 													</div>
-													<div className="space-y-1">
-														<Label>Referencia / Hotel (Opcional)</Label>
-														<Input
-															value={formData.hotel || ""}
-															placeholder="Ej: Hotel Antumalal, Depto 201"
-															onChange={(e) =>
-																setFormData({ ...formData, hotel: e.target.value })
-															}
-															className="bg-white"
-														/>
-													</div>
-												</div>
-											</>
-
-								</div>
-								
-								{/* SOLUCIÓN: Campos para editar viaje de vuelta cuando existe */}
-								{formData.idaVuelta && (
-									<div className="pt-4 border-t mt-4">
-										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-											</svg>
-											Viaje de Vuelta
-											{formData.tramoVueltaId && (
-												<Badge variant="outline" className="text-xs">
-													Reserva #{formData.tramoVueltaId}
-												</Badge>
-											)}
-										</h4>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div className="space-y-1">
-												<Label>Fecha de Regreso *</Label>
-												<Input
-													type="date"
-													value={formData.fechaRegreso || ""}
-													onChange={(e) =>
-														setFormData({ ...formData, fechaRegreso: e.target.value })
-													}
-													required
-												/>
-											</div>
-											<div className="space-y-1">
-												<Label>Hora de Recogida *</Label>
-												<Input
-													type="time"
-													value={formData.horaRegreso || ""}
-													onChange={(e) =>
-														setFormData({ ...formData, horaRegreso: e.target.value })
-													}
-													required
-												/>
-											</div>
-										</div>
-										{(!formData.fechaRegreso || !formData.horaRegreso) && (
-											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
-												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-												</svg>
-												<div>
-													<p className="text-sm font-semibold text-yellow-800">Información Requerida</p>
-													<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
-												</div>
-											</div>
-										)}
-									</div>
-								)}
-								
-								{/* Opción de notificar al conductor si hubo cambios importantes y ya tiene conductor */}
-								{hasConductorAsignado && (
-									<div className="pt-2 border-t mt-2">
-										<div className="flex items-center gap-2">
-											<Checkbox
-												id="enviarActualizacionConductor"
-												checked={enviarActualizacionConductor}
-												onCheckedChange={setEnviarActualizacionConductor}
-											/>
-											<label
-												htmlFor="enviarActualizacionConductor"
-												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-											>
-												Notificar actualización al conductor (Reenviar correo con nueva dirección)
-											</label>
-										</div>
-									</div>
-								)}
-							</div>
-
-							{/* Estado */}
-							<div className="space-y-2">
-								<Label htmlFor="estado">Estado de la Reserva</Label>
-								<Select
-									value={formData.estado}
-									onValueChange={(value) =>
-										setFormData({ ...formData, estado: value })
-									}
-								>
-									<SelectTrigger id="estado">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem
-											value="pendiente"
-											disabled={(selectedReserva?.pagoMonto || 0) > 0}
-										>
-											Pendiente
-										</SelectItem>
-										<SelectItem value="pendiente_detalles">
-											Pendiente Detalles
-										</SelectItem>
-										<SelectItem value="confirmada">Confirmada</SelectItem>
-										<SelectItem value="cancelada">Cancelada</SelectItem>
-										<SelectItem value="completada">Completada</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Estado de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="estadoPago">Estado de Pago</Label>
-								<Select
-									value={formData.estadoPago}
-									onValueChange={(value) =>
-										setFormData((prev) => {
-											let nextEstado = prev.estado;
-											if (value === "reembolsado") {
-												nextEstado = "cancelada";
-											} else if (value === "fallido") {
-												nextEstado =
-													prev.estado === "pendiente_detalles"
-														? "pendiente_detalles"
-														: "pendiente";
-											} else if (value === "pendiente") {
-												if (
-													["confirmada", "completada", "cancelada"].includes(
-														prev.estado
-													)
-												) {
-													nextEstado = "pendiente";
-												}
-											}
-											return {
-												...prev,
-												estadoPago: value,
-												estado: nextEstado,
-											};
-										})
-									}
-								>
-									<SelectTrigger id="estadoPago">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="pendiente">Pendiente</SelectItem>
-										<SelectItem value="pagado">Pagado</SelectItem>
-										<SelectItem value="fallido">Fallido</SelectItem>
-										<SelectItem value="reembolsado">Reembolsado</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Método de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="metodoPago">Método de Pago</Label>
-								<Select
-									value={formData.metodoPago}
-									onValueChange={(value) =>
-										setFormData({ ...formData, metodoPago: value })
-									}
-								>
-									<SelectTrigger id="metodoPago">
-										<SelectValue placeholder="Seleccionar método" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="flow">Flow</SelectItem>
-										<SelectItem value="transferencia">Transferencia</SelectItem>
-										<SelectItem value="efectivo">Efectivo</SelectItem>
-										<SelectItem value="otro">Otro</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
-
-							{/* Referencia de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="referenciaPago">
-									Referencia de Pago (opcional)
-								</Label>
-								<Input
-									id="referenciaPago"
-									placeholder="ID de transacción, número de transferencia, etc."
-									value={formData.referenciaPago}
-									onChange={(e) =>
-										setFormData({ ...formData, referenciaPago: e.target.value })
-									}
-								/>
-							</div>
-
-							{/* Tipo de pago registrado */}
-							<div className="space-y-2">
-								<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
-								{/* Determinar si ya se registrÃ³ el abono del 40% */}
-								{(() => {
-									const montoPagadoNum =
-										parseFloat(formData.montoPagado || 0) || 0;
-									const totalReservaNum =
-										parseFloat(
-											selectedReserva?.totalConDescuento ||
-												selectedReserva?.precio ||
-												0
-										) || 0;
-									const abonoSugeridoNum =
-										parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
-									const umbralAbono = Math.max(
-										totalReservaNum * 0.4,
-										abonoSugeridoNum || 0
-									);
-									const yaAbono40 =
-										Boolean(selectedReserva?.abonoPagado) ||
-										montoPagadoNum >= umbralAbono;
-									return (
-										<Select
-											value={formData.tipoPago}
-											onValueChange={(value) =>
-												setFormData((prev) => {
-													// Recalcular montos para prefill
-													const totalReservaNum =
-														parseFloat(
-															selectedReserva?.totalConDescuento ||
-																selectedReserva?.precio ||
-																0
-														) || 0;
-													const abonoSugeridoNum =
-														parseFloat(selectedReserva?.abonoSugerido || 0) ||
-														0;
-													const pagoPrevioNum =
-														parseFloat(selectedReserva?.pagoMonto || 0) || 0;
-													const umbralAbono = Math.max(
-														totalReservaNum * 0.4,
-														abonoSugeridoNum || 0
-													);
-
-													let computedMonto = null;
-													if (value === "saldo" || value === "total") {
-														const restante = Math.max(
-															totalReservaNum - pagoPrevioNum,
-															0
-														);
-														computedMonto = restante > 0 ? restante : null;
-													} else if (value === "abono") {
-														const necesario = Math.max(
-															umbralAbono - pagoPrevioNum,
-															0
-														);
-														computedMonto = necesario > 0 ? necesario : null;
-													}
-
-													return {
-														...prev,
-														tipoPago: value,
-														// Escritura segura: guardar número o cadena vacía
-														montoPagado:
-															computedMonto !== null
-																? computedMonto
-																: prev.montoPagado,
-													};
-												})
-											}
-										>
-											<SelectTrigger id="tipoPago">
-												<SelectValue placeholder="Selecciona el tipo de pago" />
-											</SelectTrigger>
-											<SelectContent>
-												{yaAbono40 ? (
-													// Si ya se pagÃ³ el abono del 40%, solo permitir completar el pago
-													<SelectItem value="saldo">Completar pago</SelectItem>
-												) : (
-													// Opciones por defecto: Abono 40% y Abono total
-													<>
-														<SelectItem value="abono">Abono 40%</SelectItem>
-														<SelectItem value="total">Abono total</SelectItem>
-													</>
 												)}
-											</SelectContent>
-										</Select>
-									);
-								})()}
-							</div>
 
-							{/* Monto del pago */}
-							<div className="space-y-2">
-								<div className="flex justify-between items-center">
-									<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
-									{(selectedReserva?.pagoMonto || 0) > 0 && (
-										<Button 
-											type="button" 
-											variant="ghost" 
-											size="sm" 
-											className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
-											onClick={() => {
-												if (confirm("¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.")) {
-													setFormData({
-														...formData,
-														montoPagado: "0",
-														estadoPago: "pendiente",
-														estado: "pendiente"
-													});
-												}
-											}}
-										>
-											<RefreshCw className="w-3 h-3" />
-											Resetear Pago (Volver a $0)
-										</Button>
-									)}
-								</div>
-								<Input
-									id="montoPagado"
-									type="number"
-									step="1"
-									min="0"
-									placeholder="Ingresa monto solo si deseas sumar un pago manual"
-									value={
-										formData.montoPagado !== undefined &&
-										formData.montoPagado !== null
-											? formData.montoPagado
-											: ""
-									}
-									onChange={(e) =>
-										setFormData({ ...formData, montoPagado: e.target.value })
-									}
-								/>
-								<div className="text-xs text-muted-foreground mt-1">
-									<p>
-										Registrado en sistema:{" "}
-										<span className="font-semibold">
-											{selectedReserva.pagoMonto
-												? new Intl.NumberFormat("es-CL", {
-														style: "currency",
-														currency: "CLP",
-												  }).format(selectedReserva.pagoMonto)
-												: "$0"}
-										</span>
-									</p>
-									<p className="text-[10px] mt-0.5">
-										* Solo ingresa un monto si deseas <strong>sumar</strong> un pago al total ya registrado.
-									</p>
-								</div>
-							</div>
-
-							{/* Historial de pagos de esta reserva */}
-							<div className="space-y-2">
-								<Label>Historial de pagos</Label>
-								<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
-									{pagoHistorial &&
-										pagoHistorial.length > 0 &&
-										pagoHistorial.map((p) => (
-											<div
-												key={p.id}
-												className="flex justify-between items-center py-2 border-b"
-											>
-												<div>
-													<div className="font-medium">
-														{p.source === "web" ? "Pago web" : "Pago manual"}
-													</div>
-													<div className="text-sm text-muted-foreground">
-														{p.metodo || "-"} - {p.referencia || "-"}
-													</div>
-												</div>
-												<div className="text-right text-sm">
-													<div>
-														{new Intl.NumberFormat("es-CL", {
-															style: "currency",
-															currency: "CLP",
-														}).format(p.amount)}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														{new Date(p.createdAt).toLocaleString()}
-													</div>
+												<div className="space-y-1 md:col-span-2">
+													<Label>Referencia / Hotel (Opcional)</Label>
+													<Input
+														value={formData.hotel || ""}
+														placeholder="Ej: Hotel Antumalal, Depto 201"
+														onChange={(e) =>
+															setFormData({ ...formData, hotel: e.target.value })
+														}
+														className="bg-white"
+													/>
 												</div>
 											</div>
-										))}
-									{(!pagoHistorial || pagoHistorial.length === 0) && (
-										<p className="text-sm text-muted-foreground">
-											No hay pagos registrados.
-										</p>
-									)}
-								</div>
-							</div>
 
-							{/* BotÃ³n y modal para registrar pago manual */}
-							<div className="space-y-2">
-								<Label>Registrar pago manual</Label>
-								<div className="flex gap-2">
-									<Button
-										type="button"
-										onClick={() => setShowRegisterPayment(true)}
-									>
-										Registrar pago
-									</Button>
-									<span className="text-sm text-muted-foreground self-center">
-										Registra pagos manuales y guarda un historial (manual /
-										web).
-									</span>
-								</div>
-							</div>
+											{/* Notificación al conductor si ya tiene asignado */}
+											{hasConductorAsignado && (
+												<div className="pt-2 border-t mt-2">
+													<div className="flex items-center gap-2">
+														<Checkbox
+															id="enviarActualizacionConductor"
+															checked={enviarActualizacionConductor}
+															onCheckedChange={setEnviarActualizacionConductor}
+														/>
+														<label
+															htmlFor="enviarActualizacionConductor"
+															className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+														>
+															Notificar actualización al conductor (Reenviar correo con nueva dirección)
+														</label>
+													</div>
+												</div>
+											)}
+										</TabsContent>
 
-							{/* Observaciones */}
-							<div className="space-y-2">
-								<div className="flex items-center justify-between">
-									<Label htmlFor="observaciones">Observaciones Internas</Label>
+										{/* ─── PESTAÑA SERVICIO ─── */}
+										<TabsContent value="servicio" className="mt-0 space-y-4">
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												<div className="space-y-1">
+													<Label>Fecha</Label>
+													<Input
+														type="date"
+														value={formData.fecha || ""}
+														onChange={(e) =>
+															setFormData({ ...formData, fecha: e.target.value })
+														}
+													/>
+												</div>
+												<div className="space-y-1">
+													<Label>Hora</Label>
+													<Input
+														type="time"
+														value={formData.hora || ""}
+														onChange={(e) =>
+															setFormData({ ...formData, hora: e.target.value })
+														}
+													/>
+												</div>
+												<div className="space-y-1">
+													<Label>Pasajeros</Label>
+													<Input
+														type="number"
+														min="1"
+														value={formData.pasajeros || ""}
+														onChange={(e) =>
+															setFormData({ ...formData, pasajeros: e.target.value })
+														}
+													/>
+												</div>
+												<div className="space-y-1">
+													<Label>Vehículo</Label>
+													<Select
+														value={formData.vehiculo || "auto"}
+														onValueChange={(value) =>
+															setFormData({ ...formData, vehiculo: value })
+														}
+													>
+														<SelectTrigger className="bg-white">
+															<SelectValue placeholder="Seleccionar..." />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="auto">Sedán</SelectItem>
+															<SelectItem value="van">Van</SelectItem>
+															<SelectItem value="suv">SUV</SelectItem>
+														</SelectContent>
+													</Select>
+												</div>
+												<div className="space-y-1">
+													<Label>Nº Vuelo (Opcional)</Label>
+													<Input
+														value={formData.numeroVuelo || ""}
+														placeholder="Ej: LA834"
+														onChange={(e) =>
+															setFormData({ ...formData, numeroVuelo: e.target.value })
+														}
+													/>
+												</div>
+												<div className="space-y-1">
+													<Label>Equipaje Especial (Opcional)</Label>
+													<Input
+														value={formData.equipajeEspecial || ""}
+														placeholder="Ej: Tabla de surf, silla de ruedas..."
+														onChange={(e) =>
+															setFormData({ ...formData, equipajeEspecial: e.target.value })
+														}
+													/>
+												</div>
+												<div className="flex items-center gap-2 pt-4">
+													<Checkbox
+														id="sillaInfantilEdit"
+														checked={Boolean(formData.sillaInfantil)}
+														onCheckedChange={(checked) =>
+															setFormData({ ...formData, sillaInfantil: Boolean(checked) })
+														}
+													/>
+													<label
+														htmlFor="sillaInfantilEdit"
+														className="text-sm font-medium leading-none flex items-center gap-1"
+													>
+														<Baby className="w-4 h-4" />
+														Silla Infantil
+													</label>
+												</div>
+												<div className="flex items-center gap-2 pt-4">
+													<Checkbox
+														id="idaVueltaEdit"
+														checked={Boolean(formData.idaVuelta)}
+														onCheckedChange={(checked) =>
+															setFormData({ ...formData, idaVuelta: Boolean(checked) })
+														}
+													/>
+													<label
+														htmlFor="idaVueltaEdit"
+														className="text-sm font-medium leading-none"
+													>
+														Ida y Vuelta
+													</label>
+												</div>
+											</div>
+
+											{/* Sección de viaje de vuelta (si aplica) */}
+											{formData.idaVuelta && (
+												<div className="pt-4 border-t mt-2">
+													<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+														<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+														</svg>
+														Viaje de Vuelta
+														{formData.tramoVueltaId && (
+															<Badge variant="outline" className="text-xs">
+																Reserva #{formData.tramoVueltaId}
+															</Badge>
+														)}
+													</h4>
+													<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+														<div className="space-y-1">
+															<Label>Fecha de Regreso *</Label>
+															<Input
+																type="date"
+																value={formData.fechaRegreso || ""}
+																onChange={(e) =>
+																	setFormData({ ...formData, fechaRegreso: e.target.value })
+																}
+																required
+															/>
+														</div>
+														<div className="space-y-1">
+															<Label>Hora de Recogida *</Label>
+															<Input
+																type="time"
+																value={formData.horaRegreso || ""}
+																onChange={(e) =>
+																	setFormData({ ...formData, horaRegreso: e.target.value })
+																}
+																required
+															/>
+														</div>
+													</div>
+													{(!formData.fechaRegreso || !formData.horaRegreso) && (
+														<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+															<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+															</svg>
+															<div>
+																<p className="text-sm font-semibold text-yellow-800">Información Requerida</p>
+																<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+															</div>
+														</div>
+													)}
+												</div>
+											)}
+										</TabsContent>
+
+										{/* ─── PESTAÑA PAGOS ─── */}
+										<TabsContent value="pagos" className="mt-0 space-y-4">
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												{/* Método de Pago */}
+												<div className="space-y-2">
+													<Label htmlFor="metodoPago">Método de Pago</Label>
+													<Select
+														value={formData.metodoPago}
+														onValueChange={(value) =>
+															setFormData({ ...formData, metodoPago: value })
+														}
+													>
+														<SelectTrigger id="metodoPago">
+															<SelectValue placeholder="Seleccionar método" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="flow">Flow</SelectItem>
+															<SelectItem value="transferencia">Transferencia</SelectItem>
+															<SelectItem value="efectivo">Efectivo</SelectItem>
+															<SelectItem value="otro">Otro</SelectItem>
+														</SelectContent>
+													</Select>
+												</div>
+
+												{/* Tipo de pago registrado */}
+												<div className="space-y-2">
+													<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
+													{/* Determinar si ya se registró el abono del 40% */}
+													{(() => {
+														const montoPagadoNum = parseFloat(formData.montoPagado || 0) || 0;
+														const totalReservaNum = parseFloat(selectedReserva?.totalConDescuento || selectedReserva?.precio || 0) || 0;
+														const abonoSugeridoNum = parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+														const umbralAbono = Math.max(totalReservaNum * 0.4, abonoSugeridoNum || 0);
+														const yaAbono40 = Boolean(selectedReserva?.abonoPagado) || montoPagadoNum >= umbralAbono;
+														return (
+															<Select
+																value={formData.tipoPago}
+																onValueChange={(value) =>
+																	setFormData((prev) => {
+																		const totalReservaNum = parseFloat(selectedReserva?.totalConDescuento || selectedReserva?.precio || 0) || 0;
+																		const abonoSugeridoNum = parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+																		const pagoPrevioNum = parseFloat(selectedReserva?.pagoMonto || 0) || 0;
+																		const umbralAbono = Math.max(totalReservaNum * 0.4, abonoSugeridoNum || 0);
+																		let computedMonto = null;
+																		if (value === "saldo" || value === "total") {
+																			const restante = Math.max(totalReservaNum - pagoPrevioNum, 0);
+																			computedMonto = restante > 0 ? restante : null;
+																		} else if (value === "abono") {
+																			const necesario = Math.max(umbralAbono - pagoPrevioNum, 0);
+																			computedMonto = necesario > 0 ? necesario : null;
+																		}
+																		return {
+																			...prev,
+																			tipoPago: value,
+																			// Escritura segura: guardar número o cadena vacía
+																			montoPagado: computedMonto !== null ? computedMonto : prev.montoPagado,
+																		};
+																	})
+																}
+															>
+																<SelectTrigger id="tipoPago">
+																	<SelectValue placeholder="Selecciona el tipo de pago" />
+																</SelectTrigger>
+																<SelectContent>
+																	{yaAbono40 ? (
+																		// Si ya se pagó el abono del 40%, solo permitir completar el pago
+																		<SelectItem value="saldo">Completar pago</SelectItem>
+																	) : (
+																		<>
+																			<SelectItem value="abono">Abono 40%</SelectItem>
+																			<SelectItem value="total">Abono total</SelectItem>
+																		</>
+																	)}
+																</SelectContent>
+															</Select>
+														);
+													})()}
+												</div>
+
+												{/* Referencia de Pago */}
+												<div className="space-y-2 md:col-span-2">
+													<Label htmlFor="referenciaPago">
+														Referencia de Pago (opcional)
+													</Label>
+													<Input
+														id="referenciaPago"
+														placeholder="ID de transacción, número de transferencia, etc."
+														value={formData.referenciaPago}
+														onChange={(e) =>
+															setFormData({ ...formData, referenciaPago: e.target.value })
+														}
+													/>
+												</div>
+											</div>
+
+											{/* Monto del pago */}
+											<div className="space-y-2">
+												<div className="flex justify-between items-center">
+													<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
+													{(selectedReserva?.pagoMonto || 0) > 0 && (
+														<Button
+															type="button"
+															variant="ghost"
+															size="sm"
+															className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+															onClick={() => {
+																if (confirm("¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.")) {
+																	setFormData({
+																		...formData,
+																		montoPagado: "0",
+																		estadoPago: "pendiente",
+																		estado: "pendiente"
+																	});
+																}
+															}}
+														>
+															<RefreshCw className="w-3 h-3" />
+															Resetear Pago (Volver a $0)
+														</Button>
+													)}
+												</div>
+												<Input
+													id="montoPagado"
+													type="number"
+													step="1"
+													min="0"
+													placeholder="Ingresa monto solo si deseas sumar un pago manual"
+													value={
+														formData.montoPagado !== undefined &&
+														formData.montoPagado !== null
+															? formData.montoPagado
+															: ""
+													}
+													onChange={(e) =>
+														setFormData({ ...formData, montoPagado: e.target.value })
+													}
+												/>
+												<div className="text-xs text-muted-foreground mt-1">
+													<p>
+														Registrado en sistema:{" "}
+														<span className="font-semibold">
+															{selectedReserva.pagoMonto
+																? new Intl.NumberFormat("es-CL", {
+																		style: "currency",
+																		currency: "CLP",
+																  }).format(selectedReserva.pagoMonto)
+																: "$0"}
+														</span>
+													</p>
+													<p className="text-[10px] mt-0.5">
+														* Solo ingresa un monto si deseas <strong>sumar</strong> un pago al total ya registrado.
+													</p>
+												</div>
+											</div>
+
+											{/* Historial de pagos */}
+											<div className="space-y-2">
+												<Label>Historial de pagos</Label>
+												<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
+													{pagoHistorial && pagoHistorial.length > 0 ? (
+														pagoHistorial.map((p) => (
+															<div key={p.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+																<div>
+																	<div className="font-medium text-sm">
+																		{p.source === "web" ? "Pago web" : "Pago manual"}
+																	</div>
+																	<div className="text-xs text-muted-foreground">
+																		{p.metodo || "-"} - {p.referencia || "-"}
+																	</div>
+																</div>
+																<div className="text-right text-sm">
+																	<div>
+																		{new Intl.NumberFormat("es-CL", {
+																			style: "currency",
+																			currency: "CLP",
+																		}).format(p.amount)}
+																	</div>
+																	<div className="text-xs text-muted-foreground">
+																		{new Date(p.createdAt).toLocaleString()}
+																	</div>
+																</div>
+															</div>
+														))
+													) : (
+														<p className="text-sm text-muted-foreground">No hay pagos registrados.</p>
+													)}
+												</div>
+											</div>
+
+											{/* Registrar pago manual */}
+											<div className="space-y-2">
+												<Label>Registrar pago manual</Label>
+												<div className="flex gap-2">
+													<Button type="button" onClick={() => setShowRegisterPayment(true)}>
+														Registrar pago
+													</Button>
+													<span className="text-sm text-muted-foreground self-center">
+														Registra pagos manuales y guarda un historial (manual / web).
+													</span>
+												</div>
+											</div>
+										</TabsContent>
+
+										{/* ─── PESTAÑA NOTAS ─── */}
+										<TabsContent value="notas" className="mt-0 space-y-4">
+											<div className="space-y-2">
+												<div className="flex items-center justify-between">
+													<Label htmlFor="observaciones">Observaciones Internas</Label>
+													<Button
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() =>
+															setFormData({ ...formData, observaciones: "" })
+														}
+														disabled={
+															!formData.observaciones ||
+															formData.observaciones.length === 0
+														}
+													>
+														Borrar todo
+													</Button>
+												</div>
+												<Textarea
+													id="observaciones"
+													placeholder="Notas internas sobre la reserva..."
+													value={formData.observaciones}
+													onChange={(e) =>
+														setFormData({ ...formData, observaciones: e.target.value })
+													}
+													rows={6}
+												/>
+											</div>
+										</TabsContent>
+									</div>
+								</Tabs>
+
+								{/* Footer fijo con botones siempre visibles */}
+								<div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background">
 									<Button
-										type="button"
 										variant="outline"
-										size="sm"
-										onClick={() =>
-											setFormData({ ...formData, observaciones: "" })
-										}
-										disabled={
-											!formData.observaciones ||
-											formData.observaciones.length === 0
-										}
+										onClick={() => setShowEditDialog(false)}
+										disabled={saving}
+										className="sm:w-auto"
 									>
-										Borrar todo
+										Cancelar
+									</Button>
+									<Button onClick={handleSave} disabled={saving} className="sm:w-auto">
+										{saving ? (
+											<>
+												<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+												Guardando...
+											</>
+										) : (
+											"Guardar Cambios"
+										)}
 									</Button>
 								</div>
-								<Textarea
-									id="observaciones"
-									placeholder="Notas internas sobre la reserva..."
-									value={formData.observaciones}
-									onChange={(e) =>
-										setFormData({ ...formData, observaciones: e.target.value })
-									}
-									rows={4}
-								/>
-							</div>
-
-							{/* Resumen Financiero */}
-							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
-								<h4 className="font-semibold mb-2 text-chocolate-900">
-									Resumen Financiero
-								</h4>
-								<div className="space-y-1 text-sm">
-									<div className="flex justify-between">
-										<span>Total:</span>
-										<span className="font-semibold">
-											{formatCurrency(selectedReserva.totalConDescuento)}
-										</span>
-									</div>
-									<div className="flex justify-between">
-										<span>Abono Sugerido:</span>
-										<span className="font-semibold">
-											{formatCurrency(selectedReserva.abonoSugerido)}
-										</span>
-									</div>
-									<div className="flex justify-between border-t border-chocolate-300 pt-1">
-										<span className="font-semibold">Saldo Pendiente:</span>
-										<span
-											className={`font-bold ${
-												selectedReserva.saldoPendiente > 0
-													? "text-red-600"
-													: "text-green-600"
-											}`}
-										>
-											{formatCurrency(selectedReserva.saldoPendiente)}
-										</span>
-									</div>
-									<div className="flex justify-between pt-1">
-										<span>Estado del Abono:</span>
-										<Badge
-											variant={
-												selectedReserva.abonoPagado ? "default" : "secondary"
-											}
-										>
-											{selectedReserva.abonoPagado
-												? "Abono pagado"
-												: "Pendiente"}
-										</Badge>
-									</div>
-									<div className="flex justify-between">
-										<span>Estado del Saldo:</span>
-										<Badge
-											variant={
-												selectedReserva.saldoPagado ? "default" : "secondary"
-											}
-										>
-											{selectedReserva.saldoPagado
-												? "Saldo pagado"
-												: "Pendiente"}
-										</Badge>
-									</div>
-								</div>
-							</div>
-
-							{/* Botones */}
-							<div className="flex justify-end gap-2 pt-4">
-								<Button
-									variant="outline"
-									onClick={() => setShowEditDialog(false)}
-									disabled={saving}
-								>
-									Cancelar
-								</Button>
-								<Button onClick={handleSave} disabled={saving}>
-									{saving ? (
-										<>
-											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-											Guardando...
-										</>
-									) : (
-										"Guardar Cambios"
-									)}
-								</Button>
-							</div>
-						</div>
+						</>
 					)}
 				</DialogContent>
 			</Dialog>
