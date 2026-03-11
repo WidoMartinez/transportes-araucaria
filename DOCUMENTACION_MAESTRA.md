@@ -1476,7 +1476,7 @@ El sistema de promociones permite crear ofertas atractivas con imágenes que se 
 
 ### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
 
-**Actualizado: 28 Febrero 2026**
+**Actualizado: 11 Marzo 2026**
 
 El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google Ads, diferenciando entre eventos de "Lead" (intención de compra) y "Purchase" (reserva pagada). Para maximizar la precisión, se utiliza el estándar de **Enhanced Conversions** en ambos eventos de la cascada y a través de múltiples componentes.
 
@@ -1487,19 +1487,60 @@ El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google 
     *   **ID de Conversión**: `AW-17529712870/8GVlCLP-05MbEObh6KZB`.
     *   **Enhanced Conversions**: Captura y envía inmediatamente los datos del formulario (Email, Teléfono formateado a E.164, y Nombre dividido en first/last_name) mediante el objeto `user_data`.
 2.  **Eventos de Purchase (Compra Exitosa)**:
-    *   Se disparan únicamente en los puntos de retorno de éxito (`FlowReturn.jsx`, `App.jsx`).
+    *   Se disparan únicamente en los puntos de retorno de éxito (`FlowReturn.jsx`, `App.jsx`, `CompletarDetalles.jsx` como respaldo).
     *   **ID de Conversión**: `AW-17529712870/yZz-CJqiicUbEObh6KZB` (Moneda: `CLP`).
     *   **Enhanced Conversions**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica para pasarlos a `user_data` al disparar el evento.
-3.  **Protección de Duplicados (Purchase)**: 
+3.  **Protección de Duplicados (Purchase)**:
     *   Se utiliza `sessionStorage` con una clave basada en el ID de la transacción (`id_reserva_token`) para evitar registrar la misma conversión repetida si el usuario recarga la página. Conversiones con un nuevo pago por el mismo cliente (abono + saldo pago restante) se registrarán como 2 transacciones diferentes (lo cual es correcto).
+
+#### Patrón Obligatorio: `waitForGtag` (Fix Race Condition - Marzo 2026)
+
+**Problema identificado**: `gtag.js` se carga de forma **asíncrona** desde los servidores de Google. En flujos donde la conversión se dispara automáticamente al cargar la página (ej: al volver de Flow), el script puede no estar disponible aún, causando que el evento se **pierda silenciosamente**.
+
+**Solución**: Todos los eventos de *Purchase* deben usar el patrón `waitForGtag` antes de llamar a `window.gtag(...)`:
+
+```javascript
+// ✅ PATRÓN CORRECTO: Esperar a que gtag esté disponible (polling cada 100ms, máx 5s)
+const waitForGtag = () => new Promise((resolve) => {
+    if (typeof window.gtag === "function") { resolve(true); return; }
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+        if (typeof window.gtag === "function") {
+            clearInterval(interval);
+            resolve(true);
+        } else if (Date.now() - startTime >= 5000) {
+            clearInterval(interval);
+            resolve(false); // Timeout: gtag no cargó en 5 segundos
+        }
+    }, 100);
+});
+
+// En la función async que dispara la conversión:
+const gtagListo = await waitForGtag();
+if (gtagListo) {
+    window.gtag("event", "conversion", conversionData);
+}
+```
+
+> [!IMPORTANT]
+> **Cuándo aplicar**: Este patrón es **obligatorio** en cualquier conversión de *Purchase* que se dispare automáticamente al montar un componente (en un `useEffect`). Para eventos disparados por **interacción del usuario** (click), el patrón es opcional ya que `gtag` ya habrá cargado para entonces.
+
+#### Archivos de Purchase que usan `waitForGtag`
+
+| Archivo | Flujo | Función |
+|---------|-------|---------|
+| `src/components/FlowReturn.jsx` | Pago con Código / Saldo | `verifyPayment()` → `waitForGtag()` |
+| `src/App.jsx` | Reserva Express (retorno al Home) | `dispararConversionExpress()` → `waitForGtag()` |
+| `src/components/CompletarDetalles.jsx` | Flujo Normal (respaldo) | `dispararConversionRespaldo()` → `waitForGtag()` |
 
 #### Especificaciones Técnicas
 - **Normalización Telefónica**: Es esencial usar la función local `normalizePhoneToE164` para los números al montar los payloads de Enhanced Conversions.
-- **Robustez del Valor Monetario**: El evento *Purchase* implementa fallbacks progresivos (Parámetro Flow -> Respuesta Backend -> Centinela `1.0`) para prevenir que problemas de red eviten notificar la conversión.
+- **Robustez del Valor Monetario**: El evento *Purchase* implementa fallbacks progresivos (Parámetro Flow → Respuesta Backend → Centinela `1.0`) para prevenir que problemas de red eviten notificar la conversión.
 
 > [!WARNING]
 > **Nota de Mantenimiento Crítica**:
-> Se han corregido errores de referencia histórica (ej. variables no declaradas como variables cortas `gtag`) en el tracking que detenían el embudo de manera silenciosa. **Se obliga siempre** invocar globalmente con `window.gtag` envuelto en un paso de verificación segurizado `if (typeof window.gtag === "function") { ... }`.
+> Al agregar nuevos flujos de pago, **SIEMPRE** usar el patrón `waitForGtag` descrito arriba para conversiones *Purchase* disparadas automáticamente. No usar `if (typeof window.gtag === "function") { ... }` como único guard: eso solo funciona si el script ya cargó, pero no espera si aún está cargando.
+
 
 ---
 ### 5.20 Mejoras en la Gestión y Visualización de Reservas (Panel Admin)
