@@ -6,7 +6,10 @@ import { CheckCircle, Loader2, AlertCircle, Clock } from "lucide-react";
 import logo from "../assets/logo.png";
 
 // Configuración
-const PAYMENT_VERIFICATION_DELAY_MS = 100; // Tiempo de espera antes de confirmar el pago (reducido para GA)
+// Polling: cuánto esperar entre cada intento de verificar si gtag está listo
+const GTAG_POLL_INTERVAL_MS = 100;
+// Tiempo máximo de espera total para que gtag esté disponible (5 segundos)
+const GTAG_WAIT_TIMEOUT_MS = 5000;
 
 /**
  * Normaliza un número de teléfono al formato E.164 internacional
@@ -69,11 +72,28 @@ function FlowReturn() {
 			// Opcional: redirigir a una página de ayuda o home después de unos segundos
 		}
 
+		// Espera activa (polling) hasta que window.gtag esté disponible o se agote el timeout
+		// Soluciona el race condition donde gtag.js no termina de cargar en los primeros 100ms
+		const waitForGtag = () => new Promise((resolve) => {
+			if (typeof window.gtag === "function") {
+				return resolve(true);
+			}
+			const inicio = Date.now();
+			const intervalo = setInterval(() => {
+				if (typeof window.gtag === "function") {
+					clearInterval(intervalo);
+					console.log(`✅ [FlowReturn] gtag disponible tras ${Date.now() - inicio}ms`);
+					resolve(true);
+				} else if (Date.now() - inicio >= GTAG_WAIT_TIMEOUT_MS) {
+					clearInterval(intervalo);
+					console.warn(`⚠️ [FlowReturn] gtag no disponible tras ${GTAG_WAIT_TIMEOUT_MS}ms. Se omitirá conversión.`);
+					resolve(false);
+				}
+			}, GTAG_POLL_INTERVAL_MS);
+		});
+
 		// LOGICA DE VERIFICACIÓN
 		const verifyPayment = async () => {
-			// Pequeño delay artificial para UX
-			await new Promise(resolve => setTimeout(resolve, PAYMENT_VERIFICATION_DELAY_MS));
-			
 			console.log(`🔍 [FlowReturn] Verificando estado: Status=${statusParam}, Error=${errorParam}, Amount=${amountParam}`);
 
 			// Si el backend nos dice explícitamente que hubo error
@@ -86,8 +106,11 @@ function FlowReturn() {
 			// Si el backend nos dice que fue exitoso
 			if (statusParam === "success") {
 				setPaymentStatus("success");
-				// Disparar evento de conversión
-				triggerConversion(amountParam, reservaIdParam, token);
+				// Esperar a que gtag esté disponible antes de disparar la conversión
+				const gtagListo = await waitForGtag();
+				if (gtagListo) {
+					triggerConversion(amountParam, reservaIdParam, token);
+				}
 				return;
 			}
 
@@ -98,13 +121,15 @@ function FlowReturn() {
 				return;
 			}
 
-			// Fallback (status unknown o legacy): Asumimos éxito por ahora (comportamiento original)
-			// O idealmente deberíamos consultar al backend nuevamente si es 'unknown'
-			// Para mantener compatibilidad si no hay params, lo dejamos en success pero solo si no es error explícito
+			// Fallback (status desconocido o legacy): asumir éxito si no hay error explícito
 			setPaymentStatus("success");
-			triggerConversion(amountParam, reservaIdParam, token);
+			const gtagListoFallback = await waitForGtag();
+			if (gtagListoFallback) {
+				triggerConversion(amountParam, reservaIdParam, token);
+			}
 		};
 
+		// triggerConversion ya puede asumir que gtag está disponible (se usa después de waitForGtag)
 		const triggerConversion = (amount, id, tkn) => {
 			try {
 				if (typeof window.gtag === "function") {
