@@ -37,6 +37,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Auditoría y Logs](#521-sistema-de-auditoría-y-logs-adminauditlog)
    - [Sistema de Recuperación de Detalles Incompletos](#522-sistema-de-recuperación-de-detalles-incompletos)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
+   - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
 
@@ -1446,8 +1447,26 @@ Para consultar bitácoras de cambios específicas o guías visuales antiguas, re
 - `LOGS_CORRECCIONES.md`
 
 ---
-**Transportes Araucaria - Documentación Unificada**
+---
+### 5.17 Sistema de Oportunidades de Traslado
 
+**Actualizado: Febrero 2026**
+
+El Sistema de Oportunidades permite aprovechar los traslados vacíos (retornos e idas) convirtiéndolos en oportunidades de venta con descuentos de hasta 60%, manteniendo el concepto de traslado 100% privado.
+
+#### Características Principales
+1. **Detección Automática**: 
+   - *Retornos Vacíos*: Genera una oportunidad en dirección contraria tras una reserva confirmada (ej: destino → origen). Válido hasta 2 horas antes del viaje con 50-60% de descuento.
+   - *Idas Vacías*: Si el origen de una reserva no es la Base (Temuco), genera oportunidad Base → origen. Válido hasta 3 horas antes con 50% de descuento limitando la capacidad ociosa.
+2. **Generación Automatizada**: El endpoint `GET /api/oportunidades/generar` permite al sistema leer las reservas futuras y registrar opciones disponibles.
+3. **Flujo Cautivo del Cliente**: 
+   - Muestra ofertas en `OportunidadesTraslado.jsx` (`/#oportunidades`).
+   - Al reservar se almacenan los datos de la ruta en `localStorage` y se pre-llena el formulario `HeroExpress`.
+   - Al completarse el pago, la oportunidad se marca como `reservada`.
+4. **Monitoreo Continuo**: Expiración automática (`marcarOportunidadesExpiradas()`) antes de cada listado público.
+5. **Suscripción de Alertas**: Los clientes pueden registrar su email y ruta para recibir notificaciones cuando se abra un descuento coincidente.
+
+---
 ### 5.18 Sistema de Banners Promocionales
 
 **Actualizado: Febrero 2026**
@@ -1471,8 +1490,11 @@ El sistema de promociones permite crear ofertas atractivas con imágenes que se 
 4.  **Generación de Leads e Integración**:
     -   **Link Directo**: Cada promoción tiene un link único (`/?promo=ID`) para campañas de marketing (Google Ads, Facebook).
     -   **Conversiones**: Las reservas generadas se marcan con `source: "banner_promocional"` para tracking de efectividad.
+
+5.  **Flujo Técnico**:
+    -   **API POST**: `POST /api/promociones-banner/desde-promocion/:id` crea la reserva vinculada a la promoción.
     -   **Frontend**: `ReservaRapidaModal.jsx` maneja la interfaz de usuario simplificada.
-    -   **Panel Admin**: `GestionPromociones.jsx` permite crear, editar y activar/desactivar promociones.
+    -   **Panel Admin**: `GestionPromociones.jsx` permite crear, editar, subir imágenes y activar promociones.
 
 ### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
 
@@ -1621,3 +1643,112 @@ Implementado en Febrero 2026 para gestionar el escenario donde un cliente comple
 3.  **Actualización Autónoma**:
     - El cliente accede a `ConsultarReserva.jsx`, ve un aviso destacado y puede abrir el formulario de `CompletarDetalles` sin necesidad de login adicional.
     - Una vez guardados los datos, la reserva se actualiza en tiempo real y desaparece la alerta roja en el panel del administrador.
+
+---
+
+## 6. Mantenimiento y Despliegue
+
+### 6.1 Acceso SSH a Hostinger (Hosting Compartido)
+
+El frontend React (build) y los scripts PHP se alojan en el hosting compartido de Hostinger. A continuación se documentan los datos de conexión y el flujo de trabajo para administrar el servidor de forma remota.
+
+#### Datos de Conexión SSH
+
+| Campo            | Valor              |
+|------------------|--------------------|
+| **IP**           | `82.112.246.242`   |
+| **Puerto**       | `65002`            |
+| **Usuario**      | `u419311572`       |
+| **Contraseña**   | `TeamoGadiel7.`    |
+
+> [!IMPORTANT]
+> Hostinger usa un **puerto no estándar** (`65002`). Siempre especificarlo explícitamente con `-p 65002`, de lo contrario la conexión fallará.
+
+#### Comando de Conexión
+
+```bash
+ssh u419311572@82.112.246.242 -p 65002
+```
+
+#### Estructura de Directorios en el Servidor
+
+```
+/home/u419311572/                                          ← Raíz del usuario (home)
+└── domains/
+    └── transportesaraucaria.cl/
+        └── public_html/                                   ← Document root del sitio web
+            ├── index.html                                 ← Frontend React (build)
+            ├── assets/                                    ← JS/CSS del build de Vite
+            └── *.php                                      ← Scripts PHP (emails, etc.)
+```
+
+> [!TIP]
+> Al conectarte por SSH, usa `pwd` para verificar en qué directorio estás y `ls` para listar archivos. Por defecto te posicionas en `/home/u419311572/`.
+
+#### Comandos SSH Esenciales
+
+```bash
+# Verificar ubicación actual
+pwd
+
+# Ir al document root del sitio
+cd /home/u419311572/domains/transportesaraucaria.cl/public_html/
+
+# Listar archivos del directorio actual
+ls -la
+
+# Ver el contenido de un archivo PHP
+cat enviar_correo_mejorado.php
+
+# Editar un archivo directamente en el servidor (editor nano)
+nano enviar_correo_mejorado.php
+
+# Ver las últimas líneas de un log (si existe)
+tail -n 50 error_log
+
+# Salir de la sesión SSH
+exit
+```
+
+#### Flujo de Trabajo para Actualizar Archivos PHP
+
+Los archivos PHP **se despliegan manualmente** (no hay CI/CD para Hostinger). El flujo recomendado es:
+
+1. **Editar localmente** el archivo `.php` en el repositorio.
+2. **Agregar el comentario de aviso** al inicio del archivo (ver regla en `AGENTS.md`):
+   ```php
+   <?php
+   // AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
+   // Cualquier cambio local debe subirse manualmente al servidor.
+   ```
+3. **Subir el archivo** al servidor. Opciones:
+   - **SFTP** (recomendado con FileZilla u otro cliente): mismos datos que SSH.
+   - **SCP desde terminal**:
+     ```bash
+     scp -P 65002 ./ruta/local/archivo.php u419311572@82.112.246.242:/home/u419311572/domains/transportesaraucaria.cl/public_html/
+     ```
+4. **Verificar** conectándose por SSH y revisando el archivo subido.
+
+#### Flujo de Trabajo para Actualizar el Frontend (Build React)
+
+El build de Vite genera la carpeta `dist/`. Su contenido se sube al `public_html/`:
+
+```bash
+# 1. Generar el build localmente
+npm run build
+
+# 2. Subir la carpeta dist/ completa por SFTP o SCP
+scp -P 65002 -r ./dist/* u419311572@82.112.246.242:/home/u419311572/domains/transportesaraucaria.cl/public_html/
+```
+
+> [!WARNING]
+> Al subir el build, los archivos en `assets/` cambian de nombre (hash de Vite). Si subes solo algunos archivos delta, puede quedar una versión inconsistente. **Siempre sube el contenido completo de `dist/`**.
+
+#### Solución de Problemas SSH
+
+| Síntoma | Causa probable | Solución |
+|---------|---------------|----------|
+| `Connection refused` | Puerto incorrecto | Asegurarse de usar `-p 65002` |
+| `Permission denied` | Contraseña incorrecta | Verificar/cambiar contraseña en panel Hostinger |
+| SSH deshabilitado | El acceso SSH puede desactivarse | Activarlo en Hostinger → Avanzado → Acceso SSH |
+| Archivo no aparece | Ruta equivocada | Navegar a `public_html/` y verificar con `ls` |
