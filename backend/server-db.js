@@ -6451,6 +6451,73 @@ app.post("/api/reservas/:id/solicitar-detalles", authAdmin, async (req, res) => 
 	}
 });
 
+// Reenviar correo de confirmación al cliente de una reserva existente
+app.post("/api/reservas/:id/reenviar-confirmacion", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const reserva = await Reserva.findByPk(id);
+
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		if (!reserva.email) {
+			return res.status(400).json({ error: "La reserva no tiene email asociado" });
+		}
+
+		// Enviar correo usando el script PHP de Hostinger (reutiliza el flujo existente)
+		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+
+		const emailData = {
+			nombre: reserva.nombre,
+			email: reserva.email,
+			codigoReserva: reserva.codigoReserva,
+			origen: reserva.origen,
+			destino: reserva.destino,
+			fecha: reserva.fecha,
+			hora: reserva.hora,
+			pasajeros: reserva.pasajeros,
+			total: reserva.totalConDescuento,
+			estadoPago: reserva.estadoPago,
+			pagoMonto: reserva.pagoMonto,
+			action: "reenvio_confirmacion"
+		};
+
+		const response = await axios.post(phpUrl, emailData, {
+			headers: { "Content-Type": "application/json" },
+			timeout: 15000
+		});
+
+		// Registrar la acción en los logs si el sistema de auditoría existe
+		try {
+			if (typeof AdminAuditLog !== "undefined" && req.user) {
+				await AdminAuditLog.create({
+					adminUserId: req.user.id,
+					accion: "reenviar_confirmacion",
+					entidad: "reserva",
+					entidadId: id,
+					detalles: JSON.stringify({ email: reserva.email, codigo: reserva.codigoReserva })
+				});
+			}
+		} catch (logError) {
+			console.error("Error registrando auditoría de reenvío de confirmación:", logError);
+		}
+
+		res.json({
+			success: true,
+			message: "Correo de confirmación reenviado exitosamente",
+			phpResponse: response.data
+		});
+
+	} catch (error) {
+		console.error("Error reenviando correo de confirmación:", error);
+		res.status(500).json({
+			error: "Error al reenviar el correo de confirmación",
+			details: error.message
+		});
+	}
+});
+
 // Actualizar ruta (origen/destino) de una reserva
 app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
 	try {

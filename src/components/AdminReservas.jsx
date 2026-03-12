@@ -20,6 +20,7 @@ import {
 } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import {
 	Dialog,
 	DialogContent,
@@ -2023,6 +2024,50 @@ function AdminReservas() {
 			const m = date.match(/^(\d{4}-\d{2}-\d{2})/);
 			return m ? m[1] : String(date);
 		}
+	};
+
+	// Reenviar correo de confirmación al cliente de una reserva
+	const reenviarCorreoConfirmacion = async (reservaId) => {
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${reservaId}/reenviar-confirmacion`, {
+				method: "POST",
+			});
+			if (response.ok) {
+				alert("✅ Correo reenviado exitosamente");
+			} else {
+				const errData = await response.json().catch(() => ({}));
+				throw new Error(errData.error || "Error al reenviar el correo");
+			}
+		} catch (error) {
+			console.error("Error reenviando correo de confirmación:", error);
+			alert("❌ No se pudo reenviar el correo: " + error.message);
+		}
+	};
+
+	// Ver reserva vinculada (tramo de vuelta) en el modal de edición
+	const verReservaVinculada = async (tramoHijoId) => {
+		try {
+			const response = await authenticatedFetch(`/api/reservas/${tramoHijoId}`);
+			if (response.ok) {
+				const reservaVinculada = await response.json();
+				handleEdit(reservaVinculada);
+			} else {
+				throw new Error("No se pudo obtener la reserva vinculada");
+			}
+		} catch (error) {
+			console.error("Error cargando reserva vinculada:", error);
+			alert("❌ Error al cargar la reserva vinculada: " + error.message);
+		}
+	};
+
+	// Copiar información de la reserva al portapapeles en formato WhatsApp
+	const copiarInfoWhatsApp = (reserva) => {
+		const texto = generarTextoConductor(reserva);
+		navigator.clipboard.writeText(texto).then(() => {
+			alert("✅ Información copiada al portapapeles");
+		}).catch(() => {
+			alert("❌ No se pudo copiar al portapapeles");
+		});
 	};
 
 	// Buscar clientes para autocompletar
@@ -4503,48 +4548,168 @@ function AdminReservas() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Modal de EdiciÃ³n */}
+			{/* Modal de Edición */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
 				<DialogContent className="sm:max-w-5xl md:max-w-5xl lg:max-w-5xl max-h-[85vh] overflow-y-auto">
 					<DialogHeader>
-						<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
-						<DialogDescription>
-							Actualiza el estado, pago y detalles de la reserva
-						</DialogDescription>
+						<div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+							<div>
+								<DialogTitle>Editar Reserva #{selectedReserva?.id}</DialogTitle>
+								<DialogDescription>
+									Actualiza el estado, pago y detalles de la reserva
+								</DialogDescription>
+							</div>
+							{selectedReserva && (
+								<div className="flex flex-wrap gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => reenviarCorreoConfirmacion(selectedReserva.id)}
+									>
+										<Mail className="w-4 h-4 mr-2" />
+										Reenviar Email
+									</Button>
+									{selectedReserva.tramoHijoId && (
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => verReservaVinculada(selectedReserva.tramoHijoId)}
+										>
+											Ver Tramo Vuelta →
+										</Button>
+									)}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => copiarInfoWhatsApp(selectedReserva)}
+									>
+										<Copy className="w-4 h-4 mr-2" />
+										WhatsApp
+									</Button>
+								</div>
+							)}
+						</div>
 					</DialogHeader>
 
 					{selectedReserva && (
 						<div className="space-y-4">
-							{/* InformaciÃ³n del Cliente (editable) */}
+							{/* Información del Cliente (SOLO LECTURA) */}
 							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
-									<Label>Nombre</Label>
-									<Input
-										value={formData.nombre || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, nombre: e.target.value })
-										}
-									/>
+									<Label className="text-muted-foreground">Nombre</Label>
+									<p className="font-medium py-2">{formData.nombre || "-"}</p>
 								</div>
 								<div className="space-y-1">
-									<Label>Email</Label>
-									<Input
-										type="email"
-										value={formData.email || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, email: e.target.value })
-										}
-									/>
+									<Label className="text-muted-foreground">Email</Label>
+									<p className="font-medium py-2">{formData.email || "-"}</p>
 								</div>
 								<div className="space-y-1">
-									<Label>Teléfono</Label>
-									<Input
-										value={formData.telefono || ""}
-										onChange={(e) =>
-											setFormData({ ...formData, telefono: e.target.value })
-										}
-									/>
+									<Label className="text-muted-foreground">Teléfono</Label>
+									<p className="font-medium py-2">{formData.telefono || "-"}</p>
 								</div>
+								<div className="space-y-1 md:col-span-2 flex justify-end">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											if (selectedReserva?.clienteId) {
+												window.open(`/admin?panel=clientes&clienteId=${selectedReserva.clienteId}`, "_blank");
+											} else {
+												alert("No se puede editar: esta reserva no tiene un cliente asociado.");
+											}
+										}}
+									>
+										<User className="w-4 h-4 mr-2" />
+										Ver/Editar Cliente
+									</Button>
+								</div>
+							</div>
+
+							{/* Alertas inteligentes */}
+							{(() => {
+								// Parsear fecha de la reserva una sola vez para las alertas
+								const fechaReserva = selectedReserva.fecha
+									? new Date(selectedReserva.fecha + (selectedReserva.fecha.length === 10 ? "T00:00:00" : ""))
+									: null;
+								const hoy = new Date();
+								const dosDias = new Date(hoy);
+								dosDias.setDate(dosDias.getDate() + 2);
+
+								const esPasada = fechaReserva && fechaReserva < hoy;
+								const esProxima = fechaReserva && fechaReserva < dosDias && fechaReserva > hoy;
+								const noCompletada = selectedReserva.estado !== "completada" && selectedReserva.estado !== "cancelada";
+								const pagoPendiente = selectedReserva.estadoPago === "pendiente" || selectedReserva.saldoPendiente > 0;
+
+								return (
+									<div className="space-y-2">
+										{/* Reserva pasada sin completar */}
+										{esPasada && noCompletada && (
+											<Alert className="bg-yellow-50 border-yellow-200">
+												<AlertCircle className="h-4 w-4 text-yellow-600" />
+												<AlertTitle className="text-yellow-800">Reserva Vencida</AlertTitle>
+												<AlertDescription className="text-yellow-700">
+													Esta reserva pasó de fecha ({formatDate(selectedReserva.fecha)}) y no está marcada como completada.{" "}
+													<Button
+														variant="link"
+														size="sm"
+														className="text-yellow-800 underline p-0 h-auto"
+														onClick={() => setFormData({ ...formData, estado: "completada" })}
+													>
+														Marcar como completada
+													</Button>
+												</AlertDescription>
+											</Alert>
+										)}
+
+										{/* Pago pendiente próximo a la fecha */}
+										{esProxima && pagoPendiente && (
+											<Alert variant="destructive" className="bg-red-50 border-red-200">
+												<AlertCircle className="h-4 w-4 text-red-600" />
+												<AlertTitle className="text-red-800">Urgente: Pago Pendiente</AlertTitle>
+												<AlertDescription className="text-red-700">
+													La reserva es en menos de 48 horas ({formatDate(selectedReserva.fecha)}) y tiene un saldo pendiente de {formatCurrency(selectedReserva.saldoPendiente)}.
+												</AlertDescription>
+											</Alert>
+										)}
+
+										{/* Falta dirección específica */}
+										{!selectedReserva.direccionOrigen && !selectedReserva.direccionDestino && (
+											<Alert className="bg-blue-50 border-blue-200">
+												<MapPin className="h-4 w-4 text-blue-600" />
+												<AlertTitle className="text-blue-800">Dirección Incompleta</AlertTitle>
+												<AlertDescription className="text-blue-700">
+													Falta la dirección específica de recogida o entrega. Esto puede causar problemas al conductor.
+												</AlertDescription>
+											</Alert>
+										)}
+
+										{/* Reserva confirmada sin vehículo asignado */}
+										{selectedReserva.estado === "confirmada" && !isAsignada(selectedReserva) && (
+											<Alert className="bg-orange-50 border-orange-200">
+												<Car className="h-4 w-4 text-orange-600" />
+												<AlertTitle className="text-orange-800">Sin Vehículo Asignado</AlertTitle>
+												<AlertDescription className="text-orange-700">
+													Esta reserva está confirmada pero no tiene vehículo ni conductor asignado.{" "}
+													<Button
+														variant="link"
+														size="sm"
+														className="text-orange-800 underline p-0 h-auto"
+														onClick={() => {
+															setShowEditDialog(false);
+															handleAsignar(selectedReserva);
+														}}
+													>
+														Asignar ahora
+													</Button>
+												</AlertDescription>
+											</Alert>
+										)}
+									</div>
+								);
+							})()}
+
+							{/* Datos generales de la reserva (fecha, hora, pasajeros, vehículo) */}
+							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
 									<Label>Fecha</Label>
 									<Input
@@ -5021,60 +5186,75 @@ function AdminReservas() {
 								</div>
 							</div>
 
-							{/* Historial de pagos de esta reserva */}
-							<div className="space-y-2">
-								<Label>Historial de pagos</Label>
-								<div className="bg-white border rounded p-3 max-h-48 overflow-y-auto">
-									{pagoHistorial &&
-										pagoHistorial.length > 0 &&
-										pagoHistorial.map((p) => (
-											<div
-												key={p.id}
-												className="flex justify-between items-center py-2 border-b"
-											>
-												<div>
-													<div className="font-medium">
-														{p.source === "web" ? "Pago web" : "Pago manual"}
-													</div>
-													<div className="text-sm text-muted-foreground">
-														{p.metodo || "-"} - {p.referencia || "-"}
-													</div>
-												</div>
-												<div className="text-right text-sm">
-													<div>
-														{new Intl.NumberFormat("es-CL", {
-															style: "currency",
-															currency: "CLP",
-														}).format(p.amount)}
-													</div>
-													<div className="text-xs text-muted-foreground">
-														{new Date(p.createdAt).toLocaleString()}
-													</div>
-												</div>
-											</div>
-										))}
-									{(!pagoHistorial || pagoHistorial.length === 0) && (
+							{/* Historial de pagos mejorado */}
+							<div className="space-y-4 border rounded-lg p-4 bg-slate-50">
+								<div className="flex justify-between items-center">
+									<div>
+										<Label className="text-base font-semibold">Historial de Pagos</Label>
 										<p className="text-sm text-muted-foreground">
-											No hay pagos registrados.
+											Total registrado:{" "}
+											<span className="font-medium">
+												{formatCurrency(pagoHistorial ? pagoHistorial.reduce((sum, p) => sum + (p.amount || 0), 0) : 0)}
+											</span>
 										</p>
-									)}
-								</div>
-							</div>
-
-							{/* BotÃ³n y modal para registrar pago manual */}
-							<div className="space-y-2">
-								<Label>Registrar pago manual</Label>
-								<div className="flex gap-2">
+									</div>
 									<Button
 										type="button"
 										onClick={() => setShowRegisterPayment(true)}
+										className="gap-2"
 									>
-										Registrar pago
+										<Plus className="w-4 h-4" />
+										Registrar Pago
 									</Button>
-									<span className="text-sm text-muted-foreground self-center">
-										Registra pagos manuales y guarda un historial (manual /
-										web).
-									</span>
+								</div>
+								<div className="bg-white border rounded-lg p-3 max-h-64 overflow-y-auto">
+									{pagoHistorial && pagoHistorial.length > 0 ? (
+										<div className="space-y-1">
+											{pagoHistorial.map((p) => (
+												<div
+													key={p.id}
+													className="flex justify-between items-center py-2 border-b hover:bg-slate-50 rounded px-2"
+												>
+													<div className="flex-1">
+														<div className="flex items-center gap-2">
+															<Badge variant={p.source === "web" ? "default" : "secondary"}>
+																{p.source === "web" ? "Web" : "Manual"}
+															</Badge>
+															<span className="font-medium">
+																{formatCurrency(p.amount)}
+															</span>
+														</div>
+														<div className="text-xs text-muted-foreground mt-1">
+															{p.metodo || "Sin método"}
+															{p.referencia && ` • Ref: ${p.referencia}`}
+														</div>
+													</div>
+													<div className="text-right text-xs text-muted-foreground">
+														{new Date(p.createdAt).toLocaleString("es-CL", {
+															day: "2-digit",
+															month: "2-digit",
+															year: "2-digit",
+															hour: "2-digit",
+															minute: "2-digit",
+														})}
+													</div>
+												</div>
+											))}
+										</div>
+									) : (
+										<div className="text-center py-6 text-muted-foreground">
+											<DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
+											<p className="text-sm">No hay pagos registrados</p>
+											<Button
+												variant="link"
+												size="sm"
+												onClick={() => setShowRegisterPayment(true)}
+												className="mt-2"
+											>
+												Registrar el primer pago
+											</Button>
+										</div>
+									)}
 								</div>
 							</div>
 
