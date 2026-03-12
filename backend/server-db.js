@@ -2584,6 +2584,7 @@ app.post("/enviar-reserva", async (req, res) => {
 	console.log("-".repeat(50));
 	console.log(`📊 Estado:                 ${(datosReserva.estado || "pendiente").toUpperCase()}`);
 	console.log(`💳 Estado Pago:            ${(datosReserva.estadoPago || "pendiente").toUpperCase()}`);
+	console.log(`💰 MONTO FINAL:            $${parseFloat(datosReserva.totalConDescuento || 0).toLocaleString("es-CL")}`);
 	console.log(`🌐 Fuente:                 ${datosReserva.source || "web"}`);
 	console.log("=".repeat(50) + "\n");
 
@@ -4135,14 +4136,14 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 		};
 
 		if (reservaLead) {
-			console.log(`📝 Actualizando lead abandonado: ${reservaLead.id} (${emailNormalizado})`);
+			console.log(`📝 Actualizando lead: [${datosAGuardar.nombre}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString("es-CL")}`);
 			await reservaLead.update(datosAGuardar);
 		} else {
 			// Generar código de reserva para que sea una reserva válida si el usuario decide completarla después
 			const codigoReserva = await generarCodigoReserva();
 			datosAGuardar.codigoReserva = codigoReserva;
 			
-			console.log(`🎯 Capturando nuevo lead abandonado: ${emailNormalizado}`);
+			console.log(`🎯 NUEVO LEAD: [${datosAGuardar.nombre}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString("es-CL")}`);
 			reservaLead = await Reserva.create(datosAGuardar);
 		}
 
@@ -7865,9 +7866,9 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 						"Sábado",
 					];
 					detalle = `${nombresDias[diaSemana]}`;
-					console.log(`    ✅ Aplica - ${detalle}`);
+					// console.log(`    ✅ Aplica - ${detalle}`);
 				} else {
-					console.log(`    ⏭️  No aplica`);
+					// console.log(`    ⏭️  No aplica`);
 				}
 				break;
 
@@ -7917,7 +7918,8 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 	const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
 	const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
 
-	console.log("-".repeat(50));
+	/*
+    console.log("-".repeat(50));
 	console.log("📊 AJUSTES APLICADOS:");
 	if (ajustesAplicados.length > 0) {
 		ajustesAplicados.forEach((ajuste, index) => {
@@ -7938,6 +7940,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 	}
 	console.log(`✅ PRECIO FINAL:           ${formatMoney(precioFinal)}`);
 	console.log("=".repeat(50) + "\n");
+    */
 
 		res.json({
 			precioBase: parseFloat(precioBase),
