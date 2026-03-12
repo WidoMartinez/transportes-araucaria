@@ -6319,7 +6319,21 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 				mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
 			}, { transaction });
 
-			console.log(`✅ [BULK-UPDATE] Datos generales actualizados`);
+			// 🎯 NUEVO: Sincronizar datos con el registro maestro del Cliente si existe
+			if (reserva.clienteId) {
+				const Cliente = (await import("./models/Cliente.js")).default;
+				const cliente = await Cliente.findByPk(reserva.clienteId, { transaction });
+				if (cliente) {
+					await cliente.update({
+						nombre: nombre !== undefined ? nombre : cliente.nombre,
+						email: email !== undefined ? email : cliente.email,
+						telefono: telefono !== undefined ? telefono : cliente.telefono,
+					}, { transaction });
+					console.log(`✅ [BULK-UPDATE] Registro maestro del cliente ${reserva.clienteId} actualizado`);
+				}
+			}
+
+			console.log(`✅ [BULK-UPDATE] Datos generales y de cliente actualizados`);
 		}
 
 		// 3. Actualizar ruta (si se proporciona)
