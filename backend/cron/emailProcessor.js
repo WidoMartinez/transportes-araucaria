@@ -34,7 +34,6 @@ export const processPendingEmails = async () => {
         // VERIFICAR CONEXIÓN A BD ANTES DE CONSULTAS
         await retryWithBackoff(async () => {
             await sequelize.authenticate();
-            console.log("✅ Conexión a BD verificada para email processor");
         });
 
         const now = new Date();
