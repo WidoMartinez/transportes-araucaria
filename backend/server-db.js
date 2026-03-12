@@ -494,7 +494,7 @@ const generarCodigoReserva = async () => {
 			return `AR-${Date.now()}`; 
 		}
 
-		console.log(`📋 Código de reserva generado: ${codigoReserva} (Consecutivo: ${consecutivo})`);
+		// console.log(`📋 Código de reserva generado: ${codigoReserva} (Consecutivo: ${consecutivo})`);
 
 		return codigoReserva;
 	} catch (error) {
@@ -7902,7 +7902,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			}
 
 			if (aplica) {
-				console.log(`    ✅ Ajuste aplicado: ${config.porcentajeAjuste}%`);
+				// console.log(`    ✅ Ajuste aplicado: ${config.porcentajeAjuste}%`);
 				ajustesAplicados.push({
 					nombre: config.nombre,
 					tipo: config.tipo,

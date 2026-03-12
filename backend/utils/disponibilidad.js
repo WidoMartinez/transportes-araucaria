@@ -534,7 +534,7 @@ export const validarHorarioMinimo = async ({
  * Genera opciones de horario con descuentos escalonados
  */
 export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
-	console.log("🔍 Buscando retornos:", { origen, destino, fecha });
+	// console.log("🔍 Buscando retornos:", { origen, destino, fecha });
 	try {
         const esSolicitudDesdeBase = origen === BASE_OPERACIONES;
         const esSolicitudHaciaBase = destino === BASE_OPERACIONES;
@@ -569,7 +569,7 @@ export const buscarRetornosDisponibles = async ({ origen, destino, fecha }) => {
 			},
 		});
 
-		console.log(`📊 Encontradas ${reservasContrarias?.length || 0} reservas potenciales`);
+		// console.log(`📊 Encontradas ${reservasContrarias?.length || 0} reservas potenciales`);
 		if (!reservasContrarias || reservasContrarias.length === 0) {
 			return { hayOportunidades: false, opciones: [] };
 		}

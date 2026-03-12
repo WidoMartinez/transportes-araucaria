@@ -241,10 +241,9 @@ $reservaGuardada = false;
 $adminEmailEnviado = false;
 $confirmacionEnviada = false;
 
-// =========================================================
-// RAMA: send_discount_offer — solo correo de descuento al cliente
-// =========================================================
-    exit;
+if ($action === 'send_discount_offer') {
+    // La lógica de send_discount_offer se define más abajo
+    // pero mantenemos la estructura if para evitar errores de sintaxis
 }
 
 // =========================================================
