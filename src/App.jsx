@@ -1997,9 +1997,21 @@ const [configSillas, setConfigSillas] = useState({
 
 	const minDateTime = useMemo(() => {
 		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
-		const fechaMinima = new Date();
+		
+		// Obtener "ahora" en Chile
+		const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
+		
+		// Calcular fecha mínima sumando anticipación
+		const fechaMinima = new Date(ahoraChile.getTime());
 		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
-		return fechaMinima.toISOString().split("T")[0];
+		
+		// Formatear como YYYY-MM-DD usando la zona horaria de Chile
+		return new Intl.DateTimeFormat('fr-CA', {
+			timeZone: 'America/Santiago',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		}).format(fechaMinima);
 	}, [destinoSeleccionado]);
 
 	const currencyFormatter = useMemo(

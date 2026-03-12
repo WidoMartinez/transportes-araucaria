@@ -50,6 +50,44 @@ export const processPendingEmails = async () => {
             limit: 50 // Procesar en lotes para no saturar
         });
 
+        // --- SISTEMA DE AUTOPROGRAMACIÓN PARA LEADS ABANDONADOS ---
+        // Buscamos reservas con source 'lead_hero_abandonado' creadas hace más de 30 minutos
+        // que no tengan ya una tarea de correo asociada.
+        const treintaMinutosAtras = new Date(now.getTime() - 30 * 60 * 1000);
+        const doceHorasAtras = new Date(now.getTime() - 12 * 60 * 60 * 1000); // No recuperar leads muy viejos
+
+        const leadsSinTarea = await Reserva.findAll({
+            where: {
+                source: "lead_hero_abandonado",
+                estado: "pendiente",
+                estadoPago: "pendiente",
+                created_at: {
+                    [Op.lte]: treintaMinutosAtras,
+                    [Op.gte]: doceHorasAtras
+                }
+            },
+            attributes: ["id", "email"],
+            raw: true
+        });
+
+        for (const lead of leadsSinTarea) {
+            // Verificar si ya tiene una tarea creada (por si se borró y quedó el lead)
+            const exists = await PendingEmail.findOne({
+                where: { reservaId: lead.id, type: "lead_recovery" }
+            });
+
+            if (!exists) {
+                console.log(`🆕 Programando recuperación automatizada para lead ID ${lead.id}`);
+                await PendingEmail.create({
+                    reservaId: lead.id,
+                    email: lead.email,
+                    type: "lead_recovery",
+                    status: "pending",
+                    scheduledAt: now // Enviar de inmediato ya que ya pasaron los 30 min
+                });
+            }
+        }
+
         if (pendingEmails.length === 0) return;
 
         console.log(`🔄 Procesando ${pendingEmails.length} correos pendientes...`);
@@ -81,8 +119,9 @@ export const processPendingEmails = async () => {
                     continue;
                 }
 
-                // ENVIAR CORREO DE DESCUENTO
-                console.log(`🚀 Enviando correo de descuento para ${reserva.codigoReserva}...`);
+                // DETERMINAR ACCIÓN Y ENVIAR
+                const action = emailTask.type === "lead_recovery" ? "send_lead_recovery" : "send_discount_offer";
+                console.log(`🚀 Enviando correo (${emailTask.type}) para ${reserva.codigoReserva}...`);
                 
                 const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
                 
@@ -93,6 +132,7 @@ export const processPendingEmails = async () => {
                 
                 // Preparar datos para el PHP
                 const emailData = {
+                    id: reserva.id,
                     nombre: reserva.nombre,
                     email: reserva.email,
                     telefono: reserva.telefono,
@@ -107,7 +147,7 @@ export const processPendingEmails = async () => {
                     precio: reserva.precio,
                     estadoPago: reserva.estadoPago,
                     upgradeVan: reserva.upgradeVan,
-                    action: "send_discount_offer" // Acción específica para el PHP
+                    action: action // Acción dinámica
                 };
 
                 const response = await axios.post(phpUrl, emailData, {

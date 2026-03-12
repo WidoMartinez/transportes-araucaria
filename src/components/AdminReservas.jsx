@@ -2227,6 +2227,30 @@ function AdminReservas() {
 		});
 	};
 
+	// Copiar mensaje de seguimiento para leads abandonados
+	const copiarMensajeSeguimiento = (reserva) => {
+		if (!reserva) return;
+		
+		const fechaStr = reserva.fecha 
+			? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL", { day: 'numeric', month: 'long' }) 
+			: "[Fecha]";
+			
+		const montoStr = formatCurrency(reserva.totalConDescuento);
+		const nombreCliente = reserva.nombre && !reserva.nombre.includes("Cliente Potencial") ? reserva.nombre : "cliente";
+
+		const mensaje = `Hola ${nombreCliente}, te saluda el equipo de Transportes Araucaria. 👋
+
+Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.destino}* para el ${fechaStr} por un valor de *${montoStr}*. 🚐💨
+
+¿Te gustaría que te ayudemos a concretar la reserva o tienes alguna duda con el servicio? Estamos atentos para asistirte. 😊`;
+
+		navigator.clipboard.writeText(mensaje).then(() => {
+			alert("✅ Mensaje de seguimiento copiado");
+		}).catch(() => {
+			alert("❌ Error al copiar mensaje");
+		});
+	};
+
 	// Buscar clientes para autocompletar
 	const buscarClientes = async (query) => {
 		if (!query || query.length < 2) {
@@ -3768,6 +3792,20 @@ function AdminReservas() {
 																</span>
 															</Button>
 														)}
+
+														{/* Botón de Seguimiento WhatsApp para leads abandonados */}
+														{reserva?.source === 'lead_hero_abandonado' && (
+															<Button
+																variant="outline"
+																size="sm"
+																className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+																onClick={() => copiarMensajeSeguimiento(reserva)}
+																title="Copiar mensaje de seguimiento para WhatsApp"
+															>
+																<MessageSquare className="w-4 h-4" />
+															</Button>
+														)}
+
 														{/* Botón para completar reserva y agregar gastos */}
 														{reserva?.estado === "confirmada" && (
 															<Button

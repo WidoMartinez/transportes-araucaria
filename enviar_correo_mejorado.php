@@ -195,6 +195,7 @@ $formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' :
 
 // Preparar datos completos para guardar
 $reservaCompleta = [
+    'id' => $data['id'] ?? ($data['reservaId'] ?? null),
     'codigoReserva' => $codigoReserva,
     'nombre' => $nombre,
     'email' => $email,
@@ -243,30 +244,138 @@ $confirmacionEnviada = false;
 // =========================================================
 // RAMA: send_discount_offer — solo correo de descuento al cliente
 // =========================================================
-if ($action === 'send_discount_offer') {
-    // Verificar que el cliente tenga email válido
+    exit;
+}
+
+// =========================================================
+// RAMA: send_lead_recovery — correo de recuperación de carrito abandonado
+// =========================================================
+if ($action === 'send_lead_recovery') {
     if (!$hasValidCustomerEmail) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Email del cliente inválido o vacío.']);
+        echo json_encode(['success' => false, 'message' => 'Email del cliente inválido.']);
         exit;
     }
 
-    $mail2 = new PHPMailer(true);
+    $mail3 = new PHPMailer(true);
     try {
-        $mail2->isSMTP();
-        $mail2->Host       = $emailHost;
-        $mail2->SMTPAuth   = true;
-        $mail2->Username   = $emailUser;
-        $mail2->Password   = $emailPass;
-        $mail2->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail2->Port       = $emailPort;
-        $mail2->CharSet    = 'UTF-8';
+        $mail3->isSMTP();
+        $mail3->Host       = $emailHost;
+        $mail3->SMTPAuth   = true;
+        $mail3->Username   = $emailUser;
+        $mail3->Password   = $emailPass;
+        $mail3->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail3->Port       = $emailPort;
+        $mail3->CharSet    = 'UTF-8';
 
-        $mail2->setFrom($emailUser, $brandName);
-        $mail2->addAddress($email, $nombre ?: 'Cliente');
-        $mail2->addBcc($emailTo); // Copia al admin
-        $mail2->addReplyTo($emailUser, $brandName);
-        $mail2->isHTML(true);
+        $mail3->setFrom($emailUser, $brandName);
+        $mail3->addAddress($email, $nombre ?: 'Cliente');
+        $mail3->addBCC($emailTo); // Copia al admin para respaldo y monitoreo
+        $mail3->addReplyTo($emailUser, $brandName);
+        $mail3->isHTML(true);
+
+        $backendBase = getenv('BACKEND_URL') ?: 'https://transportes-araucaria.onrender.com';
+        $payLink = "{$backendBase}/api/reservas/{$reservaCompleta['id']}/pay-redirect?type=abono";
+        $totalHtml = $totalConDescuento ? ('$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP') : ('$' . number_format($precio, 0, ',', '.') . ' CLP');
+        
+        $mail3->Subject = "🚐 ¡No pierdas tu traslado! Asegura tu cupo ahora - {$brandName}";
+        
+        $mail3->Body = "
+        <div style='font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 20px auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);'>
+            <div style='background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 32px 24px; text-align: center;'>
+                <h1 style='margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em;'>¡Casi listo! 🚌</h1>
+                <p style='margin: 8px 0 0; font-size: 16px; opacity: 0.9;'>Aún puedes asegurar tu traslado a {$destino}</p>
+            </div>
+            
+            <div style='padding: 32px 24px; background-color: #ffffff;'>
+                <p style='font-size: 16px; margin: 0 0 20px;'>Hola <strong style='color: #111827;'>" . htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8') . "</strong>,</p>
+                <p style='margin: 0 0 24px;'>Notamos que no alcanzaste a completar tu reserva. ¡No te preocupes! Hemos guardado tu cotización para que no tengas que empezar de nuevo.</p>
+                
+                <div style='background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 32px;'>
+                    <h3 style='margin: 0 0 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b;'>Resumen de tu viaje</h3>
+                    <div style='margin-bottom: 12px;'>
+                        <span style='color: #94a3b8; font-size: 13px;'>Ruta:</span><br>
+                        <strong style='font-size: 15px;'>{$origen} → {$destino}</strong>
+                    </div>
+                    <div style='display: flex; gap: 20px; margin-bottom: 12px;'>
+                        <div style='flex: 1;'>
+                            <span style='color: #94a3b8; font-size: 13px;'>Fecha:</span><br>
+                            <strong style='font-size: 15px;'>{$fecha}</strong>
+                        </div>
+                        <div style='flex: 1;'>
+                            <span style='color: #94a3b8; font-size: 13px;'>Hora:</span><br>
+                            <strong style='font-size: 15px;'>{$hora}</strong>
+                        </div>
+                    </div>
+                    <div style='margin-top: 16px; padding-top: 16px; border-top: 1px dashed #cbd5e1;'>
+                        <span style='color: #94a3b8; font-size: 13px;'>Total Cotizado:</span><br>
+                        <strong style='font-size: 22px; color: #1e40af;'>{$totalHtml}</strong>
+                    </div>
+                </div>
+
+                <div style='text-align: center; margin-bottom: 32px;'>
+                    <a href='{$payLink}' style='background-color: #2563eb; color: #ffffff; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px; text-decoration: none; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);'>
+                        💳 Pagar Abono y Asegurar Cupo
+                    </a>
+                    <p style='font-size: 13px; color: #6b7280; margin-top: 12px;'>*Solo necesitas pagar el 40% para confirmar.</p>
+                </div>
+
+                <div style='text-align: center; padding-top: 24px; border-top: 1px solid #f1f5f9;'>
+                    <p style='font-size: 14px; margin-bottom: 16px;'>¿Tienes alguna duda o prefieres asistencia personalizada?</p>
+                    <a href='https://wa.me/56936643540?text=Hola,%20tengo%20una%20duda%20con%20mi%20reserva%20para%20{$destino}' style='color: #059669; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;'>
+                        <span style='background-color: #dcfce7; padding: 8px 16px; border-radius: 50px;'>📱 Hablar por WhatsApp</span>
+                    </a>
+                </div>
+            </div>
+            
+            <div style='background-color: #f9fafb; padding: 24px; text-align: center; font-size: 12px; color: #9ca3af;'>
+                <p style='margin: 0;'>© " . date('Y') . " {$brandName}. Todos los derechos reservados.</p>
+                <p style='margin: 4px 0 0;'>Servicio de traslados ejecutivos y privados.</p>
+            </div>
+        </div>";
+
+        $mail3->send();
+        echo json_encode([
+            'success' => true,
+            'message' => 'Correo de recuperación enviado exitosamente.',
+            'reserva_id' => $reservaCompleta['id']
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error al enviar correo de recuperación: ' . $mail3->ErrorInfo
+        ]);
+    }
+    exit;
+}
+
+// =========================================================
+// RAMA: send_discount_offer — correo de descuento (cron o manual)
+// =========================================================
+if ($action === 'send_discount_offer') {
+    if (!$hasValidCustomerEmail) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Email del cliente inválido.']);
+        exit;
+    }
+
+    $mail4 = new PHPMailer(true);
+    try {
+        $mail4->isSMTP();
+        $mail4->Host       = $emailHost;
+        $mail4->SMTPAuth   = true;
+        $mail4->Username   = $emailUser;
+        $mail4->Password   = $emailPass;
+        $mail4->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail4->Port       = $emailPort;
+        $mail4->CharSet    = 'UTF-8';
+
+        $mail4->setFrom($emailUser, $brandName);
+        $mail4->addAddress($email, $nombre ?: 'Cliente');
+        $mail4->addBCC($emailTo); // Copia al admin para respaldo
+        $mail4->addReplyTo($emailUser, $brandName);
+        $mail4->isHTML(true);
 
         $precioHtml  = $precio ? ('$' . number_format($precio, 0, ',', '.') . ' CLP') : 'A consultar';
         $totalHtml   = $totalConDescuento ? ('$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP') : $precioHtml;
@@ -276,8 +385,9 @@ if ($action === 'send_discount_offer') {
             : 0;
         $precioConDescuentoHtml = '$' . number_format($precioConDescuentoEspecial, 0, ',', '.') . ' CLP';
 
-        $mail2->Subject = "🎉 ¡Oferta Exclusiva! {$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu traslado - {$brandName}";
-        $mail2->Body = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
+        $mail4->Subject = "🎉 ¡Oferta Exclusiva! {$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu traslado - {$brandName}";
+        
+        $mail4->Body = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
             <div style='background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:#fff; padding:24px 22px; text-align:center;'>
                 <h2 style='margin:0; font-size:24px;'>{$vehiculoIcono} ¡Oferta Exclusiva para Ti!</h2>
                 <p style='margin:8px 0 0; font-size:16px; opacity:0.95;'>{$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu próximo traslado</p>
@@ -292,39 +402,67 @@ if ($action === 'send_discount_offer') {
                     <p style='margin:0; font-size:32px; font-weight:bold; color:#059669;'>{$precioConDescuentoHtml}</p>
                     <p style='margin:8px 0 0; font-size:12px; color:#059669;'>¡Ahorras {$DESCUENTO_OFERTA_ESPECIAL}%!</p>
                 </div>
-                <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin:12px 0;'>
-                    <h3 style='margin:0 0 12px; color:#1e293b; font-size:16px;'>📋 Detalles de tu reserva:</h3>
-                    <p style='margin:6px 0'><strong>Origen:</strong> {$origen}</p>
-                    <p style='margin:6px 0'><strong>Destino:</strong> {$destino}</p>
-                    <p style='margin:6px 0'><strong>Fecha y hora:</strong> {$fecha} {$hora}</p>
-                    <p style='margin:6px 0'><strong>Pasajeros:</strong> {$pasajeros}</p>
-                    <p style='margin:6px 0'><strong>Vehículo:</strong> {$vehiculo}</p>
-                    " . ($upgradeVan ? "<p style='margin:6px 0; color: #7c2d12; font-weight: bold;'>✨ Upgrade a Van Incluido</p>" : "") . "
-                </div>
                 <div style='text-align:center; margin:24px 0;'>
-                    <p style='margin:0 0 16px; font-size:14px; color:#374151;'>Para obtener este descuento, completa tu pago respondiendo a este correo o contáctanos por WhatsApp:</p>
                     <a href='https://wa.me/56936643540?text=Hola,%20quiero%20confirmar%20mi%20reserva%20{$codigoReserva}%20con%20descuento' style='background-color:#25D366; color:white; padding:12px 24px; text-decoration:none; border-radius:50px; font-weight:bold; font-size:16px; display:inline-block;'>
-                        📱 Confirmar por WhatsApp
+                        📱 Confirmar por WhatsApp con Descuento
                     </a>
-                    <p style='margin:16px 0 0; font-size:14px;'>O escríbenos a: <a href='mailto:contacto@transportesaraucaria.cl' style='color:#059669;'>contacto@transportesaraucaria.cl</a></p>
                 </div>
-                <p style='font-size:12px; color:#6b7280; text-align:center; margin-top:20px;'>*Esta oferta es válida por tiempo limitado.</p>
+                <p style='font-size:12px; color:#6b7280; text-align:center;'>*Esta oferta es válida por tiempo limitado.</p>
                 <p style='margin-top:16px;'>Saludos,<br><strong>{$brandName}</strong></p>
             </div>
         </div>";
 
-        $mail2->send();
-        echo json_encode([
-            'success'                  => true,
-            'message'                  => 'Correo de descuento enviado.',
-            'correo_cliente_enviado'   => true
-        ]);
+        $mail4->send();
+        echo json_encode(['success' => true, 'message' => 'Correo de descuento enviado exitosamente.']);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode([
-            'success'  => false,
-            'message'  => 'Error al enviar correo de descuento: ' . $mail2->ErrorInfo,
-        ]);
+        echo json_encode(['success' => false, 'message' => 'Error al enviar de descuento: ' . $mail4->ErrorInfo]);
+    }
+    exit;
+}
+
+// =========================================================
+// RAMA: notify_admin_failed_email — fallo en cron
+// =========================================================
+if ($action === 'notify_admin_failed_email') {
+    $mail5 = new PHPMailer(true);
+    try {
+        $mail5->isSMTP();
+        $mail5->Host       = $emailHost;
+        $mail5->SMTPAuth   = true;
+        $mail5->Username   = $emailUser;
+        $mail5->Password   = $emailPass;
+        $mail5->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail5->Port       = $emailPort;
+        $mail5->CharSet    = 'UTF-8';
+
+        $mail5->setFrom($emailUser, 'Sistema de Alertas');
+        $mail5->addAddress($emailTo);
+        $mail5->isHTML(true);
+
+        $lastError = htmlspecialchars($data['lastError'] ?? 'Error desconocido');
+        $tipoEnvio = htmlspecialchars($data['tipo'] ?? 'Desconocido');
+        $attempts = htmlspecialchars($data['attempts'] ?? '3');
+
+        $mail5->Subject = "⚠️ ERROR: Fallo definitivo envío de correo ({$tipoEnvio}) - {$codigoReserva}";
+        $mail5->Body = "
+            <h3>Error Crítico en Sistema de Correos Automáticos</h3>
+            <p>Se han agotado los intentos de envío para el siguiente correo:</p>
+            <ul>
+                <li><strong>Reserva:</strong> {$codigoReserva}</li>
+                <li><strong>Cliente:</strong> {$nombre} ({$email})</li>
+                <li><strong>Tipo de Envío:</strong> {$tipoEnvio}</li>
+                <li><strong>Intentos:</strong> {$attempts}</li>
+                <li><strong>Último Error:</strong> <code style='color: red;'>{$lastError}</code></li>
+            </ul>
+            <p>Por favor, revisa el estado del servidor PHP o el log de errores.</p>
+        ";
+
+        $mail5->send();
+        echo json_encode(['success' => true, 'message' => 'Notificación de fallo enviada al admin.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Error al notificar al admin: ' . $mail5->ErrorInfo]);
     }
     exit;
 }

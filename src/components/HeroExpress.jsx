@@ -33,18 +33,16 @@ import {
 import { ScrollArea } from "./ui/scroll-area";
 import { TERMINOS_CONDICIONES, POLITICA_PRIVACIDAD } from "../data/legal";
 
-// Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
+// Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 10:00 PM)
 const generateTimeOptions = () => {
 	const options = [];
-	for (let hour = 6; hour <= 20; hour++) {
+	for (let hour = 6; hour <= 22; hour++) {
 		for (let minute = 0; minute < 60; minute += 15) {
+			if (hour === 22 && minute > 0) break;
 			const timeString = `${hour.toString().padStart(2, "0")}:${minute
 				.toString()
 				.padStart(2, "0")}`;
-			const displayTime = `${hour.toString().padStart(2, "0")}:${minute
-				.toString()
-				.padStart(2, "0")}`;
-			options.push({ value: timeString, label: displayTime });
+			options.push({ value: timeString, label: timeString });
 		}
 	}
 	return options;
@@ -116,6 +114,53 @@ function HeroExpress({
 		}
 	}, [currentStep]);
 
+	// --- LÓGICA DE CAPTURA DE LEADS (REMARKETING) ---
+	useEffect(() => {
+		// Solo intentar capturar si estamos en el paso de contacto (Step 1) y hay un email válido
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (currentStep !== 1 || !formData.email || !emailRegex.test(formData.email)) {
+			return;
+		}
+
+		// Debounce de 2 segundos para no saturar el backend mientras el usuario escribe
+		const timer = setTimeout(async () => {
+			try {
+				const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+				const leadData = {
+					nombre: formData.nombre,
+					email: formData.email,
+					telefono: formData.telefono,
+					origen: formData.origen,
+					destino: formData.destino,
+					fecha: formData.fecha,
+					hora: formData.hora,
+					pasajeros: formData.pasajeros,
+					precio: pricing.precioBase,
+					totalConDescuento: pricing.totalConDescuento,
+					vehiculo: cotizacion.vehiculo,
+					idaVuelta: formData.idaVuelta,
+					fechaRegreso: formData.fechaRegreso,
+					horaRegreso: formData.horaRegreso
+				};
+
+				const response = await fetch(`${apiUrl}/api/reservas/capturar-lead`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(leadData)
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					console.log("🎯 Lead capturado exitosamente:", data.codigoReserva);
+				}
+			} catch (error) {
+				console.error("❌ Error capturando lead silenciosamente:", error);
+			}
+		}, 2000);
+
+		return () => clearTimeout(timer);
+	}, [currentStep, formData.email, formData.nombre, formData.telefono, pricing.totalConDescuento]);
+
 	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
 	const targetName = useMemo(() => {
 		return formData.destino !== "Aeropuerto La Araucanía"
@@ -145,24 +190,28 @@ function HeroExpress({
 		}
 
 		// --- FILTRADO POR ANTICIPACIÓN MÍNIMA ---
-		// Si la fecha es HOY, filtrar opciones que no cumplen con la anticipación
-		const hoy = new Date();
-		const esHoy = formData.fecha === hoy.toISOString().split("T")[0];
+		// Obtener fecha hoy en formato YYYY-MM-DD (Chile)
+		const hoyChile = new Intl.DateTimeFormat('fr-CA', {
+			timeZone: 'America/Santiago',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		}).format(new Date());
 
-		if (esHoy) {
+		if (formData.fecha === hoyChile) {
 			const destinoObj = Array.isArray(destinosData)
 				? destinosData.find(d => d.nombre === targetName)
 				: null;
 			
 			const anticipacion = destinoObj?.minHorasAnticipacion || 5;
-			const ahora = new Date();
+			const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
 
 			options = options.filter(opt => {
 				const [h, m] = opt.value.split(":").map(Number);
-				const fechaOpt = new Date();
+				const fechaOpt = new Date(ahoraChile);
 				fechaOpt.setHours(h, m, 0, 0);
 				
-				const diffHoras = (fechaOpt - ahora) / 3600000;
+				const diffHoras = (fechaOpt - ahoraChile) / 3600000;
 				return diffHoras >= anticipacion;
 			});
 		}

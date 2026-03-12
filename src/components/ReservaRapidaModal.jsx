@@ -71,34 +71,45 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 
     if (!promocion) return options;
 
+    // Obtener fecha hoy en formato YYYY-MM-DD (Chile)
+    const hoyChile = new Intl.DateTimeFormat('fr-CA', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+
+    console.log(`[Debug] Fecha Seleccionada: "${fechaSeleccionada}", Hoy Chile: "${hoyChile}", Match: ${fechaSeleccionada === hoyChile}`);
+
     // Filtrar por rango horario de la promoción (si existe)
     if (promocion.hora_inicio || promocion.hora_fin) {
       options = options.filter(opt => {
         const timeVal = opt.value; // "HH:MM"
-        // Asegurar formato HH:MM comparando strings (funciona para 24h)
         const inicio = promocion.hora_inicio ? promocion.hora_inicio.slice(0, 5) : "00:00";
         const fin = promocion.hora_fin ? promocion.hora_fin.slice(0, 5) : "23:59";
         return timeVal >= inicio && timeVal <= fin;
       });
     }
     
-    // Filtrado por anticipación mínima configurada
-    const hoy = new Date();
-    const hoyStr = hoy.toISOString().split("T")[0];
-    
-    if (fechaSeleccionada === hoyStr) {
-      const ahora = new Date();
-      // Usar anticipación configurada o default de 3 horas
-      const anticipacionMinima = (promocion && promocion.anticipacion_minima !== undefined) ? promocion.anticipacion_minima : 3;
+    // Filtrado por anticipación mínima si es hoy en Chile
+    if (fechaSeleccionada === hoyChile) {
+      const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
+      const anticipacionMinima = (promocion && promocion.anticipacion_minima !== undefined && promocion.anticipacion_minima !== null) ? Number(promocion.anticipacion_minima) : 3;
       
-      options = options.filter(opt => {
+      console.log(`[Debug] Filtrando para hoy (${hoyChile}). Anticipación: ${anticipacionMinima}h. Hora Chile: ${ahoraChile.toLocaleTimeString()}`);
+      
+      const filtered = options.filter(opt => {
         const [h, m] = opt.value.split(":").map(Number);
-        const fechaOpt = new Date();
+        const fechaOpt = new Date(ahoraChile);
         fechaOpt.setHours(h, m, 0, 0);
         
-        const diffHoras = (fechaOpt - ahora) / 3600000;
-        return diffHoras >= anticipacionMinima;
+        const diffHoras = (fechaOpt - ahoraChile) / 3600000;
+        const pass = diffHoras >= anticipacionMinima;
+        return pass;
       });
+      
+      console.log(`[Debug] Opciones antes: ${options.length}, Opciones después: ${filtered.length}`);
+      options = filtered;
     }
     
     return options;
@@ -535,6 +546,7 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
                           value={formData.fecha_vuelta}
                           onChange={handleChange}
                           required={promocion.tipo_viaje === "ida_vuelta"}
+
                           min={formData.fecha_ida || new Date().toISOString().split("T")[0]}
                           className="h-12 md:h-11 bg-white border-gray-200"
                         />

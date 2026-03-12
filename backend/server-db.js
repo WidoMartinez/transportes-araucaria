@@ -4092,6 +4092,150 @@ app.post("/enviar-reserva-express", async (req, res) => {
 	}
 });
 
+// --- ENDPOINT DE CAPTURA DE LEADS (REMARKETING) ---
+app.post("/api/reservas/capturar-lead", async (req, res) => {
+	try {
+		const datos = req.body || {};
+		const emailNormalizado = sanitizarEmailRobusto(datos.email);
+
+		if (!emailNormalizado) {
+			return res.status(400).json({ success: false, message: "Email es requerido" });
+		}
+
+		// 1. Buscar si hay un lead reciente (24h) para este email para actualizarlo en lugar de crear uno nuevo
+		const hace24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
+		
+		let reservaLead = await Reserva.findOne({
+			where: {
+				email: emailNormalizado,
+				estado: "pendiente",
+				source: "lead_hero_abandonado",
+				created_at: { [Op.gte]: hace24Horas }
+			},
+			order: [["created_at", "DESC"]]
+		});
+
+		const datosAGuardar = {
+			nombre: datos.nombre || (reservaLead ? reservaLead.nombre : "Cliente Potencial"),
+			email: emailNormalizado,
+			telefono: datos.telefono || (reservaLead ? reservaLead.telefono : ""),
+			origen: datos.origen || (reservaLead ? reservaLead.origen : ""),
+			destino: datos.destino || (reservaLead ? reservaLead.destino : ""),
+			fecha: datos.fecha || (reservaLead ? reservaLead.fecha : null),
+			hora: normalizeTimeGlobal(datos.hora) || (reservaLead ? reservaLead.hora : null),
+			pasajeros: parsePositiveInteger(datos.pasajeros, "pasajeros", reservaLead ? reservaLead.pasajeros : 1),
+			precio: parsePositiveDecimal(datos.precio, "precio", reservaLead ? reservaLead.precio : 0),
+			totalConDescuento: parsePositiveDecimal(datos.totalConDescuento, "totalConDescuento", reservaLead ? reservaLead.totalConDescuento : 0),
+			vehiculo: datos.vehiculo || (reservaLead ? reservaLead.vehiculo : ""),
+			source: "lead_hero_abandonado",
+			estado: "pendiente",
+			estadoPago: "pendiente",
+			ipAddress: req.ip || req.connection.remoteAddress || "",
+			userAgent: req.get("User-Agent") || ""
+		};
+
+		if (reservaLead) {
+			console.log(`📝 Actualizando lead abandonado: ${reservaLead.id} (${emailNormalizado})`);
+			await reservaLead.update(datosAGuardar);
+		} else {
+			// Generar código de reserva para que sea una reserva válida si el usuario decide completarla después
+			const codigoReserva = await generarCodigoReserva();
+			datosAGuardar.codigoReserva = codigoReserva;
+			
+			console.log(`🎯 Capturando nuevo lead abandonado: ${emailNormalizado}`);
+			reservaLead = await Reserva.create(datosAGuardar);
+		}
+
+		// NOTA: No programamos el correo de recuperación aquí todavía, 
+		// eso lo hará el emailProcessor buscando por source="lead_hero_abandonado" 
+		// y comparando fechas (ej. enviar si pasaron > 30 min desde created_at/updated_at)
+
+		return res.json({
+			success: true,
+			reservaId: reservaLead.id,
+			codigoReserva: reservaLead.codigoReserva
+		});
+
+	} catch (error) {
+		console.error("❌ Error capturando lead:", error);
+		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
+// Endpoint para redirección directa a pago (usado en correos de recuperación)
+app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { type = "abono" } = req.query; // 'abono' o 'total'
+
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).send("Reserva no encontrada");
+		}
+
+		// Determinar monto según el tipo
+		const total = Number(reserva.totalConDescuento || reserva.precio || 0);
+		const abono = Math.round(total * 0.4);
+		const amount = type === "total" ? total : abono;
+
+		if (amount <= 0) {
+			return res.status(400).send("Monto inválido para pago");
+		}
+
+		console.log(`🔗 Redirigiendo a pago Flow para reserva ${reserva.codigoReserva} (Monto: ${amount}, Tipo: ${type})`);
+
+		// Reutilizar lógica de generación de pago Flow (simplificada para el redirect)
+		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+		const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
+		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
+		
+		const commerceOrder = `${reserva.codigoReserva || "RES"}-${Date.now()}`;
+		const description = type === "total" ? `Pago TOTAL traslado #${reserva.codigoReserva}` : `Abono (40%) traslado #${reserva.codigoReserva}`;
+
+		const optionalPayload = {
+			reservaId: reserva.id,
+			codigoReserva: reserva.codigoReserva,
+			tipoPago: type,
+			paymentOrigin: "recovery_email",
+			email: reserva.email
+		};
+
+		const params = {
+			apiKey: process.env.FLOW_API_KEY,
+			commerceOrder,
+			subject: description,
+			currency: "CLP",
+			amount: amount,
+			email: reserva.email,
+			urlConfirmation: `${backendBase}/api/flow-confirmation`,
+			urlReturn: `${backendBase}/api/payment-result`,
+			optional: JSON.stringify(optionalPayload)
+		};
+
+		params.s = signParams(params);
+
+		const response = await axios.post(
+			`${flowApiUrl}/payment/create`,
+			new URLSearchParams(params).toString(),
+			{
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			}
+		);
+
+		const payment = response.data;
+		if (payment.url && payment.token) {
+			const redirectUrl = `${payment.url}?token=${payment.token}`;
+			return res.redirect(302, redirectUrl);
+		} else {
+			throw new Error("Respuesta inválida desde Flow");
+		}
+
+	} catch (error) {
+		console.error("❌ Error en pay-redirect:", error.message);
+		res.status(500).send("Error al generar el enlace de pago. Por favor intenta más tarde o contáctanos por WhatsApp.");
+	}
+});
+
 // --- ENDPOINTS PARA CODIGOS DE PAGO ---
 
 // Crear código de pago (Admin)

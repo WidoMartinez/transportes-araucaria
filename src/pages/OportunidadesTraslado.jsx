@@ -131,15 +131,33 @@ cargarOportunidades();
 return () => clearInterval(intervalId);
 }, [filtros]);
 
+  const generarOpcionesHora = (horaBase, tipo) => {
+    if (!horaBase) return [];
+    const [h, m] = horaBase.split(":").map(Number);
+    const t = h * 60 + m;
+    const esIda = tipo === "ida_vacia";
+    const minT = esIda ? Math.max(0, t - 60) : t;
+    const maxT = esIda ? t : t + 60;
+    
+    const opciones = [];
+    for (let time = minT; time <= maxT; time += 5) {
+      const hh = Math.floor(time / 60).toString().padStart(2, "0");
+      const mm = (time % 60).toString().padStart(2, "0");
+      opciones.push(`${hh}:${mm}`);
+    }
+    return opciones;
+  };
+
   const handleReservar = (oportunidad) => {
     setOportunidadSeleccionada(oportunidad);
+    const opciones = generarOpcionesHora(oportunidad.hora || "", oportunidad.tipo);
     setReservaFormData({
       nombre: "",
       email: "",
       telefono: "",
       pasajeros: "1",
       direccion: "",
-      horaSalida: oportunidad.hora || "",
+      horaSalida: opciones.length > 0 ? opciones[0] : (oportunidad.hora || ""),
     });
     setHoraError("");
     setAceptaTerminos(false);
@@ -698,17 +716,24 @@ onReservar={handleReservar}
                 </Label>
                 <div className="relative">
                   <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 z-10" />
-                  <Input
-                    id="horaSalida"
-                    name="horaSalida"
-                    type="time"
+                  <Select
                     value={reservaFormData.horaSalida}
-                    onChange={(e) => {
-                      handleReservaInputChange(e);
+                    onValueChange={(value) => {
+                      setReservaFormData(prev => ({ ...prev, horaSalida: value }));
                       setHoraError("");
                     }}
-                    className={`h-10 pl-9 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm ${horaError ? 'border-red-500' : ''}`}
-                  />
+                  >
+                    <SelectTrigger className={`h-10 pl-9 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm ${horaError ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Selecciona la hora" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {generarOpcionesHora(oportunidadSeleccionada?.hora, oportunidadSeleccionada?.tipo).map((hora) => (
+                        <SelectItem key={hora} value={hora}>
+                          {hora} hrs
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {horaError && (
                   <p className="text-[10px] text-red-500 font-medium">{horaError}</p>
