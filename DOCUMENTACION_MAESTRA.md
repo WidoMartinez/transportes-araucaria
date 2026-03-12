@@ -36,6 +36,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Mejoras en la Gestión y Visualización de Reservas (Panel Admin)](#520-mejoras-en-la-gestión-y-visualización-de-reservas-panel-admin)
    - [Sistema de Auditoría y Logs](#521-sistema-de-auditoría-y-logs-adminauditlog)
    - [Sistema de Recuperación de Detalles Incompletos](#522-sistema-de-recuperación-de-detalles-incompletos)
+   - [Sistema de Recuperación de Leads Abandonados (HeroExpress)](#523-sistema-de-recuperación-de-leads-abandonados-heroexpress)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -1643,6 +1644,34 @@ Implementado en Febrero 2026 para gestionar el escenario donde un cliente comple
 3.  **Actualización Autónoma**:
     - El cliente accede a `ConsultarReserva.jsx`, ve un aviso destacado y puede abrir el formulario de `CompletarDetalles` sin necesidad de login adicional.
     - Una vez guardados los datos, la reserva se actualiza en tiempo real y desaparece la alerta roja en el panel del administrador.
+1647: 
+1648: ### 5.23 Sistema de Recuperación de Leads Abandonados (HeroExpress)
+1649: 
+1650: Implementado en Marzo 2026 para maximizar la conversión en el módulo HeroExpress, capturando datos de clientes que inician una cotización pero no completan el pago.
+1651: 
+1652: #### Funcionamiento Técnico
+1653: 
+1654: 1.  **Captura Silenciosa (Frontend)**:
+1655:     - El componente `HeroExpress.jsx` utiliza un mecanismo de **debounce** (500ms) para capturar los datos del formulario (`nombre`, `email`, `teléfono`, `ruta`, `precio`) tan pronto como el cliente los ingresa.
+1656:     - Los datos se envían de forma asíncrona al endpoint `/api/reservas/capturar-lead` sin interrumpir la experiencia del usuario.
+1657: 
+1658: 2.  **Persistencia y Cola de Correo (Backend)**:
+1659:     - El backend crea o actualiza un registro de reserva en estado `pendiente`.
+1660:     - Un proceso en segundo plano (`emailProcessor.js`) detecta estas reservas abandonadas (que no han pasado a `pagado` tras un tiempo prudencial) y programa un correo de recuperación.
+1661: 
+1662: 3.  **Correo de Recuperación Mejorado**:
+1663:     - Se utiliza la acción `send_lead_recovery` en el script PHP.
+1664:     - El correo incluye un **enlace de pago directo** que redirige al cliente a Flow con el monto exacto cotizado, facilitando la conversión en un solo clic.
+1665:     - El enlace utiliza el endpoint `/api/reservas/:id/pay-redirect` para generar el pago dinámicamente.
+1666: 
+1667: 4.  **Monitoreo y Respaldo (Admin BCC)**:
+1668:     - Para garantizar el seguimiento manual, se añade una copia oculta (**BCC**) al administrador (`widomartinez@gmail.com`) en todos los correos de recuperación de leads.
+1669:     - Si el envío de correo falla definitivamente tras 3 intentos, el sistema envía una **alerta de fallo crítico** al administrador.
+1670: 
+1671: 5.  **Seguimiento Administrativo**:
+1672:     - En `AdminReservas`, los leads abandonados muestran un botón de **"Seguimiento WhatsApp"** que permite al administrador copiar un mensaje personalizado y contactar al cliente de forma manual si el correo automático no surte efecto.
+1673: 
+1674: ---
 
 ---
 

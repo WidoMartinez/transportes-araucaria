@@ -51,9 +51,9 @@ export const processPendingEmails = async () => {
         });
 
         // --- SISTEMA DE AUTOPROGRAMACIÓN PARA LEADS ABANDONADOS ---
-        // Buscamos reservas con source 'lead_hero_abandonado' creadas hace más de 30 minutos
+        // Buscamos reservas con source 'lead_hero_abandonado' creadas hace más de 5 minutos
         // que no tengan ya una tarea de correo asociada.
-        const treintaMinutosAtras = new Date(now.getTime() - 30 * 60 * 1000);
+        const cincoMinutosAtras = new Date(now.getTime() - 5 * 60 * 1000);
         const doceHorasAtras = new Date(now.getTime() - 12 * 60 * 60 * 1000); // No recuperar leads muy viejos
 
         const leadsSinTarea = await Reserva.findAll({
@@ -62,7 +62,7 @@ export const processPendingEmails = async () => {
                 estado: "pendiente",
                 estadoPago: "pendiente",
                 created_at: {
-                    [Op.lte]: treintaMinutosAtras,
+                    [Op.lte]: cincoMinutosAtras,
                     [Op.gte]: doceHorasAtras
                 }
             },
@@ -83,7 +83,7 @@ export const processPendingEmails = async () => {
                     email: lead.email,
                     type: "lead_recovery",
                     status: "pending",
-                    scheduledAt: now // Enviar de inmediato ya que ya pasaron los 30 min
+                    scheduledAt: now // Enviar de inmediato ya que ya pasaron los 5 min
                 });
             }
         }

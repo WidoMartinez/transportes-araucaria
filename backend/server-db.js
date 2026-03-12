@@ -7753,6 +7753,8 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		// Helper para formateo monetario
 	const formatMoney = (amount) => `$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
 
+	// Logs silenciados para reducir ruido en Render (según solicitud de usuario)
+	/*
 	console.log("\n" + "=".repeat(50));
 	console.log("💰 CALCULANDO TARIFA DINÁMICA");
 	console.log("=".repeat(50));
@@ -7761,6 +7763,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 	console.log(`📅 Fecha Viaje:            ${fecha}`);
 	console.log(`🕐 Hora:                   ${hora || "No especificada"}`);
 	console.log("-".repeat(50));
+    */
 
 		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
 		const ahora = new Date();
@@ -7805,6 +7808,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		}
 
 		const nombreDia = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][diaSemana];
+    /*
 	console.log(`📆 Día:                    ${nombreDia}`);
 	console.log(`⏰ Anticipación:           ${diasAnticipacion} días`);
 	if (festivo) {
@@ -7812,9 +7816,10 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 	}
 	console.log("-".repeat(50));
 	console.log(`🔍 Evaluando ${configuraciones.length} configuraciones activas...`);
+    */
 
 		for (const config of configuraciones) {
-			console.log(`  ⚙️  "${config.nombre}" (${config.tipo})`);
+			// console.log(`  ⚙️  "${config.nombre}" (${config.tipo})`);
 
 			// Verificar si el destino está excluido
 			if (

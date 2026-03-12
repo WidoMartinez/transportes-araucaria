@@ -1319,18 +1319,24 @@ const [configSillas, setConfigSillas] = useState({
 		calcularCotizacion,
 	]);
 
-	// Efecto para calcular tarifa dinámica cuando cambian fecha/hora
+	// Efecto para calcular tarifa dinámica cuando cambian fecha/hora con debounce
 	useEffect(() => {
 		if (cotizacion.precio && formData.fecha) {
 			const tramo = [formData.origen, formData.destino].find(
 				(lugar) => lugar !== "Aeropuerto La Araucanía"
 			);
-			calcularTarifaDinamica(
-				cotizacion.precio,
-				tramo,
-				formData.fecha,
-				formData.hora || "12:00"
-			);
+			
+			// Establecer un timer de 500ms para evitar llamadas consecutivas (debounce)
+			const timer = setTimeout(() => {
+				calcularTarifaDinamica(
+					cotizacion.precio,
+					tramo,
+					formData.fecha,
+					formData.hora || "12:00"
+				);
+			}, 500);
+
+			return () => clearTimeout(timer);
 		}
 	}, [
 		cotizacion.precio,
