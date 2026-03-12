@@ -6452,7 +6452,7 @@ app.post("/api/reservas/:id/solicitar-detalles", authAdmin, async (req, res) => 
 });
 
 // Reenviar correo de confirmación al cliente de una reserva existente
-app.post("/api/reservas/:id/reenviar-confirmacion", authAdmin, async (req, res) => {
+app.post("/api/reservas/:id/reenviar-confirmacion", authAdmin, apiLimiter, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const reserva = await Reserva.findByPk(id);
