@@ -23,7 +23,9 @@ const WhatsAppButton = ({
 	const phoneNumber = "56936643540"; // Número de WhatsApp de Transportes Araucaria
 
 	// Construir URL de WhatsApp con mensaje pre-cargado
-	const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+	const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
+		message
+	)}`;
 
 	// Tracking de conversión de Google Ads (cuenta activa AW-17529712870)
 	const handleClick = () => {

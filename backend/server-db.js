@@ -79,7 +79,10 @@ import { authJWT } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
 import bcrypt from "bcryptjs";
-import { verificarBloqueoAgenda, obtenerBloqueosEnRango } from "./utils/bloqueoAgenda.js";
+import {
+	verificarBloqueoAgenda,
+	obtenerBloqueosEnRango,
+} from "./utils/bloqueoAgenda.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
 
 dotenv.config();
@@ -132,12 +135,14 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.set("trust proxy", 1);
 
 // Configurar CORS para permitir todos los métodos (incluyendo PATCH)
-app.use(cors({
-	origin: true, // Permite cualquier origen (o especifica URLs específicas)
-	methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-	credentials: true,
-	allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+	cors({
+		origin: true, // Permite cualquier origen (o especifica URLs específicas)
+		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		credentials: true,
+		allowedHeaders: ["Content-Type", "Authorization"],
+	})
+);
 
 app.use(express.json());
 
@@ -447,11 +452,11 @@ const generarCodigoReserva = async () => {
 		const ultimaReserva = await Reserva.findOne({
 			where: {
 				codigoReserva: {
-					[Op.like]: `${prefix}%`
-				}
+					[Op.like]: `${prefix}%`,
+				},
 			},
-			order: [["codigoReserva", "DESC"]], 
-			attributes: ["codigoReserva"]
+			order: [["codigoReserva", "DESC"]],
+			attributes: ["codigoReserva"],
 		});
 
 		let consecutivo = 1;
@@ -473,16 +478,18 @@ const generarCodigoReserva = async () => {
 
 		while (!disponible && intentos < 10) {
 			codigoReserva = `${prefix}${String(consecutivo).padStart(4, "0")}`;
-			
+
 			// Verificar si existe realmente
 			const existe = await Reserva.count({
-				where: { codigoReserva: codigoReserva }
+				where: { codigoReserva: codigoReserva },
 			});
 
 			if (existe === 0) {
 				disponible = true;
 			} else {
-				console.log(`⚠️ Código ${codigoReserva} ya existe (colisión), probando siguiente...`);
+				console.log(
+					`⚠️ Código ${codigoReserva} ya existe (colisión), probando siguiente...`
+				);
 				consecutivo++;
 				intentos++;
 			}
@@ -490,8 +497,10 @@ const generarCodigoReserva = async () => {
 
 		if (!disponible) {
 			// Fallback extremo: usar timestamp si no encontramos hueco tras 10 intentos
-			console.warn("⚠️ No se encontró hueco consecutivo tras 10 intentos, usando timestamp.");
-			return `AR-${Date.now()}`; 
+			console.warn(
+				"⚠️ No se encontró hueco consecutivo tras 10 intentos, usando timestamp."
+			);
+			return `AR-${Date.now()}`;
 		}
 
 		// console.log(`📋 Código de reserva generado: ${codigoReserva} (Consecutivo: ${consecutivo})`);
@@ -528,20 +537,20 @@ const normalizeUsuariosQueUsaron = (raw) => {
 // Nota: ampliamos headers permitidos y respondemos a preflight para evitar bloqueos desde el dominio público
 const corsOptions = {
 	origin: function (origin, callback) {
-	const allowedOrigins = [
-		"https://www.transportesaraucaria.cl",
-		"https://transportesaraucaria.cl",
-		"https://www.transportes-araucaria.cl",
-		"https://transportes-araucaria.cl",
-		"https://www.flow.cl", // Permitir peticiones desde Flow durante retorno de pago
-		"http://localhost:3000",
-		"http://localhost:5173",
-		"http://127.0.0.1:5173",
-	];
-		
+		const allowedOrigins = [
+			"https://www.transportesaraucaria.cl",
+			"https://transportesaraucaria.cl",
+			"https://www.transportes-araucaria.cl",
+			"https://transportes-araucaria.cl",
+			"https://www.flow.cl", // Permitir peticiones desde Flow durante retorno de pago
+			"http://localhost:3000",
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+		];
+
 		// Permitir peticiones sin origin (como Postman, curl, o server-to-server)
 		if (!origin) return callback(null, true);
-		
+
 		if (allowedOrigins.indexOf(origin) !== -1) {
 			callback(null, true);
 		} else {
@@ -566,8 +575,12 @@ app.use(cors(corsOptions));
 
 // Middleware de logging de peticiones CORS
 app.use((req, res, next) => {
-	if (req.method === 'OPTIONS') {
-		console.log(`🔍 CORS Preflight: ${req.method} ${req.path} desde ${req.headers.origin || 'sin origin'}`);
+	if (req.method === "OPTIONS") {
+		console.log(
+			`🔍 CORS Preflight: ${req.method} ${req.path} desde ${
+				req.headers.origin || "sin origin"
+			}`
+		);
 	}
 	next();
 });
@@ -578,7 +591,10 @@ app.options("*", (req, res) => {
 	console.log(`✅ CORS Preflight respondido para: ${origin}`);
 	res.header("Access-Control-Allow-Origin", origin);
 	res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-	res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+	res.header(
+		"Access-Control-Allow-Headers",
+		"Content-Type, Authorization, X-Requested-With, Accept, Origin"
+	);
 	res.header("Access-Control-Allow-Credentials", "true");
 	res.header("Access-Control-Max-Age", "86400");
 	res.sendStatus(200);
@@ -689,10 +705,13 @@ const initializeDatabase = async () => {
 		}
 		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
 		await addPendingEmailsTable();
-		
+
 		// Migraciones CRÍTICAS de estructura (deben correr antes de syncDatabase)
 		await addCodigosPagoTable();
-		await addSillaInfantilToCodigosPago(sequelize.getQueryInterface(), Sequelize);
+		await addSillaInfantilToCodigosPago(
+			sequelize.getQueryInterface(),
+			Sequelize
+		);
 		await addClientDataToCodigosPago();
 		await addEnProcesoEstado(); // Migración para agregar estado 'en_proceso' al ENUM
 		await addDuracionMinutosToCodigosPago();
@@ -721,54 +740,60 @@ const initializeDatabase = async () => {
 		// Crear o actualizar usuario admin por defecto
 		try {
 			let adminUser = await AdminUser.findOne({
-				where: { username: 'admin' }
+				where: { username: "admin" },
 			});
 
-			const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin123';
-			const defaultEmail = process.env.ADMIN_DEFAULT_EMAIL || 'contacto@transportesaraucaria.cl';
+			const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || "admin123";
+			const defaultEmail =
+				process.env.ADMIN_DEFAULT_EMAIL || "contacto@transportesaraucaria.cl";
 
 			if (!adminUser) {
-				console.log('👤 Creando usuario administrador por defecto...');
-				
+				console.log("👤 Creando usuario administrador por defecto...");
+
 				const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
 				adminUser = await AdminUser.create({
-					username: 'admin',
+					username: "admin",
 					email: defaultEmail,
 					password: hashedPassword,
-					nombre: 'Administrador Principal',
-					rol: 'superadmin',
-					activo: true
+					nombre: "Administrador Principal",
+					rol: "superadmin",
+					activo: true,
 				});
 
-				console.log('✅ Usuario administrador creado exitosamente');
-				console.log('📝 Credenciales por defecto:');
-				console.log('   Usuario: admin');
+				console.log("✅ Usuario administrador creado exitosamente");
+				console.log("📝 Credenciales por defecto:");
+				console.log("   Usuario: admin");
 				console.log(`   Contraseña: ${defaultPassword}`);
-				console.log('⚠️  IMPORTANTE: Cambia la contraseña después del primer login');
+				console.log(
+					"⚠️  IMPORTANTE: Cambia la contraseña después del primer login"
+				);
 			} else {
-				console.log('✅ Usuario administrador ya existe');
+				console.log("✅ Usuario administrador ya existe");
 				console.log(`📧 Email actual: ${adminUser.email}`);
 				console.log(`👤 Nombre: ${adminUser.nombre}`);
 				console.log(`🔑 Rol: ${adminUser.rol}`);
-				
+
 				// Actualizar contraseña si es diferente del hash esperado
 				const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-				const passwordMatch = await bcrypt.compare(defaultPassword, adminUser.password);
-				
+				const passwordMatch = await bcrypt.compare(
+					defaultPassword,
+					adminUser.password
+				);
+
 				if (!passwordMatch) {
-					console.log('🔄 Actualizando contraseña a valor por defecto...');
+					console.log("🔄 Actualizando contraseña a valor por defecto...");
 					adminUser.password = hashedPassword;
 					adminUser.email = defaultEmail; // También actualizar email
 					await adminUser.save();
-					console.log('✅ Credenciales actualizadas:');
-					console.log('   Usuario: admin');
+					console.log("✅ Credenciales actualizadas:");
+					console.log("   Usuario: admin");
 					console.log(`   Contraseña: ${defaultPassword}`);
 					console.log(`   Email: ${defaultEmail}`);
 				}
 			}
 		} catch (adminError) {
-			console.error('⚠️ Error al crear usuario admin:', adminError.message);
+			console.error("⚠️ Error al crear usuario admin:", adminError.message);
 		}
 
 		// Ejecutar migraciones automáticas
@@ -794,7 +819,10 @@ const initializeDatabase = async () => {
 		await addUpgradeVanToReservas(); // Migración para columna upgrade_van en reservas
 		await updateVehiculosMinibusToSuv(); // Migración para renombrar tipo minibus → suv en vehículos
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
-		await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), Sequelize); // Migración para añadir posición de imagen
+		await addPosicionImagenToPromocionesBanner(
+			sequelize.getQueryInterface(),
+			Sequelize
+		); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
@@ -857,7 +885,9 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 		const { fechaInicio, fechaFin } = req.query;
 
 		if (!fechaInicio || !fechaFin) {
-			return res.status(400).json({ error: "Faltan parámetros fechaInicio o fechaFin" });
+			return res
+				.status(400)
+				.json({ error: "Faltan parámetros fechaInicio o fechaFin" });
 		}
 
 		console.log(`📅 Solicitud de calendario: ${fechaInicio} a ${fechaFin}`);
@@ -884,39 +914,39 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				},
 				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
 				// Filtrar solo reservas confirmadas
-				[Op.or]: [
-					{ abonoPagado: true },
-					{ saldoPagado: true }
-				]
+				[Op.or]: [{ abonoPagado: true }, { saldoPagado: true }],
 			},
 			include: [
-				{ model: Conductor, as: 'conductor_asignado', required: false },
-				{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
+				{ model: Conductor, as: "conductor_asignado", required: false },
+				{ model: Vehiculo, as: "vehiculo_asignado", required: false },
 			],
-			order: [["fecha", "ASC"], ["hora", "ASC"]],
+			order: [
+				["fecha", "ASC"],
+				["hora", "ASC"],
+			],
 		});
 
-		// 2. Obtener reservas de VUELTA LEGACY (idaVuelta = true) 
+		// 2. Obtener reservas de VUELTA LEGACY (idaVuelta = true)
 		// Solo si no han sido migradas (es decir, idaVuelta sigue true)
 		const reservasVueltaLegacy = await Reserva.findAll({
 			where: {
 				idaVuelta: true, // Solo las que aún se marcan como round-trip monolítico
-				tipoTramo: 'solo_ida', // SEGURIDAD: Solo procesar como legacy si no ha sido dividida
+				tipoTramo: "solo_ida", // SEGURIDAD: Solo procesar como legacy si no ha sido dividida
 				fechaRegreso: {
 					[Op.gte]: startDate,
 					[Op.lte]: endDateInclusive,
 				},
 				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
-				[Op.or]: [
-					{ abonoPagado: true },
-					{ saldoPagado: true }
-				]
+				[Op.or]: [{ abonoPagado: true }, { saldoPagado: true }],
 			},
 			include: [
-				{ model: Conductor, as: 'conductor_asignado', required: false },
-				{ model: Vehiculo, as: 'vehiculo_asignado', required: false }
+				{ model: Conductor, as: "conductor_asignado", required: false },
+				{ model: Vehiculo, as: "vehiculo_asignado", required: false },
 			],
-			order: [["fechaRegreso", "ASC"], ["horaRegreso", "ASC"]],
+			order: [
+				["fechaRegreso", "ASC"],
+				["horaRegreso", "ASC"],
+			],
 		});
 
 		// 3. Procesar y unificar
@@ -924,9 +954,9 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 
 		// Procesar reservas directas
 		reservasDirectas.forEach((r) => {
-			const esVuelta = r.tipoTramo === 'vuelta';
+			const esVuelta = r.tipoTramo === "vuelta";
 			const labelTipo = esVuelta ? "RETORNO" : "IDA";
-			
+
 			eventos.push({
 				id: `res-${r.id}`, // ID único para el frontend
 				reservaId: r.id,
@@ -934,7 +964,7 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				fecha: r.fecha,
 				hora: r.hora,
 				// En el nuevo modelo, origen/destino ya están correctos en la BD para cada tramo
-				origen: r.origen, 
+				origen: r.origen,
 				destino: r.destino,
 				cliente: r.nombre,
 				telefono: r.telefono,
@@ -955,7 +985,7 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				saldoPendiente: r.saldoPendiente,
 				abonoPagado: r.abonoPagado,
 				saldoPagado: r.saldoPagado,
-				tramoPadreId: r.tramoPadreId // Útil para agrupar visualmente
+				tramoPadreId: r.tramoPadreId, // Útil para agrupar visualmente
 			});
 		});
 
@@ -978,15 +1008,17 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				conductorNombre: r.conductor_asignado?.nombre || null,
 				vehiculoPatente: r.vehiculo_asignado?.patente || null,
 				vehiculoTipo: r.vehiculo_asignado?.tipo || null,
-				observaciones: r.observaciones ? `(RETORNO LEGACY) ${r.observaciones}` : "(RETORNO LEGACY)",
-				numeroVuelo: null, 
+				observaciones: r.observaciones
+					? `(RETORNO LEGACY) ${r.observaciones}`
+					: "(RETORNO LEGACY)",
+				numeroVuelo: null,
 				codigoReserva: r.codigoReserva,
 				direccionOrigen: r.direccionDestino,
 				direccionDestino: r.direccionOrigen,
 				// Monto 0 para evitar duplicar en stats visuales si se suman
-				totalConDescuento: 0, 
+				totalConDescuento: 0,
 				saldoPendiente: 0,
-				esRetorno: true // Flag legacy
+				esRetorno: true, // Flag legacy
 			});
 		});
 
@@ -1118,27 +1150,32 @@ const buildPromotionEntries = (promocion) => {
 };
 
 const buildPricingPayload = async () => {
-	const [destinos, dayPromotions, descuentosGlobales, codigosDescuento, configSillas] =
-		await Promise.all([
-			Destino.findAll({
-				order: [
-					["orden", "ASC"],
-					["nombre", "ASC"],
-				],
-			}),
-			Promocion.findAll({
-				order: [["dia", "ASC"]],
-			}),
-			DescuentoGlobal.findAll(),
-			CodigoDescuento.findAll({
-				order: [["fechaCreacion", "DESC"]],
-			}),
-			Configuracion.getValorParseado("config_sillas", {
-				habilitado: false,
-				maxSillas: 2,
-				precioPorSilla: 5000,
-			}),
-		]);
+	const [
+		destinos,
+		dayPromotions,
+		descuentosGlobales,
+		codigosDescuento,
+		configSillas,
+	] = await Promise.all([
+		Destino.findAll({
+			order: [
+				["orden", "ASC"],
+				["nombre", "ASC"],
+			],
+		}),
+		Promocion.findAll({
+			order: [["dia", "ASC"]],
+		}),
+		DescuentoGlobal.findAll(),
+		CodigoDescuento.findAll({
+			order: [["fechaCreacion", "DESC"]],
+		}),
+		Configuracion.getValorParseado("config_sillas", {
+			habilitado: false,
+			maxSillas: 2,
+			precioPorSilla: 5000,
+		}),
+	]);
 
 	const dayPromotionsFormatted = dayPromotions.map((promo) => {
 		const metadata = parsePromotionMetadata(promo);
@@ -1265,7 +1302,9 @@ const buildPricingPayload = async () => {
 			},
 			van: {
 				// Si existe precioBaseVan, usarlo; de lo contrario fallback a lógica antigua
-				base: destino.precioBaseVan ? Number(destino.precioBaseVan) : (destino.precioIda * 1.8),
+				base: destino.precioBaseVan
+					? Number(destino.precioBaseVan)
+					: destino.precioIda * 1.8,
 				porcentajeAdicional: destino.porcentajeAdicionalVan || 0.1, // Era 0.05 por defecto
 			},
 		},
@@ -1338,11 +1377,13 @@ app.put("/pricing", async (req, res) => {
 					Number.isFinite(duracionVueltaValor) && duracionVueltaValor > 0
 						? duracionVueltaValor
 						: 60;
-				
+
 				// Extraer porcentajes adicionales
-				const porcentajeAdicionalAuto = Number(destino.precios?.auto?.porcentajeAdicional) || 0.1;
-				const porcentajeAdicionalVan = Number(destino.precios?.van?.porcentajeAdicional) || 0.05;
-				
+				const porcentajeAdicionalAuto =
+					Number(destino.precios?.auto?.porcentajeAdicional) || 0.1;
+				const porcentajeAdicionalVan =
+					Number(destino.precios?.van?.porcentajeAdicional) || 0.05;
+
 				// Extraer precio base van
 				const precioBaseVan = Number(destino.precios?.van?.base) || 0;
 
@@ -1516,11 +1557,11 @@ app.put("/api/destinos/:id", authAdmin, async (req, res) => {
 			"duracionVueltaMinutos",
 			"porcentajeAdicionalAuto",
 			"porcentajeAdicionalVan",
-			"precioBaseVan"
+			"precioBaseVan",
 		];
 
 		const payload = {};
-		camposActualizables.forEach(campo => {
+		camposActualizables.forEach((campo) => {
 			if (datos[campo] !== undefined) {
 				payload[campo] = datos[campo];
 			}
@@ -1560,7 +1601,7 @@ app.delete("/api/destinos/:id", authAdmin, async (req, res) => {
 				// Esto es complejo porque se guarda en JSON string.
 				// Por simplicidad, invalidamos cache y dejamos que el admin limpie si es necesario,
 				// o mejor aún, solo borramos el destino.
-			}
+			},
 		});
 
 		invalidatePricingCache();
@@ -1587,15 +1628,15 @@ app.get("/api/configuracion/whatsapp-intercept", async (req, res) => {
 
 		res.json({
 			activo,
-			mensaje: activo 
-				? "Modal de WhatsApp activo" 
-				: "Modal de WhatsApp desactivado"
+			mensaje: activo
+				? "Modal de WhatsApp activo"
+				: "Modal de WhatsApp desactivado",
 		});
 	} catch (error) {
 		console.error("Error obteniendo configuración WhatsApp intercept:", error);
 		res.status(500).json({
 			error: "Error al obtener configuración",
-			activo: true // Fallback a activo en caso de error
+			activo: true, // Fallback a activo en caso de error
 		});
 	}
 });
@@ -1605,56 +1646,65 @@ app.get("/api/configuracion/whatsapp-intercept", async (req, res) => {
  * Actualiza el estado del modal de intercepción de WhatsApp
  * Requiere autenticación de administrador
  */
-app.put("/api/configuracion/whatsapp-intercept", authAdmin, async (req, res) => {
-	try {
-		const { activo } = req.body;
+app.put(
+	"/api/configuracion/whatsapp-intercept",
+	authAdmin,
+	async (req, res) => {
+		try {
+			const { activo } = req.body;
 
-		// Validar que activo sea un booleano
-		if (typeof activo !== "boolean") {
-			return res.status(400).json({
-				error: "El campo 'activo' debe ser un valor booleano (true/false)"
+			// Validar que activo sea un booleano
+			if (typeof activo !== "boolean") {
+				return res.status(400).json({
+					error: "El campo 'activo' debe ser un valor booleano (true/false)",
+				});
+			}
+
+			// Guardar configuración
+			await Configuracion.setValor(
+				"whatsapp_intercept_activo",
+				activo,
+				"boolean",
+				"Controla si el modal de intercepción de WhatsApp está activo"
+			);
+
+			console.log(`✅ Configuración WhatsApp intercept actualizada: ${activo}`);
+
+			// Registrar en audit log si está disponible
+			if (req.user) {
+				try {
+					await AdminAuditLog.create({
+						adminUserId: req.user.id,
+						accion: "update_config",
+						entidad: "whatsapp_intercept",
+						detalles: JSON.stringify({
+							activo,
+							usuario: req.user.nombre || req.user.usuario,
+						}),
+					});
+				} catch (auditError) {
+					console.error("Error registrando en audit log:", auditError);
+				}
+			}
+
+			res.json({
+				success: true,
+				activo,
+				mensaje: `Modal de WhatsApp ${
+					activo ? "activado" : "desactivado"
+				} correctamente`,
+			});
+		} catch (error) {
+			console.error(
+				"Error actualizando configuración WhatsApp intercept:",
+				error
+			);
+			res.status(500).json({
+				error: "Error al actualizar configuración",
 			});
 		}
-
-		// Guardar configuración
-		await Configuracion.setValor(
-			"whatsapp_intercept_activo",
-			activo,
-			"boolean",
-			"Controla si el modal de intercepción de WhatsApp está activo"
-		);
-
-		console.log(`✅ Configuración WhatsApp intercept actualizada: ${activo}`);
-
-		// Registrar en audit log si está disponible
-		if (req.user) {
-			try {
-				await AdminAuditLog.create({
-					adminUserId: req.user.id,
-					accion: "update_config",
-					entidad: "whatsapp_intercept",
-					detalles: JSON.stringify({ 
-						activo,
-						usuario: req.user.nombre || req.user.usuario 
-					}),
-				});
-			} catch (auditError) {
-				console.error("Error registrando en audit log:", auditError);
-			}
-		}
-
-		res.json({
-			success: true,
-			activo,
-			mensaje: `Modal de WhatsApp ${activo ? "activado" : "desactivado"} correctamente`
-		});
-	} catch (error) {
-		console.error("Error actualizando configuración WhatsApp intercept:", error);
-		res.status(500).json({
-			error: "Error al actualizar configuración"
-		});
 	}
-});
+);
 
 /**
  * GET /api/configuracion/ofertas-sillas
@@ -1662,20 +1712,23 @@ app.put("/api/configuracion/whatsapp-intercept", authAdmin, async (req, res) => 
  */
 app.get("/api/configuracion/ofertas-sillas", async (req, res) => {
 	try {
-		const configOfertas = await Configuracion.getValorParseado("config_ofertas", {
-			anticipacionRetorno: 2,
-			anticipacionIda: 3
-		});
+		const configOfertas = await Configuracion.getValorParseado(
+			"config_ofertas",
+			{
+				anticipacionRetorno: 2,
+				anticipacionIda: 3,
+			}
+		);
 		const configSillas = await Configuracion.getValorParseado("config_sillas", {
 			habilitado: false,
 			maxSillas: 2,
-			precioPorSilla: 5000
+			precioPorSilla: 5000,
 		});
 
 		res.json({
 			success: true,
 			ofertas: configOfertas,
-			sillas: configSillas
+			sillas: configSillas,
 		});
 	} catch (error) {
 		console.error("Error obteniendo configuración ofertas/sillas:", error);
@@ -1692,15 +1745,25 @@ app.put("/api/configuracion/ofertas-sillas", authAdmin, async (req, res) => {
 		const { ofertas, sillas } = req.body;
 
 		if (ofertas) {
-			await Configuracion.setValor("config_ofertas", ofertas, "json", "Configuración de anticipación para ofertas");
+			await Configuracion.setValor(
+				"config_ofertas",
+				ofertas,
+				"json",
+				"Configuración de anticipación para ofertas"
+			);
 		}
 		if (sillas) {
-			await Configuracion.setValor("config_sillas", sillas, "json", "Configuración de disponibilidad y precio de sillas infantiles");
+			await Configuracion.setValor(
+				"config_sillas",
+				sillas,
+				"json",
+				"Configuración de disponibilidad y precio de sillas infantiles"
+			);
 		}
 
 		res.json({
 			success: true,
-			mensaje: "Configuración actualizada correctamente"
+			mensaje: "Configuración actualizada correctamente",
 		});
 	} catch (error) {
 		console.error("Error actualizando configuración ofertas/sillas:", error);
@@ -2525,9 +2588,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			datosReserva.direccionDestino
 		);
 		if (direccionDestinoCliente) {
-			detallesDirecciones.push(
-				`Direccion destino: ${direccionDestinoCliente}`
-			);
+			detallesDirecciones.push(`Direccion destino: ${direccionDestinoCliente}`);
 		}
 		const direccionOrigenCliente = limpiarTextoPlano(
 			datosReserva.direccionOrigen
@@ -2566,27 +2627,55 @@ app.post("/enviar-reserva", async (req, res) => {
 		const codigoReserva = await generarCodigoReserva();
 
 		console.log("\n" + "=".repeat(50));
-	console.log("📝 NUEVA RESERVA RECIBIDA");
-	console.log("=".repeat(50));
-	console.log(`👤 Cliente:                ${datosReserva.nombre || "No especificado"}`);
-	console.log(`📧 Email:                  ${datosReserva.email || "No especificado"}`);
-	console.log(`📱 Teléfono:               ${datosReserva.telefono || "No especificado"}`);
-	if (rutFormateado) {
-		console.log(`🆔 RUT:                    ${rutFormateado}`);
-	}
-	console.log(`🔖 Código Reserva:         ${codigoReserva}`);
-	console.log("-".repeat(50));
-	console.log(`🚗 Viaje:                  ${datosReserva.origen || "?"} → ${datosReserva.destino || "?"}`);
-	console.log(`📅 Fecha:                  ${datosReserva.fecha || "No especificada"}`);
-	console.log(`🕐 Hora:                   ${datosReserva.hora || "No especificada"}`);
-	console.log(`👥 Pasajeros:              ${datosReserva.pasajeros || 1}`);
-	console.log(`🚙 Vehículo:               ${datosReserva.vehiculo || "Por asignar"}`);
-	console.log("-".repeat(50));
-	console.log(`📊 Estado:                 ${(datosReserva.estado || "pendiente").toUpperCase()}`);
-	console.log(`💳 Estado Pago:            ${(datosReserva.estadoPago || "pendiente").toUpperCase()}`);
-	console.log(`💰 MONTO FINAL:            $${parseFloat(datosReserva.totalConDescuento || 0).toLocaleString("es-CL")}`);
-	console.log(`🌐 Fuente:                 ${datosReserva.source || "web"}`);
-	console.log("=".repeat(50) + "\n");
+		console.log("📝 NUEVA RESERVA RECIBIDA");
+		console.log("=".repeat(50));
+		console.log(
+			`👤 Cliente:                ${datosReserva.nombre || "No especificado"}`
+		);
+		console.log(
+			`📧 Email:                  ${datosReserva.email || "No especificado"}`
+		);
+		console.log(
+			`📱 Teléfono:               ${datosReserva.telefono || "No especificado"}`
+		);
+		if (rutFormateado) {
+			console.log(`🆔 RUT:                    ${rutFormateado}`);
+		}
+		console.log(`🔖 Código Reserva:         ${codigoReserva}`);
+		console.log("-".repeat(50));
+		console.log(
+			`🚗 Viaje:                  ${datosReserva.origen || "?"} → ${
+				datosReserva.destino || "?"
+			}`
+		);
+		console.log(
+			`📅 Fecha:                  ${datosReserva.fecha || "No especificada"}`
+		);
+		console.log(
+			`🕐 Hora:                   ${datosReserva.hora || "No especificada"}`
+		);
+		console.log(`👥 Pasajeros:              ${datosReserva.pasajeros || 1}`);
+		console.log(
+			`🚙 Vehículo:               ${datosReserva.vehiculo || "Por asignar"}`
+		);
+		console.log("-".repeat(50));
+		console.log(
+			`📊 Estado:                 ${(
+				datosReserva.estado || "pendiente"
+			).toUpperCase()}`
+		);
+		console.log(
+			`💳 Estado Pago:            ${(
+				datosReserva.estadoPago || "pendiente"
+			).toUpperCase()}`
+		);
+		console.log(
+			`💰 MONTO FINAL:            $${parseFloat(
+				datosReserva.totalConDescuento || 0
+			).toLocaleString("es-CL")}`
+		);
+		console.log(`🌐 Fuente:                 ${datosReserva.source || "web"}`);
+		console.log("=".repeat(50) + "\n");
 
 		// Verificar si la fecha/hora está bloqueada
 		const bloqueoResultado = await verificarBloqueoAgenda(
@@ -2629,25 +2718,42 @@ app.post("/enviar-reserva", async (req, res) => {
 		]);
 
 		// Helper para formateo monetario
-	const formatMoney = (amount) => `$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
+		const formatMoney = (amount) =>
+			`$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
 
-	const precioCalculado = parsePositiveDecimal(
-		datosReserva.precio,
-		"precio",
-		0
-	);
+		const precioCalculado = parsePositiveDecimal(
+			datosReserva.precio,
+			"precio",
+			0
+		);
 
-	// Calcular descuentos una sola vez
-	const descuentoPromocion = parsePositiveDecimal(datosReserva.descuentoPromocion, "descuentoPromocion", 0);
-	const descuentoOnline = parsePositiveDecimal(datosReserva.descuentoOnline, "descuentoOnline", 0);
-	const descuentoRoundTrip = parsePositiveDecimal(datosReserva.descuentoRoundTrip, "descuentoRoundTrip", 0);
-	const descuentoBase = parsePositiveDecimal(datosReserva.descuentoBase, "descuentoBase", 0);
+		// Calcular descuentos una sola vez
+		const descuentoPromocion = parsePositiveDecimal(
+			datosReserva.descuentoPromocion,
+			"descuentoPromocion",
+			0
+		);
+		const descuentoOnline = parsePositiveDecimal(
+			datosReserva.descuentoOnline,
+			"descuentoOnline",
+			0
+		);
+		const descuentoRoundTrip = parsePositiveDecimal(
+			datosReserva.descuentoRoundTrip,
+			"descuentoRoundTrip",
+			0
+		);
+		const descuentoBase = parsePositiveDecimal(
+			datosReserva.descuentoBase,
+			"descuentoBase",
+			0
+		);
 
-	const totalCalculado = parsePositiveDecimal(
-		datosReserva.totalConDescuento,
-		"totalConDescuento",
-		precioCalculado
-	);
+		const totalCalculado = parsePositiveDecimal(
+			datosReserva.totalConDescuento,
+			"totalConDescuento",
+			precioCalculado
+		);
 
 		const abonoCalculado = parsePositiveDecimal(
 			datosReserva.abonoSugerido,
@@ -2732,42 +2838,61 @@ app.post("/enviar-reserva", async (req, res) => {
 		const umbralAbono = Math.max(totalCalculado * 0.4, abonoCalculado || 0);
 
 		// Log mejorado: desglose financiero detallado y agrupado
-	console.log("\n" + "=".repeat(50));
-	console.log("💰 DESGLOSE FINANCIERO - RESERVA");
-	console.log("=".repeat(50));
-	
-	// Calcular total de descuentos
-	const totalDescuentos = descuentoPromocion + descuentoOnline + descuentoRoundTrip + descuentoBase;
-	
-	console.log(`(+) Precio Base:           ${formatMoney(precioCalculado)}`);
-	if (descuentoPromocion > 0) {
-		console.log(`(-) Desc. Promoción:       ${formatMoney(descuentoPromocion)}`);
-	}
-	if (descuentoOnline > 0) {
-		console.log(`(-) Desc. Online:          ${formatMoney(descuentoOnline)}`);
-	}
-	if (descuentoRoundTrip > 0) {
-		console.log(`(-) Desc. Ida y Vuelta:    ${formatMoney(descuentoRoundTrip)}`);
-	}
-	if (descuentoBase > 0) {
-		console.log(`(-) Desc. Base:            ${formatMoney(descuentoBase)}`);
-	}
-	if (totalDescuentos > 0) {
-		console.log(`    Total Descuentos:      ${formatMoney(totalDescuentos)} (${((totalDescuentos/precioCalculado)*100).toFixed(1)}%)`);
-	}
-	console.log("-".repeat(50));
-	console.log(`(=) TOTAL FINAL:           ${formatMoney(totalCalculado)}`);
-	console.log("-".repeat(50));
-	
-	// Detalles de pago
-	console.log(`📊 Estado de Pago:         ${estadoPagoInicial.toUpperCase()}`);
-	console.log(`💵 Monto Pagado:           ${formatMoney(montoPagadoCalculado)}`);
-	console.log(`💳 Saldo Pendiente:        ${formatMoney(saldoEntrada)}`);
-	if (abonoCalculado > 0) {
-		console.log(`📌 Abono Sugerido:         ${formatMoney(abonoCalculado)} (${((abonoCalculado/totalCalculado)*100).toFixed(0)}%)`);
-	}
-	console.log(`🎯 Umbral Abono (40%):     ${formatMoney(umbralAbono)}`);
-	console.log("=".repeat(50) + "\n");
+		console.log("\n" + "=".repeat(50));
+		console.log("💰 DESGLOSE FINANCIERO - RESERVA");
+		console.log("=".repeat(50));
+
+		// Calcular total de descuentos
+		const totalDescuentos =
+			descuentoPromocion + descuentoOnline + descuentoRoundTrip + descuentoBase;
+
+		console.log(`(+) Precio Base:           ${formatMoney(precioCalculado)}`);
+		if (descuentoPromocion > 0) {
+			console.log(
+				`(-) Desc. Promoción:       ${formatMoney(descuentoPromocion)}`
+			);
+		}
+		if (descuentoOnline > 0) {
+			console.log(`(-) Desc. Online:          ${formatMoney(descuentoOnline)}`);
+		}
+		if (descuentoRoundTrip > 0) {
+			console.log(
+				`(-) Desc. Ida y Vuelta:    ${formatMoney(descuentoRoundTrip)}`
+			);
+		}
+		if (descuentoBase > 0) {
+			console.log(`(-) Desc. Base:            ${formatMoney(descuentoBase)}`);
+		}
+		if (totalDescuentos > 0) {
+			console.log(
+				`    Total Descuentos:      ${formatMoney(totalDescuentos)} (${(
+					(totalDescuentos / precioCalculado) *
+					100
+				).toFixed(1)}%)`
+			);
+		}
+		console.log("-".repeat(50));
+		console.log(`(=) TOTAL FINAL:           ${formatMoney(totalCalculado)}`);
+		console.log("-".repeat(50));
+
+		// Detalles de pago
+		console.log(
+			`📊 Estado de Pago:         ${estadoPagoInicial.toUpperCase()}`
+		);
+		console.log(
+			`💵 Monto Pagado:           ${formatMoney(montoPagadoCalculado)}`
+		);
+		console.log(`💳 Saldo Pendiente:        ${formatMoney(saldoEntrada)}`);
+		if (abonoCalculado > 0) {
+			console.log(
+				`📌 Abono Sugerido:         ${formatMoney(abonoCalculado)} (${(
+					(abonoCalculado / totalCalculado) *
+					100
+				).toFixed(0)}%)`
+			);
+		}
+		console.log(`🎯 Umbral Abono (40%):     ${formatMoney(umbralAbono)}`);
+		console.log("=".repeat(50) + "\n");
 
 		let abonoPagado = false;
 		let saldoPagado = false;
@@ -2792,8 +2917,10 @@ app.post("/enviar-reserva", async (req, res) => {
 			saldoPagado = true;
 		}
 
-// Normalizar email para búsqueda
-		const emailNormalizado = datosReserva.email ? String(datosReserva.email).trim().toLowerCase() : "";
+		// Normalizar email para búsqueda
+		const emailNormalizado = datosReserva.email
+			? String(datosReserva.email).trim().toLowerCase()
+			: "";
 
 		// Verificar si existe una reserva activa sin pagar para este email
 		const reservaExistente = await Reserva.findOne({
@@ -2863,7 +2990,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				totalConDescuento: totalCalculado,
 				mensaje: datosReserva.mensaje || "",
 				// source: datosReserva.source || "web", // No sobrescribir source original si ya existe? Mejor actualizarlo por si cambia el canal
-				source: datosReserva.source || reservaExistente.source || "web", 
+				source: datosReserva.source || reservaExistente.source || "web",
 				estado: estadoInicial,
 				ipAddress: req.ip || req.connection.remoteAddress || "",
 				userAgent: req.get("User-Agent") || "",
@@ -2948,7 +3075,9 @@ app.post("/enviar-reserva", async (req, res) => {
 		// --- LÓGICA DE TRAMOS VINCULADOS (OPCIÓN 1) ---
 		// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
 		if (!reservaExistente && datosReserva.idaVuelta) {
-			console.log("🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
+			console.log(
+				"🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados..."
+			);
 
 			try {
 				// 1. Preparar datos para el tramo de vuelta
@@ -2957,10 +3086,10 @@ app.post("/enviar-reserva", async (req, res) => {
 				const destinoVuelta = datosReserva.origen || "";
 				const dirOrigenVuelta = datosReserva.direccionDestino || "";
 				const dirDestinoVuelta = datosReserva.direccionOrigen || "";
-				
+
 				// Generar nuevo código para la vuelta
 				const codigoVuelta = await generarCodigoReserva();
-				
+
 				// Dividir costos (50/50 para simplificar asignación inicial)
 				const precioIda = Number(reservaGuardada.precio) / 2;
 				const precioVuelta = Number(reservaGuardada.precio) / 2;
@@ -2976,7 +3105,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					clienteId: reservaGuardada.clienteId,
 					rut: reservaGuardada.rut,
 					pasajeros: reservaGuardada.pasajeros,
-					
+
 					// Datos específicos de la vuelta
 					codigoReserva: codigoVuelta,
 					origen: origenVuelta,
@@ -2984,8 +3113,8 @@ app.post("/enviar-reserva", async (req, res) => {
 					direccionOrigen: dirOrigenVuelta,
 					direccionDestino: dirDestinoVuelta,
 					fecha: datosReserva.fechaRegreso, // Fecha regresó original
-					hora: datosReserva.horaRegreso || "00:00:00",   // Hora regreso original
-					
+					hora: datosReserva.horaRegreso || "00:00:00", // Hora regreso original
+
 					// Datos financieros (mitad del total)
 					precio: precioVuelta,
 					totalConDescuento: totalVuelta,
@@ -2995,7 +3124,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					descuentoOnline: Number(reservaGuardada.descuentoOnline) / 2,
 					abonoSugerido: Number(reservaGuardada.abonoSugerido) / 2,
 					saldoPendiente: Number(reservaGuardada.saldoPendiente) / 2,
-					
+
 					// Datos operativos
 					vehiculo: reservaGuardada.vehiculo, // Copiar preferencia de vehículo
 					numeroVuelo: "", // El vuelo de vuelta suele ser diferente
@@ -3004,7 +3133,7 @@ app.post("/enviar-reserva", async (req, res) => {
 					sillaInfantil: reservaGuardada.sillaInfantil,
 					mensaje: reservaGuardada.mensaje,
 					source: reservaGuardada.source,
-					
+
 					// Estado
 					estado: reservaGuardada.estado, // Hereda estado del tramo de ida
 					estadoPago: reservaGuardada.estadoPago, // Hereda estado de pago
@@ -3022,10 +3151,12 @@ app.post("/enviar-reserva", async (req, res) => {
 					tramoPadreId: reservaGuardada.id,
 					tramoHijoId: null,
 					fechaRegreso: null, // Limpiar
-					horaRegreso: null
+					horaRegreso: null,
 				});
 
-				console.log(`✅ Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`);
+				console.log(
+					`✅ Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`
+				);
 
 				// 3. Actualizar reserva de IDA (Padre)
 				await reservaGuardada.update({
@@ -3038,23 +3169,24 @@ app.post("/enviar-reserva", async (req, res) => {
 					descuentoPromocion: Number(reservaGuardada.descuentoPromocion) / 2,
 					descuentoRoundTrip: Number(reservaGuardada.descuentoRoundTrip) / 2,
 					descuentoOnline: Number(reservaGuardada.descuentoOnline) / 2,
-					
+
 					// Vinculación y Flags
 					idaVuelta: false, // Convertir a tramo único
 					tipoTramo: "ida",
 					tramoHijoId: reservaVuelta.id,
-					
+
 					// Limpiar datos de regreso ya que ahora están en otra reserva
 					fechaRegreso: null,
-					horaRegreso: null
+					horaRegreso: null,
 				});
-				
-				console.log(`✅ Tramo de ida actualizado y vinculado: ${reservaGuardada.id}`);
+
+				console.log(
+					`✅ Tramo de ida actualizado y vinculado: ${reservaGuardada.id}`
+				);
 
 				// Nota: reservaGuardada sigue siendo el objeto que se usará para el email confirmación.
-				// Como el email usa 'datosReserva' (el input original), el cliente seguirá recibiendo 
+				// Como el email usa 'datosReserva' (el input original), el cliente seguirá recibiendo
 				// el resumen completo "Ida y Vuelta" con los totales correctos.
-				
 			} catch (errorSplit) {
 				console.error("❌ Error al dividir reserva ida y vuelta:", errorSplit);
 				// No fallar el request completo, pero loguear error crítico
@@ -3120,46 +3252,64 @@ app.post("/enviar-reserva", async (req, res) => {
 			try {
 				// Calcular fecha de envío (30 minutos después)
 				const scheduledAt = new Date(Date.now() + 30 * 60 * 1000);
-				
+
 				await PendingEmail.create({
 					reservaId: reservaGuardada.id,
 					email: reservaGuardada.email,
 					type: "discount_offer",
 					status: "pending",
-					scheduledAt: scheduledAt
+					scheduledAt: scheduledAt,
 				});
-				
-				console.log(`⏳ Correo de descuento programado para reserva ${reservaGuardada.codigoReserva} a las ${scheduledAt.toISOString()}`);
-				
+
+				console.log(
+					`⏳ Correo de descuento programado para reserva ${
+						reservaGuardada.codigoReserva
+					} a las ${scheduledAt.toISOString()}`
+				);
+
 				// Enviar notificación SOLO al administrador inmediatamente
 				// Usamos action='notify_admin_only' para que el PHP sepa qué hacer
 				try {
-					const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-					await axios.post(phpUrl, {
-						...datosReserva,
-						codigoReserva: reservaGuardada.codigoReserva,
-						rut: rutFormateado,
-						estadoPago: "pendiente",
-						pagoMonto: montoPagadoCalculado,
-						action: "notify_admin_only" // NUEVO PARÁMETRO
-					}, {
-						headers: { "Content-Type": "application/json" },
-						timeout: 10000
-					});
+					const phpUrl =
+						process.env.PHP_EMAIL_URL ||
+						"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+					await axios.post(
+						phpUrl,
+						{
+							...datosReserva,
+							codigoReserva: reservaGuardada.codigoReserva,
+							rut: rutFormateado,
+							estadoPago: "pendiente",
+							pagoMonto: montoPagadoCalculado,
+							action: "notify_admin_only", // NUEVO PARÁMETRO
+						},
+						{
+							headers: { "Content-Type": "application/json" },
+							timeout: 10000,
+						}
+					);
 					console.log("✅ Notificación al admin enviada correctamente");
 				} catch (adminEmailError) {
-					console.error("❌ Error enviando notificación al admin:", adminEmailError.message);
+					console.error(
+						"❌ Error enviando notificación al admin:",
+						adminEmailError.message
+					);
 				}
-
 			} catch (scheduleError) {
-				console.error("❌ Error programando correo de descuento:", scheduleError);
+				console.error(
+					"❌ Error programando correo de descuento:",
+					scheduleError
+				);
 			}
 		} else if (estadoPagoInicial === "pendiente") {
 			// Log para debugging de por qué no se programó
-			console.log(`ℹ️ Correo de descuento NO programado para ${reservaGuardada.codigoReserva}:`, {
-				source: datosReserva.source,
-				pagoMonto: reservaGuardada.pagoMonto
-			});
+			console.log(
+				`ℹ️ Correo de descuento NO programado para ${reservaGuardada.codigoReserva}:`,
+				{
+					source: datosReserva.source,
+					pagoMonto: reservaGuardada.pagoMonto,
+				}
+			);
 		}
 
 		return res.json({
@@ -3216,17 +3366,11 @@ function validarYSanitizarFecha(fecha, nombreCampo = "fecha") {
 		fechaObj.getMonth() !== month - 1 ||
 		fechaObj.getDate() !== day
 	) {
-		console.error(
-			`❌ ${nombreCampo} no es una fecha válida: "${fechaStr}"`
-		);
-		throw new Error(
-			`${nombreCampo} no es una fecha válida (${fechaStr})`
-		);
+		console.error(`❌ ${nombreCampo} no es una fecha válida: "${fechaStr}"`);
+		throw new Error(`${nombreCampo} no es una fecha válida (${fechaStr})`);
 	}
 
-	console.log(
-		`✅ ${nombreCampo} validada correctamente: "${fechaStr}"`
-	);
+	console.log(`✅ ${nombreCampo} validada correctamente: "${fechaStr}"`);
 	return fechaStr;
 }
 
@@ -3244,9 +3388,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			datosReserva.direccionDestino
 		);
 		if (direccionDestinoCliente) {
-			detallesDirecciones.push(
-				`Dirección destino: ${direccionDestinoCliente}`
-			);
+			detallesDirecciones.push(`Dirección destino: ${direccionDestinoCliente}`);
 		}
 		const direccionOrigenCliente = limpiarTextoPlano(
 			datosReserva.direccionOrigen
@@ -3266,16 +3408,18 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			mensajeDetallado.length > 0 ? mensajeDetallado : undefined;
 		const numeroVueloCliente = limpiarTextoPlano(datosReserva.numeroVuelo);
 		const hotelCliente = limpiarTextoPlano(datosReserva.hotel);
-		
+
 		// Determinar la dirección específica para guardar en el campo "hotel"
 		// Si el cliente no proporcionó "hotel" explícitamente, usar la dirección correspondiente
 		let direccionEspecifica = hotelCliente;
-		
+
 		if (!direccionEspecifica) {
 			// Determinar qué dirección usar según el sentido del viaje
-			const origenEsAeropuerto = datosReserva.origen === "Aeropuerto La Araucanía";
-			const destinoEsAeropuerto = datosReserva.destino === "Aeropuerto La Araucanía";
-			
+			const origenEsAeropuerto =
+				datosReserva.origen === "Aeropuerto La Araucanía";
+			const destinoEsAeropuerto =
+				datosReserva.destino === "Aeropuerto La Araucanía";
+
 			if (origenEsAeropuerto && direccionDestinoCliente) {
 				// Viaje DESDE aeropuerto: la dirección específica es el destino
 				direccionEspecifica = direccionDestinoCliente;
@@ -3391,30 +3535,34 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		// 🔍 VALIDACIÓN PREVENTIVA: Si es pago con código, verificar primero si ya tiene reserva vinculada
 		if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
 			const codigoPagoExistente = await CodigoPago.findOne({
-				where: { codigo: datosReserva.referenciaPago }
+				where: { codigo: datosReserva.referenciaPago },
 			});
 
 			if (!codigoPagoExistente) {
 				return res.status(404).json({
 					success: false,
-					message: "Código de pago no encontrado"
+					message: "Código de pago no encontrado",
 				});
 			}
 
 			// 🚨 CRÍTICO: Si ya está vinculado a una reserva, reutilizarla
 			if (codigoPagoExistente.reservaVinculadaId) {
-				const reservaVinculada = await Reserva.findByPk(codigoPagoExistente.reservaVinculadaId);
+				const reservaVinculada = await Reserva.findByPk(
+					codigoPagoExistente.reservaVinculadaId
+				);
 
 				if (reservaVinculada) {
-					console.log(`♻️ Reutilizando reserva existente ${reservaVinculada.id} para código ${codigoPagoExistente.codigo}`);
-					
+					console.log(
+						`♻️ Reutilizando reserva existente ${reservaVinculada.id} para código ${codigoPagoExistente.codigo}`
+					);
+
 					return res.json({
 						success: true,
 						message: "Reserva ya existe para este código",
 						reservaId: reservaVinculada.id,
 						codigoReserva: reservaVinculada.codigoReserva,
 						tipo: "express",
-						esReutilizada: true
+						esReutilizada: true,
 					});
 				}
 			}
@@ -3437,7 +3585,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		if (datosReserva.referenciaPago) {
 			// PASO 1: Buscar por referencia de pago (máxima prioridad)
-			console.log(`🔍 [PASO 1] Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`);
+			console.log(
+				`🔍 [PASO 1] Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`
+			);
 			reservaExistente = await Reserva.findOne({
 				where: {
 					referenciaPago: datosReserva.referenciaPago,
@@ -3450,7 +3600,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		if (!reservaExistente && emailNormalizado) {
 			// PASO 2: Fallback por email (captura reservas hechas antes por web sin código vinculado)
-			console.log(`🔍 [PASO 2] Fallback: buscando reserva existente por email: ${emailNormalizado}`);
+			console.log(
+				`🔍 [PASO 2] Fallback: buscando reserva existente por email: ${emailNormalizado}`
+			);
 			reservaExistente = await Reserva.findOne({
 				where: {
 					email: emailNormalizado,
@@ -3462,7 +3614,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 
 			if (reservaExistente) {
-				console.log(`✅ [PASO 2] Reserva pendiente encontrada por email (ID: ${reservaExistente.id}). Se actualizará en lugar de crear una nueva.`);
+				console.log(
+					`✅ [PASO 2] Reserva pendiente encontrada por email (ID: ${reservaExistente.id}). Se actualizará en lugar de crear una nueva.`
+				);
 			}
 		}
 
@@ -3480,12 +3634,19 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			// eliminamos el tramo de vuelta y reseteamos el padre para que la lógica de separación vuelva a ejecutarse limpia.
 			if (reservaExistente.tramoHijoId) {
 				try {
-					console.log(`🧹 Eliminando tramo de retorno antiguo (ID ${reservaExistente.tramoHijoId}) para recalcular`);
-					await Reserva.destroy({ where: { id: reservaExistente.tramoHijoId } });
+					console.log(
+						`🧹 Eliminando tramo de retorno antiguo (ID ${reservaExistente.tramoHijoId}) para recalcular`
+					);
+					await Reserva.destroy({
+						where: { id: reservaExistente.tramoHijoId },
+					});
 					reservaExistente.tramoHijoId = null;
-					reservaExistente.tipoTramo = 'solo_ida';
+					reservaExistente.tipoTramo = "solo_ida";
 				} catch (err) {
-					console.error("❌ Error al eliminar tramo hijo durante modificación:", err.message);
+					console.error(
+						"❌ Error al eliminar tramo hijo durante modificación:",
+						err.message
+					);
 				}
 			}
 
@@ -3622,7 +3783,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				referenciaPago:
 					datosReserva.referenciaPago || reservaExistente.referenciaPago,
 				tipoPago: datosReserva.tipoPago || reservaExistente.tipoPago,
-				upgradeVan: datosReserva.upgradeVan !== undefined ? Boolean(datosReserva.upgradeVan) : reservaExistente.upgradeVan,
+				upgradeVan:
+					datosReserva.upgradeVan !== undefined
+						? Boolean(datosReserva.upgradeVan)
+						: reservaExistente.upgradeVan,
 			});
 
 			reservaExpress = reservaExistente;
@@ -3632,20 +3796,28 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		} else {
 			// CREAR nueva reserva con transacción SQL para prevenir duplicados
 			const t = await sequelize.transaction();
-			
+
 			try {
 				// 🔒 Si es pago con código, marcar como "en_proceso" dentro de la transacción
-				if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
+				if (
+					datosReserva.referenciaPago &&
+					datosReserva.source === "codigo_pago"
+				) {
 					const codigoPagoParaMarcar = await CodigoPago.findOne({
 						where: { codigo: datosReserva.referenciaPago },
-						transaction: t
+						transaction: t,
 					});
 
 					if (codigoPagoParaMarcar) {
-						await codigoPagoParaMarcar.update({
-							estado: "en_proceso"
-						}, { transaction: t });
-						console.log(`🔒 Código ${codigoPagoParaMarcar.codigo} marcado como 'en_proceso'`);
+						await codigoPagoParaMarcar.update(
+							{
+								estado: "en_proceso",
+							},
+							{ transaction: t }
+						);
+						console.log(
+							`🔒 Código ${codigoPagoParaMarcar.codigo} marcado como 'en_proceso'`
+						);
 					}
 				}
 
@@ -3692,83 +3864,92 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					estadoPago: datosReserva.estadoPago,
 				});
 
-				reservaExpress = await Reserva.create({
-					codigoReserva: codigoReserva,
-					nombre: datosReserva.nombre,
-					email: emailNormalizado,
-					telefono: datosReserva.telefono,
-					clienteId: clienteIdAsociado,
-					rut: rutFormateado,
-					origen: datosReserva.origen,
-					destino: datosReserva.destino,
-					fecha: datosReserva.fecha,
-					// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
-					hora: normalizeTimeGlobal(datosReserva.hora),
-					pasajeros: parsePositiveInteger(datosReserva.pasajeros, "pasajeros", 1),
-					precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
-					vehiculo: datosReserva.vehiculo || "",
-					referenciaPago: datosReserva.referenciaPago || null,
+				reservaExpress = await Reserva.create(
+					{
+						codigoReserva: codigoReserva,
+						nombre: datosReserva.nombre,
+						email: emailNormalizado,
+						telefono: datosReserva.telefono,
+						clienteId: clienteIdAsociado,
+						rut: rutFormateado,
+						origen: datosReserva.origen,
+						destino: datosReserva.destino,
+						fecha: datosReserva.fecha,
+						// Normalizar y usar la hora enviada por el cliente, o null si no se proporciona
+						hora: normalizeTimeGlobal(datosReserva.hora),
+						pasajeros: parsePositiveInteger(
+							datosReserva.pasajeros,
+							"pasajeros",
+							1
+						),
+						precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
+						vehiculo: datosReserva.vehiculo || "",
+						referenciaPago: datosReserva.referenciaPago || null,
 
-					// Campos que se completarán después del pago (opcionales por ahora)
-					numeroVuelo: numeroVueloCliente,
-					hotel: direccionEspecifica,
-					equipajeEspecial: equipajeEspecialCliente,
-					sillaInfantil:
-						sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
-					idaVuelta: Boolean(datosReserva.idaVuelta),
-					fechaRegreso: datosReserva.fechaRegreso || null,
-					horaRegreso: normalizeTimeGlobal(datosReserva.horaRegreso),
+						// Campos que se completarán después del pago (opcionales por ahora)
+						numeroVuelo: numeroVueloCliente,
+						hotel: direccionEspecifica,
+						equipajeEspecial: equipajeEspecialCliente,
+						sillaInfantil:
+							sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
+						idaVuelta: Boolean(datosReserva.idaVuelta),
+						fechaRegreso: datosReserva.fechaRegreso || null,
+						horaRegreso: normalizeTimeGlobal(datosReserva.horaRegreso),
 
-					// Campos financieros con validación
-					abonoSugerido: abonoCalculadoExpress,
-					saldoPendiente: saldoPendienteParaGuardar,
-					descuentoBase: parsePositiveDecimal(
-						datosReserva.descuentoBase,
-						"descuentoBase",
-						0
-					),
-					descuentoPromocion: parsePositiveDecimal(
-						datosReserva.descuentoPromocion,
-						"descuentoPromocion",
-						0
-					),
-					descuentoRoundTrip: parsePositiveDecimal(
-						datosReserva.descuentoRoundTrip,
-						"descuentoRoundTrip",
-						0
-					),
-					descuentoOnline: parsePositiveDecimal(
-						datosReserva.descuentoOnline,
-						"descuentoOnline",
-						0
-					),
-					totalConDescuento: parsePositiveDecimal(
-						datosReserva.totalConDescuento,
-						"totalConDescuento",
-						0
-					),
-					mensaje: mensajeParaGuardar ?? "",
+						// Campos financieros con validación
+						abonoSugerido: abonoCalculadoExpress,
+						saldoPendiente: saldoPendienteParaGuardar,
+						descuentoBase: parsePositiveDecimal(
+							datosReserva.descuentoBase,
+							"descuentoBase",
+							0
+						),
+						descuentoPromocion: parsePositiveDecimal(
+							datosReserva.descuentoPromocion,
+							"descuentoPromocion",
+							0
+						),
+						descuentoRoundTrip: parsePositiveDecimal(
+							datosReserva.descuentoRoundTrip,
+							"descuentoRoundTrip",
+							0
+						),
+						descuentoOnline: parsePositiveDecimal(
+							datosReserva.descuentoOnline,
+							"descuentoOnline",
+							0
+						),
+						totalConDescuento: parsePositiveDecimal(
+							datosReserva.totalConDescuento,
+							"totalConDescuento",
+							0
+						),
+						mensaje: mensajeParaGuardar ?? "",
 
-					// Metadata del sistema
-					source: datosReserva.source || "express_web",
-					// Respetar el estado enviado por el frontend si existe.
-					// Si la reserva se crea desde un pago con código (source === 'codigo_pago')
-					// queremos mantenerla en 'pendiente' hasta la confirmación del pago
-					// (webhook). Por compatibilidad con el flujo express por defecto,
-					// usamos 'pendiente_detalles' sólo si no se indica lo contrario.
-					estado:
-						datosReserva.estado ||
-						(datosReserva.source === "codigo_pago"
-							? "pendiente"
-							: "pendiente_detalles"),
-					ipAddress: req.ip || req.connection.remoteAddress || "",
-					userAgent: req.get("User-Agent") || "",
-					codigoDescuento: datosReserva.codigoDescuento || "",
-					tipoPago: datosReserva.tipoPago || null,
-					upgradeVan: Boolean(datosReserva.upgradeVan),
-					estadoPago: datosReserva.estadoPago || "pendiente",
-					duracionMinutos: datosReserva.duracionMinutos ? parseInt(datosReserva.duracionMinutos) : null,
-				}, { transaction: t });
+						// Metadata del sistema
+						source: datosReserva.source || "express_web",
+						// Respetar el estado enviado por el frontend si existe.
+						// Si la reserva se crea desde un pago con código (source === 'codigo_pago')
+						// queremos mantenerla en 'pendiente' hasta la confirmación del pago
+						// (webhook). Por compatibilidad con el flujo express por defecto,
+						// usamos 'pendiente_detalles' sólo si no se indica lo contrario.
+						estado:
+							datosReserva.estado ||
+							(datosReserva.source === "codigo_pago"
+								? "pendiente"
+								: "pendiente_detalles"),
+						ipAddress: req.ip || req.connection.remoteAddress || "",
+						userAgent: req.get("User-Agent") || "",
+						codigoDescuento: datosReserva.codigoDescuento || "",
+						tipoPago: datosReserva.tipoPago || null,
+						upgradeVan: Boolean(datosReserva.upgradeVan),
+						estadoPago: datosReserva.estadoPago || "pendiente",
+						duracionMinutos: datosReserva.duracionMinutos
+							? parseInt(datosReserva.duracionMinutos)
+							: null,
+					},
+					{ transaction: t }
+				);
 
 				console.log(
 					"✅ Reserva express guardada en base de datos con ID:",
@@ -3778,193 +3959,222 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				);
 
 				// 🔗 VINCULAR INMEDIATAMENTE dentro de la transacción
-				if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
+				if (
+					datosReserva.referenciaPago &&
+					datosReserva.source === "codigo_pago"
+				) {
 					const codigoPago = await CodigoPago.findOne({
 						where: { codigo: datosReserva.referenciaPago },
-						transaction: t
+						transaction: t,
 					});
 
 					if (codigoPago) {
-						await codigoPago.update({
-							reservaVinculadaId: reservaExpress.id,
-							codigoReservaVinculado: reservaExpress.codigoReserva,
-							estado: "usado",
-							usosActuales: (codigoPago.usosActuales || 0) + 1,
-							fechaUso: new Date(),
-							emailCliente: emailNormalizado || codigoPago.emailCliente
-						}, { transaction: t });
-						
-						console.log(`🔗 Código de pago ${codigoPago.codigo} vinculado a reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`);
+						await codigoPago.update(
+							{
+								reservaVinculadaId: reservaExpress.id,
+								codigoReservaVinculado: reservaExpress.codigoReserva,
+								estado: "usado",
+								usosActuales: (codigoPago.usosActuales || 0) + 1,
+								fechaUso: new Date(),
+								emailCliente: emailNormalizado || codigoPago.emailCliente,
+							},
+							{ transaction: t }
+						);
+
+						console.log(
+							`🔗 Código de pago ${codigoPago.codigo} vinculado a reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`
+						);
 					}
 				}
 
 				// Confirmar transacción
 				await t.commit();
 				console.log("✅ Transacción confirmada exitosamente");
-
 			} catch (transactionError) {
 				await t.rollback();
-				console.error("❌ Error en transacción, rollback ejecutado:", transactionError);
+				console.error(
+					"❌ Error en transacción, rollback ejecutado:",
+					transactionError
+				);
 				throw transactionError;
 			}
 		}
 
 		// --- LÓGICA DE TRAMOS VINCULADOS (EXPRESS) ---
-	// Si es una reserva de ida y vuelta (nueva o modificada que era solo ida), dividirla en dos tramos vinculados
-	const debeDividirse = datosReserva.idaVuelta && 
-						 reservaExpress.tipoTramo === 'solo_ida' && 
-						 !reservaExpress.tramoHijoId && 
-						 !reservaExpress.tramoPadreId;
+		// Si es una reserva de ida y vuelta (nueva o modificada que era solo ida), dividirla en dos tramos vinculados
+		const debeDividirse =
+			datosReserva.idaVuelta &&
+			reservaExpress.tipoTramo === "solo_ida" &&
+			!reservaExpress.tramoHijoId &&
+			!reservaExpress.tramoPadreId;
 
-	if (debeDividirse) {
-		console.log("🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...");
-		console.log("📋 [EXPRESS] Datos de los tramos:", {
-			idReservaIda: reservaExpress.id,
-			codigoIda: reservaExpress.codigoReserva,
-			fechaIda: datosReserva.fecha,
-			horaIda: datosReserva.hora,
-			fechaVuelta: datosReserva.fechaRegreso,
-			horaVuelta: datosReserva.horaRegreso,
-		});
+		if (debeDividirse) {
+			console.log(
+				"🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados..."
+			);
+			console.log("📋 [EXPRESS] Datos de los tramos:", {
+				idReservaIda: reservaExpress.id,
+				codigoIda: reservaExpress.codigoReserva,
+				fechaIda: datosReserva.fecha,
+				horaIda: datosReserva.hora,
+				fechaVuelta: datosReserva.fechaRegreso,
+				horaVuelta: datosReserva.horaRegreso,
+			});
 
 			// Validar que existan datos de regreso antes de dividir
-		if (!datosReserva.fechaRegreso) {
-			console.error("❌ [EXPRESS] Error: idaVuelta=true pero falta fechaRegreso. No se dividirá la reserva.");
-			// No dividir, mantener como reserva única con idaVuelta=true
-		} else {
-			try {
-				// 1. Preparar datos para el tramo de vuelta
-				// Invertir origen/destino y direcciones
-				const origenVuelta = datosReserva.destino || "";
-				const destinoVuelta = datosReserva.origen || "";
-				const dirOrigenVuelta = datosReserva.direccionDestino || "";
-				const dirDestinoVuelta = datosReserva.direccionOrigen || "";
-				
-				// Generar nuevo código para la vuelta
-				let codigoVuelta = await generarCodigoReserva();
+			if (!datosReserva.fechaRegreso) {
+				console.error(
+					"❌ [EXPRESS] Error: idaVuelta=true pero falta fechaRegreso. No se dividirá la reserva."
+				);
+				// No dividir, mantener como reserva única con idaVuelta=true
+			} else {
+				try {
+					// 1. Preparar datos para el tramo de vuelta
+					// Invertir origen/destino y direcciones
+					const origenVuelta = datosReserva.destino || "";
+					const destinoVuelta = datosReserva.origen || "";
+					const dirOrigenVuelta = datosReserva.direccionDestino || "";
+					const dirDestinoVuelta = datosReserva.direccionOrigen || "";
 
-				// 🛡️ GUARDIA COLISIÓN: Si el código generado es igual al de ida (sucede en llamadas casi simultáneas)
-				if (codigoVuelta === reservaExpress.codigoReserva) {
-					console.log(`⚠️ Colisión de código detectada (${codigoVuelta}), ajustando para el tramo de vuelta...`);
-					const parts = codigoVuelta.split("-");
-					if (parts.length === 3) {
-						const nextNum = parseInt(parts[2], 10) + 1;
-						codigoVuelta = `${parts[0]}-${parts[1]}-${String(nextNum).padStart(4, "0")}`;
-					} else {
-						codigoVuelta += "-R"; // Fallback seguro
+					// Generar nuevo código para la vuelta
+					let codigoVuelta = await generarCodigoReserva();
+
+					// 🛡️ GUARDIA COLISIÓN: Si el código generado es igual al de ida (sucede en llamadas casi simultáneas)
+					if (codigoVuelta === reservaExpress.codigoReserva) {
+						console.log(
+							`⚠️ Colisión de código detectada (${codigoVuelta}), ajustando para el tramo de vuelta...`
+						);
+						const parts = codigoVuelta.split("-");
+						if (parts.length === 3) {
+							const nextNum = parseInt(parts[2], 10) + 1;
+							codigoVuelta = `${parts[0]}-${parts[1]}-${String(
+								nextNum
+							).padStart(4, "0")}`;
+						} else {
+							codigoVuelta += "-R"; // Fallback seguro
+						}
 					}
+
+					// Dividir costos y pagos (50/50 para simplificar asignación inicial)
+					const totalOriginal = Number(reservaExpress.totalConDescuento) || 0;
+					const pagoOriginal = Number(reservaExpress.pagoMonto) || 0;
+
+					const precioIda = (Number(reservaExpress.precio) || 0) / 2;
+					const precioVuelta = (Number(reservaExpress.precio) || 0) / 2;
+					const totalIda = totalOriginal / 2;
+					const totalVuelta = totalOriginal / 2;
+					const pagoIda = pagoOriginal / 2;
+					const pagoVuelta = pagoOriginal / 2;
+
+					// 2. Crear reserva de VUELTA (Hijo)
+					const reservaVuelta = await Reserva.create({
+						// Copiar datos base del cliente/contacto
+						nombre: reservaExpress.nombre,
+						email: reservaExpress.email,
+						telefono: reservaExpress.telefono,
+						clienteId: reservaExpress.clienteId,
+						rut: reservaExpress.rut,
+						pasajeros: reservaExpress.pasajeros,
+
+						// Datos específicos de la vuelta
+						codigoReserva: codigoVuelta,
+						origen: origenVuelta,
+						destino: destinoVuelta,
+						direccionOrigen: dirOrigenVuelta,
+						direccionDestino: dirDestinoVuelta,
+						fecha: datosReserva.fechaRegreso, // Fecha regreso original
+						hora: normalizeTimeGlobal(datosReserva.horaRegreso), // Hora regreso original
+
+						// Datos financieros (mitad del total y pago)
+						precio: precioVuelta,
+						totalConDescuento: totalVuelta,
+						pagoMonto: pagoVuelta,
+						abonoPagado: reservaExpress.abonoPagado,
+						saldoPagado: reservaExpress.saldoPagado,
+						descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
+						descuentoPromocion:
+							(Number(reservaExpress.descuentoPromocion) || 0) / 2,
+						descuentoRoundTrip:
+							(Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
+						descuentoOnline: (Number(reservaExpress.descuentoOnline) || 0) / 2,
+						abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
+						saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
+
+						// Datos operativos
+						vehiculo: reservaExpress.vehiculo, // Copiar preferencia de vehículo
+						numeroVuelo: "", // El vuelo de vuelta suele ser diferente
+						hotel: reservaExpress.hotel, // Asumir mismo hotel si aplica
+						equipajeEspecial: reservaExpress.equipajeEspecial,
+						sillaInfantil: reservaExpress.sillaInfantil,
+						mensaje: reservaExpress.mensaje,
+						source: reservaExpress.source,
+
+						// Estado
+						estado: reservaExpress.estado, // Hereda estado del tramo de ida
+						estadoPago: reservaExpress.estadoPago, // Hereda estado de pago
+						metodoPago: reservaExpress.metodoPago,
+						referenciaPago: reservaExpress.referenciaPago,
+						duracionMinutos: reservaExpress.duracionMinutos,
+						tipoPago: reservaExpress.tipoPago,
+
+						// Vinculación y Flags
+						idaVuelta: false, // Ya no es ida y vuelta "per se", es un tramo
+						tipoTramo: "vuelta",
+						tramoPadreId: reservaExpress.id,
+						tramoHijoId: null,
+						fechaRegreso: null, // Limpiar
+						horaRegreso: null,
+
+						// Metadata
+						ipAddress: reservaExpress.ipAddress,
+						userAgent: reservaExpress.userAgent,
+						codigoDescuento: reservaExpress.codigoDescuento,
+					});
+
+					console.log(
+						`✅ [EXPRESS] Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`
+					);
+
+					// 3. Actualizar reserva de IDA (Padre)
+					await reservaExpress.update({
+						precio: precioIda,
+						totalConDescuento: totalIda,
+						pagoMonto: pagoIda,
+						abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
+						saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
+						descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
+						descuentoPromocion:
+							(Number(reservaExpress.descuentoPromocion) || 0) / 2,
+						descuentoRoundTrip:
+							(Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
+						descuentoOnline: (Number(reservaExpress.descuentoOnline) || 0) / 2,
+
+						// Vinculación y Flags
+						idaVuelta: false, // Convertir a tramo único
+						tipoTramo: "ida",
+						tramoHijoId: reservaVuelta.id,
+
+						// Limpiar datos de regreso ya que ahora están en otra reserva
+						fechaRegreso: null,
+						horaRegreso: null,
+					});
+
+					console.log(
+						`✅ [EXPRESS] Tramo de ida actualizado y vinculado: ${reservaExpress.id}`
+					);
+
+					// Nota: reservaExpress sigue siendo el objeto que se usará para el email confirmación.
+					// Como el email usa 'datosReserva' (el input original), el cliente seguirá recibiendo
+					// el resumen completo "Ida y Vuelta" con los totales correctos.
+				} catch (errorSplit) {
+					console.error(
+						"❌ [EXPRESS] Error al dividir reserva ida y vuelta:",
+						errorSplit
+					);
+					// No fallar el request completo, pero loguear error crítico
 				}
-				
-				// Dividir costos y pagos (50/50 para simplificar asignación inicial)
-				const totalOriginal = Number(reservaExpress.totalConDescuento) || 0;
-				const pagoOriginal = Number(reservaExpress.pagoMonto) || 0;
-				
-				const precioIda = (Number(reservaExpress.precio) || 0) / 2;
-				const precioVuelta = (Number(reservaExpress.precio) || 0) / 2;
-				const totalIda = totalOriginal / 2;
-				const totalVuelta = totalOriginal / 2;
-				const pagoIda = pagoOriginal / 2;
-				const pagoVuelta = pagoOriginal / 2;
-
-				// 2. Crear reserva de VUELTA (Hijo)
-				const reservaVuelta = await Reserva.create({
-					// Copiar datos base del cliente/contacto
-					nombre: reservaExpress.nombre,
-					email: reservaExpress.email,
-					telefono: reservaExpress.telefono,
-					clienteId: reservaExpress.clienteId,
-					rut: reservaExpress.rut,
-					pasajeros: reservaExpress.pasajeros,
-					
-					// Datos específicos de la vuelta
-					codigoReserva: codigoVuelta,
-					origen: origenVuelta,
-					destino: destinoVuelta,
-					direccionOrigen: dirOrigenVuelta,
-					direccionDestino: dirDestinoVuelta,
-					fecha: datosReserva.fechaRegreso, // Fecha regreso original
-					hora: normalizeTimeGlobal(datosReserva.horaRegreso),   // Hora regreso original
-					
-					// Datos financieros (mitad del total y pago)
-					precio: precioVuelta,
-					totalConDescuento: totalVuelta,
-					pagoMonto: pagoVuelta,
-					abonoPagado: reservaExpress.abonoPagado,
-					saldoPagado: reservaExpress.saldoPagado,
-					descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
-					descuentoPromocion: (Number(reservaExpress.descuentoPromocion) || 0) / 2,
-					descuentoRoundTrip: (Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
-					descuentoOnline: (Number(reservaExpress.descuentoOnline) || 0) / 2,
-					abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
-					saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
-					
-					// Datos operativos
-					vehiculo: reservaExpress.vehiculo, // Copiar preferencia de vehículo
-					numeroVuelo: "", // El vuelo de vuelta suele ser diferente
-					hotel: reservaExpress.hotel, // Asumir mismo hotel si aplica
-					equipajeEspecial: reservaExpress.equipajeEspecial,
-					sillaInfantil: reservaExpress.sillaInfantil,
-					mensaje: reservaExpress.mensaje,
-					source: reservaExpress.source,
-					
-					// Estado
-					estado: reservaExpress.estado, // Hereda estado del tramo de ida
-					estadoPago: reservaExpress.estadoPago, // Hereda estado de pago
-					metodoPago: reservaExpress.metodoPago,
-					referenciaPago: reservaExpress.referenciaPago,
-					duracionMinutos: reservaExpress.duracionMinutos,
-					tipoPago: reservaExpress.tipoPago,
-					
-					// Vinculación y Flags
-					idaVuelta: false, // Ya no es ida y vuelta "per se", es un tramo
-					tipoTramo: "vuelta",
-					tramoPadreId: reservaExpress.id,
-					tramoHijoId: null,
-					fechaRegreso: null, // Limpiar
-					horaRegreso: null,
-					
-					// Metadata
-					ipAddress: reservaExpress.ipAddress,
-					userAgent: reservaExpress.userAgent,
-					codigoDescuento: reservaExpress.codigoDescuento
-				});
-
-				console.log(`✅ [EXPRESS] Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`);
-
-				// 3. Actualizar reserva de IDA (Padre)
-				await reservaExpress.update({
-					precio: precioIda,
-					totalConDescuento: totalIda,
-					pagoMonto: pagoIda,
-					abonoSugerido: (Number(reservaExpress.abonoSugerido) || 0) / 2,
-					saldoPendiente: (Number(reservaExpress.saldoPendiente) || 0) / 2,
-					descuentoBase: (Number(reservaExpress.descuentoBase) || 0) / 2,
-					descuentoPromocion: (Number(reservaExpress.descuentoPromocion) || 0) / 2,
-					descuentoRoundTrip: (Number(reservaExpress.descuentoRoundTrip) || 0) / 2,
-					descuentoOnline: (Number(reservaExpress.descuentoOnline) || 0) / 2,
-					
-					// Vinculación y Flags
-					idaVuelta: false, // Convertir a tramo único
-					tipoTramo: "ida",
-					tramoHijoId: reservaVuelta.id,
-					
-					// Limpiar datos de regreso ya que ahora están en otra reserva
-					fechaRegreso: null,
-					horaRegreso: null
-				});
-				
-				console.log(`✅ [EXPRESS] Tramo de ida actualizado y vinculado: ${reservaExpress.id}`);
-
-				// Nota: reservaExpress sigue siendo el objeto que se usará para el email confirmación.
-				// Como el email usa 'datosReserva' (el input original), el cliente seguirá recibiendo 
-				// el resumen completo "Ida y Vuelta" con los totales correctos.
-				
-			} catch (errorSplit) {
-				console.error("❌ [EXPRESS] Error al dividir reserva ida y vuelta:", errorSplit);
-				// No fallar el request completo, pero loguear error crítico
 			}
 		}
-	}
 
 		if (clienteIdAsociado) {
 			try {
@@ -4020,7 +4230,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		// --- LÓGICA DE CORREO DIFERIDO (DESCUENTO) - EXPRESS ---
 		// Si la reserva está pendiente de pago, programar correo de descuento
 		if (
-			(reservaExpress.estadoPago === "pendiente") &&
+			reservaExpress.estadoPago === "pendiente" &&
 			datosReserva.source !== "codigo_pago"
 		) {
 			try {
@@ -4029,48 +4239,66 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					where: {
 						reservaId: reservaExpress.id,
 						status: "pending",
-						type: "discount_offer"
-					}
+						type: "discount_offer",
+					},
 				});
 
 				if (!existingPending) {
 					// Calcular fecha de envío (30 minutos después)
 					const scheduledAt = new Date(Date.now() + 30 * 60 * 1000);
-					
+
 					await PendingEmail.create({
 						reservaId: reservaExpress.id,
 						email: reservaExpress.email,
 						type: "discount_offer",
 						status: "pending",
-						scheduledAt: scheduledAt
+						scheduledAt: scheduledAt,
 					});
-					
-					console.log(`⏳ Correo de descuento express programado para reserva ${reservaExpress.codigoReserva} a las ${scheduledAt.toISOString()}`);
-					
+
+					console.log(
+						`⏳ Correo de descuento express programado para reserva ${
+							reservaExpress.codigoReserva
+						} a las ${scheduledAt.toISOString()}`
+					);
+
 					// Enviar notificación SOLO al administrador inmediatamente
 					if (enviarCorreo) {
 						try {
-							const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-							await axios.post(phpUrl, {
-								...datosReserva,
-								codigoReserva: reservaExpress.codigoReserva,
-								precio: reservaExpress.precio,
-								totalConDescuento: reservaExpress.totalConDescuento,
-								source: reservaExpress.source || "express_web",
-								estadoPago: "pendiente",
-								action: "notify_admin_only" // NUEVO PARÁMETRO
-							}, {
-								headers: { "Content-Type": "application/json" },
-								timeout: 10000
-							});
-							console.log("✅ Notificación express al admin enviada correctamente");
+							const phpUrl =
+								process.env.PHP_EMAIL_URL ||
+								"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+							await axios.post(
+								phpUrl,
+								{
+									...datosReserva,
+									codigoReserva: reservaExpress.codigoReserva,
+									precio: reservaExpress.precio,
+									totalConDescuento: reservaExpress.totalConDescuento,
+									source: reservaExpress.source || "express_web",
+									estadoPago: "pendiente",
+									action: "notify_admin_only", // NUEVO PARÁMETRO
+								},
+								{
+									headers: { "Content-Type": "application/json" },
+									timeout: 10000,
+								}
+							);
+							console.log(
+								"✅ Notificación express al admin enviada correctamente"
+							);
 						} catch (adminEmailError) {
-							console.error("❌ Error enviando notificación express al admin:", adminEmailError.message);
+							console.error(
+								"❌ Error enviando notificación express al admin:",
+								adminEmailError.message
+							);
 						}
 					}
 				}
 			} catch (scheduleError) {
-				console.error("❌ Error programando correo de descuento express:", scheduleError);
+				console.error(
+					"❌ Error programando correo de descuento express:",
+					scheduleError
+				);
 			}
 		}
 
@@ -4100,66 +4328,97 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 		const emailNormalizado = sanitizarEmailRobusto(datos.email);
 
 		if (!emailNormalizado) {
-			return res.status(400).json({ success: false, message: "Email es requerido" });
+			return res
+				.status(400)
+				.json({ success: false, message: "Email es requerido" });
 		}
 
 		// 1. Buscar si hay un lead reciente (24h) para este email para actualizarlo en lugar de crear uno nuevo
 		const hace24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
-		
+
 		let reservaLead = await Reserva.findOne({
 			where: {
 				email: emailNormalizado,
 				estado: "pendiente",
 				source: "lead_hero_abandonado",
-				created_at: { [Op.gte]: hace24Horas }
+				created_at: { [Op.gte]: hace24Horas },
 			},
-			order: [["created_at", "DESC"]]
+			order: [["created_at", "DESC"]],
 		});
 
 		const datosAGuardar = {
-			nombre: datos.nombre || (reservaLead ? reservaLead.nombre : "Cliente Potencial"),
+			nombre:
+				datos.nombre ||
+				(reservaLead ? reservaLead.nombre : "Cliente Potencial"),
 			email: emailNormalizado,
 			telefono: datos.telefono || (reservaLead ? reservaLead.telefono : ""),
 			origen: datos.origen || (reservaLead ? reservaLead.origen : ""),
 			destino: datos.destino || (reservaLead ? reservaLead.destino : ""),
 			fecha: datos.fecha || (reservaLead ? reservaLead.fecha : null),
-			hora: normalizeTimeGlobal(datos.hora) || (reservaLead ? reservaLead.hora : null),
-			pasajeros: parsePositiveInteger(datos.pasajeros, "pasajeros", reservaLead ? reservaLead.pasajeros : 1),
-			precio: parsePositiveDecimal(datos.precio, "precio", reservaLead ? reservaLead.precio : 0),
-			totalConDescuento: parsePositiveDecimal(datos.totalConDescuento, "totalConDescuento", reservaLead ? reservaLead.totalConDescuento : 0),
+			hora:
+				normalizeTimeGlobal(datos.hora) ||
+				(reservaLead ? reservaLead.hora : null),
+			pasajeros: parsePositiveInteger(
+				datos.pasajeros,
+				"pasajeros",
+				reservaLead ? reservaLead.pasajeros : 1
+			),
+			precio: parsePositiveDecimal(
+				datos.precio,
+				"precio",
+				reservaLead ? reservaLead.precio : 0
+			),
+			totalConDescuento: parsePositiveDecimal(
+				datos.totalConDescuento,
+				"totalConDescuento",
+				reservaLead ? reservaLead.totalConDescuento : 0
+			),
 			vehiculo: datos.vehiculo || (reservaLead ? reservaLead.vehiculo : ""),
 			source: "lead_hero_abandonado",
 			estado: "pendiente",
 			estadoPago: "pendiente",
 			ipAddress: req.ip || req.connection.remoteAddress || "",
-			userAgent: req.get("User-Agent") || ""
+			userAgent: req.get("User-Agent") || "",
 		};
 
 		if (reservaLead) {
-			console.log(`📝 Actualizando lead: [${datosAGuardar.nombre}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString("es-CL")}`);
+			console.log(
+				`📝 Actualizando lead: [${
+					datosAGuardar.nombre
+				}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString(
+					"es-CL"
+				)}`
+			);
 			await reservaLead.update(datosAGuardar);
 		} else {
 			// Generar código de reserva para que sea una reserva válida si el usuario decide completarla después
 			const codigoReserva = await generarCodigoReserva();
 			datosAGuardar.codigoReserva = codigoReserva;
-			
-			console.log(`🎯 NUEVO LEAD: [${datosAGuardar.nombre}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString("es-CL")}`);
+
+			console.log(
+				`🎯 NUEVO LEAD: [${
+					datosAGuardar.nombre
+				}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString(
+					"es-CL"
+				)}`
+			);
 			reservaLead = await Reserva.create(datosAGuardar);
 		}
 
-		// NOTA: No programamos el correo de recuperación aquí todavía, 
-		// eso lo hará el emailProcessor buscando por source="lead_hero_abandonado" 
+		// NOTA: No programamos el correo de recuperación aquí todavía,
+		// eso lo hará el emailProcessor buscando por source="lead_hero_abandonado"
 		// y comparando fechas (ej. enviar si pasaron > 30 min desde created_at/updated_at)
 
 		return res.json({
 			success: true,
 			reservaId: reservaLead.id,
-			codigoReserva: reservaLead.codigoReserva
+			codigoReserva: reservaLead.codigoReserva,
 		});
-
 	} catch (error) {
 		console.error("❌ Error capturando lead:", error);
-		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
@@ -4183,22 +4442,29 @@ app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
 			return res.status(400).send("Monto inválido para pago");
 		}
 
-		console.log(`🔗 Redirigiendo a pago Flow para reserva ${reserva.codigoReserva} (Monto: ${amount}, Tipo: ${type})`);
+		console.log(
+			`🔗 Redirigiendo a pago Flow para reserva ${reserva.codigoReserva} (Monto: ${amount}, Tipo: ${type})`
+		);
 
 		// Reutilizar lógica de generación de pago Flow (simplificada para el redirect)
-		const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
-		const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
+		const frontendBase =
+			process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+		const backendBase =
+			process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
-		
+
 		const commerceOrder = `${reserva.codigoReserva || "RES"}-${Date.now()}`;
-		const description = type === "total" ? `Pago TOTAL traslado #${reserva.codigoReserva}` : `Abono (40%) traslado #${reserva.codigoReserva}`;
+		const description =
+			type === "total"
+				? `Pago TOTAL traslado #${reserva.codigoReserva}`
+				: `Abono (40%) traslado #${reserva.codigoReserva}`;
 
 		const optionalPayload = {
 			reservaId: reserva.id,
 			codigoReserva: reserva.codigoReserva,
 			tipoPago: type,
 			paymentOrigin: "recovery_email",
-			email: reserva.email
+			email: reserva.email,
 		};
 
 		const params = {
@@ -4210,7 +4476,7 @@ app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
 			email: reserva.email,
 			urlConfirmation: `${backendBase}/api/flow-confirmation`,
 			urlReturn: `${backendBase}/api/payment-result`,
-			optional: JSON.stringify(optionalPayload)
+			optional: JSON.stringify(optionalPayload),
 		};
 
 		params.s = signParams(params);
@@ -4230,10 +4496,13 @@ app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
 		} else {
 			throw new Error("Respuesta inválida desde Flow");
 		}
-
 	} catch (error) {
 		console.error("❌ Error en pay-redirect:", error.message);
-		res.status(500).send("Error al generar el enlace de pago. Por favor intenta más tarde o contáctanos por WhatsApp.");
+		res
+			.status(500)
+			.send(
+				"Error al generar el enlace de pago. Por favor intenta más tarde o contáctanos por WhatsApp."
+			);
 	}
 });
 
@@ -4265,14 +4534,17 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 		);
 		const observaciones = body.observaciones || "";
 		// Nueva duración personalizada
-		const duracionMinutos = body.duracionMinutos ? parseInt(body.duracionMinutos) : null;
+		const duracionMinutos = body.duracionMinutos
+			? parseInt(body.duracionMinutos)
+			: null;
 
 		// Datos del cliente (opcionales)
 		const nombreCliente = String(body.nombreCliente || "").trim() || null;
 		const emailCliente = String(body.emailCliente || "").trim() || null;
 		const telefonoCliente = String(body.telefonoCliente || "").trim() || null;
 		const direccionCliente = String(body.direccionCliente || "").trim() || null;
-		const codigoReservaVinculado = String(body.codigoReservaVinculado || "").trim() || null;
+		const codigoReservaVinculado =
+			String(body.codigoReservaVinculado || "").trim() || null;
 		const reservaVinculadaId = body.reservaVinculadaId || null;
 
 		if (!codigo) {
@@ -4403,34 +4675,35 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 			});
 		}
 
-
 		// Verificar vencimiento
 		if (registro.fechaVencimiento) {
 			const now = new Date();
 			const fechaVenc = new Date(registro.fechaVencimiento);
-			
+
 			if (fechaVenc < now) {
 				// Actualizar estado si aún está activo
 				if (registro.estado === "activo") {
 					await registro.update({ estado: "vencido" }).catch(() => {});
 				}
-				
+
 				// ✅ RETORNAR ERROR - No permitir uso de código vencido
 				return res.json({
 					success: false,
-					message: `El código venció el ${fechaVenc.toLocaleDateString('es-CL', {
-						year: 'numeric',
-						month: 'long',
-						day: 'numeric',
-						hour: '2-digit',
-						minute: '2-digit'
-					})}`,
+					message: `El código venció el ${fechaVenc.toLocaleDateString(
+						"es-CL",
+						{
+							year: "numeric",
+							month: "long",
+							day: "numeric",
+							hour: "2-digit",
+							minute: "2-digit",
+						}
+					)}`,
 					estado: "vencido",
-					fechaVencimiento: registro.fechaVencimiento
+					fechaVencimiento: registro.fechaVencimiento,
 				});
 			}
 		}
-
 
 		// Verificar usos
 		if (registro.usosActuales >= registro.usosMaximos) {
@@ -4503,27 +4776,44 @@ app.put("/api/codigos-pago/:codigo/usar", async (req, res) => {
 // Editar un código de pago (Admin) - cambia monto, vencimiento y observaciones
 app.put("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
 	try {
-		const codigo = String(req.params.codigo || "").trim().toUpperCase();
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
 		const registro = await CodigoPago.findOne({ where: { codigo } });
 		if (!registro) {
-			return res.status(404).json({ success: false, message: "Código de pago no encontrado" });
+			return res
+				.status(404)
+				.json({ success: false, message: "Código de pago no encontrado" });
 		}
 		if (registro.estado === "usado") {
-			return res.status(400).json({ success: false, message: "No se puede editar un código ya usado" });
+			return res
+				.status(400)
+				.json({
+					success: false,
+					message: "No se puede editar un código ya usado",
+				});
 		}
 		const body = req.body || {};
 		const updates = {};
 		if (body.monto !== undefined) {
 			const monto = parseFloat(body.monto);
 			if (!isFinite(monto) || monto <= 0) {
-				return res.status(400).json({ success: false, message: "El monto debe ser mayor a 0" });
+				return res
+					.status(400)
+					.json({ success: false, message: "El monto debe ser mayor a 0" });
 			}
 			updates.monto = monto;
 		}
 		if (body.fechaVencimiento !== undefined) {
-			updates.fechaVencimiento = body.fechaVencimiento ? new Date(body.fechaVencimiento) : null;
+			updates.fechaVencimiento = body.fechaVencimiento
+				? new Date(body.fechaVencimiento)
+				: null;
 			// Si se extiende la fecha, reactivar si estaba vencido o cancelado
-			if (updates.fechaVencimiento && updates.fechaVencimiento > new Date() && (registro.estado === "vencido" || registro.estado === "cancelado")) {
+			if (
+				updates.fechaVencimiento &&
+				updates.fechaVencimiento > new Date() &&
+				(registro.estado === "vencido" || registro.estado === "cancelado")
+			) {
 				updates.estado = "activo";
 			}
 		}
@@ -4541,26 +4831,42 @@ app.put("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
 		return res.json({ success: true, codigoPago: actualizado });
 	} catch (error) {
 		console.error("Error editando código de pago:", error);
-		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
 // Cancelar un código de pago sin eliminarlo (Admin)
 app.put("/api/codigos-pago/:codigo/cancelar", authAdmin, async (req, res) => {
 	try {
-		const codigo = String(req.params.codigo || "").trim().toUpperCase();
+		const codigo = String(req.params.codigo || "")
+			.trim()
+			.toUpperCase();
 		const registro = await CodigoPago.findOne({ where: { codigo } });
 		if (!registro) {
-			return res.status(404).json({ success: false, message: "Código de pago no encontrado" });
+			return res
+				.status(404)
+				.json({ success: false, message: "Código de pago no encontrado" });
 		}
 		if (registro.estado === "usado") {
-			return res.status(400).json({ success: false, message: "No se puede cancelar un código ya usado" });
+			return res
+				.status(400)
+				.json({
+					success: false,
+					message: "No se puede cancelar un código ya usado",
+				});
 		}
 		await registro.update({ estado: "cancelado" });
-		return res.json({ success: true, message: "Código cancelado correctamente" });
+		return res.json({
+			success: true,
+			message: "Código cancelado correctamente",
+		});
 	} catch (error) {
 		console.error("Error cancelando código de pago:", error);
-		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
@@ -4622,51 +4928,53 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			],
 		});
 		if (!reserva) {
-		return res.status(404).json({
-			success: false,
-			message: "Reserva no encontrada",
-		});
-	}
+			return res.status(404).json({
+				success: false,
+				message: "Reserva no encontrada",
+			});
+		}
 
-	// Validar que se proporcione la dirección de Google (obligatoria)
-	if (!detalles.direccionGoogle || !detalles.direccionGoogle.trim()) {
-		return res.status(400).json({
-			success: false,
-			message: "La dirección geográfica es obligatoria para completar la reserva",
-		});
-	}
+		// Validar que se proporcione la dirección de Google (obligatoria)
+		if (!detalles.direccionGoogle || !detalles.direccionGoogle.trim()) {
+			return res.status(400).json({
+				success: false,
+				message:
+					"La dirección geográfica es obligatoria para completar la reserva",
+			});
+		}
 
-	// Determinar sentido del viaje para asignar la dirección de Google al campo correcto
-	let direccionOrigen = reserva.direccionOrigen;
-	let direccionDestino = reserva.direccionDestino;
+		// Determinar sentido del viaje para asignar la dirección de Google al campo correcto
+		let direccionOrigen = reserva.direccionOrigen;
+		let direccionDestino = reserva.direccionDestino;
 
-	if (reserva.origen === "Aeropuerto La Araucanía") {
-		// Viaje DESDE el aeropuerto -> La dirección es el DESTINO
-		direccionDestino = detalles.direccionGoogle.trim();
-	} else if (reserva.destino === "Aeropuerto La Araucanía") {
-		// Viaje HACIA el aeropuerto -> La dirección es el ORIGEN
-		direccionOrigen = detalles.direccionGoogle.trim();
-	} else {
-		// Caso secundario: Si ninguno es aeropuerto, por defecto lo guardamos en destino
-		direccionDestino = detalles.direccionGoogle.trim();
-	}
+		if (reserva.origen === "Aeropuerto La Araucanía") {
+			// Viaje DESDE el aeropuerto -> La dirección es el DESTINO
+			direccionDestino = detalles.direccionGoogle.trim();
+		} else if (reserva.destino === "Aeropuerto La Araucanía") {
+			// Viaje HACIA el aeropuerto -> La dirección es el ORIGEN
+			direccionOrigen = detalles.direccionGoogle.trim();
+		} else {
+			// Caso secundario: Si ninguno es aeropuerto, por defecto lo guardamos en destino
+			direccionDestino = detalles.direccionGoogle.trim();
+		}
 
-	// Actualizar con los detalles proporcionados
-	const datosActualizados = {
-		hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
-		fecha: detalles.fecha || reserva.fecha,
-		numeroVuelo: detalles.numeroVuelo || "",
-		direccionOrigen,
-		direccionDestino,
-		hotel: detalles.hotel ? detalles.hotel.trim() : "", // Ahora es opcional (referencia)
-		equipajeEspecial: detalles.equipajeEspecial || "",
-		sillaInfantil: detalles.sillaInfantil === "si" || detalles.sillaInfantil === true,
-		idaVuelta: Boolean(detalles.idaVuelta),
-		fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
-		horaRegreso:
-			normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
-		estado: "confirmada",
-	};
+		// Actualizar con los detalles proporcionados
+		const datosActualizados = {
+			hora: normalizeTimeGlobal(detalles.hora) || reserva.hora,
+			fecha: detalles.fecha || reserva.fecha,
+			numeroVuelo: detalles.numeroVuelo || "",
+			direccionOrigen,
+			direccionDestino,
+			hotel: detalles.hotel ? detalles.hotel.trim() : "", // Ahora es opcional (referencia)
+			equipajeEspecial: detalles.equipajeEspecial || "",
+			sillaInfantil:
+				detalles.sillaInfantil === "si" || detalles.sillaInfantil === true,
+			idaVuelta: Boolean(detalles.idaVuelta),
+			fechaRegreso: detalles.fechaRegreso || reserva.fechaRegreso,
+			horaRegreso:
+				normalizeTimeGlobal(detalles.horaRegreso) || reserva.horaRegreso,
+			estado: "confirmada",
+		};
 
 		await reserva.update(datosActualizados);
 
@@ -4675,8 +4983,10 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		try {
 			const vinculadoId = reserva.tramoHijoId || reserva.tramoPadreId;
 			if (vinculadoId) {
-				console.log(`🔗 Propagando campos comunes a reserva vinculada ${vinculadoId}...`);
-				
+				console.log(
+					`🔗 Propagando campos comunes a reserva vinculada ${vinculadoId}...`
+				);
+
 				// Campos que deben ser idénticos en ambos tramos (logística compartida)
 				const camposComunes = {
 					hotel: datosActualizados.hotel,
@@ -4687,126 +4997,162 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 				};
 
 				await Reserva.update(camposComunes, {
-					where: { id: vinculadoId }
+					where: { id: vinculadoId },
 				});
 				console.log(`✅ Propagación exitosa a reserva ${vinculadoId}`);
 			}
 		} catch (propError) {
-			console.error("❌ Error al propagar detalles a reserva vinculada:", propError.message);
+			console.error(
+				"❌ Error al propagar detalles a reserva vinculada:",
+				propError.message
+			);
 			// No bloqueamos la respuesta principal por esto
 		}
 
-	console.log(`✅ Detalles completados para reserva ${id}`);
+		console.log(`✅ Detalles completados para reserva ${id}`);
 
-	// Recargar la reserva con todas las relaciones para las notificaciones
-	const reservaCompleta = await Reserva.findByPk(id, {
-		include: [
-			{
-				model: Cliente,
-				as: "cliente",
-			},
-		],
-	});
-
-	// Enviar notificación de confirmación al cliente
-	try {
-		console.log("📧 Enviando confirmación de detalles completados al cliente...");
-		
-		// ✅ CORRECCIÓN: Usar archivo PHP unificado existente
-		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-		
-		const clientePayload = {
-			// Parámetros de la reserva
-			email: reservaCompleta.email,
-			nombre: reservaCompleta.nombre,
-			codigoReserva: reservaCompleta.codigoReserva,
-			origen: reservaCompleta.origen,
-			destino: reservaCompleta.destino,
-			fecha: reservaCompleta.fecha,
-			hora: reservaCompleta.hora,
-			pasajeros: reservaCompleta.pasajeros,
-			numeroVuelo: reservaCompleta.numeroVuelo || "",
-			hotel: reservaCompleta.hotel || "",
-			equipajeEspecial: reservaCompleta.equipajeEspecial || "",
-			sillaInfantil: reservaCompleta.sillaInfantil || "no",
-			idaVuelta: reservaCompleta.idaVuelta,
-			fechaRegreso: reservaCompleta.fechaRegreso || "",
-			horaRegreso: reservaCompleta.horaRegreso || "",
-			
-			// ✅ NUEVO: Agregar acción específica para el PHP
-			action: "notify_client_details_completed"
-		};
-
-		await axios.post(phpUrl, clientePayload, {
-			headers: { "Content-Type": "application/json" },
-			timeout: 10000,
+		// Recargar la reserva con todas las relaciones para las notificaciones
+		const reservaCompleta = await Reserva.findByPk(id, {
+			include: [
+				{
+					model: Cliente,
+					as: "cliente",
+				},
+			],
 		});
 
-		console.log(`✅ Confirmación enviada al cliente ${reservaCompleta.email}`);
-	} catch (emailError) {
-		console.error("❌ Error enviando confirmación al cliente:", emailError.message);
-		
-		// ✅ MEJORA: Log más detallado para depuración
-		if (emailError.response) {
-			console.error(`   - Status HTTP: ${emailError.response.status}`);
-			console.error(`   - Respuesta del servidor: ${JSON.stringify(emailError.response.data)}`);
-		}
-	}
+		// Enviar notificación de confirmación al cliente
+		try {
+			console.log(
+				"📧 Enviando confirmación de detalles completados al cliente..."
+			);
 
-	// NUEVO: Enviar notificación al administrador cuando se completan los detalles
-	try {
-		console.log("📧 Enviando notificación de detalles completados al administrador...");
-		const phpAdminUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-		
-		await axios.post(phpAdminUrl, {
-			action: "notify_admin_details_completed",
-			reservaId: reservaCompleta.id,
-			codigoReserva: reservaCompleta.codigoReserva,
-			nombre: reservaCompleta.nombre,
-			hotel: reservaCompleta.hotel,
-			numeroVuelo: reservaCompleta.numeroVuelo,
-			hora: reservaCompleta.hora,
-			idaVuelta: reservaCompleta.idaVuelta,
-			upgradeVan: reservaCompleta.upgradeVan,
-			fechaRegreso: reservaCompleta.fechaRegreso,
-			horaRegreso: reservaCompleta.horaRegreso,
-			equipajeEspecial: reservaCompleta.equipajeEspecial
-		}, {
-			headers: { "Content-Type": "application/json" },
-			timeout: 10000
+			// ✅ CORRECCIÓN: Usar archivo PHP unificado existente
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+
+			const clientePayload = {
+				// Parámetros de la reserva
+				email: reservaCompleta.email,
+				nombre: reservaCompleta.nombre,
+				codigoReserva: reservaCompleta.codigoReserva,
+				origen: reservaCompleta.origen,
+				destino: reservaCompleta.destino,
+				fecha: reservaCompleta.fecha,
+				hora: reservaCompleta.hora,
+				pasajeros: reservaCompleta.pasajeros,
+				numeroVuelo: reservaCompleta.numeroVuelo || "",
+				hotel: reservaCompleta.hotel || "",
+				equipajeEspecial: reservaCompleta.equipajeEspecial || "",
+				sillaInfantil: reservaCompleta.sillaInfantil || "no",
+				idaVuelta: reservaCompleta.idaVuelta,
+				fechaRegreso: reservaCompleta.fechaRegreso || "",
+				horaRegreso: reservaCompleta.horaRegreso || "",
+
+				// ✅ NUEVO: Agregar acción específica para el PHP
+				action: "notify_client_details_completed",
+			};
+
+			await axios.post(phpUrl, clientePayload, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000,
+			});
+
+			console.log(
+				`✅ Confirmación enviada al cliente ${reservaCompleta.email}`
+			);
+		} catch (emailError) {
+			console.error(
+				"❌ Error enviando confirmación al cliente:",
+				emailError.message
+			);
+
+			// ✅ MEJORA: Log más detallado para depuración
+			if (emailError.response) {
+				console.error(`   - Status HTTP: ${emailError.response.status}`);
+				console.error(
+					`   - Respuesta del servidor: ${JSON.stringify(
+						emailError.response.data
+					)}`
+				);
+			}
+		}
+
+		// NUEVO: Enviar notificación al administrador cuando se completan los detalles
+		try {
+			console.log(
+				"📧 Enviando notificación de detalles completados al administrador..."
+			);
+			const phpAdminUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+
+			await axios.post(
+				phpAdminUrl,
+				{
+					action: "notify_admin_details_completed",
+					reservaId: reservaCompleta.id,
+					codigoReserva: reservaCompleta.codigoReserva,
+					nombre: reservaCompleta.nombre,
+					hotel: reservaCompleta.hotel,
+					numeroVuelo: reservaCompleta.numeroVuelo,
+					hora: reservaCompleta.hora,
+					idaVuelta: reservaCompleta.idaVuelta,
+					upgradeVan: reservaCompleta.upgradeVan,
+					fechaRegreso: reservaCompleta.fechaRegreso,
+					horaRegreso: reservaCompleta.horaRegreso,
+					equipajeEspecial: reservaCompleta.equipajeEspecial,
+				},
+				{
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				}
+			);
+			console.log("✅ Notificación de detalles al administrador enviada");
+		} catch (adminError) {
+			console.error(
+				"❌ Error enviando notificación de detalles al administrador:",
+				adminError.message
+			);
+		}
+
+		// 🎯 NUEVO: Generar oportunidades automáticamente
+		try {
+			console.log(
+				`🎯 Generando oportunidades para reserva ${reservaCompleta.id}...`
+			);
+			const oportunidadesGeneradas = await detectarYGenerarOportunidades(
+				reservaCompleta
+			);
+			if (oportunidadesGeneradas.length > 0) {
+				console.log(
+					`✅ ${oportunidadesGeneradas.length} oportunidades generadas:`,
+					oportunidadesGeneradas.map((op) => op.codigo)
+				);
+			} else {
+				console.log(`ℹ️ No se generaron oportunidades para esta reserva`);
+			}
+		} catch (oportunidadError) {
+			// No fallar la confirmación si hay error generando oportunidades
+			console.error(
+				"❌ Error generando oportunidades (no crítico):",
+				oportunidadError.message
+			);
+		}
+
+		return res.json({
+			success: true,
+			message: "Detalles actualizados correctamente",
+			reserva: reservaCompleta,
 		});
-		console.log("✅ Notificación de detalles al administrador enviada");
-	} catch (adminError) {
-		console.error("❌ Error enviando notificación de detalles al administrador:", adminError.message);
+	} catch (error) {
+		console.error("Error actualizando detalles de reserva:", error);
+		return res.status(500).json({
+			success: false,
+			message: "Error interno del servidor",
+		});
 	}
-
-	// 🎯 NUEVO: Generar oportunidades automáticamente
-	try {
-		console.log(`🎯 Generando oportunidades para reserva ${reservaCompleta.id}...`);
-		const oportunidadesGeneradas = await detectarYGenerarOportunidades(reservaCompleta);
-		if (oportunidadesGeneradas.length > 0) {
-			console.log(`✅ ${oportunidadesGeneradas.length} oportunidades generadas:`, 
-				oportunidadesGeneradas.map(op => op.codigo));
-		} else {
-			console.log(`ℹ️ No se generaron oportunidades para esta reserva`);
-		}
-	} catch (oportunidadError) {
-		// No fallar la confirmación si hay error generando oportunidades
-		console.error("❌ Error generando oportunidades (no crítico):", oportunidadError.message);
-	}
-	
-	return res.json({
-		success: true,
-		message: "Detalles actualizados correctamente",
-		reserva: reservaCompleta,
-	});
-} catch (error) {
-	console.error("Error actualizando detalles de reserva:", error);
-	return res.status(500).json({
-		success: false,
-		message: "Error interno del servidor",
-	});
-}
 });
 
 // --- ENDPOINTS PARA GESTIONAR RECURSOS (CONDUCTORES/VEHICULOS) ---
@@ -4814,18 +5160,18 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 // Obtener lista de conductores (Admin)
 app.get("/api/conductores", authAdmin, async (req, res) => {
 	try {
-        const { estado } = req.query;
-        const whereClause = {};
-        
-        if (estado) {
-            whereClause.estado = estado;
-        }
+		const { estado } = req.query;
+		const whereClause = {};
+
+		if (estado) {
+			whereClause.estado = estado;
+		}
 
 		const conductores = await Conductor.findAll({
-            where: whereClause,
+			where: whereClause,
 			order: [["nombre", "ASC"]],
 		});
-        
+
 		res.json({ success: true, conductores });
 	} catch (error) {
 		console.error("Error obteniendo conductores:", error);
@@ -4836,18 +5182,18 @@ app.get("/api/conductores", authAdmin, async (req, res) => {
 // Obtener lista de vehiculos (Admin)
 app.get("/api/vehiculos", authAdmin, async (req, res) => {
 	try {
-        const { estado } = req.query;
-        const whereClause = {};
-        
-        if (estado) {
-            whereClause.estado = estado;
-        }
+		const { estado } = req.query;
+		const whereClause = {};
+
+		if (estado) {
+			whereClause.estado = estado;
+		}
 
 		const vehiculos = await Vehiculo.findAll({
-            where: whereClause,
+			where: whereClause,
 			order: [["patente", "ASC"]],
 		});
-        
+
 		res.json({ success: true, vehiculos });
 	} catch (error) {
 		console.error("Error obteniendo vehiculos:", error);
@@ -4940,10 +5286,10 @@ app.get("/api/reservas/estadisticas", authAdmin, async (req, res) => {
 // Obtener una una reserva específica
 app.get("/api/reservas/:id", authAdmin, async (req, res) => {
 	try {
-        // Verificar si es ID numerico valido antes de consultar
-        if (!req.params.id || isNaN(req.params.id)) {
-             return res.status(400).json({ success: false, message: "ID inválido" });
-        }
+		// Verificar si es ID numerico valido antes de consultar
+		if (!req.params.id || isNaN(req.params.id)) {
+			return res.status(400).json({ success: false, message: "ID inválido" });
+		}
 
 		const reserva = await Reserva.findByPk(req.params.id, {
 			include: [
@@ -5001,7 +5347,7 @@ app.get("/api/reservas", async (req, res) => {
 			whereClause.estado = estado;
 			// Si filtramos por completadas, excluir las que tienen gastos cerrados
 			// EXCEPTO si incluir_cerradas=true
-			if (estado === 'completada' && incluir_cerradas !== 'true') {
+			if (estado === "completada" && incluir_cerradas !== "true") {
 				whereClause.gastosCerrados = false;
 			}
 		}
@@ -5012,15 +5358,12 @@ app.get("/api/reservas", async (req, res) => {
 		}
 
 		// Filtro: Sin Asignación (conductor o vehiculo faltante)
-		if (req.query.sin_asignacion === 'true') {
-			whereClause[Op.or] = [
-				{ conductorId: null },
-				{ vehiculoId: null }
-			];
+		if (req.query.sin_asignacion === "true") {
+			whereClause[Op.or] = [{ conductorId: null }, { vehiculoId: null }];
 			// Excluir canceladas/completadas si no se especifica estado
 			if (!estado) {
 				whereClause.estado = {
-					[Op.notIn]: ['cancelada', 'completada']
+					[Op.notIn]: ["cancelada", "completada"],
 				};
 			}
 		}
@@ -5031,33 +5374,33 @@ app.get("/api/reservas", async (req, res) => {
 		// Si se requiere listar explicitamente las vueltas, se podría añadir un flag tipo `incluir_vueltas=true`
 		if (!req.query.incluir_vueltas) {
 			whereClause.tipoTramo = {
-				[Op.ne]: 'vuelta'
+				[Op.ne]: "vuelta",
 			};
 		}
 
 		// Filtro: Estado Avanzado (Incompletas)
-		if (req.query.estado_avanzado === 'incompletas') {
+		if (req.query.estado_avanzado === "incompletas") {
 			whereClause[Op.and] = [
 				{
 					[Op.or]: [
 						{ numeroVuelo: null },
-						{ numeroVuelo: '' },
+						{ numeroVuelo: "" },
 						{ hotel: null },
-						{ hotel: '' }
-					]
+						{ hotel: "" },
+					],
 				},
 				// Solo considerar reservas pendientes/confirmadas
 				{
 					estado: {
-						[Op.in]: ['pendiente', 'confirmada', 'pendiente_detalles']
-					}
-				}
+						[Op.in]: ["pendiente", "confirmada", "pendiente_detalles"],
+					},
+				},
 			];
 		}
 
 		// Filtro: Archivadas
 		// Por defecto archivada = false, salvo que se pida explicitamente
-		if (req.query.archivadas === 'true') {
+		if (req.query.archivadas === "true") {
 			whereClause.archivada = true;
 		} else {
 			whereClause.archivada = false;
@@ -5068,7 +5411,10 @@ app.get("/api/reservas", async (req, res) => {
 		if (sort && order) {
 			const direction = order.toUpperCase() === "ASC" ? "ASC" : "DESC";
 			if (sort === "fecha") {
-				orderClause = [["fecha", direction], ["hora", "ASC"]];
+				orderClause = [
+					["fecha", direction],
+					["hora", "ASC"],
+				];
 			} else if (sort === "created_at") {
 				orderClause = [["created_at", direction]];
 			}
@@ -5095,16 +5441,24 @@ app.get("/api/reservas", async (req, res) => {
 				{
 					model: Reserva,
 					as: "tramoHijo",
-					attributes: ["id", "fecha", "hora", "numeroVuelo", "pagoMonto", "totalConDescuento", "saldoPendiente"],
+					attributes: [
+						"id",
+						"fecha",
+						"hora",
+						"numeroVuelo",
+						"pagoMonto",
+						"totalConDescuento",
+						"saldoPendiente",
+					],
 					required: false, // Left Join
-				}
+				},
 			],
 		};
 
 		// Manejar paginación
 		const limitNum = parseInt(limit);
 		const pageNum = parseInt(page);
-		
+
 		// Solo aplicar límite y offset si limit > 0
 		// Si limit es -1, se devolverán todos los registros sin paginación
 		if (limitNum > 0) {
@@ -5112,7 +5466,9 @@ app.get("/api/reservas", async (req, res) => {
 			queryOptions.offset = (pageNum - 1) * limitNum;
 		}
 
-		const { count, rows: reservas } = await Reserva.findAndCountAll(queryOptions);
+		const { count, rows: reservas } = await Reserva.findAndCountAll(
+			queryOptions
+		);
 
 		res.json({
 			reservas,
@@ -5128,8 +5484,6 @@ app.get("/api/reservas", async (req, res) => {
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
-
-
 
 // Obtener una reserva específica (Público)
 app.get("/api/reservas-public/:id", async (req, res) => {
@@ -5153,22 +5507,26 @@ app.put("/api/reservas/:id/archivar", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { archivada } = req.body;
-		
+
 		const reserva = await Reserva.findByPk(id);
 		if (!reserva) {
-			return res.status(404).json({ success: false, message: "Reserva no encontrada" });
+			return res
+				.status(404)
+				.json({ success: false, message: "Reserva no encontrada" });
 		}
 
 		await reserva.update({ archivada: Boolean(archivada) });
-		
-		return res.json({ 
-			success: true, 
+
+		return res.json({
+			success: true,
 			message: archivada ? "Reserva archivada" : "Reserva restaurada",
-			reserva 
+			reserva,
 		});
 	} catch (error) {
 		console.error("Error archivando reserva:", error);
-		return res.status(500).json({ success: false, message: "Error interno del servidor" });
+		return res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
@@ -5358,22 +5716,22 @@ app.patch("/api/reservas/:id/toggle-gastos", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const reserva = await Reserva.findByPk(id);
-		
+
 		if (!reserva) {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
-		
+
 		// Toggle el estado de gastosCerrados
 		const nuevoEstado = !reserva.gastosCerrados;
 		await reserva.update({ gastosCerrados: nuevoEstado });
-		
+
 		res.json({
 			success: true,
-			message: nuevoEstado 
-				? "Registro de gastos cerrado" 
+			message: nuevoEstado
+				? "Registro de gastos cerrado"
 				: "Registro de gastos reabierto",
 			gastosCerrados: nuevoEstado,
-			reserva
+			reserva,
 		});
 	} catch (error) {
 		console.error("Error al cambiar estado de gastos:", error);
@@ -5736,20 +6094,20 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 // Obtener estadísticas para el dashboard
 app.get("/api/dashboard/stats", async (req, res) => {
 	try {
-        // Consultas paralelas para mayor eficiencia
+		// Consultas paralelas para mayor eficiencia
 		const [
-            totalReservas, 
-            reservasPendientes, 
-            reservasConfirmadas, 
-            reservasPagadas,
-            ingresosResult
-        ] = await Promise.all([
-            Reserva.count(),
-            Reserva.count({ where: { estado: ['pendiente', 'pendiente_detalles'] } }),
-            Reserva.count({ where: { estado: 'confirmada' } }),
-            Reserva.count({ where: { estadoPago: 'pagado' } }),
-            Reserva.sum('totalConDescuento', { where: { estadoPago: 'pagado' } })
-        ]);
+			totalReservas,
+			reservasPendientes,
+			reservasConfirmadas,
+			reservasPagadas,
+			ingresosResult,
+		] = await Promise.all([
+			Reserva.count(),
+			Reserva.count({ where: { estado: ["pendiente", "pendiente_detalles"] } }),
+			Reserva.count({ where: { estado: "confirmada" } }),
+			Reserva.count({ where: { estadoPago: "pagado" } }),
+			Reserva.sum("totalConDescuento", { where: { estadoPago: "pagado" } }),
+		]);
 
 		res.json({
 			totalReservas,
@@ -5768,26 +6126,26 @@ app.get("/api/dashboard/stats", async (req, res) => {
 app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
 	try {
 		const { id } = req.params;
-		
-        // Verificar que la reserva existe
-        const reserva = await Reserva.findByPk(id);
-        if (!reserva) {
-            return res.status(404).json({ error: "Reserva no encontrada" });
-        }
 
-        // Obtener historial ordenado por fecha descendente
+		// Verificar que la reserva existe
+		const reserva = await Reserva.findByPk(id);
+		if (!reserva) {
+			return res.status(404).json({ error: "Reserva no encontrada" });
+		}
+
+		// Obtener historial ordenado por fecha descendente
 		const historial = await sequelize.query(
 			"SELECT * FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY created_at DESC",
-			{ 
-                replacements: { id },
-                type: sequelize.QueryTypes.SELECT 
-            }
+			{
+				replacements: { id },
+				type: sequelize.QueryTypes.SELECT,
+			}
 		);
 
 		res.json({
-            success: true, 
-            historial: historial || [] 
-        });
+			success: true,
+			historial: historial || [],
+		});
 	} catch (error) {
 		console.error("Error obteniendo historial de asignaciones:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
@@ -5796,260 +6154,291 @@ app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
 
 // Asignar vehículo y conductor a una reserva
 app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
-    const transaction = await sequelize.transaction();
+	const transaction = await sequelize.transaction();
 	try {
 		const { id } = req.params;
 		const { vehiculoId, conductorId, sendEmail, sendEmailDriver } = req.body;
 
-        console.log(`📝 Asignando recursos a reserva ${id}: Vehiculo=${vehiculoId}, Conductor=${conductorId}`);
+		console.log(
+			`📝 Asignando recursos a reserva ${id}: Vehiculo=${vehiculoId}, Conductor=${conductorId}`
+		);
 
 		const reserva = await Reserva.findByPk(id, { transaction });
 		if (!reserva) {
-            await transaction.rollback();
+			await transaction.rollback();
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-        // Obtener datos del vehículo
-        const vehiculo = await Vehiculo.findByPk(vehiculoId, { transaction });
-        if (!vehiculo) {
-            await transaction.rollback();
-            return res.status(400).json({ error: "Vehículo no encontrado" });
-        }
+		// Obtener datos del vehículo
+		const vehiculo = await Vehiculo.findByPk(vehiculoId, { transaction });
+		if (!vehiculo) {
+			await transaction.rollback();
+			return res.status(400).json({ error: "Vehículo no encontrado" });
+		}
 
-        // Obtener datos del conductor (si se proporciona)
-        let conductor = null;
-        if (conductorId) {
-            conductor = await Conductor.findByPk(conductorId, { transaction });
-            if (!conductor) {
-                await transaction.rollback();
-                return res.status(400).json({ error: "Conductor no encontrado" });
-            }
-        }
+		// Obtener datos del conductor (si se proporciona)
+		let conductor = null;
+		if (conductorId) {
+			conductor = await Conductor.findByPk(conductorId, { transaction });
+			if (!conductor) {
+				await transaction.rollback();
+				return res.status(400).json({ error: "Conductor no encontrado" });
+			}
+		}
 
-        // Función auxiliar para capitalizar tipo de vehículo
-        const formatVehiculoTipo = (tipo) => {
-            if (!tipo) return "";
-            const mapping = {
-                'sedan': 'Sedán',
-                'van': 'Van',
-                'suv': 'SUV'
-            };
-            return mapping[tipo.toLowerCase()] || tipo;
-        };
+		// Función auxiliar para capitalizar tipo de vehículo
+		const formatVehiculoTipo = (tipo) => {
+			if (!tipo) return "";
+			const mapping = {
+				sedan: "Sedán",
+				van: "Van",
+				suv: "SUV",
+			};
+			return mapping[tipo.toLowerCase()] || tipo;
+		};
 
-        // Construir string de vehículo (formato: "TIPO (patente PATENTE)")
-        const tipoFormateado = formatVehiculoTipo(vehiculo.tipo);
-        const vehiculoStr = `${tipoFormateado} (patente ${vehiculo.patente})`.trim();
-        
-        // Actualizar observaciones con el conductor
-        let nuevasObservaciones = reserva.observaciones || "";
-        // Eliminar asignación anterior de conductor si existe en observaciones
-        nuevasObservaciones = nuevasObservaciones.replace(/Conductor asignado:.*(\r\n|\n|\r)?/g, "").trim();
-        
-        if (conductor) {
-            if (nuevasObservaciones) nuevasObservaciones += "\n";
-            nuevasObservaciones += `Conductor asignado: ${conductor.nombre}`;
-        }
+		// Construir string de vehículo (formato: "TIPO (patente PATENTE)")
+		const tipoFormateado = formatVehiculoTipo(vehiculo.tipo);
+		const vehiculoStr =
+			`${tipoFormateado} (patente ${vehiculo.patente})`.trim();
 
-        // Actualizar reserva con IDs para que AdminGastos pueda acceder a ellos
-        await reserva.update({
-            vehiculo: vehiculoStr,
-            vehiculoId: vehiculoId,
-            conductorId: conductorId || null,
-            observaciones: nuevasObservaciones
-        }, { transaction });
+		// Actualizar observaciones con el conductor
+		let nuevasObservaciones = reserva.observaciones || "";
+		// Eliminar asignación anterior de conductor si existe en observaciones
+		nuevasObservaciones = nuevasObservaciones
+			.replace(/Conductor asignado:.*(\r\n|\n|\r)?/g, "")
+			.trim();
 
-        // Registrar en historial
-        await sequelize.query(
-            `INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor, created_at) 
+		if (conductor) {
+			if (nuevasObservaciones) nuevasObservaciones += "\n";
+			nuevasObservaciones += `Conductor asignado: ${conductor.nombre}`;
+		}
+
+		// Actualizar reserva con IDs para que AdminGastos pueda acceder a ellos
+		await reserva.update(
+			{
+				vehiculo: vehiculoStr,
+				vehiculoId: vehiculoId,
+				conductorId: conductorId || null,
+				observaciones: nuevasObservaciones,
+			},
+			{ transaction }
+		);
+
+		// Registrar en historial
+		await sequelize.query(
+			`INSERT INTO reserva_asignaciones (reserva_id, vehiculo, conductor, created_at) 
              VALUES (:reservaId, :vehiculo, :conductor, NOW())`,
-            {
-                replacements: {
-                    reservaId: id,
-                    vehiculo: vehiculoStr,
-                    conductor: conductor ? conductor.nombre : null
-                },
-                transaction
-            }
-        );
-        await transaction.commit();
+			{
+				replacements: {
+					reservaId: id,
+					vehiculo: vehiculoStr,
+					conductor: conductor ? conductor.nombre : null,
+				},
+				transaction,
+			}
+		);
+		await transaction.commit();
 
-        // ====================================================================
-        // LÓGICA DE NOTIFICACIONES
-        // ====================================================================
-        // Regla simple: SIEMPRE notificar por el tramo que se está asignando.
-        // Si el tramo asignado es VUELTA (tramoPadreId), se adjunta contexto de
-        // la IDA al correo del conductor para dar más información, pero no se
-        // suprime ni retrasa ninguna notificación.
-        // ====================================================================
+		// ====================================================================
+		// LÓGICA DE NOTIFICACIONES
+		// ====================================================================
+		// Regla simple: SIEMPRE notificar por el tramo que se está asignando.
+		// Si el tramo asignado es VUELTA (tramoPadreId), se adjunta contexto de
+		// la IDA al correo del conductor para dar más información, pero no se
+		// suprime ni retrasa ninguna notificación.
+		// ====================================================================
 
-        const esTramoVuelta = Boolean(reserva.tramoPadreId); // VUELTA de ida-vuelta
+		const esTramoVuelta = Boolean(reserva.tramoPadreId); // VUELTA de ida-vuelta
 
-        // Obtener datos del tramo IDA si éste es un tramo VUELTA (para más contexto)
-        let reservaIda = null;
-        let conductorIda = null;
-        let vehiculoIdaStr = null;
+		// Obtener datos del tramo IDA si éste es un tramo VUELTA (para más contexto)
+		let reservaIda = null;
+		let conductorIda = null;
+		let vehiculoIdaStr = null;
 
-        if (esTramoVuelta) {
-            try {
-                reservaIda = await Reserva.findByPk(reserva.tramoPadreId);
-                if (reservaIda && reservaIda.conductorId) {
-                    conductorIda = await Conductor.findByPk(reservaIda.conductorId);
-                }
-                if (reservaIda && reservaIda.vehiculoId) {
-                    const vehiculoIda = await Vehiculo.findByPk(reservaIda.vehiculoId);
-                    vehiculoIdaStr = vehiculoIda
-                        ? `${vehiculoIda.tipo} (patente ${vehiculoIda.patente})`
-                        : (reservaIda.vehiculo || null);
-                } else {
-                    vehiculoIdaStr = reservaIda ? (reservaIda.vehiculo || null) : null;
-                }
-            } catch (err) {
-                console.warn("⚠️ No se pudo obtener datos del tramo IDA:", err.message);
-            }
-        }
+		if (esTramoVuelta) {
+			try {
+				reservaIda = await Reserva.findByPk(reserva.tramoPadreId);
+				if (reservaIda && reservaIda.conductorId) {
+					conductorIda = await Conductor.findByPk(reservaIda.conductorId);
+				}
+				if (reservaIda && reservaIda.vehiculoId) {
+					const vehiculoIda = await Vehiculo.findByPk(reservaIda.vehiculoId);
+					vehiculoIdaStr = vehiculoIda
+						? `${vehiculoIda.tipo} (patente ${vehiculoIda.patente})`
+						: reservaIda.vehiculo || null;
+				} else {
+					vehiculoIdaStr = reservaIda ? reservaIda.vehiculo || null : null;
+				}
+			} catch (err) {
+				console.warn("⚠️ No se pudo obtener datos del tramo IDA:", err.message);
+			}
+		}
 
-        // -------------------------------------------------------------------
-        // Notificación al PASAJERO
-        // -------------------------------------------------------------------
-        // Siempre se envía por el tramo actual.
-        // Si es VUELTA e incluimos tamoVuelta en el payload → el PHP mostrará
-        // ambos tramos en el correo (para que el pasajero tenga todo el contexto).
-        // -------------------------------------------------------------------
-        if (sendEmail) {
-            try {
-                const phpUrl = process.env.PHP_ASSIGNMENT_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
-                const last4Patente = vehiculo.patente ? vehiculo.patente.slice(-4) : "";
+		// -------------------------------------------------------------------
+		// Notificación al PASAJERO
+		// -------------------------------------------------------------------
+		// Siempre se envía por el tramo actual.
+		// Si es VUELTA e incluimos tamoVuelta en el payload → el PHP mostrará
+		// ambos tramos en el correo (para que el pasajero tenga todo el contexto).
+		// -------------------------------------------------------------------
+		if (sendEmail) {
+			try {
+				const phpUrl =
+					process.env.PHP_ASSIGNMENT_EMAIL_URL ||
+					"https://www.transportesaraucaria.cl/enviar_asignacion_reserva.php";
+				const last4Patente = vehiculo.patente ? vehiculo.patente.slice(-4) : "";
 
-                const emailPayload = {
-                    email: reserva.email,
-                    nombre: reserva.nombre,
-                    codigoReserva: reserva.codigoReserva,
-                    vehiculo: vehiculoStr,
-                    vehiculoTipo: vehiculo.tipo,
-                    vehiculoPatenteLast4: last4Patente,
-                    origen: reserva.origen,
-                    destino: reserva.destino,
-                    fecha: reserva.fecha,
-                    hora: reserva.hora,
-                    pasajeros: reserva.pasajeros,
-                    upgradeVan: reserva.upgradeVan,
-                    conductorNombre: conductor ? conductor.nombre : "",
-                    estadoPago: reserva.estadoPago || "pendiente",
-                };
+				const emailPayload = {
+					email: reserva.email,
+					nombre: reserva.nombre,
+					codigoReserva: reserva.codigoReserva,
+					vehiculo: vehiculoStr,
+					vehiculoTipo: vehiculo.tipo,
+					vehiculoPatenteLast4: last4Patente,
+					origen: reserva.origen,
+					destino: reserva.destino,
+					fecha: reserva.fecha,
+					hora: reserva.hora,
+					pasajeros: reserva.pasajeros,
+					upgradeVan: reserva.upgradeVan,
+					conductorNombre: conductor ? conductor.nombre : "",
+					estadoPago: reserva.estadoPago || "pendiente",
+				};
 
-                // Si es VUELTA y ya existe la IDA asignada, incluir datos de la IDA
-                // para que el correo de vuelta muestre el contexto completo de ambos tramos.
-                if (esTramoVuelta && reservaIda) {
-                    emailPayload.esTramoVuelta = true; // indica que este correo es del tramo vuelta
-                    emailPayload.tramoIda = {
-                        origen: reservaIda.origen,
-                        destino: reservaIda.destino,
-                        fecha: reservaIda.fecha,
-                        hora: reservaIda.hora,
-                        vehiculo: vehiculoIdaStr || reservaIda.vehiculo || "",
-                        conductorNombre: conductorIda ? conductorIda.nombre : "",
-                    };
-                }
+				// Si es VUELTA y ya existe la IDA asignada, incluir datos de la IDA
+				// para que el correo de vuelta muestre el contexto completo de ambos tramos.
+				if (esTramoVuelta && reservaIda) {
+					emailPayload.esTramoVuelta = true; // indica que este correo es del tramo vuelta
+					emailPayload.tramoIda = {
+						origen: reservaIda.origen,
+						destino: reservaIda.destino,
+						fecha: reservaIda.fecha,
+						hora: reservaIda.hora,
+						vehiculo: vehiculoIdaStr || reservaIda.vehiculo || "",
+						conductorNombre: conductorIda ? conductorIda.nombre : "",
+					};
+				}
 
-                await axios.post(phpUrl, emailPayload, {
-                    headers: { "Content-Type": "application/json" },
-                    timeout: 10000
-                });
+				await axios.post(phpUrl, emailPayload, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				});
 
-                const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
-                console.log(`📧 Notificación [${tipoTramo}] enviada al cliente para reserva ${reserva.codigoReserva}`);
-            } catch (emailError) {
-                console.error("❌ Error enviando notificación al cliente:", emailError.message);
-            }
-        }
+				const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
+				console.log(
+					`📧 Notificación [${tipoTramo}] enviada al cliente para reserva ${reserva.codigoReserva}`
+				);
+			} catch (emailError) {
+				console.error(
+					"❌ Error enviando notificación al cliente:",
+					emailError.message
+				);
+			}
+		}
 
-        // -------------------------------------------------------------------
-        // Notificación al CONDUCTOR
-        // -------------------------------------------------------------------
-        // Siempre se notifica al conductor del tramo actual.
-        // Si es VUELTA y el conductor es el MISMO que la IDA, incluimos el
-        // contexto de la IDA en el correo para que sepa que tiene ambos viajes.
-        // -------------------------------------------------------------------
-        if (sendEmailDriver && conductor && conductor.email) {
-            try {
-                const phpConductorUrl = process.env.PHP_DRIVER_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
+		// -------------------------------------------------------------------
+		// Notificación al CONDUCTOR
+		// -------------------------------------------------------------------
+		// Siempre se notifica al conductor del tramo actual.
+		// Si es VUELTA y el conductor es el MISMO que la IDA, incluimos el
+		// contexto de la IDA en el correo para que sepa que tiene ambos viajes.
+		// -------------------------------------------------------------------
+		if (sendEmailDriver && conductor && conductor.email) {
+			try {
+				const phpConductorUrl =
+					process.env.PHP_DRIVER_EMAIL_URL ||
+					"https://www.transportesaraucaria.cl/enviar_notificacion_conductor.php";
 
-                const origenEsAeropuerto = (reserva.origen || "").toLowerCase().includes("aeropuerto");
-                const smartAddress = reserva.hotel ||
-                    (origenEsAeropuerto
-                        ? (reserva.direccionDestino || reserva.destino)
-                        : (reserva.direccionOrigen || reserva.origen));
+				const origenEsAeropuerto = (reserva.origen || "")
+					.toLowerCase()
+					.includes("aeropuerto");
+				const smartAddress =
+					reserva.hotel ||
+					(origenEsAeropuerto
+						? reserva.direccionDestino || reserva.destino
+						: reserva.direccionOrigen || reserva.origen);
 
-                const conductorPayload = {
-                    conductorEmail: conductor.email,
-                    conductorNombre: conductor.nombre,
-                    codigoReserva: reserva.codigoReserva,
-                    pasajeroNombre: reserva.nombre,
-                    pasajeroTelefono: reserva.telefono,
-                    origen: reserva.origen,
-                    destino: reserva.destino,
-                    direccionEspecifica: smartAddress,
-                    calendarLocation: smartAddress,
-                    fecha: reserva.fecha,
-                    hora: reserva.hora,
-                    pasajeros: reserva.pasajeros,
-                    vehiculo: vehiculoStr,
-                    upgradeVan: reserva.upgradeVan,
-                    observaciones: reserva.observaciones || "",
-                    numeroVuelo: reserva.numeroVuelo || "",
-                    hotel: reserva.hotel || ""
-                };
+				const conductorPayload = {
+					conductorEmail: conductor.email,
+					conductorNombre: conductor.nombre,
+					codigoReserva: reserva.codigoReserva,
+					pasajeroNombre: reserva.nombre,
+					pasajeroTelefono: reserva.telefono,
+					origen: reserva.origen,
+					destino: reserva.destino,
+					direccionEspecifica: smartAddress,
+					calendarLocation: smartAddress,
+					fecha: reserva.fecha,
+					hora: reserva.hora,
+					pasajeros: reserva.pasajeros,
+					vehiculo: vehiculoStr,
+					upgradeVan: reserva.upgradeVan,
+					observaciones: reserva.observaciones || "",
+					numeroVuelo: reserva.numeroVuelo || "",
+					hotel: reserva.hotel || "",
+				};
 
-                // Si es VUELTA y el mismo conductor hizo la IDA:
-                // agregar el contexto de la IDA al correo para que el conductor
-                // tenga en un único correo todo el contexto de ambos viajes que realizará.
-                const mismoConductor = esTramoVuelta && conductorIda && conductorIda.id === conductor.id;
-                if (mismoConductor && reservaIda) {
-                    const origenIdaEsAeropuerto = (reservaIda.origen || "").toLowerCase().includes("aeropuerto");
-                    const smartAddressIda = reservaIda.hotel ||
-                        (origenIdaEsAeropuerto
-                            ? (reservaIda.direccionDestino || reservaIda.destino)
-                            : (reservaIda.direccionOrigen || reservaIda.origen));
+				// Si es VUELTA y el mismo conductor hizo la IDA:
+				// agregar el contexto de la IDA al correo para que el conductor
+				// tenga en un único correo todo el contexto de ambos viajes que realizará.
+				const mismoConductor =
+					esTramoVuelta && conductorIda && conductorIda.id === conductor.id;
+				if (mismoConductor && reservaIda) {
+					const origenIdaEsAeropuerto = (reservaIda.origen || "")
+						.toLowerCase()
+						.includes("aeropuerto");
+					const smartAddressIda =
+						reservaIda.hotel ||
+						(origenIdaEsAeropuerto
+							? reservaIda.direccionDestino || reservaIda.destino
+							: reservaIda.direccionOrigen || reservaIda.origen);
 
-                    conductorPayload.tramoIda = {
-                        origen: reservaIda.origen,
-                        destino: reservaIda.destino,
-                        fecha: reservaIda.fecha,
-                        hora: reservaIda.hora,
-                        direccionEspecifica: smartAddressIda,
-                        vehiculo: vehiculoIdaStr || reservaIda.vehiculo || vehiculoStr,
-                    };
-                    console.log(`📧 [INFO] Mismo conductor en IDA y VUELTA → incluyendo contexto IDA en correo VUELTA`);
-                }
+					conductorPayload.tramoIda = {
+						origen: reservaIda.origen,
+						destino: reservaIda.destino,
+						fecha: reservaIda.fecha,
+						hora: reservaIda.hora,
+						direccionEspecifica: smartAddressIda,
+						vehiculo: vehiculoIdaStr || reservaIda.vehiculo || vehiculoStr,
+					};
+					console.log(
+						`📧 [INFO] Mismo conductor en IDA y VUELTA → incluyendo contexto IDA en correo VUELTA`
+					);
+				}
 
-                console.log("📧 [DEBUG] Enviando Notificación Conductor:", {
-                    reservaId: reserva.id,
-                    esTramoVuelta,
-                    mismoConductor: Boolean(mismoConductor),
-                    payloadOrigen: conductorPayload.origen,
-                    payloadDestino: conductorPayload.destino
-                });
+				console.log("📧 [DEBUG] Enviando Notificación Conductor:", {
+					reservaId: reserva.id,
+					esTramoVuelta,
+					mismoConductor: Boolean(mismoConductor),
+					payloadOrigen: conductorPayload.origen,
+					payloadDestino: conductorPayload.destino,
+				});
 
-                await axios.post(phpConductorUrl, conductorPayload, {
-                    headers: { "Content-Type": "application/json" },
-                    timeout: 10000
-                });
+				await axios.post(phpConductorUrl, conductorPayload, {
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				});
 
-                const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
-                console.log(`📧 Notificación [${tipoTramo}] enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`);
-            } catch (conductorEmailError) {
-                console.error("❌ Error enviando notificación al conductor:", conductorEmailError.message);
-            }
-        }
+				const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
+				console.log(
+					`📧 Notificación [${tipoTramo}] enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`
+				);
+			} catch (conductorEmailError) {
+				console.error(
+					"❌ Error enviando notificación al conductor:",
+					conductorEmailError.message
+				);
+			}
+		}
 
 		res.json({
 			success: true,
 			message: "Asignación realizada correctamente",
-            reserva
+			reserva,
 		});
 	} catch (error) {
-        if (transaction) await transaction.rollback();
+		if (transaction) await transaction.rollback();
 		console.error("Error asignando recursos:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
@@ -6082,7 +6471,7 @@ async function syncReservaPago(reservaId, transaction = null) {
 			"SELECT SUM(amount) as total FROM reserva_pagos WHERE reserva_id = :id",
 			{ replacements: { id: reservaId }, transaction }
 		);
-		
+
 		const pagoTotalNuevo = parseFloat(rows[0]?.total || 0);
 		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
 		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
@@ -6099,7 +6488,11 @@ async function syncReservaPago(reservaId, transaction = null) {
 			nuevoSaldoPendiente = 0;
 			abonoPagado = true;
 			saldoPagado = true;
-			if (["pendiente", "pendiente_detalles", "confirmada"].includes(nuevoEstadoReserva)) {
+			if (
+				["pendiente", "pendiente_detalles", "confirmada"].includes(
+					nuevoEstadoReserva
+				)
+			) {
 				nuevoEstadoReserva = "confirmada";
 			}
 		} else if (pagoTotalNuevo > 0) {
@@ -6112,14 +6505,17 @@ async function syncReservaPago(reservaId, transaction = null) {
 			}
 		}
 
-		await reserva.update({
-			estadoPago: nuevoEstadoPago,
-			pagoMonto: pagoTotalNuevo,
-			saldoPendiente: nuevoSaldoPendiente,
-			abonoPagado,
-			saldoPagado,
-			estado: nuevoEstadoReserva
-		}, { transaction });
+		await reserva.update(
+			{
+				estadoPago: nuevoEstadoPago,
+				pagoMonto: pagoTotalNuevo,
+				saldoPendiente: nuevoSaldoPendiente,
+				abonoPagado,
+				saldoPagado,
+				estado: nuevoEstadoReserva,
+			},
+			{ transaction }
+		);
 
 		return reserva;
 	} catch (error) {
@@ -6259,12 +6655,12 @@ app.put("/api/pagos/:id", authAdmin, async (req, res) => {
 			"SELECT reserva_id FROM reserva_pagos WHERE id = :id",
 			{ replacements: { id }, transaction }
 		);
-		
+
 		if (rows.length === 0) {
 			await transaction.rollback();
 			return res.status(404).json({ error: "Registro de pago no encontrado" });
 		}
-		
+
 		const reservaId = rows[0].reserva_id;
 
 		// 2. Actualizar el registro
@@ -6278,9 +6674,9 @@ app.put("/api/pagos/:id", authAdmin, async (req, res) => {
 				id,
 				amount: parseFloat(amount) || 0,
 				metodo: metodo || null,
-				referencia: referencia || null
+				referencia: referencia || null,
 			},
-			transaction
+			transaction,
 		});
 
 		// 3. Recalcular la reserva asociada
@@ -6306,19 +6702,19 @@ app.delete("/api/pagos/:id", authAdmin, async (req, res) => {
 			"SELECT reserva_id FROM reserva_pagos WHERE id = :id",
 			{ replacements: { id }, transaction }
 		);
-		
+
 		if (rows.length === 0) {
 			await transaction.rollback();
 			return res.status(404).json({ error: "Registro de pago no encontrado" });
 		}
-		
+
 		const reservaId = rows[0].reserva_id;
 
 		// 2. Eliminar el registro
-		await sequelize.query(
-			"DELETE FROM reserva_pagos WHERE id = :id",
-			{ replacements: { id }, transaction }
-		);
+		await sequelize.query("DELETE FROM reserva_pagos WHERE id = :id", {
+			replacements: { id },
+			transaction,
+		});
 
 		// 3. Recalcular la reserva asociada
 		await syncReservaPago(reservaId, transaction);
@@ -6367,9 +6763,13 @@ app.put("/api/reservas/:id", authAdmin, async (req, res) => {
 			fecha: fecha !== undefined ? fecha : reserva.fecha,
 			hora: hora !== undefined ? hora : reserva.hora,
 			direccionOrigen:
-				direccionOrigen !== undefined ? direccionOrigen : reserva.direccionOrigen,
+				direccionOrigen !== undefined
+					? direccionOrigen
+					: reserva.direccionOrigen,
 			direccionDestino:
-				direccionDestino !== undefined ? direccionDestino : reserva.direccionDestino,
+				direccionDestino !== undefined
+					? direccionDestino
+					: reserva.direccionDestino,
 			pasajeros:
 				pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
 			numeroVuelo:
@@ -6407,7 +6807,7 @@ app.put("/api/reservas/:id", authAdmin, async (req, res) => {
 
 app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 	const transaction = await sequelize.transaction();
-	
+
 	try {
 		const { id } = req.params;
 		const {
@@ -6427,7 +6827,9 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 
 		let shouldGenerateOpportunities = false;
 
-		console.log(`🔄 [BULK-UPDATE] Iniciando actualización unificada para reserva ${id}`);
+		console.log(
+			`🔄 [BULK-UPDATE] Iniciando actualización unificada para reserva ${id}`
+		);
 
 		// 1. Buscar reserva
 		const reserva = await Reserva.findByPk(id, { transaction });
@@ -6439,42 +6841,83 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 		// 2. Actualizar datos generales (si se proporcionan)
 		if (datosGenerales) {
 			const {
-				nombre, email, telefono, fecha, hora, pasajeros,
-				numeroVuelo, hotel, equipajeEspecial, sillaInfantil,
-				idaVuelta, fechaRegreso, horaRegreso, mensaje,
-				direccionOrigen, direccionDestino
+				nombre,
+				email,
+				telefono,
+				fecha,
+				hora,
+				pasajeros,
+				numeroVuelo,
+				hotel,
+				equipajeEspecial,
+				sillaInfantil,
+				idaVuelta,
+				fechaRegreso,
+				horaRegreso,
+				mensaje,
+				direccionOrigen,
+				direccionDestino,
 			} = datosGenerales;
 
-			await reserva.update({
-				nombre: nombre !== undefined ? nombre : reserva.nombre,
-				email: email !== undefined ? email : reserva.email,
-				telefono: telefono !== undefined ? telefono : reserva.telefono,
-				fecha: fecha !== undefined ? fecha : reserva.fecha,
-				hora: hora !== undefined ? hora : reserva.hora,
-				direccionOrigen: direccionOrigen !== undefined ? direccionOrigen : reserva.direccionOrigen,
-				direccionDestino: direccionDestino !== undefined ? direccionDestino : reserva.direccionDestino,
-				pasajeros: pasajeros !== undefined ? parseInt(pasajeros, 10) : reserva.pasajeros,
-				numeroVuelo: numeroVuelo !== undefined ? numeroVuelo : reserva.numeroVuelo,
-				hotel: hotel !== undefined ? hotel : reserva.hotel,
-				equipajeEspecial: equipajeEspecial !== undefined ? equipajeEspecial : reserva.equipajeEspecial,
-				sillaInfantil: sillaInfantil !== undefined ? Boolean(sillaInfantil) : reserva.sillaInfantil,
-				idaVuelta: idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
-				fechaRegreso: fechaRegreso !== undefined ? fechaRegreso : reserva.fechaRegreso,
-				horaRegreso: horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
-				mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
-			}, { transaction });
+			await reserva.update(
+				{
+					nombre: nombre !== undefined ? nombre : reserva.nombre,
+					email: email !== undefined ? email : reserva.email,
+					telefono: telefono !== undefined ? telefono : reserva.telefono,
+					fecha: fecha !== undefined ? fecha : reserva.fecha,
+					hora: hora !== undefined ? hora : reserva.hora,
+					direccionOrigen:
+						direccionOrigen !== undefined
+							? direccionOrigen
+							: reserva.direccionOrigen,
+					direccionDestino:
+						direccionDestino !== undefined
+							? direccionDestino
+							: reserva.direccionDestino,
+					pasajeros:
+						pasajeros !== undefined
+							? parseInt(pasajeros, 10)
+							: reserva.pasajeros,
+					numeroVuelo:
+						numeroVuelo !== undefined ? numeroVuelo : reserva.numeroVuelo,
+					hotel: hotel !== undefined ? hotel : reserva.hotel,
+					equipajeEspecial:
+						equipajeEspecial !== undefined
+							? equipajeEspecial
+							: reserva.equipajeEspecial,
+					sillaInfantil:
+						sillaInfantil !== undefined
+							? Boolean(sillaInfantil)
+							: reserva.sillaInfantil,
+					idaVuelta:
+						idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
+					fechaRegreso:
+						fechaRegreso !== undefined ? fechaRegreso : reserva.fechaRegreso,
+					horaRegreso:
+						horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
+					mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
+				},
+				{ transaction }
+			);
 
 			// 🎯 NUEVO: Sincronizar datos con el registro maestro del Cliente si existe
 			if (reserva.clienteId) {
 				const Cliente = (await import("./models/Cliente.js")).default;
-				const cliente = await Cliente.findByPk(reserva.clienteId, { transaction });
+				const cliente = await Cliente.findByPk(reserva.clienteId, {
+					transaction,
+				});
 				if (cliente) {
-					await cliente.update({
-						nombre: nombre !== undefined ? nombre : cliente.nombre,
-						email: email !== undefined ? email : cliente.email,
-						telefono: telefono !== undefined ? telefono : cliente.telefono,
-					}, { transaction });
-					console.log(`✅ [BULK-UPDATE] Registro maestro del cliente ${reserva.clienteId} actualizado`);
+					await cliente.update(
+						{
+							nombre: nombre !== undefined ? nombre : cliente.nombre,
+							email: email !== undefined ? email : cliente.email,
+							telefono: telefono !== undefined ? telefono : cliente.telefono,
+						},
+						{ transaction }
+					);
+					console.log(
+						`✅ [BULK-UPDATE] Registro maestro del cliente ${reserva.clienteId} actualizado`
+					);
 				}
 			}
 
@@ -6483,12 +6926,17 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 
 		// 3. Actualizar ruta (si se proporciona)
 		if (ruta && ruta.origen && ruta.destino) {
-			await reserva.update({
-				origen: ruta.origen,
-				destino: ruta.destino
-			}, { transaction });
+			await reserva.update(
+				{
+					origen: ruta.origen,
+					destino: ruta.destino,
+				},
+				{ transaction }
+			);
 
-			console.log(`✅ [BULK-UPDATE] Ruta actualizada: ${ruta.origen} → ${ruta.destino}`);
+			console.log(
+				`✅ [BULK-UPDATE] Ruta actualizada: ${ruta.origen} → ${ruta.destino}`
+			);
 		}
 
 		// 4. Actualizar pago (si se proporciona)
@@ -6499,11 +6947,12 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 				referenciaPago,
 				montoPagado,
 				tipoPago: tipoPagoRaw,
-				estadoReserva: estadoReservaRaw
+				estadoReserva: estadoReservaRaw,
 			} = pago;
 
 			// Normalización de estados
-			const normalizarEstado = (valor) => typeof valor === "string" ? valor.trim().toLowerCase() : null;
+			const normalizarEstado = (valor) =>
+				typeof valor === "string" ? valor.trim().toLowerCase() : null;
 			const estadoPagoSolicitado = normalizarEstado(estadoPagoRaw);
 			const estadoReservaSolicitado = normalizarEstado(estadoReservaRaw);
 			const tipoPagoSolicitado = normalizarEstado(tipoPagoRaw);
@@ -6512,7 +6961,10 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
 			const abonoSugerido = parseFloat(reserva.abonoSugerido || 0) || 0;
 			const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
-			const montoPago = montoPagado !== undefined && montoPagado !== null ? parseFloat(montoPagado) : null;
+			const montoPago =
+				montoPagado !== undefined && montoPagado !== null
+					? parseFloat(montoPagado)
+					: null;
 
 			let pagoTotalNuevo = pagoPrevio;
 			let nuevoSaldoPendiente = parseFloat(reserva.saldoPendiente || 0) || 0;
@@ -6550,40 +7002,60 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			}
 
 			// Actualizar campos de pago
-			await reserva.update({
-				estadoPago: nuevoEstadoPago,
-				metodoPago: metodoPago !== undefined ? metodoPago : reserva.metodoPago,
-				referenciaPago: referenciaPago !== undefined ? referenciaPago : reserva.referenciaPago,
-				tipoPago: tipoPagoSolicitado || reserva.tipoPago,
-				pagoMonto: pagoTotalNuevo,
-				saldoPendiente: nuevoSaldoPendiente,
-				abonoPagado,
-				saldoPagado,
-				pagoFecha: montoPago > 0 ? new Date() : reserva.pagoFecha
-			}, { transaction });
+			await reserva.update(
+				{
+					estadoPago: nuevoEstadoPago,
+					metodoPago:
+						metodoPago !== undefined ? metodoPago : reserva.metodoPago,
+					referenciaPago:
+						referenciaPago !== undefined
+							? referenciaPago
+							: reserva.referenciaPago,
+					tipoPago: tipoPagoSolicitado || reserva.tipoPago,
+					pagoMonto: pagoTotalNuevo,
+					saldoPendiente: nuevoSaldoPendiente,
+					abonoPagado,
+					saldoPagado,
+					pagoFecha: montoPago > 0 ? new Date() : reserva.pagoFecha,
+				},
+				{ transaction }
+			);
 
-			console.log(`✅ [BULK-UPDATE] Pago actualizado: ${nuevoEstadoPago}, monto: ${pagoTotalNuevo}`);
+			console.log(
+				`✅ [BULK-UPDATE] Pago actualizado: ${nuevoEstadoPago}, monto: ${pagoTotalNuevo}`
+			);
 		}
 
 		// 5. Actualizar estado y observaciones (si se proporcionan)
 		if (estado !== undefined || observaciones !== undefined) {
 			const nuevoEstado = estado || reserva.estado;
-			const obsValue = observaciones !== undefined
-				? (typeof observaciones === "string" && observaciones.trim() === "" ? null : observaciones)
-				: reserva.observaciones;
+			const obsValue =
+				observaciones !== undefined
+					? typeof observaciones === "string" && observaciones.trim() === ""
+						? null
+						: observaciones
+					: reserva.observaciones;
 
 			// Validar que no se pueda cambiar a pendiente si ya hay pagos
-			if (nuevoEstado === "pendiente" && (reserva.pagoMonto || 0) > 0 && reserva.estado !== "pendiente") {
+			if (
+				nuevoEstado === "pendiente" &&
+				(reserva.pagoMonto || 0) > 0 &&
+				reserva.estado !== "pendiente"
+			) {
 				await transaction.rollback();
 				return res.status(400).json({
-					error: "No se puede cambiar a pendiente una reserva que ya tiene pagos realizados"
+					error:
+						"No se puede cambiar a pendiente una reserva que ya tiene pagos realizados",
 				});
 			}
 
-			await reserva.update({
-				estado: nuevoEstado,
-				observaciones: obsValue
-			}, { transaction });
+			await reserva.update(
+				{
+					estado: nuevoEstado,
+					observaciones: obsValue,
+				},
+				{ transaction }
+			);
 
 			console.log(`✅ [BULK-UPDATE] Estado actualizado: ${nuevoEstado}`);
 
@@ -6597,7 +7069,9 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 		if (reasignacion && reasignacion.vehiculoId) {
 			// Aquí iría la lógica de re-asignación si es necesario
 			// Por ahora solo lo documentamos
-			console.log(`ℹ️ [BULK-UPDATE] Re-asignación solicitada (no implementada en bulk-update)`);
+			console.log(
+				`ℹ️ [BULK-UPDATE] Re-asignación solicitada (no implementada en bulk-update)`
+			);
 		}
 
 		// Commit de la transacción
@@ -6608,165 +7082,198 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 
 		if (shouldGenerateOpportunities) {
 			try {
-				console.log(`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`);
+				console.log(
+					`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`
+				);
 				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
-				console.error("❌ Error generando oportunidades en Bulk Update:", opErr.message);
+				console.error(
+					"❌ Error generando oportunidades en Bulk Update:",
+					opErr.message
+				);
 			}
 		}
 
-		console.log(`✅ [BULK-UPDATE] Actualización completada exitosamente para reserva ${id}`);
+		console.log(
+			`✅ [BULK-UPDATE] Actualización completada exitosamente para reserva ${id}`
+		);
 
 		res.json({
 			success: true,
 			message: "Reserva actualizada exitosamente",
-			reserva
+			reserva,
 		});
-
 	} catch (error) {
 		await transaction.rollback();
 		console.error(`❌ [BULK-UPDATE] Error actualizando reserva:`, error);
 		res.status(500).json({
 			error: "Error interno del servidor",
-			message: error.message
+			message: error.message,
 		});
 	}
 });
 
 // Solicitar detalles faltantes al cliente (enviar correo con link)
-app.post("/api/reservas/:id/solicitar-detalles", authAdmin, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const reserva = await Reserva.findByPk(id);
-
-		if (!reserva) {
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
-
-		if (reserva.detallesCompletos) {
-			return res.status(400).json({ error: "La reserva ya tiene los detalles completos" });
-		}
-
-		// Preparar datos para el script PHP
-		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_solicitud_detalles.php";
-		
-		const emailData = {
-			nombre: reserva.nombre,
-			email: reserva.email,
-			codigoReserva: reserva.codigoReserva,
-			origen: reserva.origen,
-			destino: reserva.destino,
-			fecha: reserva.fecha,
-			hora: reserva.hora,
-			upgradeVan: reserva.upgradeVan,
-			action: "request_missing_details"
-		};
-
-		// Enviar petición al script PHP
-		const response = await axios.post(phpUrl, emailData, {
-			headers: { "Content-Type": "application/json" },
-			timeout: 10000
-		});
-
-		// Registrar la fecha de solicitud en la reserva
-		await reserva.update({ ultimaSolicitudDetalles: new Date() });
-
-		// Registrar la acción en los logs (si existe el sistema de auditoría)
+app.post(
+	"/api/reservas/:id/solicitar-detalles",
+	authAdmin,
+	async (req, res) => {
 		try {
-			if (typeof AdminAuditLog !== 'undefined' && req.user) {
-				await AdminAuditLog.create({
-					adminUserId: req.user.id,
-					accion: 'solicitar_detalles',
-					entidad: 'reserva',
-					entidadId: id,
-					detalles: JSON.stringify({ email: reserva.email, codigo: reserva.codigoReserva })
-				});
+			const { id } = req.params;
+			const reserva = await Reserva.findByPk(id);
+
+			if (!reserva) {
+				return res.status(404).json({ error: "Reserva no encontrada" });
 			}
-		} catch (logError) {
-			console.error("Error registrando auditoría de solicitud de detalles:", logError);
+
+			if (reserva.detallesCompletos) {
+				return res
+					.status(400)
+					.json({ error: "La reserva ya tiene los detalles completos" });
+			}
+
+			// Preparar datos para el script PHP
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_solicitud_detalles.php";
+
+			const emailData = {
+				nombre: reserva.nombre,
+				email: reserva.email,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				upgradeVan: reserva.upgradeVan,
+				action: "request_missing_details",
+			};
+
+			// Enviar petición al script PHP
+			const response = await axios.post(phpUrl, emailData, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000,
+			});
+
+			// Registrar la fecha de solicitud en la reserva
+			await reserva.update({ ultimaSolicitudDetalles: new Date() });
+
+			// Registrar la acción en los logs (si existe el sistema de auditoría)
+			try {
+				if (typeof AdminAuditLog !== "undefined" && req.user) {
+					await AdminAuditLog.create({
+						adminUserId: req.user.id,
+						accion: "solicitar_detalles",
+						entidad: "reserva",
+						entidadId: id,
+						detalles: JSON.stringify({
+							email: reserva.email,
+							codigo: reserva.codigoReserva,
+						}),
+					});
+				}
+			} catch (logError) {
+				console.error(
+					"Error registrando auditoría de solicitud de detalles:",
+					logError
+				);
+			}
+
+			res.json({
+				success: true,
+				message: "Solicitud enviada correctamente",
+				phpResponse: response.data,
+			});
+		} catch (error) {
+			console.error("Error solicitando detalles de reserva:", error);
+			res.status(500).json({
+				error: "Error al enviar la solicitud",
+				details: error.message,
+			});
 		}
-
-		res.json({ 
-			success: true, 
-			message: "Solicitud enviada correctamente", 
-			phpResponse: response.data 
-		});
-
-	} catch (error) {
-		console.error("Error solicitando detalles de reserva:", error);
-		res.status(500).json({ 
-			error: "Error al enviar la solicitud", 
-			details: error.message 
-		});
 	}
-});
+);
 
 // Reenviar correo de confirmación al cliente de una reserva existente
-app.post("/api/reservas/:id/reenviar-confirmacion", authAdmin, apiLimiter, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const reserva = await Reserva.findByPk(id);
-
-		if (!reserva) {
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
-
-		if (!reserva.email) {
-			return res.status(400).json({ error: "La reserva no tiene email asociado" });
-		}
-
-		// Enviar correo usando el script PHP de Hostinger (reutiliza el flujo existente)
-		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_completo.php";
-
-		const emailData = {
-			nombre: reserva.nombre,
-			email: reserva.email,
-			codigoReserva: reserva.codigoReserva,
-			origen: reserva.origen,
-			destino: reserva.destino,
-			fecha: reserva.fecha,
-			hora: reserva.hora,
-			pasajeros: reserva.pasajeros,
-			total: reserva.totalConDescuento,
-			estadoPago: reserva.estadoPago,
-			pagoMonto: reserva.pagoMonto,
-			action: "reenvio_confirmacion"
-		};
-
-		const response = await axios.post(phpUrl, emailData, {
-			headers: { "Content-Type": "application/json" },
-			timeout: 15000
-		});
-
-		// Registrar la acción en los logs si el sistema de auditoría existe
+app.post(
+	"/api/reservas/:id/reenviar-confirmacion",
+	authAdmin,
+	apiLimiter,
+	async (req, res) => {
 		try {
-			if (typeof AdminAuditLog !== "undefined" && req.user) {
-				await AdminAuditLog.create({
-					adminUserId: req.user.id,
-					accion: "reenviar_confirmacion",
-					entidad: "reserva",
-					entidadId: id,
-					detalles: JSON.stringify({ email: reserva.email, codigo: reserva.codigoReserva })
-				});
+			const { id } = req.params;
+			const reserva = await Reserva.findByPk(id);
+
+			if (!reserva) {
+				return res.status(404).json({ error: "Reserva no encontrada" });
 			}
-		} catch (logError) {
-			console.error("Error registrando auditoría de reenvío de confirmación:", logError);
+
+			if (!reserva.email) {
+				return res
+					.status(400)
+					.json({ error: "La reserva no tiene email asociado" });
+			}
+
+			// Enviar correo usando el script PHP de Hostinger (reutiliza el flujo existente)
+			const phpUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_correo_completo.php";
+
+			const emailData = {
+				nombre: reserva.nombre,
+				email: reserva.email,
+				codigoReserva: reserva.codigoReserva,
+				origen: reserva.origen,
+				destino: reserva.destino,
+				fecha: reserva.fecha,
+				hora: reserva.hora,
+				pasajeros: reserva.pasajeros,
+				total: reserva.totalConDescuento,
+				estadoPago: reserva.estadoPago,
+				pagoMonto: reserva.pagoMonto,
+				action: "reenvio_confirmacion",
+			};
+
+			const response = await axios.post(phpUrl, emailData, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 15000,
+			});
+
+			// Registrar la acción en los logs si el sistema de auditoría existe
+			try {
+				if (typeof AdminAuditLog !== "undefined" && req.user) {
+					await AdminAuditLog.create({
+						adminUserId: req.user.id,
+						accion: "reenviar_confirmacion",
+						entidad: "reserva",
+						entidadId: id,
+						detalles: JSON.stringify({
+							email: reserva.email,
+							codigo: reserva.codigoReserva,
+						}),
+					});
+				}
+			} catch (logError) {
+				console.error(
+					"Error registrando auditoría de reenvío de confirmación:",
+					logError
+				);
+			}
+
+			res.json({
+				success: true,
+				message: "Correo de confirmación reenviado exitosamente",
+				phpResponse: response.data,
+			});
+		} catch (error) {
+			console.error("Error reenviando correo de confirmación:", error);
+			res.status(500).json({
+				error: "Error al reenviar el correo de confirmación",
+				details: error.message,
+			});
 		}
-
-		res.json({
-			success: true,
-			message: "Correo de confirmación reenviado exitosamente",
-			phpResponse: response.data
-		});
-
-	} catch (error) {
-		console.error("Error reenviando correo de confirmación:", error);
-		res.status(500).json({
-			error: "Error al reenviar el correo de confirmación",
-			details: error.message
-		});
 	}
-});
+);
 
 // Actualizar ruta (origen/destino) de una reserva
 app.put("/api/reservas/:id/ruta", authAdmin, async (req, res) => {
@@ -7461,27 +7968,27 @@ app.post("/api/conductores", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error creando conductor:", error);
-		
+
 		// Manejar errores de validación de Sequelize
 		if (error.name === "SequelizeValidationError") {
-			const validationErrors = error.errors.map(err => ({
+			const validationErrors = error.errors.map((err) => ({
 				field: err.path,
-				message: err.message
+				message: err.message,
 			}));
 			console.error("Errores de validación:", validationErrors);
 			return res.status(400).json({
 				error: "Error de validación",
-				details: validationErrors
+				details: validationErrors,
 			});
 		}
-		
+
 		// Manejar errores de unicidad (RUT duplicado)
 		if (error.name === "SequelizeUniqueConstraintError") {
 			return res.status(409).json({
-				error: "Ya existe un conductor con este RUT"
+				error: "Ya existe un conductor con este RUT",
 			});
 		}
-		
+
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -7565,27 +8072,27 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 		});
 	} catch (error) {
 		console.error("Error actualizando conductor:", error);
-		
+
 		// Manejar errores de validación de Sequelize
 		if (error.name === "SequelizeValidationError") {
-			const validationErrors = error.errors.map(err => ({
+			const validationErrors = error.errors.map((err) => ({
 				field: err.path,
-				message: err.message
+				message: err.message,
 			}));
 			console.error("Errores de validación:", validationErrors);
 			return res.status(400).json({
 				error: "Error de validación",
-				details: validationErrors
+				details: validationErrors,
 			});
 		}
-		
+
 		// Manejar errores de unicidad (RUT duplicado)
 		if (error.name === "SequelizeUniqueConstraintError") {
 			return res.status(409).json({
-				error: "Ya existe un conductor con este RUT"
+				error: "Ya existe un conductor con este RUT",
 			});
 		}
-		
+
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -7752,10 +8259,11 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
 
 		// Helper para formateo monetario
-	const formatMoney = (amount) => `$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
+		const formatMoney = (amount) =>
+			`$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
 
-	// Logs silenciados para reducir ruido en Render (según solicitud de usuario)
-	/*
+		// Logs silenciados para reducir ruido en Render (según solicitud de usuario)
+		/*
 	console.log("\n" + "=".repeat(50));
 	console.log("💰 CALCULANDO TARIFA DINÁMICA");
 	console.log("=".repeat(50));
@@ -7808,8 +8316,16 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
 		}
 
-		const nombreDia = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][diaSemana];
-    /*
+		const nombreDia = [
+			"Domingo",
+			"Lunes",
+			"Martes",
+			"Miércoles",
+			"Jueves",
+			"Viernes",
+			"Sábado",
+		][diaSemana];
+		/*
 	console.log(`📆 Día:                    ${nombreDia}`);
 	console.log(`⏰ Anticipación:           ${diasAnticipacion} días`);
 	if (festivo) {
@@ -7851,26 +8367,26 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 
 				case "dia_semana":
 					if (
-					config.diasSemana &&
-					Array.isArray(config.diasSemana) &&
-					config.diasSemana.includes(diaSemana)
-				) {
-					aplica = true;
-					const nombresDias = [
-						"Domingo",
-						"Lunes",
-						"Martes",
-						"Miércoles",
-						"Jueves",
-						"Viernes",
-						"Sábado",
-					];
-					detalle = `${nombresDias[diaSemana]}`;
-					// console.log(`    ✅ Aplica - ${detalle}`);
-				} else {
-					// console.log(`    ⏭️  No aplica`);
-				}
-				break;
+						config.diasSemana &&
+						Array.isArray(config.diasSemana) &&
+						config.diasSemana.includes(diaSemana)
+					) {
+						aplica = true;
+						const nombresDias = [
+							"Domingo",
+							"Lunes",
+							"Martes",
+							"Miércoles",
+							"Jueves",
+							"Viernes",
+							"Sábado",
+						];
+						detalle = `${nombresDias[diaSemana]}`;
+						// console.log(`    ✅ Aplica - ${detalle}`);
+					} else {
+						// console.log(`    ⏭️  No aplica`);
+					}
+					break;
 
 				case "horario":
 					if (hora && config.horaInicio && config.horaFin) {
@@ -7915,10 +8431,10 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		}
 
 		// Calcular montos
-	const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
-	const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
+		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
+		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
 
-	/*
+		/*
     console.log("-".repeat(50));
 	console.log("📊 AJUSTES APLICADOS:");
 	if (ajustesAplicados.length > 0) {
@@ -8187,75 +8703,81 @@ app.get("/api/disponibilidad/configuracion", authAdmin, async (req, res) => {
 });
 
 // Actualizar configuración de disponibilidad (para panel admin)
-app.put("/api/disponibilidad/configuracion/:id", authAdmin, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const {
-			holguraOptima,
-			holguraMaximaDescuento,
-			descuentoMinimo,
-			descuentoMaximo,
-			horaLimiteRetornos,
-			activo,
-			descripcion,
-		} = req.body;
+app.put(
+	"/api/disponibilidad/configuracion/:id",
+	authAdmin,
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const {
+				holguraOptima,
+				holguraMaximaDescuento,
+				descuentoMinimo,
+				descuentoMaximo,
+				horaLimiteRetornos,
+				activo,
+				descripcion,
+			} = req.body;
 
-		const config = await ConfiguracionDisponibilidad.findByPk(id);
-		if (!config) {
-			return res.status(404).json({ error: "Configuración no encontrada" });
-		}
+			const config = await ConfiguracionDisponibilidad.findByPk(id);
+			if (!config) {
+				return res.status(404).json({ error: "Configuración no encontrada" });
+			}
 
-		// Validaciones
-		if (holguraOptima < 30) {
-			return res.status(400).json({
-				error: "La holgura óptima no puede ser menor a 30 minutos",
+			// Validaciones
+			if (holguraOptima < 30) {
+				return res.status(400).json({
+					error: "La holgura óptima no puede ser menor a 30 minutos",
+				});
+			}
+
+			if (holguraMaximaDescuento < holguraOptima) {
+				return res.status(400).json({
+					error: "La holgura máxima debe ser mayor o igual a la holgura óptima",
+				});
+			}
+
+			if (descuentoMinimo < 0 || descuentoMinimo > 100) {
+				return res.status(400).json({
+					error: "El descuento mínimo debe estar entre 0 y 100",
+				});
+			}
+
+			if (descuentoMaximo < descuentoMinimo || descuentoMaximo > 100) {
+				return res.status(400).json({
+					error:
+						"El descuento máximo debe ser mayor o igual al mínimo y no superar 100",
+				});
+			}
+
+			await config.update({
+				holguraOptima,
+				holguraMaximaDescuento,
+				descuentoMinimo,
+				descuentoMaximo,
+				horaLimiteRetornos,
+				activo,
+				descripcion,
+				ultimaModificacionPor: req.user?.username || "admin",
 			});
-		}
 
-		if (holguraMaximaDescuento < holguraOptima) {
-			return res.status(400).json({
-				error: "La holgura máxima debe ser mayor o igual a la holgura óptima",
+			res.json({
+				success: true,
+				message: "Configuración actualizada exitosamente",
+				config,
 			});
+		} catch (error) {
+			console.error("Error actualizando configuración:", error);
+			res.status(500).json({ error: "Error interno del servidor" });
 		}
-
-		if (descuentoMinimo < 0 || descuentoMinimo > 100) {
-			return res.status(400).json({
-				error: "El descuento mínimo debe estar entre 0 y 100",
-			});
-		}
-
-		if (descuentoMaximo < descuentoMinimo || descuentoMaximo > 100) {
-			return res.status(400).json({
-				error: "El descuento máximo debe ser mayor o igual al mínimo y no superar 100",
-			});
-		}
-
-		await config.update({
-			holguraOptima,
-			holguraMaximaDescuento,
-			descuentoMinimo,
-			descuentoMaximo,
-			horaLimiteRetornos,
-			activo,
-			descripcion,
-			ultimaModificacionPor: req.user?.username || "admin",
-		});
-
-		res.json({
-			success: true,
-			message: "Configuración actualizada exitosamente",
-			config,
-		});
-	} catch (error) {
-		console.error("Error actualizando configuración:", error);
-		res.status(500).json({ error: "Error interno del servidor" });
 	}
-});
+);
 
 // Verificar disponibilidad de vehículos (público, para formulario de reserva)
 app.post("/api/disponibilidad/verificar", async (req, res) => {
 	try {
-		const { fecha, hora, duracionMinutos, pasajeros, excludeReservaId } = req.body;
+		const { fecha, hora, duracionMinutos, pasajeros, excludeReservaId } =
+			req.body;
 
 		if (!fecha || !hora) {
 			return res.status(400).json({
@@ -8311,34 +8833,39 @@ app.post("/api/disponibilidad/oportunidades-retorno", async (req, res) => {
 
 // Buscar retornos disponibles (público, para formulario de reserva - NUEVO)
 // No requiere email ni hora, busca todas las reservas con retornos disponibles
-app.post("/api/disponibilidad/buscar-retornos-disponibles", async (req, res) => {
-	try {
-		const { origen, destino, fecha } = req.body;
+app.post(
+	"/api/disponibilidad/buscar-retornos-disponibles",
+	async (req, res) => {
+		try {
+			const { origen, destino, fecha } = req.body;
 
-		if (!origen || !destino || !fecha) {
-			return res.status(400).json({
-				error: "Origen, destino y fecha son requeridos",
+			if (!origen || !destino || !fecha) {
+				return res.status(400).json({
+					error: "Origen, destino y fecha son requeridos",
+				});
+			}
+
+			// Importar la función dinámicamente
+			const { buscarRetornosDisponibles } = await import(
+				"./utils/disponibilidad.js"
+			);
+
+			const resultado = await buscarRetornosDisponibles({
+				origen,
+				destino,
+				fecha,
+			});
+
+			res.json(resultado);
+		} catch (error) {
+			console.error("Error buscando retornos disponibles:", error);
+			res.status(500).json({
+				error: "Error interno del servidor",
+				mensaje: error.message,
 			});
 		}
-
-		// Importar la función dinámicamente
-		const { buscarRetornosDisponibles } = await import("./utils/disponibilidad.js");
-
-		const resultado = await buscarRetornosDisponibles({
-			origen,
-			destino,
-			fecha,
-		});
-
-		res.json(resultado);
-	} catch (error) {
-		console.error("Error buscando retornos disponibles:", error);
-		res.status(500).json({
-			error: "Error interno del servidor",
-			mensaje: error.message,
-		});
 	}
-});
+);
 
 // Validar horario mínimo (público, para formulario de reserva)
 app.post("/api/disponibilidad/validar-horario", async (req, res) => {
@@ -8384,14 +8911,19 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 
 		// 🎯 RESTRICCIÓN: No permitir eliminar reservas confirmadas
 		if (reserva.estado === "confirmada") {
-			console.log(`🚫 Intento bloqueado: Eliminación de reserva CONFIRMADA #${id}`);
+			console.log(
+				`🚫 Intento bloqueado: Eliminación de reserva CONFIRMADA #${id}`
+			);
 			return res.status(400).json({
-				error: "No se permite eliminar reservas confirmadas. Por favor, cámbiela a 'cancelada' primero si desea eliminarla.",
-				codigo: "RESTRICTED_DELETE_CONFIRMED"
+				error:
+					"No se permite eliminar reservas confirmadas. Por favor, cámbiela a 'cancelada' primero si desea eliminarla.",
+				codigo: "RESTRICTED_DELETE_CONFIRMED",
 			});
 		}
 
-		console.log(`🗑️ Eliminando reserva #${id} (${reserva.codigoReserva}) solicitada por admin`);
+		console.log(
+			`🗑️ Eliminando reserva #${id} (${reserva.codigoReserva}) solicitada por admin`
+		);
 
 		// Registrar en auditoría antes de eliminar
 		try {
@@ -8407,10 +8939,10 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 						fecha: reserva.fecha,
 						tramoPadreId: reserva.tramoPadreId,
 						tramoHijoId: reserva.tramoHijoId,
-						motivo: "Eliminación manual desde panel admin"
+						motivo: "Eliminación manual desde panel admin",
 					}),
 					ip: req.ip || req.connection.remoteAddress,
-					userAgent: req.get('User-Agent')
+					userAgent: req.get("User-Agent"),
 				});
 			}
 		} catch (auditError) {
@@ -8423,19 +8955,24 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 
 		// 1. Limpieza de datos asociados a la reserva principal
 		await PendingEmail.destroy({
-			where: { reservaId: id }
+			where: { reservaId: id },
 		});
-		
+
 		// 🎯 NUEVO: Si tiene un tramo hijo (es una IDA que tiene VUELTA vinculada)
 		// Eliminar también el tramo de vuelta para evitar huérfanos
 		if (tramoHijoId) {
-			console.log(`🧹 Iniciando limpieza de tramo hijo vinculado: ${tramoHijoId}`);
+			console.log(
+				`🧹 Iniciando limpieza de tramo hijo vinculado: ${tramoHijoId}`
+			);
 			try {
 				await PendingEmail.destroy({ where: { reservaId: tramoHijoId } });
 				await Reserva.destroy({ where: { id: tramoHijoId } });
 				console.log(`✅ Tramo hijo ${tramoHijoId} eliminado exitosamente`);
 			} catch (childErr) {
-				console.error(`❌ Error eliminando tramo hijo ${tramoHijoId}:`, childErr.message);
+				console.error(
+					`❌ Error eliminando tramo hijo ${tramoHijoId}:`,
+					childErr.message
+				);
 				// No fallar la operación principal si falla el borrado del hijo
 			}
 		}
@@ -8449,7 +8986,10 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 					{ where: { id: tramoPadreId } }
 				);
 			} catch (parentErr) {
-				console.warn(`⚠️ No se pudo desvincular del padre ${tramoPadreId}:`, parentErr.message);
+				console.warn(
+					`⚠️ No se pudo desvincular del padre ${tramoPadreId}:`,
+					parentErr.message
+				);
 			}
 		}
 
@@ -8462,19 +9002,22 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 			success: true,
 			message: "Reserva y datos vinculados eliminados exitosamente",
 			deletedId: id,
-			linkedDeleted: !!tramoHijoId
+			linkedDeleted: !!tramoHijoId,
 		});
 	} catch (error) {
 		console.error("Error eliminando reserva:", error);
-		
+
 		if (error.name === "SequelizeForeignKeyConstraintError") {
-			return res.status(409).json({ 
-				error: "No se puede eliminar la reserva debido a restricciones de integridad referencial (pagos o transacciones asociadas)",
-				details: error.message 
+			return res.status(409).json({
+				error:
+					"No se puede eliminar la reserva debido a restricciones de integridad referencial (pagos o transacciones asociadas)",
+				details: error.message,
 			});
 		}
-		
-		res.status(500).json({ error: "Error interno del servidor", details: error.message });
+
+		res
+			.status(500)
+			.json({ error: "Error interno del servidor", details: error.message });
 	}
 });
 
@@ -8497,7 +9040,11 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		}
 
 		// Validar que no se pueda cambiar a pendiente si ya hay pagos realizados
-		if (estado === "pendiente" && (reserva.pagoMonto || 0) > 0 && reserva.estado !== "pendiente") {
+		if (
+			estado === "pendiente" &&
+			(reserva.pagoMonto || 0) > 0 &&
+			reserva.estado !== "pendiente"
+		) {
 			console.log(
 				"Intento de cambiar a pendiente con pagos:",
 				reserva.pagoMonto
@@ -8531,10 +9078,15 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		// 🎯 NUEVO: Generar oportunidades automáticamente si se confirma
 		if (estado === "confirmada") {
 			try {
-				console.log(`🎯 Generando oportunidades (Cambio Estado) para reserva ${reserva.id}...`);
+				console.log(
+					`🎯 Generando oportunidades (Cambio Estado) para reserva ${reserva.id}...`
+				);
 				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
-				console.error("❌ Error generando oportunidades en cambio de estado:", opErr.message);
+				console.error(
+					"❌ Error generando oportunidades en cambio de estado:",
+					opErr.message
+				);
 			}
 		}
 		res.json({
@@ -8550,7 +9102,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 
 // Endpoint para generar pagos desde el frontend
 app.post("/create-payment", async (req, res) => {
-		const {
+	const {
 		gateway,
 		amount,
 		description,
@@ -8569,7 +9121,7 @@ app.post("/create-payment", async (req, res) => {
 				"Faltan parametros requeridos: gateway, amount, description, email.",
 		});
 	}
-	
+
 	// Validación del monto en backend
 	const amountNum = Number(amount);
 	if (isNaN(amountNum) || amountNum <= 0) {
@@ -8577,10 +9129,10 @@ app.post("/create-payment", async (req, res) => {
 		return res.status(400).json({
 			success: false,
 			error: "Monto de pago inválido",
-			message: "El monto debe ser mayor a 0"
+			message: "El monto debe ser mayor a 0",
 		});
 	}
-	
+
 	console.log(`💰 [create-payment] Solicitud de pago:`, {
 		gateway,
 		amount: amountNum,
@@ -8588,7 +9140,7 @@ app.post("/create-payment", async (req, res) => {
 		codigoReserva,
 		tipoPago,
 		paymentOrigin,
-		email
+		email,
 	});
 
 	const frontendBase =
@@ -8607,16 +9159,26 @@ app.post("/create-payment", async (req, res) => {
 
 		// --- SANITIZACIÓN Y VALIDACIÓN DEL EMAIL ---
 		const emailSanitizado = sanitizarEmailRobusto(email);
-		console.log(`📧 [Flow] Email recibido: "${String(email || '').slice(0,3)}***" → sanitizado: "${emailSanitizado.slice(0,3)}***@${emailSanitizado.split('@')[1] || '?'}", longitud: ${emailSanitizado.length}`);
+		console.log(
+			`📧 [Flow] Email recibido: "${String(email || "").slice(
+				0,
+				3
+			)}***" → sanitizado: "${emailSanitizado.slice(0, 3)}***@${
+				emailSanitizado.split("@")[1] || "?"
+			}", longitud: ${emailSanitizado.length}`
+		);
 
 		// Validar que el email sanitizado tenga formato válido para Flow
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailSanitizado || !emailRegex.test(emailSanitizado)) {
-			console.error(`❌ [Flow] Email inválido para Flow después de sanitizar: "${emailSanitizado}" (original: typeof ${typeof email})`);
+			console.error(
+				`❌ [Flow] Email inválido para Flow después de sanitizar: "${emailSanitizado}" (original: typeof ${typeof email})`
+			);
 			return res.status(400).json({
 				success: false,
 				error: "Email inválido",
-				message: "El email de la reserva no tiene un formato válido. Por favor contacta a soporte."
+				message:
+					"El email de la reserva no tiene un formato válido. Por favor contacta a soporte.",
 			});
 		}
 
@@ -8661,8 +9223,11 @@ app.post("/create-payment", async (req, res) => {
 		}
 
 		params.s = signParams(params);
-		
-		console.log("🚀 Payload final enviado a Flow (POST):", JSON.stringify(params, null, 2));
+
+		console.log(
+			"🚀 Payload final enviado a Flow (POST):",
+			JSON.stringify(params, null, 2)
+		);
 
 		try {
 			const response = await axios.post(
@@ -8698,21 +9263,30 @@ app.post("/create-payment", async (req, res) => {
 // Flow envía el token por POST. Este endpoint lo captura y redirige al frontend via GET.
 app.use("/api/payment-result", express.urlencoded({ extended: true }));
 app.post("/api/payment-result", async (req, res) => {
-	console.log("🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)...");
-	
+	console.log(
+		"🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)..."
+	);
+
 	// Monto simbólico usado como último recurso cuando no se puede determinar el monto real
 	const SYMBOLIC_AMOUNT_CLP = 1000;
-	
-	const frontendBase = process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+
+	const frontendBase =
+		process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 	let token = req.body.token;
-	
+
 	try {
 		// Soporte para variaciones
 		if (!token && req.body.Token) token = req.body.Token;
 
 		if (!token) {
-			console.warn("⚠️ No se recibió token en /api/payment-result body:", req.body);
-			return res.redirect(303, `${frontendBase}/flow-return?error=missing_token`);
+			console.warn(
+				"⚠️ No se recibió token en /api/payment-result body:",
+				req.body
+			);
+			return res.redirect(
+				303,
+				`${frontendBase}/flow-return?error=missing_token`
+			);
 		}
 
 		console.log("✅ Token capturado:", token);
@@ -8726,248 +9300,353 @@ app.post("/api/payment-result", async (req, res) => {
 			params.s = signParams(params);
 
 			const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
-			const statusResponse = await axios.get(`${flowApiUrl}/payment/getStatus`, {
-				params: params
-			});
+			const statusResponse = await axios.get(
+				`${flowApiUrl}/payment/getStatus`,
+				{
+					params: params,
+				}
+			);
 
 			const flowData = statusResponse.data;
-			
+
 			// ✅ MEJORA: Logs de depuración detallados para rastrear monto
 			console.log(`💰 [DEBUG] Datos de Flow recibidos:`, {
 				status: flowData.status,
 				amount: flowData.amount,
 				requestAmount: flowData.requestAmount,
-				flowOrder: flowData.flowOrder
+				flowOrder: flowData.flowOrder,
 			});
-			
+
 			// Intentar extraer reservaId y codigoReserva de los datos opcionales
 			let reservaId = null;
 			let codigoReserva = null;
-			let optionalData = null; 
-			
+			let optionalData = null;
+
 			if (flowData.optional) {
 				try {
 					// Verificar si ya es un objeto (axios podría haberlo parseado si Flow devolvió JSON)
-					optionalData = typeof flowData.optional === "string"
-						? JSON.parse(flowData.optional)
-						: flowData.optional;
+					optionalData =
+						typeof flowData.optional === "string"
+							? JSON.parse(flowData.optional)
+							: flowData.optional;
 
 					reservaId = optionalData?.reservaId;
 					codigoReserva = optionalData?.codigoReserva;
 				} catch (e) {
-					console.warn("⚠️ Error parseando optional data de Flow:", e.message, "Data:", flowData.optional);
+					console.warn(
+						"⚠️ Error parseando optional data de Flow:",
+						e.message,
+						"Data:",
+						flowData.optional
+					);
 				}
 			}
-			
+
 			// Si no tenemos reservaId pero sí codigoReserva, buscar la reserva por código
 			if (!reservaId && codigoReserva) {
 				try {
 					const reservaByCodigo = await Reserva.findOne({
-						where: { codigoReserva: codigoReserva }
+						where: { codigoReserva: codigoReserva },
 					});
 					if (reservaByCodigo) {
 						reservaId = reservaByCodigo.id;
-						console.log(`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`);
+						console.log(
+							`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`
+						);
 					}
 				} catch (e) {
 					console.warn("⚠️ Error buscando reserva por código:", e.message);
 				}
 			}
 
-            // ✅ MEJORA: Definir montoActual con validación robusta
-            // Prioridad: monto pagado real > monto de la orden
-            const montoFlowActual = Number(flowData.amount) || Number(flowData.requestAmount) || 0;
-            
-            console.log(`💰 [DEBUG] Monto parseado de Flow: ${montoFlowActual}`);
+			// ✅ MEJORA: Definir montoActual con validación robusta
+			// Prioridad: monto pagado real > monto de la orden
+			const montoFlowActual =
+				Number(flowData.amount) || Number(flowData.requestAmount) || 0;
+
+			console.log(`💰 [DEBUG] Monto parseado de Flow: ${montoFlowActual}`);
 
 			// Si tenemos reservaId y el pago fue exitoso (2)
 			if (reservaId && flowData.status === 2) {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
 				const reserva = await Reserva.findByPk(reservaId);
-				
+
 				// Re-parsear optional data para asegurar acceso en este scope
 				let optionalDataSafe = optionalData || {};
 
 				// Determinar el origen del pago (desde DB o desde metadata optional)
 				const paymentOrigin = optionalDataSafe?.paymentOrigin;
-				const tipoPago = optionalDataSafe?.tipoPago; 
+				const tipoPago = optionalDataSafe?.tipoPago;
 
-				const isCodigoPago = (reserva && reserva.source === "codigo_pago") || paymentOrigin === "pagar_con_codigo"; // Añadido check explicito
+				const isCodigoPago =
+					(reserva && reserva.source === "codigo_pago") ||
+					paymentOrigin === "pagar_con_codigo"; // Añadido check explicito
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
 
 				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
 					// Caso: Pagar con Código, Consultar Reserva o Compra Productos
 					// Redirigir a la página de éxito estándar (FlowReturn)
-					console.log(`✅ Pago CONFIRMADO (Reserva ${reservaId}, Origen: ${paymentOrigin || reserva?.source}). Redirigiendo a FlowReturn.`);
-					
+					console.log(
+						`✅ Pago CONFIRMADO (Reserva ${reservaId}, Origen: ${
+							paymentOrigin || reserva?.source
+						}). Redirigiendo a FlowReturn.`
+					);
+
 					// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks
 					let montoParaConversion = montoFlowActual;
-					
+
 					// Validar y aplicar fallbacks en orden de prioridad
 					if (montoParaConversion <= 0) {
-						console.warn(`⚠️ [CONVERSIÓN GA] Monto de Flow es ${montoParaConversion}, aplicando fallbacks...`);
-						
+						console.warn(
+							`⚠️ [CONVERSIÓN GA] Monto de Flow es ${montoParaConversion}, aplicando fallbacks...`
+						);
+
 						// Fallback 1: pagoMonto acumulado en DB
 						if (reserva?.pagoMonto && Number(reserva.pagoMonto) > 0) {
 							montoParaConversion = Number(reserva.pagoMonto);
-							console.log(`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoParaConversion}`);
+							console.log(
+								`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoParaConversion}`
+							);
 						}
 						// Fallback 2: totalConDescuento
-						else if (reserva?.totalConDescuento && Number(reserva.totalConDescuento) > 0) {
+						else if (
+							reserva?.totalConDescuento &&
+							Number(reserva.totalConDescuento) > 0
+						) {
 							montoParaConversion = Number(reserva.totalConDescuento);
-							console.log(`   ✅ Fallback 2: Usando totalConDescuento: ${montoParaConversion}`);
+							console.log(
+								`   ✅ Fallback 2: Usando totalConDescuento: ${montoParaConversion}`
+							);
 						}
 						// Fallback 3: precio base
 						else if (reserva?.precio && Number(reserva.precio) > 0) {
 							montoParaConversion = Number(reserva.precio);
-							console.log(`   ✅ Fallback 3: Usando precio base: ${montoParaConversion}`);
+							console.log(
+								`   ✅ Fallback 3: Usando precio base: ${montoParaConversion}`
+							);
 						}
 						// Error crítico - último recurso
 						else {
-							console.error(`❌ [CRÍTICO] No se pudo determinar monto para conversión GA - Reserva ID: ${reservaId}`);
+							console.error(
+								`❌ [CRÍTICO] No se pudo determinar monto para conversión GA - Reserva ID: ${reservaId}`
+							);
 							console.error(`   - Flow amount: ${flowData.amount}`);
-							console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
+							console.error(
+								`   - Flow requestAmount: ${flowData.requestAmount}`
+							);
 							console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
-							console.error(`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`);
+							console.error(
+								`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`
+							);
 							console.error(`   - Reserva precio: ${reserva?.precio}`);
 							// Último recurso: monto simbólico para evitar cero (solo para que no falle la conversión)
 							montoParaConversion = SYMBOLIC_AMOUNT_CLP;
-							console.error(`   - Usando monto simbólico por defecto: ${montoParaConversion} CLP`);
+							console.error(
+								`   - Usando monto simbólico por defecto: ${montoParaConversion} CLP`
+							);
 						}
 					}
-					
-					console.log(`💰 [CONVERSIÓN GA] Monto final para Google Ads: ${montoParaConversion} CLP (Valor Real de Transacción)`);
-					
+
+					console.log(
+						`💰 [CONVERSIÓN GA] Monto final para Google Ads: ${montoParaConversion} CLP (Valor Real de Transacción)`
+					);
 
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
 					const userData = {
-						email: reserva?.email || optionalDataSafe?.email || '',
-						nombre: reserva?.nombre || '',
-						telefono: reserva?.telefono || ''
+						email: reserva?.email || optionalDataSafe?.email || "",
+						nombre: reserva?.nombre || "",
+						telefono: reserva?.telefono || "",
 					};
-					
+
 					// Codificar datos de usuario en Base64 para mayor privacidad
-					const userDataEncoded = Buffer.from(JSON.stringify(userData)).toString('base64');
-					
+					const userDataEncoded = Buffer.from(
+						JSON.stringify(userData)
+					).toString("base64");
+
 					// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas)
-					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${encodeURIComponent(userDataEncoded)}`;
-					
+					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${encodeURIComponent(
+						userDataEncoded
+					)}`;
+
 					return res.redirect(303, returnUrl);
 				}
 
 				// Caso: Reserva Express (flujo normal)
 				// Redirigir a Completar Detalles
-				console.log(`✅ Reserva Express CONFIRMADA (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`);
-				
+				console.log(
+					`✅ Reserva Express CONFIRMADA (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`
+				);
+
 				// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks (igual que en flujo anterior)
 				let montoExpress = montoFlowActual;
-				
+
 				if (montoExpress <= 0) {
-					console.warn(`⚠️ [CONVERSIÓN GA - Express] Monto de Flow es ${montoExpress}, aplicando fallbacks...`);
-					
+					console.warn(
+						`⚠️ [CONVERSIÓN GA - Express] Monto de Flow es ${montoExpress}, aplicando fallbacks...`
+					);
+
 					// Fallback 1: pagoMonto acumulado en DB
 					if (reserva?.pagoMonto && Number(reserva.pagoMonto) > 0) {
 						montoExpress = Number(reserva.pagoMonto);
-						console.log(`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoExpress}`);
+						console.log(
+							`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoExpress}`
+						);
 					}
 					// Fallback 2: totalConDescuento
-					else if (reserva?.totalConDescuento && Number(reserva.totalConDescuento) > 0) {
+					else if (
+						reserva?.totalConDescuento &&
+						Number(reserva.totalConDescuento) > 0
+					) {
 						montoExpress = Number(reserva.totalConDescuento);
-						console.log(`   ✅ Fallback 2: Usando totalConDescuento: ${montoExpress}`);
+						console.log(
+							`   ✅ Fallback 2: Usando totalConDescuento: ${montoExpress}`
+						);
 					}
 					// Fallback 3: precio base
 					else if (reserva?.precio && Number(reserva.precio) > 0) {
 						montoExpress = Number(reserva.precio);
-						console.log(`   ✅ Fallback 3: Usando precio base: ${montoExpress}`);
+						console.log(
+							`   ✅ Fallback 3: Usando precio base: ${montoExpress}`
+						);
 					}
 					// Error crítico - último recurso
 					else {
-						console.error(`❌ [CRÍTICO] No se pudo determinar monto para conversión GA Express - Reserva ID: ${reservaId}`);
+						console.error(
+							`❌ [CRÍTICO] No se pudo determinar monto para conversión GA Express - Reserva ID: ${reservaId}`
+						);
 						console.error(`   - Flow amount: ${flowData.amount}`);
 						console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
 						console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
-						console.error(`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`);
+						console.error(
+							`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`
+						);
 						console.error(`   - Reserva precio: ${reserva?.precio}`);
 						montoExpress = SYMBOLIC_AMOUNT_CLP;
-						console.error(`   - Usando monto simbólico por defecto: ${montoExpress} CLP`);
+						console.error(
+							`   - Usando monto simbólico por defecto: ${montoExpress} CLP`
+						);
 					}
 				}
-				
-				console.log(`💰 [CONVERSIÓN GA - Express] Monto final para Google Ads: ${montoExpress} CLP`);
+
+				console.log(
+					`💰 [CONVERSIÓN GA - Express] Monto final para Google Ads: ${montoExpress} CLP`
+				);
 
 				// FIXED: Pasar también datos del usuario (d) para conversiones en CompletarDetalles
 				const userDataExpress = {
-					email: reserva?.email || '',
-					nombre: reserva?.nombre || '',
-					telefono: reserva?.telefono || ''
+					email: reserva?.email || "",
+					nombre: reserva?.nombre || "",
+					telefono: reserva?.telefono || "",
 				};
-				const userDataEncodedExpress = Buffer.from(JSON.stringify(userDataExpress)).toString('base64');
+				const userDataEncodedExpress = Buffer.from(
+					JSON.stringify(userDataExpress)
+				).toString("base64");
 
 				// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas) e incluir token para conversiones GA predecibles
-				return res.redirect(303, `${frontendBase}/?flow_payment=success&token=${token}&reserva_id=${reservaId}&amount=${montoExpress}&d=${encodeURIComponent(userDataEncodedExpress)}`);
+				return res.redirect(
+					303,
+					`${frontendBase}/?flow_payment=success&token=${token}&reserva_id=${reservaId}&amount=${montoExpress}&d=${encodeURIComponent(
+						userDataEncodedExpress
+					)}`
+				);
 			} else if (reservaId && flowData.status === 1) {
 				// Pago PENDIENTE - No registrar conversión aún
-				console.warn(`⏳ Pago PENDIENTE (Reserva ${reservaId}, Status: ${flowData.status}). Redirigiendo con status=pending.`);
-				
+				console.warn(
+					`⏳ Pago PENDIENTE (Reserva ${reservaId}, Status: ${flowData.status}). Redirigiendo con status=pending.`
+				);
+
 				// Re-parsear optional data para determinar el flujo
 				let optionalDataSafe = optionalData || {};
 				const paymentOrigin = optionalDataSafe?.paymentOrigin;
 				const reserva = await Reserva.findByPk(reservaId);
-				
-				const isCodigoPago = (reserva && reserva.source === "codigo_pago") || paymentOrigin === "pagar_con_codigo";
+
+				const isCodigoPago =
+					(reserva && reserva.source === "codigo_pago") ||
+					paymentOrigin === "pagar_con_codigo";
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
-				
+
 				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
 					// Redirigir a FlowReturn con estado pendiente (sin monto para evitar conversión)
-					return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`);
+					return res.redirect(
+						303,
+						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`
+					);
 				} else {
 					// Reserva Express - redirigir a home con estado pendiente
-					return res.redirect(303, `${frontendBase}/?flow_payment=pending&reserva_id=${reservaId}`);
+					return res.redirect(
+						303,
+						`${frontendBase}/?flow_payment=pending&reserva_id=${reservaId}`
+					);
 				}
 			} else if (flowData.status === 3 || flowData.status === 4) {
 				// Pago rechazado (3) o anulado (4)
-				console.warn(`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`);
-				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=error&flow_status=${flowData.status}`);
+				console.warn(
+					`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`
+				);
+				return res.redirect(
+					303,
+					`${frontendBase}/flow-return?token=${token}&status=error&flow_status=${flowData.status}`
+				);
 			}
-			
+
 			// Si no hay reservaId pero el pago fue exitoso (caso raro o error de datos), redirigir a flow-return usando el monto de flowData
-			if ((!reservaId) && (flowData.status === 2 || flowData.status === 1)) {
-				console.warn("⚠️ Pago exitoso en Flow pero NO se encontró reservaId en metadata. Redirigiendo con monto de Flow.");
-				
+			if (!reservaId && (flowData.status === 2 || flowData.status === 1)) {
+				console.warn(
+					"⚠️ Pago exitoso en Flow pero NO se encontró reservaId en metadata. Redirigiendo con monto de Flow."
+				);
+
 				// ✅ CORRECCIÓN: Usar el mismo monto validado de Flow
 				let montoFlow = montoFlowActual;
-				
+
 				if (montoFlow <= 0) {
-					console.error(`❌ [CRÍTICO] Monto cero en pago sin reservaId - Flow Order: ${flowData.flowOrder}`);
+					console.error(
+						`❌ [CRÍTICO] Monto cero en pago sin reservaId - Flow Order: ${flowData.flowOrder}`
+					);
 					console.error(`   - Flow amount: ${flowData.amount}`);
 					console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
 					montoFlow = SYMBOLIC_AMOUNT_CLP; // Valor simbólico
 					console.error(`   - Usando monto simbólico: ${montoFlow} CLP`);
 				}
-				
-				console.log(`💰 [CONVERSIÓN GA - Sin Reserva] Monto final: ${montoFlow} CLP`);
-				
+
+				console.log(
+					`💰 [CONVERSIÓN GA - Sin Reserva] Monto final: ${montoFlow} CLP`
+				);
+
 				// Intento de recuperar email de flowData si existe
-				const userEmail = sanitizarEmailRobusto(flowData.payerEmail || flowData.email);
-				const userDataEncoded = Buffer.from(JSON.stringify({ email: userEmail })).toString('base64');
-				
+				const userEmail = sanitizarEmailRobusto(
+					flowData.payerEmail || flowData.email
+				);
+				const userDataEncoded = Buffer.from(
+					JSON.stringify({ email: userEmail })
+				).toString("base64");
+
 				// ✅ FIX: encodeURIComponent para escapar caracteres Base64 (+, /, =) que pueden corromperse en URLs
 				// Incluir warning param para debugging en frontend
-				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${encodeURIComponent(userDataEncoded)}&warning=no_reserva_id`);
+				return res.redirect(
+					303,
+					`${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${encodeURIComponent(
+						userDataEncoded
+					)}&warning=no_reserva_id`
+				);
 			}
-
 		} catch (flowError) {
-			console.error("⚠️ Error consultando estado en Flow (usando fallback):", flowError.message);
+			console.error(
+				"⚠️ Error consultando estado en Flow (usando fallback):",
+				flowError.message
+			);
 			// Continuar al fallback
 		}
-		
+
 		// Fallback: Redirigir a la página genérica de retorno
-		// IMPORTANTE: Pasamos status=unknown pero intentamos pasar el token. 
+		// IMPORTANTE: Pasamos status=unknown pero intentamos pasar el token.
 		// Si hubieramos capturado el monto antes del error, lo pasariamos, pero si falló getStatus, no tenemos monto confiable.
 		console.log("ℹ️ Usando fallback de redirección a /flow-return");
-		res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=unknown`);
+		res.redirect(
+			303,
+			`${frontendBase}/flow-return?token=${token}&status=unknown`
+		);
 	} catch (error) {
 		console.error("❌ Error en redirección de pago:", error);
 		res.redirect(303, `${frontendBase}/flow-return?error=server_error`);
@@ -9169,7 +9848,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			console.log(
 				`❌ Pago ${statusLabel} (status: ${payment.status}). Registrando transacción fallida para reserva ${reserva.id}`
 			);
-			
+
 			try {
 				await Transaccion.create({
 					reservaId: reserva.id,
@@ -9187,15 +9866,20 @@ app.post("/api/flow-confirmation", async (req, res) => {
 						amount: payment.amount,
 						paymentDate: payment.paymentDate,
 						commerceOrder: payment.commerceOrder,
-						payer: payment.payer
+						payer: payment.payer,
 					},
-					notas: `Pago ${statusLabel} por Flow. No se actualizó el estado de la reserva.`
+					notas: `Pago ${statusLabel} por Flow. No se actualizó el estado de la reserva.`,
 				});
-				console.log(`💾 Transacción fallida registrada: Flow Order ${payment.flowOrder}`);
+				console.log(
+					`💾 Transacción fallida registrada: Flow Order ${payment.flowOrder}`
+				);
 			} catch (transError) {
-				console.error("⚠️ Error registrando transacción fallida:", transError.message);
+				console.error(
+					"⚠️ Error registrando transacción fallida:",
+					transError.message
+				);
 			}
-			
+
 			return;
 		}
 
@@ -9225,8 +9909,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			try {
 				reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
 				if (reservaHija) {
-					console.log(`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`);
-					
+					console.log(
+						`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`
+					);
+
 					// Calcular totales para proporción
 					const totalIda = parseFloat(reserva.totalConDescuento || 0);
 					const totalVuelta = parseFloat(reservaHija.totalConDescuento || 0);
@@ -9235,12 +9921,16 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					if (totalConjunto > 0) {
 						// Calcular factores (si el total es 0, evitar división por cero)
 						const factorIda = totalIda / totalConjunto;
-						
+
 						// Dividir el monto del pago actual
 						montoIda = Math.round(montoActual * factorIda);
 						montoVuelta = montoActual - montoIda; // El resto va a la vuelta para evitar problemas de redondeo
-						
-						console.log(`📊 División aplicada (Total Pago: ${montoActual}): Ida $${montoIda} (${(factorIda*100).toFixed(1)}%) | Vuelta $${montoVuelta}`);
+
+						console.log(
+							`📊 División aplicada (Total Pago: ${montoActual}): Ida $${montoIda} (${(
+								factorIda * 100
+							).toFixed(1)}%) | Vuelta $${montoVuelta}`
+						);
 					} else {
 						// Si son reservas gratuitas o precio 0, dividir a la mitad
 						montoIda = Math.round(montoActual / 2);
@@ -9279,7 +9969,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		let nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
 		let abonoPagado = reserva.abonoPagado;
 		let saldoPagado = reserva.saldoPagado;
-		
+
 		if (pagoAcumulado >= totalReserva && totalReserva > 0) {
 			nuevoEstadoPago = "pagado";
 			nuevoSaldoPendiente = 0;
@@ -9324,10 +10014,15 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		// 🎯 NUEVO: Generar oportunidades automáticamente para Ida
 		if (nuevoEstadoReserva === "confirmada") {
 			try {
-				console.log(`🎯 Generando oportunidades (Flow Webhook Main) para reserva ${reserva.id}...`);
+				console.log(
+					`🎯 Generando oportunidades (Flow Webhook Main) para reserva ${reserva.id}...`
+				);
 				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
-				console.error("❌ Error generando oportunidades en Flow Webhook Main:", opErr.message);
+				console.error(
+					"❌ Error generando oportunidades en Flow Webhook Main:",
+					opErr.message
+				);
 			}
 		}
 
@@ -9335,8 +10030,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		// Usar la instancia de reservaHija obtenida previamente
 		if (reservaHija && montoVuelta > 0) {
 			try {
-				console.log(`🔗 Actualizando reserva vinculada (Vuelta) con pago asignado: $${montoVuelta}`);
-				
+				console.log(
+					`🔗 Actualizando reserva vinculada (Vuelta) con pago asignado: $${montoVuelta}`
+				);
+
 				const totalHija = parseFloat(reservaHija.totalConDescuento || 0);
 				const pagoPrevioHija = parseFloat(reservaHija.pagoMonto || 0);
 				const pagoAcumuladoHija = pagoPrevioHija + montoVuelta;
@@ -9357,14 +10054,20 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					saldoPendienteHija = 0;
 					abonoPagadoHija = true;
 					saldoPagadoHija = true;
-					if (["pendiente", "pendiente_detalles", "confirmada"].includes(estadoReservaHija)) {
+					if (
+						["pendiente", "pendiente_detalles", "confirmada"].includes(
+							estadoReservaHija
+						)
+					) {
 						estadoReservaHija = "confirmada";
 					}
 				} else if (pagoAcumuladoHija > 0) {
 					estadoPagoHija = "parcial";
 					if (pagoAcumuladoHija >= umbralAbonoHija) {
 						abonoPagadoHija = true;
-						if (["pendiente", "pendiente_detalles"].includes(estadoReservaHija)) {
+						if (
+							["pendiente", "pendiente_detalles"].includes(estadoReservaHija)
+						) {
 							estadoReservaHija = "confirmada";
 						}
 					}
@@ -9382,22 +10085,31 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					referenciaPago: referenciaPagoFinal,
 					tipoPago: tipoPagoFinal,
 					abonoPagado: abonoPagadoHija,
-					saldoPagado: saldoPagadoHija
+					saldoPagado: saldoPagadoHija,
 				});
-				console.log(`✅ Reserva vinculada actualizada: Estado ${estadoReservaHija}, Pago ${estadoPagoHija}`);
+				console.log(
+					`✅ Reserva vinculada actualizada: Estado ${estadoReservaHija}, Pago ${estadoPagoHija}`
+				);
 
 				// 🎯 NUEVO: Generar oportunidades automáticamente para Vuelta
 				if (estadoReservaHija === "confirmada") {
 					try {
-						console.log(`🎯 Generando oportunidades (Flow Webhook Hija) para reserva ${reservaHija.id}...`);
+						console.log(
+							`🎯 Generando oportunidades (Flow Webhook Hija) para reserva ${reservaHija.id}...`
+						);
 						await detectarYGenerarOportunidades(reservaHija);
 					} catch (opErr) {
-						console.error("❌ Error generando oportunidades en Flow Webhook Hija:", opErr.message);
+						console.error(
+							"❌ Error generando oportunidades en Flow Webhook Hija:",
+							opErr.message
+						);
 					}
 				}
-
 			} catch (errVinculada) {
-				console.error("⚠️ Error al actualizar reserva vinculada:", errVinculada.message);
+				console.error(
+					"⚠️ Error al actualizar reserva vinculada:",
+					errVinculada.message
+				);
 			}
 		}
 
@@ -9420,11 +10132,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					amount: payment.amount,
 					paymentDate: payment.paymentDate,
 					commerceOrder: payment.commerceOrder,
-					payer: payment.payer
+					payer: payment.payer,
 				},
-				notas: `Pago procesado vía Flow. Acumulado: $${pagoAcumulado}`
+				notas: `Pago procesado vía Flow. Acumulado: $${pagoAcumulado}`,
 			});
-			console.log(`💾 Transacción registrada: ID Flow ${payment.flowOrder}, Monto $${montoActual}`);
+			console.log(
+				`💾 Transacción registrada: ID Flow ${payment.flowOrder}, Monto $${montoActual}`
+			);
 		} catch (transError) {
 			console.error("⚠️ Error registrando transacción:", transError.message);
 		}
@@ -9502,52 +10216,65 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		console.log("💾 Reserva actualizada con información de pago Flow");
 
 		// Si la reserva proviene de un código de pago, marcarlo como usado
-	try {
-		let registro = null;
-		
-		// PRIORIDAD 1: Usar codigoPagoId de metadata (más confiable para pagos de saldo)
-		if (codigoPagoId && !isNaN(codigoPagoId)) {
-			registro = await CodigoPago.findByPk(codigoPagoId);
-			if (registro) {
-				console.log(`✅ Código de pago encontrado por ID: ${codigoPagoId} (${registro.codigo})`);
-			}
-		}
-		
-		// PRIORIDAD 2: Buscar por referenciaPago (compatibilidad con flujos antiguos)
-		if (!registro && reserva.referenciaPago) {
-			const codigoDePago = reserva.referenciaPago;
-			if (typeof codigoDePago === "string" && codigoDePago.trim().length > 0) {
-				const codigo = codigoDePago.trim().toUpperCase();
-				registro = await CodigoPago.findOne({ where: { codigo } });
+		try {
+			let registro = null;
+
+			// PRIORIDAD 1: Usar codigoPagoId de metadata (más confiable para pagos de saldo)
+			if (codigoPagoId && !isNaN(codigoPagoId)) {
+				registro = await CodigoPago.findByPk(codigoPagoId);
 				if (registro) {
-					console.log(`✅ Código de pago encontrado por referencia: ${codigo}`);
+					console.log(
+						`✅ Código de pago encontrado por ID: ${codigoPagoId} (${registro.codigo})`
+					);
 				}
 			}
+
+			// PRIORIDAD 2: Buscar por referenciaPago (compatibilidad con flujos antiguos)
+			if (!registro && reserva.referenciaPago) {
+				const codigoDePago = reserva.referenciaPago;
+				if (
+					typeof codigoDePago === "string" &&
+					codigoDePago.trim().length > 0
+				) {
+					const codigo = codigoDePago.trim().toUpperCase();
+					registro = await CodigoPago.findOne({ where: { codigo } });
+					if (registro) {
+						console.log(
+							`✅ Código de pago encontrado por referencia: ${codigo}`
+						);
+					}
+				}
+			}
+
+			// Si encontramos el código, actualizarlo
+			if (registro) {
+				// Guardar motivo para el correo
+				reserva.motivoPago = registro.descripcion;
+
+				const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
+				const estado =
+					nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
+
+				await registro.update({
+					usosActuales: nuevosUsos,
+					reservaId: reserva.id,
+					emailCliente: reserva.email,
+					fechaUso: new Date(),
+					estado,
+				});
+
+				console.log(
+					`✅ Código de pago actualizado: ${registro.codigo} (Usos: ${nuevosUsos}/${registro.usosMaximos}, Estado: ${estado})`
+				);
+			} else {
+				console.log("ℹ️ No se encontró código de pago para actualizar");
+			}
+		} catch (cpError) {
+			console.warn(
+				"⚠️ No se pudo actualizar el código de pago:",
+				cpError.message
+			);
 		}
-		
-		// Si encontramos el código, actualizarlo
-		if (registro) {
-			// Guardar motivo para el correo
-			reserva.motivoPago = registro.descripcion;
-			
-			const nuevosUsos = (parseInt(registro.usosActuales, 10) || 0) + 1;
-			const estado = nuevosUsos >= registro.usosMaximos ? "usado" : registro.estado;
-			
-			await registro.update({
-				usosActuales: nuevosUsos,
-				reservaId: reserva.id,
-				emailCliente: reserva.email,
-				fechaUso: new Date(),
-				estado,
-			});
-			
-			console.log(`✅ Código de pago actualizado: ${registro.codigo} (Usos: ${nuevosUsos}/${registro.usosMaximos}, Estado: ${estado})`);
-		} else {
-			console.log("ℹ️ No se encontró código de pago para actualizar");
-		}
-	} catch (cpError) {
-		console.warn("⚠️ No se pudo actualizar el código de pago:", cpError.message);
-	}
 
 		// Enviar correo de confirmación de pago al cliente
 		try {
@@ -9572,7 +10299,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				fechaRegreso: reserva.fechaRegreso || "",
 				horaRegreso: reserva.horaRegreso || "",
 				upgradeVan: reserva.upgradeVan,
-				motivo: reserva.motivoPago || ""
+				motivo: reserva.motivoPago || "",
 			};
 
 			const phpUrl =
@@ -9584,38 +10311,57 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				timeout: 30000,
 			});
 
-			console.log(`✅ Email de confirmación de pago Flow enviado al cliente: ${reserva.email}`);
+			console.log(
+				`✅ Email de confirmación de pago Flow enviado al cliente: ${reserva.email}`
+			);
 		} catch (emailError) {
-			console.error("❌ Error al enviar email de confirmación al cliente:", emailError.message);
+			console.error(
+				"❌ Error al enviar email de confirmación al cliente:",
+				emailError.message
+			);
 		}
 
 		// NUEVO: Enviar notificación al administrador sobre el pago recibido
 		try {
 			console.log("📧 Enviando notificación de pago al administrador...");
-			const phpAdminUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
-			
-			await axios.post(phpAdminUrl, {
-				action: "notify_admin_payment",
-				reservaId: reserva.id,
-				codigoReserva: reserva.codigoReserva,
-				nombre: reserva.nombre,
-				monto: payment.amount,
-				metodo: "Flow",
-				fecha: reserva.fecha,
-				hora: reserva.hora,
-				origen: reserva.origen,
-				destino: (reserva.motivoPago ? `${reserva.destino} (Motivo: ${reserva.motivoPago})` : reserva.destino) + 
-					(reservaHija ? ` | 🔄 RETORNO: ${reservaHija.fecha} ${reservaHija.hora} (${reservaHija.origen} ➝ ${reservaHija.destino})` : ""),
-				idaVuelta: reserva.idaVuelta,
-				upgradeVan: reserva.upgradeVan,
-				motivo: reserva.motivoPago || ""
-			}, {
-				headers: { "Content-Type": "application/json" },
-				timeout: 10000
-			});
+			const phpAdminUrl =
+				process.env.PHP_EMAIL_URL ||
+				"https://www.transportesaraucaria.cl/enviar_correo_mejorado.php";
+
+			await axios.post(
+				phpAdminUrl,
+				{
+					action: "notify_admin_payment",
+					reservaId: reserva.id,
+					codigoReserva: reserva.codigoReserva,
+					nombre: reserva.nombre,
+					monto: payment.amount,
+					metodo: "Flow",
+					fecha: reserva.fecha,
+					hora: reserva.hora,
+					origen: reserva.origen,
+					destino:
+						(reserva.motivoPago
+							? `${reserva.destino} (Motivo: ${reserva.motivoPago})`
+							: reserva.destino) +
+						(reservaHija
+							? ` | 🔄 RETORNO: ${reservaHija.fecha} ${reservaHija.hora} (${reservaHija.origen} ➝ ${reservaHija.destino})`
+							: ""),
+					idaVuelta: reserva.idaVuelta,
+					upgradeVan: reserva.upgradeVan,
+					motivo: reserva.motivoPago || "",
+				},
+				{
+					headers: { "Content-Type": "application/json" },
+					timeout: 10000,
+				}
+			);
 			console.log("✅ Notificación de pago al administrador enviada");
 		} catch (adminError) {
-			console.error("❌ Error enviando notificación de pago al administrador:", adminError.message);
+			console.error(
+				"❌ Error enviando notificación de pago al administrador:",
+				adminError.message
+			);
 		}
 
 		// Enviar notificación de productos si corresponde
@@ -9755,7 +10501,9 @@ app.get("/api/reservas/buscar/:codigo", authAdmin, async (req, res) => {
 		} else if (!isNaN(codigo)) {
 			whereClause = { id: codigo };
 		} else {
-			return res.status(400).json({ success: false, message: "Código de reserva inválido" });
+			return res
+				.status(400)
+				.json({ success: false, message: "Código de reserva inválido" });
 		}
 
 		const reserva = await Reserva.findOne({
@@ -9770,13 +10518,17 @@ app.get("/api/reservas/buscar/:codigo", authAdmin, async (req, res) => {
 		});
 
 		if (!reserva) {
-			return res.status(404).json({ success: false, message: "Reserva no encontrada" });
+			return res
+				.status(404)
+				.json({ success: false, message: "Reserva no encontrada" });
 		}
 
 		res.json({ success: true, reserva });
 	} catch (error) {
 		console.error("Error al buscar reserva:", error);
-		res.status(500).json({ success: false, message: "Error interno del servidor" });
+		res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
@@ -9988,7 +10740,7 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			(fechaInicio || fechaFin)
+			fechaInicio || fechaFin
 				? { fecha: filtroReservas, estado: "completada" }
 				: { estado: "completada" };
 
@@ -10005,66 +10757,66 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 				: undefined;
 
 		// NO filtrar gastos por fecha aquí, ya que necesitamos filtrarlos por reservaId
-	// Los gastos deben corresponder a las reservas del período, no por su propia fecha
-	const conductores = await Conductor.findAll({
-		include: [
-			{
-				model: Reserva,
-				as: "reservas",
-				attributes: ["id", "totalConDescuento", "estado", "fecha"],
-				where: whereReservas,
-				required: false,
-			},
-			{
-				model: Gasto,
-				as: "gastos",
-				attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId"],
-				// NO aplicar filtro de fecha aquí
-				required: false,
-			},
-		],
-	});
+		// Los gastos deben corresponder a las reservas del período, no por su propia fecha
+		const conductores = await Conductor.findAll({
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+					where: whereReservas,
+					required: false,
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId"],
+					// NO aplicar filtro de fecha aquí
+					required: false,
+				},
+			],
+		});
 
-	const estadisticas = conductores.map((conductor) => {
-		const reservas = conductor.reservas || [];
-		const todosLosGastos = conductor.gastos || [];
-		
-		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
-		const reservaIds = new Set(reservas.map(r => r.id));
-		const gastos = todosLosGastos.filter(g => 
-			g.reservaId && reservaIds.has(g.reservaId)
-		);
+		const estadisticas = conductores.map((conductor) => {
+			const reservas = conductor.reservas || [];
+			const todosLosGastos = conductor.gastos || [];
 
-		const totalReservas = reservas.length;
-		const reservasCompletadas = reservas.filter(
-			(r) => r.estado === "completada"
-		).length;
-		const totalIngresos = reservas.reduce(
-			(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-			0
-		);
-		const totalGastos = gastos.reduce(
-			(sum, g) => sum + parseFloat(g.monto || 0),
-			0
-		);
-		const pagosConductor = gastos
-			.filter((g) => g.tipoGasto === "pago_conductor")
-			.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+			// Filtrar gastos: solo los que pertenecen a las reservas filtradas
+			const reservaIds = new Set(reservas.map((r) => r.id));
+			const gastos = todosLosGastos.filter(
+				(g) => g.reservaId && reservaIds.has(g.reservaId)
+			);
 
-		return {
-			id: conductor.id,
-			nombre: conductor.nombre,
-			rut: conductor.rut,
-			telefono: conductor.telefono,
-			email: conductor.email,
-			totalReservas,
-			reservasCompletadas,
-			totalIngresos,
-			totalGastos,
-			pagosConductor,
-			utilidad: totalIngresos - totalGastos,
-		};
-	});
+			const totalReservas = reservas.length;
+			const reservasCompletadas = reservas.filter(
+				(r) => r.estado === "completada"
+			).length;
+			const totalIngresos = reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			);
+			const totalGastos = gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			);
+			const pagosConductor = gastos
+				.filter((g) => g.tipoGasto === "pago_conductor")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+
+			return {
+				id: conductor.id,
+				nombre: conductor.nombre,
+				rut: conductor.rut,
+				telefono: conductor.telefono,
+				email: conductor.email,
+				totalReservas,
+				reservasCompletadas,
+				totalIngresos,
+				totalGastos,
+				pagosConductor,
+				utilidad: totalIngresos - totalGastos,
+			};
+		});
 
 		res.json({
 			success: true,
@@ -10115,7 +10867,7 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			(fechaInicio || fechaFin)
+			fechaInicio || fechaFin
 				? { fecha: filtroReservas, estado: "completada" }
 				: { estado: "completada" };
 
@@ -10132,71 +10884,71 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 				: undefined;
 
 		// NO filtrar gastos por fecha aquí, ya que necesitamos filtrarlos por reservaId
-	// Los gastos deben corresponder a las reservas del período, no por su propia fecha
-	const vehiculos = await Vehiculo.findAll({
-		include: [
-			{
-				model: Reserva,
-				as: "reservas",
-				attributes: ["id", "totalConDescuento", "estado", "fecha"],
-				where: whereReservas,
-				required: false,
-			},
-			{
-				model: Gasto,
-				as: "gastos",
-				attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId"],
-				// NO aplicar filtro de fecha aquí
-				required: false,
-			},
-		],
-	});
+		// Los gastos deben corresponder a las reservas del período, no por su propia fecha
+		const vehiculos = await Vehiculo.findAll({
+			include: [
+				{
+					model: Reserva,
+					as: "reservas",
+					attributes: ["id", "totalConDescuento", "estado", "fecha"],
+					where: whereReservas,
+					required: false,
+				},
+				{
+					model: Gasto,
+					as: "gastos",
+					attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId"],
+					// NO aplicar filtro de fecha aquí
+					required: false,
+				},
+			],
+		});
 
-	const estadisticas = vehiculos.map((vehiculo) => {
-		const reservas = vehiculo.reservas || [];
-		const todosLosGastos = vehiculo.gastos || [];
-		
-		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
-		const reservaIds = new Set(reservas.map(r => r.id));
-		const gastos = todosLosGastos.filter(g => 
-			g.reservaId && reservaIds.has(g.reservaId)
-		);
+		const estadisticas = vehiculos.map((vehiculo) => {
+			const reservas = vehiculo.reservas || [];
+			const todosLosGastos = vehiculo.gastos || [];
 
-		const totalReservas = reservas.length;
-		const reservasCompletadas = reservas.filter(
-			(r) => r.estado === "completada"
-		).length;
-		const totalIngresos = reservas.reduce(
-			(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-			0
-		);
-		const totalGastos = gastos.reduce(
-			(sum, g) => sum + parseFloat(g.monto || 0),
-			0
-		);
-		const gastoCombustible = gastos
-			.filter((g) => g.tipoGasto === "combustible")
-			.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
-		const gastoMantenimiento = gastos
-			.filter((g) => g.tipoGasto === "mantenimiento")
-			.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+			// Filtrar gastos: solo los que pertenecen a las reservas filtradas
+			const reservaIds = new Set(reservas.map((r) => r.id));
+			const gastos = todosLosGastos.filter(
+				(g) => g.reservaId && reservaIds.has(g.reservaId)
+			);
 
-		return {
-			id: vehiculo.id,
-			patente: vehiculo.patente,
-			marca: vehiculo.marca,
-			modelo: vehiculo.modelo,
-			tipo: vehiculo.tipo,
-			capacidad: vehiculo.capacidad,
-			totalReservas,
-			reservasCompletadas,
-			totalIngresos,
-			totalGastos,
-			gastoCombustible,
-			gastoMantenimiento,
-			utilidad: totalIngresos - totalGastos,
-		};
-	});
+			const totalReservas = reservas.length;
+			const reservasCompletadas = reservas.filter(
+				(r) => r.estado === "completada"
+			).length;
+			const totalIngresos = reservas.reduce(
+				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
+				0
+			);
+			const totalGastos = gastos.reduce(
+				(sum, g) => sum + parseFloat(g.monto || 0),
+				0
+			);
+			const gastoCombustible = gastos
+				.filter((g) => g.tipoGasto === "combustible")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+			const gastoMantenimiento = gastos
+				.filter((g) => g.tipoGasto === "mantenimiento")
+				.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0);
+
+			return {
+				id: vehiculo.id,
+				patente: vehiculo.patente,
+				marca: vehiculo.marca,
+				modelo: vehiculo.modelo,
+				tipo: vehiculo.tipo,
+				capacidad: vehiculo.capacidad,
+				totalReservas,
+				reservasCompletadas,
+				totalIngresos,
+				totalGastos,
+				gastoCombustible,
+				gastoMantenimiento,
+				utilidad: totalIngresos - totalGastos,
+			};
+		});
 
 		res.json({
 			success: true,
@@ -10354,7 +11106,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 			filtroReservas[Op.lte] = fechaFin;
 		}
 		const whereReservas =
-			(fechaInicio || fechaFin)
+			fechaInicio || fechaFin
 				? { fecha: filtroReservas, estado: "completada" }
 				: { estado: "completada" };
 
@@ -10376,7 +11128,14 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 				{
 					model: Gasto,
 					as: "gastos",
-					attributes: ["id", "monto", "tipoGasto", "fecha", "reservaId", "descripcion"],
+					attributes: [
+						"id",
+						"monto",
+						"tipoGasto",
+						"fecha",
+						"reservaId",
+						"descripcion",
+					],
 					// NO filtrar por fecha aquí
 					required: false,
 					include: [
@@ -10401,9 +11160,9 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 		const todosLosGastos = conductor.gastos || [];
 
 		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
-		const reservaIds = new Set(reservas.map(r => r.id));
-		const gastos = todosLosGastos.filter(g => 
-			g.reservaId && reservaIds.has(g.reservaId)
+		const reservaIds = new Set(reservas.map((r) => r.id));
+		const gastos = todosLosGastos.filter(
+			(g) => g.reservaId && reservaIds.has(g.reservaId)
 		);
 
 		// Agrupar gastos por tipo
@@ -11333,7 +12092,10 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 			order: [[sequelize.literal("created_at"), "DESC"]],
 		});
 
-		console.log(`[DEBUG] Transacciones para reserva ${id}:`, transacciones.length);
+		console.log(
+			`[DEBUG] Transacciones para reserva ${id}:`,
+			transacciones.length
+		);
 		if (transacciones.length > 0) {
 			console.log(`[DEBUG] Detalle:`, JSON.stringify(transacciones, null, 2));
 		}
@@ -11418,11 +12180,15 @@ const startServer = async () => {
 
 		// Iniciar procesador de correos DESPUÉS de que la BD esté lista
 		setInterval(processPendingEmails, 60000);
-		console.log("🕒 Procesador de correos pendientes iniciado (intervalo: 60s)");
+		console.log(
+			"🕒 Procesador de correos pendientes iniciado (intervalo: 60s)"
+		);
 
 		// Iniciar limpiador de correos antiguos (cada 7 días = 604800000 ms)
 		setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
-		console.log("🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)");
+		console.log(
+			"🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)"
+		);
 
 		// Ejecutar limpieza inicial al arrancar (después de 5 minutos)
 		setTimeout(async () => {
