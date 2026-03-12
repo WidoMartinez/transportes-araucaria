@@ -8953,8 +8953,9 @@ app.post("/api/payment-result", async (req, res) => {
 				const userEmail = sanitizarEmailRobusto(flowData.payerEmail || flowData.email);
 				const userDataEncoded = Buffer.from(JSON.stringify({ email: userEmail })).toString('base64');
 				
+				// ✅ FIX: encodeURIComponent para escapar caracteres Base64 (+, /, =) que pueden corromperse en URLs
 				// Incluir warning param para debugging en frontend
-				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${userDataEncoded}&warning=no_reserva_id`);
+				return res.redirect(303, `${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${encodeURIComponent(userDataEncoded)}&warning=no_reserva_id`);
 			}
 
 		} catch (flowError) {

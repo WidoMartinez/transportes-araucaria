@@ -25,11 +25,11 @@ const WhatsAppButton = ({
 	// Construir URL de WhatsApp con mensaje pre-cargado
 	const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
-	// Tracking de conversión de Google Ads
+	// Tracking de conversión de Google Ads (cuenta activa AW-17529712870)
 	const handleClick = () => {
 		if (typeof window !== "undefined" && window.gtag) {
 			window.gtag("event", "conversion", {
-				send_to: "AW-16746932747/OHfECKTK4_4ZEMiWkN49",
+				send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
 				value: 1.0,
 				currency: "CLP",
 			});
