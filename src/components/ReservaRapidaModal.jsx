@@ -79,8 +79,6 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
       day: '2-digit'
     }).format(new Date());
 
-    console.log(`[Debug] Fecha Seleccionada: "${fechaSeleccionada}", Hoy Chile: "${hoyChile}", Match: ${fechaSeleccionada === hoyChile}`);
-
     // Filtrar por rango horario de la promoción (si existe)
     if (promocion.hora_inicio || promocion.hora_fin) {
       options = options.filter(opt => {
@@ -90,26 +88,29 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
         return timeVal >= inicio && timeVal <= fin;
       });
     }
-    
+
     // Filtrado por anticipación mínima si es hoy en Chile
     if (fechaSeleccionada === hoyChile) {
-      const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
+      // Obtener hora actual en Chile de forma robusta
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Santiago',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(now);
+      const hActual = parseInt(parts.find(p => p.type === 'hour').value);
+      const mActual = parseInt(parts.find(p => p.type === 'minute').value);
+      const horaActualDecimal = hActual + mActual / 60;
+
       const anticipacionMinima = (promocion && promocion.anticipacion_minima !== undefined && promocion.anticipacion_minima !== null) ? Number(promocion.anticipacion_minima) : 3;
       
-      console.log(`[Debug] Filtrando para hoy (${hoyChile}). Anticipación: ${anticipacionMinima}h. Hora Chile: ${ahoraChile.toLocaleTimeString()}`);
-      
-      const filtered = options.filter(opt => {
+      options = options.filter(opt => {
         const [h, m] = opt.value.split(":").map(Number);
-        const fechaOpt = new Date(ahoraChile);
-        fechaOpt.setHours(h, m, 0, 0);
-        
-        const diffHoras = (fechaOpt - ahoraChile) / 3600000;
-        const pass = diffHoras >= anticipacionMinima;
-        return pass;
+        const horaOpcionDecimal = h + m / 60;
+        return horaOpcionDecimal >= horaActualDecimal + anticipacionMinima;
       });
-      
-      console.log(`[Debug] Opciones antes: ${options.length}, Opciones después: ${filtered.length}`);
-      options = filtered;
     }
     
     return options;

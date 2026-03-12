@@ -204,15 +204,24 @@ function HeroExpress({
 				: null;
 			
 			const anticipacion = destinoObj?.minHorasAnticipacion || 5;
-			const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
+			
+			// Obtener hora actual en Chile de forma robusta
+			const now = new Date();
+			const formatter = new Intl.DateTimeFormat('en-US', {
+				timeZone: 'America/Santiago',
+				hour: 'numeric',
+				minute: 'numeric',
+				hour12: false
+			});
+			const parts = formatter.formatToParts(now);
+			const hActual = parseInt(parts.find(p => p.type === 'hour').value);
+			const mActual = parseInt(parts.find(p => p.type === 'minute').value);
+			const horaActualDecimal = hActual + mActual / 60;
 
 			options = options.filter(opt => {
 				const [h, m] = opt.value.split(":").map(Number);
-				const fechaOpt = new Date(ahoraChile);
-				fechaOpt.setHours(h, m, 0, 0);
-				
-				const diffHoras = (fechaOpt - ahoraChile) / 3600000;
-				return diffHoras >= anticipacion;
+				const horaOpcionDecimal = h + m / 60;
+				return horaOpcionDecimal >= horaActualDecimal + anticipacion;
 			});
 		}
 
