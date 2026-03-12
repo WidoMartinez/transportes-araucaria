@@ -2393,6 +2393,37 @@ DB_LOGGING=true  # Habilita logging SQL para diagnóstico (solo desarrollo)
 
 ---
 
+## 0. Pantalla Blanca en AdminReservas tras rediseño (Iconos Faltantes)
+
+**Documentado: 12 Marzo 2026**
+
+### Problema
+Al cargar el panel administrativo, la pantalla se queda en blanco (o Vite reporta error 500/Internal Server Error en la consola). El error específico suele ser `ReferenceError: [IconName] is not defined`.
+
+### Causa
+Se están utilizando iconos nuevos de la librería `lucide-react` en el componente `AdminReservas.jsx` pero no se han incluido en la sentencia de importación al inicio del archivo. 
+
+**Iconos recurrentemente olvidados:**
+- `Edit3`, `ClipboardList`, `Hash`, `Link2`, `MessageSquare`, `Tag`, `CreditCard`, `RefreshCcw`.
+
+### Solución
+Asegurar que todos los iconos usados en el JSX estén presentes en la importación de `lucide-react`:
+```javascript
+import {
+  // ...otros iconos
+  Edit3,
+  ClipboardList,
+  Hash,
+  Link2,
+  MessageSquare,
+  Tag,
+  CreditCard,
+  RefreshCcw
+} from "lucide-react";
+```
+
+---
+
 ## 21. Problemas en el Sistema de Oportunidades (Feb 2026)
 
 Durante el refinamiento del sistema de reserva expedita de oportunidades, se detectaron y corrigieron los siguientes puntos críticos:
