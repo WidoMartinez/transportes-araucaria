@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { toast } from "sonner";
 import { formatCurrency } from "../lib/utils";
 import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
@@ -215,6 +216,84 @@ function AdminReservas() {
 			console.error("Error al cargar historial de pagos:", e);
 		}
 	}, [selectedReserva, apiUrl]);
+
+	// ELIMINAR PAGO INDIVIDUAL
+	const handleDeletePago = async (pagoId) => {
+		if (!confirm("¿Estás seguro de que deseas eliminar este registro de pago? El saldo de la reserva se recalculará automáticamente.")) return;
+		
+		try {
+			const resp = await fetch(`${apiUrl}/api/pagos/${pagoId}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${accessToken}` }
+			});
+			if (resp.ok) {
+				toast.success("Pago eliminado correctamente");
+				fetchPagoHistorial();
+				// Recargar la reserva para ver el nuevo saldo
+				if (selectedReserva) {
+					const res = await authenticatedFetch(`/api/reservas/${selectedReserva.id}`);
+					if (res.ok) {
+						const updated = await res.json();
+						setSelectedReserva(updated);
+						// Actualizar en el listado general
+						setReservas(prev => prev.map(r => r.id === updated.id ? updated : r));
+					}
+				}
+			} else {
+				const err = await resp.json();
+				toast.error(err.error || "Error al eliminar pago");
+			}
+		} catch (e) {
+			console.error("Error eliminando pago:", e);
+			toast.error("Error de conexión al eliminar pago");
+		}
+	};
+
+	// EDITAR PAGO INDIVIDUAL (Simple prompt por ahora para no saturar con más diálogos)
+	const handleEditPago = async (pago) => {
+		const nuevoMonto = prompt("Ingresa el nuevo monto (CLP):", pago.amount);
+		if (nuevoMonto === null) return;
+		
+		const montoNum = parseFloat(nuevoMonto);
+		if (isNaN(montoNum) || montoNum < 0) {
+			toast.error("Monto inválido");
+			return;
+		}
+
+		try {
+			const resp = await fetch(`${apiUrl}/api/pagos/${pago.id}`, {
+				method: "PUT",
+				headers: { 
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}` 
+				},
+				body: JSON.stringify({
+					amount: montoNum,
+					metodo: pago.metodo,
+					referencia: pago.referencia
+				})
+			});
+			
+			if (resp.ok) {
+				toast.success("Pago actualizado");
+				fetchPagoHistorial();
+				if (selectedReserva) {
+					const res = await authenticatedFetch(`/api/reservas/${selectedReserva.id}`);
+					if (res.ok) {
+						const updated = await res.json();
+						setSelectedReserva(updated);
+						setReservas(prev => prev.map(r => r.id === updated.id ? updated : r));
+					}
+				}
+			} else {
+				const err = await resp.json();
+				toast.error(err.error || "Error al actualizar pago");
+			}
+		} catch (e) {
+			console.error("Error editando pago:", e);
+			toast.error("Error de conexión");
+		}
+	};
 
 	// Recargar historial de pagos cuando cambie la reserva seleccionada o se cierre el modal de registro
 	useEffect(() => {
@@ -1432,7 +1511,7 @@ function AdminReservas() {
 			pasajeros: String(reserva.pasajeros || ""),
 			estado: reserva.estado || "",
 			estadoPago: reserva.estadoPago || "",
-			metodoPago: reserva.metodoPago || "",
+			metodoPago: reserva.metodoPago || reserva.pagoGateway || "",
 			referenciaPago: reserva.referenciaPago || "",
 			tipoPago: reserva.tipoPago || "",
 			montoPagado: "", // FIX: Iniciar siempre vacío para evitar duplicación accidental al guardar cambios generales
@@ -4999,191 +5078,203 @@ function AdminReservas() {
 								</Select>
 							</div>
 
-							{/* Método de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="metodoPago">Método de Pago</Label>
-								<Select
-									value={formData.metodoPago}
-									onValueChange={(value) =>
-										setFormData({ ...formData, metodoPago: value })
-									}
+							{/* Sección de Gestión de Pagos Manuales (Colapsable) */}
+							<div className="space-y-4 border rounded-lg p-4 bg-slate-50/50">
+								<div 
+									className="flex items-center justify-between cursor-pointer"
+									onClick={() => setShowRegisterPayment(!showRegisterPayment)}
 								>
-									<SelectTrigger id="metodoPago">
-										<SelectValue placeholder="Seleccionar método" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="flow">Flow</SelectItem>
-										<SelectItem value="transferencia">Transferencia</SelectItem>
-										<SelectItem value="efectivo">Efectivo</SelectItem>
-										<SelectItem value="otro">Otro</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
+									<div className="flex items-center gap-2">
+										<DollarSign className="w-5 h-5 text-slate-500" />
+										<span className="font-semibold text-slate-700">Gestión de Pagos Manuales / Ajustes</span>
+									</div>
+									<Button type="button" variant="ghost" size="sm">
+										{showRegisterPayment ? "Cerrar" : "Abrir"}
+									</Button>
+								</div>
 
-							{/* Referencia de Pago */}
-							<div className="space-y-2">
-								<Label htmlFor="referenciaPago">
-									Referencia de Pago (opcional)
-								</Label>
-								<Input
-									id="referenciaPago"
-									placeholder="ID de transacción, número de transferencia, etc."
-									value={formData.referenciaPago}
-									onChange={(e) =>
-										setFormData({ ...formData, referenciaPago: e.target.value })
-									}
-								/>
-							</div>
-
-							{/* Tipo de pago registrado */}
-							<div className="space-y-2">
-								<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
-								{/* Determinar si ya se registrÃ³ el abono del 40% */}
-								{(() => {
-									const montoPagadoNum =
-										parseFloat(formData.montoPagado || 0) || 0;
-									const totalReservaNum =
-										parseFloat(
-											selectedReserva?.totalConDescuento ||
-												selectedReserva?.precio ||
-												0
-										) || 0;
-									const abonoSugeridoNum =
-										parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
-									const umbralAbono = Math.max(
-										totalReservaNum * 0.4,
-										abonoSugeridoNum || 0
-									);
-									const yaAbono40 =
-										Boolean(selectedReserva?.abonoPagado) ||
-										montoPagadoNum >= umbralAbono;
-									return (
-										<Select
-											value={formData.tipoPago}
-											onValueChange={(value) =>
-												setFormData((prev) => {
-													// Recalcular montos para prefill
-													const totalReservaNum =
-														parseFloat(
-															selectedReserva?.totalConDescuento ||
-																selectedReserva?.precio ||
-																0
-														) || 0;
-													const abonoSugeridoNum =
-														parseFloat(selectedReserva?.abonoSugerido || 0) ||
-														0;
-													const pagoPrevioNum =
-														parseFloat(selectedReserva?.pagoMonto || 0) || 0;
-													const umbralAbono = Math.max(
-														totalReservaNum * 0.4,
-														abonoSugeridoNum || 0
-													);
-
-													let computedMonto = null;
-													if (value === "saldo" || value === "total") {
-														const restante = Math.max(
-															totalReservaNum - pagoPrevioNum,
-															0
-														);
-														computedMonto = restante > 0 ? restante : null;
-													} else if (value === "abono") {
-														const necesario = Math.max(
-															umbralAbono - pagoPrevioNum,
-															0
-														);
-														computedMonto = necesario > 0 ? necesario : null;
-													}
-
-													return {
-														...prev,
-														tipoPago: value,
-														// Escritura segura: guardar número o cadena vacía
-														montoPagado:
-															computedMonto !== null
-																? computedMonto
-																: prev.montoPagado,
-													};
-												})
-											}
-										>
-											<SelectTrigger id="tipoPago">
-												<SelectValue placeholder="Selecciona el tipo de pago" />
-											</SelectTrigger>
-											<SelectContent>
-												{yaAbono40 ? (
-													// Si ya se pagÃ³ el abono del 40%, solo permitir completar el pago
-													<SelectItem value="saldo">Completar pago</SelectItem>
-												) : (
-													// Opciones por defecto: Abono 40% y Abono total
-													<>
-														<SelectItem value="abono">Abono 40%</SelectItem>
-														<SelectItem value="total">Abono total</SelectItem>
-													</>
-												)}
-											</SelectContent>
-										</Select>
-									);
-								})()}
-							</div>
-
-							{/* Monto del pago */}
-							<div className="space-y-2">
-								<div className="flex justify-between items-center">
-									<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
-									{(selectedReserva?.pagoMonto || 0) > 0 && (
-										<Button 
-											type="button" 
-											variant="ghost" 
-											size="sm" 
-											className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
-											onClick={() => {
-												if (confirm("¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.")) {
-													setFormData({
-														...formData,
-														montoPagado: "0",
-														estadoPago: "pendiente",
-														estado: "pendiente"
-													});
+								{showRegisterPayment && (
+									<div className="space-y-4 pt-2 border-t mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+										{/* Método de Pago */}
+										<div className="space-y-2">
+											<Label htmlFor="metodoPago">Método de Pago</Label>
+											<Select
+												value={formData.metodoPago}
+												onValueChange={(value) =>
+													setFormData({ ...formData, metodoPago: value })
 												}
-											}}
-										>
-											<RefreshCw className="w-3 h-3" />
-											Resetear Pago (Volver a $0)
-										</Button>
-									)}
-								</div>
-								<Input
-									id="montoPagado"
-									type="number"
-									step="1"
-									min="0"
-									placeholder="Ingresa monto solo si deseas sumar un pago manual"
-									value={
-										formData.montoPagado !== undefined &&
-										formData.montoPagado !== null
-											? formData.montoPagado
-											: ""
-									}
-									onChange={(e) =>
-										setFormData({ ...formData, montoPagado: e.target.value })
-									}
-								/>
-								<div className="text-xs text-muted-foreground mt-1">
-									<p>
-										Registrado en sistema:{" "}
-										<span className="font-semibold">
-											{selectedReserva.pagoMonto
-												? new Intl.NumberFormat("es-CL", {
-														style: "currency",
-														currency: "CLP",
-												  }).format(selectedReserva.pagoMonto)
-												: "$0"}
-										</span>
-									</p>
-									<p className="text-[10px] mt-0.5">
-										* Solo ingresa un monto si deseas <strong>sumar</strong> un pago al total ya registrado.
-									</p>
-								</div>
+											>
+												<SelectTrigger id="metodoPago">
+													<SelectValue placeholder="Seleccionar método" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="flow">Flow</SelectItem>
+													<SelectItem value="transferencia">Transferencia</SelectItem>
+													<SelectItem value="efectivo">Efectivo</SelectItem>
+													<SelectItem value="otro">Otro</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
+
+										{/* Referencia de Pago */}
+										<div className="space-y-2">
+											<Label htmlFor="referenciaPago">
+												Referencia de Pago (opcional)
+											</Label>
+											<Input
+												id="referenciaPago"
+												placeholder="ID de transacción, número de transferencia, etc."
+												value={formData.referenciaPago}
+												onChange={(e) =>
+													setFormData({ ...formData, referenciaPago: e.target.value })
+												}
+											/>
+										</div>
+
+										{/* Tipo de pago registrado */}
+										<div className="space-y-2">
+											<Label htmlFor="tipoPago">Tipo de Pago Registrado</Label>
+											{(() => {
+												const montoPagadoNum =
+													parseFloat(formData.montoPagado || 0) || 0;
+												const totalReservaNum =
+													parseFloat(
+														selectedReserva?.totalConDescuento ||
+															selectedReserva?.precio ||
+															0
+													) || 0;
+												const abonoSugeridoNum =
+													parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
+												const umbralAbono = Math.max(
+													totalReservaNum * 0.4,
+													abonoSugeridoNum || 0
+												);
+												const yaAbono40 =
+													Boolean(selectedReserva?.abonoPagado) ||
+													montoPagadoNum >= umbralAbono;
+												return (
+													<Select
+														value={formData.tipoPago}
+														onValueChange={(value) =>
+															setFormData((prev) => {
+																const totalReservaNum =
+																	parseFloat(
+																		selectedReserva?.totalConDescuento ||
+																			selectedReserva?.precio ||
+																			0
+																	) || 0;
+																const abonoSugeridoNum =
+																	parseFloat(selectedReserva?.abonoSugerido || 0) ||
+																	0;
+																const pagoPrevioNum =
+																	parseFloat(selectedReserva?.pagoMonto || 0) || 0;
+																const umbralAbono = Math.max(
+																	totalReservaNum * 0.4,
+																	abonoSugeridoNum || 0
+																);
+
+																let computedMonto = null;
+																if (value === "saldo" || value === "total") {
+																	const restante = Math.max(
+																		totalReservaNum - pagoPrevioNum,
+																		0
+																	);
+																	computedMonto = restante > 0 ? restante : null;
+																} else if (value === "abono") {
+																	const necesario = Math.max(
+																		umbralAbono - pagoPrevioNum,
+																		0
+																	);
+																	computedMonto = necesario > 0 ? necesario : null;
+																}
+
+																return {
+																	...prev,
+																	tipoPago: value,
+																	montoPagado:
+																		computedMonto !== null
+																			? computedMonto
+																			: prev.montoPagado,
+																};
+															})
+														}
+													>
+														<SelectTrigger id="tipoPago">
+															<SelectValue placeholder="Selecciona el tipo de pago" />
+														</SelectTrigger>
+														<SelectContent>
+															{yaAbono40 ? (
+																<SelectItem value="saldo">Completar pago</SelectItem>
+															) : (
+																<>
+																	<SelectItem value="abono">Abono 40%</SelectItem>
+																	<SelectItem value="total">Abono total</SelectItem>
+																</>
+															)}
+														</SelectContent>
+													</Select>
+												);
+											})()}
+										</div>
+
+										{/* Monto del pago */}
+										<div className="space-y-2">
+											<div className="flex justify-between items-center">
+												<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
+												{(selectedReserva?.pagoMonto || 0) > 0 && (
+													<Button 
+														type="button" 
+														variant="ghost" 
+														size="sm" 
+														className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+														onClick={() => {
+															if (confirm("¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.")) {
+																setFormData({
+																	...formData,
+																	montoPagado: "0",
+																	estadoPago: "pendiente",
+																	estado: "pendiente"
+																});
+															}
+														}}
+													>
+														<RefreshCw className="w-3 h-3" />
+														Resetear Pago (Volver a $0)
+													</Button>
+												)}
+											</div>
+											<Input
+												id="montoPagado"
+												type="number"
+												step="1"
+												min="0"
+												placeholder="Monto que deseas sumar"
+												value={
+													formData.montoPagado !== undefined &&
+													formData.montoPagado !== null
+														? formData.montoPagado
+														: ""
+												}
+												onChange={(e) =>
+													setFormData({ ...formData, montoPagado: e.target.value })
+												}
+											/>
+											<div className="text-xs text-muted-foreground mt-1 bg-amber-50 p-2 rounded border border-amber-100 italic">
+												<p>
+													<strong>Aviso:</strong> El monto ingresado se <strong>sumará</strong> al total ya registrado de{" "}
+													<span className="font-semibold text-amber-700">
+														{selectedReserva.pagoMonto
+															? new Intl.NumberFormat("es-CL", {
+																	style: "currency",
+																	currency: "CLP",
+															  }).format(selectedReserva.pagoMonto)
+															: "$0"}
+													</span>.
+												</p>
+											</div>
+										</div>
+									</div>
+								)}
 							</div>
 
 							{/* Historial de pagos mejorado */}
@@ -5208,53 +5299,101 @@ function AdminReservas() {
 									</Button>
 								</div>
 								<div className="bg-white border rounded-lg p-3 max-h-64 overflow-y-auto">
-									{pagoHistorial && pagoHistorial.length > 0 ? (
-										<div className="space-y-1">
-											{pagoHistorial.map((p) => (
-												<div
-													key={p.id}
-													className="flex justify-between items-center py-2 border-b hover:bg-slate-50 rounded px-2"
-												>
-													<div className="flex-1">
-														<div className="flex items-center gap-2">
-															<Badge variant={p.source === "web" ? "default" : "secondary"}>
-																{p.source === "web" ? "Web" : "Manual"}
-															</Badge>
-															<span className="font-medium">
-																{formatCurrency(p.amount)}
-															</span>
+									{(() => {
+										// Combinar pagos del historial con el pago principal de Flow si no está en el historial
+										const allPagos = [...(pagoHistorial || [])];
+										
+										// Si la reserva tiene un pago de Flow pero no aparece en el historial detallado, agregarlo virtualmente
+										const hasFlowInHistory = allPagos.some(p => p.metodo?.toLowerCase() === 'flow' || p.source === 'web');
+										if (!hasFlowInHistory && (selectedReserva.pagoMonto || 0) > 0 && (selectedReserva.pagoGateway === 'flow' || selectedReserva.metodoPago === 'flow')) {
+											allPagos.push({
+												id: 'virtual-flow',
+												amount: selectedReserva.pagoMonto,
+												metodo: 'Flow',
+												referencia: selectedReserva.referenciaPago || selectedReserva.pagoId,
+												source: 'web',
+												isVirtual: true,
+												createdAt: selectedReserva.pagoFecha || selectedReserva.createdAt
+											});
+										}
+
+										if (allPagos.length > 0) {
+											return (
+												<div className="space-y-1">
+													{allPagos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((p) => (
+														<div
+															key={p.id}
+															className="flex justify-between items-center py-2 border-b last:border-0 hover:bg-slate-50 rounded px-2"
+														>
+															<div className="flex-1">
+																<div className="flex items-center gap-2">
+																	<Badge variant={p.source === "web" ? "default" : "secondary"} className="text-[10px] h-4 px-1">
+																		{p.source === "web" ? "Automático" : "Manual"}
+																	</Badge>
+																	<span className="font-semibold text-slate-800">
+																		{formatCurrency(p.amount)}
+																	</span>
+																	<span className="text-[10px] text-muted-foreground bg-slate-100 px-1 rounded uppercase">
+																		{p.metodo || "Sin método"}
+																	</span>
+																</div>
+																<div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+																	<Calendar className="w-3 h-3" />
+																	{new Date(p.createdAt).toLocaleString("es-CL", {
+																		day: "2-digit",
+																		month: "2-digit",
+																		year: "2-digit",
+																		hour: "2-digit",
+																		minute: "2-digit",
+																	})}
+																	{p.referencia && ` • Ref: ${p.referencia}`}
+																</div>
+															</div>
+															{!p.isVirtual && (
+																<div className="flex items-center gap-1 ml-2">
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="icon"
+																		className="h-7 w-7 text-slate-400 hover:text-indigo-600"
+																		onClick={() => handleEditPago(p)}
+																		title="Editar monto"
+																	>
+																		<Edit className="w-3.5 h-3.5" />
+																	</Button>
+																	<Button
+																		type="button"
+																		variant="ghost"
+																		size="icon"
+																		className="h-7 w-7 text-slate-400 hover:text-red-600"
+																		onClick={() => handleDeletePago(p.id)}
+																		title="Eliminar pago"
+																	>
+																		<Trash2 className="w-3.5 h-3.5" />
+																	</Button>
+																</div>
+															)}
 														</div>
-														<div className="text-xs text-muted-foreground mt-1">
-															{p.metodo || "Sin método"}
-															{p.referencia && ` • Ref: ${p.referencia}`}
-														</div>
-													</div>
-													<div className="text-right text-xs text-muted-foreground">
-														{new Date(p.createdAt).toLocaleString("es-CL", {
-															day: "2-digit",
-															month: "2-digit",
-															year: "2-digit",
-															hour: "2-digit",
-															minute: "2-digit",
-														})}
-													</div>
+													))}
 												</div>
-											))}
-										</div>
-									) : (
-										<div className="text-center py-6 text-muted-foreground">
-											<DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
-											<p className="text-sm">No hay pagos registrados</p>
-											<Button
-												variant="link"
-												size="sm"
-												onClick={() => setShowRegisterPayment(true)}
-												className="mt-2"
-											>
-												Registrar el primer pago
-											</Button>
-										</div>
-									)}
+											);
+										}
+
+										return (
+											<div className="text-center py-6 text-muted-foreground">
+												<DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
+												<p className="text-sm">No hay pagos registrados</p>
+												<Button
+													variant="link"
+													size="sm"
+													onClick={() => setShowRegisterPayment(true)}
+													className="mt-2"
+												>
+													Registrar el primer pago
+												</Button>
+											</div>
+										);
+									})()}
 								</div>
 							</div>
 
@@ -5288,59 +5427,117 @@ function AdminReservas() {
 								/>
 							</div>
 
-							{/* Resumen Financiero */}
+							{/* Resumen Financiero Contextualizado */}
 							<div className="bg-chocolate-50 p-4 rounded-lg border border-chocolate-200">
-								<h4 className="font-semibold mb-2 text-chocolate-900">
-									Resumen Financiero
-								</h4>
-								<div className="space-y-1 text-sm">
-									<div className="flex justify-between">
-										<span>Total:</span>
-										<span className="font-semibold">
-											{formatCurrency(selectedReserva.totalConDescuento)}
-										</span>
-									</div>
-									<div className="flex justify-between">
-										<span>Abono Sugerido:</span>
-										<span className="font-semibold">
-											{formatCurrency(selectedReserva.abonoSugerido)}
-										</span>
-									</div>
-									<div className="flex justify-between border-t border-chocolate-300 pt-1">
-										<span className="font-semibold">Saldo Pendiente:</span>
-										<span
-											className={`font-bold ${
-												selectedReserva.saldoPendiente > 0
-													? "text-red-600"
-													: "text-green-600"
-											}`}
-										>
-											{formatCurrency(selectedReserva.saldoPendiente)}
-										</span>
-									</div>
-									<div className="flex justify-between pt-1">
-										<span>Estado del Abono:</span>
-										<Badge
-											variant={
-												selectedReserva.abonoPagado ? "default" : "secondary"
-											}
-										>
-											{selectedReserva.abonoPagado
-												? "Abono pagado"
-												: "Pendiente"}
-										</Badge>
-									</div>
-									<div className="flex justify-between">
-										<span>Estado del Saldo:</span>
-										<Badge
-											variant={
-												selectedReserva.saldoPagado ? "default" : "secondary"
-											}
-										>
-											{selectedReserva.saldoPagado
-												? "Saldo pagado"
-												: "Pendiente"}
-										</Badge>
+								<div className="flex items-center justify-between mb-3 pb-2 border-b border-chocolate-200/50">
+									<h4 className="font-bold text-chocolate-900 flex items-center gap-2">
+										<DollarSign className="w-4 h-4 text-chocolate-600" />
+										Resumen Financiero
+									</h4>
+									<Badge variant="outline" className="text-[10px] uppercase font-bold text-chocolate-700 border-chocolate-200">
+										{selectedReserva.source?.toLowerCase().includes("express") ? "Módulo Express" : 
+										 selectedReserva.source === "codigo_pago" ? "Pago con Código" : 
+										 "Manual / Web"}
+									</Badge>
+								</div>
+								
+								<div className="space-y-2 text-sm">
+									{/* BLOQUE 1: Desglose por HeroExpress */}
+									{selectedReserva.source?.toLowerCase().includes("express") && (
+										<div className="space-y-1 pb-2 border-b border-chocolate-200/30">
+											<div className="flex justify-between text-chocolate-700">
+												<span className="text-xs">Precio Base ({selectedReserva.pasajeros} pax):</span>
+												<span>{formatCurrency(selectedReserva.precio)}</span>
+											</div>
+											
+											{/* Descuentos Individuales (no basados en el consolidado online) */}
+											{Number(selectedReserva.descuentoBase || 0) > 0 && (
+												<div className="flex justify-between text-green-700 text-xs italic">
+													<span>Descuento Reserva Online:</span>
+													<span>-{formatCurrency(selectedReserva.descuentoBase)}</span>
+												</div>
+											)}
+											{Number(selectedReserva.descuentoPromocion || 0) > 0 && (
+												<div className="flex justify-between text-green-700 text-xs italic">
+													<span>Promoción Aplicada:</span>
+													<span>-{formatCurrency(selectedReserva.descuentoPromocion)}</span>
+												</div>
+											)}
+											{Number(selectedReserva.descuentoRoundTrip || 0) > 0 && (
+												<div className="flex justify-between text-green-700 text-xs italic">
+													<span>Descuento de Ida y Vuelta:</span>
+													<span>-{formatCurrency(selectedReserva.descuentoRoundTrip)}</span>
+												</div>
+											)}
+											{Number(selectedReserva.descuentosPersonalizados || 0) > 0 && (
+												<div className="flex justify-between text-green-700 text-xs italic">
+													<span>Descuento Personalizado:</span>
+													<span>-{formatCurrency(selectedReserva.descuentosPersonalizados)}</span>
+												</div>
+											)}
+											{selectedReserva.codigoDescuento && (
+												<div className="flex justify-between text-indigo-700 text-xs font-semibold py-0.5 border-t border-chocolate-100/30 mt-1">
+													<span>Cupón aplicado:</span>
+													<span>{selectedReserva.codigoDescuento}</span>
+												</div>
+											)}
+										</div>
+									)}
+
+									{/* BLOQUE 2: Detalles de Pago con Código */}
+									{selectedReserva.source === "codigo_pago" && (
+										<div className="space-y-1 pb-2 border-b border-chocolate-200/30">
+											<div className="flex justify-between text-chocolate-700">
+												<span className="text-xs">Código de Reserva usado:</span>
+												<span className="font-mono font-bold text-indigo-700">{selectedReserva.referenciaPago}</span>
+											</div>
+											{selectedReserva.pagoFecha && (
+												<div className="flex justify-between text-chocolate-700">
+													<span className="text-xs">Fecha del Pago:</span>
+													<span className="text-[11px]">{new Date(selectedReserva.pagoFecha).toLocaleString("es-CL")}</span>
+												</div>
+											)}
+											{selectedReserva.pagoGateway && (
+												<div className="flex justify-between text-chocolate-700">
+													<span className="text-xs">Pasarela:</span>
+													<span className="capitalize">{selectedReserva.pagoGateway}</span>
+												</div>
+											)}
+										</div>
+									)}
+
+									{/* BLOQUE 3: Totales Finales (Común para todos) */}
+									<div className="space-y-1.5 pt-1">
+										<div className="flex justify-between items-center">
+											<span className="font-medium text-chocolate-800">Total Final Cobrado:</span>
+											<span className="text-base font-bold text-chocolate-950">
+												{formatCurrency(selectedReserva.totalConDescuento)}
+											</span>
+										</div>
+
+										<div className="flex justify-between items-center py-1 bg-white/40 px-2 rounded -mx-1 border border-chocolate-100/50">
+											<span className="font-semibold text-chocolate-900">Saldo Pendiente:</span>
+											<span className={`text-base font-black ${
+												selectedReserva.saldoPendiente > 0 ? "text-red-600" : "text-green-600"
+											}`}>
+												{formatCurrency(selectedReserva.saldoPendiente)}
+											</span>
+										</div>
+										
+										<div className="grid grid-cols-2 gap-2 mt-2">
+											<div className="flex flex-col gap-1">
+												<span className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider">Estado Abono</span>
+												<Badge variant={selectedReserva.abonoPagado ? "default" : "secondary"} className="w-fit text-[10px] py-0 h-5">
+													{selectedReserva.abonoPagado ? "Pagado" : "Pendiente"}
+												</Badge>
+											</div>
+											<div className="flex flex-col gap-1">
+												<span className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider">Estado Saldo</span>
+												<Badge variant={selectedReserva.saldoPagado ? "default" : "secondary"} className="w-fit text-[10px] py-0 h-5">
+													{selectedReserva.saldoPagado ? "Pagado" : "Pendiente"}
+												</Badge>
+											</div>
+										</div>
 									</div>
 								</div>
 							</div>

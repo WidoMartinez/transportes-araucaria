@@ -5927,6 +5927,62 @@ const ensureReservaPagosTable = async () => {
 	`);
 };
 
+// Función auxiliar para sincronizar el estado de pago de una reserva basado en su historial detallado
+async function syncReservaPago(reservaId, transaction = null) {
+	try {
+		const reserva = await Reserva.findByPk(reservaId, { transaction });
+		if (!reserva) return null;
+
+		const [rows] = await sequelize.query(
+			"SELECT SUM(amount) as total FROM reserva_pagos WHERE reserva_id = :id",
+			{ replacements: { id: reservaId }, transaction }
+		);
+		
+		const pagoTotalNuevo = parseFloat(rows[0]?.total || 0);
+		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
+		const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
+
+		let nuevoEstadoPago = "pendiente";
+		let nuevoEstadoReserva = reserva.estado;
+		let nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
+		let abonoPagado = false;
+		let saldoPagado = false;
+
+		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
+			nuevoEstadoPago = "pagado";
+			nuevoSaldoPendiente = 0;
+			abonoPagado = true;
+			saldoPagado = true;
+			if (["pendiente", "pendiente_detalles", "confirmada"].includes(nuevoEstadoReserva)) {
+				nuevoEstadoReserva = "confirmada";
+			}
+		} else if (pagoTotalNuevo > 0) {
+			nuevoEstadoPago = "parcial";
+			if (pagoTotalNuevo >= umbralAbono) {
+				abonoPagado = true;
+				if (["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)) {
+					nuevoEstadoReserva = "confirmada";
+				}
+			}
+		}
+
+		await reserva.update({
+			estadoPago: nuevoEstadoPago,
+			pagoMonto: pagoTotalNuevo,
+			saldoPendiente: nuevoSaldoPendiente,
+			abonoPagado,
+			saldoPagado,
+			estado: nuevoEstadoReserva
+		}, { transaction });
+
+		return reserva;
+	} catch (error) {
+		console.error(`Error syncReservaPago para reserva ${reservaId}:`, error);
+		throw error;
+	}
+}
+
 // Endpoint: obtener historial de pagos de una reserva
 app.get("/api/reservas/:id/pagos", async (req, res) => {
 	try {
@@ -5995,58 +6051,8 @@ app.post("/api/reservas/:id/pagos", async (req, res) => {
 			transaction,
 		});
 
-		// Reutilizar lógica de acumulado similar a /pago: actualizar reserva con el monto
-		const totalReserva = parseFloat(reserva.totalConDescuento || 0);
-		const abonoSugerido = parseFloat(reserva.abonoSugerido || 0);
-		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
-		const pagoTotalNuevo = pagoPrevio + monto;
-		const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
-
-		let nuevoEstadoPago = reserva.estadoPago;
-		let nuevoEstadoReserva = reserva.estado;
-		let nuevoSaldoPendiente = Math.max(totalReserva - pagoTotalNuevo, 0);
-		let abonoPagado = reserva.abonoPagado;
-		let saldoPagado = reserva.saldoPagado;
-
-		if (pagoTotalNuevo >= totalReserva && totalReserva > 0) {
-			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "completada";
-			nuevoSaldoPendiente = 0;
-			abonoPagado = true;
-			saldoPagado = true;
-		} else if (pagoTotalNuevo > 0) {
-			if (
-				pagoTotalNuevo >= umbralAbono &&
-				["pendiente", "pendiente_detalles"].includes(nuevoEstadoReserva)
-			) {
-				nuevoEstadoReserva = "confirmada";
-			}
-			nuevoEstadoPago = "parcial";
-			if (pagoTotalNuevo >= umbralAbono) abonoPagado = true;
-		}
-
-		if (
-			nuevoSaldoPendiente <= 0 &&
-			pagoTotalNuevo >= totalReserva &&
-			totalReserva > 0
-		) {
-			saldoPagado = true;
-			abonoPagado = true;
-			nuevoEstadoPago = "pagado";
-			nuevoEstadoReserva = "completada";
-		}
-
-		const updatePayload = {
-			estadoPago: nuevoEstadoPago,
-			saldoPendiente: nuevoSaldoPendiente,
-			abonoPagado,
-			saldoPagado,
-			estado: nuevoEstadoReserva,
-			pagoMonto: pagoTotalNuevo,
-			pagoFecha: new Date(),
-		};
-
-		await reserva.update(updatePayload, { transaction });
+		// 🎯 SYNC: Recalcular estados de la reserva usando el helper
+		await syncReservaPago(id, transaction);
 
 		let clienteActualizado = null;
 		if (reserva.clienteId) {
@@ -6059,11 +6065,11 @@ app.post("/api/reservas/:id/pagos", async (req, res) => {
 		await transaction.commit();
 
 		// Devolver reserva actualizada y el pago insertado
-		const [rows] = await sequelize.query(
+		const [rowsP] = await sequelize.query(
 			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC LIMIT 1",
 			{ replacements: { id } }
 		);
-		const pagoInsertado = rows[0] || null;
+		const pagoInsertado = rowsP[0] || null;
 
 		const reservaActualizada = await Reserva.findByPk(id, {
 			include: [
@@ -6092,6 +6098,91 @@ app.post("/api/reservas/:id/pagos", async (req, res) => {
 	} catch (error) {
 		await transaction.rollback();
 		console.error("Error registrando pago manual:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint: editar un pago manual
+app.put("/api/pagos/:id", authAdmin, async (req, res) => {
+	const transaction = await sequelize.transaction();
+	try {
+		const { id } = req.params;
+		const { amount, metodo, referencia } = req.body;
+
+		// 1. Obtener datos actuales del pago
+		const [rows] = await sequelize.query(
+			"SELECT reserva_id FROM reserva_pagos WHERE id = :id",
+			{ replacements: { id }, transaction }
+		);
+		
+		if (rows.length === 0) {
+			await transaction.rollback();
+			return res.status(404).json({ error: "Registro de pago no encontrado" });
+		}
+		
+		const reservaId = rows[0].reserva_id;
+
+		// 2. Actualizar el registro
+		const updateSql = `
+			UPDATE reserva_pagos 
+			SET amount = :amount, metodo = :metodo, referencia = :referencia 
+			WHERE id = :id
+		`;
+		await sequelize.query(updateSql, {
+			replacements: {
+				id,
+				amount: parseFloat(amount) || 0,
+				metodo: metodo || null,
+				referencia: referencia || null
+			},
+			transaction
+		});
+
+		// 3. Recalcular la reserva asociada
+		await syncReservaPago(reservaId, transaction);
+
+		await transaction.commit();
+		res.json({ success: true, message: "Pago actualizado correctamente" });
+	} catch (error) {
+		await transaction.rollback();
+		console.error("Error editando pago:", error);
+		res.status(500).json({ error: "Error interno del servidor" });
+	}
+});
+
+// Endpoint: eliminar un pago manual
+app.delete("/api/pagos/:id", authAdmin, async (req, res) => {
+	const transaction = await sequelize.transaction();
+	try {
+		const { id } = req.params;
+
+		// 1. Obtener el reserva_id antes de borrar
+		const [rows] = await sequelize.query(
+			"SELECT reserva_id FROM reserva_pagos WHERE id = :id",
+			{ replacements: { id }, transaction }
+		);
+		
+		if (rows.length === 0) {
+			await transaction.rollback();
+			return res.status(404).json({ error: "Registro de pago no encontrado" });
+		}
+		
+		const reservaId = rows[0].reserva_id;
+
+		// 2. Eliminar el registro
+		await sequelize.query(
+			"DELETE FROM reserva_pagos WHERE id = :id",
+			{ replacements: { id }, transaction }
+		);
+
+		// 3. Recalcular la reserva asociada
+		await syncReservaPago(reservaId, transaction);
+
+		await transaction.commit();
+		res.json({ success: true, message: "Pago eliminado correctamente" });
+	} catch (error) {
+		await transaction.rollback();
+		console.error("Error eliminando pago:", error);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
 });
@@ -9052,6 +9143,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			estadoPago: nuevoEstadoPago,
 			pagoId: payment.flowOrder.toString(),
 			pagoGateway: "flow",
+			metodoPago: "flow", // 🎯 SYNC: Asegurar que el método de pago se registre como 'flow'
 			pagoMonto: pagoAcumulado,
 			pagoFecha: new Date(payment.paymentDate || new Date()),
 			estado: nuevoEstadoReserva,
@@ -9115,6 +9207,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					estadoPago: estadoPagoHija,
 					pagoId: payment.flowOrder.toString(),
 					pagoGateway: "flow",
+					metodoPago: "flow", // 🎯 SYNC: Asegurar que el método de pago se registre como 'flow'
 					pagoMonto: pagoAcumuladoHija,
 					pagoFecha: new Date(payment.paymentDate || new Date()),
 					estado: estadoReservaHija,
