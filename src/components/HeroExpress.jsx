@@ -50,6 +50,65 @@ const generateTimeOptions = () => {
 	return options;
 };
 
+// Obtiene o crea un ID de sesión único para rastrear al usuario sin requerir login
+const getSessionId = () => {
+	let sessionId = localStorage.getItem('sessionId');
+	if (!sessionId) {
+		sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		localStorage.setItem('sessionId', sessionId);
+	}
+	return sessionId;
+};
+
+// Guarda o actualiza un lead incompleto en el backend
+// datosCompletos=true incluye email/teléfono/nombre (Paso 2)
+const guardarLeadIncompleto = async (formData, pricing, datosCompletos = false) => {
+	try {
+		const apiUrl = getBackendUrl();
+
+		const leadData = {
+			origen: formData.origen,
+			destino: formData.destino,
+			fecha_viaje: formData.fecha,
+			hora_viaje: formData.hora,
+			num_pasajeros: parseInt(formData.pasajeros) || 1,
+			precio_estimado: pricing?.totalConDescuento || 0,
+			session_id: getSessionId(),
+		};
+
+		// Si estamos en Paso 2 y tiene datos de contacto, incluirlos
+		if (datosCompletos) {
+			leadData.email = formData.email || null;
+			leadData.telefono = formData.telefono || null;
+			leadData.nombre = formData.nombre || null;
+		}
+
+		const response = await fetch(`${apiUrl}/api/leads/guardar`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(leadData),
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const result = await response.json();
+
+		// Guardar ID del lead en localStorage para seguimiento posterior
+		if (result.success && result.leadId) {
+			localStorage.setItem('leadId', result.leadId.toString());
+			console.log('✅ Lead guardado:', result.accion, '- ID:', result.leadId);
+		}
+
+		return result;
+	} catch (error) {
+		console.error('❌ Error guardando lead incompleto:', error);
+		// No lanzar error para no interrumpir la experiencia del usuario
+		return { success: false, error: error.message };
+	}
+};
+
 function HeroExpress({
 	formData,
 	handleInputChange,
@@ -115,6 +174,19 @@ function HeroExpress({
 			setUrgencyMessage(null);
 		}
 	}, [currentStep]);
+
+	// Actualizar lead con datos de contacto cuando el usuario escribe su email en Paso 2
+	// Se aplica debounce de 2 segundos para evitar múltiples llamadas mientras el usuario escribe
+	useEffect(() => {
+		const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email || '');
+		if (currentStep === 1 && emailValido) {
+			const timer = setTimeout(() => {
+				guardarLeadIncompleto(formData, pricing, true);
+			}, 2000);
+			return () => clearTimeout(timer);
+		}
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentStep, formData.email, formData.telefono, formData.nombre]);
 
 	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
 	const targetName = useMemo(() => {
@@ -486,6 +558,10 @@ function HeroExpress({
 		setDescuentoRetorno(resultado.descuento || null);
 		setStepError("");
 		setErrorRequiereVan(false);
+
+		// Guardar lead incompleto al avanzar a Paso 2 (sin datos de contacto aún)
+		guardarLeadIncompleto(formData, pricing, false);
+
 		setCurrentStep(1);
 	};
 
@@ -522,6 +598,24 @@ function HeroExpress({
 			setStepError(result.message || "Error al procesar.");
 			return;
 		}
+
+		// Marcar lead como convertido y limpiar localStorage al procesar el pago
+		try {
+			const sessionId = localStorage.getItem('sessionId');
+			if (sessionId) {
+				const apiUrl = getBackendUrl();
+				fetch(`${apiUrl}/api/leads/convertido`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ session_id: sessionId }),
+				}).catch(() => {}); // No interrumpir flujo si falla
+				localStorage.removeItem('leadId');
+				localStorage.removeItem('sessionId');
+			}
+		} catch (error) {
+			console.error('Error al marcar lead como convertido:', error);
+		}
+
 		handlePayment(gateway, type, {
 			reservaId: result.reservaId,
 			codigoReserva: result.codigoReserva,

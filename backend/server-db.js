@@ -70,8 +70,11 @@ import addPosicionImagenToPromocionesBanner from "./migrations/add-posicion-imag
 import addAdvancedPromoConfig from "./migrations/add-advanced-promo-config.js";
 import addUltimaSolicitudDetalles from "./migrations/add-ultima-solicitud-detalles.js";
 import updateVehiculosMinibusToSuv from "./migrations/update-vehiculos-minibus-to-suv.js";
+import addLeadsIncompletosTable from "./migrations/add-leads-incompletos-table.js";
 import PromocionBanner from "./models/PromocionBanner.js";
+import LeadIncompleto from "./models/LeadIncompleto.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
+import leadsRoutes from "./routes/leads.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import setupOportunidadesRoutes from "./routes/oportunidades.js";
@@ -592,6 +595,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/promociones-banner", promocionesBannerRoutes);
 setupOportunidadesRoutes(app, authAdmin);
 
+// --- RUTAS DE LEADS INCOMPLETOS ---
+app.use("/api/leads", leadsRoutes);
+
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 // Función para ejecutar migración automática del código de reserva
 const ejecutarMigracionCodigoReserva = async () => {
@@ -716,6 +722,7 @@ const initializeDatabase = async () => {
 			Transaccion,
 			Oportunidad,
 			SuscripcionOportunidad,
+			LeadIncompleto,
 		]); // false = no forzar recreación
 
 		// Crear o actualizar usuario admin por defecto
@@ -795,6 +802,7 @@ const initializeDatabase = async () => {
 		await updateVehiculosMinibusToSuv(); // Migración para renombrar tipo minibus → suv en vehículos
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		await addPosicionImagenToPromocionesBanner(sequelize.getQueryInterface(), Sequelize); // Migración para añadir posición de imagen
+		await addLeadsIncompletosTable(); // Migración para tabla de leads incompletos (captura de abandono)
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
