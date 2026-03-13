@@ -736,6 +736,7 @@ const initializeDatabase = async () => {
 			DescuentoGlobal,
 			PendingEmail,
 			Transaccion,
+			FlowToken,
 			Oportunidad,
 			SuscripcionOportunidad,
 		]); // false = no forzar recreación
