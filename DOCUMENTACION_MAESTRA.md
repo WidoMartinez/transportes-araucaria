@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 12 Marzo 2026
-> **Versión**: 1.8
+> **Última Actualización**: 13 Marzo 2026
+> **Versión**: 1.9
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -38,6 +38,8 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Recuperación de Detalles Incompletos](#522-sistema-de-recuperación-de-detalles-incompletos)
    - [Sistema de Recuperación de Leads Abandonados (HeroExpress)](#523-sistema-de-recuperación-de-leads-abandonados-heroexpress)
    - [Sistema de Persistencia y Robustez de Pagos](#524-sistema-de-persistencia-y-robustez-de-pagos)
+   - [Almacenamiento Persistente de Imágenes (Cloudinary)](#525-almacenamiento-persistente-de-imágenes-cloudinary)
+   - [Estrategia de Logs en Render](#526-estrategia-de-logs-en-render)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -1412,17 +1414,128 @@ Sistema robusto para rastrear conversiones de marketing con alta precisión, dis
 > **Defensa en Profundidad**: El sistema prioriza **capturar el evento** sobre la precisión del dato. Es preferible registrar una venta con valor $1 que perder la señal de que un cliente compró.
 
 
+---
+
+### 5.25 Almacenamiento Persistente de Imágenes (Cloudinary)
+
+**Implementado: 13 Marzo 2026**
+
+#### Problema que resuelve
+Render.com (plan gratuito y Starter) utiliza un **filesystem efímero**: cualquier archivo guardado en disco se borra al reiniciar o redesplegar el servicio. Antes de esta implementación, las imágenes de los banners promocionales se almacenaban en `public/banners/` del servidor, por lo que se perdían en cada deploy, obligando al administrador a volver a subirlas manualmente.
+
+#### Solución implementada
+Las imágenes se suben directamente a **Cloudinary** (CDN de imágenes en la nube). La URL permanente de Cloudinary se guarda en la Base de Datos (`imagen_url`), por lo que sobrevive indefinidamente a cualquier reinicio del backend.
+
+#### Arquitectura técnica
+
+**Archivo principal**: `backend/routes/promociones-banner.routes.js`
+
+```
+[Admin sube imagen]
+        ↓
+[Multer: memoryStorage]   ← Sin tocar disco (buffer en RAM)
+        ↓
+[cloudinary.uploader.upload_stream()]
+        ↓
+[Cloudinary devuelve secure_url]
+        ↓
+[BD guarda la URL absoluta: https://res.cloudinary.com/...]
+```
+
+**Organización en Cloudinary**:
+- Carpeta: `transportes-araucaria/banners/`
+- Transformación automática: `quality: auto, fetch_format: auto` (optimización de peso/formato)
+
+**Eliminación de imágenes antiguas**:
+- Al editar una promoción con nueva imagen → se destruye el `public_id` anterior via `cloudinary.uploader.destroy()`
+- Al eliminar una promoción → ídem. La función helper `extractCloudinaryPublicId(url)` extrae el `public_id` desde la URL completa.
+
+#### Variables de entorno requeridas (solo en Render — nunca en código)
+
+| Variable | Descripción |
+|---|---|
+| `CLOUDINARY_CLOUD_NAME` | `dsmjdnzkq` |
+| `CLOUDINARY_API_KEY` | API Key de la cuenta Root |
+| `CLOUDINARY_API_SECRET` | API Secret de la cuenta Root |
+
+> [!WARNING]
+> Las credenciales se configuran **exclusivamente** en el panel de Render (`Environment → Add Environment Variable`). Nunca escribirlas en código ni commitearlas al repositorio.
+
+#### Detección de URL absoluta vs. relativa (Frontend)
+
+Las `imagen_url` guardadas antes de esta migración apuntan a URLs relativas (`/banners/foto.jpg`). Las nuevas apuntan a URLs absolutas de Cloudinary (`https://res.cloudinary.com/...`). El frontend detecta el tipo con:
+
+```jsx
+// GestionPromociones.jsx y PromocionBanners.jsx
+src={promo.imagen_url?.startsWith('http')
+  ? promo.imagen_url                          // Cloudinary → usar directamente
+  : `${getBackendUrl()}${promo.imagen_url}`}  // Legado → prepender backend URL
+```
+
+> [!NOTE]
+> Las promociones con URLs legadas (`/banners/...`) mostrarán imagen rota hasta que se editen y se les reasigne una imagen. Las nuevas creaciones funcionan correctamente de inmediato.
+
+#### Caché de la API de banners
+El endpoint público `GET /api/promociones-banner/activas` envía `Cache-Control: no-store` para que los navegadores no cacheen los datos y reflejen cambios del admin en tiempo real.
+
+#### Dependencia instalada
+```bash
+# En backend/
+pnpm add cloudinary   # v2.9.0
+```
+
+---
+
+### 5.26 Estrategia de Logs en Render
+
+**Implementado: 13 Marzo 2026**
+
+#### Principio general
+Los logs en Render (plan gratuito) son el único canal de observabilidad disponible sin acceso a shell. La estrategia es: **cero ruido, máxima señal en lo que realmente importa** (pagos, conversiones, errores).
+
+#### Logs eliminados (ruido sin valor diagnóstico)
+
+| Log eliminado | Archivo | Motivo |
+|---|---|---|
+| `Token expirado` / `Token inválido` | `utils/auth.js` | Flujo normal del refresh automático. No es un error; si llenara logs es señal de alta actividad, no de problema. |
+| `🔍 CORS Preflight` + `✅ CORS Preflight respondido` | `server-db.js` | El navegador genera preflight en cada sesión activa. Completamente rutinario. |
+| `📅 Solicitud de calendario: fechaInicio a fechaFin` | `server-db.js` | Se dispara en cada apertura del selector de fecha. Sin valor diagnóstico. |
+| `PUT /pricing recibido` + dump completo del body JSON | `server-db.js` | Útil en debug inicial. En producción expone datos de configuración y no aporta. |
+| `❌ Destino excluido: Pucón/Villarrica` | `server-db.js` | Estaba **dentro de un bucle** sobre configuraciones → se imprimía N veces por cada cálculo de tarifa dinámica. |
+| Log de email sanitizado en flujo Flow | `server-db.js` | Expone datos parciales del cliente sin valor en producción. |
+
+#### Logs mejorados (conversiones y eventos críticos)
+
+**Inicio de proceso de pago** (`/api/create-payment`):
+```
+🚀 [INICIO PAGO] 2026-03-13T14:38:02.000Z | Pasarela: flow | Monto: $45000 | Reserva: AR-20260313-0001 | Tipo: anticipo | Origen: directo
+```
+
+**Webhook de confirmación Flow** (conversión real confirmada):
+```
+💳 [CONVERSIÓN PAGO] 2026-03-13T14:39:50.000Z | Estado: PAGADO | Monto: $45000 | FlowOrder: 12345 | Payer: wid***
+```
+Los estados de Flow se mapean a texto legible: `1→PENDIENTE`, `2→PAGADO`, `3→RECHAZADO`, `4→ANULADO`.
+
+**Subida de imagen a Cloudinary**:
+```
+🖼️  [BANNER] Imagen subida a Cloudinary: transportes-araucaria/banners/banner-1741872000000
+```
+
+#### Política para futuros logs
+| Nivel | Cuándo usar |
+|---|---|
+| `console.log` | Eventos de negocio significativos: conversión confirmada, cambio de estado de reserva, inicio de pago |
+| `console.warn` | Situaciones inesperadas no críticas: metadata inválida, fallback activado, dato faltante no bloqueante |
+| `console.error` | Errores reales que requieren atención: fallo de BD, fallo de pasarela de pago, error de Cloudinary |
+| **Silencio** | Todo flujo normal/rutinario que se repite en bucles o por cada request HTTP estándar |
+
+> [!IMPORTANT]
+> Si en el futuro se agrega lógica que itera sobre colecciones (tarifas, configuraciones, destinos), **nunca poner logs dentro del bucle**. Acumular resultados y loguear una sola vez al final si es necesario.
+
+---
+
 ## 6. Mantenimiento y Despliegue
-
-### Frontend
-- Build: `npm run build`
-- Output: `dist/`
-- Despliegue: Automático (o manual vía subida de `dist/` a hosting estático/Hostinger).
-
-### Backend (Render)
-- Repositorio conectado a Render.com.
-- Despliegue automático al push en `main`.
-- **Nota**: El servicio spinning down (dormir) en capa gratuita causa delays iniciales.
 
 ### Archivos Legacy
 La documentación antigua se ha archivado en `docs/legacy/` para referencia histórica. Consultar esa carpeta si se busca información muy específica sobre versiones anteriores (v1) o logs de cambios detallados.
