@@ -84,10 +84,10 @@ export const verifyToken = (token) => {
 	try {
 		return jwt.verify(token, JWT_SECRET);
 	} catch (error) {
-		if (error.name === "TokenExpiredError") {
-			console.log("Token expirado");
-		} else if (error.name === "JsonWebTokenError") {
-			console.log("Token inválido");
+		// Los tokens expirados son flujo normal (refresh automático del frontend), no se loguean.
+		// Solo registrar errores inesperados que no sean de expiración.
+		if (error.name !== "TokenExpiredError" && error.name !== "JsonWebTokenError") {
+			console.error("[auth] Error inesperado al verificar token:", error.message);
 		}
 		return null;
 	}

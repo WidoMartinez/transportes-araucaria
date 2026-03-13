@@ -4,7 +4,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
 import PromocionBanner from "../models/PromocionBanner.js";
 import Reserva from "../models/Reserva.js";
 import Cliente from "../models/Cliente.js";
@@ -14,27 +14,47 @@ import { Op } from "sequelize";
 
 const router = express.Router();
 
-// Obtener __dirname en ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Configurar carpeta de uploads
-const uploadDir = path.join(__dirname, "../../public/banners");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configurar multer para upload de imágenes
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, "banner-" + uniqueSuffix + path.extname(file.originalname));
-  },
+// Configurar Cloudinary con variables de entorno (las credenciales nunca se escriben en código)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+/**
+ * Extrae el public_id de una URL de Cloudinary para poder borrar la imagen.
+ * Ejemplo: https://res.cloudinary.com/xxx/image/upload/v123/transportes-araucaria/banners/banner-abc.jpg
+ * → public_id: transportes-araucaria/banners/banner-abc
+ */
+const extractCloudinaryPublicId = (url) => {
+  if (!url || !url.includes("cloudinary.com")) return null;
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/);
+  return match ? match[1] : null;
+};
+
+/**
+ * Sube un buffer de imagen a Cloudinary y retorna la URL segura.
+ * Las imágenes se organizan en la carpeta transportes-araucaria/banners.
+ */
+const subirImagenCloudinary = (buffer, mimetype) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: "transportes-araucaria/banners",
+        resource_type: "image",
+        // Transformación automática: optimizar calidad y formato
+        transformation: [{ quality: "auto", fetch_format: "auto" }],
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(buffer);
+  });
+};
+
+// Multer en memoria: el archivo no toca el disco de Render (que es efímero)
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -48,7 +68,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(), // En memoria: sin escritura en disco
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB máximo
   fileFilter: fileFilter,
 });
@@ -171,15 +191,21 @@ router.post("/", apiLimiter, authJWT, upload.single("imagen"), handleMulterError
 
     // Validaciones básicas
     if (!nombre || !precio || !tipo_viaje || !destino) {
-      // Eliminar archivo subido si la validación falla
-      fs.unlinkSync(req.file.path);
       return res.status(400).json({
         error: "Faltan campos requeridos: nombre, precio, tipo_viaje, destino",
       });
     }
 
-    // Construir URL relativa de la imagen
-    const imagen_url = `/banners/${req.file.filename}`;
+    // Subir imagen a Cloudinary (el buffer viene de multer memoryStorage)
+    let imagen_url;
+    try {
+      const cloudResult = await subirImagenCloudinary(req.file.buffer, req.file.mimetype);
+      imagen_url = cloudResult.secure_url;
+      console.log(`🖼️  [BANNER] Imagen subida a Cloudinary: ${cloudResult.public_id}`);
+    } catch (cloudError) {
+      console.error("Error al subir imagen a Cloudinary:", cloudError.message);
+      return res.status(500).json({ error: "Error al subir la imagen. Intenta nuevamente." });
+    }
 
     const promocion = await PromocionBanner.create({
       nombre,
@@ -206,14 +232,6 @@ router.post("/", apiLimiter, authJWT, upload.single("imagen"), handleMulterError
     res.status(201).json(promocion);
   } catch (error) {
     console.error("Error al crear promoción:", error);
-    // Intentar eliminar archivo subido si hubo error
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        console.error("Error al eliminar archivo:", e);
-      }
-    }
     res.status(500).json({ error: "Error al crear promoción" });
   }
 });
@@ -285,24 +303,28 @@ router.put("/:id", apiLimiter, authJWT, upload.single("imagen"), handleMulterErr
     if (anticipacion_minima !== undefined)
       updateData.anticipacion_minima = anticipacion_minima ? parseInt(anticipacion_minima) : 3;
 
-    // Si hay nueva imagen, actualizar URL y eliminar imagen anterior
+    // Si hay nueva imagen, subir a Cloudinary y eliminar la anterior
     if (req.file) {
-      // Eliminar imagen anterior si existe
-      if (promocion.imagen_url) {
-        const oldImagePath = path.join(
-          __dirname,
-          "../../public",
-          promocion.imagen_url
-        );
-        if (fs.existsSync(oldImagePath)) {
-          try {
-            fs.unlinkSync(oldImagePath);
-          } catch (e) {
-            console.error("Error al eliminar imagen anterior:", e);
-          }
+      // Eliminar imagen anterior de Cloudinary si existe
+      const oldPublicId = extractCloudinaryPublicId(promocion.imagen_url);
+      if (oldPublicId) {
+        try {
+          await cloudinary.uploader.destroy(oldPublicId);
+        } catch (e) {
+          // No crítico: loguear pero continuar
+          console.error("Error al eliminar imagen anterior de Cloudinary:", e.message);
         }
       }
-      updateData.imagen_url = `/banners/${req.file.filename}`;
+
+      // Subir nueva imagen
+      try {
+        const cloudResult = await subirImagenCloudinary(req.file.buffer, req.file.mimetype);
+        updateData.imagen_url = cloudResult.secure_url;
+        console.log(`🖼️  [BANNER] Imagen actualizada en Cloudinary: ${cloudResult.public_id}`);
+      } catch (cloudError) {
+        console.error("Error al subir nueva imagen a Cloudinary:", cloudError.message);
+        return res.status(500).json({ error: "Error al subir la imagen. Intenta nuevamente." });
+      }
     }
 
     await promocion.update(updateData);
@@ -310,14 +332,6 @@ router.put("/:id", apiLimiter, authJWT, upload.single("imagen"), handleMulterErr
     res.json(promocion);
   } catch (error) {
     console.error("Error al actualizar promoción:", error);
-    // Intentar eliminar archivo subido si hubo error
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        console.error("Error al eliminar archivo:", e);
-      }
-    }
     res.status(500).json({ error: "Error al actualizar promoción" });
   }
 });
@@ -331,19 +345,14 @@ router.delete("/:id", apiLimiter, authJWT, async (req, res) => {
       return res.status(404).json({ error: "Promoción no encontrada" });
     }
 
-    // Eliminar imagen del disco
-    if (promocion.imagen_url) {
-      const imagePath = path.join(
-        __dirname,
-        "../../public",
-        promocion.imagen_url
-      );
-      if (fs.existsSync(imagePath)) {
-        try {
-          fs.unlinkSync(imagePath);
-        } catch (e) {
-          console.error("Error al eliminar imagen:", e);
-        }
+    // Eliminar imagen de Cloudinary si existe
+    const publicId = extractCloudinaryPublicId(promocion.imagen_url);
+    if (publicId) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+      } catch (e) {
+        // No crítico: la promo se elimina igual aunque falle la limpieza en Cloudinary
+        console.error("Error al eliminar imagen de Cloudinary:", e.message);
       }
     }
 

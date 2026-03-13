@@ -575,22 +575,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Middleware de logging de peticiones CORS
-app.use((req, res, next) => {
-	if (req.method === "OPTIONS") {
-		console.log(
-			`🔍 CORS Preflight: ${req.method} ${req.path} desde ${
-				req.headers.origin || "sin origin"
-			}`
-		);
-	}
-	next();
-});
-
 // Responder explícitamente a las solicitudes de preflight con headers manuales
+// (sin log — los preflight son rutinarios y generan demasiado ruido en producción)
 app.options("*", (req, res) => {
 	const origin = req.headers.origin || "*";
-	console.log(`✅ CORS Preflight respondido para: ${origin}`);
 	res.header("Access-Control-Allow-Origin", origin);
 	res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 	res.header(
@@ -893,8 +881,6 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				.status(400)
 				.json({ error: "Faltan parámetros fechaInicio o fechaFin" });
 		}
-
-		console.log(`📅 Solicitud de calendario: ${fechaInicio} a ${fechaFin}`);
 
 		const startDate = new Date(fechaInicio);
 		const endDate = new Date(fechaFin);
@@ -1348,9 +1334,6 @@ app.get("/pricing", async (req, res) => {
 });
 
 app.put("/pricing", async (req, res) => {
-	console.log("PUT /pricing recibido");
-	console.log("Body recibido:", JSON.stringify(req.body, null, 2));
-
 	const { destinos, dayPromotions, descuentosGlobales } = req.body || {};
 
 	if (!Array.isArray(destinos) || !Array.isArray(dayPromotions)) {
@@ -8348,7 +8331,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 				Array.isArray(config.destinosExcluidos) &&
 				config.destinosExcluidos.includes(destino)
 			) {
-				console.log(`    ❌ Destino excluido: ${destino}`);
+				// Destino excluido de esta configuración — se omite sin log (es flujo normal/repetitivo)
 				continue;
 			}
 
@@ -9137,15 +9120,8 @@ app.post("/create-payment", async (req, res) => {
 		});
 	}
 
-	console.log(`💰 [create-payment] Solicitud de pago:`, {
-		gateway,
-		amount: amountNum,
-		reservaId,
-		codigoReserva,
-		tipoPago,
-		paymentOrigin,
-		email,
-	});
+	// LOG DE CONVERSIÓN: inicio de proceso de pago (trazabilidad completa para analytics)
+	console.log(`🚀 [INICIO PAGO] ${new Date().toISOString()} | Pasarela: ${gateway} | Monto: $${amountNum} | Reserva: ${codigoReserva || reservaId || 'sin código'} | Tipo: ${tipoPago || 'total'} | Origen: ${paymentOrigin || 'directo'}`);
 
 	const frontendBase =
 		process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
@@ -9163,14 +9139,7 @@ app.post("/create-payment", async (req, res) => {
 
 		// --- SANITIZACIÓN Y VALIDACIÓN DEL EMAIL ---
 		const emailSanitizado = sanitizarEmailRobusto(email);
-		console.log(
-			`📧 [Flow] Email recibido: "${String(email || "").slice(
-				0,
-				3
-			)}***" → sanitizado: "${emailSanitizado.slice(0, 3)}***@${
-				emailSanitizado.split("@")[1] || "?"
-			}", longitud: ${emailSanitizado.length}`
-		);
+		// (el log del email sanitizado se omite — no aporta valor en producción)
 
 		// Validar que el email sanitizado tenga formato válido para Flow
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9805,11 +9774,9 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		);
 
 		const payment = flowResponse.data;
-		console.log("💳 Estado del pago Flow:", {
-			flowOrder: payment.flowOrder,
-			status: payment.status,
-			amount: payment.amount,
-		});
+		// LOG DE CONVERSIÓN: estado de pago recibido desde Flow (dato crítico para analytics y reconciliación)
+		const FLOW_ESTADOS = { 1: 'PENDIENTE', 2: 'PAGADO', 3: 'RECHAZADO', 4: 'ANULADO' };
+		console.log(`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${payment.payer?.email ? payment.payer.email.slice(0, 3) + '***' : 'sin email'}`);
 
 		// Responder a Flow
 		res.status(200).send("OK");
