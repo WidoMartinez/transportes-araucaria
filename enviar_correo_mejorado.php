@@ -1,4 +1,7 @@
 <?php
+// AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
+// Cualquier cambio local debe subirse manualmente al servidor.
+
 // enviar_correo_mejorado.php
 // Versión mejorada que envía correo Y guarda los datos de reserva
 // En producción, NO mostrar errores en la salida para no corromper el JSON
@@ -316,14 +319,26 @@ if ($action === 'send_lead_recovery') {
                     <a href='{$payLink}' style='background-color: #2563eb; color: #ffffff; padding: 16px 32px; border-radius: 8px; font-weight: bold; font-size: 16px; text-decoration: none; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);'>
                         💳 Pagar Abono y Asegurar Cupo
                     </a>
-                    <p style='font-size: 13px; color: #6b7280; margin-top: 12px;'>*Solo necesitas pagar el 40% para confirmar.</p>
+                    <p style='font-size: 14px; color: #1e40af; font-weight: bold; margin-top: 12px;'>✨ ¡Hasta 3 cuotas precio contado!</p>
+                    <p style='font-size: 13px; color: #6b7280; margin-top: 4px;'>Paga con Webpay, Débito, Crédito o Transferencia vía <strong>Flow</strong>.</p>
+                    <p style='font-size: 12px; color: #9ca3af; margin-top: 4px;'>*Solo necesitas pagar el 40% para confirmar.</p>
                 </div>
 
-                <div style='text-align: center; padding-top: 24px; border-top: 1px solid #f1f5f9;'>
-                    <p style='font-size: 14px; margin-bottom: 16px;'>¿Tienes alguna duda o prefieres asistencia personalizada?</p>
-                    <a href='https://wa.me/56936643540?text=Hola,%20tengo%20una%20duda%20con%20mi%20reserva%20para%20{$destino}' style='color: #059669; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center;'>
-                        <span style='background-color: #dcfce7; padding: 8px 16px; border-radius: 50px;'>📱 Hablar por WhatsApp</span>
+                <!-- Bloque urgencia WhatsApp con descuento especial -->
+                <div style='background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 2px solid #ea580c; border-radius: 14px; padding: 24px; text-align: center; margin-top: 28px;'>
+                    <!-- Badge de urgencia -->
+                    <div style='display: inline-block; background-color: #dc2626; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 50px; letter-spacing: 0.08em; margin-bottom: 14px; text-transform: uppercase;'>⏰ OFERTA POR TIEMPO LIMITADO</div>
+                    <h3 style='margin: 0 0 10px; font-size: 19px; color: #7c2d12; font-weight: 800; line-height: 1.3;'>¡Hay un descuento especial<br>disponible para tu ruta!</h3>
+                    <p style='margin: 0 0 8px; font-size: 14px; color: #9a3412; line-height: 1.5;'>
+                        Escríbenos <strong>ahora por WhatsApp</strong> y pregunta por el<br>
+                        <strong>descuento exclusivo</strong> que tenemos para tu traslado.
+                    </p>
+                    <p style='margin: 0 0 20px; font-size: 13px; color: #c2410c; font-style: italic;'>⚡ Cupos limitados — esta oferta puede expirar en cualquier momento.</p>
+                    <!-- Botón WhatsApp principal -->
+                    <a href='https://wa.me/56936643540?text=Hola!%20Vi%20que%20hay%20un%20descuento%20especial%20disponible%20para%20mi%20traslado%20de%20{$origen}%20a%20{$destino}.%20C%C3%B3digo%20de%20reserva%3A%20{$codigoReserva}%20%C2%BFMe%20pueden%20confirmar%20el%20descuento?' style='background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: #ffffff; padding: 15px 32px; border-radius: 50px; font-weight: 800; font-size: 17px; text-decoration: none; display: inline-block; box-shadow: 0 6px 12px -2px rgba(22, 163, 74, 0.4); letter-spacing: 0.01em;'>
+                        📱 ¡Quiero mi descuento especial!
                     </a>
+                    <p style='font-size: 12px; color: #9a3412; margin-top: 14px; margin-bottom: 0;'>Respuesta inmediata &middot; Sin compromisos &middot; Solo por WhatsApp</p>
                 </div>
             </div>
             
@@ -400,6 +415,8 @@ if ($action === 'send_discount_offer') {
                     <p style='margin:16px 0 8px; font-size:14px; color:#065f46;'>TU PRECIO ESPECIAL</p>
                     <p style='margin:0; font-size:32px; font-weight:bold; color:#059669;'>{$precioConDescuentoHtml}</p>
                     <p style='margin:8px 0 0; font-size:12px; color:#059669;'>¡Ahorras {$DESCUENTO_OFERTA_ESPECIAL}%!</p>
+                    <p style='margin:12px 0 0; font-size:15px; color:#059669; font-weight:bold;'>💳 ¡Paga en 3 cuotas sin interés!</p>
+                    <p style='margin:4px 0 0; font-size:13px; color:#065f46;'>Aceptamos Débito, Crédito y Transferencia vía Flow.</p>
                 </div>
                 <div style='text-align:center; margin:24px 0;'>
                     <a href='https://wa.me/56936643540?text=Hola,%20quiero%20confirmar%20mi%20reserva%20{$codigoReserva}%20con%20descuento' style='background-color:#25D366; color:white; padding:12px 24px; text-decoration:none; border-radius:50px; font-weight:bold; font-size:16px; display:inline-block;'>
@@ -727,6 +744,8 @@ try {
                             <p style='margin:16px 0 8px; font-size:14px; color:#065f46;'>TU PRECIO ESPECIAL</p>
                             <p style='margin:0; font-size:32px; font-weight:bold; color:#059669;'>{$precioConDescuentoHtml}</p>
                             <p style='margin:8px 0 0; font-size:12px; color:#059669;'>¡Ahorras {$DESCUENTO_OFERTA_ESPECIAL}%!</p>
+                            <p style='margin:12px 0 0; font-size:15px; color:#059669; font-weight:bold;'>💳 ¡Hasta 3 cuotas precio contado!</p>
+                            <p style='margin:4px 0 0; font-size:13px; color:#065f46;'>Webpay, Débito, Crédito y Transferencia vía Flow.</p>
                         </div>
 
                         <div style='background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin:12px 0;'>
