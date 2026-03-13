@@ -2666,3 +2666,34 @@ Además, los callbacks de Flow a veces redirigen con la falta del `reserva_id`, 
 **Solución Implementada**:
 Para forzar una diferenciación absoluta de `transaction_id` entre compras consecutivas reales del mismo cliente, se modificaron los archivos `src/App.jsx` y `src/components/FlowReturn.jsx`.
 Ahora, el `transaction_id` combina el ID de la reserva con un substring del token único de Flow (ej: `509_8fA2bC1`), generando una huella criptográfica inequívoca para cada transacción pagada en la ventana activa.
+
+## 11. Pérdida de Conversiones de Google Ads por Latencia en Flow
+
+**Implementado: 12 Marzo 2026**
+
+### Problema
+Se detectaron casos donde las conversiones de Google Ads se registraban con valor cero o no se registraban en absoluto, a pesar de que el usuario había pagado exitosamente en Flow.
+
+### Síntomas
+- Reservas pagadas aparecen en el panel admin pero no marcan valor de conversión en Google Ads.
+- Logs muestran errores de timeout o excepciones al intentar consultar el estado del pago en Flow.
+- La URL de retorno no contiene el parámetro de monto (`amount`).
+
+### Causa Raíz
+El backend dependía totalmente de una llamada asíncrona a la API de Flow (`getStatus`) durante la redirección del usuario. Si esta llamada fallaba por latencia de Render o respuesta lenta de Flow, el sistema activaba un fallback que enviaba al usuario a la página de retorno sin el valor del monto, lo que invalidaba la conversión de Google Ads.
+
+### Solución (Marzo 2026)
+Se implementó un **Sistema de Persistencia Previa de Tokens**.
+
+1.  **Modelo `FlowToken`**: Ahora, antes de redirigir al usuario a Flow, el backend guarda el monto y los metadatos de la intención de pago vinculados al token.
+2.  **Fallback Robusto**: Si la API de Flow falla durante el retorno, el sistema consulta la tabla `FlowToken` y recupera el monto persistido localmente.
+3.  **Valor Centinela**: Se implementó una protección donde, si fallan todos los métodos de recuperación, se inyecta un valor de `1.0 CLP` en lugar de dejar el monto vacío, asegurando que Google Ads reciba un valor numérico válido.
+
+### Archivos Modificados
+- `backend/server-db.js`: Lógica de persistencia en `/create-payment` y fallbacks en `/api/payment-result`.
+- `backend/models/FlowToken.js`: Definición del nuevo modelo.
+- `src/components/FlowReturn.jsx`: Mejoras en la detección y tracking.
+- `src/App.jsx`: Normalización de parámetros de origen.
+
+> [!NOTE]
+> Para más detalles técnicos sobre el funcionamiento, ver [Sección 5.24 de la Documentación Maestra](DOCUMENTACION_MAESTRA.md#524-sistema-de-persistencia-y-robustez-de-pagos).

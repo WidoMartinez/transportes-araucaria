@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 18 Febrero 2026
-> **Versión**: 1.7
+> **Última Actualización**: 12 Marzo 2026
+> **Versión**: 1.8
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -37,6 +37,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Auditoría y Logs](#521-sistema-de-auditoría-y-logs-adminauditlog)
    - [Sistema de Recuperación de Detalles Incompletos](#522-sistema-de-recuperación-de-detalles-incompletos)
    - [Sistema de Recuperación de Leads Abandonados (HeroExpress)](#523-sistema-de-recuperación-de-leads-abandonados-heroexpress)
+   - [Sistema de Persistencia y Robustez de Pagos](#524-sistema-de-persistencia-y-robustez-de-pagos)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -1672,6 +1673,40 @@ Implementado en Febrero 2026 para gestionar el escenario donde un cliente comple
 1672:     - En `AdminReservas`, los leads abandonados muestran un botón de **"Seguimiento WhatsApp"** que permite al administrador copiar un mensaje personalizado y contactar al cliente de forma manual si el correo automático no surte efecto.
 1673: 
 1674: ---
+
+
+### 5.24 Sistema de Persistencia y Robustez de Pagos
+
+**Implementado: Marzo 2026**
+
+Este sistema garantiza que no se pierdan datos de conversión de Google Ads ni trazabilidad de pagos, incluso ante fallos de red o latencia en la API de Flow.
+
+#### Componentes Técnicos
+
+1.  **Modelo `FlowToken`**:
+    *   Tabla en la base de datos que registra cada `token` generado por Flow en el momento de la creación del pago.
+    *   **Datos persistidos**: `amount` (monto real cotizado), `email` del cliente, `reservaId`, `paymentOrigin` y `metadata` JSON.
+    *   **Expiración**: Los tokens tienen una validez de 1 hora en la base de datos.
+
+2.  **Estrategia de Fallback en Cascada**:
+    Al retornar de la pasarela, el sistema intenta recuperar el monto para la conversión en este orden:
+    1.  **Flow API**: Intenta una llamada `getStatus` a Flow.
+    2.  **Metadata Local**: Si Flow API falla, busca el token en la tabla `FlowToken`.
+    3.  **Base de Datos**: Si lo anterior falla, busca el monto en la tabla `Reserva` asociada.
+    4.  **Monto Simbólico**: Como último recurso, envía un valor centinela (`1.0 CLP`) para evitar que Google Ads registre una conversión de valor cero.
+
+3.  **Normalización de Parámetros**:
+    *   El backend es agnóstico al componente que origina el pago.
+    *   Acepta indistintamente `reservaId` o `reservationId` (usado en componentes de productos).
+    *   Identifica el origen mediante `paymentOrigin` para decidir la ruta de redirección final (Home vs generic FlowReturn).
+
+#### Flujos Cubiertos
+*   **Express**: Home → Cotización → Pago.
+*   **Pagar con Código**: Uso de códigos de prepago.
+*   **Consulta de Reserva**: Pago de saldos pendientes.
+*   **Oportunidades**: Compra de retornos con descuento.
+*   **Banners**: Reservas desde promociones destacadas.
+*   **Productos**: Adición de servicios extras (café, WiFi, etc.) post-reserva.
 
 ---
 
