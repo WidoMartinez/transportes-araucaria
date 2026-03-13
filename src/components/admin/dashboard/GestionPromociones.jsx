@@ -224,7 +224,8 @@ setFormData({
       anticipacion_minima: (promocion.anticipacion_minima || "3").toString(),
     });
 setImagenFile(null);
-setPreviewUrl(`${getBackendUrl()}${promocion.imagen_url}`);
+// Si la URL ya es absoluta (Cloudinary), usarla directamente; si es relativa, prepender el backend
+setPreviewUrl(promocion.imagen_url?.startsWith('http') ? promocion.imagen_url : `${getBackendUrl()}${promocion.imagen_url}`);
 setIsDialogOpen(true);
 };
 
@@ -427,10 +428,10 @@ Nueva Promoción
 <div className="relative">
 {/* Imagen preview */}
 <img
-src={`${getBackendUrl()}${promo.imagen_url}`}
-alt={promo.nombre}
-className="w-full h-48 object-cover"
-style={{ objectPosition: promo.posicion_imagen || "center" }}
+  src={promo.imagen_url?.startsWith('http') ? promo.imagen_url : `${getBackendUrl()}${promo.imagen_url}`}
+  alt={promo.nombre}
+  className="w-full h-48 object-cover"
+  style={{ objectPosition: promo.posicion_imagen || "center" }}
 />
 
 {/* Badge de estado */}
