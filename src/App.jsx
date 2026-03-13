@@ -1666,6 +1666,7 @@ const [configSillas, setConfigSillas] = useState({
 					reservaId: reservaIdParaPago || null,
 					codigoReserva: codigoReservaParaPago || null,
 					tipoPago: type,
+					paymentOrigin: "reserva_express", // Identificador para fallback robusto y conversiones GA
 				}),
 			});
 

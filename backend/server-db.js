@@ -9413,9 +9413,11 @@ app.post("/api/payment-result", async (req, res) => {
 					paymentOrigin === "pagar_con_codigo"; // Añadido check explicito
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
+				const isOportunidad = paymentOrigin === "oportunidad_traslado";
+				const isBanner = paymentOrigin === "banner_promocional";
 
-				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
-					// Caso: Pagar con Código, Consultar Reserva o Compra Productos
+				if (isCodigoPago || isConsultaReserva || isCompraProductos || isOportunidad || isBanner) {
+					// Caso: Pagar con Código, Consultar Reserva, Compra Productos, Oportunidad o Banner
 					// Redirigir a la página de éxito estándar (FlowReturn)
 					console.log(
 						`✅ Pago CONFIRMADO (Reserva ${reservaId}, Origen: ${
@@ -9596,8 +9598,10 @@ app.post("/api/payment-result", async (req, res) => {
 					paymentOrigin === "pagar_con_codigo";
 				const isConsultaReserva = paymentOrigin === "consultar_reserva";
 				const isCompraProductos = paymentOrigin === "compra_productos";
+				const isOportunidad = paymentOrigin === "oportunidad_traslado";
+				const isBanner = paymentOrigin === "banner_promocional";
 
-				if (isCodigoPago || isConsultaReserva || isCompraProductos) {
+				if (isCodigoPago || isConsultaReserva || isCompraProductos || isOportunidad || isBanner) {
 					// Redirigir a FlowReturn con estado pendiente (sin monto para evitar conversión)
 					return res.redirect(
 						303,
@@ -9672,12 +9676,26 @@ app.post("/api/payment-result", async (req, res) => {
 				const recordedToken = await FlowToken.findByPk(token);
 				if (recordedToken) {
 					console.log(
-						`🎯 [Fallback DB] Datos recuperados: Monto $${recordedToken.amount}, Email: ${recordedToken.email}`
+						`🎯 [Fallback DB] Datos recuperados: Monto $${recordedToken.amount}, Origen: ${recordedToken.paymentOrigin}`
 					);
 
 					const userDataEncoded = Buffer.from(
 						JSON.stringify({ email: recordedToken.email || "" })
 					).toString("base64");
+
+					const dbOrigin = recordedToken.paymentOrigin || "desconocido";
+
+					// Reserva Express vuelve al home; todos los demás flujos van a /flow-return
+					if (dbOrigin === "reserva_express") {
+						return res.redirect(
+							303,
+							`${frontendBase}/?flow_payment=success&token=${token}&reserva_id=${
+								recordedToken.reservaId || ""
+							}&amount=${recordedToken.amount}&d=${encodeURIComponent(
+								userDataEncoded
+							)}&warning=api_failure_db_fallback`
+						);
+					}
 
 					return res.redirect(
 						303,

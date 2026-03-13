@@ -255,6 +255,7 @@ return () => clearInterval(intervalId);
             reservaId: data.reservaId,
             codigoReserva: data.codigoReserva,
             tipoPago: "total",
+            paymentOrigin: "oportunidad_traslado", // Identificador para redirección y conversiones GA
           }),
         });
 
