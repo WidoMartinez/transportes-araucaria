@@ -569,7 +569,7 @@ const [configSillas, setConfigSillas] = useState({
 						transaction_id: transactionId,
 					};
 
-					// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data'
+					// ✅ Enhanced Conversions: usar gtag('set', 'user_data', ...) para máxima compatibilidad
 					const userData = {};
 					if (userEmail) userData.email = userEmail.toLowerCase().trim();
 					if (userPhone) userData.phone_number = normalizePhoneToE164(userPhone);
@@ -581,8 +581,10 @@ const [configSillas, setConfigSillas] = useState({
 							country: 'CL'
 						};
 					}
+
 					if (Object.keys(userData).length > 0) {
-						conversionData.user_data = userData;
+						console.log("👤 [App.jsx] Set user_data para Enhanced Conversions");
+						window.gtag("set", "user_data", userData);
 					}
 
 					// Esperar a que gtag esté listo antes de disparar

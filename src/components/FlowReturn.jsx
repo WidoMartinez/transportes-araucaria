@@ -214,7 +214,7 @@ function FlowReturn() {
 						transaction_id: transactionId,
 					};
 
-					// ✅ Enhanced Conversions: anidar datos de usuario dentro de 'user_data' (formato oficial Google Ads)
+					// ✅ Enhanced Conversions: usar gtag('set', 'user_data', ...) para máxima compatibilidad
 					const userData = {};
 					if (userEmail) userData.email = userEmail.toLowerCase().trim();
 					if (userPhone) {
@@ -229,9 +229,11 @@ function FlowReturn() {
 							country: 'CL'
 						};
 					}
+
 					if (Object.keys(userData).length > 0) {
-						conversionData.user_data = userData;
-					}	
+						console.log("👤 [FlowReturn] Set user_data para Enhanced Conversions");
+						window.gtag("set", "user_data", userData);
+					}
 
 					console.log(`🚀 [FlowReturn] Disparando conversión Google Ads:`, conversionData);
 					window.gtag("event", "conversion", conversionData);

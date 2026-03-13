@@ -38,6 +38,8 @@ import addClientDataToCodigosPago from "./migrations/add-client-data-to-codigos-
 import addEnProcesoEstado from "./migrations/add-en-proceso-estado-codigo-pago.js";
 import CodigoPago from "./models/CodigoPago.js";
 import Transaccion from "./models/Transaccion.js";
+import FlowToken from "./models/FlowToken.js";
+import addFlowTokensTable from "./migrations/add-flow-tokens-table.js";
 import addAbonoFlags from "./migrations/add-abono-flags.js";
 import addTipoPagoColumn from "./migrations/add-tipo-pago-column.js";
 import addGastosTable from "./migrations/add-gastos-table.js";
@@ -703,7 +705,8 @@ const initializeDatabase = async () => {
 		if (!connected) {
 			throw new Error("No se pudo conectar a la base de datos");
 		}
-		// Sincronizar solo los modelos principales en orden para evitar ALTER TABLE masivos
+		// Ejecutar migraciones en orden secuencial
+		await addFlowTokensTable(sequelize);
 		await addPendingEmailsTable();
 
 		// Migraciones CRÍTICAS de estructura (deben correr antes de syncDatabase)
@@ -9243,6 +9246,32 @@ app.post("/create-payment", async (req, res) => {
 			if (!payment.url || !payment.token) {
 				throw new Error("Respuesta invalida desde Flow");
 			}
+
+			// ✅ [ROOT CAUSE 1] PERSISTIR TOKEN: Guardar mapeo token -> datos para fallback robusto en redirección
+			try {
+				const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora de validez
+				await FlowToken.create({
+					token: payment.token,
+					reservaId: reservaId || null,
+					amount: amountNum,
+					email: emailSanitizado,
+					paymentOrigin: paymentOrigin || "desconocido",
+					metadata: optionalPayload,
+					expiresAt,
+				});
+				console.log(
+					`💾 [FlowToken] Guardado registro para token: ${payment.token.slice(
+						0,
+						10
+					)}...`
+				);
+			} catch (tokenSaveError) {
+				console.error(
+					"⚠️ [FlowToken] No se pudo guardar el token (el flujo continuará):",
+					tokenSaveError.message
+				);
+			}
+
 			const redirectUrl = `${payment.url}?token=${payment.token}`;
 			return res.json({ url: redirectUrl });
 		} catch (error) {
@@ -9633,10 +9662,38 @@ app.post("/api/payment-result", async (req, res) => {
 			}
 		} catch (flowError) {
 			console.error(
-				"⚠️ Error consultando estado en Flow (usando fallback):",
+				"⚠️ Error consultando estado en Flow (usando fallback de DB):",
 				flowError.message
 			);
-			// Continuar al fallback
+
+			// ✅ [ROOT CAUSE 1] FALLBACK ROBUSTO: Intentar recuperar datos del token desde nuestra DB
+			try {
+				const recordedToken = await FlowToken.findByPk(token);
+				if (recordedToken) {
+					console.log(
+						`🎯 [Fallback DB] Datos recuperados: Monto $${recordedToken.amount}, Email: ${recordedToken.email}`
+					);
+
+					const userDataEncoded = Buffer.from(
+						JSON.stringify({ email: recordedToken.email || "" })
+					).toString("base64");
+
+					return res.redirect(
+						303,
+						`${frontendBase}/flow-return?token=${token}&status=success&amount=${
+							recordedToken.amount
+						}&d=${encodeURIComponent(
+							userDataEncoded
+						)}&warning=api_failure_db_fallback`
+					);
+				}
+			} catch (dbError) {
+				console.error(
+					"❌ [Fallback DB] Error consultando FlowToken:",
+					dbError.message
+				);
+			}
+			// Continuar al fallback genérico si la DB también falla o no hay registro
 		}
 
 		// Fallback: Redirigir a la página genérica de retorno
@@ -12188,6 +12245,25 @@ const startServer = async () => {
 		setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
 		console.log(
 			"🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)"
+		);
+
+		// Iniciar limpiador de tokens de Flow expirados (cada 12 horas)
+		setInterval(async () => {
+			try {
+				const count = await FlowToken.destroy({
+					where: { expiresAt: { [Op.lt]: new Date() } },
+				});
+				if (count > 0)
+					console.log(`🧹 [FlowToken] Limpiados ${count} tokens expirados`);
+			} catch (err) {
+				console.error(
+					"❌ [FlowToken] Error en limpieza automática:",
+					err.message
+				);
+			}
+		}, 12 * 60 * 60 * 1000);
+		console.log(
+			"🧹 Limpiador de tokens de Flow iniciado (intervalo: 12 horas)"
 		);
 
 		// Ejecutar limpieza inicial al arrancar (después de 5 minutos)
