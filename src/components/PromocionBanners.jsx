@@ -100,8 +100,9 @@ return null;
                     onClick={() => handleBannerClick(promo)}
                   >
                     {/* Imagen del banner con fallback */}
+                    {/* Si la URL es absoluta (Cloudinary) se usa directamente; si es relativa se prepende el backend */}
                     <img
-                      src={`${getBackendUrl()}${promo.imagen_url}`}
+                      src={promo.imagen_url?.startsWith('http') ? promo.imagen_url : `${getBackendUrl()}${promo.imagen_url}`}
                       alt={promo.nombre}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover/banner:scale-110"
                       style={{ 
