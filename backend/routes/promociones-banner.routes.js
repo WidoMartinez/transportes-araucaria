@@ -124,6 +124,8 @@ router.get("/activas", async (req, res) => {
       order: [["orden", "ASC"], ["created_at", "DESC"]],
     });
 
+    // Sin caché: los banners deben reflejar cambios del admin de inmediato
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
     res.json(promociones);
   } catch (error) {
     console.error("Error al obtener promociones activas:", error);
