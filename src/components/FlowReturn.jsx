@@ -92,44 +92,10 @@ function FlowReturn() {
 			}, GTAG_POLL_INTERVAL_MS);
 		});
 
-		// LOGICA DE VERIFICACIÓN
-		const verifyPayment = async () => {
-			console.log(`🔍 [FlowReturn] Verificando estado: Status=${statusParam}, Error=${errorParam}, Amount=${amountParam}`);
-
-			// Si el backend nos dice explícitamente que hubo error
-			if (statusParam === "error" || errorParam) {
-				console.warn(`❌ Error en pago detectado. Status: ${statusParam}, Error: ${errorParam}, FlowStatus: ${flowStatusParam}`);
-				setPaymentStatus("error");
-				return;
-			}
-
-			// Si el backend nos dice que fue exitoso
-			if (statusParam === "success") {
-				setPaymentStatus("success");
-				// Esperar a que gtag esté disponible antes de disparar la conversión
-				const gtagListo = await waitForGtag();
-				if (gtagListo) {
-					triggerConversion(amountParam, reservaIdParam, token);
-				}
-				return;
-			}
-
-			// Si el pago está PENDIENTE (esperando confirmación)
-			if (statusParam === "pending") {
-				console.warn(`⏳ Pago PENDIENTE detectado. No se disparará conversión hasta confirmación.`);
-				setPaymentStatus("pending");
-				return;
-			}
-
-			// Fallback (status desconocido o legacy): asumir éxito si no hay error explícito
-			setPaymentStatus("success");
-			const gtagListoFallback = await waitForGtag();
-			if (gtagListoFallback) {
-				triggerConversion(amountParam, reservaIdParam, token);
-			}
-		};
-
-		// triggerConversion ya puede asumir que gtag está disponible (se usa después de waitForGtag)
+		// ✅ ORDEN IMPORTANTE: triggerConversion debe declararse ANTES que verifyPayment.
+		// Con "const", la variable no existe hasta que la línea de declaración se ejecuta.
+		// Si verifyPayment la referenciara antes de que triggerConversion esté declarada,
+		// el motor JS lanzaría un ReferenceError silencioso en el contexto asíncrono.
 		const triggerConversion = (amount, id, tkn) => {
 			try {
 				if (typeof window.gtag === "function") {
@@ -250,8 +216,44 @@ function FlowReturn() {
 			}
 		};
 
+		// verifyPayment se declara DESPUÉS de triggerConversion (ver comentario anterior)
+		const verifyPayment = async () => {
+			console.log(`🔍 [FlowReturn] Verificando estado: Status=${statusParam}, Error=${errorParam}, Amount=${amountParam}`);
+
+			// Si el backend nos dice explícitamente que hubo error
+			if (statusParam === "error" || errorParam) {
+				console.warn(`❌ Error en pago detectado. Status: ${statusParam}, Error: ${errorParam}, FlowStatus: ${flowStatusParam}`);
+				setPaymentStatus("error");
+				return;
+			}
+
+			// Si el backend nos dice que fue exitoso
+			if (statusParam === "success") {
+				setPaymentStatus("success");
+				// Esperar a que gtag esté disponible antes de disparar la conversión
+				const gtagListo = await waitForGtag();
+				if (gtagListo) {
+					triggerConversion(amountParam, reservaIdParam, token);
+				}
+				return;
+			}
+
+			// Si el pago está PENDIENTE (esperando confirmación)
+			if (statusParam === "pending") {
+				console.warn(`⏳ Pago PENDIENTE detectado. No se disparará conversión hasta confirmación.`);
+				setPaymentStatus("pending");
+				return;
+			}
+
+			// Fallback (status desconocido o legacy): asumir éxito si no hay error explícito
+			setPaymentStatus("success");
+			const gtagListoFallback = await waitForGtag();
+			if (gtagListoFallback) {
+				triggerConversion(amountParam, reservaIdParam, token);
+			}
+		};
+
 		verifyPayment();
-		// Removed timeout wrapper to verify payment immediately after delay
 	}, []);
 
 	const handleGoHome = () => {
