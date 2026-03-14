@@ -152,6 +152,9 @@ function FlowReturn() {
 							'⚠️ [FlowReturn] No se recibió monto válido en la URL. Usando valor por defecto 1.0.',
 							'amount recibido:', amount
 						);
+						// ALERTA: si este log aparece en producción, el backend no está pasando 'amount' en la URL de retorno
+						// Esto distorsiona el valor promedio de conversión en Google Ads → revisar /api/payment-result en Render
+						console.error('❌ [GA-ALERTA] Conversión disparada con value=1.0 (fallback). Verificar que backend pase amount en URL.');
 						conversionValue = 1.0;
 					} else {
 						console.log(`✅ [FlowReturn] Valor total de conversión: ${conversionValue}, Transaction ID: ${transactionId}`);
@@ -172,16 +175,16 @@ function FlowReturn() {
 						const encodedData = urlParams.get('d');
 						if (encodedData) {
 							try {
-								// ✅ FIX: Decodificar Base64 con soporte UTF-8 para caracteres especiales (acentos, ñ, etc.)
-								// Paso 1: Decodificar URL encoding (revertir encodeURIComponent del backend)
-								const decodedFromUrl = decodeURIComponent(encodedData);
-								
-								// Paso 2: Decodificar Base64 a bytes
-								const base64Decoded = atob(decodedFromUrl);
-								
-								// Paso 3: Convertir bytes a UTF-8 string (maneja acentos correctamente)
-								const utf8Decoded = decodeURIComponent(escape(base64Decoded));
-								
+						// ✅ Decodificar Base64 con soporte UTF-8 usando TextDecoder (estándar moderno, sin escape() deprecated)
+						// Paso 1: Decodificar URL encoding (revertir encodeURIComponent del backend)
+						const decodedFromUrl = decodeURIComponent(encodedData);
+						
+						// Paso 2: Decodificar Base64 a bytes
+						const base64Decoded = atob(decodedFromUrl);
+						
+						// Paso 3: Convertir bytes a string UTF-8 con TextDecoder (soporta ñ, acentos y caracteres especiales)
+						const bytes = Uint8Array.from(base64Decoded, c => c.charCodeAt(0));
+						const utf8Decoded = new TextDecoder('utf-8').decode(bytes);
 								// Paso 4: Parsear JSON
 								const userData = JSON.parse(utf8Decoded);
 								

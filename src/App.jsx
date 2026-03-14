@@ -536,6 +536,9 @@ const [configSillas, setConfigSillas] = useState({
 
 					if (conversionValue <= 0) {
 						console.warn("⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.");
+						// ALERTA: si este log aparece en producción, el backend no está pasando 'amount' en la URL de retorno Express
+						// Esto distorsiona el valor promedio de conversión en Google Ads → revisar /api/payment-result en Render
+						console.error('❌ [GA-ALERTA] Conversión Express disparada con value=1.0 (fallback). Verificar que backend pase amount en URL.');
 						conversionValue = 1.0;
 					}
 
@@ -546,9 +549,11 @@ const [configSillas, setConfigSillas] = useState({
 					// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
 					if (encodedData) {
 						try {
+							// ✅ Decodificar Base64 con soporte UTF-8 usando TextDecoder (sin escape() deprecated)
 							const decodedFromUrl = decodeURIComponent(encodedData);
 							const base64Decoded = atob(decodedFromUrl);
-							const utf8Decoded = decodeURIComponent(escape(base64Decoded));
+							const bytes = Uint8Array.from(base64Decoded, c => c.charCodeAt(0));
+							const utf8Decoded = new TextDecoder('utf-8').decode(bytes);
 							const userData = JSON.parse(utf8Decoded);
 							if (userData && typeof userData === 'object') {
 								userEmail = userData.email || '';

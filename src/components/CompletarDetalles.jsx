@@ -25,6 +25,19 @@ import { AddressAutocomplete } from "./ui/address-autocomplete";
 
 import { getBackendUrl } from "../lib/backend";
 
+/**
+ * Normaliza un número de teléfono al formato E.164 internacional (+56...)
+ * Necesario para Enhanced Conversions de Google Ads
+ */
+function normalizePhoneToE164(phone) {
+	if (!phone) return '';
+	let cleaned = phone.replace(/[\s\-()]/g, '');
+	if (cleaned.startsWith('+56')) return cleaned;
+	if (cleaned.startsWith('56')) return '+' + cleaned;
+	if (cleaned.startsWith('9') && cleaned.length >= 9) return '+56' + cleaned;
+	return '+56' + cleaned;
+}
+
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 8:00 PM)
 const generateTimeOptions = () => {
 	const options = [];
@@ -165,7 +178,8 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 			if (reserva) {
 				const ud = {};
 				if (reserva.email) ud.email = reserva.email.toLowerCase().trim();
-				if (reserva.telefono) ud.phone_number = reserva.telefono.replace(/\s+/g, '').startsWith('+') ? reserva.telefono.replace(/\s+/g,'') : `+56${reserva.telefono.replace(/^0|^56|\s+/g,'').replace(/[^0-9]/g,'')}`;
+				// Usar normalizePhoneToE164 para consistencia con el resto del sistema de conversiones
+				if (reserva.telefono) ud.phone_number = normalizePhoneToE164(reserva.telefono);
 				if (reserva.nombre) {
 					const parts = reserva.nombre.trim().split(' ');
 					ud.address = {
