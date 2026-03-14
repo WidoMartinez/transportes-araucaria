@@ -1,4 +1,3 @@
-/* global gtag */
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
@@ -44,7 +43,8 @@ function TestGoogleAds() {
 	// Verificar disponibilidad de gtag al cargar
 	useEffect(() => {
 		const checkGtag = () => {
-			const available = typeof gtag === "function";
+			const available =
+				typeof window !== "undefined" && typeof window.gtag === "function";
 			setGtagAvailable(available);
 			addLog(
 				available ? "✅ gtag está disponible" : "❌ gtag NO está disponible",
@@ -102,7 +102,7 @@ function TestGoogleAds() {
 			addLog(`   - address.last_name: ${conversionData.address.last_name}`, "info");
 			addLog(`   - address.country: ${conversionData.address.country}`, "info");
 
-			gtag("event", "conversion", conversionData);
+			window.gtag("event", "conversion", conversionData);
 			
 			addLog("✅ Evento de conversión Google Ads disparado exitosamente", "success");
 			addLog(`🔑 Token usado: ${testToken}`, "success");

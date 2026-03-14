@@ -1,4 +1,3 @@
-/* global gtag */
 // src/components/WhatsAppInterceptModal.jsx
 
 import React from "react";
@@ -20,15 +19,15 @@ export default function WhatsAppInterceptModal({
 
 	// Tracking de eventos
 	const trackEvent = (action) => {
-		if (typeof gtag === "function") {
-			gtag("event", action, {
+		if (typeof window !== "undefined" && typeof window.gtag === "function") {
+			window.gtag("event", action, {
 				event_category: "whatsapp_intercept_modal",
 				event_label: hasDiscount ? `discount_${discountData.valor}` : "no_discount",
 			});
 
 			// Si es clic en WhatsApp, enviar también conversión de Google Ads (igual que en Header)
 			if (action === "modal_whatsapp_selected") {
-				gtag("event", "conversion", {
+				window.gtag("event", "conversion", {
 					send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
 				});
 				console.log("💰 Conversión de clic en WhatsApp (Modal) enviada.");

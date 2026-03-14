@@ -1,4 +1,3 @@
-/* global gtag */
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,8 +28,8 @@ import { getBackendUrl } from "../lib/backend";
 
 // --- Trackers ---
 const trackWhatsAppClick = () => {
-  if (typeof gtag === "function") {
-    gtag("event", "conversion", {
+  if (typeof window !== "undefined" && typeof window.gtag === "function") {
+    window.gtag("event", "conversion", {
       send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
     });
   }

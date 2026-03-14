@@ -1662,6 +1662,11 @@ if (gtagListo) {
 > [!IMPORTANT]
 > **Cuándo aplicar**: Este patrón es **obligatorio** en cualquier conversión de *Purchase* que se dispare automáticamente al montar un componente (en un `useEffect`). Para eventos disparados por **interacción del usuario** (click), el patrón es opcional ya que `gtag` ya habrá cargado para entonces.
 
+> [!NOTE]
+> **Compatibilidad en módulos ES6**:
+> En componentes React y otros módulos ESM, preferir siempre `window.gtag(...)` por sobre `gtag(...)`.
+> Ambas formas apuntan al mismo tag global, pero `window.gtag` evita depender de variables globales implícitas y reduce falsos positivos de lint o diferencias de scope entre builds.
+
 #### Archivos de Purchase que usan `waitForGtag`
 
 | Archivo | Flujo | Función |

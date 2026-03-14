@@ -1,4 +1,3 @@
-﻿/* global gtag */
 import { useMemo, useState } from "react";
 import {
 	Card,
@@ -39,8 +38,8 @@ const initialFormState = {
 const REQUIRED_FIELDS = ["nombre", "telefono", "email", "origen", "destino"];
 
 const trackWhatsAppClick = () => {
-	if (typeof gtag === "function") {
-		gtag("event", "conversion", {
+	if (typeof window !== "undefined" && typeof window.gtag === "function") {
+		window.gtag("event", "conversion", {
 			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
 		});
 	}
@@ -159,8 +158,8 @@ Tipo: Flete Nacional`,
 				);
 			}
 
-			if (typeof gtag === "function") {
-				gtag("event", "conversion", {
+			if (typeof window !== "undefined" && typeof window.gtag === "function") {
+				window.gtag("event", "conversion", {
 					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 				});
 			}
