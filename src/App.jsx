@@ -471,6 +471,7 @@ const [configSillas, setConfigSillas] = useState({
 	useEffect(() => {
 		const url = new URL(window.location.href);
 		const flowSuccess = url.searchParams.get("flow_payment") === "success";
+		const flowPending = url.searchParams.get("flow_payment") === "pending";
 		const reservaId = url.searchParams.get("reserva_id");
 		const amount = url.searchParams.get("amount");
 		const encodedData = url.searchParams.get("d");
@@ -478,6 +479,51 @@ const [configSillas, setConfigSillas] = useState({
 		const flowToken = url.searchParams.get("token");
 		// Capturar warning si existe (e.g. no_reserva_id)
 		const warning = url.searchParams.get("warning");
+
+		// FLUJO PENDIENTE (reserva_express): Flow confirmó el pago solo vía webhook (status=2),
+		// pero el navegador recibió status=1 primero. Hacer polling hasta que la DB refleje el pago.
+		if (flowPending && reservaId) {
+			console.warn(`⏳ [App.jsx] Pago Express PENDIENTE para reserva ${reservaId}. Iniciando polling...`);
+
+			const apiBase = import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+			const MAX_INTENTOS = 24; // 24 × 5s = 2 minutos
+			let intentos = 0;
+			let cancelado = false;
+
+			const pollingInterval = setInterval(async () => {
+				if (cancelado) return;
+				intentos++;
+				try {
+					const resp = await fetch(`${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(reservaId)}`);
+					if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+					const data = await resp.json();
+
+					console.log(`🔄 [App.jsx] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`);
+
+					if (data.pagado) {
+						clearInterval(pollingInterval);
+						cancelado = true;
+						// Redirigir a la misma URL pero con status=success y monto desde DB
+						const montoConfirmado = data.monto || amount || "";
+						const nuevaUrl = new URL(window.location.href);
+						nuevaUrl.searchParams.set("flow_payment", "success");
+						if (montoConfirmado) nuevaUrl.searchParams.set("amount", montoConfirmado);
+						// Reemplazar la URL para que el useEffect se active con success
+						window.location.replace(nuevaUrl.toString());
+					}
+				} catch (e) {
+					console.warn(`⚠️ [App.jsx] Error en polling (intento ${intentos}):`, e.message);
+				}
+
+				if (intentos >= MAX_INTENTOS && !cancelado) {
+					clearInterval(pollingInterval);
+					cancelado = true;
+					console.log("⏲️ [App.jsx] Polling finalizado sin confirmación (timeout 2 min).");
+				}
+			}, 5000);
+
+			return () => { cancelado = true; clearInterval(pollingInterval); };
+		}
 
 		if (flowSuccess) {
 			console.log(`🔍 [App.jsx] Datos de conversión recibidos:`, {
