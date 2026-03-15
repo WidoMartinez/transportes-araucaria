@@ -262,6 +262,19 @@ return () => clearInterval(intervalId);
         const paymentData = await paymentResponse.json();
         if (paymentData.url) {
           // ✅ Lead: registrar intención de pago antes de redirigir a Flow
+          // Usar waitForGtag para garantizar que el evento se envíe incluso si gtag.js
+          // aún no terminó de cargar (poco probable tras el tiempo del formulario + API, pero seguro).
+          const waitForGtag = () => new Promise((resolve) => {
+            if (typeof window.gtag === "function") { resolve(); return; }
+            const inicio = Date.now();
+            const iv = setInterval(() => {
+              if (typeof window.gtag === "function") { clearInterval(iv); resolve(); }
+              else if (Date.now() - inicio >= 2000) { clearInterval(iv); resolve(); } // 2s máx para no bloquear la navegación
+            }, 50);
+          });
+
+          await waitForGtag();
+
           if (typeof window.gtag === "function") {
             const conversionData = {
               send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB"
