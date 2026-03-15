@@ -113,11 +113,55 @@ function FlowReturn() {
 				return;
 			}
 
-			// Si el pago está PENDIENTE (esperando confirmación)
+			// Si el pago está PENDIENTE (esperando confirmación del webhook de Flow)
+			// El flujo de Flow envía primero status=1 al navegador del usuario y luego status=2
+			// solo al webhook del servidor. Por eso el usuario queda en "pending" y el redirect
+			// final con status=success nunca llega al browser. Solución: polling al backend.
 			if (statusParam === "pending") {
-				console.warn(`⏳ Pago PENDIENTE detectado. No se disparará conversión hasta confirmación.`);
+				console.warn(`⏳ Pago PENDIENTE detectado. Iniciando polling para verificar confirmación...`);
 				setPaymentStatus("pending");
-				return;
+
+				const apiBase = import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+				// Máximo 24 intentos cada 5 segundos = 2 minutos de espera
+				const MAX_INTENTOS = 24;
+				let intentos = 0;
+				let cancelado = false;
+
+				const pollingInterval = setInterval(async () => {
+					if (cancelado) return;
+					intentos++;
+					try {
+						const url = `${apiBase}/api/payment-status?token=${encodeURIComponent(token || "")}&reserva_id=${encodeURIComponent(reservaIdParam || "")}`;
+						const resp = await fetch(url);
+						if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+						const data = await resp.json();
+
+						console.log(`🔄 [FlowReturn] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`);
+
+						if (data.pagado) {
+							clearInterval(pollingInterval);
+							cancelado = true;
+							setPaymentStatus("success");
+							// Usar monto retornado por el backend (desde DB) o el que vino en la URL si llega tarde
+							const montoConfirmado = data.monto?.toString() || amountParam;
+							const gtagListo = await waitForGtag();
+							if (gtagListo) {
+								triggerConversion(montoConfirmado, reservaIdParam, token);
+							}
+						}
+					} catch (e) {
+						console.warn(`⚠️ [FlowReturn] Error en polling (intento ${intentos}):`, e.message);
+					}
+
+					if (intentos >= MAX_INTENTOS && !cancelado) {
+						clearInterval(pollingInterval);
+						cancelado = true;
+						console.log("⏲️ [FlowReturn] Polling finalizado sin confirmación de pago (timeout 2 min). El usuario debe revisar su email.");
+					}
+				}, 5000);
+
+				// Limpieza si el componente se desmonta antes de completar
+				return () => { cancelado = true; clearInterval(pollingInterval); };
 			}
 
 			// Fallback (status desconocido o legacy): asumir éxito si no hay error explícito

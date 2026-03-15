@@ -9258,6 +9258,56 @@ app.post("/create-payment", async (req, res) => {
 	return res.status(400).json({ message: "Pasarela de pago no válida." });
 });
 
+// Endpoint público para consultar el estado de un pago por token o ID de reserva.
+// Usado por FlowReturn.jsx para hacer polling cuando el pago llega como "pendiente"
+// y necesita confirmarse después (Flow envía primero status=1 al navegador y luego status=2 vía webhook).
+app.get("/api/payment-status", async (req, res) => {
+	try {
+		const { token, reserva_id } = req.query;
+
+		if (!token && !reserva_id) {
+			return res.status(400).json({ error: "Se requiere token o reserva_id" });
+		}
+
+		let reservaId = reserva_id ? parseInt(reserva_id, 10) : null;
+
+		// Si se recibe token pero no reserva_id, buscar la reserva asociada en FlowToken
+		if (token && !reservaId) {
+			const flowToken = await FlowToken.findByPk(token);
+			if (flowToken?.reservaId) {
+				reservaId = flowToken.reservaId;
+			}
+		}
+
+		if (!reservaId) {
+			return res.json({ pagado: false, status: "desconocido", monto: null });
+		}
+
+		const reserva = await Reserva.findByPk(reservaId, {
+			attributes: ["id", "estadoPago", "pagoMonto", "totalConDescuento", "precio"],
+		});
+
+		if (!reserva) {
+			return res.json({ pagado: false, status: "desconocido", monto: null });
+		}
+
+		const pagado = reserva.estadoPago === "pagado";
+		// Retornar el monto solo cuando el pago está confirmado
+		const monto = pagado
+			? Number(reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0)
+			: null;
+
+		return res.json({
+			pagado,
+			status: reserva.estadoPago || "pendiente",
+			monto,
+		});
+	} catch (error) {
+		console.error("[payment-status] Error consultando estado:", error.message);
+		return res.status(500).json({ error: "Error consultando estado del pago" });
+	}
+});
+
 // Endpoint para manejar el retorno de Flow (POST -> GET Redirect)
 // Flow envía el token por POST. Este endpoint lo captura y redirige al frontend via GET.
 app.use("/api/payment-result", express.urlencoded({ extended: true }));
