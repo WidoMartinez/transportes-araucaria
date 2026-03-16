@@ -3065,6 +3065,14 @@ app.post("/enviar-reserva", async (req, res) => {
 			console.log(
 				"🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados..."
 			);
+			
+			// DEBUG: Verificar valores antes de dividir
+			console.log("💰 VALORES ANTES DE DIVIDIR:", {
+				precioOriginal: reservaGuardada.precio,
+				totalConDescuentoOriginal: reservaGuardada.totalConDescuento,
+				abonoSugeridoOriginal: reservaGuardada.abonoSugerido,
+				saldoPendienteOriginal: reservaGuardada.saldoPendiente
+			});
 
 			try {
 				// 1. Preparar datos para el tramo de vuelta
@@ -3082,6 +3090,14 @@ app.post("/enviar-reserva", async (req, res) => {
 				const precioVuelta = Number(reservaGuardada.precio) / 2;
 				const totalIda = Number(reservaGuardada.totalConDescuento) / 2;
 				const totalVuelta = Number(reservaGuardada.totalConDescuento) / 2;
+				
+				// DEBUG: Verificar valores divididos
+				console.log("💰 VALORES DESPUÉS DE DIVIDIR:", {
+					precioIda,
+					precioVuelta,
+					totalIda,
+					totalVuelta
+				});
 
 				// 2. Crear reserva de VUELTA (Hijo)
 				const reservaVuelta = await Reserva.create({

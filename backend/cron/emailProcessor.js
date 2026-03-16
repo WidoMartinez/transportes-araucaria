@@ -237,16 +237,21 @@ export const processPendingEmails = async () => {
         }
     } catch (globalError) {
         // Manejo específico de errores de conexión
-        if (globalError.name === 'SequelizeConnectionError' || globalError.name === 'ConnectionError') {
-            console.error("❌ Error de conexión a BD en email processor:", {
-                error: globalError.message,
-                code: globalError.parent?.code,
-                host: process.env.DB_HOST,
-                timestamp: new Date().toISOString(),
-                stack: process.env.NODE_ENV === 'development' ? globalError.stack : undefined
+        if (globalError.name === 'SequelizeConnectionError' || globalError.name === 'ConnectionError' || globalError.code === 'ETIMEDOUT') {
+            const errorCode = globalError.parent?.code || globalError.code || 'UNKNOWN';
+            
+            // Log estructurado y claro para diagnóstico
+            console.error("❌ ERROR DE CONEXIÓN A BD (ETIMEDOUT/TIMEOUT):", {
+                mensaje: globalError.message,
+                codigo: errorCode,
+                host: process.env.DB_HOST || 'srv1551.hstgr.io',
+                puerto: process.env.DB_PORT || 3306,
+                timestamp: new Date().toISOString()
             });
+
+            console.log("💡 Sugerencia: Verifica que el Acceso Remoto MySQL esté habilitado en Hostinger para la IP de este servidor.");
             console.log("⏭️ Saliendo gracefully. Se reintentará en el próximo ciclo (60s)");
-            return; // Salir sin crashear, se reintentará en el próximo ciclo
+            return; 
         }
         
         // Otros errores globales

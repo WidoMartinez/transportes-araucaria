@@ -56,7 +56,7 @@ Página web profesional y sistema de gestión para **Transportes Araucaria**, es
 ### Tecnologías Clave
 - **Frontend**: React 18, Vite, Tailwind CSS, Shadcn/UI.
 - **Backend**: Node.js + Express (hospedado en **Render.com**).
-- **Base de Datos**: PostgreSQL (vía Sequelize).
+- **Base de Datos**: MySQL (vía Sequelize).
 - **Infraestructura Legacy**: Scripts PHP para emails (hospedados en **Hostinger**).
 
 ---

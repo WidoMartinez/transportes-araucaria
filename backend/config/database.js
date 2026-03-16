@@ -27,7 +27,7 @@ const sequelize = new Sequelize({
 		timezone: process.env.DB_TIMEZONE || "-04:00",
 	},
 	retry: {
-		max: 3, // Número máximo de reintentos
+		max: 5, // Aumentado a 5 reintentos para mayor tolerancia en Render/Hostinger
 	},
 	define: {
 		timestamps: true,
