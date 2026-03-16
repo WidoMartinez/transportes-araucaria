@@ -416,8 +416,8 @@ if ($abonoSugerido > 0 || $totalConDescuento != $precio) {
         </div>";
 }
 
-        </div>";
-}
+
+
 
 $emailHtml .= "
         <!-- Contacto Oficina -->

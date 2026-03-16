@@ -2391,6 +2391,171 @@ DB_LOGGING=true  # Habilita logging SQL para diagnóstico (solo desarrollo)
 > - Límites de conexiones simultáneas en el plan de hosting
 > - Firewall o restricciones de red entre Render y Hostinger
 
+### Diagnóstico Adicional (Si el Problema Persiste)
+
+**Implementado: 16 Marzo 2026**
+
+Si los timeouts ETIMEDOUT continúan ocurriendo después de implementar la solución anterior, ejecutar el script de diagnóstico avanzado:
+
+```bash
+# En local (requiere acceso a las mismas variables de entorno que Render)
+cd backend
+node scripts/test-db-connection.js
+
+# En Render (vía SSH o añadiendo al build command temporalmente)
+# Agregar al render.yaml como comando temporal:
+# - npm run diagnose-db
+```
+
+**Script**: `backend/scripts/test-db-connection.js`
+
+**Qué verifica**:
+1. ✅ Resolución DNS del host `srv1551.hstgr.io`
+2. ✅ Conexión TCP a MySQL (authenticate)
+3. ✅ Consulta simple SELECT 1
+4. ✅ Estado del pool de conexiones
+5. ✅ 5 conexiones paralelas simultáneas
+
+**Salida esperada (conexión saludable)**:
+```
+🔍 Ejecutando diagnóstico de conexión a BD...
+1️⃣ Probando resolución DNS...
+   ✅ DNS resuelto: 104.21.xxx.xxx (45ms)
+2️⃣ Probando conexión TCP a BD...
+   ✅ Conexión establecida (1234ms)
+3️⃣ Probando consulta simple...
+   ✅ Consulta exitosa (89ms)
+4️⃣ Estado del pool de conexiones:
+   - Total: 1
+   - Disponibles: 1
+   - En uso: 0
+   - Esperando: 0
+5️⃣ Probando 5 conexiones paralelas...
+   ✅ Exitosas: 5/5
+   ⏱️ Duración total: 456ms
+```
+
+**Salida problemática (conexión inestable)**:
+```
+2️⃣ Probando conexión TCP a BD...
+   ❌ Error de conexión TCP: {
+     mensaje: 'connect ETIMEDOUT',
+     código: 'ETIMEDOUT',
+     timeout: 90000,
+     duración: '>90000ms'
+   }
+```
+
+### Soluciones Adicionales Según Diagnóstico
+
+#### Caso A: Timeouts superiores a 10 segundos pero conexión exitosa
+**Síntoma**: Conexión TCP toma 10-30 segundos pero eventualmente funciona.  
+**Causa**: Latencia alta entre Render y Hostinger.  
+**Solución**:
+1. Aumentar timeouts en `backend/config/database.js`:
+   ```javascript
+   pool: {
+       acquire: 120000, // 120s
+       idle: 10000,
+   },
+   dialectOptions: {
+       connectTimeout: 120000, // 120s
+   },
+   ```
+2. Reducir frecuencia del cron en `backend/server-db.js`:
+   ```javascript
+   // De cada 60s a cada 120s
+   setInterval(processPendingEmails, 120000);
+   ```
+
+#### Caso B: Resolución DNS falla o toma > 5 segundos
+**Síntoma**: DNS no resuelve o toma más de 5 segundos.  
+**Causa**: Problema de DNS en Render o bloqueo de Hostinger.  
+**Solución**:
+1. Usar IP directa en lugar de hostname (requiere actualizar `DB_HOST` en Render):
+   ```bash
+   # Obtener IP de srv1551.hstgr.io
+   nslookup srv1551.hstgr.io
+   
+   # Actualizar variable de entorno en Render:
+   DB_HOST=104.21.xxx.xxx  # Reemplazar con IP real
+   ```
+2. Contactar soporte de Render para verificar configuración de DNS interno.
+
+#### Caso C: Conexiones paralelas fallan (< 3/5 exitosas)
+**Síntoma**: De 5 conexiones paralelas, 2 o más fallan.  
+**Causa**: Límite de conexiones simultáneas en Hostinger o pool saturado.  
+**Solución**:
+1. Reducir tamaño del pool en `backend/config/database.js`:
+   ```javascript
+   pool: {
+       max: 2,  // De 5 a 2
+       min: 0,
+       acquire: 90000,
+       idle: 10000,
+   },
+   ```
+2. Verificar plan de hosting en Hostinger:
+   - **Plan básico**: 10-25 conexiones simultáneas
+   - **Plan premium**: 50-100 conexiones
+3. Contactar soporte de Hostinger para aumentar límite de conexiones.
+
+#### Caso D: Error persiste incluso con todos los ajustes
+**Síntoma**: ETIMEDOUT constante independiente de configuración.  
+**Causa**: Firewall o bloqueo de IP de Render en Hostinger.  
+**Solución**:
+1. **Verificar whitelist de IPs en Hostinger**:
+   - Acceder a cPanel → Remote MySQL
+   - Agregar rangos de IP de Render (verificar con `curl icanhazip.com` desde Render SSH)
+   - Render usa IPs dinámicas, puede requerir whitelist amplia o `%` (cualquier host)
+   
+2. **Migrar BD a servicio externo** (si el problema persiste):
+   - Considerar PlanetScale (MySQL serverless)
+   - Railway (MySQL gestionado)
+   - AWS RDS (si presupuesto lo permite)
+   
+3. **Split de arquitectura**:
+   - Mantener PHP y BD en Hostinger para el frontend
+   - Crear BD secundaria en servicio externo solo para el backend de Render
+   - Sincronizar datos críticos vía API
+
+### Monitoreo Preventivo
+
+Para evitar que el problema vuelva a aparecer sin detección:
+
+1. **Agregar monitoreo de salud en Render**:
+   ```javascript
+   // En server-db.js, endpoint de health check
+   app.get('/health/db', async (req, res) => {
+       try {
+           await sequelize.authenticate();
+           const [result] = await sequelize.query('SELECT 1');
+           res.json({ 
+               status: 'healthy', 
+               database: 'connected',
+               timestamp: new Date().toISOString()
+           });
+       } catch (error) {
+           res.status(503).json({ 
+               status: 'unhealthy', 
+               database: 'disconnected',
+               error: error.message,
+               code: error.parent?.code,
+               timestamp: new Date().toISOString()
+           });
+       }
+   });
+   ```
+
+2. **Configurar alertas en Render Dashboard**:
+   - Ir a Service → Alerts
+   - Crear alerta para `Health Check Failed`
+   - Configurar notificaciones por email
+
+3. **Logging estructurado con timestamps**:
+   - Ya implementado en `emailProcessor.js` (línea 241-248)
+   - Verificar logs en Render cada 24h durante una semana después del despliegue
+
 ---
 
 ## 0. Pantalla Blanca en AdminReservas tras rediseño (Iconos Faltantes)
@@ -2697,3 +2862,116 @@ Se implementó un **Sistema de Persistencia Previa de Tokens**.
 
 > [!NOTE]
 > Para más detalles técnicos sobre el funcionamiento, ver [Sección 5.24 de la Documentación Maestra](DOCUMENTACION_MAESTRA.md#524-sistema-de-persistencia-y-robustez-de-pagos).
+
+---
+
+## 16. Conversiones Perdidas por Doble Redirección de Flow (PagarConCodigo)
+
+**Detectado e implementado: 15 Marzo 2026**
+
+### Problema
+Las conversiones de Google Ads de *Purchase* no se registraban para pagos realizados con código (flujo `PagarConCodigo`). El pago se completaba correctamente y aparecía como pagado en el panel de administración, pero Google Ads nunca registraba la conversión.
+
+### Síntomas
+- Reservas con código (`estadoPago = "pagado"`) visibles en el panel admin sin conversión en Google Ads.
+- La página `FlowReturn.jsx` se mostraba con el **icono de reloj** (estado pendiente) en lugar del ícono de éxito.
+- El navegador permanecía indefinidamente en el estado "Procesando pago..." sin avanzar a "¡Pago Exitoso!".
+- Logs de Render confirmaban que el webhook recibía `status=2` (pagado), pero el frontend nunca lo recibía.
+
+### Causa Raíz: Doble Redirección de Flow
+
+Flow envía la URL de retorno **dos veces con distintos estados**:
+
+| Momento | Destinatario | Status | Acción del Backend |
+|---------|-------------|--------|-------------------|
+| Inmediato (usuario cierra pasarela) | Navegador del usuario | `1` (Pendiente) | Redirige a `/flow-return?status=pending` |
+| Segundos/minutos después | Webhook del servidor | `2` (Confirmado) | Actualiza BD, **NO redirige** |
+
+**Consecuencia**: El navegador del usuario siempre recibía `status=1` (pendiente) para pagos con código. El frontend nunca recibía `status=2`, por lo que **nunca disparaba la conversión**.
+
+### Solución (15 Marzo 2026)
+
+Se implementó un mecanismo de **polling desde el frontend** que consulta periódicamente el estado real del pago en la base de datos, resolviendo la brecha entre la redirección de browser y el webhook:
+
+#### 1. Nuevo Endpoint: `GET /api/payment-status`
+
+**Archivo**: `backend/server-db.js`
+
+```javascript
+app.get("/api/payment-status", async (req, res) => {
+    const { token, reserva_id } = req.query;
+    // Busca por token → FlowToken → Reserva, o directamente por reserva_id
+    const pagado = reserva.estadoPago === "pagado";
+    const monto = pagado ? Number(reserva.pagoMonto || ...) : null;
+    return res.json({ pagado, status: reserva.estadoPago, monto });
+});
+```
+
+Endpoint público (sin autenticación), consultable por token de Flow o ID de reserva.
+
+#### 2. Polling en `FlowReturn.jsx`
+
+Cuando el backend redirige con `status=pending`, el componente inicia polling:
+
+```javascript
+// 5 segundos de intervalo, máximo 24 intentos (≈ 2 minutos)
+if (statusParam === "pending") {
+    setPaymentStatus("pending");
+    let intentos = 0;
+    const pollingInterval = setInterval(async () => {
+        intentos++;
+        if (intentos > 24) { clearInterval(pollingInterval); return; }
+        const resp = await fetch(`${apiBase}/api/payment-status?token=${token}&reserva_id=${reservaId}`);
+        const data = await resp.json();
+        if (data.pagado) {
+            clearInterval(pollingInterval);
+            setPaymentStatus("success");
+            await waitForGtag();         // esperar gtag antes de disparar
+            triggerConversion(data.monto?.toString() || amountParam, reservaId, token);
+        }
+    }, 5000);
+    return () => { cancelado = true; clearInterval(pollingInterval); };
+}
+```
+
+#### 3. Polling en `App.jsx` (flujo HeroExpress)
+
+Para el flujo de reserva express, `App.jsx` detecta `?flow_payment=pending` y realiza el mismo polling. Al confirmar el pago, hace un **redirect interno** a `?flow_payment=success&amount=<montoReal>`:
+
+```javascript
+const flowPending = url.searchParams.get("flow_payment") === "pending";
+if (flowPending && reservaId) {
+    const pollingInterval = setInterval(async () => {
+        const data = await fetch(`${apiBase}/api/payment-status?reserva_id=${reservaId}`)
+            .then(r => r.json());
+        if (data.pagado) {
+            clearInterval(pollingInterval);
+            nuevaUrl.searchParams.set("flow_payment", "success");
+            nuevaUrl.searchParams.set("amount", data.monto || amount);
+            window.location.replace(nuevaUrl.toString());
+        }
+    }, 5000);
+}
+```
+
+### Diagnóstico
+
+Para verificar que el polling funciona, revisar en consola del navegador:
+```
+[FlowReturn] status=pending detectado, iniciando polling de estado...
+[FlowReturn] Polling intento 1...
+[FlowReturn] Pago confirmado por BD. Disparando conversión con monto: 59670
+🚀 [FlowReturn] Disparando conversión Google Ads: { value: 59670, ... }
+```
+
+### Archivos Modificados (commits bf0d8b9, 0d88974, 63b6d26)
+- `backend/server-db.js`: Nuevo endpoint `GET /api/payment-status`.
+- `src/components/FlowReturn.jsx`: Polling para `status=pending`.
+- `src/App.jsx`: Detección de `flow_payment=pending` + polling + redirect.
+- `src/pages/OportunidadesTraslado.jsx`: Lead event mejorado con `waitForGtag` 2s.
+- `src/components/ReservaRapidaModal.jsx`: Lead event mejorado con `waitForGtag` 2s.
+
+> [!WARNING]
+> **Para nuevos flujos de pago**: Si el nuevo flujo puede recibir `status=1` (pendiente) al retornar de Flow, **siempre implementar el polling** usando `/api/payment-status`. No basta con detectar `status=2` en la URL de retorno porque Flow puede no enviarlo al navegador.
+
+---

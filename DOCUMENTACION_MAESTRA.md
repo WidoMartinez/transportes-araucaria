@@ -1613,7 +1613,7 @@ El sistema de promociones permite crear ofertas atractivas con imágenes que se 
 
 ### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
 
-**Actualizado: 11 Marzo 2026**
+**Actualizado: 15 Marzo 2026**
 
 El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google Ads, diferenciando entre eventos de "Lead" (intención de compra) y "Purchase" (reserva pagada). Para maximizar la precisión, se utiliza el estándar de **Enhanced Conversions** en ambos eventos de la cascada y a través de múltiples componentes.
 
@@ -1623,6 +1623,7 @@ El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google 
     *   Se disparan inmediatamente antes de redirigir al usuario a la pasarela Flow (ej. en `PagarConCodigo.jsx`, `ReservaRapidaModal.jsx`, `OportunidadesTraslado.jsx`).
     *   **ID de Conversión**: `AW-17529712870/8GVlCLP-05MbEObh6KZB`.
     *   **Enhanced Conversions**: Captura y envía inmediatamente los datos del formulario (Email, Teléfono formateado a E.164, y Nombre dividido en first/last_name) mediante el objeto `user_data`.
+    *   **Patrón**: Usan `waitForGtag` con timeout de 2 segundos (el usuario disparó el click, así que el riesgo de carrera es bajo pero se protege igualmente).
 2.  **Eventos de Purchase (Compra Exitosa)**:
     *   Se disparan únicamente en los puntos de retorno de éxito (`FlowReturn.jsx`, `App.jsx`, `CompletarDetalles.jsx` como respaldo).
     *   **ID de Conversión**: `AW-17529712870/yZz-CJqiicUbEObh6KZB` (Moneda: `CLP`).
@@ -1630,24 +1631,76 @@ El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google 
 3.  **Protección de Duplicados (Purchase)**:
     *   Se utiliza `sessionStorage` con una clave basada en el ID de la transacción (`id_reserva_token`) para evitar registrar la misma conversión repetida si el usuario recarga la página. Conversiones con un nuevo pago por el mismo cliente (abono + saldo pago restante) se registrarán como 2 transacciones diferentes (lo cual es correcto).
 
+#### Comportamiento del Gateway Flow: Doble Redirección (descubierto 15 Marzo 2026)
+
+Flow envía la URL de retorno **dos veces** con distintos estados:
+
+1. **Redirección de navegador (status=1, Pendiente)**: Ocurre inmediatamente cuando el usuario termina en Flow. El navegador del usuario aterriza en `urlReturn` con `status=1`.
+2. **Webhook server-side (status=2, Confirmado)**: Llega segundos / minutos después al servidor, actualizando `estadoPago = "pagado"` en la BD.
+
+**Impacto**: Si el frontend disparaba la conversión al recibir `status=2` en la URL, nunca lo recibiría para pagos con código (PagarConCodigo), porque esos pagos siempre llegan con `status=1` al navegador y solo el webhook backend recibe `status=2`.
+
+**Solución**: Mecanismo de polling en el frontend (ver sección siguiente).
+
+#### Endpoint `/api/payment-status` (Implementado: 15 Marzo 2026)
+
+Nuevo endpoint público en `backend/server-db.js` que permite al frontend consultar el estado real del pago en la BD:
+
+```
+GET /api/payment-status?token=<flowToken>&reserva_id=<id>
+```
+
+**Respuesta:**
+```json
+{ "pagado": true, "status": "pagado", "monto": 59670 }
+```
+
+- Requiere `token` **o** `reserva_id` (al menos uno).
+- Si `token` está presente, busca el `FlowToken` para obtener el `reservaId` asociado.
+- Devuelve `pagado: false` y `monto: null` mientras el webhook aún no confirmó el pago.
+
+#### Patrón de Polling para `status=pending` (Implementado: 15 Marzo 2026)
+
+Cuando el backend redirige al frontend con `status=pending`, el componente React inicia un polling a `/api/payment-status`:
+
+```javascript
+// Polling: 5 segundos de intervalo, máximo 24 intentos (2 minutos total)
+let intentos = 0;
+const pollingInterval = setInterval(async () => {
+    intentos++;
+    if (intentos > 24) { clearInterval(pollingInterval); return; }
+    const resp = await fetch(`${apiBase}/api/payment-status?token=${token}&reserva_id=${reservaId}`);
+    const data = await resp.json();
+    if (data.pagado) {
+        clearInterval(pollingInterval);
+        setPaymentStatus("success");
+        const montoConfirmado = data.monto?.toString() || amountParam;
+        await waitForGtag();
+        triggerConversion(montoConfirmado, reservaIdParam, token);
+    }
+}, 5000);
+// Limpiar polling al desmontar el componente
+return () => { cancelado = true; clearInterval(pollingInterval); };
+```
+
 #### Patrón Obligatorio: `waitForGtag` (Fix Race Condition - Marzo 2026)
 
 **Problema identificado**: `gtag.js` se carga de forma **asíncrona** desde los servidores de Google. En flujos donde la conversión se dispara automáticamente al cargar la página (ej: al volver de Flow), el script puede no estar disponible aún, causando que el evento se **pierda silenciosamente**.
 
-**Solución**: Todos los eventos de *Purchase* deben usar el patrón `waitForGtag` antes de llamar a `window.gtag(...)`:
+**Solución**: Todos los eventos de *Purchase* y *Lead* automáticos deben usar el patrón `waitForGtag` antes de llamar a `window.gtag(...)`:
 
 ```javascript
-// ✅ PATRÓN CORRECTO: Esperar a que gtag esté disponible (polling cada 100ms, máx 5s)
-const waitForGtag = () => new Promise((resolve) => {
+// ✅ PATRÓN CORRECTO: Esperar a que gtag esté disponible (polling cada 100ms, máx configurable)
+const waitForGtag = (maxMs = 5000) => new Promise((resolve) => {
     if (typeof window.gtag === "function") { resolve(true); return; }
     const startTime = Date.now();
     const interval = setInterval(() => {
         if (typeof window.gtag === "function") {
             clearInterval(interval);
             resolve(true);
-        } else if (Date.now() - startTime >= 5000) {
+        } else if (Date.now() - startTime >= maxMs) {
             clearInterval(interval);
-            resolve(false); // Timeout: gtag no cargó en 5 segundos
+            resolve(false); // Timeout: gtag no cargó
         }
     }, 100);
 });
@@ -1660,20 +1713,43 @@ if (gtagListo) {
 ```
 
 > [!IMPORTANT]
-> **Cuándo aplicar**: Este patrón es **obligatorio** en cualquier conversión de *Purchase* que se dispare automáticamente al montar un componente (en un `useEffect`). Para eventos disparados por **interacción del usuario** (click), el patrón es opcional ya que `gtag` ya habrá cargado para entonces.
+> **Cuándo aplicar**: Este patrón es **obligatorio** en cualquier conversión que se dispare automáticamente al montar un componente (en un `useEffect`). Para eventos disparados por **interacción del usuario** (click), el patrón es opcional ya que `gtag` ya habrá cargado para entonces, pero se recomienda aplicarlo igualmente para uniformidad.
 
 > [!NOTE]
 > **Compatibilidad en módulos ES6**:
 > En componentes React y otros módulos ESM, preferir siempre `window.gtag(...)` por sobre `gtag(...)`.
 > Ambas formas apuntan al mismo tag global, pero `window.gtag` evita depender de variables globales implícitas y reduce falsos positivos de lint o diferencias de scope entre builds.
 
+#### Tabla de Cobertura Completa de Flujos (Estado: 15 Marzo 2026)
+
+| Flujo | `paymentOrigin` | Componente Purchase | Lead status | Polling pending |
+|-------|----------------|---------------------|-----------  |----------------|
+| PagarConCodigo | `pagar_con_codigo` | `FlowReturn.jsx` | guard simple (click) | ✅ FlowReturn |
+| ConsultarReserva | `consultar_reserva` | `FlowReturn.jsx` | `waitForGtag` 2s | ✅ FlowReturn |
+| Oportunidades | `oportunidad_traslado` | `FlowReturn.jsx` | `waitForGtag` 2s | ✅ FlowReturn |
+| Banners/Promociones | `banner_promocional` | `FlowReturn.jsx` | `waitForGtag` 2s | ✅ FlowReturn |
+| HeroExpress | `reserva_express` | `App.jsx` (redirect) | `waitForGtag` 5s | ✅ App.jsx |
+
 #### Archivos de Purchase que usan `waitForGtag`
 
 | Archivo | Flujo | Función |
 |---------|-------|---------|
-| `src/components/FlowReturn.jsx` | Pago con Código / Saldo | `verifyPayment()` → `waitForGtag()` |
+| `src/components/FlowReturn.jsx` | Todos los flujos no-express | `verifyPayment()` / polling → `waitForGtag()` |
 | `src/App.jsx` | Reserva Express (retorno al Home) | `dispararConversionExpress()` → `waitForGtag()` |
 | `src/components/CompletarDetalles.jsx` | Flujo Normal (respaldo) | `dispararConversionRespaldo()` → `waitForGtag()` |
+
+#### Archivos de Lead que usan `waitForGtag`
+
+| Archivo | Evento | Timeout |
+|---------|--------|---------|
+| `src/components/Header/index.jsx` | Lead → WhatsApp | 2s |
+| `src/pages/FletesLanding.jsx` | Lead → WhatsApp | 2s |
+| `src/components/WhatsAppButton.jsx` | Lead → WhatsApp | 2s |
+| `src/components/WhatsAppInterceptModal.jsx` | Lead → WhatsApp | 2s |
+| `src/App.jsx` | Lead → WhatsApp (HeroExpress) | 2s |
+| `src/components/ConsultarReserva.jsx` | Lead → Pago | 2s |
+| `src/pages/OportunidadesTraslado.jsx` | Lead → Pago | 2s |
+| `src/components/ReservaRapidaModal.jsx` | Lead → Pago | 2s |
 
 #### Especificaciones Técnicas
 - **Normalización Telefónica**: Es esencial usar la función local `normalizePhoneToE164` para los números al montar los payloads de Enhanced Conversions.
@@ -1682,6 +1758,7 @@ if (gtagListo) {
 > [!WARNING]
 > **Nota de Mantenimiento Crítica**:
 > Al agregar nuevos flujos de pago, **SIEMPRE** usar el patrón `waitForGtag` descrito arriba para conversiones *Purchase* disparadas automáticamente. No usar `if (typeof window.gtag === "function") { ... }` como único guard: eso solo funciona si el script ya cargó, pero no espera si aún está cargando.
+> Si el nuevo flujo puede recibir `status=1` (pending) desde Flow, implementar el polling usando el endpoint `/api/payment-status`.
 
 
 ---
