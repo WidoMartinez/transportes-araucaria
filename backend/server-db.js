@@ -143,7 +143,7 @@ app.use(
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		credentials: true,
 		allowedHeaders: ["Content-Type", "Authorization"],
-	})
+	}),
 );
 
 app.use(express.json());
@@ -233,13 +233,13 @@ const parsePositiveInteger = (value, fieldName, defaultValue = 1) => {
 	const parsed = parseInt(value, 10);
 	if (isNaN(parsed)) {
 		console.warn(
-			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`
+			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`,
 		);
 		return defaultValue;
 	}
 	if (parsed < 1) {
 		console.warn(
-			`⚠️ Valor menor a 1 para ${fieldName}: ${parsed}, usando ${defaultValue}`
+			`⚠️ Valor menor a 1 para ${fieldName}: ${parsed}, usando ${defaultValue}`,
 		);
 		return defaultValue;
 	}
@@ -250,14 +250,14 @@ const parsePositiveDecimal = (value, fieldName, defaultValue = 0) => {
 	const parsed = parseFloat(value);
 	if (isNaN(parsed)) {
 		console.warn(
-			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`
+			`⚠️ Valor inválido para ${fieldName}: "${value}", usando ${defaultValue}`,
 		);
 		return defaultValue;
 	}
 	if (parsed < 0) {
 		const fallback = Math.max(0, defaultValue);
 		console.warn(
-			`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${fallback}`
+			`⚠️ Valor negativo para ${fieldName}: ${parsed}, usando ${fallback}`,
 		);
 		return fallback;
 	}
@@ -341,16 +341,16 @@ const actualizarResumenCliente = async (clienteId, transaction) => {
 
 	const totalReservasCliente = reservasCliente.length;
 	const reservasCompletadas = reservasCliente.filter(
-		(reserva) => reserva.estado === "completada"
+		(reserva) => reserva.estado === "completada",
 	).length;
 	const reservasPagadas = reservasCliente.filter(
-		(reserva) => reserva.estadoPago === "pagado"
+		(reserva) => reserva.estadoPago === "pagado",
 	).length;
 	const totalGastado = reservasCliente
 		.filter((reserva) => reserva.estadoPago === "pagado")
 		.reduce(
 			(suma, reserva) => suma + parseFloat(reserva.totalConDescuento || 0),
-			0
+			0,
 		);
 
 	const clasificacion = obtenerClasificacionCliente(reservasCompletadas);
@@ -373,7 +373,7 @@ const actualizarResumenCliente = async (clienteId, transaction) => {
 				reservasCliente[totalReservasCliente - 1]?.fecha ||
 				cliente.primeraReserva,
 		},
-		{ transaction }
+		{ transaction },
 	);
 
 	return cliente;
@@ -490,7 +490,7 @@ const generarCodigoReserva = async () => {
 				disponible = true;
 			} else {
 				console.log(
-					`⚠️ Código ${codigoReserva} ya existe (colisión), probando siguiente...`
+					`⚠️ Código ${codigoReserva} ya existe (colisión), probando siguiente...`,
 				);
 				consecutivo++;
 				intentos++;
@@ -500,7 +500,7 @@ const generarCodigoReserva = async () => {
 		if (!disponible) {
 			// Fallback extremo: usar timestamp si no encontramos hueco tras 10 intentos
 			console.warn(
-				"⚠️ No se encontró hueco consecutivo tras 10 intentos, usando timestamp."
+				"⚠️ No se encontró hueco consecutivo tras 10 intentos, usando timestamp.",
 			);
 			return `AR-${Date.now()}`;
 		}
@@ -583,7 +583,7 @@ app.options("*", (req, res) => {
 	res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 	res.header(
 		"Access-Control-Allow-Headers",
-		"Content-Type, Authorization, X-Requested-With, Accept, Origin"
+		"Content-Type, Authorization, X-Requested-With, Accept, Origin",
 	);
 	res.header("Access-Control-Allow-Credentials", "true");
 	res.header("Access-Control-Max-Age", "86400");
@@ -640,7 +640,7 @@ const ejecutarMigracionCodigoReserva = async () => {
 
 		if (reservasSinCodigo.length > 0) {
 			console.log(
-				`📋 Generando códigos para ${reservasSinCodigo.length} reservas existentes...`
+				`📋 Generando códigos para ${reservasSinCodigo.length} reservas existentes...`,
 			);
 
 			const reservasPorFecha = {};
@@ -668,12 +668,12 @@ const ejecutarMigracionCodigoReserva = async () => {
 				`,
 					{
 						replacements: { codigoReserva, id: reserva.id },
-					}
+					},
 				);
 			}
 
 			console.log(
-				`✅ Códigos generados para ${reservasSinCodigo.length} reservas`
+				`✅ Códigos generados para ${reservasSinCodigo.length} reservas`,
 			);
 		}
 
@@ -682,7 +682,7 @@ const ejecutarMigracionCodigoReserva = async () => {
 		// Si hay error pero no es crítico, solo advertir
 		console.warn(
 			"⚠️ Advertencia en migración de codigo_reserva:",
-			error.message
+			error.message,
 		);
 	}
 };
@@ -701,7 +701,7 @@ const initializeDatabase = async () => {
 		await addCodigosPagoTable();
 		await addSillaInfantilToCodigosPago(
 			sequelize.getQueryInterface(),
-			Sequelize
+			Sequelize,
 		);
 		await addClientDataToCodigosPago();
 		await addEnProcesoEstado(); // Migración para agregar estado 'en_proceso' al ENUM
@@ -758,7 +758,7 @@ const initializeDatabase = async () => {
 				console.log("   Usuario: admin");
 				console.log(`   Contraseña: ${defaultPassword}`);
 				console.log(
-					"⚠️  IMPORTANTE: Cambia la contraseña después del primer login"
+					"⚠️  IMPORTANTE: Cambia la contraseña después del primer login",
 				);
 			} else {
 				console.log("✅ Usuario administrador ya existe");
@@ -770,7 +770,7 @@ const initializeDatabase = async () => {
 				const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 				const passwordMatch = await bcrypt.compare(
 					defaultPassword,
-					adminUser.password
+					adminUser.password,
 				);
 
 				if (!passwordMatch) {
@@ -813,14 +813,14 @@ const initializeDatabase = async () => {
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		await addPosicionImagenToPromocionesBanner(
 			sequelize.getQueryInterface(),
-			Sequelize
+			Sequelize,
 		); // Migración para añadir posición de imagen
 		// addClientDataToCodigosPago movido al inicio
 
 		// Asegurar índice UNIQUE en codigos_descuento.codigo sin exceder límite de índices
 		try {
 			const [idxRows] = await sequelize.query(
-				"SHOW INDEX FROM codigos_descuento WHERE Column_name = 'codigo'"
+				"SHOW INDEX FROM codigos_descuento WHERE Column_name = 'codigo'",
 			);
 			const hasUnique = Array.isArray(idxRows)
 				? idxRows.some((r) => String(r.Non_unique) === "0")
@@ -829,18 +829,18 @@ const initializeDatabase = async () => {
 			if (!hasUnique) {
 				// Contar índices actuales de la tabla para evitar ER_TOO_MANY_KEYS (max 64)
 				const [countRows] = await sequelize.query(
-					"SHOW INDEX FROM codigos_descuento"
+					"SHOW INDEX FROM codigos_descuento",
 				);
 				const indexNames = new Set(
-					(Array.isArray(countRows) ? countRows : []).map((r) => r.Key_name)
+					(Array.isArray(countRows) ? countRows : []).map((r) => r.Key_name),
 				);
 				if (indexNames.size >= 64) {
 					console.warn(
-						"La tabla codigos_descuento ya tiene 64 índices. No se puede crear índice único para codigo. Se continuará sin UNIQUE."
+						"La tabla codigos_descuento ya tiene 64 índices. No se puede crear índice único para codigo. Se continuará sin UNIQUE.",
 					);
 				} else {
 					await sequelize.query(
-						"CREATE UNIQUE INDEX idx_codigos_descuento_codigo ON codigos_descuento(codigo)"
+						"CREATE UNIQUE INDEX idx_codigos_descuento_codigo ON codigos_descuento(codigo)",
 					);
 					console.log("✅ Índice único idx_codigos_descuento_codigo creado");
 				}
@@ -848,7 +848,7 @@ const initializeDatabase = async () => {
 		} catch (idxErr) {
 			console.warn(
 				"⚠️ No se pudo asegurar índice único en codigos_descuento.codigo:",
-				idxErr.message
+				idxErr.message,
 			);
 		}
 
@@ -1063,7 +1063,7 @@ const buildPromotionEntries = (promocion) => {
 			promocion.descuentoPorcentaje ??
 			promocion.valor ??
 			0,
-		0
+		0,
 	);
 	const aplicaPorDias =
 		metadata?.aplicaPorDias ?? Boolean(promocion.aplicaPorDias);
@@ -1083,8 +1083,8 @@ const buildPromotionEntries = (promocion) => {
 		? diasMetadata.length > 0
 			? diasMetadata
 			: diasDesdePromo.length > 0
-			? diasDesdePromo
-			: [diaBase]
+				? diasDesdePromo
+				: [diaBase]
 		: [diaBase];
 	const destino = metadata?.destino || promocion.destino || "";
 	const nombre =
@@ -1175,8 +1175,8 @@ const buildPricingPayload = async () => {
 			porcentajeBase !== undefined
 				? toNumber(porcentajeBase, 0)
 				: promo.tipo === "porcentaje"
-				? toNumber(promo.valor, 0)
-				: 0;
+					? toNumber(promo.valor, 0)
+					: 0;
 		const aplicaPorDias =
 			metadata?.aplicaPorDias !== undefined
 				? Boolean(metadata.aplicaPorDias)
@@ -1197,8 +1197,8 @@ const buildPricingPayload = async () => {
 			? diasMetadata.length > 0
 				? diasMetadata
 				: diasDesdePromo.length > 0
-				? diasDesdePromo
-				: [defaultDay]
+					? diasDesdePromo
+					: [defaultDay]
 			: [];
 		const tipoViaje = metadata?.aplicaTipoViaje || {};
 		return {
@@ -1228,8 +1228,8 @@ const buildPricingPayload = async () => {
 				metadata?.activo !== undefined
 					? Boolean(metadata.activo)
 					: promo.activo !== undefined
-					? Boolean(promo.activo)
-					: true,
+						? Boolean(promo.activo)
+						: true,
 		};
 	});
 
@@ -1275,10 +1275,10 @@ const buildPricingPayload = async () => {
 		return {
 			...codigoJson,
 			destinosAplicables: normalizeDestinosAplicables(
-				codigoJson.destinosAplicables ?? codigo.destinosAplicables
+				codigoJson.destinosAplicables ?? codigo.destinosAplicables,
 			),
 			usuariosQueUsaron: normalizeUsuariosQueUsaron(
-				codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
+				codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron,
 			),
 		};
 	});
@@ -1392,7 +1392,7 @@ app.put("/pricing", async (req, res) => {
 					porcentajeAdicionalVan,
 					precioBaseVan: precioBaseVan > 0 ? precioBaseVan : null,
 				});
-			})
+			}),
 		);
 
 		const existingPromotions = await Promocion.findAll();
@@ -1400,7 +1400,7 @@ app.put("/pricing", async (req, res) => {
 			existingPromotions.map((promo) => [
 				extractPromotionKeyFromRecord(promo),
 				promo,
-			])
+			]),
 		);
 		const seenPromotionKeys = new Set();
 
@@ -1438,7 +1438,7 @@ app.put("/pricing", async (req, res) => {
 						valor: descuentosGlobales.descuentoOnline.valor,
 						activo: descuentosGlobales.descuentoOnline.activo,
 						descripcion: "Descuento por reserva online",
-					})
+					}),
 				);
 			}
 
@@ -1450,7 +1450,7 @@ app.put("/pricing", async (req, res) => {
 						valor: descuentosGlobales.descuentoRoundTrip.valor,
 						activo: descuentosGlobales.descuentoRoundTrip.activo,
 						descripcion: "Descuento por ida y vuelta",
-					})
+					}),
 				);
 			}
 
@@ -1469,7 +1469,7 @@ app.put("/pricing", async (req, res) => {
 							valor: descuento.valor,
 							activo: descuento.activo,
 							descripcion: descuento.descripcion || "",
-						}))
+						})),
 					);
 				}
 			}
@@ -1610,7 +1610,7 @@ app.get("/api/configuracion/whatsapp-intercept", async (req, res) => {
 	try {
 		const activo = await Configuracion.getValorParseado(
 			"whatsapp_intercept_activo",
-			true // Por defecto activo
+			true, // Por defecto activo
 		);
 
 		res.json({
@@ -1652,7 +1652,7 @@ app.put(
 				"whatsapp_intercept_activo",
 				activo,
 				"boolean",
-				"Controla si el modal de intercepción de WhatsApp está activo"
+				"Controla si el modal de intercepción de WhatsApp está activo",
 			);
 
 			console.log(`✅ Configuración WhatsApp intercept actualizada: ${activo}`);
@@ -1684,13 +1684,13 @@ app.put(
 		} catch (error) {
 			console.error(
 				"Error actualizando configuración WhatsApp intercept:",
-				error
+				error,
 			);
 			res.status(500).json({
 				error: "Error al actualizar configuración",
 			});
 		}
-	}
+	},
 );
 
 /**
@@ -1704,7 +1704,7 @@ app.get("/api/configuracion/ofertas-sillas", async (req, res) => {
 			{
 				anticipacionRetorno: 2,
 				anticipacionIda: 3,
-			}
+			},
 		);
 		const configSillas = await Configuracion.getValorParseado("config_sillas", {
 			habilitado: false,
@@ -1736,7 +1736,7 @@ app.put("/api/configuracion/ofertas-sillas", authAdmin, async (req, res) => {
 				"config_ofertas",
 				ofertas,
 				"json",
-				"Configuración de anticipación para ofertas"
+				"Configuración de anticipación para ofertas",
 			);
 		}
 		if (sillas) {
@@ -1744,7 +1744,7 @@ app.put("/api/configuracion/ofertas-sillas", authAdmin, async (req, res) => {
 				"config_sillas",
 				sillas,
 				"json",
-				"Configuración de disponibilidad y precio de sillas infantiles"
+				"Configuración de disponibilidad y precio de sillas infantiles",
 			);
 		}
 
@@ -1771,10 +1771,10 @@ app.get("/api/codigos", async (req, res) => {
 			return {
 				...codigoJson,
 				destinosAplicables: normalizeDestinosAplicables(
-					codigoJson.destinosAplicables ?? codigo.destinosAplicables
+					codigoJson.destinosAplicables ?? codigo.destinosAplicables,
 				),
 				usuariosQueUsaron: normalizeUsuariosQueUsaron(
-					codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron
+					codigoJson.usuariosQueUsaron ?? codigo.usuariosQueUsaron,
 				),
 			};
 		});
@@ -1791,7 +1791,7 @@ app.post("/api/codigos", async (req, res) => {
 		const nuevoCodigo = {
 			...req.body,
 			destinosAplicables: normalizeDestinosAplicables(
-				req.body.destinosAplicables
+				req.body.destinosAplicables,
 			),
 			id: req.body.codigo,
 			usosActuales: 0,
@@ -1814,7 +1814,7 @@ app.put("/api/codigos/:id", async (req, res) => {
 
 		if (Object.prototype.hasOwnProperty.call(req.body, "destinosAplicables")) {
 			payload.destinosAplicables = normalizeDestinosAplicables(
-				req.body.destinosAplicables
+				req.body.destinosAplicables,
 			);
 		}
 
@@ -1889,7 +1889,7 @@ app.post("/api/codigos/validar", async (req, res) => {
 		// Verificar si el usuario ya usó este código
 		if (usuarioId) {
 			const usuariosQueUsaron = normalizeUsuariosQueUsaron(
-				codigoEncontrado.usuariosQueUsaron || []
+				codigoEncontrado.usuariosQueUsaron || [],
 			);
 			const usuarioYaUso = usuariosQueUsaron.includes(usuarioId);
 			if (usuarioYaUso) {
@@ -1901,7 +1901,7 @@ app.post("/api/codigos/validar", async (req, res) => {
 		}
 
 		const destinosAplicables = normalizeDestinosAplicables(
-			codigoEncontrado.destinosAplicables
+			codigoEncontrado.destinosAplicables,
 		);
 
 		// Verificar destino aplicable
@@ -1926,7 +1926,7 @@ app.post("/api/codigos/validar", async (req, res) => {
 		const codigoPlano = codigoEncontrado.toJSON();
 		codigoPlano.destinosAplicables = destinosAplicables;
 		codigoPlano.usuariosQueUsaron = normalizeUsuariosQueUsaron(
-			codigoPlano.usuariosQueUsaron ?? codigoEncontrado.usuariosQueUsaron
+			codigoPlano.usuariosQueUsaron ?? codigoEncontrado.usuariosQueUsaron,
 		);
 
 		res.json({ valido: true, codigo: codigoPlano });
@@ -1961,7 +1961,7 @@ app.post("/api/codigos/usar", async (req, res) => {
 		// Verificar si el usuario ya usó este código
 		if (usuarioId) {
 			const usuariosQueUsaron = normalizeUsuariosQueUsaron(
-				codigoEncontrado.usuariosQueUsaron || []
+				codigoEncontrado.usuariosQueUsaron || [],
 			);
 			const usuarioYaUso = usuariosQueUsaron.includes(usuarioId);
 			if (usuarioYaUso) {
@@ -1974,7 +1974,7 @@ app.post("/api/codigos/usar", async (req, res) => {
 
 		// Actualizar usos - asegurar que no se duplique el usuario
 		const usuariosActuales = normalizeUsuariosQueUsaron(
-			codigoEncontrado.usuariosQueUsaron || []
+			codigoEncontrado.usuariosQueUsaron || [],
 		);
 		const nuevosUsuarios = usuarioId
 			? [...usuariosActuales, usuarioId]
@@ -1987,7 +1987,7 @@ app.post("/api/codigos/usar", async (req, res) => {
 			},
 			{
 				where: { codigo },
-			}
+			},
 		);
 
 		res.json({
@@ -2023,7 +2023,7 @@ app.delete("/api/codigos/:codigo/usuarios/:usuarioId", async (req, res) => {
 			},
 			{
 				where: { codigo },
-			}
+			},
 		);
 
 		res.json({
@@ -2049,7 +2049,7 @@ app.get("/api/codigos/:id/usuarios", async (req, res) => {
 		}
 
 		const usuariosQueUsaron = normalizeUsuariosQueUsaron(
-			codigo.usuariosQueUsaron || []
+			codigo.usuariosQueUsaron || [],
 		);
 
 		// Obtener detalles de las reservas de estos usuarios
@@ -2134,7 +2134,7 @@ app.post("/api/codigos/:id/reset", async (req, res) => {
 			},
 			{
 				where: { id },
-			}
+			},
 		);
 
 		res.json({
@@ -2179,7 +2179,7 @@ app.get("/api/test-tables", async (req, res) => {
 
 		// Verificar si la tabla codigos_descuento existe
 		const [results] = await sequelize.query(
-			"SHOW TABLES LIKE 'codigos_descuento'"
+			"SHOW TABLES LIKE 'codigos_descuento'",
 		);
 		const tableExists = results.length > 0;
 
@@ -2246,7 +2246,7 @@ app.get("/api/sync-all", async (req, res) => {
 
 		// Verificar estructura de las tablas principales
 		const [codigosResults] = await sequelize.query(
-			"DESCRIBE codigos_descuento"
+			"DESCRIBE codigos_descuento",
 		);
 		const [reservasResults] = await sequelize.query("DESCRIBE reservas");
 
@@ -2360,7 +2360,7 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 							sequelize.where(
 								sequelize.col("usosActuales"),
 								Op.gte,
-								sequelize.col("limiteUsos")
+								sequelize.col("limiteUsos"),
 							),
 						],
 					},
@@ -2380,7 +2380,7 @@ app.get("/api/codigos/estadisticas", async (req, res) => {
 		} catch (columnError) {
 			console.warn(
 				"Columnas de uso no disponibles, usando valores por defecto:",
-				columnError.message
+				columnError.message,
 			);
 		}
 
@@ -2428,7 +2428,7 @@ app.get("/api/codigos/buscar", async (req, res) => {
 				sequelize.where(
 					sequelize.col("usosActuales"),
 					Op.gte,
-					sequelize.col("limiteUsos")
+					sequelize.col("limiteUsos"),
 				),
 			];
 		}
@@ -2532,11 +2532,11 @@ app.get("/api/codigos/historial", async (req, res) => {
 		// Estadísticas
 		const totalUsos = historial.length;
 		const usuariosUnicos = new Set(
-			historial.map((h) => `${h.email}-${h.telefono}`)
+			historial.map((h) => `${h.email}-${h.telefono}`),
 		).size;
 		const totalDescuentos = historial.reduce(
 			(sum, h) => sum + (h.monto || 0),
-			0
+			0,
 		);
 
 		// Usos de hoy
@@ -2572,13 +2572,13 @@ app.post("/enviar-reserva", async (req, res) => {
 		};
 		const detallesDirecciones = [];
 		const direccionDestinoCliente = limpiarTextoPlano(
-			datosReserva.direccionDestino
+			datosReserva.direccionDestino,
 		);
 		if (direccionDestinoCliente) {
 			detallesDirecciones.push(`Direccion destino: ${direccionDestinoCliente}`);
 		}
 		const direccionOrigenCliente = limpiarTextoPlano(
-			datosReserva.direccionOrigen
+			datosReserva.direccionOrigen,
 		);
 		if (direccionOrigenCliente) {
 			detallesDirecciones.push(`Direccion origen: ${direccionOrigenCliente}`);
@@ -2596,7 +2596,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		const numeroVueloCliente = limpiarTextoPlano(datosReserva.numeroVuelo);
 		const hotelCliente = limpiarTextoPlano(datosReserva.hotel);
 		const equipajeEspecialCliente = limpiarTextoPlano(
-			datosReserva.equipajeEspecial
+			datosReserva.equipajeEspecial,
 		);
 		const sillaInfantilCliente =
 			datosReserva.sillaInfantil !== undefined
@@ -2617,13 +2617,13 @@ app.post("/enviar-reserva", async (req, res) => {
 		console.log("📝 NUEVA RESERVA RECIBIDA");
 		console.log("=".repeat(50));
 		console.log(
-			`👤 Cliente:                ${datosReserva.nombre || "No especificado"}`
+			`👤 Cliente:                ${datosReserva.nombre || "No especificado"}`,
 		);
 		console.log(
-			`📧 Email:                  ${datosReserva.email || "No especificado"}`
+			`📧 Email:                  ${datosReserva.email || "No especificado"}`,
 		);
 		console.log(
-			`📱 Teléfono:               ${datosReserva.telefono || "No especificado"}`
+			`📱 Teléfono:               ${datosReserva.telefono || "No especificado"}`,
 		);
 		if (rutFormateado) {
 			console.log(`🆔 RUT:                    ${rutFormateado}`);
@@ -2633,33 +2633,33 @@ app.post("/enviar-reserva", async (req, res) => {
 		console.log(
 			`🚗 Viaje:                  ${datosReserva.origen || "?"} → ${
 				datosReserva.destino || "?"
-			}`
+			}`,
 		);
 		console.log(
-			`📅 Fecha:                  ${datosReserva.fecha || "No especificada"}`
+			`📅 Fecha:                  ${datosReserva.fecha || "No especificada"}`,
 		);
 		console.log(
-			`🕐 Hora:                   ${datosReserva.hora || "No especificada"}`
+			`🕐 Hora:                   ${datosReserva.hora || "No especificada"}`,
 		);
 		console.log(`👥 Pasajeros:              ${datosReserva.pasajeros || 1}`);
 		console.log(
-			`🚙 Vehículo:               ${datosReserva.vehiculo || "Por asignar"}`
+			`🚙 Vehículo:               ${datosReserva.vehiculo || "Por asignar"}`,
 		);
 		console.log("-".repeat(50));
 		console.log(
 			`📊 Estado:                 ${(
 				datosReserva.estado || "pendiente"
-			).toUpperCase()}`
+			).toUpperCase()}`,
 		);
 		console.log(
 			`💳 Estado Pago:            ${(
 				datosReserva.estadoPago || "pendiente"
-			).toUpperCase()}`
+			).toUpperCase()}`,
 		);
 		console.log(
 			`💰 MONTO FINAL:            $${parseFloat(
-				datosReserva.totalConDescuento || 0
-			).toLocaleString("es-CL")}`
+				datosReserva.totalConDescuento || 0,
+			).toLocaleString("es-CL")}`,
 		);
 		console.log(`🌐 Fuente:                 ${datosReserva.source || "web"}`);
 		console.log("=".repeat(50) + "\n");
@@ -2667,7 +2667,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		// Verificar si la fecha/hora está bloqueada
 		const bloqueoResultado = await verificarBloqueoAgenda(
 			datosReserva.fecha,
-			datosReserva.hora
+			datosReserva.hora,
 		);
 
 		if (bloqueoResultado.bloqueado) {
@@ -2711,41 +2711,41 @@ app.post("/enviar-reserva", async (req, res) => {
 		const precioCalculado = parsePositiveDecimal(
 			datosReserva.precio,
 			"precio",
-			0
+			0,
 		);
 
 		// Calcular descuentos una sola vez
 		const descuentoPromocion = parsePositiveDecimal(
 			datosReserva.descuentoPromocion,
 			"descuentoPromocion",
-			0
+			0,
 		);
 		const descuentoOnline = parsePositiveDecimal(
 			datosReserva.descuentoOnline,
 			"descuentoOnline",
-			0
+			0,
 		);
 		const descuentoRoundTrip = parsePositiveDecimal(
 			datosReserva.descuentoRoundTrip,
 			"descuentoRoundTrip",
-			0
+			0,
 		);
 		const descuentoBase = parsePositiveDecimal(
 			datosReserva.descuentoBase,
 			"descuentoBase",
-			0
+			0,
 		);
 
 		const totalCalculado = parsePositiveDecimal(
 			datosReserva.totalConDescuento,
 			"totalConDescuento",
-			precioCalculado
+			precioCalculado,
 		);
 
 		const abonoCalculado = parsePositiveDecimal(
 			datosReserva.abonoSugerido,
 			"abonoSugerido",
-			0
+			0,
 		);
 
 		// No confiar en saldoPendiente enviado por el cliente cuando no hay
@@ -2753,7 +2753,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		// evidencia, forzamos saldo = totalCalculado (es decir, pago 0).
 		const hasSaldoProvided = Object.prototype.hasOwnProperty.call(
 			datosReserva,
-			"saldoPendiente"
+			"saldoPendiente",
 		);
 
 		let saldoEntrada;
@@ -2773,7 +2773,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			saldoEntrada = parsePositiveDecimal(
 				datosReserva.saldoPendiente,
 				"saldoPendiente",
-				Math.max(totalCalculado - abonoCalculado, 0)
+				Math.max(totalCalculado - abonoCalculado, 0),
 			);
 		} else {
 			// No se asume ningún pago: saldo = total
@@ -2814,7 +2814,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			montoPagadoCalculado = parsePositiveDecimal(
 				datosReserva.pagoMonto,
 				"pagoMonto",
-				0
+				0,
 			);
 		} else if (estadoPagoInicial === "pagado") {
 			// Si el cliente/servicio explícitamente indicó 'pagado', asumir pago total
@@ -2836,7 +2836,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		console.log(`(+) Precio Base:           ${formatMoney(precioCalculado)}`);
 		if (descuentoPromocion > 0) {
 			console.log(
-				`(-) Desc. Promoción:       ${formatMoney(descuentoPromocion)}`
+				`(-) Desc. Promoción:       ${formatMoney(descuentoPromocion)}`,
 			);
 		}
 		if (descuentoOnline > 0) {
@@ -2844,7 +2844,7 @@ app.post("/enviar-reserva", async (req, res) => {
 		}
 		if (descuentoRoundTrip > 0) {
 			console.log(
-				`(-) Desc. Ida y Vuelta:    ${formatMoney(descuentoRoundTrip)}`
+				`(-) Desc. Ida y Vuelta:    ${formatMoney(descuentoRoundTrip)}`,
 			);
 		}
 		if (descuentoBase > 0) {
@@ -2855,7 +2855,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				`    Total Descuentos:      ${formatMoney(totalDescuentos)} (${(
 					(totalDescuentos / precioCalculado) *
 					100
-				).toFixed(1)}%)`
+				).toFixed(1)}%)`,
 			);
 		}
 		console.log("-".repeat(50));
@@ -2864,10 +2864,10 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		// Detalles de pago
 		console.log(
-			`📊 Estado de Pago:         ${estadoPagoInicial.toUpperCase()}`
+			`📊 Estado de Pago:         ${estadoPagoInicial.toUpperCase()}`,
 		);
 		console.log(
-			`💵 Monto Pagado:           ${formatMoney(montoPagadoCalculado)}`
+			`💵 Monto Pagado:           ${formatMoney(montoPagadoCalculado)}`,
 		);
 		console.log(`💳 Saldo Pendiente:        ${formatMoney(saldoEntrada)}`);
 		if (abonoCalculado > 0) {
@@ -2875,7 +2875,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				`📌 Abono Sugerido:         ${formatMoney(abonoCalculado)} (${(
 					(abonoCalculado / totalCalculado) *
 					100
-				).toFixed(0)}%)`
+				).toFixed(0)}%)`,
 			);
 		}
 		console.log(`🎯 Umbral Abono (40%):     ${formatMoney(umbralAbono)}`);
@@ -2925,7 +2925,7 @@ app.post("/enviar-reserva", async (req, res) => {
 
 		if (reservaExistente) {
 			console.log(
-				`🔄 Modificando reserva existente ID: ${reservaExistente.id} (desde /enviar-reserva)`
+				`🔄 Modificando reserva existente ID: ${reservaExistente.id} (desde /enviar-reserva)`,
 			);
 			// Actualizar reserva existente
 			await reservaExistente.update({
@@ -2947,7 +2947,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				equipajeEspecial: datosReserva.equipajeEspecial || "",
 				sillaInfantil: Boolean(
 					datosReserva.sillaInfantil === "si" ||
-						datosReserva.sillaInfantil === true
+					datosReserva.sillaInfantil === true,
 				),
 				idaVuelta: Boolean(datosReserva.idaVuelta),
 				fechaRegreso: datosReserva.fechaRegreso || null,
@@ -2957,22 +2957,22 @@ app.post("/enviar-reserva", async (req, res) => {
 				descuentoBase: parsePositiveDecimal(
 					datosReserva.descuentoBase,
 					"descuentoBase",
-					0
+					0,
 				),
 				descuentoPromocion: parsePositiveDecimal(
 					datosReserva.descuentoPromocion,
 					"descuentoPromocion",
-					0
+					0,
 				),
 				descuentoRoundTrip: parsePositiveDecimal(
 					datosReserva.descuentoRoundTrip,
 					"descuentoRoundTrip",
-					0
+					0,
 				),
 				descuentoOnline: parsePositiveDecimal(
 					datosReserva.descuentoOnline,
 					"descuentoOnline",
-					0
+					0,
 				),
 				totalConDescuento: totalCalculado,
 				mensaje: datosReserva.mensaje || "",
@@ -3014,7 +3014,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				equipajeEspecial: datosReserva.equipajeEspecial || "",
 				sillaInfantil: Boolean(
 					datosReserva.sillaInfantil === "si" ||
-						datosReserva.sillaInfantil === true
+					datosReserva.sillaInfantil === true,
 				),
 				idaVuelta: Boolean(datosReserva.idaVuelta),
 				fechaRegreso: datosReserva.fechaRegreso || null,
@@ -3024,22 +3024,22 @@ app.post("/enviar-reserva", async (req, res) => {
 				descuentoBase: parsePositiveDecimal(
 					datosReserva.descuentoBase,
 					"descuentoBase",
-					0
+					0,
 				),
 				descuentoPromocion: parsePositiveDecimal(
 					datosReserva.descuentoPromocion,
 					"descuentoPromocion",
-					0
+					0,
 				),
 				descuentoRoundTrip: parsePositiveDecimal(
 					datosReserva.descuentoRoundTrip,
 					"descuentoRoundTrip",
-					0
+					0,
 				),
 				descuentoOnline: parsePositiveDecimal(
 					datosReserva.descuentoOnline,
 					"descuentoOnline",
-					0
+					0,
 				),
 				totalConDescuento: totalCalculado,
 				mensaje: datosReserva.mensaje || "",
@@ -3063,15 +3063,15 @@ app.post("/enviar-reserva", async (req, res) => {
 		// Si es una reserva nueva de ida y vuelta, dividirla en dos tramos vinculados
 		if (!reservaExistente && datosReserva.idaVuelta) {
 			console.log(
-				"🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados..."
+				"🔄 Procesando reserva Ida y Vuelta: Generando tramos vinculados...",
 			);
-			
+
 			// DEBUG: Verificar valores antes de dividir
 			console.log("💰 VALORES ANTES DE DIVIDIR:", {
 				precioOriginal: reservaGuardada.precio,
 				totalConDescuentoOriginal: reservaGuardada.totalConDescuento,
 				abonoSugeridoOriginal: reservaGuardada.abonoSugerido,
-				saldoPendienteOriginal: reservaGuardada.saldoPendiente
+				saldoPendienteOriginal: reservaGuardada.saldoPendiente,
 			});
 
 			try {
@@ -3090,13 +3090,13 @@ app.post("/enviar-reserva", async (req, res) => {
 				const precioVuelta = Number(reservaGuardada.precio) / 2;
 				const totalIda = Number(reservaGuardada.totalConDescuento) / 2;
 				const totalVuelta = Number(reservaGuardada.totalConDescuento) / 2;
-				
+
 				// DEBUG: Verificar valores divididos
 				console.log("💰 VALORES DESPUÉS DE DIVIDIR:", {
 					precioIda,
 					precioVuelta,
 					totalIda,
-					totalVuelta
+					totalVuelta,
 				});
 
 				// 2. Crear reserva de VUELTA (Hijo)
@@ -3158,7 +3158,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				});
 
 				console.log(
-					`✅ Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`
+					`✅ Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`,
 				);
 
 				// 3. Actualizar reserva de IDA (Padre)
@@ -3184,7 +3184,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				});
 
 				console.log(
-					`✅ Tramo de ida actualizado y vinculado: ${reservaGuardada.id}`
+					`✅ Tramo de ida actualizado y vinculado: ${reservaGuardada.id}`,
 				);
 
 				// Nota: reservaGuardada sigue siendo el objeto que se usará para el email confirmación.
@@ -3200,7 +3200,7 @@ app.post("/enviar-reserva", async (req, res) => {
 			"✅ Reserva guardada en base de datos con ID:",
 			reservaGuardada.id,
 			"Código:",
-			reservaGuardada.codigoReserva
+			reservaGuardada.codigoReserva,
 		);
 
 		// Enviar email de confirmación llamando al PHP en Hostinger si corresponde
@@ -3232,7 +3232,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				} else {
 					console.warn(
 						"⚠️ Email no se pudo enviar:",
-						emailResponse.data.message
+						emailResponse.data.message,
 					);
 				}
 			} catch (emailError) {
@@ -3267,7 +3267,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				console.log(
 					`⏳ Correo de descuento programado para reserva ${
 						reservaGuardada.codigoReserva
-					} a las ${scheduledAt.toISOString()}`
+					} a las ${scheduledAt.toISOString()}`,
 				);
 
 				// Enviar notificación SOLO al administrador inmediatamente
@@ -3289,19 +3289,19 @@ app.post("/enviar-reserva", async (req, res) => {
 						{
 							headers: { "Content-Type": "application/json" },
 							timeout: 10000,
-						}
+						},
 					);
 					console.log("✅ Notificación al admin enviada correctamente");
 				} catch (adminEmailError) {
 					console.error(
 						"❌ Error enviando notificación al admin:",
-						adminEmailError.message
+						adminEmailError.message,
 					);
 				}
 			} catch (scheduleError) {
 				console.error(
 					"❌ Error programando correo de descuento:",
-					scheduleError
+					scheduleError,
 				);
 			}
 		} else if (estadoPagoInicial === "pendiente") {
@@ -3311,7 +3311,7 @@ app.post("/enviar-reserva", async (req, res) => {
 				{
 					source: datosReserva.source,
 					pagoMonto: reservaGuardada.pagoMonto,
-				}
+				},
 			);
 		}
 
@@ -3352,10 +3352,10 @@ function validarYSanitizarFecha(fecha, nombreCampo = "fecha") {
 	const formatoFechaRegex = /^\d{4}-\d{2}-\d{2}$/;
 	if (!formatoFechaRegex.test(fechaStr)) {
 		console.error(
-			`❌ Formato de ${nombreCampo} inválido. Recibido: "${fecha}", Sanitizado: "${fechaStr}"`
+			`❌ Formato de ${nombreCampo} inválido. Recibido: "${fecha}", Sanitizado: "${fechaStr}"`,
 		);
 		throw new Error(
-			`${nombreCampo} debe tener el formato YYYY-MM-DD (año-mes-día)`
+			`${nombreCampo} debe tener el formato YYYY-MM-DD (año-mes-día)`,
 		);
 	}
 
@@ -3388,13 +3388,13 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		};
 		const detallesDirecciones = [];
 		const direccionDestinoCliente = limpiarTextoPlano(
-			datosReserva.direccionDestino
+			datosReserva.direccionDestino,
 		);
 		if (direccionDestinoCliente) {
 			detallesDirecciones.push(`Dirección destino: ${direccionDestinoCliente}`);
 		}
 		const direccionOrigenCliente = limpiarTextoPlano(
-			datosReserva.direccionOrigen
+			datosReserva.direccionOrigen,
 		);
 		if (direccionOrigenCliente) {
 			detallesDirecciones.push(`Dirección origen: ${direccionOrigenCliente}`);
@@ -3436,7 +3436,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		}
 
 		const equipajeEspecialCliente = limpiarTextoPlano(
-			datosReserva.equipajeEspecial
+			datosReserva.equipajeEspecial,
 		);
 		const sillaInfantilCliente =
 			datosReserva.sillaInfantil !== undefined
@@ -3473,7 +3473,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			"fecha",
 		];
 		const camposFaltantes = camposRequeridos.filter(
-			(campo) => !datosReserva[campo]
+			(campo) => !datosReserva[campo],
 		);
 
 		if (camposFaltantes.length > 0) {
@@ -3497,14 +3497,14 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			// Validar fecha principal (requerida)
 			datosReserva.fecha = validarYSanitizarFecha(
 				datosReserva.fecha,
-				"Fecha del servicio"
+				"Fecha del servicio",
 			);
 
 			// Validar fecha de regreso si existe (opcional)
 			if (datosReserva.fechaRegreso) {
 				datosReserva.fechaRegreso = validarYSanitizarFecha(
 					datosReserva.fechaRegreso,
-					"Fecha de regreso"
+					"Fecha de regreso",
 				);
 			}
 		} catch (errorFecha) {
@@ -3518,7 +3518,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		// Verificar si la fecha/hora está bloqueada
 		const bloqueoResultado = await verificarBloqueoAgenda(
 			datosReserva.fecha,
-			datosReserva.hora
+			datosReserva.hora,
 		);
 
 		if (bloqueoResultado.bloqueado) {
@@ -3551,12 +3551,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			// 🚨 CRÍTICO: Si ya está vinculado a una reserva, reutilizarla
 			if (codigoPagoExistente.reservaVinculadaId) {
 				const reservaVinculada = await Reserva.findByPk(
-					codigoPagoExistente.reservaVinculadaId
+					codigoPagoExistente.reservaVinculadaId,
 				);
 
 				if (reservaVinculada) {
 					console.log(
-						`♻️ Reutilizando reserva existente ${reservaVinculada.id} para código ${codigoPagoExistente.codigo}`
+						`♻️ Reutilizando reserva existente ${reservaVinculada.id} para código ${codigoPagoExistente.codigo}`,
 					);
 
 					return res.json({
@@ -3589,7 +3589,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		if (datosReserva.referenciaPago) {
 			// PASO 1: Buscar por referencia de pago (máxima prioridad)
 			console.log(
-				`🔍 [PASO 1] Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`
+				`🔍 [PASO 1] Buscando reserva existente por referenciaPago: ${datosReserva.referenciaPago}`,
 			);
 			reservaExistente = await Reserva.findOne({
 				where: {
@@ -3604,7 +3604,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		if (!reservaExistente && emailNormalizado) {
 			// PASO 2: Fallback por email (captura reservas hechas antes por web sin código vinculado)
 			console.log(
-				`🔍 [PASO 2] Fallback: buscando reserva existente por email: ${emailNormalizado}`
+				`🔍 [PASO 2] Fallback: buscando reserva existente por email: ${emailNormalizado}`,
 			);
 			reservaExistente = await Reserva.findOne({
 				where: {
@@ -3618,7 +3618,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 			if (reservaExistente) {
 				console.log(
-					`✅ [PASO 2] Reserva pendiente encontrada por email (ID: ${reservaExistente.id}). Se actualizará en lugar de crear una nueva.`
+					`✅ [PASO 2] Reserva pendiente encontrada por email (ID: ${reservaExistente.id}). Se actualizará en lugar de crear una nueva.`,
 				);
 			}
 		}
@@ -3629,7 +3629,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 		if (reservaExistente) {
 			// MODIFICAR reserva existente sin pagar
 			console.log(
-				`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`
+				`🔄 Modificando reserva existente ID: ${reservaExistente.id}, Código: ${reservaExistente.codigoReserva}`,
 			);
 			esModificacion = true;
 
@@ -3638,7 +3638,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			if (reservaExistente.tramoHijoId) {
 				try {
 					console.log(
-						`🧹 Eliminando tramo de retorno antiguo (ID ${reservaExistente.tramoHijoId}) para recalcular`
+						`🧹 Eliminando tramo de retorno antiguo (ID ${reservaExistente.tramoHijoId}) para recalcular`,
 					);
 					await Reserva.destroy({
 						where: { id: reservaExistente.tramoHijoId },
@@ -3648,7 +3648,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				} catch (err) {
 					console.error(
 						"❌ Error al eliminar tramo hijo durante modificación:",
-						err.message
+						err.message,
 					);
 				}
 			}
@@ -3660,16 +3660,16 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				datosReserva.totalConDescuento,
 				"totalConDescuento",
 				reservaExistente.totalConDescuento ||
-					parsePositiveDecimal(datosReserva.precio, "precio", 0)
+					parsePositiveDecimal(datosReserva.precio, "precio", 0),
 			);
 			const abonoCalculadoExistente = parsePositiveDecimal(
 				datosReserva.abonoSugerido,
 				"abonoSugerido",
-				reservaExistente.abonoSugerido || 0
+				reservaExistente.abonoSugerido || 0,
 			);
 			const hasSaldoProvidedExistente = Object.prototype.hasOwnProperty.call(
 				datosReserva,
-				"saldoPendiente"
+				"saldoPendiente",
 			);
 			const pagoMontoProvidedExistente =
 				datosReserva.pagoMonto !== undefined &&
@@ -3685,7 +3685,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				saldoParaActualizarExistente = parsePositiveDecimal(
 					datosReserva.saldoPendiente,
 					"saldoPendiente",
-					Math.max(totalCalculadoExistente - abonoCalculadoExistente, 0)
+					Math.max(totalCalculadoExistente - abonoCalculadoExistente, 0),
 				);
 			} else {
 				// No hay evidencia de pago: mantenemos saldo igual al total (no asumir abono)
@@ -3702,7 +3702,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					pagoMontoProvidedExistente,
 					saldoParaActualizarExistente,
 					estadoPago: datosReserva.estadoPago,
-				}
+				},
 			);
 
 			await reservaExistente.update({
@@ -3750,27 +3750,27 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				descuentoBase: parsePositiveDecimal(
 					datosReserva.descuentoBase,
 					"descuentoBase",
-					0
+					0,
 				),
 				descuentoPromocion: parsePositiveDecimal(
 					datosReserva.descuentoPromocion,
 					"descuentoPromocion",
-					0
+					0,
 				),
 				descuentoRoundTrip: parsePositiveDecimal(
 					datosReserva.descuentoRoundTrip,
 					"descuentoRoundTrip",
-					0
+					0,
 				),
 				descuentoOnline: parsePositiveDecimal(
 					datosReserva.descuentoOnline,
 					"descuentoOnline",
-					0
+					0,
 				),
 				totalConDescuento: parsePositiveDecimal(
 					datosReserva.totalConDescuento,
 					"totalConDescuento",
-					0
+					0,
 				),
 				mensaje:
 					mensajeParaGuardar !== undefined
@@ -3794,7 +3794,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 			reservaExpress = reservaExistente;
 			console.log(
-				`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`
+				`✅ Reserva modificada exitosamente: ID ${reservaExpress.id}`,
 			);
 		} else {
 			// CREAR nueva reserva con transacción SQL para prevenir duplicados
@@ -3816,10 +3816,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 							{
 								estado: "en_proceso",
 							},
-							{ transaction: t }
+							{ transaction: t },
 						);
 						console.log(
-							`🔒 Código ${codigoPagoParaMarcar.codigo} marcado como 'en_proceso'`
+							`🔒 Código ${codigoPagoParaMarcar.codigo} marcado como 'en_proceso'`,
 						);
 					}
 				}
@@ -3831,12 +3831,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				const totalCalculadoExpress = parsePositiveDecimal(
 					datosReserva.totalConDescuento,
 					"totalConDescuento",
-					parsePositiveDecimal(datosReserva.precio, "precio", 0)
+					parsePositiveDecimal(datosReserva.precio, "precio", 0),
 				);
 				const abonoCalculadoExpress = parsePositiveDecimal(
 					datosReserva.abonoSugerido,
 					"abonoSugerido",
-					0
+					0,
 				);
 
 				const pagoMontoProvidedExpress =
@@ -3851,7 +3851,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					saldoPendienteParaGuardar = parsePositiveDecimal(
 						datosReserva.saldoPendiente,
 						"saldoPendiente",
-						Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0)
+						Math.max(totalCalculadoExpress - abonoCalculadoExpress, 0),
 					);
 				} else {
 					// No hay evidencia de pago: saldo = total
@@ -3883,7 +3883,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 						pasajeros: parsePositiveInteger(
 							datosReserva.pasajeros,
 							"pasajeros",
-							1
+							1,
 						),
 						precio: parsePositiveDecimal(datosReserva.precio, "precio", 0),
 						vehiculo: datosReserva.vehiculo || "",
@@ -3905,27 +3905,27 @@ app.post("/enviar-reserva-express", async (req, res) => {
 						descuentoBase: parsePositiveDecimal(
 							datosReserva.descuentoBase,
 							"descuentoBase",
-							0
+							0,
 						),
 						descuentoPromocion: parsePositiveDecimal(
 							datosReserva.descuentoPromocion,
 							"descuentoPromocion",
-							0
+							0,
 						),
 						descuentoRoundTrip: parsePositiveDecimal(
 							datosReserva.descuentoRoundTrip,
 							"descuentoRoundTrip",
-							0
+							0,
 						),
 						descuentoOnline: parsePositiveDecimal(
 							datosReserva.descuentoOnline,
 							"descuentoOnline",
-							0
+							0,
 						),
 						totalConDescuento: parsePositiveDecimal(
 							datosReserva.totalConDescuento,
 							"totalConDescuento",
-							0
+							0,
 						),
 						mensaje: mensajeParaGuardar ?? "",
 
@@ -3951,14 +3951,14 @@ app.post("/enviar-reserva-express", async (req, res) => {
 							? parseInt(datosReserva.duracionMinutos)
 							: null,
 					},
-					{ transaction: t }
+					{ transaction: t },
 				);
 
 				console.log(
 					"✅ Reserva express guardada en base de datos con ID:",
 					reservaExpress.id,
 					"Código:",
-					reservaExpress.codigoReserva
+					reservaExpress.codigoReserva,
 				);
 
 				// 🔗 VINCULAR INMEDIATAMENTE dentro de la transacción
@@ -3981,11 +3981,11 @@ app.post("/enviar-reserva-express", async (req, res) => {
 								fechaUso: new Date(),
 								emailCliente: emailNormalizado || codigoPago.emailCliente,
 							},
-							{ transaction: t }
+							{ transaction: t },
 						);
 
 						console.log(
-							`🔗 Código de pago ${codigoPago.codigo} vinculado a reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`
+							`🔗 Código de pago ${codigoPago.codigo} vinculado a reserva ${reservaExpress.id} (${reservaExpress.codigoReserva})`,
 						);
 					}
 				}
@@ -3997,7 +3997,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				await t.rollback();
 				console.error(
 					"❌ Error en transacción, rollback ejecutado:",
-					transactionError
+					transactionError,
 				);
 				throw transactionError;
 			}
@@ -4013,7 +4013,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 		if (debeDividirse) {
 			console.log(
-				"🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados..."
+				"🔄 [EXPRESS] Procesando reserva Ida y Vuelta: Generando tramos vinculados...",
 			);
 			console.log("📋 [EXPRESS] Datos de los tramos:", {
 				idReservaIda: reservaExpress.id,
@@ -4027,7 +4027,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			// Validar que existan datos de regreso antes de dividir
 			if (!datosReserva.fechaRegreso) {
 				console.error(
-					"❌ [EXPRESS] Error: idaVuelta=true pero falta fechaRegreso. No se dividirá la reserva."
+					"❌ [EXPRESS] Error: idaVuelta=true pero falta fechaRegreso. No se dividirá la reserva.",
 				);
 				// No dividir, mantener como reserva única con idaVuelta=true
 			} else {
@@ -4045,13 +4045,13 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					// 🛡️ GUARDIA COLISIÓN: Si el código generado es igual al de ida (sucede en llamadas casi simultáneas)
 					if (codigoVuelta === reservaExpress.codigoReserva) {
 						console.log(
-							`⚠️ Colisión de código detectada (${codigoVuelta}), ajustando para el tramo de vuelta...`
+							`⚠️ Colisión de código detectada (${codigoVuelta}), ajustando para el tramo de vuelta...`,
 						);
 						const parts = codigoVuelta.split("-");
 						if (parts.length === 3) {
 							const nextNum = parseInt(parts[2], 10) + 1;
 							codigoVuelta = `${parts[0]}-${parts[1]}-${String(
-								nextNum
+								nextNum,
 							).padStart(4, "0")}`;
 						} else {
 							codigoVuelta += "-R"; // Fallback seguro
@@ -4135,7 +4135,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					});
 
 					console.log(
-						`✅ [EXPRESS] Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`
+						`✅ [EXPRESS] Tramo de vuelta creado: ${reservaVuelta.id} (${reservaVuelta.codigoReserva})`,
 					);
 
 					// 3. Actualizar reserva de IDA (Padre)
@@ -4163,7 +4163,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					});
 
 					console.log(
-						`✅ [EXPRESS] Tramo de ida actualizado y vinculado: ${reservaExpress.id}`
+						`✅ [EXPRESS] Tramo de ida actualizado y vinculado: ${reservaExpress.id}`,
 					);
 
 					// Nota: reservaExpress sigue siendo el objeto que se usará para el email confirmación.
@@ -4172,7 +4172,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 				} catch (errorSplit) {
 					console.error(
 						"❌ [EXPRESS] Error al dividir reserva ida y vuelta:",
-						errorSplit
+						errorSplit,
 					);
 					// No fallar el request completo, pero loguear error crítico
 				}
@@ -4185,7 +4185,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			} catch (resumenError) {
 				console.error(
 					"Error al actualizar el resumen del cliente en reserva express:",
-					resumenError
+					resumenError,
 				);
 			}
 		}
@@ -4216,17 +4216,17 @@ app.post("/enviar-reserva-express", async (req, res) => {
 
 				console.log(
 					"✅ Email express enviado exitosamente:",
-					emailResponse.data
+					emailResponse.data,
 				);
 			} catch (emailError) {
 				console.error(
 					"❌ Error al enviar email express (no afecta la reserva):",
-					emailError.message
+					emailError.message,
 				);
 			}
 		} else {
 			console.log(
-				"ℹ️ Email de notificación express omitido (enviarCorreo = false)"
+				"ℹ️ Email de notificación express omitido (enviarCorreo = false)",
 			);
 		}
 
@@ -4261,7 +4261,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					console.log(
 						`⏳ Correo de descuento express programado para reserva ${
 							reservaExpress.codigoReserva
-						} a las ${scheduledAt.toISOString()}`
+						} a las ${scheduledAt.toISOString()}`,
 					);
 
 					// Enviar notificación SOLO al administrador inmediatamente
@@ -4284,15 +4284,15 @@ app.post("/enviar-reserva-express", async (req, res) => {
 								{
 									headers: { "Content-Type": "application/json" },
 									timeout: 10000,
-								}
+								},
 							);
 							console.log(
-								"✅ Notificación express al admin enviada correctamente"
+								"✅ Notificación express al admin enviada correctamente",
 							);
 						} catch (adminEmailError) {
 							console.error(
 								"❌ Error enviando notificación express al admin:",
-								adminEmailError.message
+								adminEmailError.message,
 							);
 						}
 					}
@@ -4300,7 +4300,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			} catch (scheduleError) {
 				console.error(
 					"❌ Error programando correo de descuento express:",
-					scheduleError
+					scheduleError,
 				);
 			}
 		}
@@ -4364,17 +4364,17 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 			pasajeros: parsePositiveInteger(
 				datos.pasajeros,
 				"pasajeros",
-				reservaLead ? reservaLead.pasajeros : 1
+				reservaLead ? reservaLead.pasajeros : 1,
 			),
 			precio: parsePositiveDecimal(
 				datos.precio,
 				"precio",
-				reservaLead ? reservaLead.precio : 0
+				reservaLead ? reservaLead.precio : 0,
 			),
 			totalConDescuento: parsePositiveDecimal(
 				datos.totalConDescuento,
 				"totalConDescuento",
-				reservaLead ? reservaLead.totalConDescuento : 0
+				reservaLead ? reservaLead.totalConDescuento : 0,
 			),
 			vehiculo: datos.vehiculo || (reservaLead ? reservaLead.vehiculo : ""),
 			source: "lead_hero_abandonado",
@@ -4389,8 +4389,8 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 				`📝 Actualizando lead: [${
 					datosAGuardar.nombre
 				}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString(
-					"es-CL"
-				)}`
+					"es-CL",
+				)}`,
 			);
 			await reservaLead.update(datosAGuardar);
 		} else {
@@ -4402,8 +4402,8 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 				`🎯 NUEVO LEAD: [${
 					datosAGuardar.nombre
 				}] (${emailNormalizado}) -> Cotizado: $${datosAGuardar.totalConDescuento.toLocaleString(
-					"es-CL"
-				)}`
+					"es-CL",
+				)}`,
 			);
 			reservaLead = await Reserva.create(datosAGuardar);
 		}
@@ -4446,7 +4446,7 @@ app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
 		}
 
 		console.log(
-			`🔗 Redirigiendo a pago Flow para reserva ${reserva.codigoReserva} (Monto: ${amount}, Tipo: ${type})`
+			`🔗 Redirigiendo a pago Flow para reserva ${reserva.codigoReserva} (Monto: ${amount}, Tipo: ${type})`,
 		);
 
 		// Reutilizar lógica de generación de pago Flow (simplificada para el redirect)
@@ -4489,7 +4489,7 @@ app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
 			new URLSearchParams(params).toString(),
 			{
 				headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			}
+			},
 		);
 
 		const payment = response.data;
@@ -4504,7 +4504,7 @@ app.get("/api/reservas/:id/pay-redirect", async (req, res) => {
 		res
 			.status(500)
 			.send(
-				"Error al generar el enlace de pago. Por favor intenta más tarde o contáctanos por WhatsApp."
+				"Error al generar el enlace de pago. Por favor intenta más tarde o contáctanos por WhatsApp.",
 			);
 	}
 });
@@ -4533,7 +4533,7 @@ app.post("/api/codigos-pago", authAdmin, async (req, res) => {
 		const usosMaximos = parsePositiveInteger(
 			body.usosMaximos,
 			"usosMaximos",
-			1
+			1,
 		);
 		const observaciones = body.observaciones || "";
 		// Nueva duración personalizada
@@ -4630,7 +4630,7 @@ app.get("/api/codigos-pago", authAdmin, async (req, res) => {
 						[Op.lt]: now, // fechaVencimiento < now
 					},
 				},
-			}
+			},
 		);
 
 		const { count, rows } = await CodigoPago.findAndCountAll({
@@ -4700,7 +4700,7 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 							day: "numeric",
 							hour: "2-digit",
 							minute: "2-digit",
-						}
+						},
 					)}`,
 					estado: "vencido",
 					fechaVencimiento: registro.fechaVencimiento,
@@ -4789,12 +4789,10 @@ app.put("/api/codigos-pago/:codigo", authAdmin, async (req, res) => {
 				.json({ success: false, message: "Código de pago no encontrado" });
 		}
 		if (registro.estado === "usado") {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					message: "No se puede editar un código ya usado",
-				});
+			return res.status(400).json({
+				success: false,
+				message: "No se puede editar un código ya usado",
+			});
 		}
 		const body = req.body || {};
 		const updates = {};
@@ -4853,12 +4851,10 @@ app.put("/api/codigos-pago/:codigo/cancelar", authAdmin, async (req, res) => {
 				.json({ success: false, message: "Código de pago no encontrado" });
 		}
 		if (registro.estado === "usado") {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					message: "No se puede cancelar un código ya usado",
-				});
+			return res.status(400).json({
+				success: false,
+				message: "No se puede cancelar un código ya usado",
+			});
 		}
 		await registro.update({ estado: "cancelado" });
 		return res.json({
@@ -4987,7 +4983,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			const vinculadoId = reserva.tramoHijoId || reserva.tramoPadreId;
 			if (vinculadoId) {
 				console.log(
-					`🔗 Propagando campos comunes a reserva vinculada ${vinculadoId}...`
+					`🔗 Propagando campos comunes a reserva vinculada ${vinculadoId}...`,
 				);
 
 				// Campos que deben ser idénticos en ambos tramos (logística compartida)
@@ -5007,7 +5003,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		} catch (propError) {
 			console.error(
 				"❌ Error al propagar detalles a reserva vinculada:",
-				propError.message
+				propError.message,
 			);
 			// No bloqueamos la respuesta principal por esto
 		}
@@ -5027,7 +5023,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		// Enviar notificación de confirmación al cliente
 		try {
 			console.log(
-				"📧 Enviando confirmación de detalles completados al cliente..."
+				"📧 Enviando confirmación de detalles completados al cliente...",
 			);
 
 			// ✅ CORRECCIÓN: Usar archivo PHP unificado existente
@@ -5063,12 +5059,12 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			});
 
 			console.log(
-				`✅ Confirmación enviada al cliente ${reservaCompleta.email}`
+				`✅ Confirmación enviada al cliente ${reservaCompleta.email}`,
 			);
 		} catch (emailError) {
 			console.error(
 				"❌ Error enviando confirmación al cliente:",
-				emailError.message
+				emailError.message,
 			);
 
 			// ✅ MEJORA: Log más detallado para depuración
@@ -5076,8 +5072,8 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 				console.error(`   - Status HTTP: ${emailError.response.status}`);
 				console.error(
 					`   - Respuesta del servidor: ${JSON.stringify(
-						emailError.response.data
-					)}`
+						emailError.response.data,
+					)}`,
 				);
 			}
 		}
@@ -5085,7 +5081,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 		// NUEVO: Enviar notificación al administrador cuando se completan los detalles
 		try {
 			console.log(
-				"📧 Enviando notificación de detalles completados al administrador..."
+				"📧 Enviando notificación de detalles completados al administrador...",
 			);
 			const phpAdminUrl =
 				process.env.PHP_EMAIL_URL ||
@@ -5110,28 +5106,27 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 				{
 					headers: { "Content-Type": "application/json" },
 					timeout: 10000,
-				}
+				},
 			);
 			console.log("✅ Notificación de detalles al administrador enviada");
 		} catch (adminError) {
 			console.error(
 				"❌ Error enviando notificación de detalles al administrador:",
-				adminError.message
+				adminError.message,
 			);
 		}
 
 		// 🎯 NUEVO: Generar oportunidades automáticamente
 		try {
 			console.log(
-				`🎯 Generando oportunidades para reserva ${reservaCompleta.id}...`
+				`🎯 Generando oportunidades para reserva ${reservaCompleta.id}...`,
 			);
-			const oportunidadesGeneradas = await detectarYGenerarOportunidades(
-				reservaCompleta
-			);
+			const oportunidadesGeneradas =
+				await detectarYGenerarOportunidades(reservaCompleta);
 			if (oportunidadesGeneradas.length > 0) {
 				console.log(
 					`✅ ${oportunidadesGeneradas.length} oportunidades generadas:`,
-					oportunidadesGeneradas.map((op) => op.codigo)
+					oportunidadesGeneradas.map((op) => op.codigo),
 				);
 			} else {
 				console.log(`ℹ️ No se generaron oportunidades para esta reserva`);
@@ -5140,7 +5135,7 @@ app.put("/completar-reserva-detalles/:id", async (req, res) => {
 			// No fallar la confirmación si hay error generando oportunidades
 			console.error(
 				"❌ Error generando oportunidades (no crítico):",
-				oportunidadError.message
+				oportunidadError.message,
 			);
 		}
 
@@ -5469,9 +5464,8 @@ app.get("/api/reservas", async (req, res) => {
 			queryOptions.offset = (pageNum - 1) * limitNum;
 		}
 
-		const { count, rows: reservas } = await Reserva.findAndCountAll(
-			queryOptions
-		);
+		const { count, rows: reservas } =
+			await Reserva.findAndCountAll(queryOptions);
 
 		res.json({
 			reservas,
@@ -5688,7 +5682,7 @@ app.get("/api/reservas/verificar-activa/:email", async (req, res) => {
 		}
 
 		console.log(
-			`⚠️ Se encontró reserva activa sin pagar: ID ${reservaActiva.id}, Código: ${reservaActiva.codigoReserva}`
+			`⚠️ Se encontró reserva activa sin pagar: ID ${reservaActiva.id}, Código: ${reservaActiva.codigoReserva}`,
 		);
 		res.json({
 			tieneReservaActiva: true,
@@ -5772,7 +5766,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		} catch (lerr) {
 			console.warn(
 				"DEBUG: no se pudo loggear payload de actualización de pago",
-				lerr
+				lerr,
 			);
 		}
 
@@ -5801,7 +5795,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			"completada",
 		];
 		const estadoReservaValido = estadosReservaPermitidos.includes(
-			estadoReservaSolicitado
+			estadoReservaSolicitado,
 		)
 			? estadoReservaSolicitado
 			: null;
@@ -5825,7 +5819,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 			parseFloat(
 				reserva.saldoPendiente != null
 					? reserva.saldoPendiente
-					: Math.max(totalReserva - abonoSugerido, 0)
+					: Math.max(totalReserva - abonoSugerido, 0),
 			) || 0;
 		const montoPago =
 			montoPagado !== undefined && montoPagado !== null
@@ -5937,8 +5931,8 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 						(["completada", "cancelada"].includes(reserva.estado)
 							? "cancelada"
 							: reserva.estado === "pendiente_detalles"
-							? "pendiente_detalles"
-							: "pendiente");
+								? "pendiente_detalles"
+								: "pendiente");
 					nuevoSaldoPendiente = totalReserva;
 					abonoPagado = false;
 					saldoPagado = false;
@@ -6055,7 +6049,7 @@ app.put("/api/reservas/:id/pago", async (req, res) => {
 		if (reserva.clienteId) {
 			clienteActualizado = await actualizarResumenCliente(
 				reserva.clienteId,
-				transaction
+				transaction,
 			);
 		}
 
@@ -6142,7 +6136,7 @@ app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
 			{
 				replacements: { id },
 				type: sequelize.QueryTypes.SELECT,
-			}
+			},
 		);
 
 		res.json({
@@ -6163,7 +6157,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 		const { vehiculoId, conductorId, sendEmail, sendEmailDriver } = req.body;
 
 		console.log(
-			`📝 Asignando recursos a reserva ${id}: Vehiculo=${vehiculoId}, Conductor=${conductorId}`
+			`📝 Asignando recursos a reserva ${id}: Vehiculo=${vehiculoId}, Conductor=${conductorId}`,
 		);
 
 		const reserva = await Reserva.findByPk(id, { transaction });
@@ -6225,7 +6219,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 				conductorId: conductorId || null,
 				observaciones: nuevasObservaciones,
 			},
-			{ transaction }
+			{ transaction },
 		);
 
 		// Registrar en historial
@@ -6239,7 +6233,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 					conductor: conductor ? conductor.nombre : null,
 				},
 				transaction,
-			}
+			},
 		);
 		await transaction.commit();
 
@@ -6330,12 +6324,12 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 
 				const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
 				console.log(
-					`📧 Notificación [${tipoTramo}] enviada al cliente para reserva ${reserva.codigoReserva}`
+					`📧 Notificación [${tipoTramo}] enviada al cliente para reserva ${reserva.codigoReserva}`,
 				);
 			} catch (emailError) {
 				console.error(
 					"❌ Error enviando notificación al cliente:",
-					emailError.message
+					emailError.message,
 				);
 			}
 		}
@@ -6406,7 +6400,7 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 						vehiculo: vehiculoIdaStr || reservaIda.vehiculo || vehiculoStr,
 					};
 					console.log(
-						`📧 [INFO] Mismo conductor en IDA y VUELTA → incluyendo contexto IDA en correo VUELTA`
+						`📧 [INFO] Mismo conductor en IDA y VUELTA → incluyendo contexto IDA en correo VUELTA`,
 					);
 				}
 
@@ -6425,12 +6419,12 @@ app.put("/api/reservas/:id/asignar", authAdmin, async (req, res) => {
 
 				const tipoTramo = esTramoVuelta ? "VUELTA" : "IDA";
 				console.log(
-					`📧 Notificación [${tipoTramo}] enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`
+					`📧 Notificación [${tipoTramo}] enviada al conductor ${conductor.nombre} (${conductor.email}) para reserva ${reserva.codigoReserva}`,
 				);
 			} catch (conductorEmailError) {
 				console.error(
 					"❌ Error enviando notificación al conductor:",
-					conductorEmailError.message
+					conductorEmailError.message,
 				);
 			}
 		}
@@ -6472,7 +6466,7 @@ async function syncReservaPago(reservaId, transaction = null) {
 
 		const [rows] = await sequelize.query(
 			"SELECT SUM(amount) as total FROM reserva_pagos WHERE reserva_id = :id",
-			{ replacements: { id: reservaId }, transaction }
+			{ replacements: { id: reservaId }, transaction },
 		);
 
 		const pagoTotalNuevo = parseFloat(rows[0]?.total || 0);
@@ -6493,7 +6487,7 @@ async function syncReservaPago(reservaId, transaction = null) {
 			saldoPagado = true;
 			if (
 				["pendiente", "pendiente_detalles", "confirmada"].includes(
-					nuevoEstadoReserva
+					nuevoEstadoReserva,
 				)
 			) {
 				nuevoEstadoReserva = "confirmada";
@@ -6517,7 +6511,7 @@ async function syncReservaPago(reservaId, transaction = null) {
 				saldoPagado,
 				estado: nuevoEstadoReserva,
 			},
-			{ transaction }
+			{ transaction },
 		);
 
 		return reserva;
@@ -6534,7 +6528,7 @@ app.get("/api/reservas/:id/pagos", async (req, res) => {
 		await ensureReservaPagosTable();
 		const [rows] = await sequelize.query(
 			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC",
-			{ replacements: { id } }
+			{ replacements: { id } },
 		);
 		res.json({ success: true, pagos: rows });
 	} catch (error) {
@@ -6602,7 +6596,7 @@ app.post("/api/reservas/:id/pagos", async (req, res) => {
 		if (reserva.clienteId) {
 			clienteActualizado = await actualizarResumenCliente(
 				reserva.clienteId,
-				transaction
+				transaction,
 			);
 		}
 
@@ -6611,7 +6605,7 @@ app.post("/api/reservas/:id/pagos", async (req, res) => {
 		// Devolver reserva actualizada y el pago insertado
 		const [rowsP] = await sequelize.query(
 			"SELECT id, reserva_id AS reservaId, amount, metodo, referencia, source, is_manual AS isManual, created_at AS createdAt FROM reserva_pagos WHERE reserva_id = :id ORDER BY created_at DESC LIMIT 1",
-			{ replacements: { id } }
+			{ replacements: { id } },
 		);
 		const pagoInsertado = rowsP[0] || null;
 
@@ -6656,7 +6650,7 @@ app.put("/api/pagos/:id", authAdmin, async (req, res) => {
 		// 1. Obtener datos actuales del pago
 		const [rows] = await sequelize.query(
 			"SELECT reserva_id FROM reserva_pagos WHERE id = :id",
-			{ replacements: { id }, transaction }
+			{ replacements: { id }, transaction },
 		);
 
 		if (rows.length === 0) {
@@ -6703,7 +6697,7 @@ app.delete("/api/pagos/:id", authAdmin, async (req, res) => {
 		// 1. Obtener el reserva_id antes de borrar
 		const [rows] = await sequelize.query(
 			"SELECT reserva_id FROM reserva_pagos WHERE id = :id",
-			{ replacements: { id }, transaction }
+			{ replacements: { id }, transaction },
 		);
 
 		if (rows.length === 0) {
@@ -6831,7 +6825,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 		let shouldGenerateOpportunities = false;
 
 		console.log(
-			`🔄 [BULK-UPDATE] Iniciando actualización unificada para reserva ${id}`
+			`🔄 [BULK-UPDATE] Iniciando actualización unificada para reserva ${id}`,
 		);
 
 		// 1. Buscar reserva
@@ -6900,7 +6894,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 						horaRegreso !== undefined ? horaRegreso : reserva.horaRegreso,
 					mensaje: mensaje !== undefined ? mensaje : reserva.mensaje,
 				},
-				{ transaction }
+				{ transaction },
 			);
 
 			// 🎯 NUEVO: Sincronizar datos con el registro maestro del Cliente si existe
@@ -6916,10 +6910,10 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 							email: email !== undefined ? email : cliente.email,
 							telefono: telefono !== undefined ? telefono : cliente.telefono,
 						},
-						{ transaction }
+						{ transaction },
 					);
 					console.log(
-						`✅ [BULK-UPDATE] Registro maestro del cliente ${reserva.clienteId} actualizado`
+						`✅ [BULK-UPDATE] Registro maestro del cliente ${reserva.clienteId} actualizado`,
 					);
 				}
 			}
@@ -6934,11 +6928,11 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 					origen: ruta.origen,
 					destino: ruta.destino,
 				},
-				{ transaction }
+				{ transaction },
 			);
 
 			console.log(
-				`✅ [BULK-UPDATE] Ruta actualizada: ${ruta.origen} → ${ruta.destino}`
+				`✅ [BULK-UPDATE] Ruta actualizada: ${ruta.origen} → ${ruta.destino}`,
 			);
 		}
 
@@ -7021,11 +7015,11 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 					saldoPagado,
 					pagoFecha: montoPago > 0 ? new Date() : reserva.pagoFecha,
 				},
-				{ transaction }
+				{ transaction },
 			);
 
 			console.log(
-				`✅ [BULK-UPDATE] Pago actualizado: ${nuevoEstadoPago}, monto: ${pagoTotalNuevo}`
+				`✅ [BULK-UPDATE] Pago actualizado: ${nuevoEstadoPago}, monto: ${pagoTotalNuevo}`,
 			);
 		}
 
@@ -7057,7 +7051,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 					estado: nuevoEstado,
 					observaciones: obsValue,
 				},
-				{ transaction }
+				{ transaction },
 			);
 
 			console.log(`✅ [BULK-UPDATE] Estado actualizado: ${nuevoEstado}`);
@@ -7073,7 +7067,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			// Aquí iría la lógica de re-asignación si es necesario
 			// Por ahora solo lo documentamos
 			console.log(
-				`ℹ️ [BULK-UPDATE] Re-asignación solicitada (no implementada en bulk-update)`
+				`ℹ️ [BULK-UPDATE] Re-asignación solicitada (no implementada en bulk-update)`,
 			);
 		}
 
@@ -7086,19 +7080,19 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 		if (shouldGenerateOpportunities) {
 			try {
 				console.log(
-					`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`
+					`🎯 Generando oportunidades (Bulk Update) para reserva ${reserva.id}...`,
 				);
 				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
 				console.error(
 					"❌ Error generando oportunidades en Bulk Update:",
-					opErr.message
+					opErr.message,
 				);
 			}
 		}
 
 		console.log(
-			`✅ [BULK-UPDATE] Actualización completada exitosamente para reserva ${id}`
+			`✅ [BULK-UPDATE] Actualización completada exitosamente para reserva ${id}`,
 		);
 
 		res.json({
@@ -7178,7 +7172,7 @@ app.post(
 			} catch (logError) {
 				console.error(
 					"Error registrando auditoría de solicitud de detalles:",
-					logError
+					logError,
 				);
 			}
 
@@ -7194,7 +7188,7 @@ app.post(
 				details: error.message,
 			});
 		}
-	}
+	},
 );
 
 // Reenviar correo de confirmación al cliente de una reserva existente
@@ -7259,7 +7253,7 @@ app.post(
 			} catch (logError) {
 				console.error(
 					"Error registrando auditoría de reenvío de confirmación:",
-					logError
+					logError,
 				);
 			}
 
@@ -7275,7 +7269,7 @@ app.post(
 				details: error.message,
 			});
 		}
-	}
+	},
 );
 
 // Actualizar ruta (origen/destino) de una reserva
@@ -7308,7 +7302,7 @@ app.get("/api/reservas/:id/asignaciones", authAdmin, async (req, res) => {
 		const { id } = req.params;
 		const [rows] = await sequelize.query(
 			`SELECT id, vehiculo, conductor, created_at FROM reserva_asignaciones WHERE reserva_id = :id ORDER BY id DESC`,
-			{ replacements: { id } }
+			{ replacements: { id } },
 		);
 		res.json({ historial: rows || [] });
 	} catch (error) {
@@ -8046,8 +8040,8 @@ app.put("/api/conductores/:id", authAdmin, async (req, res) => {
 			typeof email === "string" && email.trim() === ""
 				? null
 				: typeof email === "string"
-				? email.trim()
-				: email;
+					? email.trim()
+					: email;
 
 		// Normalizar fecha: cadena vacía a null
 		const fechaNorm =
@@ -8153,7 +8147,7 @@ app.get("/api/tarifa-dinamica", async (req, res) => {
 	} catch (error) {
 		console.error(
 			"Error obteniendo configuraciones de tarifa dinámica:",
-			error
+			error,
 		);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
@@ -8181,7 +8175,7 @@ app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 			"📝 diasSemana recibido:",
 			req.body.diasSemana,
 			"tipo:",
-			typeof req.body.diasSemana
+			typeof req.body.diasSemana,
 		);
 
 		const config = await ConfiguracionTarifaDinamica.findByPk(id);
@@ -8196,14 +8190,14 @@ app.put("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 			"✅ diasSemana guardado:",
 			config.diasSemana,
 			"tipo:",
-			typeof config.diasSemana
+			typeof config.diasSemana,
 		);
 
 		res.json(config);
 	} catch (error) {
 		console.error(
 			"Error actualizando configuración de tarifa dinámica:",
-			error
+			error,
 		);
 		res.status(500).json({ error: "Error interno del servidor" });
 	}
@@ -8257,7 +8251,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		const fechaViaje = new Date(
 			parseInt(year),
 			parseInt(month) - 1,
-			parseInt(day)
+			parseInt(day),
 		);
 		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
 
@@ -8282,10 +8276,10 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 		const hoyInicio = new Date(
 			ahora.getFullYear(),
 			ahora.getMonth(),
-			ahora.getDate()
+			ahora.getDate(),
 		);
 		const diasAnticipacion = Math.floor(
-			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)
+			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24),
 		);
 
 		// Verificar si la fecha es festivo
@@ -8299,7 +8293,7 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 						recurrente: true,
 						[Op.and]: sequelize.where(
 							sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
-							sequelize.fn("DATE_FORMAT", fechaStr, "%m-%d")
+							sequelize.fn("DATE_FORMAT", fechaStr, "%m-%d"),
 						),
 					},
 				],
@@ -8773,7 +8767,7 @@ app.put(
 			console.error("Error actualizando configuración:", error);
 			res.status(500).json({ error: "Error interno del servidor" });
 		}
-	}
+	},
 );
 
 // Verificar disponibilidad de vehículos (público, para formulario de reserva)
@@ -8849,9 +8843,8 @@ app.post(
 			}
 
 			// Importar la función dinámicamente
-			const { buscarRetornosDisponibles } = await import(
-				"./utils/disponibilidad.js"
-			);
+			const { buscarRetornosDisponibles } =
+				await import("./utils/disponibilidad.js");
 
 			const resultado = await buscarRetornosDisponibles({
 				origen,
@@ -8867,7 +8860,7 @@ app.post(
 				mensaje: error.message,
 			});
 		}
-	}
+	},
 );
 
 // Validar horario mínimo (público, para formulario de reserva)
@@ -8915,7 +8908,7 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 		// 🎯 RESTRICCIÓN: No permitir eliminar reservas confirmadas
 		if (reserva.estado === "confirmada") {
 			console.log(
-				`🚫 Intento bloqueado: Eliminación de reserva CONFIRMADA #${id}`
+				`🚫 Intento bloqueado: Eliminación de reserva CONFIRMADA #${id}`,
 			);
 			return res.status(400).json({
 				error:
@@ -8925,7 +8918,7 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 		}
 
 		console.log(
-			`🗑️ Eliminando reserva #${id} (${reserva.codigoReserva}) solicitada por admin`
+			`🗑️ Eliminando reserva #${id} (${reserva.codigoReserva}) solicitada por admin`,
 		);
 
 		// Registrar en auditoría antes de eliminar
@@ -8965,7 +8958,7 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 		// Eliminar también el tramo de vuelta para evitar huérfanos
 		if (tramoHijoId) {
 			console.log(
-				`🧹 Iniciando limpieza de tramo hijo vinculado: ${tramoHijoId}`
+				`🧹 Iniciando limpieza de tramo hijo vinculado: ${tramoHijoId}`,
 			);
 			try {
 				await PendingEmail.destroy({ where: { reservaId: tramoHijoId } });
@@ -8974,7 +8967,7 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 			} catch (childErr) {
 				console.error(
 					`❌ Error eliminando tramo hijo ${tramoHijoId}:`,
-					childErr.message
+					childErr.message,
 				);
 				// No fallar la operación principal si falla el borrado del hijo
 			}
@@ -8986,12 +8979,12 @@ app.delete("/api/reservas/:id", authAdmin, async (req, res) => {
 			try {
 				await Reserva.update(
 					{ tramoHijoId: null },
-					{ where: { id: tramoPadreId } }
+					{ where: { id: tramoPadreId } },
 				);
 			} catch (parentErr) {
 				console.warn(
 					`⚠️ No se pudo desvincular del padre ${tramoPadreId}:`,
-					parentErr.message
+					parentErr.message,
 				);
 			}
 		}
@@ -9030,7 +9023,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		"PUT /api/reservas/:id/estado llamado con id:",
 		req.params.id,
 		"estado:",
-		req.body?.estado
+		req.body?.estado,
 	);
 	try {
 		const { id } = req.params;
@@ -9050,7 +9043,7 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 		) {
 			console.log(
 				"Intento de cambiar a pendiente con pagos:",
-				reserva.pagoMonto
+				reserva.pagoMonto,
 			);
 			return res.status(400).json({
 				error:
@@ -9075,20 +9068,20 @@ app.put("/api/reservas/:id/estado", async (req, res) => {
 			"Estado actualizado exitosamente para reserva:",
 			id,
 			"a:",
-			estado
+			estado,
 		);
 
 		// 🎯 NUEVO: Generar oportunidades automáticamente si se confirma
 		if (estado === "confirmada") {
 			try {
 				console.log(
-					`🎯 Generando oportunidades (Cambio Estado) para reserva ${reserva.id}...`
+					`🎯 Generando oportunidades (Cambio Estado) para reserva ${reserva.id}...`,
 				);
 				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
 				console.error(
 					"❌ Error generando oportunidades en cambio de estado:",
-					opErr.message
+					opErr.message,
 				);
 			}
 		}
@@ -9137,7 +9130,9 @@ app.post("/create-payment", async (req, res) => {
 	}
 
 	// LOG DE CONVERSIÓN: inicio de proceso de pago (trazabilidad completa para analytics)
-	console.log(`🚀 [INICIO PAGO] ${new Date().toISOString()} | Pasarela: ${gateway} | Monto: $${amountNum} | Reserva: ${codigoReserva || reservaId || 'sin código'} | Tipo: ${tipoPago || 'total'} | Origen: ${paymentOrigin || 'directo'}`);
+	console.log(
+		`🚀 [INICIO PAGO] ${new Date().toISOString()} | Pasarela: ${gateway} | Monto: $${amountNum} | Reserva: ${codigoReserva || reservaId || "sin código"} | Tipo: ${tipoPago || "total"} | Origen: ${paymentOrigin || "directo"}`,
+	);
 
 	const frontendBase =
 		process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
@@ -9161,7 +9156,7 @@ app.post("/create-payment", async (req, res) => {
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailSanitizado || !emailRegex.test(emailSanitizado)) {
 			console.error(
-				`❌ [Flow] Email inválido para Flow después de sanitizar: "${emailSanitizado}" (original: typeof ${typeof email})`
+				`❌ [Flow] Email inválido para Flow después de sanitizar: "${emailSanitizado}" (original: typeof ${typeof email})`,
 			);
 			return res.status(400).json({
 				success: false,
@@ -9204,7 +9199,7 @@ app.post("/create-payment", async (req, res) => {
 			} catch (optionalError) {
 				console.warn(
 					"⚠️ No se pudo serializar la metadata optional para Flow:",
-					optionalError.message
+					optionalError.message,
 				);
 			}
 		} else {
@@ -9215,7 +9210,7 @@ app.post("/create-payment", async (req, res) => {
 
 		console.log(
 			"🚀 Payload final enviado a Flow (POST):",
-			JSON.stringify(params, null, 2)
+			JSON.stringify(params, null, 2),
 		);
 
 		try {
@@ -9226,7 +9221,7 @@ app.post("/create-payment", async (req, res) => {
 					headers: {
 						"Content-Type": "application/x-www-form-urlencoded",
 					},
-				}
+				},
 			);
 			const payment = response.data;
 			if (!payment.url || !payment.token) {
@@ -9248,13 +9243,13 @@ app.post("/create-payment", async (req, res) => {
 				console.log(
 					`💾 [FlowToken] Guardado registro para token: ${payment.token.slice(
 						0,
-						10
-					)}...`
+						10,
+					)}...`,
 				);
 			} catch (tokenSaveError) {
 				console.error(
 					"⚠️ [FlowToken] No se pudo guardar el token (el flujo continuará):",
-					tokenSaveError.message
+					tokenSaveError.message,
 				);
 			}
 
@@ -9263,7 +9258,7 @@ app.post("/create-payment", async (req, res) => {
 		} catch (error) {
 			console.error(
 				"Error al crear el pago con Flow:",
-				error.response ? error.response.data : error.message
+				error.response ? error.response.data : error.message,
 			);
 			return res.status(500).json({
 				message: "Error al generar el pago con Flow.",
@@ -9300,7 +9295,13 @@ app.get("/api/payment-status", async (req, res) => {
 		}
 
 		const reserva = await Reserva.findByPk(reservaId, {
-			attributes: ["id", "estadoPago", "pagoMonto", "totalConDescuento", "precio"],
+			attributes: [
+				"id",
+				"estadoPago",
+				"pagoMonto",
+				"totalConDescuento",
+				"precio",
+			],
 		});
 
 		if (!reserva) {
@@ -9310,7 +9311,9 @@ app.get("/api/payment-status", async (req, res) => {
 		const pagado = reserva.estadoPago === "pagado";
 		// Retornar el monto solo cuando el pago está confirmado
 		const monto = pagado
-			? Number(reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0)
+			? Number(
+					reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,
+				)
 			: null;
 
 		return res.json({
@@ -9329,7 +9332,7 @@ app.get("/api/payment-status", async (req, res) => {
 app.use("/api/payment-result", express.urlencoded({ extended: true }));
 app.post("/api/payment-result", async (req, res) => {
 	console.log(
-		"🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)..."
+		"🔄 Recibiendo retorno de Flow via POST (Procesando redirección inteligente)...",
 	);
 
 	// Monto simbólico usado como último recurso cuando no se puede determinar el monto real
@@ -9346,11 +9349,11 @@ app.post("/api/payment-result", async (req, res) => {
 		if (!token) {
 			console.warn(
 				"⚠️ No se recibió token en /api/payment-result body:",
-				req.body
+				req.body,
 			);
 			return res.redirect(
 				303,
-				`${frontendBase}/flow-return?error=missing_token`
+				`${frontendBase}/flow-return?error=missing_token`,
 			);
 		}
 
@@ -9369,7 +9372,7 @@ app.post("/api/payment-result", async (req, res) => {
 				`${flowApiUrl}/payment/getStatus`,
 				{
 					params: params,
-				}
+				},
 			);
 
 			const flowData = statusResponse.data;
@@ -9402,7 +9405,7 @@ app.post("/api/payment-result", async (req, res) => {
 						"⚠️ Error parseando optional data de Flow:",
 						e.message,
 						"Data:",
-						flowData.optional
+						flowData.optional,
 					);
 				}
 			}
@@ -9416,7 +9419,7 @@ app.post("/api/payment-result", async (req, res) => {
 					if (reservaByCodigo) {
 						reservaId = reservaByCodigo.id;
 						console.log(
-							`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`
+							`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`,
 						);
 					}
 				} catch (e) {
@@ -9451,13 +9454,19 @@ app.post("/api/payment-result", async (req, res) => {
 				const isOportunidad = paymentOrigin === "oportunidad_traslado";
 				const isBanner = paymentOrigin === "banner_promocional";
 
-				if (isCodigoPago || isConsultaReserva || isCompraProductos || isOportunidad || isBanner) {
+				if (
+					isCodigoPago ||
+					isConsultaReserva ||
+					isCompraProductos ||
+					isOportunidad ||
+					isBanner
+				) {
 					// Caso: Pagar con Código, Consultar Reserva, Compra Productos, Oportunidad o Banner
 					// Redirigir a la página de éxito estándar (FlowReturn)
 					console.log(
 						`✅ Pago CONFIRMADO (Reserva ${reservaId}, Origen: ${
 							paymentOrigin || reserva?.source
-						}). Redirigiendo a FlowReturn.`
+						}). Redirigiendo a FlowReturn.`,
 					);
 
 					// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks
@@ -9466,14 +9475,14 @@ app.post("/api/payment-result", async (req, res) => {
 					// Validar y aplicar fallbacks en orden de prioridad
 					if (montoParaConversion <= 0) {
 						console.warn(
-							`⚠️ [CONVERSIÓN GA] Monto de Flow es ${montoParaConversion}, aplicando fallbacks...`
+							`⚠️ [CONVERSIÓN GA] Monto de Flow es ${montoParaConversion}, aplicando fallbacks...`,
 						);
 
 						// Fallback 1: pagoMonto acumulado en DB
 						if (reserva?.pagoMonto && Number(reserva.pagoMonto) > 0) {
 							montoParaConversion = Number(reserva.pagoMonto);
 							console.log(
-								`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoParaConversion}`
+								`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoParaConversion}`,
 							);
 						}
 						// Fallback 2: totalConDescuento
@@ -9483,40 +9492,40 @@ app.post("/api/payment-result", async (req, res) => {
 						) {
 							montoParaConversion = Number(reserva.totalConDescuento);
 							console.log(
-								`   ✅ Fallback 2: Usando totalConDescuento: ${montoParaConversion}`
+								`   ✅ Fallback 2: Usando totalConDescuento: ${montoParaConversion}`,
 							);
 						}
 						// Fallback 3: precio base
 						else if (reserva?.precio && Number(reserva.precio) > 0) {
 							montoParaConversion = Number(reserva.precio);
 							console.log(
-								`   ✅ Fallback 3: Usando precio base: ${montoParaConversion}`
+								`   ✅ Fallback 3: Usando precio base: ${montoParaConversion}`,
 							);
 						}
 						// Error crítico - último recurso
 						else {
 							console.error(
-								`❌ [CRÍTICO] No se pudo determinar monto para conversión GA - Reserva ID: ${reservaId}`
+								`❌ [CRÍTICO] No se pudo determinar monto para conversión GA - Reserva ID: ${reservaId}`,
 							);
 							console.error(`   - Flow amount: ${flowData.amount}`);
 							console.error(
-								`   - Flow requestAmount: ${flowData.requestAmount}`
+								`   - Flow requestAmount: ${flowData.requestAmount}`,
 							);
 							console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
 							console.error(
-								`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`
+								`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`,
 							);
 							console.error(`   - Reserva precio: ${reserva?.precio}`);
 							// Último recurso: monto simbólico para evitar cero (solo para que no falle la conversión)
 							montoParaConversion = SYMBOLIC_AMOUNT_CLP;
 							console.error(
-								`   - Usando monto simbólico por defecto: ${montoParaConversion} CLP`
+								`   - Usando monto simbólico por defecto: ${montoParaConversion} CLP`,
 							);
 						}
 					}
 
 					console.log(
-						`💰 [CONVERSIÓN GA] Monto final para Google Ads: ${montoParaConversion} CLP (Valor Real de Transacción)`
+						`💰 [CONVERSIÓN GA] Monto final para Google Ads: ${montoParaConversion} CLP (Valor Real de Transacción)`,
 					);
 
 					// Crear objeto con datos de usuario para conversiones avanzadas de Google Ads
@@ -9528,12 +9537,12 @@ app.post("/api/payment-result", async (req, res) => {
 
 					// Codificar datos de usuario en Base64 para mayor privacidad
 					const userDataEncoded = Buffer.from(
-						JSON.stringify(userData)
+						JSON.stringify(userData),
 					).toString("base64");
 
 					// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas)
 					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${encodeURIComponent(
-						userDataEncoded
+						userDataEncoded,
 					)}`;
 
 					return res.redirect(303, returnUrl);
@@ -9542,7 +9551,7 @@ app.post("/api/payment-result", async (req, res) => {
 				// Caso: Reserva Express (flujo normal)
 				// Redirigir a Completar Detalles
 				console.log(
-					`✅ Reserva Express CONFIRMADA (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`
+					`✅ Reserva Express CONFIRMADA (Reserva ${reservaId}). Redirigiendo a Completar Detalles.`,
 				);
 
 				// ✅ CORRECCIÓN CRÍTICA: Calcular monto con validación robusta y fallbacks (igual que en flujo anterior)
@@ -9550,14 +9559,14 @@ app.post("/api/payment-result", async (req, res) => {
 
 				if (montoExpress <= 0) {
 					console.warn(
-						`⚠️ [CONVERSIÓN GA - Express] Monto de Flow es ${montoExpress}, aplicando fallbacks...`
+						`⚠️ [CONVERSIÓN GA - Express] Monto de Flow es ${montoExpress}, aplicando fallbacks...`,
 					);
 
 					// Fallback 1: pagoMonto acumulado en DB
 					if (reserva?.pagoMonto && Number(reserva.pagoMonto) > 0) {
 						montoExpress = Number(reserva.pagoMonto);
 						console.log(
-							`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoExpress}`
+							`   ✅ Fallback 1: Usando pagoMonto de DB: ${montoExpress}`,
 						);
 					}
 					// Fallback 2: totalConDescuento
@@ -9567,37 +9576,37 @@ app.post("/api/payment-result", async (req, res) => {
 					) {
 						montoExpress = Number(reserva.totalConDescuento);
 						console.log(
-							`   ✅ Fallback 2: Usando totalConDescuento: ${montoExpress}`
+							`   ✅ Fallback 2: Usando totalConDescuento: ${montoExpress}`,
 						);
 					}
 					// Fallback 3: precio base
 					else if (reserva?.precio && Number(reserva.precio) > 0) {
 						montoExpress = Number(reserva.precio);
 						console.log(
-							`   ✅ Fallback 3: Usando precio base: ${montoExpress}`
+							`   ✅ Fallback 3: Usando precio base: ${montoExpress}`,
 						);
 					}
 					// Error crítico - último recurso
 					else {
 						console.error(
-							`❌ [CRÍTICO] No se pudo determinar monto para conversión GA Express - Reserva ID: ${reservaId}`
+							`❌ [CRÍTICO] No se pudo determinar monto para conversión GA Express - Reserva ID: ${reservaId}`,
 						);
 						console.error(`   - Flow amount: ${flowData.amount}`);
 						console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
 						console.error(`   - Reserva pagoMonto: ${reserva?.pagoMonto}`);
 						console.error(
-							`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`
+							`   - Reserva totalConDescuento: ${reserva?.totalConDescuento}`,
 						);
 						console.error(`   - Reserva precio: ${reserva?.precio}`);
 						montoExpress = SYMBOLIC_AMOUNT_CLP;
 						console.error(
-							`   - Usando monto simbólico por defecto: ${montoExpress} CLP`
+							`   - Usando monto simbólico por defecto: ${montoExpress} CLP`,
 						);
 					}
 				}
 
 				console.log(
-					`💰 [CONVERSIÓN GA - Express] Monto final para Google Ads: ${montoExpress} CLP`
+					`💰 [CONVERSIÓN GA - Express] Monto final para Google Ads: ${montoExpress} CLP`,
 				);
 
 				// FIXED: Pasar también datos del usuario (d) para conversiones en CompletarDetalles
@@ -9607,20 +9616,20 @@ app.post("/api/payment-result", async (req, res) => {
 					telefono: reserva?.telefono || "",
 				};
 				const userDataEncodedExpress = Buffer.from(
-					JSON.stringify(userDataExpress)
+					JSON.stringify(userDataExpress),
 				).toString("base64");
 
 				// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas) e incluir token para conversiones GA predecibles
 				return res.redirect(
 					303,
 					`${frontendBase}/?flow_payment=success&token=${token}&reserva_id=${reservaId}&amount=${montoExpress}&d=${encodeURIComponent(
-						userDataEncodedExpress
-					)}`
+						userDataEncodedExpress,
+					)}`,
 				);
 			} else if (reservaId && flowData.status === 1) {
 				// Pago PENDIENTE - No registrar conversión aún
 				console.warn(
-					`⏳ Pago PENDIENTE (Reserva ${reservaId}, Status: ${flowData.status}). Redirigiendo con status=pending.`
+					`⏳ Pago PENDIENTE (Reserva ${reservaId}, Status: ${flowData.status}). Redirigiendo con status=pending.`,
 				);
 
 				// Re-parsear optional data para determinar el flujo
@@ -9636,34 +9645,40 @@ app.post("/api/payment-result", async (req, res) => {
 				const isOportunidad = paymentOrigin === "oportunidad_traslado";
 				const isBanner = paymentOrigin === "banner_promocional";
 
-				if (isCodigoPago || isConsultaReserva || isCompraProductos || isOportunidad || isBanner) {
+				if (
+					isCodigoPago ||
+					isConsultaReserva ||
+					isCompraProductos ||
+					isOportunidad ||
+					isBanner
+				) {
 					// Redirigir a FlowReturn con estado pendiente (sin monto para evitar conversión)
 					return res.redirect(
 						303,
-						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`
+						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`,
 					);
 				} else {
 					// Reserva Express - redirigir a home con estado pendiente
 					return res.redirect(
 						303,
-						`${frontendBase}/?flow_payment=pending&reserva_id=${reservaId}`
+						`${frontendBase}/?flow_payment=pending&reserva_id=${reservaId}`,
 					);
 				}
 			} else if (flowData.status === 3 || flowData.status === 4) {
 				// Pago rechazado (3) o anulado (4)
 				console.warn(
-					`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`
+					`⚠️ Pago rechazado/anulado por Flow (Status ${flowData.status}). Redirigiendo a error.`,
 				);
 				return res.redirect(
 					303,
-					`${frontendBase}/flow-return?token=${token}&status=error&flow_status=${flowData.status}`
+					`${frontendBase}/flow-return?token=${token}&status=error&flow_status=${flowData.status}`,
 				);
 			}
 
 			// Si no hay reservaId pero el pago fue exitoso (caso raro o error de datos), redirigir a flow-return usando el monto de flowData
 			if (!reservaId && (flowData.status === 2 || flowData.status === 1)) {
 				console.warn(
-					"⚠️ Pago exitoso en Flow pero NO se encontró reservaId en metadata. Redirigiendo con monto de Flow."
+					"⚠️ Pago exitoso en Flow pero NO se encontró reservaId en metadata. Redirigiendo con monto de Flow.",
 				);
 
 				// ✅ CORRECCIÓN: Usar el mismo monto validado de Flow
@@ -9671,7 +9686,7 @@ app.post("/api/payment-result", async (req, res) => {
 
 				if (montoFlow <= 0) {
 					console.error(
-						`❌ [CRÍTICO] Monto cero en pago sin reservaId - Flow Order: ${flowData.flowOrder}`
+						`❌ [CRÍTICO] Monto cero en pago sin reservaId - Flow Order: ${flowData.flowOrder}`,
 					);
 					console.error(`   - Flow amount: ${flowData.amount}`);
 					console.error(`   - Flow requestAmount: ${flowData.requestAmount}`);
@@ -9680,15 +9695,15 @@ app.post("/api/payment-result", async (req, res) => {
 				}
 
 				console.log(
-					`💰 [CONVERSIÓN GA - Sin Reserva] Monto final: ${montoFlow} CLP`
+					`💰 [CONVERSIÓN GA - Sin Reserva] Monto final: ${montoFlow} CLP`,
 				);
 
 				// Intento de recuperar email de flowData si existe
 				const userEmail = sanitizarEmailRobusto(
-					flowData.payerEmail || flowData.email
+					flowData.payerEmail || flowData.email,
 				);
 				const userDataEncoded = Buffer.from(
-					JSON.stringify({ email: userEmail })
+					JSON.stringify({ email: userEmail }),
 				).toString("base64");
 
 				// ✅ FIX: encodeURIComponent para escapar caracteres Base64 (+, /, =) que pueden corromperse en URLs
@@ -9696,14 +9711,14 @@ app.post("/api/payment-result", async (req, res) => {
 				return res.redirect(
 					303,
 					`${frontendBase}/flow-return?token=${token}&status=success&amount=${montoFlow}&d=${encodeURIComponent(
-						userDataEncoded
-					)}&warning=no_reserva_id`
+						userDataEncoded,
+					)}&warning=no_reserva_id`,
 				);
 			}
 		} catch (flowError) {
 			console.error(
 				"⚠️ Error consultando estado en Flow (usando fallback de DB):",
-				flowError.message
+				flowError.message,
 			);
 
 			// ✅ [ROOT CAUSE 1] FALLBACK ROBUSTO: Intentar recuperar datos del token desde nuestra DB
@@ -9711,11 +9726,11 @@ app.post("/api/payment-result", async (req, res) => {
 				const recordedToken = await FlowToken.findByPk(token);
 				if (recordedToken) {
 					console.log(
-						`🎯 [Fallback DB] Datos recuperados: Monto $${recordedToken.amount}, Origen: ${recordedToken.paymentOrigin}`
+						`🎯 [Fallback DB] Datos recuperados: Monto $${recordedToken.amount}, Origen: ${recordedToken.paymentOrigin}`,
 					);
 
 					const userDataEncoded = Buffer.from(
-						JSON.stringify({ email: recordedToken.email || "" })
+						JSON.stringify({ email: recordedToken.email || "" }),
 					).toString("base64");
 
 					const dbOrigin = recordedToken.paymentOrigin || "desconocido";
@@ -9727,8 +9742,8 @@ app.post("/api/payment-result", async (req, res) => {
 							`${frontendBase}/?flow_payment=success&token=${token}&reserva_id=${
 								recordedToken.reservaId || ""
 							}&amount=${recordedToken.amount}&d=${encodeURIComponent(
-								userDataEncoded
-							)}&warning=api_failure_db_fallback`
+								userDataEncoded,
+							)}&warning=api_failure_db_fallback`,
 						);
 					}
 
@@ -9737,14 +9752,14 @@ app.post("/api/payment-result", async (req, res) => {
 						`${frontendBase}/flow-return?token=${token}&status=success&amount=${
 							recordedToken.amount
 						}&d=${encodeURIComponent(
-							userDataEncoded
-						)}&warning=api_failure_db_fallback`
+							userDataEncoded,
+						)}&warning=api_failure_db_fallback`,
 					);
 				}
 			} catch (dbError) {
 				console.error(
 					"❌ [Fallback DB] Error consultando FlowToken:",
-					dbError.message
+					dbError.message,
 				);
 			}
 			// Continuar al fallback genérico si la DB también falla o no hay registro
@@ -9756,7 +9771,7 @@ app.post("/api/payment-result", async (req, res) => {
 		console.log("ℹ️ Usando fallback de redirección a /flow-return");
 		res.redirect(
 			303,
-			`${frontendBase}/flow-return?token=${token}&status=unknown`
+			`${frontendBase}/flow-return?token=${token}&status=unknown`,
 		);
 	} catch (error) {
 		console.error("❌ Error en redirección de pago:", error);
@@ -9793,7 +9808,7 @@ app.post("/api/create-flow-payment", async (req, res) => {
 				headers: {
 					"Content-Type": "application/x-www-form-urlencoded",
 				},
-			}
+			},
 		);
 
 		res.json(response.data);
@@ -9836,13 +9851,20 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 		const flowResponse = await axios.get(
 			"https://www.flow.cl/api/payment/getStatus",
-			{ params }
+			{ params },
 		);
 
 		const payment = flowResponse.data;
 		// LOG DE CONVERSIÓN: estado de pago recibido desde Flow (dato crítico para analytics y reconciliación)
-		const FLOW_ESTADOS = { 1: 'PENDIENTE', 2: 'PAGADO', 3: 'RECHAZADO', 4: 'ANULADO' };
-		console.log(`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${payment.payer?.email ? payment.payer.email.slice(0, 3) + '***' : 'sin email'}`);
+		const FLOW_ESTADOS = {
+			1: "PENDIENTE",
+			2: "PAGADO",
+			3: "RECHAZADO",
+			4: "ANULADO",
+		};
+		console.log(
+			`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${payment.payer?.email ? payment.payer.email.slice(0, 3) + "***" : "sin email"}`,
+		);
 
 		// Responder a Flow
 		res.status(200).send("OK");
@@ -9860,7 +9882,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			} catch (optionalParseError) {
 				console.warn(
 					"⚠️  No se pudo interpretar la metadata optional de Flow:",
-					optionalParseError.message
+					optionalParseError.message,
 				);
 				optionalMetadata = {};
 			}
@@ -9903,7 +9925,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			!email
 		) {
 			console.log(
-				"⚠️  No se puede identificar la reserva (falta metadata suficiente)"
+				"⚠️  No se puede identificar la reserva (falta metadata suficiente)",
 			);
 			return;
 		}
@@ -9955,7 +9977,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		if (payment.status === 3 || payment.status === 4) {
 			const statusLabel = payment.status === 3 ? "Rechazado" : "Anulado";
 			console.log(
-				`❌ Pago ${statusLabel} (status: ${payment.status}). Registrando transacción fallida para reserva ${reserva.id}`
+				`❌ Pago ${statusLabel} (status: ${payment.status}). Registrando transacción fallida para reserva ${reserva.id}`,
 			);
 
 			try {
@@ -9980,12 +10002,12 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					notas: `Pago ${statusLabel} por Flow. No se actualizó el estado de la reserva.`,
 				});
 				console.log(
-					`💾 Transacción fallida registrada: Flow Order ${payment.flowOrder}`
+					`💾 Transacción fallida registrada: Flow Order ${payment.flowOrder}`,
 				);
 			} catch (transError) {
 				console.error(
 					"⚠️ Error registrando transacción fallida:",
-					transError.message
+					transError.message,
 				);
 			}
 
@@ -9995,13 +10017,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		// Solo procesar pagos exitosos (status 2 = pagado)
 		if (payment.status !== 2) {
 			console.log(
-				`ℹ️  Pago no exitoso (status: ${payment.status}), no se actualiza reserva`
+				`ℹ️  Pago no exitoso (status: ${payment.status}), no se actualiza reserva`,
 			);
 			return;
 		}
 
 		console.log(
-			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`
+			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`,
 		);
 
 		// Reglas: parcial (>= 40% del total) => confirmada, total => confirmada (estado completada se gestiona manualmente)
@@ -10019,7 +10041,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
 				if (reservaHija) {
 					console.log(
-						`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`
+						`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`,
 					);
 
 					// Calcular totales para proporción
@@ -10038,7 +10060,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 						console.log(
 							`📊 División aplicada (Total Pago: ${montoActual}): Ida $${montoIda} (${(
 								factorIda * 100
-							).toFixed(1)}%) | Vuelta $${montoVuelta}`
+							).toFixed(1)}%) | Vuelta $${montoVuelta}`,
 						);
 					} else {
 						// Si son reservas gratuitas o precio 0, dividir a la mitad
@@ -10055,7 +10077,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		// Definir variables comunes y umbrales para IDA
 		const umbralAbono = Math.max(
 			totalReserva * 0.4,
-			parseFloat(reserva.abonoSugerido || 0) || 0
+			parseFloat(reserva.abonoSugerido || 0) || 0,
 		);
 		const referenciaPagoFinal =
 			optionalReferenciaPago || reserva.referenciaPago || null;
@@ -10086,7 +10108,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			saldoPagado = true;
 			if (
 				["pendiente", "pendiente_detalles", "confirmada"].includes(
-					nuevoEstadoReserva
+					nuevoEstadoReserva,
 				)
 			) {
 				nuevoEstadoReserva = "confirmada";
@@ -10124,13 +10146,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		if (nuevoEstadoReserva === "confirmada") {
 			try {
 				console.log(
-					`🎯 Generando oportunidades (Flow Webhook Main) para reserva ${reserva.id}...`
+					`🎯 Generando oportunidades (Flow Webhook Main) para reserva ${reserva.id}...`,
 				);
 				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
 				console.error(
 					"❌ Error generando oportunidades en Flow Webhook Main:",
-					opErr.message
+					opErr.message,
 				);
 			}
 		}
@@ -10140,7 +10162,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		if (reservaHija && montoVuelta > 0) {
 			try {
 				console.log(
-					`🔗 Actualizando reserva vinculada (Vuelta) con pago asignado: $${montoVuelta}`
+					`🔗 Actualizando reserva vinculada (Vuelta) con pago asignado: $${montoVuelta}`,
 				);
 
 				const totalHija = parseFloat(reservaHija.totalConDescuento || 0);
@@ -10148,7 +10170,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				const pagoAcumuladoHija = pagoPrevioHija + montoVuelta;
 				const umbralAbonoHija = Math.max(
 					totalHija * 0.4,
-					parseFloat(reservaHija.abonoSugerido || 0) || 0
+					parseFloat(reservaHija.abonoSugerido || 0) || 0,
 				);
 
 				let estadoPagoHija = reservaHija.estadoPago;
@@ -10165,7 +10187,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					saldoPagadoHija = true;
 					if (
 						["pendiente", "pendiente_detalles", "confirmada"].includes(
-							estadoReservaHija
+							estadoReservaHija,
 						)
 					) {
 						estadoReservaHija = "confirmada";
@@ -10197,27 +10219,27 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					saldoPagado: saldoPagadoHija,
 				});
 				console.log(
-					`✅ Reserva vinculada actualizada: Estado ${estadoReservaHija}, Pago ${estadoPagoHija}`
+					`✅ Reserva vinculada actualizada: Estado ${estadoReservaHija}, Pago ${estadoPagoHija}`,
 				);
 
 				// 🎯 NUEVO: Generar oportunidades automáticamente para Vuelta
 				if (estadoReservaHija === "confirmada") {
 					try {
 						console.log(
-							`🎯 Generando oportunidades (Flow Webhook Hija) para reserva ${reservaHija.id}...`
+							`🎯 Generando oportunidades (Flow Webhook Hija) para reserva ${reservaHija.id}...`,
 						);
 						await detectarYGenerarOportunidades(reservaHija);
 					} catch (opErr) {
 						console.error(
 							"❌ Error generando oportunidades en Flow Webhook Hija:",
-							opErr.message
+							opErr.message,
 						);
 					}
 				}
 			} catch (errVinculada) {
 				console.error(
 					"⚠️ Error al actualizar reserva vinculada:",
-					errVinculada.message
+					errVinculada.message,
 				);
 			}
 		}
@@ -10246,7 +10268,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				notas: `Pago procesado vía Flow. Acumulado: $${pagoAcumulado}`,
 			});
 			console.log(
-				`💾 Transacción registrada: ID Flow ${payment.flowOrder}, Monto $${montoActual}`
+				`💾 Transacción registrada: ID Flow ${payment.flowOrder}, Monto $${montoActual}`,
 			);
 		} catch (transError) {
 			console.error("⚠️ Error registrando transacción:", transError.message);
@@ -10268,7 +10290,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					clienteAsociado = await Cliente.findOne({
 						where: sequelize.where(
 							sequelize.fn("LOWER", sequelize.col("email")),
-							emailNormalizado
+							emailNormalizado,
 						),
 					});
 				}
@@ -10312,13 +10334,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		} catch (clienteError) {
 			console.error(
 				"⚠️ No se pudo sincronizar el cliente tras pago Flow:",
-				clienteError.message
+				clienteError.message,
 			);
 		}
 
 		if (clienteActualizado) {
 			console.log(
-				`👤 Cliente sincronizado tras pago Flow: ${clienteActualizado.id}`
+				`👤 Cliente sincronizado tras pago Flow: ${clienteActualizado.id}`,
 			);
 		}
 
@@ -10333,7 +10355,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				registro = await CodigoPago.findByPk(codigoPagoId);
 				if (registro) {
 					console.log(
-						`✅ Código de pago encontrado por ID: ${codigoPagoId} (${registro.codigo})`
+						`✅ Código de pago encontrado por ID: ${codigoPagoId} (${registro.codigo})`,
 					);
 				}
 			}
@@ -10349,7 +10371,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					registro = await CodigoPago.findOne({ where: { codigo } });
 					if (registro) {
 						console.log(
-							`✅ Código de pago encontrado por referencia: ${codigo}`
+							`✅ Código de pago encontrado por referencia: ${codigo}`,
 						);
 					}
 				}
@@ -10373,7 +10395,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				});
 
 				console.log(
-					`✅ Código de pago actualizado: ${registro.codigo} (Usos: ${nuevosUsos}/${registro.usosMaximos}, Estado: ${estado})`
+					`✅ Código de pago actualizado: ${registro.codigo} (Usos: ${nuevosUsos}/${registro.usosMaximos}, Estado: ${estado})`,
 				);
 			} else {
 				console.log("ℹ️ No se encontró código de pago para actualizar");
@@ -10381,7 +10403,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		} catch (cpError) {
 			console.warn(
 				"⚠️ No se pudo actualizar el código de pago:",
-				cpError.message
+				cpError.message,
 			);
 		}
 
@@ -10421,12 +10443,12 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			});
 
 			console.log(
-				`✅ Email de confirmación de pago Flow enviado al cliente: ${reserva.email}`
+				`✅ Email de confirmación de pago Flow enviado al cliente: ${reserva.email}`,
 			);
 		} catch (emailError) {
 			console.error(
 				"❌ Error al enviar email de confirmación al cliente:",
-				emailError.message
+				emailError.message,
 			);
 		}
 
@@ -10463,13 +10485,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				{
 					headers: { "Content-Type": "application/json" },
 					timeout: 10000,
-				}
+				},
 			);
 			console.log("✅ Notificación de pago al administrador enviada");
 		} catch (adminError) {
 			console.error(
 				"❌ Error enviando notificación de pago al administrador:",
-				adminError.message
+				adminError.message,
 			);
 		}
 
@@ -10482,7 +10504,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 			if (productosEnReserva.length > 0) {
 				console.log(
-					`📧 Enviando notificación de productos para reserva ${reserva.codigoReserva}...`
+					`📧 Enviando notificación de productos para reserva ${reserva.codigoReserva}...`,
 				);
 
 				const productosParaNotificacion = productosEnReserva.map((pr) => ({
@@ -10495,7 +10517,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 				const totalProductos = productosParaNotificacion.reduce(
 					(sum, p) => sum + p.subtotal,
-					0
+					0,
 				);
 
 				const notifData = {
@@ -10519,14 +10541,14 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				});
 
 				console.log(
-					`✅ Notificación de productos enviada para reserva ${reserva.codigoReserva}`
+					`✅ Notificación de productos enviada para reserva ${reserva.codigoReserva}`,
 				);
 				if (resp?.data) {
 					console.log(
 						"   • Respuesta PHP:",
 						typeof resp.data === "string"
 							? resp.data
-							: JSON.stringify(resp.data)
+							: JSON.stringify(resp.data),
 					);
 				}
 			}
@@ -10536,13 +10558,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			const body = notifError?.response?.data;
 			console.error(
 				"❌ Error al enviar notificación de productos (no crítico):",
-				notifError.message
+				notifError.message,
 			);
 			if (status) console.error("   • Código HTTP:", status);
 			if (body)
 				console.error(
 					"   • Respuesta del servidor:",
-					typeof body === "string" ? body : JSON.stringify(body)
+					typeof body === "string" ? body : JSON.stringify(body),
 				);
 		}
 	} catch (error) {
@@ -10582,7 +10604,7 @@ app.get("/api/reservas/:id/gastos", authAdmin, async (req, res) => {
 
 		const totalGastos = gastos.reduce(
 			(sum, gasto) => sum + parseFloat(gasto.monto || 0),
-			0
+			0,
 		);
 
 		res.json({
@@ -10893,20 +10915,20 @@ app.get("/api/estadisticas/conductores", authAdmin, async (req, res) => {
 			// Filtrar gastos: solo los que pertenecen a las reservas filtradas
 			const reservaIds = new Set(reservas.map((r) => r.id));
 			const gastos = todosLosGastos.filter(
-				(g) => g.reservaId && reservaIds.has(g.reservaId)
+				(g) => g.reservaId && reservaIds.has(g.reservaId),
 			);
 
 			const totalReservas = reservas.length;
 			const reservasCompletadas = reservas.filter(
-				(r) => r.estado === "completada"
+				(r) => r.estado === "completada",
 			).length;
 			const totalIngresos = reservas.reduce(
 				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-				0
+				0,
 			);
 			const totalGastos = gastos.reduce(
 				(sum, g) => sum + parseFloat(g.monto || 0),
-				0
+				0,
 			);
 			const pagosConductor = gastos
 				.filter((g) => g.tipoGasto === "pago_conductor")
@@ -11020,20 +11042,20 @@ app.get("/api/estadisticas/vehiculos", authAdmin, async (req, res) => {
 			// Filtrar gastos: solo los que pertenecen a las reservas filtradas
 			const reservaIds = new Set(reservas.map((r) => r.id));
 			const gastos = todosLosGastos.filter(
-				(g) => g.reservaId && reservaIds.has(g.reservaId)
+				(g) => g.reservaId && reservaIds.has(g.reservaId),
 			);
 
 			const totalReservas = reservas.length;
 			const reservasCompletadas = reservas.filter(
-				(r) => r.estado === "completada"
+				(r) => r.estado === "completada",
 			).length;
 			const totalIngresos = reservas.reduce(
 				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-				0
+				0,
 			);
 			const totalGastos = gastos.reduce(
 				(sum, g) => sum + parseFloat(g.monto || 0),
-				0
+				0,
 			);
 			const gastoCombustible = gastos
 				.filter((g) => g.tipoGasto === "combustible")
@@ -11175,7 +11197,7 @@ app.get("/api/estadisticas/gastos", authAdmin, async (req, res) => {
 		});
 
 		const resumenPorFecha = Object.values(resumenPorFechaMap).sort(
-			(a, b) => new Date(a.fecha) - new Date(b.fecha)
+			(a, b) => new Date(a.fecha) - new Date(b.fecha),
 		);
 
 		res.json({
@@ -11271,7 +11293,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 		// Filtrar gastos: solo los que pertenecen a las reservas filtradas
 		const reservaIds = new Set(reservas.map((r) => r.id));
 		const gastos = todosLosGastos.filter(
-			(g) => g.reservaId && reservaIds.has(g.reservaId)
+			(g) => g.reservaId && reservaIds.has(g.reservaId),
 		);
 
 		// Agrupar gastos por tipo
@@ -11295,12 +11317,12 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 						patente: r.vehiculo_asignado.patente,
 						marca: r.vehiculo_asignado.marca,
 						modelo: r.vehiculo_asignado.modelo,
-					})
+					}),
 				);
 			}
 		});
 		const vehiculosAsociados = Array.from(vehiculosSet).map((v) =>
-			JSON.parse(v)
+			JSON.parse(v),
 		);
 
 		res.json({
@@ -11326,7 +11348,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 							patente: r.vehiculo_asignado.patente,
 							marca: r.vehiculo_asignado.marca,
 							modelo: r.vehiculo_asignado.modelo,
-					  }
+						}
 					: null,
 			})),
 			gastos: gastos.map((g) => ({
@@ -11340,7 +11362,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 							id: g.reserva.id,
 							codigoReserva: g.reserva.codigoReserva,
 							fecha: g.reserva.fecha,
-					  }
+						}
 					: null,
 			})),
 			gastosPorTipo,
@@ -11348,7 +11370,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 			totalReservas: reservas.length,
 			totalIngresos: reservas.reduce(
 				(sum, r) => sum + parseFloat(r.totalConDescuento || 0),
-				0
+				0,
 			),
 			totalGastos: gastos.reduce((sum, g) => sum + parseFloat(g.monto || 0), 0),
 		});
@@ -11373,7 +11395,7 @@ app.get("/api/estadisticas/conductores/:id", authAdmin, async (req, res) => {
 const limpiarListaTexto = (lista) =>
 	lista
 		.map((item) =>
-			item !== undefined && item !== null ? String(item).trim() : ""
+			item !== undefined && item !== null ? String(item).trim() : "",
 		)
 		.filter((item) => item.length > 0);
 
@@ -11536,7 +11558,7 @@ app.post("/api/productos", authAdmin, async (req, res) => {
 		const existente = await Producto.findOne({
 			where: sequelize.where(
 				sequelize.fn("LOWER", sequelize.col("nombre")),
-				nombreNormalizado.toLowerCase()
+				nombreNormalizado.toLowerCase(),
 			),
 		});
 
@@ -11670,7 +11692,7 @@ app.put("/api/productos/:id", authAdmin, async (req, res) => {
 						[Op.and]: [
 							sequelize.where(
 								sequelize.fn("LOWER", sequelize.col("nombre")),
-								nombreNormalizado.toLowerCase()
+								nombreNormalizado.toLowerCase(),
 							),
 							{ id: { [Op.ne]: producto.id } },
 						],
@@ -11852,7 +11874,7 @@ app.get("/api/reservas/:id/productos", async (req, res) => {
 		// Calcular total de productos
 		const totalProductos = productosReserva.reduce(
 			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
-			0
+			0,
 		);
 
 		res.json({
@@ -11967,7 +11989,7 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 						as: "producto",
 					},
 				],
-			}
+			},
 		);
 
 		// Calcular nuevo total de productos
@@ -11976,7 +11998,7 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 		});
 		const totalProductos = todosProductos.reduce(
 			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
-			0
+			0,
 		);
 
 		// Calcular nuevo total de la reserva (precio base + productos)
@@ -11984,7 +12006,7 @@ app.post("/api/reservas/:id/productos", async (req, res) => {
 			parseFloat(reserva.totalConDescuento || 0) + totalProductos;
 
 		console.log(
-			`✅ Producto agregado a reserva ${reserva.codigoReserva}: ${producto.nombre} x${cantidad}`
+			`✅ Producto agregado a reserva ${reserva.codigoReserva}: ${producto.nombre} x${cantidad}`,
 		);
 
 		// NOTA: La notificación de productos NO se envía aquí al agregar cada producto.
@@ -12086,7 +12108,7 @@ app.put("/api/reservas/:id/productos/:productoReservaId", async (req, res) => {
 		});
 		const totalProductos = todosProductos.reduce(
 			(sum, pr) => sum + parseFloat(pr.subtotal || 0),
-			0
+			0,
 		);
 
 		res.json({
@@ -12152,7 +12174,7 @@ app.delete(
 			});
 			const totalProductos = todosProductos.reduce(
 				(sum, pr) => sum + parseFloat(pr.subtotal || 0),
-				0
+				0,
 			);
 
 			res.json({
@@ -12167,7 +12189,7 @@ app.delete(
 				error: "Error al eliminar producto de reserva",
 			});
 		}
-	}
+	},
 );
 
 /**
@@ -12203,7 +12225,7 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 
 		console.log(
 			`[DEBUG] Transacciones para reserva ${id}:`,
-			transacciones.length
+			transacciones.length,
 		);
 		if (transacciones.length > 0) {
 			console.log(`[DEBUG] Detalle:`, JSON.stringify(transacciones, null, 2));
@@ -12212,7 +12234,7 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 		// Calcular resumen
 		const montoTotal = transacciones.reduce(
 			(sum, t) => sum + parseFloat(t.monto || 0),
-			0
+			0,
 		);
 
 		const transaccionesPorTipo = transacciones.reduce((acc, t) => {
@@ -12260,7 +12282,7 @@ const scheduleKeepAlive = () => {
 		: `${targetBase.replace(/\/$/, "")}/health`;
 	const interval = Number(process.env.RENDER_KEEP_ALIVE_INTERVAL_MS || 300000);
 	console.log(
-		`Activando keep-alive cada ${interval / 1000}s hacia ${normalized}`
+		`Activando keep-alive cada ${interval / 1000}s hacia ${normalized}`,
 	);
 
 	const timer = setInterval(() => {
@@ -12290,40 +12312,46 @@ const startServer = async () => {
 		// Iniciar procesador de correos DESPUÉS de que la BD esté lista
 		setInterval(processPendingEmails, 60000);
 		console.log(
-			"🕒 Procesador de correos pendientes iniciado (intervalo: 60s)"
+			"🕒 Procesador de correos pendientes iniciado (intervalo: 60s)",
 		);
 
 		// Iniciar limpiador de correos antiguos (cada 7 días = 604800000 ms)
 		setInterval(cleanOldEmails, 7 * 24 * 60 * 60 * 1000);
 		console.log(
-			"🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)"
+			"🧹 Limpiador de correos antiguos iniciado (intervalo: 7 días)",
 		);
 
 		// Iniciar limpiador de tokens de Flow expirados (cada 12 horas)
-		setInterval(async () => {
-			try {
-				const count = await FlowToken.destroy({
-					where: { expiresAt: { [Op.lt]: new Date() } },
-				});
-				if (count > 0)
-					console.log(`🧹 [FlowToken] Limpiados ${count} tokens expirados`);
-			} catch (err) {
-				console.error(
-					"❌ [FlowToken] Error en limpieza automática:",
-					err.message
-				);
-			}
-		}, 12 * 60 * 60 * 1000);
+		setInterval(
+			async () => {
+				try {
+					const count = await FlowToken.destroy({
+						where: { expiresAt: { [Op.lt]: new Date() } },
+					});
+					if (count > 0)
+						console.log(`🧹 [FlowToken] Limpiados ${count} tokens expirados`);
+				} catch (err) {
+					console.error(
+						"❌ [FlowToken] Error en limpieza automática:",
+						err.message,
+					);
+				}
+			},
+			12 * 60 * 60 * 1000,
+		);
 		console.log(
-			"🧹 Limpiador de tokens de Flow iniciado (intervalo: 12 horas)"
+			"🧹 Limpiador de tokens de Flow iniciado (intervalo: 12 horas)",
 		);
 
 		// Ejecutar limpieza inicial al arrancar (después de 5 minutos)
-		setTimeout(async () => {
-			console.log("🔄 Ejecutando limpieza inicial de correos antiguos...");
-			await cleanOldEmails();
-			await getEmailStats();
-		}, 5 * 60 * 1000);
+		setTimeout(
+			async () => {
+				console.log("🔄 Ejecutando limpieza inicial de correos antiguos...");
+				await cleanOldEmails();
+				await getEmailStats();
+			},
+			5 * 60 * 1000,
+		);
 
 		// NOTA: Las migraciones de base de datos deben ejecutarse con el script
 		// separado: npm run migrate o npm run start:migrate
@@ -12332,10 +12360,10 @@ const startServer = async () => {
 	} catch (error) {
 		console.error(
 			"⚠️ Advertencia: No se pudo conectar a la base de datos:",
-			error.message
+			error.message,
 		);
 		console.log(
-			"🔄 Continuando sin base de datos - algunas funciones estarán limitadas"
+			"🔄 Continuando sin base de datos - algunas funciones estarán limitadas",
 		);
 	}
 

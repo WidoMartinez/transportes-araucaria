@@ -45,15 +45,16 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
 8. [Anexos Históricos](#8-anexos-históricos)
 
-
 ---
 
 ## 1. Visión General del Proyecto
 
 ### Descripción
+
 Página web profesional y sistema de gestión para **Transportes Araucaria**, especializada en traslados desde el Aeropuerto de La Araucanía. El sistema incluye un frontend público para captación de leads/reservas y un panel administrativo completo para la gestión del negocio.
 
 ### Tecnologías Clave
+
 - **Frontend**: React 18, Vite, Tailwind CSS, Shadcn/UI.
 - **Backend**: Node.js + Express (hospedado en **Render.com**).
 - **Base de Datos**: MySQL (vía Sequelize).
@@ -64,6 +65,7 @@ Página web profesional y sistema de gestión para **Transportes Araucaria**, es
 ## 2. Guía para Desarrolladores
 
 ### Setup Local
+
 1. **Requisitos**: Node.js 18+, npm.
 2. **Instalación**:
    ```bash
@@ -73,9 +75,10 @@ Página web profesional y sistema de gestión para **Transportes Araucaria**, es
    ```bash
    npm run dev
    ```
-   *Nota: El frontend local (puerto 5173) se conecta al backend de producción en Render por defecto, salvo configuración contraria en `.env.local`.*
+   _Nota: El frontend local (puerto 5173) se conecta al backend de producción en Render por defecto, salvo configuración contraria en `.env.local`._
 
 ### Variables de Entorno (`.env.local`)
+
 ```env
 VITE_API_URL=https://transportes-araucaria.onrender.com
 # Para desarrollo backend local:
@@ -83,6 +86,7 @@ VITE_API_URL=https://transportes-araucaria.onrender.com
 ```
 
 ### Reglas de Contribución (`AGENTS.md`)
+
 - **Idioma**: Todo en Español (código, commits, docs).
 - **Archivos Protegidos**: No modificar archivos en `.github/` sin autorización.
 - **PHP**: Los archivos PHP en Hostinger se despliegan **manualmente**. No sobrescribir lógica de correos sin verificar `INTEGRACION_EMAILS_PHP.md`.
@@ -90,17 +94,20 @@ VITE_API_URL=https://transportes-araucaria.onrender.com
 ### Sistema de Documentación
 
 **Documentos Maestros Oficiales:**
+
 - **`DOCUMENTACION_MAESTRA.md`**: Funcionalidades, arquitectura, flujos de usuario y sistemas técnicos
 - **`GUIA_SOLUCION_PROBLEMAS.md`**: Troubleshooting, errores recurrentes y sus soluciones
 
 **Workflow de Documentación:**
 El proyecto incluye el workflow `/documentacion` que debe ejecutarse después de:
+
 - Resolver un bug complejo
 - Implementar una nueva funcionalidad mayor
 - Modificar la arquitectura del sistema
 - Detectar que la documentación está desactualizada
 
 **Reglas Críticas para Agentes:**
+
 1. **SIEMPRE consultar** `DOCUMENTACION_MAESTRA.md` y `GUIA_SOLUCION_PROBLEMAS.md` antes de intervenir el proyecto
 2. Si el problema ya está documentado en `GUIA_SOLUCION_PROBLEMAS.md`, seguir la solución establecida
 3. Después de resolver un problema nuevo, actualizar la documentación usando `/documentacion`
@@ -114,13 +121,14 @@ El proyecto incluye el workflow `/documentacion` que debe ejecutarse después de
 ## 3. Arquitectura del Sistema
 
 ### Estructura del Panel Administrativo
+
 El panel ha sido rediseñado (v2.0) para optimizar la operación:
 
 - **Dashboard**: KPIs en tiempo real (Ingresos, Ocupación, Reservas Hoy).
 - **Operaciones**:
   - `AdminReservas`: Gestión central, vista calendario.
   - `AdminVehiculos` / `AdminConductores`: Gestión de flota y personal.
-- **Finanzas**: 
+- **Finanzas**:
   - Control de gastos asociados a reservas.
   - **Estadísticas**: Panel de métricas financieras y operativas.
     - **Filtrado Inteligente**: Las estadísticas consideran **únicamente reservas completadas** para reflejar la realidad financiera.
@@ -132,6 +140,7 @@ El panel ha sido rediseñado (v2.0) para optimizar la operación:
 - **Marketing**: Gestión de códigos de descuento.
 
 ### Diagrama de Flujo de Datos
+
 ```mermaid
 graph TD
     A[Cliente Web] -->|Reserva| B[Backend API (Render)]
@@ -147,10 +156,12 @@ graph TD
 ## 4. Manual de Usuario (Panel Admin)
 
 ### Acceso
+
 - **URL**: `/admin`
 - **Credenciales**: Gestionadas por SuperAdmin.
 
 ### Funcionalidades Clave
+
 1. **Crear Reserva**:
    - Botón "Nueva Reserva".
    - Autocompletado de clientes frecuentes.
@@ -176,6 +187,7 @@ graph TD
    - **Fallback a WhatsApp**: Si un cliente intenta reservar para 5-7 pasajeros y no hay Vans disponibles, el sistema le redirige automáticamente a WhatsApp para gestión manual.
 
 ### Solución de Problemas Comunes
+
 - **Error de Carga**: Si el panel no carga datos, verificar conexión a internet y estado de Render (puede "dormirse" en plan gratuito).
 - **Emails no llegan**: Verificar carpeta SPAM y logs en `AdminEmails`.
 
@@ -184,12 +196,15 @@ graph TD
 ## 5. Sistemas Técnicos Detallados
 
 ### 5.1 Sistema de Autenticación
+
 Usa **JWT (JSON Web Tokens)**.
+
 - El token se almacena en `localStorage`.
 - Expiración automática.
 - Middleware en backend `authenticateToken` protege las rutas críticas.
 
 ### 5.2 Pagos y Finanzas
+
 - **Integración Flow**: Para pagos con tarjetas chilenas.
 - **Códigos de Pago**: Sistema propio para generar links de pago únicos.
   - **Vencimiento Inteligente**: Los códigos se marcan automáticamente como "vencido" al expirar.
@@ -199,11 +214,13 @@ Usa **JWT (JSON Web Tokens)**.
   - **Emails**: Se aplica sanitización robusta (vía `sanitizarEmailRobusto`) y validación de formato Regex antes de cualquier interacción con Flow para prevenir el error 1620.
 
 ### 5.3 Notificaciones vía Email
+
 El sistema utiliza una arquitectura híbrida:
+
 1. **Backend Node** recibe la solicitud de envío.
 2. **Backend Node** hace POST a script PHP en Hostinger.
 3. **PHP** utiliza `PHPMailer` autenticado para el envío final.
-*Archivos Clave*: `enviar_asignacion_reserva.php` (Pasajero) y `enviar_notificacion_conductor.php` (Conductor).
+   _Archivos Clave_: `enviar_asignacion_reserva.php` (Pasajero) y `enviar_notificacion_conductor.php` (Conductor).
 
 #### 5.3.1 Notificaciones para Reservas de Tramos Vinculados (Ida y Vuelta)
 
@@ -213,14 +230,15 @@ Para mejorar la claridad en reservas de ida y vuelta (donde la reserva se divide
 
 1.  **Regla de Notificación**: Cada tramo se notifica de forma independiente en el momento de su asignación. Esto permite flexibilidad si no se conocen ambos conductores al mismo tiempo.
 2.  **Contexto en el Correo de Vuelta**:
-    *   Si se asigna el tramo de **VUELTA** y el tramo de **IDA** ya tiene conductor/vehículo asignado, el correo al pasajero incluirá automáticamente una sección de "✈️ Viaje de Ida (ya confirmado)" arriba del viaje actual.
-    *   Esto garantiza que el cliente tenga siempre a mano la información completa del servicio unificado.
+    - Si se asigna el tramo de **VUELTA** y el tramo de **IDA** ya tiene conductor/vehículo asignado, el correo al pasajero incluirá automáticamente una sección de "✈️ Viaje de Ida (ya confirmado)" arriba del viaje actual.
+    - Esto garantiza que el cliente tenga siempre a mano la información completa del servicio unificado.
 3.  **Notificación al Conductor**:
-    *   Si el **mismo conductor** es asignado a ambos tramos, recibirá un correo unificado con los detalles de la ida y la vuelta.
-    *   El archivo `.ics` (calendario) adjunto contendrá **dos eventos** (ida y vuelta) para facilitar su agendamiento.
-    *   Si son conductores distintos, cada uno recibe su notificación individual por el tramo que le corresponde.
+    - Si el **mismo conductor** es asignado a ambos tramos, recibirá un correo unificado con los detalles de la ida y la vuelta.
+    - El archivo `.ics` (calendario) adjunto contendrá **dos eventos** (ida y vuelta) para facilitar su agendamiento.
+    - Si son conductores distintos, cada uno recibe su notificación individual por el tramo que le corresponde.
 
 ### 5.4 Integraciones Externas
+
 - **Google Ads**: Conversiones mejoradas implementadas en flujos de pago.
   - **Tracking Robusto**: El backend (`/api/payment-result`) inyecta el monto real de la transacción en la URL de retorno, garantizando que el tag de conversión (`gtag`) reciba el valor correcto incluso si falla la consulta de base de datos local.
 - **Google Maps**: Autocomplete V2 (`PlaceAutocompleteElement`) para direcciones.
@@ -228,6 +246,7 @@ Para mejorar la claridad en reservas de ida y vuelta (donde la reserva se divide
 ### 5.5 Lógica de Disponibilidad y Anticipación
 
 ### 5.5.1 Capacidad Extendida (Vans)
+
 Se implementó soporte para hasta 7 pasajeros con una lógica de fallback híbrida:
 
 1.  **Backend (`/api/disponibilidad/verificar`)**:
@@ -253,7 +272,7 @@ Se implementó soporte para hasta 7 pasajeros con una lógica de fallback híbri
 El sistema implementa una doble validación para evitar reservas de "último minuto" que son operativamente inviables:
 
 1.  **Modelo de Datos**: Cada `Destino` tiene un campo `minHorasAnticipacion` (configurable desde el Admin). Por defecto 5 horas.
-2.  **Validación Frontend**: 
+2.  **Validación Frontend**:
     - **Filtrado Visual**: En `HeroExpress.jsx`, si el usuario selecciona HOY, se ocultan del selector las horas que violan la restricción.
     - **Bloqueo Lógico**: Al intentar avanzar al paso de pago, se recalcula la diferencia horaria y se bloquea el avance si no cumple.
 
@@ -262,37 +281,40 @@ El sistema implementa una doble validación para evitar reservas de "último min
 Para garantizar la consistencia operativa y del marketing (Google Ads), se han estandarizado los 3 flujos de reserva. Toda modificación futura **debe respetar estas directrices**:
 
 #### A. Módulo Principal (Express)
-*   **Ruta**: Home → Cotización → Pago → `CompletarDetalles.jsx`.
-*   **Captura de Dirección**: 
-    - Obligatorio usar `AddressAutocomplete` en el campo `hotel` dentro de `CompletarDetalles.jsx`.
-    - **Validación Frontend**: El componente valida que el campo no esté vacío antes de enviar (líneas 161-166).
-    - **Validación Backend**: El endpoint `/completar-reserva-detalles` retorna error HTTP 400 si falta la dirección.
-*   **Notificaciones**:
-    1.  **Pago**: Webhook (`/api/flow-confirmation`) notifica el dinero recibido (Admin + Cliente).
-    2.  **Logística**: Al guardar detalles en `PUT /completar-reserva-detalles`, se dispara la notificación logística (Admin + Cliente).
-*   **Tracking**: La conversión se dispara en `App.jsx` al retornar de Flow, usando los parámetros `amount` y `d` (datos de usuario encriptados).
+
+- **Ruta**: Home → Cotización → Pago → `CompletarDetalles.jsx`.
+- **Captura de Dirección**:
+  - Obligatorio usar `AddressAutocomplete` en el campo `hotel` dentro de `CompletarDetalles.jsx`.
+  - **Validación Frontend**: El componente valida que el campo no esté vacío antes de enviar (líneas 161-166).
+  - **Validación Backend**: El endpoint `/completar-reserva-detalles` retorna error HTTP 400 si falta la dirección.
+- **Notificaciones**:
+  1.  **Pago**: Webhook (`/api/flow-confirmation`) notifica el dinero recibido (Admin + Cliente).
+  2.  **Logística**: Al guardar detalles en `PUT /completar-reserva-detalles`, se dispara la notificación logística (Admin + Cliente).
+- **Tracking**: La conversión se dispara en `App.jsx` al retornar de Flow, usando los parámetros `amount` y `d` (datos de usuario encriptados).
 
 #### B. Pagar con Código
-*   **Escenarios**:
-    1.  **Nueva Reserva**: Crea una reserva express con los datos del código.
-    2.  **Pago de Saldo/Diferencia**: Paga un monto vinculado a una reserva existente (`reservaVinculadaId`).
-*   **Ruta**: Usuario ingresa código → Vista (Formulario Completo o Resumen Vinculado) → Pago → `FlowReturn.jsx`.
-*   **Captura de Dirección**: 
-    - Obligatorio usar `AddressAutocomplete` en el formulario inicial de `PagarConCodigo.jsx`.
-    - Campos condicionales: `direccionDestino` (viajes DESDE aeropuerto) o `direccionOrigen` (viajes HACIA aeropuerto).
-    - **Validación Frontend**: El componente valida según sentido del viaje (líneas 196-212).
-    - **Mapeo Inteligente Backend**: El endpoint `/enviar-reserva-express` determina automáticamente qué dirección usar y la guarda en el campo `hotel` (líneas 2793-2815).
-*   **Notificaciones**:
-    1.  **Logística**: Ocurre al crear la reserva inicial (`POST /enviar-reserva-express`).
-    2.  **Pago**: Webhook (`/api/flow-confirmation`) notifica solo el pago (el sistema detecta que es flujo de código y evita duplicar la logística).
-*   **Actualización de Código**:
-    - El webhook localiza el código mediante `codigoPagoId` (prioritario) o `referenciaPago` y lo marca como **usado** automáticamente tras el pago exitoso.
-*   **Tracking**: La conversión se dispara en `FlowReturn.jsx` usando los parámetros `amount` y `d`.
+
+- **Escenarios**:
+  1.  **Nueva Reserva**: Crea una reserva express con los datos del código.
+  2.  **Pago de Saldo/Diferencia**: Paga un monto vinculado a una reserva existente (`reservaVinculadaId`).
+- **Ruta**: Usuario ingresa código → Vista (Formulario Completo o Resumen Vinculado) → Pago → `FlowReturn.jsx`.
+- **Captura de Dirección**:
+  - Obligatorio usar `AddressAutocomplete` en el formulario inicial de `PagarConCodigo.jsx`.
+  - Campos condicionales: `direccionDestino` (viajes DESDE aeropuerto) o `direccionOrigen` (viajes HACIA aeropuerto).
+  - **Validación Frontend**: El componente valida según sentido del viaje (líneas 196-212).
+  - **Mapeo Inteligente Backend**: El endpoint `/enviar-reserva-express` determina automáticamente qué dirección usar y la guarda en el campo `hotel` (líneas 2793-2815).
+- **Notificaciones**:
+  1.  **Logística**: Ocurre al crear la reserva inicial (`POST /enviar-reserva-express`).
+  2.  **Pago**: Webhook (`/api/flow-confirmation`) notifica solo el pago (el sistema detecta que es flujo de código y evita duplicar la logística).
+- **Actualización de Código**:
+  - El webhook localiza el código mediante `codigoPagoId` (prioritario) o `referenciaPago` y lo marca como **usado** automáticamente tras el pago exitoso.
+- **Tracking**: La conversión se dispara en `FlowReturn.jsx` usando los parámetros `amount` y `d`.
 
 #### C. Consultar Reserva / Pagos Pendientes
-*   **Ruta**: #consultar-reserva → Ver Estado → Pagar Saldo → `FlowReturn.jsx`.
-*   **Notificaciones**: Solo notificación de pago (Financiera).
-*   **Tracking**: Conversión en `FlowReturn.jsx` con monto del abono o saldo pagado.
+
+- **Ruta**: #consultar-reserva → Ver Estado → Pagar Saldo → `FlowReturn.jsx`.
+- **Notificaciones**: Solo notificación de pago (Financiera).
+- **Tracking**: Conversión en `FlowReturn.jsx` con monto del abono o saldo pagado.
 
 #### 🛠️ Directrices Técnicas Generales
 
@@ -317,19 +339,21 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
 Se implementó validación obligatoria y mapeo inteligente de direcciones en ambos flujos principales:
 
 **Flujo A (Express)**:
+
 - **Frontend** (`CompletarDetalles.jsx` líneas 161-166): Validación antes de enviar formulario.
 - **Backend** (`/completar-reserva-detalles` línea 3614): Retorna HTTP 400 si falta dirección.
 - **Guardado**: Directo al campo `hotel` con `.trim()` para limpiar espacios.
 
 **Flujo B (Pagar con Código)**:
+
 - **Frontend** (`PagarConCodigo.jsx` líneas 196-212): Validación condicional según sentido del viaje.
 - **Backend** (`/enviar-reserva-express` líneas 2793-2815): Lógica inteligente de mapeo:
   ```javascript
   // Determina automáticamente la dirección específica
   if (origenEsAeropuerto && direccionDestinoCliente) {
-      direccionEspecifica = direccionDestinoCliente; // Viaje DESDE aeropuerto
+  	direccionEspecifica = direccionDestinoCliente; // Viaje DESDE aeropuerto
   } else if (destinoEsAeropuerto && direccionOrigenCliente) {
-      direccionEspecifica = direccionOrigenCliente; // Viaje HACIA aeropuerto
+  	direccionEspecifica = direccionOrigenCliente; // Viaje HACIA aeropuerto
   }
   ```
 - **Guardado**: Mapeo inteligente al campo `hotel` según sentido del viaje.
@@ -351,29 +375,31 @@ El panel de estadísticas (`AdminEstadisticas.jsx`) proporciona métricas clave 
 #### Implementación Técnica
 
 **Backend** (`server-db.js`):
+
 - Endpoints modificados: `/api/estadisticas/conductores`, `/api/estadisticas/vehiculos`, `/api/estadisticas/conductores/:id`
 - Filtro aplicado: `{ estado: "completada" }` en todas las consultas de reservas
 - Líneas clave: 7587-7590, 7714-7717, 7953-7956
 
 ```javascript
 const whereReservas =
-    (fechaInicio || fechaFin)
-        ? { fecha: filtroReservas, estado: "completada" }
-        : { estado: "completada" };
+	fechaInicio || fechaFin
+		? { fecha: filtroReservas, estado: "completada" }
+		: { estado: "completada" };
 ```
 
 **Frontend** (`AdminEstadisticas.jsx`):
+
 - No requiere cambios, consume los datos filtrados del backend
 - Cálculo de totales: `calcularTotales()` suma métricas de conductores/vehículos
 - Visualización: Cards con Total Reservas, Total Ingresos, Total Gastos, Utilidad
 
 #### Métricas Disponibles
 
-| Vista | Métricas |
-|-------|----------|
-| **Conductores** | Reservas completadas, ingresos, gastos, pagos al conductor, utilidad |
-| **Vehículos** | Reservas completadas, ingresos, gastos de combustible, mantenimiento, utilidad |
-| **Gastos** | Total por período, registros, desglose por tipo (combustible, peajes, etc.) |
+| Vista           | Métricas                                                                       |
+| --------------- | ------------------------------------------------------------------------------ |
+| **Conductores** | Reservas completadas, ingresos, gastos, pagos al conductor, utilidad           |
+| **Vehículos**   | Reservas completadas, ingresos, gastos de combustible, mantenimiento, utilidad |
+| **Gastos**      | Total por período, registros, desglose por tipo (combustible, peajes, etc.)    |
 
 #### Filtros Temporales
 
@@ -395,13 +421,15 @@ const whereReservas =
 Para resolver problemas de asignación de conductores distintos para la ida y la vuelta, y permitir cierres de caja parciales, se implementó un cambio estructural en cómo se manejan los viajes redondos.
 
 #### Lógica de Negocio
+
 Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
+
 1.  **Backend**: El sistema intercepta la creación y genera **DOS** registros en la base de datos:
     - **Registro A (Ida)**: Contiene los datos del viaje de ida.
     - **Registro B (Vuelta)**: Contiene los datos de regreso (origen/destino invertidos).
 2.  **Vinculación**: Ambos registros quedan unidos mediante los campos `tramoPadreId` y `tramoHijoId`.
-3.  **División de Costos**: El precio total y los abonos se dividen **50/50** entre ambos tramos. 
-    - *Ejemplo*: Reserva de $40.000. Se crean dos reservas de $20.000 cada una.
+3.  **División de Costos**: El precio total y los abonos se dividen **50/50** entre ambos tramos.
+    - _Ejemplo_: Reserva de $40.000. Se crean dos reservas de $20.000 cada una.
 4.  **Independencia Operativa**:
     - Cada tramo puede tener su propio **Conductor** y **Vehículo**.
     - Cada tramo puede tener su propio estado de pago y estado de ejecución (`Confirmada` vs `Completada`).
@@ -409,10 +437,12 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
 #### Implementación Técnica
 
 **Endpoints con lógica de separación:**
+
 - ✅ `/enviar-reserva` (líneas 2646-2752): Implementado desde Diciembre 2025
 - ✅ `/enviar-reserva-express` (líneas 3380-3499): **Implementado 13 Enero 2026**
 
 **Flujos que usan la separación:**
+
 - ✅ Pagar con Código → `/enviar-reserva-express`
 - ✅ Cualquier flujo que use `/enviar-reserva-express`
 
@@ -420,10 +450,11 @@ Cuando un usuario (o admin) crea una reserva de tipo "Ida y Vuelta":
 > **Fix Crítico (13 Enero 2026)**: Se detectó que el endpoint `/enviar-reserva-express` (usado por "Pagar con Código") NO tenía la lógica de separación, causando que todas las reservas ida y vuelta quedaran como una sola. Este problema fue corregido copiando la lógica de separación al endpoint express. Ver `GUIA_SOLUCION_PROBLEMAS.md` sección 1 para detalles.
 
 #### Impacto en Panel Admin (`AdminReservas`)
+
 - **Visualización**: Las reservas aparecen como filas separadas.
 - **Identificadores**:
-    - Badge **IDA** (Verde): Indica el primer tramo.
-    - Badge **RETORNO** (Azul): Indica el segundo tramo.
+  - Badge **IDA** (Verde): Indica el primer tramo.
+  - Badge **RETORNO** (Azul): Indica el segundo tramo.
 - **Acciones**: Puede completar y cerrar la "Ida" (y registrar sus gastos) mientras la "Vuelta" permanece pendiente para días futuros.
 
 > **Nota**: Desde Feb 2026, la vista principal **oculta por defecto** las reservas de tipo "Vuelta" para evitar duplicados en la lista. Se accede a ellas a través de la reserva de "Ida" vinculada.
@@ -439,6 +470,7 @@ Para verificar la integridad de los datos de reservas ida/vuelta y detectar posi
 **Archivo**: [`backend/diagnosticar-tipo-tramo.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/diagnosticar-tipo-tramo.js)
 
 **Funcionalidades**:
+
 1. Verifica la existencia de la columna `tipo_tramo` en la base de datos
 2. Muestra la distribución de reservas por tipo ('ida', 'vuelta', 'solo_ida')
 3. Lista las últimas 10 reservas vinculadas con sus tipos y relaciones
@@ -447,12 +479,14 @@ Para verificar la integridad de los datos de reservas ida/vuelta y detectar posi
    - Reservas padres (con `tramoHijoId`) que NO sean tipo 'ida'
 
 **Uso**:
+
 ```bash
 cd backend
 node diagnosticar-tipo-tramo.js
 ```
 
 **Hallazgos del Último Diagnóstico (10 Feb 2026)**:
+
 - ✅ La columna `tipo_tramo` existe y está correctamente configurada
 - ✅ Todas las reservas vinculadas tienen tipos correctos asignados
 - ✅ No se detectaron inconsistencias en los datos actuales
@@ -461,7 +495,6 @@ node diagnosticar-tipo-tramo.js
 > [!TIP]
 > **Para Troubleshooting**: Si un usuario reporta problemas con reservas ida/vuelta, ejecutar primero este script de diagnóstico para verificar si el problema está en los datos (backend) o en la visualización (frontend).
 
-
 ### 5.9 Optimización del Modal de Detalles de Reserva
 
 **Implementado: 2 Enero 2026**
@@ -469,17 +502,21 @@ node diagnosticar-tipo-tramo.js
 Para mejorar la experiencia de usuario en el panel administrativo, se optimizó el modal "Ver Detalles" de reservas para ocultar campos vacíos y concentrar la información relevante.
 
 #### Problema Identificado
+
 El modal mostraba todos los campos posibles, incluso cuando estaban vacíos (con guiones "-" o valores en $0). Esto dificultaba la lectura rápida de información importante, especialmente en reservas con datos mínimos.
 
 #### Solución Implementada
+
 Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar solo campos con contenido real.
 
 #### Campos Optimizados
 
 **Detalles del Viaje:**
+
 - `vehiculo`: Solo se muestra si está asignado
 
 **Información Adicional:**
+
 - Sección completa se oculta si todos los campos están vacíos
 - `numeroVuelo`: Solo si tiene valor
 - `hotel`: Solo si tiene valor
@@ -487,6 +524,7 @@ Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar s
 - `sillaInfantil`: Solo si es `true` (muestra "Sí")
 
 **Información Financiera:**
+
 - `descuentoBase`: Solo si > 0
 - `descuentoPromocion`: Solo si > 0
 - `descuentoRoundTrip`: Solo si > 0
@@ -494,10 +532,12 @@ Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar s
 - `codigoDescuento`: Solo si tiene valor
 
 **Estado y Pago:**
+
 - `metodoPago`: Solo si tiene valor
 - `referenciaPago`: Solo si tiene valor
 
 **Información Técnica:**
+
 - `ipAddress`: Solo si tiene valor
 
 #### Implementación Técnica
@@ -505,35 +545,43 @@ Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar s
 **Archivo**: `src/components/AdminReservas.jsx`
 
 **Patrón de Código**:
+
 ```jsx
 // Para campos de texto/string
-{selectedReserva.campo && (
-  <div>
-    <Label>Etiqueta</Label>
-    <p>{selectedReserva.campo}</p>
-  </div>
-)}
+{
+	selectedReserva.campo && (
+		<div>
+			<Label>Etiqueta</Label>
+			<p>{selectedReserva.campo}</p>
+		</div>
+	);
+}
 
 // Para campos numéricos (descuentos)
-{selectedReserva.descuento > 0 && (
-  <div>
-    <Label>Descuento</Label>
-    <p>{formatCurrency(selectedReserva.descuento)}</p>
-  </div>
-)}
+{
+	selectedReserva.descuento > 0 && (
+		<div>
+			<Label>Descuento</Label>
+			<p>{formatCurrency(selectedReserva.descuento)}</p>
+		</div>
+	);
+}
 
 // Para secciones completas
-{(campo1 || campo2 || campo3) && (
-  <div>
-    <h3>Sección</h3>
-    {/* Campos individuales con sus propias condiciones */}
-  </div>
-)}
+{
+	(campo1 || campo2 || campo3) && (
+		<div>
+			<h3>Sección</h3>
+			{/* Campos individuales con sus propias condiciones */}
+		</div>
+	);
+}
 ```
 
 **Líneas Modificadas**: 3173-3178, 3303-3348, 3354-3393, 3448-3455, 3477-3495, 3535-3540
 
 #### Beneficios
+
 - ✅ **Claridad Visual**: Solo información relevante
 - ✅ **Lectura Rápida**: Menos scroll, más concentración
 - ✅ **Profesionalismo**: Interfaz limpia y ordenada
@@ -549,7 +597,9 @@ Se implementó **renderizado condicional** en `AdminReservas.jsx` para mostrar s
 Se implementó una mejora significativa en la visualización de reservas de ida y vuelta en todos los modales de detalle del sistema, para hacer la información más clara y evitar confusiones operativas.
 
 #### Problema Identificado
+
 Cuando una reserva era de tipo **ida y vuelta** (`idaVuelta === true`), la información del viaje de regreso (fecha y hora de vuelta) no se mostraba de manera prominente. Los campos `fechaRegreso` y `horaRegreso` aparecían mezclados con otros datos, lo que dificultaba:
+
 - Identificar rápidamente que era un viaje de ida y vuelta
 - Visualizar claramente las fechas y horas de ambos viajes
 - Detectar cuando faltaba información del viaje de regreso
@@ -559,6 +609,7 @@ Cuando una reserva era de tipo **ida y vuelta** (`idaVuelta === true`), la infor
 Se implementó un **diseño visual mejorado con separación por colores** que distingue claramente entre el viaje de ida y el viaje de vuelta:
 
 **Características Principales:**
+
 1. **Indicador Visual del Tipo de Viaje**: Badge azul que indica "Viaje Ida y Vuelta"
 2. **Tarjeta Verde para Viaje de Ida**: Con borde izquierdo verde, fondo degradado verde claro
 3. **Tarjeta Azul para Viaje de Vuelta**: Con borde izquierdo azul, fondo degradado azul claro
@@ -569,71 +620,129 @@ Se implementó un **diseño visual mejorado con separación por colores** que di
 #### Archivos Modificados
 
 **1. AdminReservas.jsx** (Líneas ~3173-3297)
+
 ```jsx
-{/* Indicador del tipo de viaje */}
-{selectedReserva.idaVuelta && (
-  <div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-    </svg>
-    <span className="font-semibold text-sm">Viaje Ida y Vuelta</span>
-  </div>
-)}
+{
+	/* Indicador del tipo de viaje */
+}
+{
+	selectedReserva.idaVuelta && (
+		<div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
+			<svg
+				className="w-4 h-4"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+				/>
+			</svg>
+			<span className="font-semibold text-sm">Viaje Ida y Vuelta</span>
+		</div>
+	);
+}
 
-{/* Viaje de Ida - Tarjeta Verde */}
+{
+	/* Viaje de Ida - Tarjeta Verde */
+}
 <div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-4 mb-4">
-  <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-    </svg>
-    VIAJE DE IDA
-  </h4>
-  {/* Contenido del viaje de ida */}
-</div>
+	<h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+		<svg
+			className="w-5 h-5"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+		>
+			<path
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				strokeWidth={2}
+				d="M17 8l4 4m0 0l-4 4m4-4H3"
+			/>
+		</svg>
+		VIAJE DE IDA
+	</h4>
+	{/* Contenido del viaje de ida */}
+</div>;
 
-{/* Viaje de Vuelta - Tarjeta Azul con Advertencia */}
-{selectedReserva.idaVuelta && (
-  <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
-    <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-      </svg>
-      VIAJE DE VUELTA
-    </h4>
-    {/* Contenido del viaje de vuelta */}
-    
-    {/* Advertencia si falta información */}
-    {(!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso) && (
-      <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
-        <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <div>
-          <p className="text-sm font-semibold text-yellow-800">Información Incompleta del Viaje de Vuelta</p>
-          <p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
-        </div>
-      </div>
-    )}
-  </div>
-)}
+{
+	/* Viaje de Vuelta - Tarjeta Azul con Advertencia */
+}
+{
+	selectedReserva.idaVuelta && (
+		<div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+			<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+				<svg
+					className="w-5 h-5"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M7 16l-4-4m0 0l4-4m-4 4h18"
+					/>
+				</svg>
+				VIAJE DE VUELTA
+			</h4>
+			{/* Contenido del viaje de vuelta */}
+
+			{/* Advertencia si falta información */}
+			{(!selectedReserva.fechaRegreso || !selectedReserva.horaRegreso) && (
+				<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+					<svg
+						className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={2}
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+						/>
+					</svg>
+					<div>
+						<p className="text-sm font-semibold text-yellow-800">
+							Información Incompleta del Viaje de Vuelta
+						</p>
+						<p className="text-xs text-yellow-700 mt-1">
+							Es necesario completar la fecha y hora del regreso para coordinar
+							el servicio.
+						</p>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
 ```
 
 **2. ConsultarReserva.jsx** (Líneas ~399-466)
+
 - Mismas mejoras visuales adaptadas para la vista del cliente
 - Mensaje de advertencia adaptado: "Nos comunicaremos contigo para confirmar la fecha y hora del regreso"
 
 **3. AdminEstadisticas.jsx** (Líneas ~1400-1438)
+
 - Diseño compacto adaptado al modal más pequeño
 - Mantiene la misma lógica de separación visual por colores
 
 #### Esquema de Colores
 
-| Elemento | Color/Estilo | Propósito |
-|----------|-------------|-----------|
-| Badge Ida y Vuelta | `bg-blue-50 text-blue-700 border-blue-200` | Indicador general del tipo de viaje |
-| Tarjeta de Ida | `from-green-50 to-green-100 border-l-4 border-green-500` | Viaje de ida destacado en verde |
-| Tarjeta de Vuelta | `from-blue-50 to-blue-100 border-l-4 border-blue-500` | Viaje de vuelta destacado en azul |
-| Advertencia | `bg-yellow-50 border-yellow-200` | Información faltante del viaje de vuelta |
+| Elemento           | Color/Estilo                                             | Propósito                                |
+| ------------------ | -------------------------------------------------------- | ---------------------------------------- |
+| Badge Ida y Vuelta | `bg-blue-50 text-blue-700 border-blue-200`               | Indicador general del tipo de viaje      |
+| Tarjeta de Ida     | `from-green-50 to-green-100 border-l-4 border-green-500` | Viaje de ida destacado en verde          |
+| Tarjeta de Vuelta  | `from-blue-50 to-blue-100 border-l-4 border-blue-500`    | Viaje de vuelta destacado en azul        |
+| Advertencia        | `bg-yellow-50 border-yellow-200`                         | Información faltante del viaje de vuelta |
 
 #### Beneficios
 
@@ -647,6 +756,7 @@ Se implementó un **diseño visual mejorado con separación por colores** que di
 #### Datos Mostrados por Tarjeta
 
 **Tarjeta de Ida (Verde):**
+
 - Origen
 - Destino
 - Dirección de Origen (si existe)
@@ -655,17 +765,20 @@ Se implementó un **diseño visual mejorado con separación por colores** que di
 - Hora de recogida
 
 **Tarjeta de Vuelta (Azul):**
+
 - Origen (que es el destino original invertido)
 - Destino (que es el origen original invertido)
 - Fecha de regreso (con advertencia si no existe)
 - Hora de regreso (con advertencia si no existe)
 
 **Información Adicional (Fuera de tarjetas):**
+
 - Número de pasajeros
 - Vehículo asignado (si existe)
 
 > [!IMPORTANT]
 > **Para Mantenimiento Futuro**: Si se agregan nuevos campos relacionados con el viaje de regreso, asegúrate de:
+>
 > 1. Incluirlos dentro de la tarjeta azul de vuelta
 > 2. Agregar validación en la advertencia si son campos críticos
 > 3. Mantener la consistencia de colores (azul para vuelta, verde para ida)
@@ -701,14 +814,14 @@ Los descuentos se almacenan en la tabla `DescuentoGlobal` con `tipo: "descuentoP
 descuentosFormatted.descuentosPersonalizados = [];
 
 descuentosGlobales.forEach((descuento) => {
-  if (descuento.tipo === "descuentoPersonalizado") {
-    descuentosFormatted.descuentosPersonalizados.push({
-      nombre: descuento.nombre,
-      valor: descuento.valor,        // Porcentaje (ej: 10 = 10%)
-      activo: descuento.activo,      // Boolean
-      descripcion: descuento.descripcion,
-    });
-  }
+	if (descuento.tipo === "descuentoPersonalizado") {
+		descuentosFormatted.descuentosPersonalizados.push({
+			nombre: descuento.nombre,
+			valor: descuento.valor, // Porcentaje (ej: 10 = 10%)
+			activo: descuento.activo, // Boolean
+			descripcion: descuento.descripcion,
+		});
+	}
 });
 ```
 
@@ -722,9 +835,9 @@ descuentosGlobales.forEach((descuento) => {
 ```javascript
 // Suma todos los descuentos personalizados activos
 const personalizedDiscountRate =
-  descuentosGlobales?.descuentosPersonalizados
-    ?.filter((desc) => desc.activo && desc.valor > 0)
-    .reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
+	descuentosGlobales?.descuentosPersonalizados
+		?.filter((desc) => desc.activo && desc.valor > 0)
+		.reduce((sum, desc) => sum + desc.valor / 100, 0) || 0;
 ```
 
 **Ejemplo**: Si hay descuentos de 10% y 5% activos → `personalizedDiscountRate = 0.15`
@@ -737,13 +850,13 @@ const personalizedDiscountRate =
 ```javascript
 // Calcular descuento sobre precio de un tramo
 const descuentosPersonalizadosPorTramo = Math.round(
-  precioIda * personalizedDiscountRate
+	precioIda * personalizedDiscountRate,
 );
 
 // Duplicar si es ida y vuelta
 const descuentosPersonalizados = formData.idaVuelta
-  ? descuentosPersonalizadosPorTramo * 2
-  : descuentosPersonalizadosPorTramo;
+	? descuentosPersonalizadosPorTramo * 2
+	: descuentosPersonalizadosPorTramo;
 ```
 
 **4. Inclusión en el Total Final**
@@ -754,19 +867,20 @@ const descuentosPersonalizados = formData.idaVuelta
 ```javascript
 // Suma de todos los descuentos
 const descuentoTotalSinLimite =
-  descuentoOnline +
-  descuentoPromocion +
-  descuentoRoundTrip +
-  descuentosPersonalizados +  // ← Incluido aquí
-  descuentoCodigo +
-  descuentoRetornoUniversal;
+	descuentoOnline +
+	descuentoPromocion +
+	descuentoRoundTrip +
+	descuentosPersonalizados + // ← Incluido aquí
+	descuentoCodigo +
+	descuentoRetornoUniversal;
 
 // Límite máximo del 75% del precio base
 const descuentoMaximo = Math.round(precioBase * 0.75);
 const descuentoOnlineTotal = Math.min(descuentoTotalSinLimite, descuentoMaximo);
 
 // Precio final
-const totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
+const totalConDescuento =
+	Math.max(precioBase - descuentoOnlineTotal, 0) + costoSilla;
 ```
 
 #### Visualización en la Interfaz
@@ -780,11 +894,13 @@ Los descuentos personalizados se muestran en 3 ubicaciones:
 3. **Badge visual** (líneas 803-810): Etiqueta morada "Especial +X%"
 
 ```jsx
-{personalizedDiscountPercentage > 0 && (
-  <Badge variant="default" className="bg-purple-500">
-    Especial +{personalizedDiscountPercentage}%
-  </Badge>
-)}
+{
+	personalizedDiscountPercentage > 0 && (
+		<Badge variant="default" className="bg-purple-500">
+			Especial +{personalizedDiscountPercentage}%
+		</Badge>
+	);
+}
 ```
 
 #### Ejemplo de Cálculo Completo
@@ -799,14 +915,14 @@ Descuentos configurados:
 
 Cálculo:
   Precio base total (ida + vuelta): $60,000
-  
+
   Descuentos por tramo:
     - Online (5% × $30,000 × 2): -$3,000
     - Personalizado (10% × $30,000 × 2): -$6,000
-  
+
   Descuentos sobre total:
     - Ida y vuelta (10% × $60,000): -$6,000
-  
+
   Total descuentos: $15,000 (25% del total)
   Precio final: $45,000
 ```
@@ -816,12 +932,14 @@ Cálculo:
 **Componente**: [`AdminPricing.jsx`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/src/components/AdminPricing.jsx)
 
 **Funciones clave**:
+
 - `addDescuentoPersonalizado()` (línea 477): Agregar nuevo descuento
 - `handleDescuentoPersonalizadoChange()` (línea 497): Editar descuento
 - `toggleDescuentoPersonalizado()` (línea 531): Activar/desactivar
 - `removeDescuentoPersonalizado()` (línea 518): Eliminar descuento
 
 **Campos configurables**:
+
 - `nombre`: Identificador del descuento
 - `valor`: Porcentaje (número entero, ej: 10 = 10%)
 - `activo`: Estado del descuento (boolean)
@@ -835,19 +953,16 @@ Cálculo:
 
 #### Referencias de Código
 
-| Archivo | Líneas | Descripción |
-|---------|--------|-------------|
-| `backend/server-db.js` | 1114, 1130-1137 | Formateo y envío de descuentos al frontend |
-| `backend/server-db.js` | 1319-1335 | Guardado de descuentos en base de datos |
-| `backend/models/DescuentoGlobal.js` | 16 | Definición del tipo "descuentoPersonalizado" |
-| `src/App.jsx` | 1002-1006 | Cálculo del porcentaje total de descuentos personalizados |
-| `src/App.jsx` | 1308-1314 | Aplicación al precio por tramo |
-| `src/App.jsx` | 1360-1373 | Suma en el descuento total final |
-| `src/components/Hero.jsx` | 529-531, 669-672, 759-764, 803-810 | Visualización en interfaz de usuario |
-| `src/components/AdminPricing.jsx` | 476-540, 1096-1114 | Gestión en panel administrativo |
-
-
-
+| Archivo                             | Líneas                             | Descripción                                               |
+| ----------------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| `backend/server-db.js`              | 1114, 1130-1137                    | Formateo y envío de descuentos al frontend                |
+| `backend/server-db.js`              | 1319-1335                          | Guardado de descuentos en base de datos                   |
+| `backend/models/DescuentoGlobal.js` | 16                                 | Definición del tipo "descuentoPersonalizado"              |
+| `src/App.jsx`                       | 1002-1006                          | Cálculo del porcentaje total de descuentos personalizados |
+| `src/App.jsx`                       | 1308-1314                          | Aplicación al precio por tramo                            |
+| `src/App.jsx`                       | 1360-1373                          | Suma en el descuento total final                          |
+| `src/components/Hero.jsx`           | 529-531, 669-672, 759-764, 803-810 | Visualización en interfaz de usuario                      |
+| `src/components/AdminPricing.jsx`   | 476-540, 1096-1114                 | Gestión en panel administrativo                           |
 
 ### 5.11 Ajuste de Umbrales de Pasajeros por Tipo de Vehículo
 
@@ -858,6 +973,7 @@ Para optimizar la comodidad de los pasajeros y garantizar espacio adecuado para 
 #### Problema Identificado
 
 Con la configuración anterior (Auto Privado para 1-4 pasajeros), se detectó que:
+
 - **4 pasajeros en sedán**: Espacio muy limitado para pasajeros
 - **Equipaje insuficiente**: La cajuela de un sedán no puede acomodar adecuadamente el equipaje de 4 personas
 - **Experiencia degradada**: Los clientes viajan incómodos
@@ -867,6 +983,7 @@ Con la configuración anterior (Auto Privado para 1-4 pasajeros), se detectó qu
 Se modificó el umbral para aplicar un **salto exponencial en el 4to pasajero**, enviándolo directamente a la categoría Van:
 
 **Nueva Configuración:**
+
 - **Auto Privado (Sedán)**: 1-3 pasajeros
 - **Van de Pasajeros**: 4-7 pasajeros
 
@@ -875,6 +992,7 @@ Se modificó el umbral para aplicar un **salto exponencial en el 4to pasajero**,
 Para mantener la coherencia financiera, se ajustó el cálculo de precios de Van:
 
 **Antes:**
+
 ```javascript
 // Van comenzaba en 5 pasajeros
 const pasajerosAdicionales = numPasajeros - 5;
@@ -882,6 +1000,7 @@ const pasajerosAdicionales = numPasajeros - 5;
 ```
 
 **Después:**
+
 ```javascript
 // Van comienza en 4 pasajeros
 const pasajerosAdicionales = numPasajeros - 4;
@@ -892,12 +1011,12 @@ const pasajerosAdicionales = numPasajeros - 4;
 
 Asumiendo precio base van de $50,000 con incremento del 5%:
 
-| Pasajeros | Cálculo | Precio Final |
-|-----------|---------|--------------|
-| 4 pax | $50,000 (base) | **$50,000** |
-| 5 pax | $50,000 + (1 × $2,500) | **$52,500** |
-| 6 pax | $50,000 + (2 × $2,500) | **$55,000** |
-| 7 pax | $50,000 + (3 × $2,500) | **$57,500** |
+| Pasajeros | Cálculo                | Precio Final |
+| --------- | ---------------------- | ------------ |
+| 4 pax     | $50,000 (base)         | **$50,000**  |
+| 5 pax     | $50,000 + (1 × $2,500) | **$52,500**  |
+| 6 pax     | $50,000 + (2 × $2,500) | **$55,000**  |
+| 7 pax     | $50,000 + (3 × $2,500) | **$57,500**  |
 
 #### Beneficios
 
@@ -914,18 +1033,20 @@ Asumiendo precio base van de $50,000 con incremento del 5%:
 
 ```javascript
 // Línea 1061: Cambio de umbral para Auto
-if (numPasajeros > 0 && numPasajeros <= 3) {  // Antes: <= 4
-    vehiculoAsignado = "Auto Privado";
-    // ... cálculo de precio
+if (numPasajeros > 0 && numPasajeros <= 3) {
+	// Antes: <= 4
+	vehiculoAsignado = "Auto Privado";
+	// ... cálculo de precio
 }
 
 // Línea 1079: Cambio de umbral para Van
-else if (numPasajeros >= 4 && numPasajeros <= destinoInfo.maxPasajeros) {  // Antes: >= 5
-    vehiculoAsignado = "Van de Pasajeros";
-    
-    // Línea 1088: Ajuste de cálculo de pasajeros adicionales
-    const pasajerosAdicionales = numPasajeros - 4;  // Antes: - 5
-    // ... cálculo de precio
+else if (numPasajeros >= 4 && numPasajeros <= destinoInfo.maxPasajeros) {
+	// Antes: >= 5
+	vehiculoAsignado = "Van de Pasajeros";
+
+	// Línea 1088: Ajuste de cálculo de pasajeros adicionales
+	const pasajerosAdicionales = numPasajeros - 4; // Antes: - 5
+	// ... cálculo de precio
 }
 ```
 
@@ -935,22 +1056,23 @@ else if (numPasajeros >= 4 && numPasajeros <= destinoInfo.maxPasajeros) {  // An
 > [!TIP]
 > **Configuración Recomendada**: El precio base de Van debería ser aproximadamente 1.5x - 1.7x el precio base de Auto para reflejar los costos operativos adicionales (combustible, mantenimiento, seguro).
 
-
-
 ### 5.12 Solución de UI/UX Crítica: Modal de Intercepción y Stacking Contexts
-
 
 **Documentado: 3 Enero 2026**
 
 Esta sección documenta la solución técnica definitiva aplicada al problema recurrente de visualización del "Modal de WhatsApp" en dispositivos de escritorio y móviles con pantallas pequeñas.
 
 #### Problema Identificado
+
 El modal de intercepción (que aparece al intentar ir a WhatsApp) presentaba dos fallos críticos:
+
 1.  **Corte Superior (Clipping)**: En pantallas con poca altura (laptops), la parte superior del modal desaparecía y no era accesible mediante scroll.
 2.  **Visualización Errática**: El modal se movía o cortaba inesperadamente dependiendo del scroll de la página.
 
 #### Causa Raíz Técnica
+
 El problema se debía a un conflicto de **Stacking Context (Contexto de Apilamiento)** en CSS:
+
 - El componente modal estaba anidado dentro de `<motion.header>` en `Header.jsx`.
 - `<motion.header>` aplica propiedades de transformación (`transform: translateY(...)`) para animar la entrada.
 - **Regla CSS Crítica**: Todo elemento con `position: fixed` que sea hijo de un elemento con `transform`, deja de comportarse como fijo respecto al viewport y pasa a comportarse como `absolute` respecto al padre transformado.
@@ -967,20 +1089,20 @@ Para evitar este problema en el futuro, se establecen las siguientes reglas de i
 
 2.  **Layout "Safe Scroll" (Prueba de Fallos)**:
     Se reemplazó el centrado CSS tradicional por una estructura que garantiza scroll si el contenido excede la altura de la pantalla (Tailwind UI Pattern):
-    
+
     ```jsx
-    {/* 1. Contenedor Padre fijo al viewport con scroll habilitado */}
+    {
+    	/* 1. Contenedor Padre fijo al viewport con scroll habilitado */
+    }
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
-      
-      {/* 2. Contenedor Flex con altura mínima garantizada */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        
-        {/* 3. El Modal en sí (sin margin auto fijos que bloqueen scroll) */}
-        <div className="relative bg-white rounded-xl ...">
-          {/* Contenido */}
-        </div>
-      </div>
-    </div>
+    	{/* 2. Contenedor Flex con altura mínima garantizada */}
+    	<div className="flex min-h-full items-center justify-center p-4">
+    		{/* 3. El Modal en sí (sin margin auto fijos que bloqueen scroll) */}
+    		<div className="relative bg-white rounded-xl ...">
+    			{/* Contenido */}
+    		</div>
+    	</div>
+    </div>;
     ```
 
 3.  **Colores Robustos**:
@@ -1014,6 +1136,7 @@ graph TD
 ```
 
 **Ubicación de Archivos:**
+
 - **Scripts de Migración**: `backend/migrations/*.js`
 - **Importación**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L29-L50) (líneas 29-50)
 - **Ejecución**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L630-L723) (líneas 630-723)
@@ -1034,31 +1157,31 @@ Al crear una nueva migración, usar esta plantilla estándar:
 import sequelize from "../config/database.js";
 
 const nombreMigracion = async () => {
-    try {
-        console.log("🔄 Verificando [DESCRIPCIÓN DEL CAMBIO]...");
+	try {
+		console.log("🔄 Verificando [DESCRIPCIÓN DEL CAMBIO]...");
 
-        // Paso 1: Verificar si ya existe (idempotencia)
-        const [columns] = await sequelize.query(
-            "SHOW COLUMNS FROM tabla LIKE 'columna'"
-        );
-        
-        if (columns.length === 0) {
-            console.log("📋 Aplicando migración [NOMBRE]...");
-            
-            // Paso 2: Ejecutar cambio
-            await sequelize.query(`
+		// Paso 1: Verificar si ya existe (idempotencia)
+		const [columns] = await sequelize.query(
+			"SHOW COLUMNS FROM tabla LIKE 'columna'",
+		);
+
+		if (columns.length === 0) {
+			console.log("📋 Aplicando migración [NOMBRE]...");
+
+			// Paso 2: Ejecutar cambio
+			await sequelize.query(`
                 ALTER TABLE tabla 
                 ADD COLUMN columna TIPO DEFAULT VALOR
             `);
-            
-            console.log("✅ Migración [NOMBRE] completada exitosamente");
-        } else {
-            console.log("✅ [NOMBRE] ya aplicado previamente");
-        }
-    } catch (error) {
-        // Solo loguear error, no detener el servidor (salvo sea crítico)
-        console.error("❌ Error en migración [NOMBRE]:", error.message);
-    }
+
+			console.log("✅ Migración [NOMBRE] completada exitosamente");
+		} else {
+			console.log("✅ [NOMBRE] ya aplicado previamente");
+		}
+	} catch (error) {
+		// Solo loguear error, no detener el servidor (salvo sea crítico)
+		console.error("❌ Error en migración [NOMBRE]:", error.message);
+	}
 };
 
 export default nombreMigracion;
@@ -1066,6 +1189,7 @@ export default nombreMigracion;
 
 > [!IMPORTANT]
 > **Diferencias Críticas con Plantillas Obsoletas:**
+>
 > - ✅ **NO incluir** `sequelize.close()` (la conexión es gestionada por el servidor)
 > - ✅ **NO incluir** bloques CLI como `if (import.meta.url === ...)` o `.catch()`
 > - ✅ **Exportar** como `export default` para importación ES6
@@ -1114,27 +1238,27 @@ Render ejecutará automáticamente la migración al desplegar.
 
 El sistema incluye las siguientes migraciones (en orden de ejecución):
 
-| Migración | Descripción | Línea en server-db.js |
-|-----------|-------------|----------------------|
-| `addPendingEmailsTable` | Tabla de correos pendientes | 630 |
-| `addCodigosPagoTable` | Tabla de códigos de pago | 633 |
-| `addSillaInfantilToCodigosPago` | Campo silla infantil en códigos | 634 |
-| `addClientDataToCodigosPago` | Datos de cliente en códigos | 635 |
-| `ejecutarMigracionCodigoReserva` | Código único de reserva | 706 |
-| `addPaymentFields` | Campos de pago en reservas | 707 |
-| `addTipoPagoColumn` | Tipo de pago | 708 |
-| `addAbonoFlags` | Flags de abono | 709-710 |
-| `addGastosTable` | Tabla de gastos | 712 |
-| `addProductosTables` | Tablas de productos | 713 |
-| `addTarifaDinamicaTable` | Configuración de tarifa dinámica | 714 |
-| `addTarifaDinamicaFields` | Campos de tarifa en reservas | 715 |
-| `addFestivosTable` | Tabla de festivos | 716 |
-| `addDisponibilidadConfig` | Configuración de disponibilidad | 717 |
-| `addPorcentajeAdicionalColumns` | Porcentaje adicional por pasajero | 718 |
-| `addAddressColumns` | Columnas de dirección | 719 |
-| `addBloqueosAgendaTable` | Bloqueos de agenda | 720 |
-| `addGastosCerradosField` | Campo gastos cerrados | 721 |
-| `addTramosFields` | Campos de tramos (ida/vuelta) | 722 |
+| Migración                        | Descripción                       | Línea en server-db.js |
+| -------------------------------- | --------------------------------- | --------------------- |
+| `addPendingEmailsTable`          | Tabla de correos pendientes       | 630                   |
+| `addCodigosPagoTable`            | Tabla de códigos de pago          | 633                   |
+| `addSillaInfantilToCodigosPago`  | Campo silla infantil en códigos   | 634                   |
+| `addClientDataToCodigosPago`     | Datos de cliente en códigos       | 635                   |
+| `ejecutarMigracionCodigoReserva` | Código único de reserva           | 706                   |
+| `addPaymentFields`               | Campos de pago en reservas        | 707                   |
+| `addTipoPagoColumn`              | Tipo de pago                      | 708                   |
+| `addAbonoFlags`                  | Flags de abono                    | 709-710               |
+| `addGastosTable`                 | Tabla de gastos                   | 712                   |
+| `addProductosTables`             | Tablas de productos               | 713                   |
+| `addTarifaDinamicaTable`         | Configuración de tarifa dinámica  | 714                   |
+| `addTarifaDinamicaFields`        | Campos de tarifa en reservas      | 715                   |
+| `addFestivosTable`               | Tabla de festivos                 | 716                   |
+| `addDisponibilidadConfig`        | Configuración de disponibilidad   | 717                   |
+| `addPorcentajeAdicionalColumns`  | Porcentaje adicional por pasajero | 718                   |
+| `addAddressColumns`              | Columnas de dirección             | 719                   |
+| `addBloqueosAgendaTable`         | Bloqueos de agenda                | 720                   |
+| `addGastosCerradosField`         | Campo gastos cerrados             | 721                   |
+| `addTramosFields`                | Campos de tramos (ida/vuelta)     | 722                   |
 
 #### Buenas Prácticas
 
@@ -1147,18 +1271,22 @@ El sistema incluye las siguientes migraciones (en orden de ejecución):
 #### Troubleshooting
 
 **Error: "Column already exists"**
+
 - ✅ **Normal**: La migración es idempotente y detectó que el cambio ya existe
 - ✅ **Acción**: Ninguna, el sistema continuará normalmente
 
 **Error: "Cannot find module"**
+
 - ❌ **Causa**: Falta importar la migración en `server-db.js`
 - ✅ **Solución**: Agregar `import` en líneas 29-50
 
 **Error: "sequelize.close is not a function"**
+
 - ❌ **Causa**: Usando plantilla obsoleta con `sequelize.close()`
 - ✅ **Solución**: Eliminar `sequelize.close()` y bloques CLI del script
 
 **Migración no se ejecuta en Render**
+
 - ❌ **Causa**: No se agregó `await nombreMigracion()` en `initializeDatabase()`
 - ✅ **Solución**: Agregar llamada en líneas 630-723 de `server-db.js`
 
@@ -1171,9 +1299,6 @@ El sistema incluye las siguientes migraciones (en orden de ejecución):
 - **Código de Ejecución**: [`backend/server-db.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L623-L777) (función `initializeDatabase`)
 - **Ejemplo de Migración**: [`backend/migrations/add-codigo-reserva-column.js`](file:///c:/Users/widom/Documents/web}/transportes-araucaria/backend/server-db.js#L536-L621) (implementado inline en server-db.js)
 
-
-
-
 ### 5.14 Sistema de Historial de Transacciones (Flow)
 
 **Implementado: Enero 2026**
@@ -1183,29 +1308,29 @@ Sistema para el registro detallado y auditable de cada transacción de pago real
 #### Componentes del Sistema
 
 1.  **Modelo de Datos (`Transaccion`)**:
-    *   Registra individualmente cada pago exitoso.
-    *   Campos: `monto`, `gateway`, `transaccionId` (Flow Order), `estado`, `tipoPago` (abono/saldo), `metadata` (JSON completo de Flow).
-    *   Relación auditora con `Reserva` (1:N) y `CodigoPago` (1:N).
+    - Registra individualmente cada pago exitoso.
+    - Campos: `monto`, `gateway`, `transaccionId` (Flow Order), `estado`, `tipoPago` (abono/saldo), `metadata` (JSON completo de Flow).
+    - Relación auditora con `Reserva` (1:N) y `CodigoPago` (1:N).
 
 2.  **Integración Flow (`Webhook`)**:
-    *   Endpoint: `/api/flow-confirmation`
-    *   Registra automáticamente la transacción al confirmar el pago.
-    *   Actualiza los acumuladores de la Reserva (`pagoMonto`, `estadoPago`), pero **mantiene el registro individual** en la tabla `transacciones`.
-    *   Vincula pagos realizados mediante códigos de cupón/descuento.
+    - Endpoint: `/api/flow-confirmation`
+    - Registra automáticamente la transacción al confirmar el pago.
+    - Actualiza los acumuladores de la Reserva (`pagoMonto`, `estadoPago`), pero **mantiene el registro individual** en la tabla `transacciones`.
+    - Vincula pagos realizados mediante códigos de cupón/descuento.
 
 3.  **Visualización en Panel Admin**:
-    *   Ubicación: Modal "Ver Detalles" en `AdminReservas`.
-    *   Funcionalidad: Tabla detallada con fechas, montos y estados de cada intento de pago.
-    *   API Backend: `GET /api/reservas/:id/transacciones`.
+    - Ubicación: Modal "Ver Detalles" en `AdminReservas`.
+    - Funcionalidad: Tabla detallada con fechas, montos y estados de cada intento de pago.
+    - API Backend: `GET /api/reservas/:id/transacciones`.
 
 #### Flujo de Datos
 
 1.  **Inicio**: Cliente inicia pago (Reserva o Código).
 2.  **Procesamiento**: Flow procesa el cobro bancario.
 3.  **Confirmación**:
-    *   Webhook recibe notificación POST.
-    *   Se crea registro en `Transaccion`.
-    *   Se actualiza saldo en `Reserva`.
+    - Webhook recibe notificación POST.
+    - Se crea registro en `Transaccion`.
+    - Se actualiza saldo en `Reserva`.
 4.  **Auditoría**: Admin visualiza el historial completo, permitiendo distinguir entre abono inicial y pago de saldo.
 
 ---
@@ -1227,29 +1352,32 @@ El sistema utiliza un enfoque de **vencimiento pasivo-reactivo**:
 
 Tanto en el Panel Admin como en la Vista del Cliente se utiliza la misma escala de urgencia:
 
-| Tiempo Restante | Color / Estado | Feedback |
-|-----------------|----------------|----------|
-| > 2 horas | 🟢 Verde (Admin) / Azul (Cliente) | Normal |
-| < 2 horas | 🟠 Naranja | Urgente |
-| < 1 hora | 🔴 Rojo Parpadeante (Admin) | Crítico |
-| Expitado | ❌ Rojo Plano / Gris | Vencido |
+| Tiempo Restante | Color / Estado                    | Feedback |
+| --------------- | --------------------------------- | -------- |
+| > 2 horas       | 🟢 Verde (Admin) / Azul (Cliente) | Normal   |
+| < 2 horas       | 🟠 Naranja                        | Urgente  |
+| < 1 hora        | 🔴 Rojo Parpadeante (Admin)       | Crítico  |
+| Expitado        | ❌ Rojo Plano / Gris              | Vencido  |
 
 #### Implementación Técnica
 
 **Backend (`server-db.js`):**
+
 ```javascript
 // Actualización masiva antes de listar
 await CodigoPago.update(
-  { estado: "vencido" },
-  { where: { estado: "activo", fechaVencimiento: { [Op.lt]: new Date() } } }
+	{ estado: "vencido" },
+	{ where: { estado: "activo", fechaVencimiento: { [Op.lt]: new Date() } } },
 );
 ```
 
 **Frontend (`AdminCodigosPago.jsx` & `PagarConCodigo.jsx`):**
+
 - Utilizan `setInterval(() => ..., 60000)` para actualizar los contadores cada minuto sin refrescar la página.
 - La función `calcularTiempoRestante` centraliza la lógica de formateo (ej: "1h 45m" o "15m").
 
 #### Beneficios
+
 - ✅ **Cero costos de servidor**: No requiere procesos en segundo plano permanentes.
 - ✅ **Precisión total**: El cliente sabe exactamente cuánto tiempo le queda para pagar.
 - ✅ **Orden Administrativo**: Los códigos viejos se limpian visualmente de forma automática.
@@ -1263,7 +1391,9 @@ await CodigoPago.update(
 Este sistema optimiza la edición de reservas en el panel administrativo, consolidando múltiples actualizaciones en una sola transacción atómica del lado del servidor.
 
 #### Problema Resuelto
+
 Anteriormente, guardar una reserva implicaba hasta 6 llamadas HTTP secuenciales (`PUT /api/reservas/:id`, `PUT /api/reservas/:id/ruta`, `PUT /api/reservas/:id/pago`, etc.). Esto causaba:
+
 - **Lentitud**: Espera de 2-3 segundos por guardado al saturar la cola de peticiones.
 - **Riesgo de Inconsistencia**: Si la conexión fallaba a mitad del proceso, los datos quedaban en un estado inconsistente (ej. nombre cambiado pero pago no registrado).
 
@@ -1272,10 +1402,10 @@ Anteriormente, guardar una reserva implicaba hasta 6 llamadas HTTP secuenciales 
 1.  **Backend (`PUT /api/reservas/:id/bulk-update`)**:
     - Utiliza `sequelize.transaction()` para garantizar que todos los cambios se apliquen juntos o no se aplique ninguno.
     - Centraliza la lógica de:
-        - **Datos generales**: Actualización de campos como nombre, vuelo, pasajeros, etc.
-        - **Ruta**: Actualización de origen y destino coordinada.
-        - **Pagos**: Cálculo automático de montos acumulados, saldos restantes y estados de pago (`pendiente`, `parcial`, `pagado`) basado en el nuevo monto aportado.
-        - **Estado/Observaciones**: Cambio de estado de la reserva con validaciones de integridad (ej: no permitir volver a "pendiente" si ya hay pagos registrados).
+      - **Datos generales**: Actualización de campos como nombre, vuelo, pasajeros, etc.
+      - **Ruta**: Actualización de origen y destino coordinada.
+      - **Pagos**: Cálculo automático de montos acumulados, saldos restantes y estados de pago (`pendiente`, `parcial`, `pagado`) basado en el nuevo monto aportado.
+      - **Estado/Observaciones**: Cambio de estado de la reserva con validaciones de integridad (ej: no permitir volver a "pendiente" si ya hay pagos registrados).
     - Implementa un sistema de logs detallado (`[BULK-UPDATE]`) para trazabilidad del proceso.
 
 2.  **Frontend (`AdminReservas.jsx`)**:
@@ -1284,6 +1414,7 @@ Anteriormente, guardar una reserva implicaba hasta 6 llamadas HTTP secuenciales 
     - Reduce la probabilidad de errores de red y mejora drásticamente el feedback visual al usuario.
 
 #### Beneficios
+
 - ✅ **Rendimiento**: Mejora de ~80% en la velocidad percibida de guardado.
 - ✅ **Integridad**: Garantía de "Todo o Nada" en la persistencia de datos.
 - ✅ **Mantenibilidad**: Se elimina la fragmentación lógica de actualizaciones en múltiples rutas de API.
@@ -1313,25 +1444,26 @@ El sistema de oportunidades permite maximizar la eficiencia de la flota al ofrec
 Para garantizar precisión operativa y ofrecer precios estables, el sistema utiliza las siguientes reglas:
 
 - **Duración del Viaje**: Se obtiene del campo `duracionIdaMinutos` del modelo `Destino`.
-- **Precio Base (Simplificado)**: 
-    - El sistema **ya no utiliza Tarifa Dinámica** (ajustes por festivos, horario o anticipación) para las oportunidades. El precio es estable.
-    - **Sedán**: Usa `precioIda` del destino.
-    - **Van**: Usa `precioBaseVan` del destino (ej: $80.000 para Pucón).
+- **Precio Base (Simplificado)**:
+  - El sistema **ya no utiliza Tarifa Dinámica** (ajustes por festivos, horario o anticipación) para las oportunidades. El precio es estable.
+  - **Sedán**: Usa `precioIda` del destino.
+  - **Van**: Usa `precioBaseVan` del destino (ej: $80.000 para Pucón).
 - **Recargo por Pasajeros**: Se aplica un recargo porcentual por cada pasajero adicional:
-    - **Sedán**: A partir del 4to pasajero (usa `porcentajeAdicionalAuto`).
-    - **Van**: A partir del 6to pasajero (usa `porcentajeAdicionalVan`).
+  - **Sedán**: A partir del 4to pasajero (usa `porcentajeAdicionalAuto`).
+  - **Van**: A partir del 6to pasajero (usa `porcentajeAdicionalVan`).
 - **Descuento Fijo**: El 50% de descuento se aplica sobre el valor final calculado (Base + Recargos Pax).
 
 #### Filtrado Estricto de Rutas
 
 Para evitar competencia con servicios estándar y optimizar la logística:
+
 1. **Aeropuerto Obligatorio**: Toda oportunidad debe tener el "Aeropuerto La Araucanía" como origen o destino.
 2. **Exclusión de Temuco Ciudad**: Se omiten automáticamente trayectos entre la ciudad de Temuco y el Aeropuerto.
 
 #### Restricciones de Vehículo
 
 - **Consistencia de Flota**: La oportunidad hereda estrictamente el tipo de vehículo asignado a la reserva original.
-- **Lógica de Asignación**: 
+- **Lógica de Asignación**:
   - Si la reserva tiene un vehículo específico asignado, la oportunidad mostrará ese vehículo.
   - Si no hay un vehículo asignado pero la reserva es para 1-3 pasajeros, se ofrece como **Sedán**.
   - Si la reserva es para 4-7 pasajeros, se ofrece como **Van**.
@@ -1353,12 +1485,11 @@ Para reducir la fricción y maximizar las conversiones, las oportunidades cuenta
 
 #### Puntos de Integración Técnica
 
--   **Backend**: `backend/routes/oportunidades.js` (Endpoint `POST /api/oportunidades/reservar`).
--   **Frontend**: `src/pages/OportunidadesTraslado.jsx` (Componente `ReservaOportunidadModal` y lógica de integración con Flow).
--   **Base de Datos**: Transacción atómica que crea la `Reserva` y marca la `Oportunidad` como `reservada`.
+- **Backend**: `backend/routes/oportunidades.js` (Endpoint `POST /api/oportunidades/reservar`).
+- **Frontend**: `src/pages/OportunidadesTraslado.jsx` (Componente `ReservaOportunidadModal` y lógica de integración con Flow).
+- **Base de Datos**: Transacción atómica que crea la `Reserva` y marca la `Oportunidad` como `reservada`.
 
 ---
-
 
 ### 5.18 Sistema de Banners Promocionales
 
@@ -1367,17 +1498,17 @@ Para reducir la fricción y maximizar las conversiones, las oportunidades cuenta
 Sistema integral para crear y administrar ofertas especiales con imágenes, desplegadas en un carrusel público y con flujo de reserva rápida.
 
 #### Características Clave
+
 - **Admin**: CRUD completo de banners con upload de imágenes.
 - **Frontend**: Carrusel auto-gestionable en Home.
 - **Reserva**: Modal de captura rápida de datos + Pago diferido.
 
 #### Flujo de Pago
+
 El sistema utiliza una redirección automática a Flow (`/create-payment`) inmediatamente después de crear la reserva, garantizando que las promos se paguen al instante.
 
 > [!NOTE]
 > Para detalles técnicos profundos (Modelo de datos, API, Configuración), consultar la **[Guía de Deployment y Arquitectura de Banners](./GUIA_DEPLOYMENT_BANNERS.md)**.
-
-
 
 ### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
 
@@ -1388,31 +1519,31 @@ Sistema robusto para rastrear conversiones de marketing con alta precisión, dis
 #### Componentes del Rastreo
 
 1.  **Evento de Conversión (`gtag`)**:
-    *   Se dispara únicamente en las páginas de éxito (`FlowReturn.jsx`, `App.jsx`).
-    *   **ID de Conversión**: `AW-17529712870/M7-iCN_HtZUbEObh6KZB`.
-    *   **Protección de Duplicados**: Utiliza `sessionStorage` para asegurar que cada transacción solo cuente una vez, incluso si el usuario recarga la página.
+    - Se dispara únicamente en las páginas de éxito (`FlowReturn.jsx`, `App.jsx`).
+    - **ID de Conversión**: `AW-17529712870/M7-iCN_HtZUbEObh6KZB`.
+    - **Protección de Duplicados**: Utiliza `sessionStorage` para asegurar que cada transacción solo cuente una vez, incluso si el usuario recarga la página.
 
 2.  **Conversiones Mejoradas (Enhanced Conversions)**:
-    *   Envía datos de cliente (Email, Teléfono) hasheados con SHA256.
-    *   Permite a Google atribuir ventas cross-device y recuperar conversiones donde las cookies han expirado.
-    *   **Mecanismo**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica y hashea antes de enviarlos.
+    - Envía datos de cliente (Email, Teléfono) hasheados con SHA256.
+    - Permite a Google atribuir ventas cross-device y recuperar conversiones donde las cookies han expirado.
+    - **Mecanismo**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica y hashea antes de enviarlos.
 
 3.  **Robustez del Valor Monetario**:
-    *   **Problema**: Flujos de pago interrumpidos a veces resultan en montos `0` o `null`.
-    *   **Solución**: El sistema implementa una cascada de fallbacks:
-        1. Monto reportado por Flow.
-        2. Monto registrado en base de datos.
-        3. **Valor Centinela (1.0)**: Si todo fallo, se envía 1.0 para garantizar que la conversión se registre.
+    - **Problema**: Flujos de pago interrumpidos a veces resultan en montos `0` o `null`.
+    - **Solución**: El sistema implementa una cascada de fallbacks:
+      1. Monto reportado por Flow.
+      2. Monto registrado en base de datos.
+      3. **Valor Centinela (1.0)**: Si todo fallo, se envía 1.0 para garantizar que la conversión se registre.
 
 #### Flujos Soportados
-*   **Reserva Web**: `App.jsx` maneja el retorno.
-*   **Pagar con Código**: `FlowReturn.jsx` maneja el retorno.
-*   **Pago de Saldo**: `FlowReturn.jsx` maneja el retorno.
-*   **Banner Promocional**: `FlowReturn.jsx` maneja el retorno.
+
+- **Reserva Web**: `App.jsx` maneja el retorno.
+- **Pagar con Código**: `FlowReturn.jsx` maneja el retorno.
+- **Pago de Saldo**: `FlowReturn.jsx` maneja el retorno.
+- **Banner Promocional**: `FlowReturn.jsx` maneja el retorno.
 
 > [!IMPORTANT]
 > **Defensa en Profundidad**: El sistema prioriza **capturar el evento** sobre la precisión del dato. Es preferible registrar una venta con valor $1 que perder la señal de que un cliente compró.
-
 
 ---
 
@@ -1421,9 +1552,11 @@ Sistema robusto para rastrear conversiones de marketing con alta precisión, dis
 **Implementado: 13 Marzo 2026**
 
 #### Problema que resuelve
+
 Render.com (plan gratuito y Starter) utiliza un **filesystem efímero**: cualquier archivo guardado en disco se borra al reiniciar o redesplegar el servicio. Antes de esta implementación, las imágenes de los banners promocionales se almacenaban en `public/banners/` del servidor, por lo que se perdían en cada deploy, obligando al administrador a volver a subirlas manualmente.
 
 #### Solución implementada
+
 Las imágenes se suben directamente a **Cloudinary** (CDN de imágenes en la nube). La URL permanente de Cloudinary se guarda en la Base de Datos (`imagen_url`), por lo que sobrevive indefinidamente a cualquier reinicio del backend.
 
 #### Arquitectura técnica
@@ -1443,19 +1576,21 @@ Las imágenes se suben directamente a **Cloudinary** (CDN de imágenes en la nub
 ```
 
 **Organización en Cloudinary**:
+
 - Carpeta: `transportes-araucaria/banners/`
 - Transformación automática: `quality: auto, fetch_format: auto` (optimización de peso/formato)
 
 **Eliminación de imágenes antiguas**:
+
 - Al editar una promoción con nueva imagen → se destruye el `public_id` anterior via `cloudinary.uploader.destroy()`
 - Al eliminar una promoción → ídem. La función helper `extractCloudinaryPublicId(url)` extrae el `public_id` desde la URL completa.
 
 #### Variables de entorno requeridas (solo en Render — nunca en código)
 
-| Variable | Descripción |
-|---|---|
-| `CLOUDINARY_CLOUD_NAME` | `dsmjdnzkq` |
-| `CLOUDINARY_API_KEY` | API Key de la cuenta Root |
+| Variable                | Descripción                  |
+| ----------------------- | ---------------------------- |
+| `CLOUDINARY_CLOUD_NAME` | `dsmjdnzkq`                  |
+| `CLOUDINARY_API_KEY`    | API Key de la cuenta Root    |
 | `CLOUDINARY_API_SECRET` | API Secret de la cuenta Root |
 
 > [!WARNING]
@@ -1476,9 +1611,11 @@ src={promo.imagen_url?.startsWith('http')
 > Las promociones con URLs legadas (`/banners/...`) mostrarán imagen rota hasta que se editen y se les reasigne una imagen. Las nuevas creaciones funcionan correctamente de inmediato.
 
 #### Caché de la API de banners
+
 El endpoint público `GET /api/promociones-banner/activas` envía `Cache-Control: no-store` para que los navegadores no cacheen los datos y reflejen cambios del admin en tiempo real.
 
 #### Dependencia instalada
+
 ```bash
 # En backend/
 pnpm add cloudinary   # v2.9.0
@@ -1491,44 +1628,50 @@ pnpm add cloudinary   # v2.9.0
 **Implementado: 13 Marzo 2026**
 
 #### Principio general
+
 Los logs en Render (plan gratuito) son el único canal de observabilidad disponible sin acceso a shell. La estrategia es: **cero ruido, máxima señal en lo que realmente importa** (pagos, conversiones, errores).
 
 #### Logs eliminados (ruido sin valor diagnóstico)
 
-| Log eliminado | Archivo | Motivo |
-|---|---|---|
-| `Token expirado` / `Token inválido` | `utils/auth.js` | Flujo normal del refresh automático. No es un error; si llenara logs es señal de alta actividad, no de problema. |
-| `🔍 CORS Preflight` + `✅ CORS Preflight respondido` | `server-db.js` | El navegador genera preflight en cada sesión activa. Completamente rutinario. |
-| `📅 Solicitud de calendario: fechaInicio a fechaFin` | `server-db.js` | Se dispara en cada apertura del selector de fecha. Sin valor diagnóstico. |
-| `PUT /pricing recibido` + dump completo del body JSON | `server-db.js` | Útil en debug inicial. En producción expone datos de configuración y no aporta. |
-| `❌ Destino excluido: Pucón/Villarrica` | `server-db.js` | Estaba **dentro de un bucle** sobre configuraciones → se imprimía N veces por cada cálculo de tarifa dinámica. |
-| Log de email sanitizado en flujo Flow | `server-db.js` | Expone datos parciales del cliente sin valor en producción. |
+| Log eliminado                                         | Archivo         | Motivo                                                                                                           |
+| ----------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `Token expirado` / `Token inválido`                   | `utils/auth.js` | Flujo normal del refresh automático. No es un error; si llenara logs es señal de alta actividad, no de problema. |
+| `🔍 CORS Preflight` + `✅ CORS Preflight respondido`  | `server-db.js`  | El navegador genera preflight en cada sesión activa. Completamente rutinario.                                    |
+| `📅 Solicitud de calendario: fechaInicio a fechaFin`  | `server-db.js`  | Se dispara en cada apertura del selector de fecha. Sin valor diagnóstico.                                        |
+| `PUT /pricing recibido` + dump completo del body JSON | `server-db.js`  | Útil en debug inicial. En producción expone datos de configuración y no aporta.                                  |
+| `❌ Destino excluido: Pucón/Villarrica`               | `server-db.js`  | Estaba **dentro de un bucle** sobre configuraciones → se imprimía N veces por cada cálculo de tarifa dinámica.   |
+| Log de email sanitizado en flujo Flow                 | `server-db.js`  | Expone datos parciales del cliente sin valor en producción.                                                      |
 
 #### Logs mejorados (conversiones y eventos críticos)
 
 **Inicio de proceso de pago** (`/api/create-payment`):
+
 ```
 🚀 [INICIO PAGO] 2026-03-13T14:38:02.000Z | Pasarela: flow | Monto: $45000 | Reserva: AR-20260313-0001 | Tipo: anticipo | Origen: directo
 ```
 
 **Webhook de confirmación Flow** (conversión real confirmada):
+
 ```
 💳 [CONVERSIÓN PAGO] 2026-03-13T14:39:50.000Z | Estado: PAGADO | Monto: $45000 | FlowOrder: 12345 | Payer: wid***
 ```
+
 Los estados de Flow se mapean a texto legible: `1→PENDIENTE`, `2→PAGADO`, `3→RECHAZADO`, `4→ANULADO`.
 
 **Subida de imagen a Cloudinary**:
+
 ```
 🖼️  [BANNER] Imagen subida a Cloudinary: transportes-araucaria/banners/banner-1741872000000
 ```
 
 #### Política para futuros logs
-| Nivel | Cuándo usar |
-|---|---|
-| `console.log` | Eventos de negocio significativos: conversión confirmada, cambio de estado de reserva, inicio de pago |
-| `console.warn` | Situaciones inesperadas no críticas: metadata inválida, fallback activado, dato faltante no bloqueante |
-| `console.error` | Errores reales que requieren atención: fallo de BD, fallo de pasarela de pago, error de Cloudinary |
-| **Silencio** | Todo flujo normal/rutinario que se repite en bucles o por cada request HTTP estándar |
+
+| Nivel           | Cuándo usar                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------ |
+| `console.log`   | Eventos de negocio significativos: conversión confirmada, cambio de estado de reserva, inicio de pago  |
+| `console.warn`  | Situaciones inesperadas no críticas: metadata inválida, fallback activado, dato faltante no bloqueante |
+| `console.error` | Errores reales que requieren atención: fallo de BD, fallo de pasarela de pago, error de Cloudinary     |
+| **Silencio**    | Todo flujo normal/rutinario que se repite en bucles o por cada request HTTP estándar                   |
 
 > [!IMPORTANT]
 > Si en el futuro se agrega lógica que itera sobre colecciones (tarifas, configuraciones, destinos), **nunca poner logs dentro del bucle**. Acumular resultados y loguear una sola vez al final si es necesario.
@@ -1538,6 +1681,7 @@ Los estados de Flow se mapean a texto legible: `1→PENDIENTE`, `2→PAGADO`, `3
 ## 6. Mantenimiento y Despliegue
 
 ### Archivos Legacy
+
 La documentación antigua se ha archivado en `docs/legacy/` para referencia histórica. Consultar esa carpeta si se busca información muy específica sobre versiones anteriores (v1) o logs de cambios detallados.
 
 ---
@@ -1545,6 +1689,7 @@ La documentación antigua se ha archivado en `docs/legacy/` para referencia hist
 ## 7. Solución de Problemas (Troubleshooting)
 
 Se ha compilado una guía específica para resolver problemas recurrentes como:
+
 - **Backend 500**: Errores de ruta o base de datos.
 - **Migraciones**: Cómo crear e integrar nuevas migraciones. **IMPORTANTE**: Revisar la sección [5.13 Sistema de Migraciones](#513-sistema-de-migraciones-de-base-de-datos) para entender el sistema de auto-migraciones.
 - **Autenticación**: Solución al bloqueo de edición.
@@ -1556,13 +1701,16 @@ Se ha compilado una guía específica para resolver problemas recurrentes como:
 ## 8. Anexos Históricos
 
 Para consultar bitácoras de cambios específicas o guías visuales antiguas, revisar la carpeta `docs/legacy`. Archivos notables movidos allí:
+
 - `GUIA_USUARIO_PANEL_ADMIN_V2.md`
 - `ARQUITECTURA_PANEL_ADMIN.md`
 - `INTEGRACION_EMAILS_PHP.md`
 - `LOGS_CORRECCIONES.md`
 
 ---
+
 ---
+
 ### 5.17 Sistema de Oportunidades de Traslado
 
 **Actualizado: Febrero 2026**
@@ -1570,11 +1718,12 @@ Para consultar bitácoras de cambios específicas o guías visuales antiguas, re
 El Sistema de Oportunidades permite aprovechar los traslados vacíos (retornos e idas) convirtiéndolos en oportunidades de venta con descuentos de hasta 60%, manteniendo el concepto de traslado 100% privado.
 
 #### Características Principales
-1. **Detección Automática**: 
-   - *Retornos Vacíos*: Genera una oportunidad en dirección contraria tras una reserva confirmada (ej: destino → origen). Válido hasta 2 horas antes del viaje con 50-60% de descuento.
-   - *Idas Vacías*: Si el origen de una reserva no es la Base (Temuco), genera oportunidad Base → origen. Válido hasta 3 horas antes con 50% de descuento limitando la capacidad ociosa.
+
+1. **Detección Automática**:
+   - _Retornos Vacíos_: Genera una oportunidad en dirección contraria tras una reserva confirmada (ej: destino → origen). Válido hasta 2 horas antes del viaje con 50-60% de descuento.
+   - _Idas Vacías_: Si el origen de una reserva no es la Base (Temuco), genera oportunidad Base → origen. Válido hasta 3 horas antes con 50% de descuento limitando la capacidad ociosa.
 2. **Generación Automatizada**: El endpoint `GET /api/oportunidades/generar` permite al sistema leer las reservas futuras y registrar opciones disponibles.
-3. **Flujo Cautivo del Cliente**: 
+3. **Flujo Cautivo del Cliente**:
    - Muestra ofertas en `OportunidadesTraslado.jsx` (`/#oportunidades`).
    - Al reservar se almacenan los datos de la ruta en `localStorage` y se pre-llena el formulario `HeroExpress`.
    - Al completarse el pago, la oportunidad se marca como `reservada`.
@@ -1582,6 +1731,7 @@ El Sistema de Oportunidades permite aprovechar los traslados vacíos (retornos e
 5. **Suscripción de Alertas**: Los clientes pueden registrar su email y ruta para recibir notificaciones cuando se abra un descuento coincidente.
 
 ---
+
 ### 5.18 Sistema de Banners Promocionales
 
 **Actualizado: Febrero 2026**
@@ -1589,27 +1739,28 @@ El Sistema de Oportunidades permite aprovechar los traslados vacíos (retornos e
 El sistema de promociones permite crear ofertas atractivas con imágenes que se muestran en la página principal (`PromocionBanners.jsx`). Estas promociones generan reservas rápidas con flujos de pago simplificados.
 
 #### Características Principales
+
 1.  **Tipos de Viaje Específicos**:
-    -   `Desde Aeropuerto`: Fija el origen en Aeropuerto La Araucanía.
-    -   `Hacia Aeropuerto`: Fija el destino en Aeropuerto La Araucanía.
-    -   `Ida y Vuelta`: Permite libre elección de ruta.
+    - `Desde Aeropuerto`: Fija el origen en Aeropuerto La Araucanía.
+    - `Hacia Aeropuerto`: Fija el destino en Aeropuerto La Araucanía.
+    - `Ida y Vuelta`: Permite libre elección de ruta.
 
 2.  **Restricciones de Pasajeros**:
-    -   **Rango Configurable**: Se define un mínimo (`min_pasajeros`) y máximo (`max_pasajeros`) de pasajeros.
-    -   **Selector Dinámico**: El cliente selecciona la cantidad exacta dentro del rango permitido al reservar (ej: de 2 a 4).
+    - **Rango Configurable**: Se define un mínimo (`min_pasajeros`) y máximo (`max_pasajeros`) de pasajeros.
+    - **Selector Dinámico**: El cliente selecciona la cantidad exacta dentro del rango permitido al reservar (ej: de 2 a 4).
 
 3.  **Restricciones Horarias**:
-    -   **Ventana de Reserva**: Se pueden definir horas de inicio y fin (ej: solo válido de 10:00 a 14:00).
-    -   **Filtrado Inteligente**: El modal de reserva oculta automáticamente las horas fuera del rango permitido.
+    - **Ventana de Reserva**: Se pueden definir horas de inicio y fin (ej: solo válido de 10:00 a 14:00).
+    - **Filtrado Inteligente**: El modal de reserva oculta automáticamente las horas fuera del rango permitido.
 
 4.  **Generación de Leads e Integración**:
-    -   **Link Directo**: Cada promoción tiene un link único (`/?promo=ID`) para campañas de marketing (Google Ads, Facebook).
-    -   **Conversiones**: Las reservas generadas se marcan con `source: "banner_promocional"` para tracking de efectividad.
+    - **Link Directo**: Cada promoción tiene un link único (`/?promo=ID`) para campañas de marketing (Google Ads, Facebook).
+    - **Conversiones**: Las reservas generadas se marcan con `source: "banner_promocional"` para tracking de efectividad.
 
 5.  **Flujo Técnico**:
-    -   **API POST**: `POST /api/promociones-banner/desde-promocion/:id` crea la reserva vinculada a la promoción.
-    -   **Frontend**: `ReservaRapidaModal.jsx` maneja la interfaz de usuario simplificada.
-    -   **Panel Admin**: `GestionPromociones.jsx` permite crear, editar, subir imágenes y activar promociones.
+    - **API POST**: `POST /api/promociones-banner/desde-promocion/:id` crea la reserva vinculada a la promoción.
+    - **Frontend**: `ReservaRapidaModal.jsx` maneja la interfaz de usuario simplificada.
+    - **Panel Admin**: `GestionPromociones.jsx` permite crear, editar, subir imágenes y activar promociones.
 
 ### 5.19 Sistema de Seguimiento de Conversiones (Google Ads)
 
@@ -1620,16 +1771,16 @@ El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google 
 #### Arquitectura del Seguimiento
 
 1.  **Eventos de Lead (Intención de Pago)**:
-    *   Se disparan inmediatamente antes de redirigir al usuario a la pasarela Flow (ej. en `PagarConCodigo.jsx`, `ReservaRapidaModal.jsx`, `OportunidadesTraslado.jsx`).
-    *   **ID de Conversión**: `AW-17529712870/8GVlCLP-05MbEObh6KZB`.
-    *   **Enhanced Conversions**: Captura y envía inmediatamente los datos del formulario (Email, Teléfono formateado a E.164, y Nombre dividido en first/last_name) mediante el objeto `user_data`.
-    *   **Patrón**: Usan `waitForGtag` con timeout de 2 segundos (el usuario disparó el click, así que el riesgo de carrera es bajo pero se protege igualmente).
+    - Se disparan inmediatamente antes de redirigir al usuario a la pasarela Flow (ej. en `PagarConCodigo.jsx`, `ReservaRapidaModal.jsx`, `OportunidadesTraslado.jsx`).
+    - **ID de Conversión**: `AW-17529712870/8GVlCLP-05MbEObh6KZB`.
+    - **Enhanced Conversions**: Captura y envía inmediatamente los datos del formulario (Email, Teléfono formateado a E.164, y Nombre dividido en first/last_name) mediante el objeto `user_data`.
+    - **Patrón**: Usan `waitForGtag` con timeout de 2 segundos (el usuario disparó el click, así que el riesgo de carrera es bajo pero se protege igualmente).
 2.  **Eventos de Purchase (Compra Exitosa)**:
-    *   Se disparan únicamente en los puntos de retorno de éxito (`FlowReturn.jsx`, `App.jsx`, `CompletarDetalles.jsx` como respaldo).
-    *   **ID de Conversión**: `AW-17529712870/yZz-CJqiicUbEObh6KZB` (Moneda: `CLP`).
-    *   **Enhanced Conversions**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica para pasarlos a `user_data` al disparar el evento.
+    - Se disparan únicamente en los puntos de retorno de éxito (`FlowReturn.jsx`, `App.jsx`, `CompletarDetalles.jsx` como respaldo).
+    - **ID de Conversión**: `AW-17529712870/yZz-CJqiicUbEObh6KZB` (Moneda: `CLP`).
+    - **Enhanced Conversions**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica para pasarlos a `user_data` al disparar el evento.
 3.  **Protección de Duplicados (Purchase)**:
-    *   Se utiliza `sessionStorage` con una clave basada en el ID de la transacción (`id_reserva_token`) para evitar registrar la misma conversión repetida si el usuario recarga la página. Conversiones con un nuevo pago por el mismo cliente (abono + saldo pago restante) se registrarán como 2 transacciones diferentes (lo cual es correcto).
+    - Se utiliza `sessionStorage` con una clave basada en el ID de la transacción (`id_reserva_token`) para evitar registrar la misma conversión repetida si el usuario recarga la página. Conversiones con un nuevo pago por el mismo cliente (abono + saldo pago restante) se registrarán como 2 transacciones diferentes (lo cual es correcto).
 
 #### Comportamiento del Gateway Flow: Doble Redirección (descubierto 15 Marzo 2026)
 
@@ -1651,6 +1802,7 @@ GET /api/payment-status?token=<flowToken>&reserva_id=<id>
 ```
 
 **Respuesta:**
+
 ```json
 { "pagado": true, "status": "pagado", "monto": 59670 }
 ```
@@ -1667,48 +1819,60 @@ Cuando el backend redirige al frontend con `status=pending`, el componente React
 // Polling: 5 segundos de intervalo, máximo 24 intentos (2 minutos total)
 let intentos = 0;
 const pollingInterval = setInterval(async () => {
-    intentos++;
-    if (intentos > 24) { clearInterval(pollingInterval); return; }
-    const resp = await fetch(`${apiBase}/api/payment-status?token=${token}&reserva_id=${reservaId}`);
-    const data = await resp.json();
-    if (data.pagado) {
-        clearInterval(pollingInterval);
-        setPaymentStatus("success");
-        const montoConfirmado = data.monto?.toString() || amountParam;
-        await waitForGtag();
-        triggerConversion(montoConfirmado, reservaIdParam, token);
-    }
+	intentos++;
+	if (intentos > 24) {
+		clearInterval(pollingInterval);
+		return;
+	}
+	const resp = await fetch(
+		`${apiBase}/api/payment-status?token=${token}&reserva_id=${reservaId}`,
+	);
+	const data = await resp.json();
+	if (data.pagado) {
+		clearInterval(pollingInterval);
+		setPaymentStatus("success");
+		const montoConfirmado = data.monto?.toString() || amountParam;
+		await waitForGtag();
+		triggerConversion(montoConfirmado, reservaIdParam, token);
+	}
 }, 5000);
 // Limpiar polling al desmontar el componente
-return () => { cancelado = true; clearInterval(pollingInterval); };
+return () => {
+	cancelado = true;
+	clearInterval(pollingInterval);
+};
 ```
 
 #### Patrón Obligatorio: `waitForGtag` (Fix Race Condition - Marzo 2026)
 
 **Problema identificado**: `gtag.js` se carga de forma **asíncrona** desde los servidores de Google. En flujos donde la conversión se dispara automáticamente al cargar la página (ej: al volver de Flow), el script puede no estar disponible aún, causando que el evento se **pierda silenciosamente**.
 
-**Solución**: Todos los eventos de *Purchase* y *Lead* automáticos deben usar el patrón `waitForGtag` antes de llamar a `window.gtag(...)`:
+**Solución**: Todos los eventos de _Purchase_ y _Lead_ automáticos deben usar el patrón `waitForGtag` antes de llamar a `window.gtag(...)`:
 
 ```javascript
 // ✅ PATRÓN CORRECTO: Esperar a que gtag esté disponible (polling cada 100ms, máx configurable)
-const waitForGtag = (maxMs = 5000) => new Promise((resolve) => {
-    if (typeof window.gtag === "function") { resolve(true); return; }
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-        if (typeof window.gtag === "function") {
-            clearInterval(interval);
-            resolve(true);
-        } else if (Date.now() - startTime >= maxMs) {
-            clearInterval(interval);
-            resolve(false); // Timeout: gtag no cargó
-        }
-    }, 100);
-});
+const waitForGtag = (maxMs = 5000) =>
+	new Promise((resolve) => {
+		if (typeof window.gtag === "function") {
+			resolve(true);
+			return;
+		}
+		const startTime = Date.now();
+		const interval = setInterval(() => {
+			if (typeof window.gtag === "function") {
+				clearInterval(interval);
+				resolve(true);
+			} else if (Date.now() - startTime >= maxMs) {
+				clearInterval(interval);
+				resolve(false); // Timeout: gtag no cargó
+			}
+		}, 100);
+	});
 
 // En la función async que dispara la conversión:
 const gtagListo = await waitForGtag();
 if (gtagListo) {
-    window.gtag("event", "conversion", conversionData);
+	window.gtag("event", "conversion", conversionData);
 }
 ```
 
@@ -1722,46 +1886,47 @@ if (gtagListo) {
 
 #### Tabla de Cobertura Completa de Flujos (Estado: 15 Marzo 2026)
 
-| Flujo | `paymentOrigin` | Componente Purchase | Lead status | Polling pending |
-|-------|----------------|---------------------|-----------  |----------------|
-| PagarConCodigo | `pagar_con_codigo` | `FlowReturn.jsx` | guard simple (click) | ✅ FlowReturn |
-| ConsultarReserva | `consultar_reserva` | `FlowReturn.jsx` | `waitForGtag` 2s | ✅ FlowReturn |
-| Oportunidades | `oportunidad_traslado` | `FlowReturn.jsx` | `waitForGtag` 2s | ✅ FlowReturn |
-| Banners/Promociones | `banner_promocional` | `FlowReturn.jsx` | `waitForGtag` 2s | ✅ FlowReturn |
-| HeroExpress | `reserva_express` | `App.jsx` (redirect) | `waitForGtag` 5s | ✅ App.jsx |
+| Flujo               | `paymentOrigin`        | Componente Purchase  | Lead status          | Polling pending |
+| ------------------- | ---------------------- | -------------------- | -------------------- | --------------- |
+| PagarConCodigo      | `pagar_con_codigo`     | `FlowReturn.jsx`     | guard simple (click) | ✅ FlowReturn   |
+| ConsultarReserva    | `consultar_reserva`    | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
+| Oportunidades       | `oportunidad_traslado` | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
+| Banners/Promociones | `banner_promocional`   | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
+| HeroExpress         | `reserva_express`      | `App.jsx` (redirect) | `waitForGtag` 5s     | ✅ App.jsx      |
 
 #### Archivos de Purchase que usan `waitForGtag`
 
-| Archivo | Flujo | Función |
-|---------|-------|---------|
-| `src/components/FlowReturn.jsx` | Todos los flujos no-express | `verifyPayment()` / polling → `waitForGtag()` |
-| `src/App.jsx` | Reserva Express (retorno al Home) | `dispararConversionExpress()` → `waitForGtag()` |
-| `src/components/CompletarDetalles.jsx` | Flujo Normal (respaldo) | `dispararConversionRespaldo()` → `waitForGtag()` |
+| Archivo                                | Flujo                             | Función                                          |
+| -------------------------------------- | --------------------------------- | ------------------------------------------------ |
+| `src/components/FlowReturn.jsx`        | Todos los flujos no-express       | `verifyPayment()` / polling → `waitForGtag()`    |
+| `src/App.jsx`                          | Reserva Express (retorno al Home) | `dispararConversionExpress()` → `waitForGtag()`  |
+| `src/components/CompletarDetalles.jsx` | Flujo Normal (respaldo)           | `dispararConversionRespaldo()` → `waitForGtag()` |
 
 #### Archivos de Lead que usan `waitForGtag`
 
-| Archivo | Evento | Timeout |
-|---------|--------|---------|
-| `src/components/Header/index.jsx` | Lead → WhatsApp | 2s |
-| `src/pages/FletesLanding.jsx` | Lead → WhatsApp | 2s |
-| `src/components/WhatsAppButton.jsx` | Lead → WhatsApp | 2s |
-| `src/components/WhatsAppInterceptModal.jsx` | Lead → WhatsApp | 2s |
-| `src/App.jsx` | Lead → WhatsApp (HeroExpress) | 2s |
-| `src/components/ConsultarReserva.jsx` | Lead → Pago | 2s |
-| `src/pages/OportunidadesTraslado.jsx` | Lead → Pago | 2s |
-| `src/components/ReservaRapidaModal.jsx` | Lead → Pago | 2s |
+| Archivo                                     | Evento                        | Timeout |
+| ------------------------------------------- | ----------------------------- | ------- |
+| `src/components/Header/index.jsx`           | Lead → WhatsApp               | 2s      |
+| `src/pages/FletesLanding.jsx`               | Lead → WhatsApp               | 2s      |
+| `src/components/WhatsAppButton.jsx`         | Lead → WhatsApp               | 2s      |
+| `src/components/WhatsAppInterceptModal.jsx` | Lead → WhatsApp               | 2s      |
+| `src/App.jsx`                               | Lead → WhatsApp (HeroExpress) | 2s      |
+| `src/components/ConsultarReserva.jsx`       | Lead → Pago                   | 2s      |
+| `src/pages/OportunidadesTraslado.jsx`       | Lead → Pago                   | 2s      |
+| `src/components/ReservaRapidaModal.jsx`     | Lead → Pago                   | 2s      |
 
 #### Especificaciones Técnicas
+
 - **Normalización Telefónica**: Es esencial usar la función local `normalizePhoneToE164` para los números al montar los payloads de Enhanced Conversions.
-- **Robustez del Valor Monetario**: El evento *Purchase* implementa fallbacks progresivos (Parámetro Flow → Respuesta Backend → Centinela `1.0`) para prevenir que problemas de red eviten notificar la conversión.
+- **Robustez del Valor Monetario**: El evento _Purchase_ implementa fallbacks progresivos (Parámetro Flow → Respuesta Backend → Centinela `1.0`) para prevenir que problemas de red eviten notificar la conversión.
 
 > [!WARNING]
 > **Nota de Mantenimiento Crítica**:
-> Al agregar nuevos flujos de pago, **SIEMPRE** usar el patrón `waitForGtag` descrito arriba para conversiones *Purchase* disparadas automáticamente. No usar `if (typeof window.gtag === "function") { ... }` como único guard: eso solo funciona si el script ya cargó, pero no espera si aún está cargando.
+> Al agregar nuevos flujos de pago, **SIEMPRE** usar el patrón `waitForGtag` descrito arriba para conversiones _Purchase_ disparadas automáticamente. No usar `if (typeof window.gtag === "function") { ... }` como único guard: eso solo funciona si el script ya cargó, pero no espera si aún está cargando.
 > Si el nuevo flujo puede recibir `status=1` (pending) desde Flow, implementar el polling usando el endpoint `/api/payment-status`.
 
-
 ---
+
 ### 5.20 Mejoras en la Gestión y Visualización de Reservas (Panel Admin)
 
 **Implementado: 15 Febrero 2026**
@@ -1769,27 +1934,34 @@ if (gtagListo) {
 Se han realizado mejoras significativas en el panel de administración de reservas para facilitar la búsqueda, el ordenamiento y la identificación de servicios especiales (sillas infantiles) y retornos vinculados.
 
 #### 1. Ordenamiento Dinámico de la Tabla
+
 Anteriormente, la lista de reservas era estática. Se ha implementado un sistema de ordenamiento que permite al administrador organizar la información según sus necesidades:
+
 - **Columnas Ordenables**: "Fecha/Hora Viaje" ("fecha") y "Fecha Creación" ("created_at").
 - **Estados**: Ascendente y Descendente con indicadores visuales (flechas ^|^v).
 - **Persistencia**: El ordenamiento se realiza directamente en la base de datos a través de la API para mantener el rendimiento con grandes volúmenes de datos.
 
 #### 2. Visualización Mejorada de Viajes de Regreso
+
 Para las reservas marcadas como "Ida y Vuelta", el panel ahora muestra información del tramo de regreso directamente en la tabla:
+
 - **Datos Visibles**: Fecha y Hora de regreso (si están disponibles).
 - **Asociación Técnica**: Se utiliza la asociación "tramoHijo" en el backend para recuperar automáticamente los datos vinculados del tramo de vuelta.
 
 #### 3. Indicador de Silla Infantil (Baby Seat)
+
 Se ha añadido un identificador visual crítico para la logística de los conductores:
+
 - **Icono**: Icono de "Baby" ("lucide-react") resaltado en color café junto al número de pasajeros.
 - **Activación**: Se muestra automáticamente si la reserva tiene el campo "sillaInfantil: true".
 
 #### 4. Detalles Técnicos (Backend)
+
 - **Asociaciones**: Se implementó "tramoHijo" y "tramoPadre" en "associations.js" para vincular reservas del mismo viaje.
-- **API "GET /api/reservas"**: 
-    - Soporta parámetros "sort" (columna) y "order" ("asc"/"desc").
-    - Incluye por defecto la asociación "tramoHijo".
-    - Orden predeterminado: "created_at" DESC (reservas más nuevas primero).
+- **API "GET /api/reservas"**:
+  - Soporta parámetros "sort" (columna) y "order" ("asc"/"desc").
+  - Incluye por defecto la asociación "tramoHijo".
+  - Orden predeterminado: "created_at" DESC (reservas más nuevas primero).
 
 ---
 
@@ -1798,7 +1970,9 @@ Se ha añadido un identificador visual crítico para la logística de los conduc
 El sistema cuenta con un mecanismo de auditoría (`AdminAuditLog`) diseñado para registrar acciones críticas realizadas por usuarios administradores. Este registro es esencial para la seguridad, trazabilidad y depuración de incidentes.
 
 ### Funcionalidad
+
 Cada vez que se realiza una acción sensible en el panel administrativo, el backend crea un registro en la tabla `admin_audit_logs` con la siguiente información:
+
 - **Actor**: ID del administrador (`adminUserId`)
 - **Acción**: Tipo de evento (ej: `login`, `eliminar`, `update_config`)
 - **Entidad**: Objeto afectado (ej: `Reserva`, `Configuracion`)
@@ -1806,16 +1980,19 @@ Cada vez que se realiza una acción sensible en el panel administrativo, el back
 - **Contexto**: Dirección IP y User Agent
 
 ### Eventos Registrados Actualmente
+
 1. **Seguridad**:
-    - Inicio de sesión (`login`)
-    - Cierre de sesión (`logout`)
+   - Inicio de sesión (`login`)
+   - Cierre de sesión (`logout`)
 2. **Configuración**:
-    - Cambios en variables globales (`update_config`), como activar/desactivar el modal de WhatsApp anterior.
+   - Cambios en variables globales (`update_config`), como activar/desactivar el modal de WhatsApp anterior.
 3. **Gestión de Reservas**:
-    - **Eliminación (`accion: eliminar`)**: Implementado en Febrero 2026 tras incidente de pérdida de datos. Registra todos los detalles de la reserva eliminada para permitir su recuperación manual si fuera necesario.
+   - **Eliminación (`accion: eliminar`)**: Implementado en Febrero 2026 tras incidente de pérdida de datos. Registra todos los detalles de la reserva eliminada para permitir su recuperación manual si fuera necesario.
 
 ### Consultas de Auditoría
+
 Actualmente los logs se pueden consultar directamente en la base de datos:
+
 ```sql
 SELECT * FROM admin_audit_logs ORDER BY created_at DESC;
 ```
@@ -1837,38 +2014,35 @@ Implementado en Febrero 2026 para gestionar el escenario donde un cliente comple
     - Botón **"📧 Solicitar Datos Faltantes"** en el modal de detalles del Administrador.
     - Envía un correo automático con un enlace personalizado que lleva al cliente directamente a su reserva.
 
-3.  **Actualización Autónoma**:
-    - El cliente accede a `ConsultarReserva.jsx`, ve un aviso destacado y puede abrir el formulario de `CompletarDetalles` sin necesidad de login adicional.
-    - Una vez guardados los datos, la reserva se actualiza en tiempo real y desaparece la alerta roja en el panel del administrador.
-1647: 
-1648: ### 5.23 Sistema de Recuperación de Leads Abandonados (HeroExpress)
-1649: 
-1650: Implementado en Marzo 2026 para maximizar la conversión en el módulo HeroExpress, capturando datos de clientes que inician una cotización pero no completan el pago.
-1651: 
-1652: #### Funcionamiento Técnico
-1653: 
-1654: 1.  **Captura Silenciosa (Frontend)**:
-1655:     - El componente `HeroExpress.jsx` utiliza un mecanismo de **debounce** (500ms) para capturar los datos del formulario (`nombre`, `email`, `teléfono`, `ruta`, `precio`) tan pronto como el cliente los ingresa.
-1656:     - Los datos se envían de forma asíncrona al endpoint `/api/reservas/capturar-lead` sin interrumpir la experiencia del usuario.
-1657: 
-1658: 2.  **Persistencia y Cola de Correo (Backend)**:
-1659:     - El backend crea o actualiza un registro de reserva en estado `pendiente`.
-1660:     - Un proceso en segundo plano (`emailProcessor.js`) detecta estas reservas abandonadas (que no han pasado a `pagado` tras un tiempo prudencial) y programa un correo de recuperación.
-1661: 
-1662: 3.  **Correo de Recuperación Mejorado**:
-1663:     - Se utiliza la acción `send_lead_recovery` en el script PHP.
-1664:     - El correo incluye un **enlace de pago directo** que redirige al cliente a Flow con el monto exacto cotizado, facilitando la conversión en un solo clic.
-1665:     - El enlace utiliza el endpoint `/api/reservas/:id/pay-redirect` para generar el pago dinámicamente.
-1666: 
-1667: 4.  **Monitoreo y Respaldo (Admin BCC)**:
-1668:     - Para garantizar el seguimiento manual, se añade una copia oculta (**BCC**) al administrador (`widomartinez@gmail.com`) en todos los correos de recuperación de leads.
-1669:     - Si el envío de correo falla definitivamente tras 3 intentos, el sistema envía una **alerta de fallo crítico** al administrador.
-1670: 
-1671: 5.  **Seguimiento Administrativo**:
-1672:     - En `AdminReservas`, los leads abandonados muestran un botón de **"Seguimiento WhatsApp"** que permite al administrador copiar un mensaje personalizado y contactar al cliente de forma manual si el correo automático no surte efecto.
-1673: 
-1674: ---
-
+3.  **Actualización Autónoma**: - El cliente accede a `ConsultarReserva.jsx`, ve un aviso destacado y puede abrir el formulario de `CompletarDetalles` sin necesidad de login adicional. - Una vez guardados los datos, la reserva se actualiza en tiempo real y desaparece la alerta roja en el panel del administrador.
+    1647:
+    1648: ### 5.23 Sistema de Recuperación de Leads Abandonados (HeroExpress)
+    1649:
+    1650: Implementado en Marzo 2026 para maximizar la conversión en el módulo HeroExpress, capturando datos de clientes que inician una cotización pero no completan el pago.
+    1651:
+    1652: #### Funcionamiento Técnico
+    1653:
+    1654: 1. **Captura Silenciosa (Frontend)**:
+    1655: - El componente `HeroExpress.jsx` utiliza un mecanismo de **debounce** (500ms) para capturar los datos del formulario (`nombre`, `email`, `teléfono`, `ruta`, `precio`) tan pronto como el cliente los ingresa.
+    1656: - Los datos se envían de forma asíncrona al endpoint `/api/reservas/capturar-lead` sin interrumpir la experiencia del usuario.
+    1657:
+    1658: 2. **Persistencia y Cola de Correo (Backend)**:
+    1659: - El backend crea o actualiza un registro de reserva en estado `pendiente`.
+    1660: - Un proceso en segundo plano (`emailProcessor.js`) detecta estas reservas abandonadas (que no han pasado a `pagado` tras un tiempo prudencial) y programa un correo de recuperación.
+    1661:
+    1662: 3. **Correo de Recuperación Mejorado**:
+    1663: - Se utiliza la acción `send_lead_recovery` en el script PHP.
+    1664: - El correo incluye un **enlace de pago directo** que redirige al cliente a Flow con el monto exacto cotizado, facilitando la conversión en un solo clic.
+    1665: - El enlace utiliza el endpoint `/api/reservas/:id/pay-redirect` para generar el pago dinámicamente.
+    1666:
+    1667: 4. **Monitoreo y Respaldo (Admin BCC)**:
+    1668: - Para garantizar el seguimiento manual, se añade una copia oculta (**BCC**) al administrador (`widomartinez@gmail.com`) en todos los correos de recuperación de leads.
+    1669: - Si el envío de correo falla definitivamente tras 3 intentos, el sistema envía una **alerta de fallo crítico** al administrador.
+    1670:
+    1671: 5. **Seguimiento Administrativo**:
+    1672: - En `AdminReservas`, los leads abandonados muestran un botón de **"Seguimiento WhatsApp"** que permite al administrador copiar un mensaje personalizado y contactar al cliente de forma manual si el correo automático no surte efecto.
+    1673:
+    1674: ---
 
 ### 5.24 Sistema de Persistencia y Robustez de Pagos
 
@@ -1879,9 +2053,9 @@ Este sistema garantiza que no se pierdan datos de conversión de Google Ads ni t
 #### Componentes Técnicos
 
 1.  **Modelo `FlowToken`**:
-    *   Tabla en la base de datos que registra cada `token` generado por Flow en el momento de la creación del pago.
-    *   **Datos persistidos**: `amount` (monto real cotizado), `email` del cliente, `reservaId`, `paymentOrigin` y `metadata` JSON.
-    *   **Expiración**: Los tokens tienen una validez de 1 hora en la base de datos.
+    - Tabla en la base de datos que registra cada `token` generado por Flow en el momento de la creación del pago.
+    - **Datos persistidos**: `amount` (monto real cotizado), `email` del cliente, `reservaId`, `paymentOrigin` y `metadata` JSON.
+    - **Expiración**: Los tokens tienen una validez de 1 hora en la base de datos.
 
 2.  **Estrategia de Fallback en Cascada**:
     Al retornar de la pasarela, el sistema intenta recuperar el monto para la conversión en este orden:
@@ -1891,17 +2065,18 @@ Este sistema garantiza que no se pierdan datos de conversión de Google Ads ni t
     4.  **Monto Simbólico**: Como último recurso, envía un valor centinela (`1.0 CLP`) para evitar que Google Ads registre una conversión de valor cero.
 
 3.  **Normalización de Parámetros**:
-    *   El backend es agnóstico al componente que origina el pago.
-    *   Acepta indistintamente `reservaId` o `reservationId` (usado en componentes de productos).
-    *   Identifica el origen mediante `paymentOrigin` para decidir la ruta de redirección final (Home vs generic FlowReturn).
+    - El backend es agnóstico al componente que origina el pago.
+    - Acepta indistintamente `reservaId` o `reservationId` (usado en componentes de productos).
+    - Identifica el origen mediante `paymentOrigin` para decidir la ruta de redirección final (Home vs generic FlowReturn).
 
 #### Flujos Cubiertos
-*   **Express**: Home → Cotización → Pago.
-*   **Pagar con Código**: Uso de códigos de prepago.
-*   **Consulta de Reserva**: Pago de saldos pendientes.
-*   **Oportunidades**: Compra de retornos con descuento.
-*   **Banners**: Reservas desde promociones destacadas.
-*   **Productos**: Adición de servicios extras (café, WiFi, etc.) post-reserva.
+
+- **Express**: Home → Cotización → Pago.
+- **Pagar con Código**: Uso de códigos de prepago.
+- **Consulta de Reserva**: Pago de saldos pendientes.
+- **Oportunidades**: Compra de retornos con descuento.
+- **Banners**: Reservas desde promociones destacadas.
+- **Productos**: Adición de servicios extras (café, WiFi, etc.) post-reserva.
 
 ---
 
@@ -1913,12 +2088,12 @@ El frontend React (build) y los scripts PHP se alojan en el hosting compartido d
 
 #### Datos de Conexión SSH
 
-| Campo            | Valor              |
-|------------------|--------------------|
-| **IP**           | `82.112.246.242`   |
-| **Puerto**       | `65002`            |
-| **Usuario**      | `u419311572`       |
-| **Contraseña**   | `TeamoGadiel7.`    |
+| Campo          | Valor            |
+| -------------- | ---------------- |
+| **IP**         | `82.112.246.242` |
+| **Puerto**     | `65002`          |
+| **Usuario**    | `u419311572`     |
+| **Contraseña** | `TeamoGadiel7.`  |
 
 > [!IMPORTANT]
 > Hostinger usa un **puerto no estándar** (`65002`). Siempre especificarlo explícitamente con `-p 65002`, de lo contrario la conexión fallará.
@@ -2005,9 +2180,9 @@ scp -P 65002 -r ./dist/* u419311572@82.112.246.242:/home/u419311572/domains/tran
 
 #### Solución de Problemas SSH
 
-| Síntoma | Causa probable | Solución |
-|---------|---------------|----------|
-| `Connection refused` | Puerto incorrecto | Asegurarse de usar `-p 65002` |
-| `Permission denied` | Contraseña incorrecta | Verificar/cambiar contraseña en panel Hostinger |
-| SSH deshabilitado | El acceso SSH puede desactivarse | Activarlo en Hostinger → Avanzado → Acceso SSH |
-| Archivo no aparece | Ruta equivocada | Navegar a `public_html/` y verificar con `ls` |
+| Síntoma              | Causa probable                   | Solución                                        |
+| -------------------- | -------------------------------- | ----------------------------------------------- |
+| `Connection refused` | Puerto incorrecto                | Asegurarse de usar `-p 65002`                   |
+| `Permission denied`  | Contraseña incorrecta            | Verificar/cambiar contraseña en panel Hostinger |
+| SSH deshabilitado    | El acceso SSH puede desactivarse | Activarlo en Hostinger → Avanzado → Acceso SSH  |
+| Archivo no aparece   | Ruta equivocada                  | Navegar a `public_html/` y verificar con `ls`   |
