@@ -152,11 +152,27 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 				return;
 			}
 
-			// Determinar el valor de la conversión
-			// FIXED: Priorizar initialAmount si existe (viene de la transacción real)
+			// Determinar el valor de la conversión con prioridad:
+			// 1. initialAmount (pasado desde App.jsx en el retorno de pago)
+			// 2. localStorage pending (guardado antes de ir a Flow)
+			// 3. datos de la reserva en DB
 			let value = Number(initialAmount);
 
-			// Si no hay initialAmount, usar fallback de reserva
+			if (!value || value <= 0) {
+				// Intentar recuperar el monto desde el pending de localStorage
+				try {
+					const pendingRaw = localStorage.getItem('ga_pending_conversion_express');
+					if (pendingRaw) {
+						const pending = JSON.parse(pendingRaw);
+						if (pending.reservaId === String(reservaId) && Number(pending.amount) > 0) {
+							value = Number(pending.amount);
+							console.log(`✅ [CompletarDetalles] Monto recuperado desde localStorage: ${value}`);
+						}
+					}
+				} catch (e) { /* ignorar */ }
+			}
+
+			// Si no hay initialAmount ni localStorage, usar fallback de reserva
 			if (!value || value <= 0) {
 				value = Number(reserva.totalConDescuento || reserva.precio || reserva.abonoSugerido || 0);
 			}

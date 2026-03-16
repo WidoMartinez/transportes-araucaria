@@ -650,6 +650,8 @@ const [configSillas, setConfigSillas] = useState({
 					if (reservaId) {
 						sessionStorage.setItem(`flow_conversion_express_${reservaId}`, 'true');
 					}
+					// Limpiar el pending de localStorage al disparar exitosamente
+					localStorage.removeItem('ga_pending_conversion_express');
 				} catch (conversionError) {
 					console.error("❌ [App.jsx] Error crítico disparando conversión:", conversionError);
 				}
@@ -668,6 +670,40 @@ const [configSillas, setConfigSillas] = useState({
 
 			// Limpiar URL para evitar reactivación al recargar, pero mantener estado interno
 			// window.history.replaceState(null, "", window.location.pathname);
+			return; // Evita ejecutar el recovery check abajo
+		}
+
+		// RECOVERY: Si no hay flow_payment en URL, verificar si hay una conversión pendiente
+		// (cubre el caso donde el pago se completó en otra pestaña y esta no recibió el retorno)
+		if (!flowPending) {
+			const pendingRaw = localStorage.getItem('ga_pending_conversion_express');
+			if (pendingRaw) {
+				try {
+					const pending = JSON.parse(pendingRaw);
+					const edadMs = Date.now() - (pending.timestamp || 0);
+					// Verificar solo si el pending tiene menos de 2 horas
+					if (pending.reservaId && edadMs < 2 * 60 * 60 * 1000) {
+						const apiBase = import.meta.env.VITE_API_URL || 'https://transportes-araucaria.onrender.com';
+						fetch(`${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(pending.reservaId)}`)
+							.then(r => r.ok ? r.json() : null)
+							.then(data => {
+								if (data?.pagado) {
+									console.log(`✅ [App.jsx Recovery] Pago detectado para reserva ${pending.reservaId}. Activando CompletarDetalles.`);
+									localStorage.removeItem('ga_pending_conversion_express');
+									// CompletarDetalles disparará la conversión de respaldo (sessionStorage no tiene la clave)
+									setVistaCompletarDetalles({
+										activo: true,
+										reservaId: pending.reservaId,
+										initialAmount: pending.amount,
+									});
+								}
+							})
+							.catch(() => {}); // Ignorar errores de red silenciosamente
+					}
+				} catch (e) {
+					localStorage.removeItem('ga_pending_conversion_express'); // limpiar dato corrupto
+				}
+			}
 		}
 	}, []);
 
@@ -1726,6 +1762,15 @@ const [configSillas, setConfigSillas] = useState({
 
 			const data = await response.json();
 			if (data.url) {
+				// Guardar intención de conversión en localStorage ANTES de abrir Flow
+				// Permite recuperar la conversión si la nueva pestaña se cierra antes del redirect
+				if (reservaIdParaPago) {
+					localStorage.setItem('ga_pending_conversion_express', JSON.stringify({
+						reservaId: String(reservaIdParaPago),
+						amount: String(amount),
+						timestamp: Date.now()
+					}));
+				}
 				window.open(data.url, "_blank");
 			} else {
 				throw new Error(
