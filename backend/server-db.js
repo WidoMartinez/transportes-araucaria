@@ -5646,7 +5646,7 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		console.log(`✅ Reserva encontrada: ID ${reserva.id}`);
+		console.log(`✅ Reserva encontrada: ID ${reserva.id}, Precio: $${reserva.precio}, IdaVuelta: ${reserva.idaVuelta}, TipoTramo: ${reserva.tipoTramo}`);
 		res.json(reserva);
 	} catch (error) {
 		console.error("Error buscando reserva por código:", error);
