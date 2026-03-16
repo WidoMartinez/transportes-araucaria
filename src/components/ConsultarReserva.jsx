@@ -165,6 +165,14 @@ function ConsultarReserva() {
 		}).format(amount || 0);
 	};
 
+	// CORRECCIÓN: Calcular el precio base real considerando ida+vuelta
+	const precioBaseReal = useMemo(() => {
+		if (!reserva) return 0;
+		// Si es ida y vuelta, el backend divide el precio total en 2 tramos
+		// Por lo tanto, multiplicamos por 2 para mostrar el precio total
+		return reserva.idaVuelta ? (reserva.precio * 2) : reserva.precio;
+	}, [reserva]);
+
 	const getEstadoBadge = (estado) => {
 		const estados = {
 			pendiente: { variant: "secondary", icon: Clock, label: "Pendiente" },
@@ -613,7 +621,7 @@ function ConsultarReserva() {
 									<div>
 										<Label className="text-muted-foreground">Precio Base</Label>
 										<p className="font-medium">
-											{formatCurrency(reserva.precio)}
+											{formatCurrency(precioBaseReal)}
 										</p>
 									</div>
 									<div>

@@ -1963,7 +1963,9 @@ const [configSillas, setConfigSillas] = useState({
 			source,
 
 			// Datos de pricing calculados
-			precio: cotizacion.precio,
+			// El backend divide los precios en 2 tramos cuando idaVuelta=true
+			// Por lo tanto debemos enviar el precio base YA multiplicado (si es ida y vuelta)
+			precio: pricing.precioBase,
 			vehiculo: cotizacion.vehiculo,
 			abonoSugerido: pricing.abono,
 			saldoPendiente: pricing.saldoPendiente,

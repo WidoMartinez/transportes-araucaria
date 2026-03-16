@@ -194,7 +194,9 @@ $action = $data['action'] ?? 'normal'; // 'normal', 'notify_admin_only', 'send_d
 // Configuración del descuento para clientes sin pago (porcentaje)
 $DESCUENTO_OFERTA_ESPECIAL = 10;
 
-$formattedPrice = $precio ? '$' . number_format($precio, 0, ',', '.') . ' CLP' : 'A consultar';
+// CORRECCIÓN: Usar totalConDescuento si está disponible (incluye ida+vuelta), sino usar precio
+$precioParaMostrar = ($totalConDescuento > 0) ? $totalConDescuento : $precio;
+$formattedPrice = $precioParaMostrar ? '$' . number_format($precioParaMostrar, 0, ',', '.') . ' CLP' : 'A consultar';
 
 // Preparar datos completos para guardar
 $reservaCompleta = [
