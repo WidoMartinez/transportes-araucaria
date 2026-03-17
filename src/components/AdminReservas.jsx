@@ -773,6 +773,9 @@ function AdminReservas() {
 
 	// Estado para mostrar el modal de registro de pago manual
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
+
+	// Estado para mostrar la sección de ajustes manuales inline en el diálogo de edición
+	const [showAdjustments, setShowAdjustments] = useState(false);
 	
 	// Estado para modal de exportación de calendario
 	const [showCalendarDialog, setShowCalendarDialog] = useState(false);
@@ -4950,20 +4953,22 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 							{/* Sección de Gestión de Pagos Manuales (Colapsable) */}
 							<div className="space-y-4 border rounded-lg p-4 bg-slate-50/50">
-								<div 
-									className="flex items-center justify-between cursor-pointer"
-									onClick={() => setShowRegisterPayment(!showRegisterPayment)}
-								>
-									<div className="flex items-center gap-2">
-										<DollarSign className="w-5 h-5 text-slate-500" />
-										<span className="font-semibold text-slate-700">Gestión de Pagos Manuales / Ajustes</span>
-									</div>
-									<Button type="button" variant="ghost" size="sm">
-										{showRegisterPayment ? "Cerrar" : "Abrir"}
+								<div className="flex items-center justify-between">
+									<h3 className="font-semibold text-chocolate-800 flex items-center gap-2">
+										<DollarSign className="w-5 h-5" />
+										Gestión de Pagos Manuales / Ajustes
+									</h3>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={() => setShowAdjustments(!showAdjustments)}
+										className="text-chocolate-600 hover:text-chocolate-700 hover:bg-chocolate-50"
+									>
+										{showAdjustments ? "Cerrar" : "Abrir"}
 									</Button>
 								</div>
 
-								{showRegisterPayment && (
+								{showAdjustments && (
 									<div className="space-y-4 pt-2 border-t mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
 										{/* Método de Pago */}
 										<div className="space-y-2">
