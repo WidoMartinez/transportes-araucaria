@@ -9855,16 +9855,12 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		);
 
 		const payment = flowResponse.data;
-		// LOG DE CONVERSIÓN: estado de pago recibido desde Flow (dato crítico para analytics y reconciliación)
 		const FLOW_ESTADOS = {
 			1: "PENDIENTE",
 			2: "PAGADO",
 			3: "RECHAZADO",
 			4: "ANULADO",
 		};
-		console.log(
-			`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${payment.payer?.email ? payment.payer.email.slice(0, 3) + "***" : "sin email"}`,
-		);
 
 		// Responder a Flow
 		res.status(200).send("OK");
@@ -9888,7 +9884,13 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			}
 		}
 		const emailOptional = optionalMetadata.email;
+		// Flow puede devolver payment.payer como string directo o como objeto {email}.
+		// Se usa emailOptional como fallback (viene del campo optional que siempre enviamos).
 		const email = payment.payer?.email || emailOptional;
+		// LOG DE CONVERSIÓN: usar email ya resuelto para mostrar el payer correctamente
+		console.log(
+			`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${email ? email.slice(0, 3) + "***" : "sin email"}`,
+		);
 		const commerceOrder = payment.commerceOrder;
 		const optionalReservaId =
 			optionalMetadata.reservaId !== undefined &&
