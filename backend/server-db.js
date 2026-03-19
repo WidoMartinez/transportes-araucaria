@@ -9862,11 +9862,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			3: "RECHAZADO",
 			4: "ANULADO",
 		};
-		// NOTA: Flow devuelve payment.payer como string (email directo), no como objeto {email:"..."}.
-		// Se normaliza para soportar ambos formatos por compatibilidad con tests o cambios futuros de la API.
-		const payerEmail = typeof payment.payer === "string" ? payment.payer : payment.payer?.email;
 		console.log(
-			`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${payerEmail ? payerEmail.slice(0, 3) + "***" : "sin email"}`,
+			`💳 [CONVERSIÓN PAGO] ${new Date().toISOString()} | Estado: ${FLOW_ESTADOS[payment.status] || `status_${payment.status}`} | Monto: $${payment.amount} | FlowOrder: ${payment.flowOrder} | Payer: ${payment.payer?.email ? payment.payer.email.slice(0, 3) + "***" : "sin email"}`,
 		);
 
 		// Responder a Flow
@@ -9891,7 +9888,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			}
 		}
 		const emailOptional = optionalMetadata.email;
-		const email = payerEmail || emailOptional;
+		const email = payment.payer?.email || emailOptional;
 		const commerceOrder = payment.commerceOrder;
 		const optionalReservaId =
 			optionalMetadata.reservaId !== undefined &&
