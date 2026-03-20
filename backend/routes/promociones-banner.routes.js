@@ -463,14 +463,78 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
       });
     }
 
-    // Generar código de reserva único
-    const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
-    // Crear reserva
     const esIdaVuelta = promocion.tipo_viaje === "ida_vuelta";
     const pasajeros = req.body.cantidad_pasajeros ? parseInt(req.body.cantidad_pasajeros) : 1;
     const sillaBool = cantidadSillas > 0;
     const comentariosSilla = cantidadSillas > 0 ? `Incluye ${cantidadSillas} silla(s) infantil(es)` : null;
+
+    // ─── Deduplicación: buscar reserva pendiente existente para el mismo
+    // cliente/ruta/fecha/hora desde banner para actualizar en lugar de crear una nueva.
+    // Esto evita duplicados cuando el usuario reintenta el pago o vuelve atrás desde Flow.
+    // Se filtra por tipoTramo="ida" para no confundir con el tramo vuelta vinculado.
+    const reservaExistente = await Reserva.findOne({
+      where: {
+        email,
+        origen: origenFinal,
+        destino: destinoFinal,
+        fecha: fecha_ida,
+        hora: hora_ida,
+        estado: "pendiente",
+        source: "banner_promocional",
+        tipoTramo: "ida",
+      },
+    });
+
+    if (reservaExistente) {
+      // Actualizar la reserva existente con los nuevos datos del formulario
+      const precioTramoActualizado = esIdaVuelta ? precioTotal / 2 : precioTotal;
+      await reservaExistente.update({
+        clienteId: cliente.id,
+        nombre,
+        telefono,
+        pasajeros,
+        precio: precioTramoActualizado,
+        totalConDescuento: precioTramoActualizado,
+        sillaInfantil: sillaBool,
+        cantidadSillasInfantiles: cantidadSillas,
+        comentarios: comentariosSilla,
+      });
+
+      // Si tiene tramo vuelta vinculado, actualizarlo también
+      if (esIdaVuelta && reservaExistente.tramoHijoId) {
+        const tramovueltaExistente = await Reserva.findByPk(reservaExistente.tramoHijoId);
+        if (tramovueltaExistente) {
+          await tramovueltaExistente.update({
+            clienteId: cliente.id,
+            nombre,
+            telefono,
+            fecha: fecha_vuelta || tramovueltaExistente.fecha,
+            hora: hora_vuelta || tramovueltaExistente.hora,
+            pasajeros,
+            precio: precioTramoActualizado,
+            totalConDescuento: precioTramoActualizado,
+            sillaInfantil: sillaBool,
+            cantidadSillasInfantiles: cantidadSillas,
+            comentarios: comentariosSilla,
+          });
+        }
+      }
+
+      console.log(`🔄 [BANNER] Reserva existente actualizada: ${reservaExistente.codigoReserva} (id: ${reservaExistente.id})`);
+
+      return res.status(200).json({
+        message: "Reserva actualizada exitosamente",
+        reserva: {
+          id: reservaExistente.id,
+          codigo_reserva: reservaExistente.codigoReserva,
+          precio_total: precioTotal,
+        },
+      });
+    }
+
+    // No existe reserva pendiente previa → crear una nueva
+    // Generar código de reserva único
+    const codigoReserva = `PR-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     let reserva;
 
@@ -527,7 +591,7 @@ router.post("/desde-promocion/:id", apiLimiter, async (req, res) => {
 
       // c) Crear tramo VUELTA (Hijo)
       const reservaVuelta = await Reserva.create({
-        codigoReserva: `${codigoReserva}-V`, // Sufijo opcional para distinguir
+        codigoReserva: `${codigoReserva}-V`, // Sufijo para distinguir el tramo
         clienteId: cliente.id,
         nombre,
         email,
