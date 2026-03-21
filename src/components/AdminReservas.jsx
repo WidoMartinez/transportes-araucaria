@@ -1512,6 +1512,29 @@ function AdminReservas() {
 				setCurrentPage(Math.max(1, nuevasTotalPages));
 			}
 			setTotalReservas(data.pagination?.total || 0);
+
+			// Cargar estados de evaluaciones para reservas completadas en el lote actual
+			const completadas = reservasNormalizadas.filter((r) => r.estado === "completada");
+			if (completadas.length > 0) {
+				try {
+					const evalResp = await authenticatedFetch(`${apiUrl}/api/admin/evaluaciones?soloEvaluadas=false&limit=100`);
+					if (evalResp.ok) {
+						const evalData = await evalResp.json();
+						const evalMap = {};
+						(evalData.evaluaciones || []).forEach((ev) => {
+							evalMap[ev.reservaId] = {
+								enviada: ev.solicitudEnviada,
+								fecha: ev.fechaSolicitud,
+								evaluada: ev.evaluada,
+								promedio: ev.calificacionPromedio,
+							};
+						});
+						setSolicitudEvaluacion(evalMap);
+					}
+				} catch (_err) {
+					// No interrumpir el flujo si falla la carga de evaluaciones
+				}
+			}
 		} catch (error) {
 			console.error("Error cargando reservas:", error);
 			setError(error.message || "Error al cargar las reservas");

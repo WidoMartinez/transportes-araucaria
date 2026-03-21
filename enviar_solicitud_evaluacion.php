@@ -52,17 +52,17 @@ $tokenEvaluacion = $data['token_evaluacion'];
 // Formatear fecha para el correo
 $fechaFormateada = '';
 if (!empty($fechaViaje)) {
-    $ts = strtotime($fechaViaje);
-    if ($ts) {
-        $fechaFormateada = strftime('%d de %B de %Y', $ts);
-        if (empty($fechaFormateada)) {
-            // Fallback para sistemas que no tienen strftime completo
-            $meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-            $d = date('j', $ts);
-            $m = $meses[date('n', $ts) - 1];
-            $y = date('Y', $ts);
-            $fechaFormateada = "{$d} de {$m} de {$y}";
-        }
+    $dt = DateTime::createFromFormat('Y-m-d', $fechaViaje) ?: new DateTime($fechaViaje);
+    if ($dt) {
+        $meses = [
+            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+            5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+        ];
+        $d = (int)$dt->format('j');
+        $m = $meses[(int)$dt->format('n')];
+        $y = $dt->format('Y');
+        $fechaFormateada = "{$d} de {$m} de {$y}";
     }
 }
 

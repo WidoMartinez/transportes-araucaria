@@ -70,7 +70,7 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 	const [error, setError] = useState("");
 
 	const montoFinal = propinaOtro
-		? Math.max(0, parseInt(propinaOtroValor) || 0)
+		? Math.max(0, Math.floor(Number(propinaOtroValor) || 0))
 		: propinaMonto;
 
 	// Formatear monto en CLP

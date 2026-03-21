@@ -111,7 +111,7 @@ function AdminEvaluaciones() {
 
 	// Despublicar testimonio
 	const handleDespublicar = async (evaluacion) => {
-		if (!confirm("¿Seguro que deseas retirar este testimonio del sitio?")) return;
+		if (!window.confirm("¿Seguro que deseas retirar este testimonio del sitio?")) return;
 		setAccionando(true);
 		try {
 			const resp = await authFetch(

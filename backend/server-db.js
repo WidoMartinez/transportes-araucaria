@@ -9931,21 +9931,24 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				? Number(optionalMetadata.evaluacionId)
 				: null;
 
-			if (evaluacionId) {
+			if (evaluacionId && !isNaN(evaluacionId)) {
 				try {
-					await EvaluacionConductor.update(
-						{
+					// Verificar que la evaluación existe antes de actualizar
+					const evaluacion = await EvaluacionConductor.findByPk(evaluacionId);
+					if (evaluacion) {
+						await evaluacion.update({
 							propinaPagada: true,
 							propinaPaymentId: String(payment.flowOrder || payment.commerceOrder || ""),
-						},
-						{ where: { id: evaluacionId } }
-					);
-					console.log(`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}. FlowOrder: ${payment.flowOrder}`);
+						});
+						console.log(`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}. FlowOrder: ${payment.flowOrder}`);
+					} else {
+						console.warn(`⚠️ [Propina] No se encontró la evaluación ${evaluacionId} en la BD`);
+					}
 				} catch (propinaErr) {
 					console.error(`❌ [Propina] Error al actualizar propina para evaluación ${evaluacionId}:`, propinaErr.message);
 				}
 			} else {
-				console.warn("⚠️ [Propina] Pago de propina confirmado sin evaluacionId en metadata");
+				console.warn("⚠️ [Propina] Pago de propina confirmado sin evaluacionId válido en metadata");
 			}
 			return; // No continuar con el flujo normal de reservas
 		}
@@ -12548,10 +12551,10 @@ app.get("/api/testimonios", async (req, res) => {
 });
 
 // --- ENDPOINT ADMIN: Solicitar evaluación para una reserva ---
-app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, async (req, res) => {
+app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, apiLimiter, async (req, res) => {
 	try {
 		const reservaId = Number(req.params.reservaId);
-		if (!reservaId) {
+		if (!Number.isInteger(reservaId) || reservaId <= 0) {
 			return res.status(400).json({ success: false, error: "reservaId inválido" });
 		}
 
@@ -12650,7 +12653,7 @@ app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, async (req, re
 });
 
 // --- ENDPOINT ADMIN: Listar evaluaciones ---
-app.get("/api/admin/evaluaciones", authJWT, async (req, res) => {
+app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
 	try {
 		const { page = 1, limit = 20, soloEvaluadas, soloConPropina } = req.query;
 		const offset = (Number(page) - 1) * Number(limit);
@@ -12689,7 +12692,7 @@ app.get("/api/admin/evaluaciones", authJWT, async (req, res) => {
 });
 
 // --- ENDPOINT ADMIN: Publicar testimonio ---
-app.put("/api/admin/evaluaciones/:id/publicar", authJWT, async (req, res) => {
+app.put("/api/admin/evaluaciones/:id/publicar", authJWT, apiLimiter, async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { publicado_nombre } = req.body || {};
@@ -12717,7 +12720,7 @@ app.put("/api/admin/evaluaciones/:id/publicar", authJWT, async (req, res) => {
 });
 
 // --- ENDPOINT ADMIN: Despublicar testimonio ---
-app.put("/api/admin/evaluaciones/:id/despublicar", authJWT, async (req, res) => {
+app.put("/api/admin/evaluaciones/:id/despublicar", authJWT, apiLimiter, async (req, res) => {
 	try {
 		const { id } = req.params;
 
