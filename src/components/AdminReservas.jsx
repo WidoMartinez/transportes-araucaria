@@ -774,6 +774,10 @@ function AdminReservas() {
 	// Estado para mostrar el modal de registro de pago manual
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
 
+	// Estado para evaluación de conductor post-viaje
+	const [solicitudEvaluacion, setSolicitudEvaluacion] = useState({}); // { [reservaId]: { enviada, fecha, evaluada, promedio } }
+	const [solicitandoEvaluacion, setSolicitandoEvaluacion] = useState(false);
+
 	// Estado para mostrar la sección de ajustes manuales inline en el diálogo de edición
 	const [showAdjustments, setShowAdjustments] = useState(false);
 	
@@ -2652,6 +2656,39 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 	// Since that function is not in the provided content, I will insert the new function
 	// directly after `handleNewReserva` and before `toggleSelectAll`.
 
+	// Solicitar evaluación al pasajero (acción manual del admin)
+	const handleSolicitarEvaluacion = async (reserva) => {
+		if (!reserva) return;
+		if (!window.confirm(`¿Enviar solicitud de evaluación al pasajero ${reserva.nombre} (${reserva.email})?`)) return;
+		setSolicitandoEvaluacion(true);
+		try {
+			const resp = await authenticatedFetch(`/api/admin/evaluaciones/solicitar/${reserva.id}`, {
+				method: "POST",
+			});
+			const data = await resp.json();
+			if (!resp.ok && resp.status !== 409) {
+				throw new Error(data.error || "Error al solicitar evaluación");
+			}
+			setSolicitudEvaluacion((prev) => ({
+				...prev,
+				[reserva.id]: {
+					enviada: true,
+					fecha: data.fechaSolicitud || new Date().toISOString(),
+					evaluada: data.evaluada || false,
+				},
+			}));
+			if (resp.status === 409) {
+				alert(`Ya se había enviado una solicitud de evaluación el ${new Date(data.fechaSolicitud).toLocaleDateString("es-CL")}.`);
+			} else {
+				alert("✅ Solicitud de evaluación enviada exitosamente al pasajero.");
+			}
+		} catch (err) {
+			alert("Error al solicitar evaluación: " + err.message);
+		} finally {
+			setSolicitandoEvaluacion(false);
+		}
+	};
+
 	const handleSolicitarDetalles = async (reserva) => {
 		if (!reserva) return;
 		
@@ -4446,6 +4483,51 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												</div>
 											)}
 										</div>
+									</div>
+								)}
+
+								{/* Sección de Evaluación del Servicio (solo para reservas completadas) */}
+								{selectedReserva.estado === "completada" && (
+									<div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
+										<h4 className="text-sm font-bold text-amber-800 mb-3">
+											⭐ Evaluación del Servicio
+										</h4>
+										{(() => {
+											const infoEval = solicitudEvaluacion[selectedReserva.id];
+											if (infoEval?.evaluada) {
+												return (
+													<div className="flex items-center gap-2">
+														<span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+															✅ Evaluada
+														</span>
+														<button
+															className="text-xs text-amber-700 underline"
+															onClick={() => {
+																setShowDetailDialog(false);
+															}}
+														>
+															Ver en Evaluaciones
+														</button>
+													</div>
+												);
+											}
+											if (infoEval?.enviada) {
+												return (
+													<span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
+														⏳ Solicitud enviada el {new Date(infoEval.fecha).toLocaleDateString("es-CL")}
+													</span>
+												);
+											}
+											return (
+												<button
+													onClick={() => handleSolicitarEvaluacion(selectedReserva)}
+													disabled={solicitandoEvaluacion || !selectedReserva.email}
+													className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+												>
+													{solicitandoEvaluacion ? "⏳ Enviando..." : "📧 Solicitar evaluación al pasajero"}
+												</button>
+											);
+										})()}
 									</div>
 								)}
 
