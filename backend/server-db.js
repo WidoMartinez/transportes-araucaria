@@ -72,6 +72,9 @@ import addPosicionImagenToPromocionesBanner from "./migrations/add-posicion-imag
 import addAdvancedPromoConfig from "./migrations/add-advanced-promo-config.js";
 import addUltimaSolicitudDetalles from "./migrations/add-ultima-solicitud-detalles.js";
 import updateVehiculosMinibusToSuv from "./migrations/update-vehiculos-minibus-to-suv.js";
+import addEvaluacionesConductorTable from "./migrations/add-evaluaciones-conductor-table.js";
+import EvaluacionConductor from "./models/EvaluacionConductor.js";
+import { generarTokenEvaluacion, calcularPromedioEvaluacion, crearOrdenFlowPropina } from "./utils/evaluacionesHelper.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
@@ -810,6 +813,7 @@ const initializeDatabase = async () => {
 		await addSillaInfantilCountToReservas(); // Migración para columna cantidad_sillas_infantiles en reservas
 		await addUpgradeVanToReservas(); // Migración para columna upgrade_van en reservas
 		await updateVehiculosMinibusToSuv(); // Migración para renombrar tipo minibus → suv en vehículos
+		await addEvaluacionesConductorTable(); // Migración para tabla de evaluaciones de conductor post-viaje
 		await createPromocionesBannerTable(); // Migración para tabla de banners promocionales
 		await addPosicionImagenToPromocionesBanner(
 			sequelize.getQueryInterface(),
@@ -9920,6 +9924,35 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				? Number(optionalMetadata.codigoPagoId)
 				: null;
 
+		// --- Detección y procesamiento de propina de evaluación ---
+		// Si el origen del pago es una propina, procesarlo por separado y no continuar con el flujo normal
+		if (optionalMetadata.paymentOrigin === "propina_evaluacion" && payment.status === 2) {
+			const evaluacionId = optionalMetadata.evaluacionId
+				? Number(optionalMetadata.evaluacionId)
+				: null;
+
+			if (evaluacionId && !isNaN(evaluacionId)) {
+				try {
+					// Verificar que la evaluación existe antes de actualizar
+					const evaluacion = await EvaluacionConductor.findByPk(evaluacionId);
+					if (evaluacion) {
+						await evaluacion.update({
+							propinaPagada: true,
+							propinaPaymentId: String(payment.flowOrder || payment.commerceOrder || ""),
+						});
+						console.log(`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}. FlowOrder: ${payment.flowOrder}`);
+					} else {
+						console.warn(`⚠️ [Propina] No se encontró la evaluación ${evaluacionId} en la BD`);
+					}
+				} catch (propinaErr) {
+					console.error(`❌ [Propina] Error al actualizar propina para evaluación ${evaluacionId}:`, propinaErr.message);
+				}
+			} else {
+				console.warn("⚠️ [Propina] Pago de propina confirmado sin evaluacionId válido en metadata");
+			}
+			return; // No continuar con el flujo normal de reservas
+		}
+
 		if (
 			!commerceOrder &&
 			!optionalReservaId &&
@@ -12270,6 +12303,446 @@ app.get("/api/reservas/:id/transacciones", async (req, res) => {
 	}
 });
 
+// =====================================================================
+// --- SISTEMA DE EVALUACIONES DE CONDUCTOR POST-VIAJE ---
+// =====================================================================
+
+// --- ENDPOINT PÚBLICO: Validar token de evaluación ---
+app.get("/api/evaluaciones/validar-token/:token", async (req, res) => {
+	try {
+		const { token } = req.params;
+		if (!token) {
+			return res.status(400).json({ valido: false, motivo: "token_faltante" });
+		}
+
+		const evaluacion = await EvaluacionConductor.findOne({
+			where: { tokenEvaluacion: token },
+		});
+
+		if (!evaluacion) {
+			return res.json({ valido: false, motivo: "no_encontrado" });
+		}
+
+		if (evaluacion.evaluada) {
+			return res.json({ valido: false, motivo: "ya_evaluado" });
+		}
+
+		if (evaluacion.tokenExpiracion && new Date() > new Date(evaluacion.tokenExpiracion)) {
+			return res.json({ valido: false, motivo: "expirado" });
+		}
+
+		// Obtener datos de la reserva asociada
+		const reserva = await Reserva.findByPk(evaluacion.reservaId);
+
+		return res.json({
+			valido: true,
+			evaluacion: {
+				id: evaluacion.id,
+				clienteNombre: evaluacion.clienteNombre,
+				conductorNombre: evaluacion.conductorNombre,
+			},
+			reserva: reserva
+				? {
+						id: reserva.id,
+						codigoReserva: reserva.codigoReserva,
+						origen: reserva.origen,
+						destino: reserva.destino,
+						fecha: reserva.fecha,
+						hora: reserva.hora,
+					}
+				: null,
+		});
+	} catch (error) {
+		console.error("❌ [evaluaciones/validar-token] Error:", error.message);
+		return res.status(500).json({ valido: false, motivo: "error_interno" });
+	}
+});
+
+// --- ENDPOINT PÚBLICO: Guardar evaluación ---
+app.post("/api/evaluaciones/guardar", async (req, res) => {
+	try {
+		const {
+			token,
+			calificacion_puntualidad,
+			calificacion_limpieza,
+			calificacion_seguridad,
+			calificacion_comunicacion,
+			comentario,
+			propina_monto,
+		} = req.body || {};
+
+		if (!token) {
+			return res.status(400).json({ success: false, error: "Token requerido" });
+		}
+
+		const evaluacion = await EvaluacionConductor.findOne({
+			where: { tokenEvaluacion: token },
+		});
+
+		if (!evaluacion) {
+			return res.status(404).json({ success: false, error: "Token no encontrado" });
+		}
+
+		if (evaluacion.evaluada) {
+			return res.status(400).json({ success: false, error: "Esta evaluación ya fue completada" });
+		}
+
+		if (evaluacion.tokenExpiracion && new Date() > new Date(evaluacion.tokenExpiracion)) {
+			return res.status(400).json({ success: false, error: "El enlace de evaluación ha expirado" });
+		}
+
+		// Validar calificaciones (1-5)
+		const cats = [calificacion_puntualidad, calificacion_limpieza, calificacion_seguridad, calificacion_comunicacion];
+		for (const c of cats) {
+			const n = Number(c);
+			if (!Number.isInteger(n) || n < 1 || n > 5) {
+				return res.status(400).json({ success: false, error: "Las calificaciones deben ser valores entre 1 y 5" });
+			}
+		}
+
+		const promedio = calcularPromedioEvaluacion(
+			calificacion_puntualidad,
+			calificacion_limpieza,
+			calificacion_seguridad,
+			calificacion_comunicacion
+		);
+
+		const montoPropinaNum = Number(propina_monto) || 0;
+
+		// Actualizar evaluación con los datos ingresados
+		await evaluacion.update({
+			calificacionPuntualidad: Number(calificacion_puntualidad),
+			calificacionLimpieza: Number(calificacion_limpieza),
+			calificacionSeguridad: Number(calificacion_seguridad),
+			calificacionComunicacion: Number(calificacion_comunicacion),
+			calificacionPromedio: promedio,
+			comentario: comentario || null,
+			propinaMonto: montoPropinaNum,
+			evaluada: true,
+			fechaEvaluacion: new Date(),
+		});
+
+		console.log(`✅ [Evaluación] Reserva ${evaluacion.reservaId} evaluada. Promedio: ${promedio}. Propina: $${montoPropinaNum}`);
+
+		// Si hay propina, crear orden de pago en Flow
+		if (montoPropinaNum > 0) {
+			try {
+				const reserva = await Reserva.findByPk(evaluacion.reservaId);
+				const { flowUrl, token: flowToken, flowOrder } = await crearOrdenFlowPropina(
+					montoPropinaNum,
+					reserva?.codigoReserva || evaluacion.reservaId,
+					evaluacion.id,
+					evaluacion.clienteEmail
+				);
+
+				// Guardar datos de la orden de propina en la evaluación
+				await evaluacion.update({
+					propinaFlowToken: flowToken,
+					propinaFlowOrder: flowOrder,
+				});
+
+				console.log(`💰 [Propina] Orden Flow creada para evaluación ${evaluacion.id}. Order: ${flowOrder}`);
+
+				// Notificar al admin en segundo plano
+				notificarAdminEvaluacion(evaluacion).catch(err =>
+					console.warn("⚠️ [Evaluación] Error al notificar admin:", err.message)
+				);
+
+				return res.json({ success: true, flowUrl });
+			} catch (flowError) {
+				console.error("❌ [Propina] Error al crear orden Flow:", flowError.message);
+				// La evaluación ya se guardó, solo informamos el error de propina
+				return res.status(500).json({
+					success: false,
+					error: "Evaluación guardada, pero hubo un error al procesar la propina. Contacta al soporte.",
+				});
+			}
+		}
+
+		// Sin propina: notificar al admin y retornar éxito
+		notificarAdminEvaluacion(evaluacion).catch(err =>
+			console.warn("⚠️ [Evaluación] Error al notificar admin:", err.message)
+		);
+
+		return res.json({ success: true });
+	} catch (error) {
+		console.error("❌ [evaluaciones/guardar] Error:", error.message);
+		return res.status(500).json({ success: false, error: "Error interno al guardar la evaluación" });
+	}
+});
+
+// --- FUNCIÓN AUXILIAR: Notificar al admin cuando se recibe una evaluación ---
+const notificarAdminEvaluacion = async (evaluacion) => {
+	try {
+		const reserva = await Reserva.findByPk(evaluacion.reservaId);
+		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucania.cl";
+
+		const payload = {
+			reserva_codigo: reserva?.codigoReserva || `ID-${evaluacion.reservaId}`,
+			cliente_nombre: evaluacion.clienteNombre || "Pasajero",
+			calificaciones: {
+				puntualidad: evaluacion.calificacionPuntualidad,
+				limpieza: evaluacion.calificacionLimpieza,
+				seguridad: evaluacion.calificacionSeguridad,
+				comunicacion: evaluacion.calificacionComunicacion,
+			},
+			promedio: evaluacion.calificacionPromedio,
+			comentario: evaluacion.comentario || "",
+			propina_monto: evaluacion.propinaMonto || 0,
+			propina_pagada: evaluacion.propinaPagada || false,
+			conductor_nombre: evaluacion.conductorNombre || "No especificado",
+		};
+
+		await axios.post(`${phpUrl}/enviar_notificacion_evaluacion_admin.php`, payload, {
+			headers: { "Content-Type": "application/json" },
+			timeout: 10000,
+		});
+
+		await evaluacion.update({ notificacionAdminEnviada: true });
+		console.log(`📧 [Evaluación] Notificación al admin enviada para evaluación ${evaluacion.id}`);
+	} catch (error) {
+		console.warn(`⚠️ [Evaluación] No se pudo notificar al admin: ${error.message}`);
+	}
+};
+
+// --- ENDPOINT PÚBLICO: Obtener testimonios publicados ---
+app.get("/api/testimonios", async (req, res) => {
+	try {
+		const testimonios = await EvaluacionConductor.findAll({
+			where: { publicado: true, evaluada: true },
+			include: [
+				{
+					model: Reserva,
+					as: "Reserva",
+					attributes: ["origen", "destino", "fecha"],
+					required: false,
+				},
+			],
+			attributes: [
+				"id",
+				"publicadoNombre",
+				"calificacionPromedio",
+				"comentario",
+				"publicadoEn",
+				"conductorNombre",
+				"reservaId",
+			],
+			order: [["publicado_en", "DESC"]],
+			limit: 20,
+		});
+
+		return res.json(
+			testimonios.map((t) => ({
+				id: t.id,
+				nombre: t.publicadoNombre,
+				calificacion: Number(t.calificacionPromedio),
+				comentario: t.comentario,
+				fecha: t.publicadoEn,
+				conductor: t.conductorNombre,
+				origen: t.Reserva?.origen,
+				destino: t.Reserva?.destino,
+				fechaViaje: t.Reserva?.fecha,
+			}))
+		);
+	} catch (error) {
+		console.error("❌ [testimonios] Error:", error.message);
+		return res.status(500).json({ error: "Error al obtener testimonios" });
+	}
+});
+
+// --- ENDPOINT ADMIN: Solicitar evaluación para una reserva ---
+app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, apiLimiter, async (req, res) => {
+	try {
+		const reservaId = Number(req.params.reservaId);
+		if (!Number.isInteger(reservaId) || reservaId <= 0) {
+			return res.status(400).json({ success: false, error: "reservaId inválido" });
+		}
+
+		// Verificar si ya existe una solicitud para esta reserva
+		const existente = await EvaluacionConductor.findOne({
+			where: { reservaId },
+		});
+
+		if (existente) {
+			if (existente.solicitudEnviada) {
+				return res.status(409).json({
+					success: false,
+					error: "Ya se envió una solicitud de evaluación para esta reserva",
+					fechaSolicitud: existente.fechaSolicitud,
+					evaluada: existente.evaluada,
+				});
+			}
+		}
+
+		// Obtener datos de la reserva
+		const reserva = await Reserva.findByPk(reservaId);
+		if (!reserva) {
+			return res.status(404).json({ success: false, error: "Reserva no encontrada" });
+		}
+
+		if (!reserva.email) {
+			return res.status(400).json({ success: false, error: "La reserva no tiene email del pasajero" });
+		}
+
+		// Generar token y fecha de expiración (7 días)
+		const tokenEvaluacion = generarTokenEvaluacion();
+		const tokenExpiracion = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+		// Crear o actualizar registro de evaluación
+		let evaluacion;
+		if (existente) {
+			await existente.update({
+				tokenEvaluacion,
+				tokenExpiracion,
+				solicitudEnviada: false, // Se marcará como enviada después del correo
+				conductorNombre: reserva.conductorNombre || reserva.conductor || null,
+				clienteEmail: reserva.email,
+				clienteNombre: reserva.nombre,
+			});
+			evaluacion = existente;
+		} else {
+			evaluacion = await EvaluacionConductor.create({
+				reservaId,
+				conductorNombre: reserva.conductorNombre || reserva.conductor || null,
+				clienteEmail: reserva.email,
+				clienteNombre: reserva.nombre,
+				tokenEvaluacion,
+				tokenExpiracion,
+				solicitudEnviada: false,
+			});
+		}
+
+		// Llamar al script PHP para enviar el correo al pasajero
+		try {
+			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucania.cl";
+			await axios.post(`${phpUrl}/enviar_solicitud_evaluacion.php`, {
+				reserva_id: reserva.id,
+				cliente_nombre: reserva.nombre || "Pasajero",
+				cliente_email: reserva.email,
+				origen: reserva.origen || "",
+				destino: reserva.destino || "",
+				fecha_viaje: reserva.fecha || "",
+				conductor_nombre: evaluacion.conductorNombre || "",
+				token_evaluacion: tokenEvaluacion,
+			}, {
+				headers: { "Content-Type": "application/json" },
+				timeout: 15000,
+			});
+
+			await evaluacion.update({
+				solicitudEnviada: true,
+				fechaSolicitud: new Date(),
+			});
+
+			console.log(`📧 [Evaluación] Solicitud enviada para reserva ${reservaId} al pasajero ${reserva.email}`);
+		} catch (phpError) {
+			console.error("❌ [Evaluación] Error al llamar PHP para enviar correo:", phpError.message);
+			// Aunque falle el PHP, guardamos el registro para reintento
+		}
+
+		return res.json({
+			success: true,
+			mensaje: "Solicitud de evaluación enviada",
+			tokenExpiracion,
+			evaluacionId: evaluacion.id,
+		});
+	} catch (error) {
+		console.error("❌ [admin/evaluaciones/solicitar] Error:", error.message);
+		return res.status(500).json({ success: false, error: "Error interno al solicitar evaluación" });
+	}
+});
+
+// --- ENDPOINT ADMIN: Listar evaluaciones ---
+app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
+	try {
+		const { page = 1, limit = 20, soloEvaluadas, soloConPropina } = req.query;
+		const offset = (Number(page) - 1) * Number(limit);
+
+		const where = {};
+		if (soloEvaluadas === "true") where.evaluada = true;
+		if (soloConPropina === "true") {
+			where.propinaMonto = { [Op.gt]: 0 };
+		}
+
+		const { count, rows } = await EvaluacionConductor.findAndCountAll({
+			where,
+			include: [
+				{
+					model: Reserva,
+					as: "Reserva",
+					attributes: ["id", "codigoReserva", "origen", "destino", "fecha", "hora", "nombre", "email"],
+					required: false,
+				},
+			],
+			order: [["created_at", "DESC"]],
+			limit: Number(limit),
+			offset,
+		});
+
+		return res.json({
+			total: count,
+			page: Number(page),
+			totalPages: Math.ceil(count / Number(limit)),
+			evaluaciones: rows,
+		});
+	} catch (error) {
+		console.error("❌ [admin/evaluaciones] Error:", error.message);
+		return res.status(500).json({ error: "Error al obtener evaluaciones" });
+	}
+});
+
+// --- ENDPOINT ADMIN: Publicar testimonio ---
+app.put("/api/admin/evaluaciones/:id/publicar", authJWT, apiLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { publicado_nombre } = req.body || {};
+
+		const evaluacion = await EvaluacionConductor.findByPk(id);
+		if (!evaluacion) {
+			return res.status(404).json({ success: false, error: "Evaluación no encontrada" });
+		}
+
+		if (!evaluacion.evaluada) {
+			return res.status(400).json({ success: false, error: "Solo se pueden publicar evaluaciones completadas" });
+		}
+
+		await evaluacion.update({
+			publicado: true,
+			publicadoNombre: publicado_nombre || evaluacion.clienteNombre || "Pasajero anónimo",
+			publicadoEn: new Date(),
+		});
+
+		return res.json({ success: true, mensaje: "Testimonio publicado exitosamente" });
+	} catch (error) {
+		console.error("❌ [admin/evaluaciones/publicar] Error:", error.message);
+		return res.status(500).json({ success: false, error: "Error al publicar testimonio" });
+	}
+});
+
+// --- ENDPOINT ADMIN: Despublicar testimonio ---
+app.put("/api/admin/evaluaciones/:id/despublicar", authJWT, apiLimiter, async (req, res) => {
+	try {
+		const { id } = req.params;
+
+		const evaluacion = await EvaluacionConductor.findByPk(id);
+		if (!evaluacion) {
+			return res.status(404).json({ success: false, error: "Evaluación no encontrada" });
+		}
+
+		await evaluacion.update({
+			publicado: false,
+			publicadoNombre: null,
+			publicadoEn: null,
+		});
+
+		return res.json({ success: true, mensaje: "Testimonio retirado del sitio" });
+	} catch (error) {
+		console.error("❌ [admin/evaluaciones/despublicar] Error:", error.message);
+		return res.status(500).json({ success: false, error: "Error al retirar testimonio" });
+	}
+});
+
+// =====================================================================
 // --- UTILIDADES DE KEEP ALIVE ---
 const scheduleKeepAlive = () => {
 	const targetBase =

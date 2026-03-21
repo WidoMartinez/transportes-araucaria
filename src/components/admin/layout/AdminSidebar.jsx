@@ -24,6 +24,7 @@ import {
   Sliders,
   ChevronLeft,
   Sparkles,
+  Star,
   ChevronRight as ChevronRightIcon
 } from "lucide-react";
 import { Button } from "../../ui/button";
@@ -73,7 +74,8 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
       items: [
         { id: "reservas", label: "Reservas", icon: Calendar },
         { id: "vehiculos", label: "Vehículos", icon: Car },
-        { id: "conductores", label: "Conductores", icon: Users }
+        { id: "conductores", label: "Conductores", icon: Users },
+        { id: "evaluaciones", label: "Evaluaciones", icon: Star }
       ]
     },
     {

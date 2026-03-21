@@ -14,6 +14,7 @@ import PendingEmail from "./PendingEmail.js";
 import Transaccion from "./Transaccion.js";
 import CodigoPago from "./CodigoPago.js";
 import Oportunidad from "./Oportunidad.js";
+import EvaluacionConductor from "./EvaluacionConductor.js";
 
 // Función para establecer todas las asociaciones
 export const setupAssociations = () => {
@@ -194,6 +195,17 @@ export const setupAssociations = () => {
 	Oportunidad.belongsTo(Reserva, {
 		foreignKey: "reservaAprovechadaId",
 		as: "reservaAprovechada",
+	});
+
+	// Relación: Reserva -> EvaluacionConductor (Una reserva puede tener una evaluación)
+	Reserva.hasOne(EvaluacionConductor, {
+		foreignKey: "reservaId",
+		as: "EvaluacionConductor",
+	});
+
+	EvaluacionConductor.belongsTo(Reserva, {
+		foreignKey: "reservaId",
+		as: "Reserva",
 	});
 
 	console.log("✅ Asociaciones de modelos establecidas correctamente");

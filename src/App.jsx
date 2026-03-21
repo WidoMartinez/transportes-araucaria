@@ -37,6 +37,8 @@ import Destinos from "./components/Destinos";
 import Destacados from "./components/Destacados";
 import PorQueElegirnos from "./components/PorQueElegirnos";
 import Testimonios from "./components/Testimonios";
+import PaginaEvaluar from "./components/Evaluar/PaginaEvaluar";
+import SeccionTestimonios from "./components/Testimonios/SeccionTestimonios";
 import Contacto from "./components/Contacto";
 import FletesLanding from "./components/FletesLanding";
 import Footer from "./components/Footer";
@@ -242,6 +244,12 @@ const resolveIsTestGoogleAdsView = () => {
 	);
 };
 
+// Resolver si la URL es para la página de evaluación post-viaje
+const resolveIsEvaluarView = () => {
+	const hash = window.location.hash;
+	return hash.startsWith("#evaluar");
+};
+
 function App() {
 	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
@@ -259,6 +267,7 @@ function App() {
 	const [isTestGoogleAdsView, setIsTestGoogleAdsView] = useState(
 		resolveIsTestGoogleAdsView
 	);
+	const [isEvaluarView, setIsEvaluarView] = useState(resolveIsEvaluarView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -443,6 +452,17 @@ const [configSillas, setConfigSillas] = useState({
 		return () => {
 			window.removeEventListener("hashchange", syncTestGoogleAds);
 			window.removeEventListener("popstate", syncTestGoogleAds);
+		};
+	}, []);
+
+	// Sincronizar vista de evaluación post-viaje
+	useEffect(() => {
+		const syncEvaluar = () => setIsEvaluarView(resolveIsEvaluarView());
+		window.addEventListener("hashchange", syncEvaluar);
+		window.addEventListener("popstate", syncEvaluar);
+		return () => {
+			window.removeEventListener("hashchange", syncEvaluar);
+			window.removeEventListener("popstate", syncEvaluar);
 		};
 	}, []);
 
@@ -2169,6 +2189,11 @@ const [configSillas, setConfigSillas] = useState({
 		return <TestGoogleAds />;
 	}
 
+	// Vista de evaluación post-viaje (accedida por enlace en el correo del pasajero)
+	if (isEvaluarView) {
+		return <PaginaEvaluar />;
+	}
+
 	// Vista para completar detalles después del pago
 	if (vistaCompletarDetalles.activo) {
 		return (
@@ -2289,6 +2314,7 @@ const [configSillas, setConfigSillas] = useState({
 				<Destacados destinos={destacadosData} />
 				<Fidelizacion />
 				<PorQueElegirnos />
+				<SeccionTestimonios />
 				<Testimonios />
 				<Contacto />
 			</main>
