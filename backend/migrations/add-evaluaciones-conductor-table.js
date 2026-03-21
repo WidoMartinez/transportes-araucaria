@@ -60,7 +60,7 @@ const addEvaluacionesConductorTable = async () => {
 					INDEX idx_evaluacion_publicado (publicado),
 
 					CONSTRAINT fk_evaluacion_reserva FOREIGN KEY (reserva_id)
-						REFERENCES Reservas(id) ON DELETE CASCADE
+						REFERENCES reservas(id) ON DELETE CASCADE
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 				COMMENT='Tabla de evaluaciones de conductor post-viaje con soporte de propinas y testimonios';
 			`);
