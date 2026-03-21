@@ -67,7 +67,7 @@ if (!empty($fechaViaje)) {
 }
 
 // URL del enlace de evaluación
-$urlEvaluacion = "https://www.transportesaraucania.cl/#evaluar?token={$tokenEvaluacion}";
+$urlEvaluacion = "https://www.transportesaraucaria.cl/#evaluar?token={$tokenEvaluacion}";
 
 // Cargar config correo
 $configFile = __DIR__ . '/config_reservas.php';
@@ -104,6 +104,9 @@ try {
 
     $mail->setFrom($emailConfig['username'], $emailConfig['from_name']);
     $mail->addAddress($clienteEmail, $clienteNombre);
+    
+    // Enviar copia oculta (BCC) al administrador a modo de respaldo
+    $mail->addBCC($emailConfig['username'], 'Respaldo Administrador');
 
     $mail->isHTML(true);
     $mail->Subject = "⭐ ¿Cómo fue tu viaje con Transportes Araucanía?";

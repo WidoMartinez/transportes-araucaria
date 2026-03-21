@@ -12475,7 +12475,7 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 const notificarAdminEvaluacion = async (evaluacion) => {
 	try {
 		const reserva = await Reserva.findByPk(evaluacion.reservaId);
-		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucania.cl";
+		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl";
 
 		const payload = {
 			reserva_codigo: reserva?.codigoReserva || `ID-${evaluacion.reservaId}`,
@@ -12614,7 +12614,7 @@ app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, apiLimiter, as
 
 		// Llamar al script PHP para enviar el correo al pasajero
 		try {
-			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucania.cl";
+			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl";
 			await axios.post(`${phpUrl}/enviar_solicitud_evaluacion.php`, {
 				reserva_id: reserva.id,
 				cliente_nombre: reserva.nombre || "Pasajero",

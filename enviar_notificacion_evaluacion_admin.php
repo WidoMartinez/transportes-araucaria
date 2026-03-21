@@ -210,7 +210,7 @@ try {
 
                 <!-- Enlace al panel admin -->
                 <div style='text-align:center;margin-top:25px;'>
-                    <a href='https://www.transportesaraucania.cl/?admin=true&panel=evaluaciones'
+                    <a href='https://www.transportesaraucaria.cl/?admin=true&panel=evaluaciones'
                        style='display:inline-block;background:linear-gradient(135deg,#7c3f00,#a0522d);color:#fff;
                               text-decoration:none;padding:12px 30px;border-radius:50px;font-size:14px;font-weight:700;'>
                         📋 Ver en Panel Administrativo

@@ -1517,7 +1517,7 @@ function AdminReservas() {
 			const completadas = reservasNormalizadas.filter((r) => r.estado === "completada");
 			if (completadas.length > 0) {
 				try {
-					const evalResp = await authenticatedFetch(`${apiUrl}/api/admin/evaluaciones?soloEvaluadas=false&limit=100`);
+					const evalResp = await authenticatedFetch(`/api/admin/evaluaciones?soloEvaluadas=false&limit=100`);
 					if (evalResp.ok) {
 						const evalData = await evalResp.json();
 						const evalMap = {};

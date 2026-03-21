@@ -341,7 +341,7 @@ try {
         // Incluir evento IDA (contexto)
         $idaDir = htmlspecialchars($tramoIda['direccionEspecifica'] ?? $calendarLocation);
         $icsEvents[] = generateICS(
-            "reserva-{$codigoReserva}-ida@transportesaraucania.cl",
+            "reserva-{$codigoReserva}-ida@transportesaraucaria.cl",
             $tramoIda['fecha'], $tramoIda['hora'],
             htmlspecialchars($tramoIda['origen'] ?? ''),
             htmlspecialchars($tramoIda['destino'] ?? ''),
@@ -349,7 +349,7 @@ try {
         );
         // Evento VUELTA (actual)
         $icsEvents[] = generateICS(
-            "reserva-{$codigoReserva}-vuelta@transportesaraucania.cl",
+            "reserva-{$codigoReserva}-vuelta@transportesaraucaria.cl",
             $fecha, $hora, $origen, $destino, $calendarLocation, $pasajeroNombre, $observaciones
         );
         $icsFile = "servicio-{$codigoReserva}-ida-vuelta.ics";
@@ -357,11 +357,11 @@ try {
         // Retrocompat: segundoTramo
         $st2Dir = htmlspecialchars($segundoTramo['direccionEspecifica'] ?? $calendarLocation);
         $icsEvents[] = generateICS(
-            "reserva-{$codigoReserva}-ida@transportesaraucania.cl",
+            "reserva-{$codigoReserva}-ida@transportesaraucaria.cl",
             $fecha, $hora, $origen, $destino, $calendarLocation, $pasajeroNombre, $observaciones
         );
         $icsEvents[] = generateICS(
-            "reserva-{$codigoReserva}-vuelta@transportesaraucania.cl",
+            "reserva-{$codigoReserva}-vuelta@transportesaraucaria.cl",
             $segundoTramo['fecha'], $segundoTramo['hora'],
             htmlspecialchars($segundoTramo['origen'] ?? ''),
             htmlspecialchars($segundoTramo['destino'] ?? ''),
@@ -371,7 +371,7 @@ try {
     } else {
         // Solo un tramo
         $icsEvents[] = generateICS(
-            "reserva-{$codigoReserva}@transportesaraucania.cl",
+            "reserva-{$codigoReserva}@transportesaraucaria.cl",
             $fecha, $hora, $origen, $destino, $calendarLocation, $pasajeroNombre, $observaciones
         );
         $icsFile = "servicio-{$codigoReserva}.ics";
