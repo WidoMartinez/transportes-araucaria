@@ -109,7 +109,7 @@ try {
     $mail->addBCC($emailConfig['username'], 'Respaldo Administrador');
 
     $mail->isHTML(true);
-    $mail->Subject = "⭐ ¿Cómo fue tu viaje con Transportes Araucanía?";
+    $mail->Subject = "⭐ ¿Cómo fue tu viaje con Transportes Araucaria?";
 
     // Fila del conductor (opcional)
     $filaConductor = '';
@@ -155,7 +155,7 @@ try {
                     Hola <strong>{$clienteNombre}</strong>,
                 </p>
                 <p style='color:#5a3a1a;font-size:15px;line-height:1.6;margin:0 0 25px;'>
-                    Esperamos que hayas disfrutado tu viaje con <strong>Transportes Araucanía</strong>. 
+                    Esperamos que hayas disfrutado tu viaje con <strong>Transportes Araucaria</strong>. 
                     Nos gustaría conocer tu experiencia para seguir brindándote el mejor servicio.
                 </p>
 
@@ -208,17 +208,17 @@ try {
             <!-- Footer -->
             <div style='background:#3d2209;padding:20px;text-align:center;'>
                 <p style='color:#c8a882;font-size:13px;margin:0;'>
-                    Transportes Araucanía — Servicio de traslados en la región de La Araucanía
+                    Transportes Araucaria — Servicio de traslados en la región de La Araucanía
                 </p>
                 <p style='color:#8b6a4a;font-size:12px;margin:8px 0 0;'>
-                    © 2025 Transportes Araucanía. Todos los derechos reservados.
+                    © 2025 Transportes Araucaria. Todos los derechos reservados.
                 </p>
             </div>
         </div>
     </body>
     </html>";
 
-    $mail->AltBody = "Hola {$clienteNombre},\n\n¿Cómo fue tu viaje con Transportes Araucanía?\n\nViaje: {$origen} → {$destino}\n\nCalifica tu experiencia aquí (enlace válido por 7 días):\n{$urlEvaluacion}\n\nGracias por elegir Transportes Araucanía.";
+    $mail->AltBody = "Hola {$clienteNombre},\n\n¿Cómo fue tu viaje con Transportes Araucaria?\n\nViaje: {$origen} → {$destino}\n\nCalifica tu experiencia aquí (enlace válido por 7 días):\n{$urlEvaluacion}\n\nGracias por elegir Transportes Araucaria.";
 
     $mail->send();
 

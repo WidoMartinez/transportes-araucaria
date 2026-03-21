@@ -221,7 +221,7 @@ try {
             <!-- Footer -->
             <div style='background:#3d2209;padding:20px;text-align:center;'>
                 <p style='color:#c8a882;font-size:13px;margin:0;'>
-                    Sistema de Evaluaciones — Transportes Araucanía
+                    Sistema de Evaluaciones — Transportes Araucaria
                 </p>
             </div>
         </div>

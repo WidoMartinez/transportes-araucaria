@@ -168,7 +168,7 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 					</h2>
 					<p className="text-amber-700 mb-4">
 						Tu opinión nos ayuda a seguir mejorando el servicio de
-						Transportes Araucanía.
+						Transportes Araucaria.
 					</p>
 					<div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
 						<p className="text-amber-800 text-sm">

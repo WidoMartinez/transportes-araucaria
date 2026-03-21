@@ -74,7 +74,7 @@ function SeccionTestimonios() {
 						Lo que dicen nuestros pasajeros
 					</h2>
 					<p className="text-xl text-gray-500 max-w-2xl mx-auto">
-						Experiencias reales de personas que viajaron con Transportes Araucanía
+						Experiencias reales de personas que viajaron con Transportes Araucaria
 					</p>
 				</div>
 

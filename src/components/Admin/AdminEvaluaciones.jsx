@@ -41,7 +41,7 @@ function Estrellas({ valor, size = "sm" }) {
 
 function AdminEvaluaciones() {
 	const apiUrl = getBackendUrl();
-	const authFetch = useAuthenticatedFetch();
+	const { authenticatedFetch: authFetch } = useAuthenticatedFetch();
 
 	// Estado de lista
 	const [evaluaciones, setEvaluaciones] = useState([]);
@@ -69,7 +69,7 @@ function AdminEvaluaciones() {
 				soloEvaluadas: soloEvaluadas ? "true" : "false",
 				soloConPropina: soloConPropina ? "true" : "false",
 			});
-			const resp = await authFetch(`${apiUrl}/api/admin/evaluaciones?${params}`);
+			const resp = await authFetch(`/api/admin/evaluaciones?${params}`);
 			const data = await resp.json();
 			setEvaluaciones(data.evaluaciones || []);
 			setTotal(data.total || 0);
@@ -90,7 +90,7 @@ function AdminEvaluaciones() {
 		setAccionando(true);
 		try {
 			const resp = await authFetch(
-				`${apiUrl}/api/admin/evaluaciones/${evaluacion.id}/publicar`,
+				`/api/admin/evaluaciones/${evaluacion.id}/publicar`,
 				{
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
@@ -115,7 +115,7 @@ function AdminEvaluaciones() {
 		setAccionando(true);
 		try {
 			const resp = await authFetch(
-				`${apiUrl}/api/admin/evaluaciones/${evaluacion.id}/despublicar`,
+				`/api/admin/evaluaciones/${evaluacion.id}/despublicar`,
 				{ method: "PUT" }
 			);
 			const data = await resp.json();
