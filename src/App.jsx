@@ -201,7 +201,7 @@ const resolveIsConsultaView = () => {
 // Resolver si la URL es para pagar con código
 const resolveIsPayCodeView = () => {
 	const hash = window.location.hash.toLowerCase();
-	return hash === "#pagar-con-codigo" || hash === "#pago-codigo";
+	return hash.startsWith("#pagar-con-codigo") || hash.startsWith("#pago-codigo");
 };
 
 // Resolver si la URL es para comprar productos

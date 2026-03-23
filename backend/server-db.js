@@ -5740,6 +5740,64 @@ app.patch("/api/reservas/:id/toggle-gastos", authAdmin, async (req, res) => {
 	}
 });
 
+// Generar código de pago (link) para una reserva
+app.post("/api/reservas/:id/generar-link-pago", authAdmin, async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { monto } = req.body;
+
+		const reserva = await Reserva.findByPk(id, {
+			include: [{ model: Cliente, as: "cliente" }],
+		});
+
+		if (!reserva) {
+			return res.status(404).json({ success: false, message: "Reserva no encontrada" });
+		}
+
+		if (!monto || parseFloat(monto) <= 0) {
+			return res.status(400).json({ success: false, message: "Monto inválido" });
+		}
+
+		// Generar un código único
+		const timestamp = new Date().getTime().toString().slice(-4);
+		const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+		const codigoGenerado = `PAGO-${id}-${timestamp}-${randomStr}`;
+
+		// Crear el código de pago
+		const nuevoCodigo = await CodigoPago.create({
+			codigo: codigoGenerado,
+			origen: reserva.origen || "Aeropuerto La Araucanía",
+			destino: reserva.destino || "Temuco",
+			monto: parseFloat(monto),
+			descripcion: `Pago de Saldo/Abono - Reserva ${reserva.codigoReserva || id}`,
+			vehiculo: reserva.vehiculo || "Por asignar",
+			pasajeros: reserva.pasajeros || 1,
+			idaVuelta: reserva.idaVuelta || false,
+			sillaInfantil: reserva.sillaInfantil || false,
+			estado: "activo",
+			usosMaximos: 1,
+			usosActuales: 0,
+			reservaVinculadaId: reserva.id,
+			codigoReservaVinculado: reserva.codigoReserva,
+			emailCliente: reserva.email || (reserva.cliente ? reserva.cliente.email : null),
+			nombreCliente: reserva.nombre || (reserva.cliente ? reserva.cliente.nombre : null),
+			telefonoCliente: reserva.telefono || (reserva.cliente ? reserva.cliente.telefono : null),
+			direccionCliente: reserva.direccionDestino || reserva.direccionOrigen || null,
+			duracionMinutos: reserva.duracionMinutos || 45
+		});
+
+		return res.json({
+			success: true,
+			message: "Link de pago generado exitosamente",
+			codigoPago: nuevoCodigo.codigo,
+			url: `https://transportes-araucaria.cl/#pagar-con-codigo/${nuevoCodigo.codigo}`
+		});
+	} catch (error) {
+		console.error("Error al generar link de pago:", error);
+		res.status(500).json({ success: false, message: "Error interno del servidor" });
+	}
+});
+
 // Actualizar estado de pago de una reserva (con transacciones para garantizar consistencia)
 app.put("/api/reservas/:id/pago", async (req, res) => {
 	const transaction = await sequelize.transaction();

@@ -248,6 +248,46 @@ function AdminReservas() {
 	const [editOtroOrigen, setEditOtroOrigen] = useState("");
 	const [editOtroDestino, setEditOtroDestino] = useState("");
 
+	// Estados para Link de Pago
+	const [showGenerarLinkDialog, setShowGenerarLinkDialog] = useState(false);
+	const [linkGenerado, setLinkGenerado] = useState("");
+	const [montoGenerarLink, setMontoGenerarLink] = useState(0);
+	const [reservaParaLink, setReservaParaLink] = useState(null);
+	const [generandoLink, setGenerandoLink] = useState(false);
+
+	const handleGenerarLinkPago = async () => {
+		if (!reservaParaLink) return;
+		if (montoGenerarLink <= 0) {
+			toast.error("El monto debe ser mayor a 0");
+			return;
+		}
+		try {
+			setGenerandoLink(true);
+			const apiUrl = getBackendUrl() || "http://localhost:3000";
+			const response = await authenticatedFetch(
+				`${apiUrl}/api/reservas/${reservaParaLink.id}/generar-link-pago`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ monto: montoGenerarLink }),
+				}
+			);
+			
+			const data = await response.json();
+			if (data.success && data.url) {
+				setLinkGenerado(data.url);
+				toast.success("Link generado con éxito");
+			} else {
+				throw new Error(data.message || "Error al generar link");
+			}
+		} catch (error) {
+			console.error("Error generando link:", error);
+			toast.error(error.message || "No se pudo generar el link de pago");
+		} finally {
+			setGenerandoLink(false);
+		}
+	};
+
 	// Estados para asignaciÃ³n de vehÃ­culo/conductor
 	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
 	const [regPagoMonto, setRegPagoMonto] = useState("");
@@ -3384,6 +3424,86 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							</div>
 						</DialogContent>
 					</Dialog>
+
+					{/* Modal para Generar Link de Pago */}
+					<Dialog
+						open={showGenerarLinkDialog}
+						onOpenChange={(open) => {
+							setShowGenerarLinkDialog(open);
+							if (!open) {
+								setLinkGenerado("");
+								setReservaParaLink(null);
+							}
+						}}
+					>
+						<DialogContent className="max-w-md">
+							<DialogHeader>
+								<DialogTitle>Generar Link de Pago</DialogTitle>
+								<DialogDescription>
+									Genera un enlace único para que el cliente pague su saldo pendiente. El cliente completará sus datos antes de pagar.
+								</DialogDescription>
+							</DialogHeader>
+							
+							{reservaParaLink && !linkGenerado && (
+								<div className="space-y-4 mt-4">
+									<div className="bg-slate-50 p-3 rounded border">
+										<p className="text-sm font-semibold mb-1">Reserva #{reservaParaLink.id}</p>
+										<p className="text-xs text-muted-foreground">{reservaParaLink.nombre} - {reservaParaLink.email || "Sin email"}</p>
+									</div>
+									<div className="space-y-2">
+										<Label>Monto a cobrar (CLP)</Label>
+										<Input
+											type="number"
+											value={montoGenerarLink}
+											onChange={(e) => setMontoGenerarLink(Number(e.target.value))}
+											min="1"
+										/>
+										<p className="text-xs text-muted-foreground">Saldo actual de la reserva: {formatCurrency(reservaParaLink.saldoPendiente)}</p>
+									</div>
+									<div className="flex justify-end gap-2 pt-4">
+										<Button variant="outline" onClick={() => setShowGenerarLinkDialog(false)}>
+											Cancelar
+										</Button>
+										<Button onClick={handleGenerarLinkPago} disabled={generandoLink}>
+											{generandoLink ? "Generando..." : "Generar Link"}
+										</Button>
+									</div>
+								</div>
+							)}
+
+							{linkGenerado && (
+								<div className="space-y-4 mt-4">
+									<div className="bg-green-50 text-green-800 p-4 rounded-lg border border-green-200 space-y-2">
+										<p className="font-semibold text-sm">¡Enlace listo!</p>
+										<p className="text-xs mb-2">Envía este enlace al cliente por WhatsApp o email:</p>
+										<div className="flex bg-white rounded border overflow-hidden">
+											<input 
+												type="text" 
+												readOnly 
+												value={linkGenerado} 
+												className="flex-1 px-2 text-xs outline-none" 
+												onClick={(e) => e.target.select()}
+											/>
+											<Button 
+												className="rounded-none border-l h-auto py-2"
+												onClick={() => {
+													navigator.clipboard.writeText(linkGenerado);
+													toast.success("Enlace copiado al portapapeles");
+												}}
+											>
+												<Copy className="w-4 h-4" />
+											</Button>
+										</div>
+									</div>
+									<div className="flex justify-end pt-2">
+										<Button onClick={() => setShowGenerarLinkDialog(false)}>
+											Cerrar
+										</Button>
+									</div>
+								</div>
+							)}
+						</DialogContent>
+					</Dialog>
 				</CardHeader>
 				<CardContent>
 					{error && (
@@ -3836,6 +3956,23 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														>
 															<Edit className="w-4 h-4" />
 														</Button>
+														{/* Botón para generar Link de Pago */}
+														{reserva.saldoPendiente > 0 && ["pendiente", "confirmada"].includes(reserva.estado) && (
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() => {
+																	setReservaParaLink(reserva);
+																	setMontoGenerarLink(reserva.saldoPendiente);
+																	setLinkGenerado("");
+																	setShowGenerarLinkDialog(true);
+																}}
+																title="Generar Link de Pago"
+																className="border-blue-200 text-blue-700 hover:bg-blue-50"
+															>
+																<Link2 className="w-4 h-4" />
+															</Button>
+														)}
 														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
 														{reserva?.estado === "confirmada" && (
 															<Button

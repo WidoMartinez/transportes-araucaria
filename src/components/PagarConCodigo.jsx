@@ -58,6 +58,7 @@ const normalizePhoneToE164 = (phone) => {
 // Componente para pagar usando un código de pago estandarizado
 function PagarConCodigo() {
 	const [codigo, setCodigo] = useState("");
+	const [autoValidadoInicial, setAutoValidadoInicial] = useState(false);
 	const [validando, setValidando] = useState(false);
 	const [codigoValidado, setCodigoValidado] = useState(null);
 	const [error, setError] = useState("");
@@ -144,9 +145,25 @@ function PagarConCodigo() {
 		return () => clearInterval(intervalo);
 	}, [codigoValidado]);
 
+	// Auto-validar si el código viene en la URL
+	useEffect(() => {
+		if (autoValidadoInicial) return;
+		const hash = window.location.hash;
+		if (hash.startsWith("#pagar-con-codigo/") || hash.startsWith("#pago-codigo/")) {
+			const parts = hash.split("/");
+			if (parts.length > 1 && parts[1]) {
+				const paramCodigo = parts[1].toUpperCase();
+				setCodigo(paramCodigo);
+				validarCodigo(paramCodigo);
+			}
+		}
+		setAutoValidadoInicial(true);
+	}, [autoValidadoInicial]);
+
 	// Validar el código de pago
-	const validarCodigo = async () => {
-		if (!codigo.trim()) {
+	const validarCodigo = async (codigoForzado) => {
+		const codigoAValidar = (typeof codigoForzado === "string" ? codigoForzado : codigo);
+		if (!codigoAValidar.trim()) {
 			setError("Por favor ingresa un código de pago");
 			return;
 		}
@@ -158,7 +175,7 @@ function PagarConCodigo() {
 
 		try {
 			const response = await fetch(
-				`${backendUrl}/api/codigos-pago/${codigo.toUpperCase()}`
+				`${backendUrl}/api/codigos-pago/${codigoAValidar.toUpperCase()}`
 			);
 
 			const data = await response.json();
@@ -628,39 +645,13 @@ function PagarConCodigo() {
 
 							{/* Formulario de datos */}
 							<div className="space-y-4">
-								{codigoValidado?.codigoReservaVinculado ? (
-									/* Vista de Resumen para Pagos Vinculados */
-									<div className="bg-primary/5 border border-primary/10 rounded-lg p-4 space-y-4">
-										<p className="text-sm font-semibold text-primary border-b border-primary/10 pb-2">
-											Datos del Cliente (Asociados a la reserva)
-										</p>
-										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8">
-											<div className="space-y-1">
-												<span className="text-xs text-muted-foreground block">Nombre</span>
-												<span className="text-sm font-medium flex items-center gap-2">
-													<User className="h-4 w-4 text-primary/60 flex-shrink-0" />
-													<span className="break-words">{formData.nombre}</span>
-												</span>
-											</div>
-											<div className="space-y-1">
-												<span className="text-xs text-muted-foreground block">Email</span>
-												<span className="text-sm font-medium flex items-center gap-2">
-													<Mail className="h-4 w-4 text-primary/60 flex-shrink-0" />
-													<span className="break-all">{formData.email}</span>
-												</span>
-											</div>
-											<div className="space-y-1">
-												<span className="text-xs text-muted-foreground block">Teléfono</span>
-												<span className="text-sm font-medium flex items-center gap-2">
-													<Phone className="h-4 w-4 text-primary/60 flex-shrink-0" />
-													<span>{formData.telefono}</span>
-												</span>
-											</div>
-										</div>
-									</div>
-								) : (
-									/* Vista de Formulario para Códigos Normales */
+									/* Vista de Formulario Unificada */
 									<>
+										{codigoValidado?.codigoReservaVinculado && (
+											<p className="text-sm font-medium text-emerald-600 mb-2">
+												Por favor, verifica tus datos de contacto. Requerimos tu email para enviarte el comprobante de pago.
+											</p>
+										)}
 										{/* Nombre */}
 										<div className="space-y-2">
 											<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
@@ -671,7 +662,7 @@ function PagarConCodigo() {
 												<Input
 													id="nombre"
 													name="nombre"
-													value={formData.nombre}
+													value={formData.nombre || ""}
 													onChange={handleInputChange}
 													placeholder="Juan Pérez"
 													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
@@ -691,7 +682,7 @@ function PagarConCodigo() {
 														id="email"
 														name="email"
 														type="email"
-														value={formData.email}
+														value={formData.email || ""}
 														onChange={handleInputChange}
 														placeholder="tu@email.cl"
 														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
@@ -707,7 +698,7 @@ function PagarConCodigo() {
 													<Input
 														id="telefono"
 														name="telefono"
-														value={formData.telefono}
+														value={formData.telefono || ""}
 														onChange={handleInputChange}
 														placeholder="+56 9 1234 5678"
 														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
@@ -716,7 +707,7 @@ function PagarConCodigo() {
 											</div>
 										</div>
 									</>
-								)}
+
 
 								{/* Datos de viaje (Fecha, Hora, Dirección, etc.) - OCULTOS SI ES PAGO VINCULADO */}
 								{!codigoValidado?.codigoReservaVinculado && (
