@@ -3957,7 +3957,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														</Button>
 														{/* Botón para generar Link de Pago */}
 														{["pendiente", "confirmada"].includes(reserva.estado) && 
-															(Number(reserva.saldoPendiente) > 0 || Number(reserva.totalConDescuento) > 0) && (
+															reserva.estadoPago !== "pagado" &&
+															(Number(reserva.totalConDescuento) > 0 && Number(reserva.pagoMonto || 0) < Number(reserva.totalConDescuento)) && (
 															<Button
 																variant="outline"
 																size="sm"
@@ -3965,8 +3966,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	setReservaParaLink(reserva);
 																	const suggestedAmount = Number(reserva.saldoPendiente) > 0 
 																		? Number(reserva.saldoPendiente) 
-																		: Number(reserva.totalConDescuento);
-																	setMontoGenerarLink(suggestedAmount);
+																		: (Number(reserva.totalConDescuento || 0) - Number(reserva.pagoMonto || 0));
+																	setMontoGenerarLink(suggestedAmount > 0 ? suggestedAmount : Number(reserva.totalConDescuento));
 																	setLinkGenerado("");
 																	setShowGenerarLinkDialog(true);
 																}}

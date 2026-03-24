@@ -4732,6 +4732,25 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 			});
 		}
 
+		if (registro.reservaVinculadaId) {
+			const reservaOrig = await Reserva.findByPk(registro.reservaVinculadaId);
+			if (reservaOrig) {
+				const responseData = { 
+					...registro.toJSON(),
+					// Incluir datos de la reserva original para que el frontend detecte qué falta
+					fecha: reservaOrig.fecha,
+					hora: reservaOrig.hora,
+					fechaRegreso: reservaOrig.fechaRegreso,
+					horaRegreso: reservaOrig.horaRegreso,
+					direccionOrigen: reservaOrig.direccionOrigen,
+					direccionDestino: reservaOrig.direccionDestino,
+					numeroVuelo: reservaOrig.numeroVuelo,
+					hotel: reservaOrig.hotel
+				};
+				return res.json({ success: true, codigoPago: responseData });
+			}
+		}
+
 		return res.json({ success: true, codigoPago: registro });
 	} catch (error) {
 		console.error("Error validando código de pago:", error);

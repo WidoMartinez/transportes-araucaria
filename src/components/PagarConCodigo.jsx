@@ -22,7 +22,8 @@ import {
 	Building2,
 	Shield,
 	Baby,
-	Info
+	Info,
+	Edit
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import { validatePaymentAmount } from "../utils/paymentValidation";
@@ -65,6 +66,7 @@ function PagarConCodigo() {
 	const [showContactButton, setShowContactButton] = useState(false);
 	const [step, setStep] = useState(1); // 1: Validar código, 2: Completar datos y pagar
 	const [selectedPaymentType, setSelectedPaymentType] = useState("total"); // 'total' | 'abono'
+	const [editandoDatos, setEditandoDatos] = useState(false);
 
 	// Datos del cliente
 	const [formData, setFormData] = useState({
@@ -101,6 +103,7 @@ function PagarConCodigo() {
 		selectedPaymentType === "abono" ? abonoSugerido : montoTotal;
 	const esIdaVuelta = Boolean(codigoValidado?.idaVuelta);
 	const incluyeSillaInfantil = Boolean(codigoValidado?.sillaInfantil);
+	const isPagoVinculado = !!(codigoValidado?.codigoReservaVinculado || codigoValidado?.reservaVinculadaId);
 
 	// Calcular tiempo restante hasta el vencimiento del código
 	const calcularTiempoRestante = (fechaVencimiento) => {
@@ -207,12 +210,18 @@ function PagarConCodigo() {
 				// Determinar qué campo de dirección usar según el sentido del viaje
 				direccionDestino:
 					data.codigoPago.origen === "Aeropuerto La Araucanía"
-						? (data.codigoPago.direccionCliente || prev.direccionDestino)
+						? (data.codigoPago.direccionDestino || prev.direccionDestino)
 						: prev.direccionDestino,
 				direccionOrigen:
 					data.codigoPago.destino === "Aeropuerto La Araucanía"
-						? (data.codigoPago.direccionCliente || prev.direccionOrigen)
-						: prev.direccionOrigen
+						? (data.codigoPago.direccionOrigen || prev.direccionOrigen)
+						: prev.direccionOrigen,
+				fecha: data.codigoPago.fecha || prev.fecha,
+				hora: data.codigoPago.hora || prev.hora,
+				fechaRegreso: data.codigoPago.fechaRegreso || prev.fechaRegreso,
+				horaRegreso: data.codigoPago.horaRegreso || prev.horaRegreso,
+				numeroVuelo: data.codigoPago.numeroVuelo || prev.numeroVuelo,
+				hotel: data.codigoPago.hotel || prev.hotel
 			}));
 
 			setSelectedPaymentType("total");
@@ -255,18 +264,20 @@ function PagarConCodigo() {
 		}
 
 		// Si NO es un pago vinculado, validar fecha, hora y dirección
-		if (!codigoValidado?.codigoReservaVinculado) {
+		if (!isPagoVinculado || !codigoValidado?.fecha) {
 			if (!formData.fecha) {
 				setError("Por favor selecciona la fecha del servicio");
 				return false;
 			}
+		}
+		if (!isPagoVinculado || !codigoValidado?.hora) {
 			if (!formData.hora) {
 				setError("Por favor selecciona la hora del servicio");
 				return false;
 			}
 		}
 
-		if (esIdaVuelta && !codigoValidado?.codigoReservaVinculado) {
+		if (esIdaVuelta && !isPagoVinculado) {
 			if (!formData.fechaRegreso) {
 				setError("Por favor indica la fecha del viaje de regreso");
 				return false;
@@ -291,9 +302,10 @@ function PagarConCodigo() {
 			}
 		}
 		// Validar dirección obligatoria según sentido del viaje (solo si NO es pago vinculado)
-		if (codigoValidado && !codigoValidado.codigoReservaVinculado) {
+		if (codigoValidado && !isPagoVinculado) {
 			if (
 				codigoValidado.origen === "Aeropuerto La Araucanía" &&
+				!codigoValidado.direccionDestino &&
 				!formData.direccionDestino.trim()
 			) {
 				setError("Por favor ingresa la dirección de destino");
@@ -301,6 +313,7 @@ function PagarConCodigo() {
 			}
 			if (
 				codigoValidado.destino === "Aeropuerto La Araucanía" &&
+				!codigoValidado.direccionOrigen &&
 				!formData.direccionOrigen.trim()
 			) {
 				setError("Por favor ingresa la dirección de origen");
@@ -393,7 +406,7 @@ function PagarConCodigo() {
 			let codigoReservaGenerado = null;
 
 			// SI EL CÓDIGO YA ESTÁ VINCULADO A UNA RESERVA (POR ID O POR CÓDIGO AR-...), NO CREAMOS UNA NUEVA
-			if (codigoValidado.reservaVinculadaId || codigoValidado.codigoReservaVinculado) {
+			if (isPagoVinculado) {
 				console.log("🔗 Pago vinculado detectado. Saltando creación de reserva express.");
 				reservaId = codigoValidado.reservaVinculadaId || null;
 				codigoReservaGenerado = codigoValidado.codigoReservaVinculado || null;
@@ -442,6 +455,17 @@ function PagarConCodigo() {
 					referenciaPago: codigoPagoNormalizado,
 					paymentOrigin: "pagar_con_codigo", // Identificador de flujo para redirección correcta
 					codigoPagoId: codigoValidado.id,
+					// Enviar datos adicionales que pudieron completarse en el formulario
+					nombre: formData.nombre,
+					telefono: formData.telefono,
+					fecha: formData.fecha,
+					hora: formData.hora,
+					direccionOrigen: formData.direccionOrigen,
+					direccionDestino: formData.direccionDestino,
+					numeroVuelo: formData.numeroVuelo,
+					hotel: formData.hotel,
+					fechaRegreso: formData.fechaRegreso,
+					horaRegreso: formData.horaRegreso
 				}),
 			});
 			const pj = await p.json();
@@ -645,228 +669,269 @@ function PagarConCodigo() {
 
 							{/* Formulario de datos */}
 							<div className="space-y-4">
-								
-									<>
-										{codigoValidado?.codigoReservaVinculado && (
-											<p className="text-sm font-medium text-emerald-600 mb-2">
-												Por favor, verifica tus datos de contacto. Requerimos tu email para enviarte el comprobante de pago.
-											</p>
-										)}
-										{/* Nombre */}
-										<div className="space-y-2">
-											<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
-												Nombre completo <span className="text-red-500">*</span>
-											</Label>
-											<div className="relative">
-												<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-												<Input
-													id="nombre"
-													name="nombre"
-													value={formData.nombre || ""}
-													onChange={handleInputChange}
-													placeholder="Juan Pérez"
-													className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-												/>
-											</div>
-										</div>
+								{/* Resumen del pasajero si ya tenemos sus datos (PAGOS VINCULADOS) */}
+								{(() => {
+									if (!isPagoVinculado || editandoDatos) return null;
+									
+									const hasNombre = !!codigoValidado?.nombreCliente?.trim();
+									const hasEmail = !!codigoValidado?.emailCliente?.trim();
+									const hasTelefono = !!codigoValidado?.telefonoCliente?.trim();
+									const allPresent = hasNombre && hasEmail && hasTelefono;
 
-										{/* Email y Teléfono */}
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label htmlFor="email" className="text-sm font-semibold text-foreground">
-													Email <span className="text-red-500">*</span>
-												</Label>
-												<div className="relative">
-													<Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-													<Input
-														id="email"
-														name="email"
-														type="email"
-														value={formData.email || ""}
-														onChange={handleInputChange}
-														placeholder="tu@email.cl"
-														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-													/>
+									if (allPresent) {
+										return (
+											<div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3.5 mb-2 flex items-start justify-between">
+												<div className="grid grid-cols-1 gap-1">
+													<p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">Datos del Pasajero</p>
+													<p className="text-sm font-semibold text-emerald-900 leading-none">{codigoValidado.nombreCliente}</p>
+													<div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 opacity-80">
+														<p className="text-[11px] text-emerald-800 flex items-center"><Mail className="w-2.5 h-2.5 mr-1" /> {codigoValidado.emailCliente}</p>
+														<p className="text-[11px] text-emerald-800 flex items-center"><Phone className="w-2.5 h-2.5 mr-1" /> {codigoValidado.telefonoCliente}</p>
+													</div>
 												</div>
+												<Button 
+													variant="ghost" 
+													size="sm" 
+													className="h-7 px-2 text-[10px] text-emerald-700 hover:text-emerald-800 hover:bg-emerald-100/50 -mt-1"
+													onClick={() => setEditandoDatos(true)}
+												>
+													<Edit className="w-3 h-3 mr-1" /> Editar
+												</Button>
 											</div>
-											<div className="space-y-2">
-												<Label htmlFor="telefono" className="text-sm font-semibold text-foreground">
-													Teléfono <span className="text-red-500">*</span>
-												</Label>
-												<div className="relative">
-													<Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-													<Input
-														id="telefono"
-														name="telefono"
-														value={formData.telefono || ""}
-														onChange={handleInputChange}
-														placeholder="+56 9 1234 5678"
-														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-													/>
-												</div>
-											</div>
-										</div>
-									</>
+										);
+									}
+									return null;
+								})()}
 
+								{/* Datos personales - SOLO SI FALTAN O NO ESTÁ VINCULADO O ESTAMOS EDITANDO */}
+								{(() => {
+									const showNombre = !isPagoVinculado || editandoDatos || !codigoValidado?.nombreCliente?.trim();
+									const showEmail = !isPagoVinculado || editandoDatos || !codigoValidado?.emailCliente?.trim();
+									const showTelefono = !isPagoVinculado || editandoDatos || !codigoValidado?.telefonoCliente?.trim();
+									const showAny = showNombre || showEmail || showTelefono;
 
-								{/* Datos de viaje (Fecha, Hora, Dirección, etc.) - OCULTOS SI ES PAGO VINCULADO */}
-								{!codigoValidado?.codigoReservaVinculado && (
-									<>
-										{/* Fecha y Hora */}
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
-													Fecha <span className="text-red-500">*</span>
-												</Label>
-												<div className="relative">
-													<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-													<Input
-														id="fecha"
-														name="fecha"
-														type="date"
-														value={formData.fecha}
-														onChange={handleInputChange}
-														min={new Date().toISOString().split("T")[0]}
-														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-													/>
-												</div>
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="hora" className="text-sm font-semibold text-foreground">
-													Hora <span className="text-red-500">*</span>
-												</Label>
-												<div className="relative">
-													<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-													<select
-														id="hora"
-														name="hora"
-														value={formData.hora}
-														onChange={handleInputChange}
-														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
-													>
-														<option value="">Seleccionar...</option>
-														{TIME_OPTIONS.map((hora) => (
-															<option key={hora} value={hora}>{hora}</option>
-														))}
-													</select>
-												</div>
-											</div>
-										</div>
+									if (!showAny) return null;
 
-										{/* Campos de regreso para ida y vuelta */}
-										{esIdaVuelta && (
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									return (
+										<>
+											{isPagoVinculado && (
+												<p className="text-xs font-semibold text-emerald-600 mb-2 uppercase tracking-tight">
+													Para continuar, completa los datos faltantes:
+												</p>
+											)}
+											
+											{showNombre && (
 												<div className="space-y-2">
-													<Label htmlFor="fechaRegreso" className="text-sm font-semibold text-foreground">
-														Fecha regreso <span className="text-red-500">*</span>
+													<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
+														Nombre completo <span className="text-red-500">*</span>
 													</Label>
 													<div className="relative">
-														<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+														<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
 														<Input
-															id="fechaRegreso"
-															name="fechaRegreso"
-															type="date"
-															value={formData.fechaRegreso}
+															id="nombre"
+															name="nombre"
+															value={formData.nombre || ""}
 															onChange={handleInputChange}
-															min={formData.fecha || new Date().toISOString().split("T")[0]}
+															placeholder="Juan Pérez"
 															className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 														/>
 													</div>
 												</div>
-												<div className="space-y-2">
-													<Label htmlFor="horaRegreso" className="text-sm font-semibold text-foreground">
-														Hora regreso <span className="text-red-500">*</span>
-													</Label>
-													<div className="relative">
-														<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-														<select
-															id="horaRegreso"
-															name="horaRegreso"
-															value={formData.horaRegreso}
-															onChange={handleInputChange}
-															className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
-														>
-															<option value="">Seleccionar...</option>
-															{TIME_OPTIONS.map((hora) => (
-																<option key={`regreso-${hora}`} value={hora}>{hora}</option>
-															))}
-														</select>
+											)}
+
+											{(showEmail || showTelefono) && (
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													{showEmail && (
+														<div className="space-y-2">
+															<Label htmlFor="email" className="text-sm font-semibold text-foreground">
+																Email <span className="text-red-500">*</span>
+															</Label>
+															<div className="relative">
+																<Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+																<Input
+																	id="email"
+																	name="email"
+																	type="email"
+																	value={formData.email || ""}
+																	onChange={handleInputChange}
+																	placeholder="tu@email.cl"
+																	className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+																/>
+															</div>
+														</div>
+													)}
+													{showTelefono && (
+														<div className="space-y-2">
+															<Label htmlFor="telefono" className="text-sm font-semibold text-foreground">
+																Teléfono <span className="text-red-500">*</span>
+															</Label>
+															<div className="relative">
+																<Phone className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+																<Input
+																	id="telefono"
+																	name="telefono"
+																	value={formData.telefono || ""}
+																	onChange={handleInputChange}
+																	placeholder="+56 9 1234 5678"
+																	className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+																/>
+															</div>
+														</div>
+													)}
+												</div>
+											)}
+										</>
+									);
+								})()}
+
+
+								{/* Datos de viaje (Fecha, Hora, Dirección, etc.) */}
+								{(() => {
+									const showFecha = !isPagoVinculado || !codigoValidado?.fecha;
+									const showHora = !isPagoVinculado || !codigoValidado?.hora;
+									const showRegreso = esIdaVuelta && (!isPagoVinculado || !codigoValidado?.fechaRegreso || !codigoValidado?.horaRegreso);
+									const showDireccionDestino = 
+										codigoValidado?.origen === "Aeropuerto La Araucanía" && 
+										(!isPagoVinculado || !codigoValidado?.direccionDestino);
+									const showDireccionOrigen = 
+										codigoValidado?.destino === "Aeropuerto La Araucanía" && 
+										(!isPagoVinculado || !codigoValidado?.direccionOrigen);
+									const showCualquiera = showFecha || showHora || showRegreso || showDireccionDestino || showDireccionOrigen;
+
+									if (!showCualquiera) return null;
+
+									return (
+										<div className="space-y-4 pt-2 border-t border-border/30">
+											<p className="text-xs font-semibold text-primary mb-2 uppercase tracking-tight">
+												Detalles del traslado faltantes:
+											</p>
+
+											{/* Fecha y Hora */}
+											{(showFecha || showHora) && (
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													{showFecha && (
+														<div className="space-y-2">
+															<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
+																Fecha <span className="text-red-500">*</span>
+															</Label>
+															<div className="relative">
+																<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+																<Input
+																	id="fecha"
+																	name="fecha"
+																	type="date"
+																	value={formData.fecha}
+																	onChange={handleInputChange}
+																	min={new Date().toISOString().split("T")[0]}
+																	className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+																/>
+															</div>
+														</div>
+													)}
+													{showHora && (
+														<div className="space-y-2">
+															<Label htmlFor="hora" className="text-sm font-semibold text-foreground">
+																Hora <span className="text-red-500">*</span>
+															</Label>
+															<div className="relative">
+																<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+																<select
+																	id="hora"
+																	name="hora"
+																	value={formData.hora}
+																	onChange={handleInputChange}
+																	className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+																>
+																	<option value="">Seleccionar...</option>
+																	{TIME_OPTIONS.map((hora) => (
+																		<option key={hora} value={hora}>{hora}</option>
+																	))}
+																</select>
+															</div>
+														</div>
+													)}
+												</div>
+											)}
+
+											{/* Campos de regreso para ida y vuelta */}
+											{showRegreso && (
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													<div className="space-y-2">
+														<Label htmlFor="fechaRegreso" className="text-sm font-semibold text-foreground">
+															Fecha regreso <span className="text-red-500">*</span>
+														</Label>
+														<div className="relative">
+															<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+															<Input
+																id="fechaRegreso"
+																name="fechaRegreso"
+																type="date"
+																value={formData.fechaRegreso}
+																onChange={handleInputChange}
+																min={formData.fecha || new Date().toISOString().split("T")[0]}
+																className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+															/>
+														</div>
+													</div>
+													<div className="space-y-2">
+														<Label htmlFor="horaRegreso" className="text-sm font-semibold text-foreground">
+															Hora regreso <span className="text-red-500">*</span>
+														</Label>
+														<div className="relative">
+															<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+															<select
+																id="horaRegreso"
+																name="horaRegreso"
+																value={formData.horaRegreso}
+																onChange={handleInputChange}
+																className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+															>
+																<option value="">Seleccionar...</option>
+																{TIME_OPTIONS.map((hora) => (
+																	<option key={`regreso-${hora}`} value={hora}>{hora}</option>
+																))}
+															</select>
+														</div>
 													</div>
 												</div>
-											</div>
-										)}
+											)}
 
-										{/* Dirección (según sentido del viaje) */}
-										{codigoValidado?.origen === "Aeropuerto La Araucanía" && (
-											<div className="space-y-2">
-												<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
-													Dirección de destino <span className="text-red-500">*</span>
-												</Label>
-												<AddressAutocomplete
-													id="direccionDestino"
-													name="direccionDestino"
-													value={formData.direccionDestino}
-													onChange={handleInputChange}
-													placeholder="Av. Alemania 1234, Temuco"
-													className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-													required
-												/>
-											</div>
-										)}
-										{codigoValidado?.destino === "Aeropuerto La Araucanía" && (
-											<div className="space-y-2">
-												<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
-													Dirección de origen <span className="text-red-500">*</span>
-												</Label>
-												<AddressAutocomplete
-													id="direccionOrigen"
-													name="direccionOrigen"
-													value={formData.direccionOrigen}
-													onChange={handleInputChange}
-													placeholder="Av. O'Higgins 567, Temuco"
-													className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
-													required
-												/>
-											</div>
-										)}
-
-										{/* Campos opcionales en fila */}
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<div className="space-y-2">
-												<Label htmlFor="numeroVuelo" className="text-sm font-semibold text-foreground">
-													Nº de vuelo (opcional)
-												</Label>
-												<div className="relative">
-													<Plane className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-													<Input
-														id="numeroVuelo"
-														name="numeroVuelo"
-														value={formData.numeroVuelo}
+											{/* Dirección (según sentido del viaje) */}
+											{showDireccionDestino && (
+												<div className="space-y-2">
+													<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
+														Dirección de destino <span className="text-red-500">*</span>
+													</Label>
+													<AddressAutocomplete
+														id="direccionDestino"
+														name="direccionDestino"
+														value={formData.direccionDestino}
 														onChange={handleInputChange}
-														placeholder="LA1234"
-														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+														placeholder="Av. Alemania 1234, Temuco"
+														className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+														required
 													/>
 												</div>
-											</div>
-											<div className="space-y-2">
-												<Label htmlFor="hotel" className="text-sm font-semibold text-foreground">
-													Hotel (opcional)
-												</Label>
-												<div className="relative">
-													<Building2 className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-													<Input
-														id="hotel"
-														name="hotel"
-														value={formData.hotel}
+											)}
+											{showDireccionOrigen && (
+												<div className="space-y-2">
+													<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
+														Dirección de origen <span className="text-red-500">*</span>
+													</Label>
+													<AddressAutocomplete
+														id="direccionOrigen"
+														name="direccionOrigen"
+														value={formData.direccionOrigen}
 														onChange={handleInputChange}
-														placeholder="Hotel Dreams"
-														className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+														placeholder="Av. O'Higgins 567, Temuco"
+														className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+														required
 													/>
 												</div>
-											</div>
+											)}
 										</div>
-									</>
-								)}
+									);
+								})()}
 							</div>
 
 							{/* Mensaje de error */}
