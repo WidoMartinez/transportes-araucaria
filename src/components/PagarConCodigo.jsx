@@ -785,6 +785,49 @@ function PagarConCodigo() {
 								})()}
 
 
+								{/* Resumen de datos de viaje ya existentes */}
+					{(() => {
+						if (!isPagoVinculado) return null;
+						const hasFecha = !!codigoValidado?.fecha;
+						const hasHora = !!codigoValidado?.hora;
+						const hasDireccionOrigen = !!codigoValidado?.direccionOrigen;
+						const hasDireccionDestino = !!codigoValidado?.direccionDestino;
+						const hasAny = hasFecha || hasHora || hasDireccionOrigen || hasDireccionDestino;
+						if (!hasAny) return null;
+
+						const formatFecha = (f) => {
+							if (!f) return null;
+							try { return new Date(f).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+							catch { return f; }
+						};
+
+						return (
+							<div className="bg-sky-50/50 border border-sky-100 rounded-lg p-3.5 mb-2">
+								<p className="text-[10px] font-bold text-sky-700 uppercase tracking-wider mb-1.5">Detalles del Traslado</p>
+								<div className="grid grid-cols-1 gap-1 text-[11px] text-sky-800 opacity-85">
+									{(hasFecha || hasHora) && (
+										<p className="flex items-center gap-1">
+											<Calendar className="w-3 h-3 shrink-0" />
+											<span>{[formatFecha(codigoValidado.fecha), codigoValidado.hora].filter(Boolean).join(' a las ')}</span>
+										</p>
+									)}
+									{hasDireccionOrigen && (
+										<p className="flex items-center gap-1">
+											<MapPin className="w-3 h-3 shrink-0" />
+											<span>Origen: {codigoValidado.direccionOrigen}</span>
+										</p>
+									)}
+									{hasDireccionDestino && (
+										<p className="flex items-center gap-1">
+											<MapPin className="w-3 h-3 shrink-0" />
+											<span>Destino: {codigoValidado.direccionDestino}</span>
+										</p>
+									)}
+								</div>
+							</div>
+						);
+					})()}
+
 								{/* Datos de viaje (Fecha, Hora, Dirección, etc.) */}
 								{(() => {
 									const showFecha = !isPagoVinculado || !codigoValidado?.fecha;
