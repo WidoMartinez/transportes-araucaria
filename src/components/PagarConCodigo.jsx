@@ -645,7 +645,7 @@ function PagarConCodigo() {
 
 							{/* Formulario de datos */}
 							<div className="space-y-4">
-									/* Vista de Formulario Unificada */
+								
 									<>
 										{codigoValidado?.codigoReservaVinculado && (
 											<p className="text-sm font-medium text-emerald-600 mb-2">

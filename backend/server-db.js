@@ -5786,11 +5786,13 @@ app.post("/api/reservas/:id/generar-link-pago", authAdmin, async (req, res) => {
 			duracionMinutos: reserva.duracionMinutos || 45
 		});
 
+		const frontendUrl = process.env.FRONTEND_URL || "https://transportesaraucaria.cl";
+
 		return res.json({
 			success: true,
 			message: "Link de pago generado exitosamente",
 			codigoPago: nuevoCodigo.codigo,
-			url: `https://transportes-araucaria.cl/#pagar-con-codigo/${nuevoCodigo.codigo}`
+			url: `${frontendUrl}/#pagar-con-codigo/${nuevoCodigo.codigo}`
 		});
 	} catch (error) {
 		console.error("Error al generar link de pago:", error);

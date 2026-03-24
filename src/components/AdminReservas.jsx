@@ -263,9 +263,8 @@ function AdminReservas() {
 		}
 		try {
 			setGenerandoLink(true);
-			const apiUrl = getBackendUrl() || "http://localhost:3000";
 			const response = await authenticatedFetch(
-				`${apiUrl}/api/reservas/${reservaParaLink.id}/generar-link-pago`,
+				`/api/reservas/${reservaParaLink.id}/generar-link-pago`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -3957,13 +3956,17 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<Edit className="w-4 h-4" />
 														</Button>
 														{/* Botón para generar Link de Pago */}
-														{reserva.saldoPendiente > 0 && ["pendiente", "confirmada"].includes(reserva.estado) && (
+														{["pendiente", "confirmada"].includes(reserva.estado) && 
+															(Number(reserva.saldoPendiente) > 0 || Number(reserva.totalConDescuento) > 0) && (
 															<Button
 																variant="outline"
 																size="sm"
 																onClick={() => {
 																	setReservaParaLink(reserva);
-																	setMontoGenerarLink(reserva.saldoPendiente);
+																	const suggestedAmount = Number(reserva.saldoPendiente) > 0 
+																		? Number(reserva.saldoPendiente) 
+																		: Number(reserva.totalConDescuento);
+																	setMontoGenerarLink(suggestedAmount);
 																	setLinkGenerado("");
 																	setShowGenerarLinkDialog(true);
 																}}
