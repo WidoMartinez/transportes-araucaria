@@ -157,6 +157,17 @@ Este documento establece **reglas y convenciones obligatorias** para agentes que
 
 ---
 
+## ⚡ Eficiencia de Tokens
+
+Para minimizar el consumo de tokens y optimizar la velocidad de respuesta, el agente **DEBE**:
+
+- **Lectura Selectiva**: Al examinar archivos, usar `view_file` con rangos específicos (`StartLine` y `EndLine`) siempre que sea posible. Evitar leer archivos completos de más de 100 líneas si solo se necesita una sección.
+- **Búsquedas Inteligentes**: Priorizar `grep_search` para localizar variables o funciones antes de abrir archivos sospechosos.
+- **Uso de KIs**: Consultar siempre los Knowledge Items (KIs) antes de realizar investigaciones profundas sobre la arquitectura o lógica de negocio.
+- **Contexto en el Editor**: Sugerir al usuario que abra solo los archivos estrictamente necesarios en su editor, ya que el contexto del editor se envía en cada mensaje.
+
+---
+
 ## 🧰 Notas para agentes
 
 - Antes de iniciar, **leer este AGENTS.md** y revisar `.github/` para políticas adicionales.
