@@ -138,37 +138,29 @@ function AdminEvaluaciones() {
 	const abrirModal = (ev) => {
 		setModalEval(ev);
 		setNombrePublico(ev.clienteNombre || "");
-		// Reiniciar link manual al abrir un modal nuevo
-		setLinkManual("");
-		setLinkExpiracion(null);
 	};
 
-	// Obtener link de evaluación manual desde el backend
-	const handleObtenerLink = async (ev) => {
-		if (!ev?.Reserva?.id) {
-			toast.error("No se pudo identificar el ID de la reserva");
-			return;
-		}
-		setCargandoLink(true);
+	// Solicitar evaluación (enviar correo)
+	const handleSolicitarEvaluacion = async (evaluacion) => {
+		setAccionando(true);
 		try {
-			const resp = await authFetch(`/api/admin/evaluaciones/link/${ev.Reserva.id}`);
+			const resp = await authFetch(
+				`/api/admin/evaluaciones/solicitar/${evaluacion.reservaId}`,
+				{ method: "POST" }
+			);
 			const data = await resp.json();
-			if (!data.success) throw new Error(data.error);
-			setLinkManual(data.link);
-			setLinkExpiracion(data.tokenExpiracion);
+			if (data.success) {
+				toast.success("Solicitud enviada correctamente");
+				fetchEvaluaciones();
+				setModalEval(null);
+			} else {
+				toast.error(data.error || "Error al enviar solicitud");
+			}
 		} catch (err) {
-			toast.error("Error al obtener link: " + err.message);
+			toast.error("Error de conexión: " + err.message);
 		} finally {
-			setCargandoLink(false);
+			setAccionando(false);
 		}
-	};
-
-	// Copiar link al portapapeles
-	const handleCopiarLink = () => {
-		if (!linkManual) return;
-		navigator.clipboard.writeText(linkManual)
-			.then(() => toast.success("✅ Link copiado al portapapeles"))
-			.catch(() => toast.error("No se pudo copiar al portapapeles"));
 	};
 
 	const formatFecha = (d) =>
@@ -431,6 +423,26 @@ function AdminEvaluaciones() {
 									</div>
 								</div>
 							)}
+							{/* Botón para solicitar si está pendiente */}
+							{!modalEval.evaluada && (
+								<div className="border-t pt-4">
+									<Button
+										onClick={() => handleSolicitarEvaluacion(modalEval)}
+										disabled={accionando}
+										className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+									>
+										{accionando ? (
+											<RefreshCw className="h-4 w-4 animate-spin mr-2" />
+										) : (
+											<CheckCircle className="h-4 w-4 mr-2" />
+										)}
+										Enviar solicitud de evaluación por correo
+									</Button>
+									<p className="text-xs text-gray-400 mt-2 text-center">
+										Se enviará un correo al pasajero con el link para evaluar el servicio.
+									</p>
+								</div>
+							)}
 
 							{/* Acciones de publicación */}
 							{modalEval.evaluada && (
@@ -488,46 +500,6 @@ function AdminEvaluaciones() {
 								</div>
 							)}
 						</div>
-
-						{/* Link manual de evaluación — solo si aún no fue completada */}
-						{!modalEval.evaluada && (
-							<div className="border-t pt-4 space-y-3">
-								<h4 className="font-semibold text-gray-800 flex items-center gap-2">
-									<Link2 className="h-4 w-4 text-blue-600" />
-									Link manual de evaluación
-								</h4>
-								<p className="text-xs text-gray-400">Compartir por WhatsApp u otro canal sin reenviar el correo.</p>
-								{!linkManual ? (
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => handleObtenerLink(modalEval)}
-										disabled={cargandoLink}
-										className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
-									>
-										{cargandoLink ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Link2 className="h-4 w-4 mr-2" />}
-										Obtener link
-									</Button>
-								) : (
-									<div className="space-y-2">
-										<div className="flex items-center gap-2">
-											<input
-												readOnly
-												value={linkManual}
-												className="flex-1 text-xs bg-blue-50 border border-blue-200 rounded-md px-3 py-2 font-mono text-blue-800 select-all"
-												onClick={(e) => e.target.select()}
-											/>
-											<Button size="sm" variant="outline" onClick={handleCopiarLink} className="border-blue-300 text-blue-700 hover:bg-blue-50 shrink-0">
-												<Copy className="h-4 w-4" />
-											</Button>
-										</div>
-										{linkExpiracion && (
-											<p className="text-xs text-gray-400">⏱ Válido hasta: {new Date(linkExpiracion).toLocaleDateString("es-CL")}</p>
-										)}
-									</div>
-								)}
-							</div>
-						)}
 
 						<DialogFooter>
 							<Button variant="ghost" onClick={() => setModalEval(null)}>
