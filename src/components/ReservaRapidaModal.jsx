@@ -205,7 +205,11 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 
         if (typeof window.gtag === "function") {
           const conversionData = {
-            send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB"
+            send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+            // Valor e identificador de la transacción (obligatorio para que Google Ads registre el monto del Lead)
+            value: precioTotal,
+            currency: "CLP",
+            transaction_id: `lead_banner_${data.reserva.id}_${Date.now()}`,
           };
 
           // Enhanced Conversions
@@ -222,11 +226,21 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
           }
 
           if (Object.keys(userData).length > 0) {
-            conversionData.user_data = userData;
+            window.gtag("set", "user_data", userData);
           }
 
           window.gtag("event", "conversion", conversionData);
+          console.log(`🚀 [ReservaRapidaModal] Lead banner disparado: value=${precioTotal}, reservaId=${data.reserva.id}`);
         }
+
+        // Guardar monto en localStorage como respaldo para la conversión de Purchase
+        // (usado por CompletarDetalles y FlowReturn si el retorno llega sin amount en la URL)
+        try {
+          localStorage.setItem(
+            "ga_pending_conversion_express",
+            JSON.stringify({ reservaId: String(data.reserva.id), amount: precioTotal }),
+          );
+        } catch (_e) { /* ignorar errores de localStorage */ }
 
         // Redirigir a Flow para completar el pago
         window.location.href = paymentData.url;
