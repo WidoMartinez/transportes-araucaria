@@ -1190,11 +1190,15 @@ function HeroExpress({
 							<div className="bg-muted/30 p-4 rounded-xl border border-border space-y-3">
 								<div className="flex justify-between items-start">
 									<div className="flex-1 min-w-0">
-										<p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Ruta</p>
+										<p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Ruta y Pasajeros</p>
 										<p className="font-semibold text-foreground text-sm md:text-base break-words">
 											{formData.origen === "Otro" ? formData.otroOrigen : formData.origen}
 											<span className="mx-1 md:mx-2 text-muted-foreground">→</span>
 											{formData.destino === "Otro" ? formData.otroDestino : formData.destino}
+										</p>
+										<p className="text-xs font-medium text-muted-foreground mt-0.5 flex items-center gap-1">
+											<Users className="w-3.5 h-3.5" />
+											{formData.pasajeros} {parseInt(formData.pasajeros) === 1 ? 'pasajero' : 'pasajeros'}
 										</p>
 									</div>
 								</div>
@@ -1217,7 +1221,7 @@ function HeroExpress({
 									</div>
 									<div className="text-right flex flex-col items-end">
 										<p className="text-xs font-bold text-muted-foreground uppercase">Total</p>
-										{pricing.totalNormal > pricing.totalConDescuento && formData.idaVuelta ? (
+										{pricing.totalNormal > pricing.totalConDescuento ? (
 											<>
 												<p className="text-sm text-muted-foreground line-through decoration-destructive/60 decoration-1">
 													{formatCurrency(pricing.totalNormal)}
@@ -1239,10 +1243,17 @@ function HeroExpress({
 										)}
 									</div>
 								</div>
+								{(pricing?.totalNormal > pricing?.totalConDescuento) && (
+									<div className="flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20 animate-in fade-in zoom-in duration-300">
+										<Sparkles className="h-4 w-4" />
+										¡Descuento exclusivo web aplicado!
+									</div>
+								)}
+
 								{(descuentoRetorno || (pricing?.descuentoRetornoUniversal > 0)) && (
-									<div className="flex items-center gap-2 text-xs font-medium text-accent bg-accent/10 p-2 rounded-lg">
+									<div className="flex items-center gap-2 text-xs font-medium text-accent bg-accent/10 p-2.5 rounded-lg border border-accent/20 animate-in fade-in zoom-in duration-300">
 										<CheckCircle2 className="h-4 w-4" />
-										¡Descuento por retorno aplicado!
+										¡Descuento adicional por retorno aplicado!
 									</div>
 								)}
 							</div>
