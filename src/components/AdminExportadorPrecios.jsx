@@ -9,16 +9,16 @@
  */
 
 import { useState, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 import { getBackendUrl } from "../lib/backend";
-import { Loader2, Printer, RefreshCw } from "lucide-react";
+import { Loader2, Printer, RefreshCw, FileSpreadsheet } from "lucide-react";
 
 // URL base del backend
 const API_BASE_URL =
 	getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
-// Rangos de pasajeros a mostrar por tipo de vehículo
-const PASAJEROS_AUTO = [1, 2, 3];
-const PASAJEROS_VAN  = [4, 5, 6, 7];
+// Máximo de pasajeros por defecto — consistente con el backend (defaultValue: 4 en BD)
+const MAX_PAX_ABSOLUTO = 4;
 
 /**
  * Formatea un número como precio en CLP.
@@ -34,13 +34,34 @@ const formatPrecio = (valor) => {
 };
 
 /**
+ * Formatea minutos como "X h Y min" o "Y min".
+ * @param {number|null} minutos
+ */
+const formatDuracion = (minutos) => {
+	if (!minutos || minutos <= 0) return null;
+	const h = Math.floor(minutos / 60);
+	const m = minutos % 60;
+	if (h > 0 && m > 0) return `${h} h ${m} min`;
+	if (h > 0) return `${h} h`;
+	return `${m} min`;
+};
+
+/**
  * Escapa texto para seguridad al mostrarlo.
  * @param {string} texto
  */
 const escapar = (texto) =>
-	String(texto ?? "").replace(/[<>"'&]/g, (c) => ({
-		"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "&": "&amp;",
-	}[c]));
+	String(texto ?? "").replace(
+		/[<>"'&]/g,
+		(c) =>
+			({
+				"<": "&lt;",
+				">": "&gt;",
+				'"': "&quot;",
+				"'": "&#39;",
+				"&": "&amp;",
+			})[c],
+	);
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 
@@ -48,13 +69,126 @@ function AdminExportadorPrecios({ destinos = [] }) {
 	// Fecha por defecto: hoy en formato YYYY-MM-DD
 	const hoyStr = new Date().toISOString().slice(0, 10);
 
-	const [fecha, setFecha]         = useState(hoyStr);
-	const [hora, setHora]           = useState("10:00");
+	const [fecha, setFecha] = useState(hoyStr);
+	const [hora, setHora] = useState("10:00");
 	const [idaVuelta, setIdaVuelta] = useState(false);
-	const [cargando, setCargando]   = useState(false);
-	const [precios, setPrecios]     = useState(null); // { [destino]: { [pax]: resultado } }
-	const [error, setError]         = useState("");
-	const tablaRef                  = useRef(null);
+	const [cargando, setCargando] = useState(false);
+	const [precios, setPrecios] = useState(null); // { [destino]: { [pax]: resultado } }
+	const [error, setError] = useState("");
+	const tablaRef = useRef(null);
+
+	// Tramos seleccionados para exportar/imprimir (null = todos)
+	const [tramosSeleccionados, setTramosSeleccionados] = useState(null);
+
+	/**
+	 * Alterna la selección de un tramo. null significa "todos".
+	 */
+	const toggleTramo = (nombre) => {
+		setTramosSeleccionados((prev) => {
+			// Si estaba en modo "todos", inicializar con todos menos el clickeado desactivado
+			const activos = prev ?? destinosActivos.map((d) => d.nombre);
+			if (activos.includes(nombre)) {
+				const nuevo = activos.filter((n) => n !== nombre);
+				// Si quedan todos activos de nuevo, volver a null
+				return nuevo.length === destinosActivos.length ? null : nuevo;
+			}
+			const nuevo = [...activos, nombre];
+			return nuevo.length === destinosActivos.length ? null : nuevo;
+		});
+	};
+
+	const seleccionarTodos = () => setTramosSeleccionados(null);
+	const deseleccionarTodos = () => setTramosSeleccionados([]);
+
+	/**
+	 * Genera y descarga un archivo .xlsx con los precios calculados.
+	 * Solo incluye los tramos seleccionados.
+	 */
+	const exportarXLSX = () => {
+		if (!precios) return;
+		const wb = XLSX.utils.book_new();
+		const tramosAExportar = destinosActivos.filter(
+			(d) => tramosSeleccionados === null || tramosSeleccionados.includes(d.nombre),
+		);
+
+		// Una hoja por destino
+		for (const dest of tramosAExportar) {
+			const dataDest = precios[dest.nombre] || {};
+			const maxPax = dest.maxPasajeros || MAX_PAX_ABSOLUTO;
+			const durIda = formatDuracion(dest.duracionIdaMinutos);
+			const durVuelta = formatDuracion(dest.duracionVueltaMinutos);
+
+			// Cabecera informativa
+			const infoFilas = [
+				[`Tramo: ${dest.nombre}`],
+				[`Fecha: ${fecha}${hora ? ` a las ${hora}` : ""}`],
+			];
+			if (durIda) infoFilas.push([`Duración ida: ${durIda}`]);
+			if (idaVuelta && durVuelta) infoFilas.push([`Duración vuelta: ${durVuelta}`]);
+			infoFilas.push([]);
+
+			// Columnas
+			const colHeaders = [
+				"Pasajeros",
+				"Vehículo",
+				"Precio base",
+				"Solo ida (con tarifa dinámica)",
+				"Solo ida (con descuento online)",
+				"+Upgrade Van (extra s/sedán, 1-3 pax)",
+			];
+			if (idaVuelta) {
+				colHeaders.push("Ida y vuelta (con tarifa dinámica)");
+				colHeaders.push("Ida y vuelta (con todos los dtos.)");
+			}
+
+			const filasDatos = [];
+			for (let pax = 1; pax <= maxPax; pax++) {
+				const d = dataDest[pax];
+				if (!d) continue;
+				// Diferencia upgrade van: precio van con tarifa - precio sedán con tarifa
+				const pctTotalXLSX = d.tarifaDinamica?.ida?.porcentajeTotal ?? 0;
+				const soloIdaXLSX = d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0;
+				const precioUpgradeXLSX =
+					pax <= 3 && dest.precios?.van?.base
+						? Math.round(dest.precios.van.base * (1 + pctTotalXLSX / 100)) - soloIdaXLSX
+						: "";
+				const fila = [
+					pax,
+					d.vehiculo ?? "",
+					d.precioBase ?? 0,
+					d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0,
+					d.totalConDescuento ?? 0,
+					precioUpgradeXLSX,
+				];
+				if (idaVuelta) {
+					const precioIVTD =
+						(d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0) +
+						(d.tarifaDinamica?.vuelta?.precioAjustado ?? d.precioBase ?? 0);
+					fila.push(precioIVTD);
+					fila.push(
+						d.preciosRoundTrip?.totalConDescuento ||
+							(d.totalConDescuento ? Math.round(d.totalConDescuento * 2 * 0.9) : 0),
+					);
+				}
+				filasDatos.push(fila);
+			}
+
+			// Construir hoja de cálculo
+			const wsData = [...infoFilas, colHeaders, ...filasDatos];
+			const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+			// Ancho de columnas aproximado
+			ws["!cols"] = [10, 24, 16, 32, 32, 34, 34, 14].map((w) => ({ wch: w }));
+
+			// Nombre de hoja (máx 31 chars, sin caracteres especiales)
+			const nombreHoja = dest.nombre.replace(/[[\]*?:/\\]/g, "-").slice(0, 31);
+			XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+		}
+
+		// Nombre del archivo
+		const nombreArchivo = `tarifas_araucania_${fecha}.xlsx`;
+		XLSX.writeFile(wb, nombreArchivo);
+	};
 
 	/**
 	 * Llama a POST /api/cotizar para cada combinación destino × pasajeros.
@@ -66,7 +200,9 @@ function AdminExportadorPrecios({ destinos = [] }) {
 			return;
 		}
 		if (!destinos || destinos.length === 0) {
-			setError("No hay destinos disponibles. Asegúrate de que los destinos estén cargados.");
+			setError(
+				"No hay destinos disponibles. Asegúrate de que los destinos estén cargados.",
+			);
 			return;
 		}
 
@@ -81,12 +217,9 @@ function AdminExportadorPrecios({ destinos = [] }) {
 			for (const dest of destinos) {
 				if (!dest.activo) continue;
 
-				const todosLosPasajeros = [...PASAJEROS_AUTO, ...PASAJEROS_VAN];
-				for (const pax of todosLosPasajeros) {
-					// Verificar si el destino soporta esa cantidad de pasajeros
-					const maxPax = dest.maxPasajeros || 7;
-					if (pax > maxPax) continue;
-
+				// Usar maxPasajeros real del destino (puede ser 7, 8, etc.)
+				const maxPax = dest.maxPasajeros || MAX_PAX_ABSOLUTO;
+				for (let pax = 1; pax <= maxPax; pax++) {
 					combinaciones.push({
 						destino: dest.nombre,
 						pasajeros: pax,
@@ -114,7 +247,7 @@ function AdminExportadorPrecios({ destinos = [] }) {
 								hora: hora || undefined,
 								idaVuelta,
 								fechaRegreso: idaVuelta ? fecha : undefined,
-								horaRegreso:  idaVuelta && hora ? hora : undefined,
+								horaRegreso: idaVuelta && hora ? hora : undefined,
 								upgradeVan: false,
 							}),
 						});
@@ -138,21 +271,80 @@ function AdminExportadorPrecios({ destinos = [] }) {
 
 			setPrecios(resultados);
 		} catch (err) {
-			setError("Error al calcular precios: " + (err.message || "error desconocido"));
+			setError(
+				"Error al calcular precios: " + (err.message || "error desconocido"),
+			);
 		} finally {
 			setCargando(false);
 		}
 	}, [fecha, hora, idaVuelta, destinos]);
 
 	/**
-	 * Abre el diálogo de impresión del navegador mostrando solo la tabla.
+	 * Abre una ventana nueva con solo el contenido del reporte y dispara la impresión.
+	 * Esto evita el problema de que body > * { display:none } oculte también el #root.
 	 */
 	const imprimir = () => {
-		window.print();
+		const nodo = tablaRef.current;
+		if (!nodo) return;
+
+		// Capturar los estilos base del documento (Tailwind + demás hojas)
+		const estilosGlobales = Array.from(document.styleSheets)
+			.map((hoja) => {
+				try {
+					return Array.from(hoja.cssRules)
+						.map((r) => r.cssText)
+						.join("\n");
+				} catch {
+					// Hojas externas (CORS) se ignoran con seguridad
+					return "";
+				}
+			})
+			.join("\n");
+
+		const ventana = window.open("", "_blank", "width=900,height=700");
+		if (!ventana) {
+			setError("El navegador bloqueó la ventana emergente. Permite pop-ups para este sitio.");
+			return;
+		}
+
+		ventana.document.write(`
+			<!DOCTYPE html>
+			<html lang="es">
+			<head>
+				<meta charset="UTF-8" />
+				<title>Lista de Precios Transportes Araucanía</title>
+				<style>
+					${estilosGlobales}
+					body { background: white; color: black; font-family: sans-serif; padding: 20px; }
+					table { width: 100%; border-collapse: collapse; font-size: 11px; }
+					th, td { border: 1px solid #999; padding: 4px 7px; text-align: right; }
+					th { background: #f0f0f0; font-weight: bold; }
+					td:first-child, th:first-child { text-align: left; }
+					.badge-recargo { color: #c00; font-weight: bold; }
+					.badge-descuento { color: #060; font-weight: bold; }
+					.nota-pie { font-size: 9px; color: #555; margin-top: 8px; }
+					@media print { body { padding: 0; } }
+				</style>
+			</head>
+			<body>${nodo.innerHTML}</body>
+			</html>
+		`);
+		ventana.document.close();
+		ventana.focus();
+		// Pequeño delay para que carguen los estilos antes de imprimir
+		setTimeout(() => {
+			ventana.print();
+			ventana.close();
+		}, 400);
 	};
 
-	// Destinos activos con precios calculados
+	// Destinos activos
 	const destinosActivos = destinos.filter((d) => d.activo);
+
+	// Destinos que se muestran según la selección
+	const destinosMostrar = destinosActivos.filter(
+		(d) => tramosSeleccionados === null || tramosSeleccionados.includes(d.nombre),
+	);
 
 	// Formatea la fecha para mostrar en el encabezado del reporte
 	const fechaFormateada = fecha
@@ -161,63 +353,14 @@ function AdminExportadorPrecios({ destinos = [] }) {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
-		  })
+			})
 		: "";
 
 	return (
 		<>
-			{/* ────────── Estilos de impresión ────────── */}
-			<style>{`
-				@media print {
-					/* Ocultar todo excepto la sección de impresión */
-					body > * { display: none !important; }
-					#seccion-impresion-precios {
-						display: block !important;
-						position: absolute;
-						top: 0; left: 0;
-						width: 100%;
-						background: white;
-						color: black;
-					}
-					/* Estilos de tabla para impresión */
-					#seccion-impresion-precios table {
-						width: 100%;
-						border-collapse: collapse;
-						font-size: 11px;
-					}
-					#seccion-impresion-precios th,
-					#seccion-impresion-precios td {
-						border: 1px solid #999;
-						padding: 4px 6px;
-						text-align: right;
-					}
-					#seccion-impresion-precios th {
-						background: #f0f0f0;
-						font-weight: bold;
-					}
-					#seccion-impresion-precios td:first-child,
-					#seccion-impresion-precios th:first-child {
-						text-align: left;
-					}
-					#seccion-impresion-precios .badge-recargo {
-						color: #c00;
-						font-weight: bold;
-					}
-					#seccion-impresion-precios .badge-descuento {
-						color: #060;
-						font-weight: bold;
-					}
-					#seccion-impresion-precios .nota-pie {
-						font-size: 9px;
-						color: #555;
-						margin-top: 8px;
-					}
-					/* Saltos de página */
-					#seccion-impresion-precios .salto-pagina {
-						page-break-before: always;
-					}
-				}
-			`}</style>
+			{/* Los estilos de impresión ya no se necesitan aquí:
+			     el botón "Imprimir" abre una ventana nueva con el contenido,
+			     evitando que body > * oculte el #root de React. */}
 
 			{/* ────────── Panel de control (no se imprime) ────────── */}
 			<section className="rounded-lg border border-slate-700 bg-slate-900/60 p-6 space-y-4 no-print">
@@ -230,8 +373,8 @@ function AdminExportadorPrecios({ destinos = [] }) {
 
 				<p className="text-sm text-slate-400">
 					Selecciona una fecha y hora para calcular los precios reales que se
-					mostrarían al pasajero en ese momento, incluyendo todos los ajustes
-					de tarifa dinámica (anticipación, día de semana, horario, festivos).
+					mostrarían al pasajero en ese momento, incluyendo todos los ajustes de
+					tarifa dinámica (anticipación, día de semana, horario, festivos).
 				</p>
 
 				{/* Controles */}
@@ -277,8 +420,8 @@ function AdminExportadorPrecios({ destinos = [] }) {
 							</span>
 						</label>
 						<p className="mt-1 text-xs text-slate-500">
-							Si está activo, muestra el precio del viaje de regreso en la
-							misma fecha.
+							Si está activo, muestra el precio del viaje de regreso en la misma
+							fecha.
 						</p>
 					</div>
 				</div>
@@ -300,16 +443,81 @@ function AdminExportadorPrecios({ destinos = [] }) {
 					</button>
 
 					{precios && (
-						<button
-							type="button"
-							onClick={imprimir}
-							className="flex items-center gap-2 rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 border border-slate-600"
-						>
-							<Printer className="h-4 w-4" />
-							Imprimir / Guardar PDF
-						</button>
+						<>
+							<button
+								type="button"
+								onClick={imprimir}
+								className="flex items-center gap-2 rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 border border-slate-600"
+							>
+								<Printer className="h-4 w-4" />
+								Imprimir / Guardar PDF
+							</button>
+							<button
+								type="button"
+								onClick={exportarXLSX}
+								disabled={destinosMostrar.length === 0}
+								className="flex items-center gap-2 rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:opacity-50"
+							>
+								<FileSpreadsheet className="h-4 w-4" />
+								Exportar .xlsx
+							</button>
+						</>
 					)}
 				</div>
+
+				{/* Selector de tramos */}
+				{precios && destinosActivos.length > 1 && (
+					<div className="mt-2 rounded-md border border-slate-700 bg-slate-800/60 p-3">
+						<div className="flex items-center justify-between mb-2">
+							<span className="text-xs font-medium text-slate-300">
+								Tramos a incluir en impresión / exportación:
+							</span>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									onClick={seleccionarTodos}
+									className="text-xs text-slate-400 hover:text-white underline"
+								>
+									Todos
+								</button>
+								<button
+									type="button"
+									onClick={deseleccionarTodos}
+									className="text-xs text-slate-400 hover:text-white underline"
+								>
+									Ninguno
+								</button>
+							</div>
+						</div>
+						<div className="flex flex-wrap gap-2">
+							{destinosActivos.map((d) => {
+								const activo =
+									tramosSeleccionados === null ||
+									tramosSeleccionados.includes(d.nombre);
+								return (
+									<label
+										key={d.nombre}
+										className="inline-flex items-center gap-1.5 cursor-pointer"
+									>
+										<input
+											type="checkbox"
+											checked={activo}
+											onChange={() => toggleTramo(d.nombre)}
+											className="rounded border-slate-600 bg-slate-700 text-chocolate-500 focus:ring-chocolate-500"
+										/>
+										<span
+											className={`text-xs ${
+												activo ? "text-white" : "text-slate-500"
+											}`}
+										>
+											{d.nombre}
+										</span>
+									</label>
+								);
+							})}
+						</div>
+					</div>
+				)}
 
 				{/* Error */}
 				{error && (
@@ -346,20 +554,18 @@ function AdminExportadorPrecios({ destinos = [] }) {
 							</div>
 							<div className="text-right text-xs text-gray-500">
 								<p>Generado: {new Date().toLocaleString("es-CL")}</p>
-								<p className="text-gray-400">
-									Precios en pesos chilenos (CLP)
-								</p>
+								<p className="text-gray-400">Precios en pesos chilenos (CLP)</p>
 							</div>
 						</div>
 					</div>
 
-					{/* Tablas por destino */}
-					{destinosActivos.map((dest, idx) => {
+				{/* Tablas por destino — solo los seleccionados */}
+				{destinosMostrar.map((dest, idx) => {
 						const dataDest = precios[dest.nombre] || {};
 						const tieneAjuste = Object.values(dataDest).some(
 							(d) =>
 								d?.tarifaDinamica?.ida?.ajustes?.length > 0 ||
-								d?.tarifaDinamica?.vuelta?.ajustes?.length > 0
+								d?.tarifaDinamica?.vuelta?.ajustes?.length > 0,
 						);
 
 						// Obtener el primer resultado para mostrar info de tarifa dinámica
@@ -367,20 +573,26 @@ function AdminExportadorPrecios({ destinos = [] }) {
 						const ajustesIda =
 							primerResultado?.tarifaDinamica?.ida?.ajustes || [];
 						return (
-							<div
-								key={dest.nombre}
-								className={idx > 0 ? "mt-8" : ""}
-							>
+							<div key={dest.nombre} className={idx > 0 ? "mt-8" : ""}>
 								{/* Nombre del destino */}
 								<div className="flex items-baseline gap-3 mb-2">
 									<h3 className="font-bold text-gray-900 text-base">
 										{escapar(dest.nombre)}
 									</h3>
-									{dest.tiempo && (
-										<span className="text-xs text-gray-500">
-											⏱ {escapar(dest.tiempo)}
-										</span>
-									)}
+								{/* Duración real desde duracionIdaMinutos / duracionVueltaMinutos */}
+								{(dest.duracionIdaMinutos || dest.duracionVueltaMinutos) ? (
+									<span className="text-xs text-gray-500">
+										⏱{" "}
+										{formatDuracion(dest.duracionIdaMinutos) ?? "—"}
+										{idaVuelta && dest.duracionVueltaMinutos &&
+											dest.duracionVueltaMinutos !== dest.duracionIdaMinutos &&
+											` / vuelta: ${formatDuracion(dest.duracionVueltaMinutos)}`}
+									</span>
+								) : dest.tiempo ? (
+									<span className="text-xs text-gray-500">
+										⏱ {escapar(dest.tiempo)}
+									</span>
+								) : null}
 									{tieneAjuste && (
 										<span className="text-xs font-medium text-orange-600">
 											⚡ Tarifa dinámica activa
@@ -388,30 +600,57 @@ function AdminExportadorPrecios({ destinos = [] }) {
 									)}
 								</div>
 
-								{/* Descripción de ajustes de tarifa dinámica */}
-								{ajustesIda.length > 0 && (
-									<div className="mb-2 rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
-										<span className="font-semibold">Ajustes aplicados: </span>
-										{ajustesIda.map((a) => (
-											<span key={a.nombre} className="mr-2">
-												{a.nombre}
-												<span
-													className={
-														a.porcentaje > 0
-															? "badge-recargo ml-1"
-															: "badge-descuento ml-1"
-													}
-												>
-													({a.porcentaje > 0 ? "+" : ""}
-													{a.porcentaje}%)
-												</span>
+{/* Descripción de ajustes de tarifa dinámica — filtra ajustes con nombre vacío */}
+					{ajustesIda.filter((a) => a.nombre?.trim()).length > 0 && (
+						<div className="mb-2 rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+							<span className="font-semibold">Ajustes aplicados: </span>
+							{ajustesIda
+								.filter((a) => a.nombre?.trim())
+								.map((a, i) => (
+									<span key={`${a.nombre}-${i}`} className="mr-2">
+										{a.nombre}
+										{a.porcentaje !== 0 && (
+											<span
+												className={
+													a.porcentaje > 0
+														? "badge-recargo ml-1"
+														: "badge-descuento ml-1"
+												}
+											>
+												({a.porcentaje > 0 ? "+" : ""}{a.porcentaje}%)
 											</span>
-										))}
+										)}
+									</span>
+								))}
 									</div>
 								)}
 
 								{/* Tabla de precios */}
 								<div className="overflow-x-auto">
+									{/* Info de porcentajes adicionales por vehículo */}
+									{(dest.precios?.auto?.porcentajeAdicional != null ||
+										dest.precios?.van?.porcentajeAdicional != null) && (
+										<div className="mb-1 flex flex-wrap gap-x-5 text-xs text-gray-500">
+											{dest.precios?.auto?.porcentajeAdicional != null && (
+												<span>
+													🚗 Sedán: base 1 pax, +
+													<strong>
+														{Math.round(dest.precios.auto.porcentajeAdicional * 100)}%
+													</strong>{" "}
+													por cada pax adicional (2.°, 3.°)
+												</span>
+											)}
+											{dest.precios?.van?.porcentajeAdicional != null && (
+												<span>
+													🚐 Van: base 4 pax, +
+													<strong>
+														{Math.round(dest.precios.van.porcentajeAdicional * 100)}%
+													</strong>{" "}
+													por cada pax adicional (5.°, 6.°…)
+												</span>
+											)}
+										</div>
+									)}
 									<table className="w-full text-sm border border-gray-200">
 										<thead>
 											<tr className="bg-gray-100">
@@ -456,15 +695,20 @@ function AdminExportadorPrecios({ destinos = [] }) {
 														</th>
 													</>
 												)}
-												<th className="border border-gray-200 px-3 py-2 text-right font-semibold text-gray-700 bg-gray-50">
-													Abono (40%)
+													<th className="border border-gray-200 px-3 py-2 text-right font-semibold text-gray-700 bg-orange-50">
+														+Upgrade Van
+														<br />
+														<span className="text-xs font-normal text-orange-600">
+															(extra s/sedán, 1–3 pax)
+														</span>
 												</th>
 											</tr>
 										</thead>
 										<tbody>
-											{[...PASAJEROS_AUTO, ...PASAJEROS_VAN].map((pax) => {
-												const maxPax = dest.maxPasajeros || 7;
-												if (pax > maxPax) return null;
+										{Array.from(
+											{ length: dest.maxPasajeros || MAX_PAX_ABSOLUTO },
+											(_, i) => i + 1,
+										).map((pax) => {
 												const d = dataDest[pax];
 												if (!d) {
 													return (
@@ -483,32 +727,50 @@ function AdminExportadorPrecios({ destinos = [] }) {
 												}
 
 												// Extracción de datos del resultado de /api/cotizar
-												const precioBase     = d.precioBaseIda || d.precioBase || 0;
-										// precioAjustado = precio de ida tras aplicar tarifa dinámica
-										const soloIda        = d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0;
-										const totalConDto    = d.totalConDescuento ?? soloIda;
-										const abono          = d.abono ?? Math.round(totalConDto * 0.4);
+												const precioBase = d.precioBaseIda || d.precioBase || 0;
+												// precioAjustado = precio de ida tras aplicar tarifa dinámica
+												const soloIda =
+													d.tarifaDinamica?.ida?.precioAjustado ??
+													d.precioBase ??
+													0;
+												const totalConDto = d.totalConDescuento ?? soloIda;
 
-										// Para ida y vuelta
-										const ida2           = d.tarifaDinamica?.ida?.precioAjustado  ?? 0;
-										const vuelta2        = d.tarifaDinamica?.vuelta?.precioAjustado ?? 0;
-												const totalIdaVuelta = idaVuelta ? (ida2 + vuelta2) || (d.precioBase ?? 0) : 0;
-												const totalIdaVueltaConDto = idaVuelta ? (d.totalConDescuento ?? totalIdaVuelta) : 0;
-												const abonoIdaVuelta = Math.round(totalIdaVueltaConDto * 0.4);
+												// Para ida y vuelta
+												const ida2 = d.tarifaDinamica?.ida?.precioAjustado ?? 0;
+												const vuelta2 =
+													d.tarifaDinamica?.vuelta?.precioAjustado ?? 0;
+												const totalIdaVuelta = idaVuelta
+													? ida2 + vuelta2 || (d.precioBase ?? 0)
+													: 0;
+												const totalIdaVueltaConDto = idaVuelta
+													? (d.totalConDescuento ?? totalIdaVuelta)
+													: 0;
 
 												// Porcentaje de variación respecto al precio base
-												const variacion = precioBase > 0
-													? ((soloIda - precioBase) / precioBase) * 100
-													: 0;
+												const variacion =
+													precioBase > 0
+														? ((soloIda - precioBase) / precioBase) * 100
+														: 0;
 
 												return (
 													<tr
 														key={pax}
 														className={`border-b border-gray-100 ${pax >= 4 ? "bg-slate-50" : ""}`}
 													>
-														{/* Pasajeros */}
-														<td className="border border-gray-200 px-3 py-2 font-medium">
-															{pax} {pax === 1 ? "pasajero" : "pasajeros"}
+{/* Pasajeros + indicador de % adicional cuando aplica */}
+												<td className="border border-gray-200 px-3 py-2 font-medium">
+													{pax} {pax === 1 ? "pasajero" : "pasajeros"}
+													{/* Mostrar % adicional solo en pasajeros que generan recargo */}
+													{pax >= 2 && pax <= 3 && dest.precios?.auto?.porcentajeAdicional ? (
+														<span className="ml-1 text-xs text-blue-500 font-normal">
+															(+{Math.round(dest.precios.auto.porcentajeAdicional * 100 * (pax - 1))}% sobre base)
+														</span>
+													) : null}
+													{pax >= 5 && dest.precios?.van?.porcentajeAdicional ? (
+														<span className="ml-1 text-xs text-purple-500 font-normal">
+															(+{Math.round(dest.precios.van.porcentajeAdicional * 100 * (pax - 4))}% sobre base van)
+														</span>
+													) : null}
 														</td>
 
 														{/* Vehículo */}
@@ -543,23 +805,37 @@ function AdminExportadorPrecios({ destinos = [] }) {
 															{idaVuelta ? "—" : formatPrecio(totalConDto)}
 														</td>
 
-														{/* Ida y vuelta */}
-														{idaVuelta && (
-															<>
-																<td className="border border-gray-200 px-3 py-2 text-right font-semibold bg-blue-50">
-																	{formatPrecio(totalIdaVuelta)}
-																</td>
-																<td className="border border-gray-200 px-3 py-2 text-right font-semibold text-purple-700 bg-purple-50">
-																	{formatPrecio(totalIdaVueltaConDto)}
-																</td>
-															</>
-														)}
-
-														{/* Abono */}
-														<td className="border border-gray-200 px-3 py-2 text-right text-gray-500 bg-gray-50">
-															{formatPrecio(idaVuelta ? abonoIdaVuelta : abono)}
+												{/* Upgrade Van: diferencia a pagar sobre el sedán, solo para 1-3 pax */}
+												{(() => {
+													const pctTotal = d.tarifaDinamica?.ida?.porcentajeTotal ?? 0;
+													const vanBase = dest.precios?.van?.base;
+													// soloIda = precio sedán con tarifa dinámica aplicada
+													const soloIda = d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0;
+													const precioUpgrade =
+														pax <= 3 && vanBase
+															? Math.round(vanBase * (1 + pctTotal / 100)) - soloIda
+															: null;
+													return (
+														<td className="border border-gray-200 px-3 py-2 text-right bg-orange-50">
+															{precioUpgrade != null
+																? formatPrecio(precioUpgrade)
+																: <span className="text-gray-300">—</span>}
 														</td>
-													</tr>
+													);
+												})()}
+
+												{/* Ida y vuelta */}
+												{idaVuelta && (
+													<>
+														<td className="border border-gray-200 px-3 py-2 text-right font-semibold bg-blue-50">
+															{formatPrecio(totalIdaVuelta)}
+														</td>
+														<td className="border border-gray-200 px-3 py-2 text-right font-semibold text-purple-700 bg-purple-50">
+															{formatPrecio(totalIdaVueltaConDto)}
+														</td>
+													</>
+												)}
+											</tr>
 												);
 											})}
 										</tbody>
@@ -584,7 +860,9 @@ function AdminExportadorPrecios({ destinos = [] }) {
 										{primerResultado.descuentos.personalizados > 0 && (
 											<span>
 												✓ Dto. personalizados:{" "}
-												{formatPrecio(primerResultado.descuentos.personalizados)}
+												{formatPrecio(
+													primerResultado.descuentos.personalizados,
+												)}
 											</span>
 										)}
 										{primerResultado.descuentos.promocion > 0 && (

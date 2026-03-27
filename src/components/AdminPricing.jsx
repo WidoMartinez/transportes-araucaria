@@ -6,7 +6,8 @@ import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import AdminExportadorPrecios from "./AdminExportadorPrecios";
 
-const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+const API_BASE_URL =
+	getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 const nuevoDestinoTemplate = {
 	nombre: "",
@@ -59,7 +60,9 @@ const parsePromotionMetadata = (promo) => {
 	if (!promo || typeof promo.descripcion !== "string") return null;
 	try {
 		const parsed = JSON.parse(promo.descripcion);
-		return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+		return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+			? parsed
+			: null;
 	} catch (error) {
 		return null;
 	}
@@ -69,20 +72,27 @@ const normalizePromotions = (promociones = []) => {
 	if (!Array.isArray(promociones)) return [];
 	return promociones.map((promo, index) => {
 		const metadata = parsePromotionMetadata(promo);
-		const id = metadata?.sourceId || promo.id || generatePromotionId() || `promo-${index}`;
-		const diasMetadata = Array.isArray(metadata?.dias) ? metadata.dias.filter(Boolean) : [];
-		const aplicaPorDias = metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
+		const id =
+			metadata?.sourceId ||
+			promo.id ||
+			generatePromotionId() ||
+			`promo-${index}`;
+		const diasMetadata = Array.isArray(metadata?.dias)
+			? metadata.dias.filter(Boolean)
+			: [];
+		const aplicaPorDias =
+			metadata?.aplicaPorDias ?? Boolean(promo.aplicaPorDias);
 		const dias = aplicaPorDias
-			? (diasMetadata.length > 0
+			? diasMetadata.length > 0
 				? diasMetadata
 				: Array.isArray(promo.dias)
-				? promo.dias.filter(Boolean)
-				: metadata?.diaIndividual
-				? [metadata.diaIndividual]
-				: [])
+					? promo.dias.filter(Boolean)
+					: metadata?.diaIndividual
+						? [metadata.diaIndividual]
+						: []
 			: [];
 		const porcentaje = Number(
-			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
+			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0,
 		);
 		const aplicaTipoViajeMetadata = metadata?.aplicaTipoViaje || {};
 
@@ -94,7 +104,8 @@ const normalizePromotions = (promociones = []) => {
 			descripcion: metadata?.descripcion ?? promo.descripcion ?? "",
 			aplicaPorDias,
 			dias,
-			aplicaPorHorario: metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
+			aplicaPorHorario:
+				metadata?.aplicaPorHorario ?? Boolean(promo.aplicaPorHorario),
 			horaInicio: metadata?.horaInicio ?? promo.horaInicio ?? "",
 			horaFin: metadata?.horaFin ?? promo.horaFin ?? "",
 			descuentoPorcentaje: Number.isFinite(porcentaje) ? porcentaje : 0,
@@ -102,9 +113,13 @@ const normalizePromotions = (promociones = []) => {
 				ida:
 					metadata?.aplicaTipoViaje?.ida ?? promo.aplicaTipoViaje?.ida ?? false,
 				vuelta:
-					metadata?.aplicaTipoViaje?.vuelta ?? promo.aplicaTipoViaje?.vuelta ?? false,
+					metadata?.aplicaTipoViaje?.vuelta ??
+					promo.aplicaTipoViaje?.vuelta ??
+					false,
 				ambos:
-					metadata?.aplicaTipoViaje?.ambos ?? promo.aplicaTipoViaje?.ambos ?? true,
+					metadata?.aplicaTipoViaje?.ambos ??
+					promo.aplicaTipoViaje?.ambos ??
+					true,
 			},
 			activo: metadata?.activo ?? promo.activo ?? true,
 		};
@@ -135,25 +150,25 @@ function AdminPricing() {
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
-    // Gestión de destinos inactivos
-    const [inactiveDestinos, setInactiveDestinos] = useState([]);
-    const [loadingInactive, setLoadingInactive] = useState(false);
-    const [savingRowId, setSavingRowId] = useState(null);
+	// Gestión de destinos inactivos
+	const [inactiveDestinos, setInactiveDestinos] = useState([]);
+	const [loadingInactive, setLoadingInactive] = useState(false);
+	const [savingRowId, setSavingRowId] = useState(null);
 
-    const fetchInactiveDestinos = useCallback(async () => {
-        try {
-            setLoadingInactive(true);
-            const resp = await authenticatedFetch(`/api/destinos?activos=false`);
-            if (resp.ok) {
-                const data = await resp.json();
-                setInactiveDestinos(Array.isArray(data.destinos) ? data.destinos : []);
-            }
-        } catch (e) {
-            setInactiveDestinos([]);
-        } finally {
-            setLoadingInactive(false);
-        }
-    }, [authenticatedFetch]);
+	const fetchInactiveDestinos = useCallback(async () => {
+		try {
+			setLoadingInactive(true);
+			const resp = await authenticatedFetch(`/api/destinos?activos=false`);
+			if (resp.ok) {
+				const data = await resp.json();
+				setInactiveDestinos(Array.isArray(data.destinos) ? data.destinos : []);
+			}
+		} catch (e) {
+			setInactiveDestinos([]);
+		} finally {
+			setLoadingInactive(false);
+		}
+	}, [authenticatedFetch]);
 
 	const fetchPricing = useCallback(async () => {
 		setLoading(true);
@@ -162,7 +177,7 @@ function AdminPricing() {
 			const response = await authenticatedFetch(`/pricing`);
 			if (!response.ok) {
 				throw new Error(
-					"No se pudo obtener la configuración de precios del servidor."
+					"No se pudo obtener la configuración de precios del servidor.",
 				);
 			}
 			const data = await response.json();
@@ -204,7 +219,7 @@ function AdminPricing() {
 		} catch (fetchError) {
 			console.error(fetchError);
 			setError(
-				fetchError.message || "Ocurrió un error al cargar la configuración."
+				fetchError.message || "Ocurrió un error al cargar la configuración.",
 			);
 			setPricing({
 				destinos: destinosIniciales,
@@ -256,7 +271,11 @@ function AdminPricing() {
 							},
 						},
 					};
-					console.log("🔄 Nuevo estado para destino:", updated.nombre, updated.precios);
+					console.log(
+						"🔄 Nuevo estado para destino:",
+						updated.nombre,
+						updated.precios,
+					);
 					return updated;
 				}
 				return dest;
@@ -269,7 +288,9 @@ function AdminPricing() {
 		setPricing((prev) => ({
 			...prev,
 			destinos: prev.destinos.map((dest) =>
-				dest.nombre === nombre ? { ...dest, [field]: value === "" ? "" : value } : dest
+				dest.nombre === nombre
+					? { ...dest, [field]: value === "" ? "" : value }
+					: dest,
 			),
 		}));
 	};
@@ -278,16 +299,16 @@ function AdminPricing() {
 		console.log("🔍 handleAddPromotion - pricing.destinos:", pricing.destinos);
 		console.log(
 			"🔍 handleAddPromotion - pricing.destinos.length:",
-			pricing.destinos?.length
+			pricing.destinos?.length,
 		);
 		console.log(
 			"🔍 handleAddPromotion - condición:",
-			!pricing.destinos || pricing.destinos.length === 0
+			!pricing.destinos || pricing.destinos.length === 0,
 		);
 
 		if (!pricing.destinos || pricing.destinos.length === 0) {
 			alert(
-				"Agrega al menos un destino antes de crear un descuento personalizado."
+				"Agrega al menos un destino antes de crear un descuento personalizado.",
 			);
 			return;
 		}
@@ -302,12 +323,12 @@ function AdminPricing() {
 		setPricing((prev) => {
 			console.log(
 				"🔍 handleAddPromotion - dayPromotions antes:",
-				prev.dayPromotions
+				prev.dayPromotions,
 			);
 			const newDayPromotions = [...prev.dayPromotions, nuevaPromocion];
 			console.log(
 				"🔍 handleAddPromotion - dayPromotions después:",
-				newDayPromotions
+				newDayPromotions,
 			);
 			return {
 				...prev,
@@ -455,10 +476,7 @@ function AdminPricing() {
 				...prev.descuentosGlobales,
 				[tipo]: {
 					...prev.descuentosGlobales[tipo],
-					[field]:
-						field === "valor"
-							? value === "" ? "" : value
-							: value,
+					[field]: field === "valor" ? (value === "" ? "" : value) : value,
 				},
 			},
 		}));
@@ -509,11 +527,9 @@ function AdminPricing() {
 							? {
 									...desc,
 									[field]:
-										field === "valor"
-											? value === "" ? "" : value
-											: value,
-							  }
-							: desc
+										field === "valor" ? (value === "" ? "" : value) : value,
+								}
+							: desc,
 					),
 			},
 		}));
@@ -526,7 +542,7 @@ function AdminPricing() {
 				...prev.descuentosGlobales,
 				descuentosPersonalizados:
 					prev.descuentosGlobales.descuentosPersonalizados.filter(
-						(desc) => desc.id !== id
+						(desc) => desc.id !== id,
 					),
 			},
 		}));
@@ -539,7 +555,7 @@ function AdminPricing() {
 				...prev.descuentosGlobales,
 				descuentosPersonalizados:
 					prev.descuentosGlobales.descuentosPersonalizados.map((desc) =>
-						desc.id === id ? { ...desc, activo: !desc.activo } : desc
+						desc.id === id ? { ...desc, activo: !desc.activo } : desc,
 					),
 			},
 		}));
@@ -552,7 +568,7 @@ function AdminPricing() {
 		}
 		if (
 			pricing.destinos.some(
-				(d) => d.nombre.toLowerCase() === newDestino.nombre.toLowerCase()
+				(d) => d.nombre.toLowerCase() === newDestino.nombre.toLowerCase(),
 			)
 		) {
 			alert("Ya existe un destino con ese nombre.");
@@ -569,7 +585,7 @@ function AdminPricing() {
 	const handleRemoveDestino = async (nombre, id) => {
 		if (
 			window.confirm(
-				`¿Estás seguro de que quieres eliminar el destino "${nombre}"?`
+				`¿Estás seguro de que quieres eliminar el destino "${nombre}"?`,
 			)
 		) {
 			try {
@@ -587,7 +603,7 @@ function AdminPricing() {
 					...prev,
 					destinos: prev.destinos.filter((d) => d.nombre !== nombre),
 					dayPromotions: prev.dayPromotions.filter(
-						(promo) => promo.destino !== nombre
+						(promo) => promo.destino !== nombre,
 					),
 				}));
 			} catch (error) {
@@ -601,7 +617,7 @@ function AdminPricing() {
 		event.preventDefault();
 		if (newDestino) {
 			alert(
-				"Por favor, guarda o cancela el nuevo destino antes de guardar los cambios generales."
+				"Por favor, guarda o cancela el nuevo destino antes de guardar los cambios generales.",
 			);
 			return;
 		}
@@ -635,7 +651,7 @@ function AdminPricing() {
 
 		if (promocionInvalida) {
 			alert(
-				"Revisa los descuentos: cada promoción debe tener destino, porcentaje y configuración válida."
+				"Revisa los descuentos: cada promoción debe tener destino, porcentaje y configuración válida.",
 			);
 			return;
 		}
@@ -643,33 +659,33 @@ function AdminPricing() {
 		// Debug logs para descuentos personalizados
 		console.log(
 			"🔍 Frontend - Descuentos personalizados antes de enviar:",
-			pricing.descuentosGlobales.descuentosPersonalizados
+			pricing.descuentosGlobales.descuentosPersonalizados,
 		);
 		console.log(
 			"🔍 Frontend - Tipo:",
-			typeof pricing.descuentosGlobales.descuentosPersonalizados
+			typeof pricing.descuentosGlobales.descuentosPersonalizados,
 		);
 		console.log(
 			"🔍 Frontend - Es array:",
-			Array.isArray(pricing.descuentosGlobales.descuentosPersonalizados)
+			Array.isArray(pricing.descuentosGlobales.descuentosPersonalizados),
 		);
 		console.log(
 			"🔍 Frontend - Longitud:",
-			pricing.descuentosGlobales.descuentosPersonalizados?.length
+			pricing.descuentosGlobales.descuentosPersonalizados?.length,
 		);
 
 		// Debug logs para dayPromotions
 		console.log(
 			"🔍 Frontend - dayPromotions antes de enviar:",
-			pricing.dayPromotions
+			pricing.dayPromotions,
 		);
 		console.log(
 			"🔍 Frontend - dayPromotions.length:",
-			pricing.dayPromotions?.length
+			pricing.dayPromotions?.length,
 		);
 		console.log(
 			"🔍 Frontend - dayPromotions contenido:",
-			pricing.dayPromotions
+			pricing.dayPromotions,
 		);
 		console.log("🔍 Frontend - Estado completo de pricing:", pricing);
 
@@ -679,70 +695,82 @@ function AdminPricing() {
 
 		try {
 			console.log("🚀 Preparando envío de datos...");
-			const destinosPayload = pricing.destinos.map(d => ({
+			const destinosPayload = pricing.destinos.map((d) => ({
 				...d,
 				precios: {
 					auto: {
 						base: Number(d.precios?.auto?.base) || 0,
-						porcentajeAdicional: Number(d.precios?.auto?.porcentajeAdicional) || 0
+						porcentajeAdicional:
+							Number(d.precios?.auto?.porcentajeAdicional) || 0,
 					},
 					van: {
 						base: Number(d.precios?.van?.base) || 0,
-						porcentajeAdicional: Number(d.precios?.van?.porcentajeAdicional) || 0
-					}
-				}
+						porcentajeAdicional:
+							Number(d.precios?.van?.porcentajeAdicional) || 0,
+					},
+				},
 			}));
-			
-			console.log("📦 Payload de destinos a enviar:", JSON.stringify(destinosPayload, null, 2));
+
+			console.log(
+				"📦 Payload de destinos a enviar:",
+				JSON.stringify(destinosPayload, null, 2),
+			);
 
 			// Buscar Malalcahuello específicamente para debug
-			const malalcahuello = destinosPayload.find(d => d.nombre === "Malalcahuello");
-			console.log("🧐 Estado de Malalcahuello en payload:", malalcahuello ? malalcahuello.precios : "No encontrado");
+			const malalcahuello = destinosPayload.find(
+				(d) => d.nombre === "Malalcahuello",
+			);
+			console.log(
+				"🧐 Estado de Malalcahuello en payload:",
+				malalcahuello ? malalcahuello.precios : "No encontrado",
+			);
 
-			const formattedDayPromotions = (pricing.dayPromotions || []).map((promo) => {
-				const aplicaPorDias = Boolean(promo.aplicaPorDias);
-				const diasArray = Array.isArray(promo.dias)
-					? promo.dias.filter(Boolean)
-					: [];
-				const normalizedDias = aplicaPorDias
-					? diasArray.length > 0
-						? diasArray
-						: ["lunes"]
-					: [];
-				const diaPersistencia = aplicaPorDias
-					? normalizedDias[0]
-					: promo.dia || diasArray[0] || "lunes";
-				const porcentaje =
-					typeof promo.descuentoPorcentaje === "number"
-						? promo.descuentoPorcentaje
-						: Number(promo.descuentoPorcentaje) || 0;
-				const metadata = {
-					sourceId: promo.id,
-					destino: promo.destino || "",
-					descripcion: promo.descripcion || "",
-					dias: aplicaPorDias ? normalizedDias : [],
-					aplicaPorDias,
-					aplicaPorHorario: Boolean(promo.aplicaPorHorario),
-					horaInicio: promo.horaInicio || "",
-					horaFin: promo.horaFin || "",
-					porcentaje,
-					aplicaTipoViaje: {
-						ida: Boolean(promo.aplicaTipoViaje?.ida),
-						vuelta: Boolean(promo.aplicaTipoViaje?.vuelta),
-						ambos: Boolean(promo.aplicaTipoViaje?.ambos),
-					},
-					activo: promo.activo !== false,
-					diaIndividual: diaPersistencia,
-				};
+			const formattedDayPromotions = (pricing.dayPromotions || []).map(
+				(promo) => {
+					const aplicaPorDias = Boolean(promo.aplicaPorDias);
+					const diasArray = Array.isArray(promo.dias)
+						? promo.dias.filter(Boolean)
+						: [];
+					const normalizedDias = aplicaPorDias
+						? diasArray.length > 0
+							? diasArray
+							: ["lunes"]
+						: [];
+					const diaPersistencia = aplicaPorDias
+						? normalizedDias[0]
+						: promo.dia || diasArray[0] || "lunes";
+					const porcentaje =
+						typeof promo.descuentoPorcentaje === "number"
+							? promo.descuentoPorcentaje
+							: Number(promo.descuentoPorcentaje) || 0;
+					const metadata = {
+						sourceId: promo.id,
+						destino: promo.destino || "",
+						descripcion: promo.descripcion || "",
+						dias: aplicaPorDias ? normalizedDias : [],
+						aplicaPorDias,
+						aplicaPorHorario: Boolean(promo.aplicaPorHorario),
+						horaInicio: promo.horaInicio || "",
+						horaFin: promo.horaFin || "",
+						porcentaje,
+						aplicaTipoViaje: {
+							ida: Boolean(promo.aplicaTipoViaje?.ida),
+							vuelta: Boolean(promo.aplicaTipoViaje?.vuelta),
+							ambos: Boolean(promo.aplicaTipoViaje?.ambos),
+						},
+						activo: promo.activo !== false,
+						diaIndividual: diaPersistencia,
+					};
 
-				return {
-					...promo,
-					dias: aplicaPorDias ? normalizedDias : [],
-					dia: diaPersistencia,
-					porcentaje,
-					descripcion: JSON.stringify(metadata),
-				};
-			});
+					return {
+						...promo,
+						dias: aplicaPorDias ? normalizedDias : [],
+						dia: diaPersistencia,
+						porcentaje,
+						descripcion: JSON.stringify(metadata),
+					};
+				},
+			);
 
 			const response = await authenticatedFetch(`/pricing`, {
 				method: "PUT",
@@ -757,7 +785,7 @@ function AdminPricing() {
 			if (!response.ok) {
 				const errorBody = await response.json().catch(() => ({}));
 				throw new Error(
-					errorBody.message || "No se pudo guardar la configuración."
+					errorBody.message || "No se pudo guardar la configuración.",
 				);
 			}
 
@@ -765,7 +793,10 @@ function AdminPricing() {
 			try {
 				savedData = await response.json();
 			} catch (parseError) {
-				console.warn("No se pudo parsear la respuesta del servidor; se recargara la configuracion.", parseError);
+				console.warn(
+					"No se pudo parsear la respuesta del servidor; se recargara la configuracion.",
+					parseError,
+				);
 			}
 
 			const hasFullPayload =
@@ -787,10 +818,11 @@ function AdminPricing() {
 								savedData.descuentosGlobales?.descuentoOnline ||
 								5,
 							activo:
-								savedData.descuentosGlobales?.descuentoOnline?.activo !== undefined
+								savedData.descuentosGlobales?.descuentoOnline?.activo !==
+								undefined
 									? savedData.descuentosGlobales.descuentoOnline.activo
 									: true,
-								nombre: "Descuento por Reserva Online",
+							nombre: "Descuento por Reserva Online",
 						},
 						descuentoRoundTrip: {
 							valor:
@@ -798,10 +830,11 @@ function AdminPricing() {
 								savedData.descuentosGlobales?.descuentoRoundTrip ||
 								10,
 							activo:
-								savedData.descuentosGlobales?.descuentoRoundTrip?.activo !== undefined
+								savedData.descuentosGlobales?.descuentoRoundTrip?.activo !==
+								undefined
 									? savedData.descuentosGlobales.descuentoRoundTrip.activo
 									: true,
-								nombre: "Descuento por Ida y Vuelta",
+							nombre: "Descuento por Ida y Vuelta",
 						},
 						descuentosPersonalizados:
 							savedData.descuentosGlobales?.descuentosPersonalizados || [],
@@ -816,16 +849,22 @@ function AdminPricing() {
 			}
 
 			setSuccess(
-				"Configuracion guardada correctamente. Los cambios se aplicaran en el sitio web."
+				"Configuracion guardada correctamente. Los cambios se aplicaran en el sitio web.",
 			);
 			// Notificar a la aplicacion principal que los datos han cambiado
 			try {
 				localStorage.setItem("pricing_updated", Date.now().toString());
 				if (broadcastPayload) {
 					try {
-						localStorage.setItem("pricing_updated_payload", JSON.stringify(broadcastPayload));
+						localStorage.setItem(
+							"pricing_updated_payload",
+							JSON.stringify(broadcastPayload),
+						);
 					} catch (storageError) {
-						console.warn("No se pudo persistir payload de precios en localStorage:", storageError);
+						console.warn(
+							"No se pudo persistir payload de precios en localStorage:",
+							storageError,
+						);
 					}
 				} else {
 					localStorage.removeItem("pricing_updated_payload");
@@ -835,17 +874,20 @@ function AdminPricing() {
 					window.dispatchEvent(
 						new CustomEvent("pricing_updated", {
 							detail: broadcastPayload || null,
-						})
+						}),
 					);
 				}
 
 				if (typeof window !== "undefined" && window.recargarDatosPrecios) {
 					const resultadoRecarga = window.recargarDatosPrecios(
-						broadcastPayload ? { payload: broadcastPayload } : undefined
+						broadcastPayload ? { payload: broadcastPayload } : undefined,
 					);
 					if (resultadoRecarga && typeof resultadoRecarga.catch == "function") {
 						resultadoRecarga.catch((error) => {
-							console.error("Error aplicando payload desde panel admin:", error);
+							console.error(
+								"Error aplicando payload desde panel admin:",
+								error,
+							);
 						});
 					}
 				}
@@ -857,15 +899,21 @@ function AdminPricing() {
 				) {
 					try {
 						const resultadoOpener = window.opener.recargarDatosPrecios(
-							broadcastPayload ? { payload: broadcastPayload } : undefined
+							broadcastPayload ? { payload: broadcastPayload } : undefined,
 						);
 						if (resultadoOpener && typeof resultadoOpener.catch == "function") {
 							resultadoOpener.catch((error) => {
-								console.error("Error aplicando payload en ventana principal:", error);
+								console.error(
+									"Error aplicando payload en ventana principal:",
+									error,
+								);
 							});
 						}
 					} catch (callError) {
-						console.error("Error notificando a la ventana principal:", callError);
+						console.error(
+							"Error notificando a la ventana principal:",
+							callError,
+						);
 					}
 				}
 
@@ -873,14 +921,13 @@ function AdminPricing() {
 			} catch (e) {
 				console.log(
 					"No se pudieron enviar todas las notificaciones:",
-					e.message
+					e.message,
 				);
 			}
-
 		} catch (submitError) {
 			console.error(submitError);
 			setError(
-				submitError.message || "Ocurrió un error al guardar los cambios."
+				submitError.message || "Ocurrió un error al guardar los cambios.",
 			);
 		} finally {
 			setSaving(false);
@@ -913,102 +960,195 @@ function AdminPricing() {
 					)}
 				</header>
 
-                {/* Sección de Destinos Inactivos */}
-                <section className="mb-10 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold text-white">🗂️ Destinos Inactivos</h2>
-                        <button
-                            type="button"
-                            onClick={fetchInactiveDestinos}
-                            className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 text-sm hover:bg-slate-700"
-                        >
-                            {loadingInactive ? "Cargando..." : "Refrescar"}
-                        </button>
-                    </div>
-                    {loadingInactive ? (
-                        <p className="text-slate-400 text-sm">Cargando destinos inactivos…</p>
-                    ) : inactiveDestinos.length === 0 ? (
-                        <p className="text-slate-400 text-sm">No hay destinos inactivos para configurar.</p>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="text-left border-b border-slate-800">
-                                        <th className="py-2 pr-2">Nombre</th>
-                                        <th className="py-2 pr-2">Precio Ida</th>
-                                        <th className="py-2 pr-2">Precio Vuelta</th>
-                                        <th className="py-2 pr-2">Ida y Vuelta</th>
-                                        <th className="py-2 pr-2">Activo</th>
-                                        <th className="py-2 pr-2 text-right">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {inactiveDestinos.map((d) => (
-                                        <tr key={d.id} className="border-b border-slate-800">
-                                            <td className="py-2 pr-2">
-                                                <input
-                                                    className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1"
-                                                    value={d.nombre}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, nombre: e.target.value } : x))}
-                                                />
-                                            </td>
-                                            <td className="py-2 pr-2">
-                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIda}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIda: e.target.value === "" ? "" : e.target.value } : x))}
-                                                />
-                                            </td>
-                                            <td className="py-2 pr-2">
-                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioVuelta}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioVuelta: e.target.value === "" ? "" : e.target.value } : x))}
-                                                />
-                                            </td>
-                                            <td className="py-2 pr-2">
-                                                <input type="number" className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1" value={d.precioIdaVuelta}
-                                                    onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, precioIdaVuelta: e.target.value === "" ? "" : e.target.value } : x))}
-                                                />
-                                            </td>
-                                            <td className="py-2 pr-2">
-                                                <input type="checkbox" checked={Boolean(d.activo)} onChange={(e) => setInactiveDestinos((prev) => prev.map((x) => x.id === d.id ? { ...x, activo: e.target.checked } : x))} />
-                                            </td>
-                                            <td className="py-2 pr-2 text-right">
-                                                <button
-                                                    type="button"
-                                                    disabled={savingRowId === d.id}
-                                                    onClick={async () => {
-                                                        try {
-                                                            setSavingRowId(d.id);
-                                                            const resp = await authenticatedFetch(`/api/destinos/${d.id}`, {
-                                                                method: "PUT",
-                                                                body: JSON.stringify({
-                                                                    nombre: d.nombre,
-                                                                    precioIda: d.precioIda === "" ? 0 : Number(d.precioIda),
-                                                                    precioVuelta: d.precioVuelta === "" ? 0 : Number(d.precioVuelta),
-                                                                    precioIdaVuelta: d.precioIdaVuelta === "" ? 0 : Number(d.precioIdaVuelta),
-                                                                    activo: d.activo,
-                                                                }),
-                                                            });
-                                                            if (resp.ok) {
-                                                                await fetchInactiveDestinos();
-                                                                await fetchPricing();
-                                                            } else {
-                                                                alert("No se pudo guardar el destino");
-                                                            }
-                                                        } finally {
-                                                            setSavingRowId(null);
-                                                        }
-                                                    }}
-                                                    className="rounded-md border border-green-600 bg-green-700 px-3 py-1 text-sm hover:bg-green-600 disabled:opacity-60"
-                                                >
-                                                    {savingRowId === d.id ? "Guardando…" : (d.activo ? "Guardar" : "Dar de alta")}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </section>
+				{/* Sección de Destinos Inactivos */}
+				<section className="mb-10 rounded-lg border border-slate-800 bg-slate-900/70 p-6 shadow-lg">
+					<div className="flex items-center justify-between mb-4">
+						<h2 className="text-xl font-semibold text-white">
+							🗂️ Destinos Inactivos
+						</h2>
+						<button
+							type="button"
+							onClick={fetchInactiveDestinos}
+							className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1 text-sm hover:bg-slate-700"
+						>
+							{loadingInactive ? "Cargando..." : "Refrescar"}
+						</button>
+					</div>
+					{loadingInactive ? (
+						<p className="text-slate-400 text-sm">
+							Cargando destinos inactivos…
+						</p>
+					) : inactiveDestinos.length === 0 ? (
+						<p className="text-slate-400 text-sm">
+							No hay destinos inactivos para configurar.
+						</p>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="w-full text-sm">
+								<thead>
+									<tr className="text-left border-b border-slate-800">
+										<th className="py-2 pr-2">Nombre</th>
+										<th className="py-2 pr-2">Precio Ida</th>
+										<th className="py-2 pr-2">Precio Vuelta</th>
+										<th className="py-2 pr-2">Ida y Vuelta</th>
+										<th className="py-2 pr-2">Activo</th>
+										<th className="py-2 pr-2 text-right">Acción</th>
+									</tr>
+								</thead>
+								<tbody>
+									{inactiveDestinos.map((d) => (
+										<tr key={d.id} className="border-b border-slate-800">
+											<td className="py-2 pr-2">
+												<input
+													className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1"
+													value={d.nombre}
+													onChange={(e) =>
+														setInactiveDestinos((prev) =>
+															prev.map((x) =>
+																x.id === d.id
+																	? { ...x, nombre: e.target.value }
+																	: x,
+															),
+														)
+													}
+												/>
+											</td>
+											<td className="py-2 pr-2">
+												<input
+													type="number"
+													className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1"
+													value={d.precioIda}
+													onChange={(e) =>
+														setInactiveDestinos((prev) =>
+															prev.map((x) =>
+																x.id === d.id
+																	? {
+																			...x,
+																			precioIda:
+																				e.target.value === ""
+																					? ""
+																					: e.target.value,
+																		}
+																	: x,
+															),
+														)
+													}
+												/>
+											</td>
+											<td className="py-2 pr-2">
+												<input
+													type="number"
+													className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1"
+													value={d.precioVuelta}
+													onChange={(e) =>
+														setInactiveDestinos((prev) =>
+															prev.map((x) =>
+																x.id === d.id
+																	? {
+																			...x,
+																			precioVuelta:
+																				e.target.value === ""
+																					? ""
+																					: e.target.value,
+																		}
+																	: x,
+															),
+														)
+													}
+												/>
+											</td>
+											<td className="py-2 pr-2">
+												<input
+													type="number"
+													className="w-28 rounded-md border border-slate-700 bg-slate-800 px-2 py-1"
+													value={d.precioIdaVuelta}
+													onChange={(e) =>
+														setInactiveDestinos((prev) =>
+															prev.map((x) =>
+																x.id === d.id
+																	? {
+																			...x,
+																			precioIdaVuelta:
+																				e.target.value === ""
+																					? ""
+																					: e.target.value,
+																		}
+																	: x,
+															),
+														)
+													}
+												/>
+											</td>
+											<td className="py-2 pr-2">
+												<input
+													type="checkbox"
+													checked={Boolean(d.activo)}
+													onChange={(e) =>
+														setInactiveDestinos((prev) =>
+															prev.map((x) =>
+																x.id === d.id
+																	? { ...x, activo: e.target.checked }
+																	: x,
+															),
+														)
+													}
+												/>
+											</td>
+											<td className="py-2 pr-2 text-right">
+												<button
+													type="button"
+													disabled={savingRowId === d.id}
+													onClick={async () => {
+														try {
+															setSavingRowId(d.id);
+															const resp = await authenticatedFetch(
+																`/api/destinos/${d.id}`,
+																{
+																	method: "PUT",
+																	body: JSON.stringify({
+																		nombre: d.nombre,
+																		precioIda:
+																			d.precioIda === ""
+																				? 0
+																				: Number(d.precioIda),
+																		precioVuelta:
+																			d.precioVuelta === ""
+																				? 0
+																				: Number(d.precioVuelta),
+																		precioIdaVuelta:
+																			d.precioIdaVuelta === ""
+																				? 0
+																				: Number(d.precioIdaVuelta),
+																		activo: d.activo,
+																	}),
+																},
+															);
+															if (resp.ok) {
+																await fetchInactiveDestinos();
+																await fetchPricing();
+															} else {
+																alert("No se pudo guardar el destino");
+															}
+														} finally {
+															setSavingRowId(null);
+														}
+													}}
+													className="rounded-md border border-green-600 bg-green-700 px-3 py-1 text-sm hover:bg-green-600 disabled:opacity-60"
+												>
+													{savingRowId === d.id
+														? "Guardando…"
+														: d.activo
+															? "Guardar"
+															: "Dar de alta"}
+												</button>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</section>
 
 				<form onSubmit={handleSubmit} className="space-y-10">
 					{/* Sección de Descuentos Globales */}
@@ -1062,7 +1202,7 @@ function AdminPricing() {
 												handleDescuentoFijoChange(
 													"descuentoOnline",
 													"valor",
-													e.target.value
+													e.target.value,
 												)
 											}
 											disabled={
@@ -1116,7 +1256,7 @@ function AdminPricing() {
 												handleDescuentoFijoChange(
 													"descuentoRoundTrip",
 													"valor",
-													e.target.value
+													e.target.value,
 												)
 											}
 											disabled={
@@ -1177,7 +1317,7 @@ function AdminPricing() {
 																	handleDescuentoPersonalizadoChange(
 																		descuento.id,
 																		"nombre",
-																		e.target.value
+																		e.target.value,
 																	)
 																}
 																placeholder="Ej: Descuento Estudiantes"
@@ -1198,7 +1338,7 @@ function AdminPricing() {
 																	handleDescuentoPersonalizadoChange(
 																		descuento.id,
 																		"valor",
-																		e.target.value
+																		e.target.value,
 																	)
 																}
 																disabled={!descuento.activo}
@@ -1232,7 +1372,7 @@ function AdminPricing() {
 													</div>
 												</div>
 											</div>
-										)
+										),
 									)}
 								</div>
 							)}
@@ -1303,7 +1443,7 @@ function AdminPricing() {
 														{desc.activo ? "✅" : "❌"}
 													</span>
 												</p>
-											)
+											),
 										)
 									)}
 								</div>
@@ -1323,7 +1463,7 @@ function AdminPricing() {
 												pricing.descuentosGlobales?.descuentoOnline?.activo,
 												pricing.descuentosGlobales?.descuentoRoundTrip?.activo,
 												...(pricing.descuentosGlobales?.descuentosPersonalizados?.map(
-													(d) => d.activo
+													(d) => d.activo,
 												) || []),
 											].filter(Boolean).length
 										}
@@ -1418,55 +1558,57 @@ function AdminPricing() {
 											/>
 										</label>
 										<label className="text-sm text-slate-300">
-													Precio Base (Auto)
-													<input
-														type="number"
-														min="0"
-														value={newDestino.precios.auto.base}
-														onChange={(e) =>
-															setNewDestino((d) => ({
-																...d,
-																precios: {
-																	...d.precios,
-																	auto: {
-																		...d.precios.auto,
-																		base: e.target.value === "" ? "" : e.target.value,
-																	},
-																},
-															}))
-														}
-														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-													/>
-												</label>
-												<label className="text-sm text-slate-300">
-													% Adicional por Pasajero (Auto)
-													<input
-														type="number"
-														min="0"
-														max="1"
-														step="0.01"
-														value={newDestino.precios.auto.porcentajeAdicional}
-														onChange={(e) =>
-															setNewDestino((d) => ({
-																...d,
-																precios: {
-																	...d.precios,
-																	auto: {
-																		...d.precios.auto,
-																		porcentajeAdicional: e.target.value === "" ? "" : e.target.value,
-																	},
-																},
-															}))
-														}
-														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
-														placeholder="Ej: 0.10 para 10%"
-													/>
-													<p className="mt-1 text-xs text-slate-400">
-														Ej: 0.10 = 10% por cada pasajero adicional
-													</p>
-												</label>
-												<label className="text-sm text-slate-300">
-													Precio Base (Van)
+											Precio Base (Auto)
+											<input
+												type="number"
+												min="0"
+												value={newDestino.precios.auto.base}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														precios: {
+															...d.precios,
+															auto: {
+																...d.precios.auto,
+																base:
+																	e.target.value === "" ? "" : e.target.value,
+															},
+														},
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+											/>
+										</label>
+										<label className="text-sm text-slate-300">
+											% Adicional por Pasajero (Auto)
+											<input
+												type="number"
+												min="0"
+												max="1"
+												step="0.01"
+												value={newDestino.precios.auto.porcentajeAdicional}
+												onChange={(e) =>
+													setNewDestino((d) => ({
+														...d,
+														precios: {
+															...d.precios,
+															auto: {
+																...d.precios.auto,
+																porcentajeAdicional:
+																	e.target.value === "" ? "" : e.target.value,
+															},
+														},
+													}))
+												}
+												className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
+												placeholder="Ej: 0.10 para 10%"
+											/>
+											<p className="mt-1 text-xs text-slate-400">
+												Ej: 0.10 = 10% por cada pasajero adicional
+											</p>
+										</label>
+										<label className="text-sm text-slate-300">
+											Precio Base (Van)
 											<input
 												type="number"
 												value={newDestino.precios.van.base}
@@ -1477,7 +1619,8 @@ function AdminPricing() {
 															...d.precios,
 															van: {
 																...d.precios.van,
-																base: e.target.value === "" ? "" : e.target.value,
+																base:
+																	e.target.value === "" ? "" : e.target.value,
 															},
 														},
 													}))
@@ -1500,7 +1643,8 @@ function AdminPricing() {
 															...d.precios,
 															van: {
 																...d.precios.van,
-																porcentajeAdicional: e.target.value === "" ? "" : e.target.value,
+																porcentajeAdicional:
+																	e.target.value === "" ? "" : e.target.value,
 															},
 														},
 													}))
@@ -1509,7 +1653,8 @@ function AdminPricing() {
 												placeholder="Ej: 0.05 para 5%"
 											/>
 											<p className="mt-1 text-xs text-slate-400">
-												Ej: 0.05 = 5% por cada pasajero adicional (a partir del 6to)
+												Ej: 0.05 = 5% por cada pasajero adicional (a partir del
+												6to)
 											</p>
 										</label>
 									</div>
@@ -1546,7 +1691,9 @@ function AdminPricing() {
 												</h3>
 												<button
 													type="button"
-													onClick={() => handleRemoveDestino(destino.nombre, destino.id)}
+													onClick={() =>
+														handleRemoveDestino(destino.nombre, destino.id)
+													}
 													className="rounded-md border border-red-400/50 px-3 py-1 text-xs font-semibold text-red-200 transition hover:bg-red-500/10"
 												>
 													Eliminar
@@ -1564,7 +1711,7 @@ function AdminPricing() {
 																destino.nombre,
 																"auto",
 																"base",
-																e.target.value
+																e.target.value,
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1577,13 +1724,15 @@ function AdminPricing() {
 														min="0"
 														max="1"
 														step="0.01"
-														value={destino.precios.auto.porcentajeAdicional || 0.1}
+														value={
+															destino.precios.auto.porcentajeAdicional || 0.1
+														}
 														onChange={(e) =>
 															handleDestinoChange(
 																destino.nombre,
 																"auto",
 																"porcentajeAdicional",
-																e.target.value
+																e.target.value,
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1608,7 +1757,7 @@ function AdminPricing() {
 																destino.nombre,
 																"van",
 																"base",
-																e.target.value
+																e.target.value,
 															)
 														}
 														disabled={isVanDisabled}
@@ -1635,13 +1784,15 @@ function AdminPricing() {
 														min="0"
 														max="1"
 														step="0.01"
-														value={destino.precios.van.porcentajeAdicional || 0.05}
+														value={
+															destino.precios.van.porcentajeAdicional || 0.05
+														}
 														onChange={(e) =>
 															handleDestinoChange(
 																destino.nombre,
 																"van",
 																"porcentajeAdicional",
-																e.target.value
+																e.target.value,
 															)
 														}
 														disabled={isVanDisabled}
@@ -1653,7 +1804,8 @@ function AdminPricing() {
 														placeholder="Ej: 0.05 para 5%"
 													/>
 													<p className="mt-1 text-xs text-slate-400">
-														Ej: 0.05 = 5% por cada pasajero adicional (a partir del 6to)
+														Ej: 0.05 = 5% por cada pasajero adicional (a partir
+														del 6to)
 													</p>
 												</label>
 												<label className="text-sm text-slate-300">
@@ -1666,7 +1818,7 @@ function AdminPricing() {
 															handleGeneralDestinoChange(
 																destino.nombre,
 																"maxPasajeros",
-																e.target.value
+																e.target.value,
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1682,7 +1834,7 @@ function AdminPricing() {
 															handleGeneralDestinoChange(
 																destino.nombre,
 																"duracionIdaMinutos",
-																e.target.value
+																e.target.value,
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1699,7 +1851,7 @@ function AdminPricing() {
 															handleGeneralDestinoChange(
 																destino.nombre,
 																"duracionVueltaMinutos",
-																e.target.value
+																e.target.value,
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1716,7 +1868,7 @@ function AdminPricing() {
 															handleGeneralDestinoChange(
 																destino.nombre,
 																"minHorasAnticipacion",
-																e.target.value
+																e.target.value,
 															)
 														}
 														className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1773,7 +1925,7 @@ function AdminPricing() {
 							<div className="space-y-5">
 								{pricing.dayPromotions.map((promo) => {
 									const destinoOptions = pricing.destinos.map(
-										(dest) => dest.nombre
+										(dest) => dest.nombre,
 									);
 									return (
 										<div
@@ -1791,7 +1943,7 @@ function AdminPricing() {
 																handlePromotionFieldChange(
 																	promo.id,
 																	"destino",
-																	e.target.value
+																	e.target.value,
 																)
 															}
 														>
@@ -1814,7 +1966,7 @@ function AdminPricing() {
 																handlePromotionFieldChange(
 																	promo.id,
 																	"descuentoPorcentaje",
-																	e.target.value
+																	e.target.value,
 																)
 															}
 															className="mt-1 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -1829,7 +1981,7 @@ function AdminPricing() {
 																handlePromotionFieldChange(
 																	promo.id,
 																	"descripcion",
-																	e.target.value
+																	e.target.value,
 																)
 															}
 															placeholder="Ej: Promo finde"
@@ -1855,7 +2007,7 @@ function AdminPricing() {
 															onChange={() =>
 																handleTogglePromotionSetting(
 																	promo.id,
-																	"aplicaPorDias"
+																	"aplicaPorDias",
 																)
 															}
 															className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
@@ -1899,7 +2051,7 @@ function AdminPricing() {
 														onChange={() =>
 															handleTogglePromotionSetting(
 																promo.id,
-																"aplicaPorHorario"
+																"aplicaPorHorario",
 															)
 														}
 														className="h-4 w-4 rounded border border-slate-600 bg-slate-900"
@@ -1916,7 +2068,7 @@ function AdminPricing() {
 																handlePromotionFieldChange(
 																	promo.id,
 																	"horaInicio",
-																	e.target.value
+																	e.target.value,
 																)
 															}
 															disabled={!promo.aplicaPorHorario}
@@ -1936,7 +2088,7 @@ function AdminPricing() {
 																handlePromotionFieldChange(
 																	promo.id,
 																	"horaFin",
-																	e.target.value
+																	e.target.value,
 																)
 															}
 															disabled={!promo.aplicaPorHorario}
