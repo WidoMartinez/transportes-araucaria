@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { destinosBase as destinosIniciales } from "@/data/destinos";
 import { getBackendUrl } from "../lib/backend";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
+import AdminExportadorPrecios from "./AdminExportadorPrecios";
 
 const API_BASE_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
@@ -2043,6 +2044,11 @@ function AdminPricing() {
 						{success}
 					</div>
 				)}
+
+				{/* ── Exportador / impresora de precios por fecha con tarifa dinámica ── */}
+				<div className="mt-10">
+					<AdminExportadorPrecios destinos={pricing.destinos} />
+				</div>
 			</div>
 		</div>
 	);
