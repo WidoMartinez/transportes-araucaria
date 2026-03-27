@@ -13,13 +13,26 @@ Guía completa para trabajar con el sistema de precios y descuentos del panel ad
 
 ## Arquitectura del Sistema de Precios
 
+> ⚠️ **Nueva arquitectura (desde PR #260 + commit eb9f92c):** el cálculo de precios
+> fue migrado **completamente al backend**. El frontend ya no calcula precios;
+> solo llama a `POST /api/cotizar` y muestra los resultados.
+
 ```
-Frontend (AdminPricing.jsx / App.jsx)
+Frontend (App.jsx)
+  └── useCotizacion(params)          ← hook con debounce 400ms
+         ↕ POST /api/cotizar
+Backend (cotizacion.js → PricingService.js)
+  ├── calcularPrecioBase()            ← precio por vehículo y pasajeros
+  ├── calcularTarifaDinamica()        ← ajustes por anticipación/día/horario
+  └── cotizar()                       ← precio final + todos los descuentos
+         ↕ Sequelize ORM
+BD (PostgreSQL en Render.com)
+  Tablas: Destino, Promocion, DescuentoGlobal, CodigoDescuento,
+          ConfiguracionTarifaDinamica, Festivo, Configuracion
+
+Admin UI (AdminPricing.jsx)
       ↕ GET/PUT /pricing
 Backend (server-db.js)
-      ↕ Sequelize ORM
-BD (PostgreSQL en Render.com)
-  Tablas: Destino, Promocion, DescuentoGlobal, CodigoDescuento, Configuracion
 ```
 
 ---
@@ -29,7 +42,10 @@ BD (PostgreSQL en Render.com)
 | Archivo | Rol |
 |---------|-----|
 | `src/components/AdminPricing.jsx` | Panel UI para editar tarifas, descuentos y promociones |
-| `src/App.jsx` (líneas 760-845, 1300-1420) | Lógica de cálculo de cotización y descuentos en el frontend |
+| `src/App.jsx` (líneas 760-845, ~1385-1505) | Integra `useCotizacion` y mapea resultado al formato legacy |
+| `src/hooks/useCotizacion.js` | **NUEVO** — Hook React: llama a `POST /api/cotizar` con debounce 400ms |
+| `backend/services/PricingService.js` | **NUEVO** — Fuente de verdad del cálculo de precios (server-side) |
+| `backend/endpoints/cotizacion.js` | **NUEVO** — Router Express: `POST /api/cotizar` y `POST /api/cotizar/validar-monto` |
 | `src/data/destinos.jsx` | Datos base / fallback de destinos con precios por defecto |
 | `backend/server-db.js` (líneas 1033-1490) | Endpoints `GET /pricing` y `PUT /pricing`, caché, constructores |
 | `backend/models/Destino.js` | Modelo Sequelize — tarifas por vehículo, porcentajes adicionales |
@@ -128,68 +144,144 @@ BD (PostgreSQL en Render.com)
 
 ## Paso 3 — Flujo Completo de Cálculo de Precios
 
-### 3.1 Fórmula General
+> **Desde PR #260:** todo el cálculo ocurre en `backend/services/PricingService.js`.
+> El frontend solo envía parámetros y recibe el resultado.
+
+### 3.1 Flujo General (nueva arquitectura)
 
 ```
-precioBase = precio auto/van base × pasajeros adicionales
-precioIda  = calcularCotizacion(origen, destino, pasajeros, upgradeVan)
+App.jsx (formData + codigoAplicado)
+    │
+    ▼
+paramsCotizacion (useMemo)
+    │  { origen, destino, pasajeros, fecha, hora, idaVuelta,
+    │    fechaRegreso, horaRegreso, upgradeVan, codigoDescuento,
+    │    sillaInfantil, cantidadSillas }
+    ▼
+useCotizacion(params)  ← debounce 400ms + AbortController
+    │
+    ▼ POST /api/cotizar
+PricingService.cotizar(params)
+    ├── calcularPrecioBase()        —  precio por vehículo/pasajeros
+    ├── calcularTarifaDinamica()    —  ajustes anticipación/día/horario/festivos
+    └── Descuentos (en orden):
+        1. Online (sobre cada tramo)
+        2. Personalizados (sobre cada tramo)
+        3. Promoción activa (sobre cada tramo)
+        4. Round-trip (sobre total)
+        5. Código de descuento
+        → LÍMITE: 75% del precioBase
+    └── Sillas infantiles
+    └── abono = totalConDescuento × 40%
+    │
+    ▼  { precioBase, totalConDescuento, abono, saldoPendiente, descuentos{...} }
+usesCotizacion → pricing useMemo (mapeo legacy)
+```
 
-— Descuentos sobre precio de CADA TRAMO —
-descuentoOnline           = precioIda × (descuentoOnline.valor / 100)
-descuentoPromocion        = precioIda × (porcentajePromoDiaria / 100)
-descuentosPersonalizados  = precioIda × (sumaDescuentosPersonalizados / 100)
+### 3.2 Fórmula Resumida (ejecutada en el backend)
 
-— Descuento sobre TOTAL IDA + VUELTA —
-descuentoRoundTrip        = (precioIda + precioVuelta) × (descuentoRoundTrip.valor / 100)
+```
+precioBaseIda  = calcularPrecioBase(destinoInfo, pasajeros, upgradeVan)
+precioIdaFinal = calcularTarifaDinamica(precioBaseIda, destino, fecha, hora)
+precioBase     = idaVuelta ? precioIdaFinal × 2 : precioIdaFinal
 
-— Descuento por CÓDIGO —
-descuentoCodigo           = precioBase × (codigoDescuento.porcentaje / 100)
-
-— SUMA TOTAL DESCUENTOS (límite: 75% del precioBase) —
 descuentoTotal = MIN(
-  descuentoOnline + descuentoPromocion + descuentosPersonalizados +
-  descuentoRoundTrip + descuentoCodigo,
+  online + personalizados + promocion + roundTrip + codigo,
   precioBase × 0.75
 )
 
-— PRECIO FINAL —
-totalConDescuento = MAX(precioBase - descuentoTotal, 0) + costoSilla
+totalConDescuento = MAX(precioBase - descuentoTotal, 0) + costoSillas
+abono             = ROUND(totalConDescuento × 0.40)
+saldoPendiente    = totalConDescuento - abono
 ```
 
-### 3.2 Cálculo de Precio Base por Vehículo
+### 3.3 Cálculo de Precio Base por Vehículo (`PricingService.calcularPrecioBase`)
 
 ```javascript
-// Auto (1-4 pasajeros)
-if (pasajeros <= 4) {
-  precioFinal = precios.auto.base;
+// Sedán — 1 a 3 pasajeros (para 4+ sin upgrade → Van obligatoria)
+if (pasajeros <= 3) {
+  precioFinal = destino.precioIda;  // base Sedán
 }
-
-// Auto upgrade van (5-7 pasajeros con porcentaje adicional)
-if (pasajeros >= 5 && pasajeros <= 7) {
-  pasajerosAdicionales = pasajeros - 4;
-  costoAdicional = precios.auto.base * precios.auto.porcentajeAdicional;
-  precioFinal = precios.auto.base + pasajerosAdicionales * costoAdicional;
+// Van obligatoria — 4+ pasajeros
+if (pasajeros >= 4) {
+  const baseVan = destino.precioBaseVan || destino.precioIda * 1.8;
+  const addPct  = destino.porcentajeAdicionalVan || 0.05;
+  precioFinal   = baseVan + (pasajeros - 4) * (baseVan * addPct);
+}
+// Upgrade Van (1-3 pax que piden van por comodidad)
+if (upgradeVan && pasajeros <= 3) {
+  precioFinal = destino.precioBaseVan || destino.precioIda * 1.8;
 }
 ```
 
-### 3.3 Tarifa Dinámica (`/api/tarifa-dinamica/calcular`)
+### 3.4 Tarifa Dinámica (interna en `PricingService`)
 
-Se llama al backend con `{ precioBase, destino, fecha, hora }` y el backend aplica ajustes por días de anticipación u otras reglas configuradas. El resultado reemplaza al `precioBase` antes de aplicar descuentos.
+`calcularTarifaDinamica` ya no es un endpoint separado que llama el frontend.
+Ahora es una función interna de `PricingService.js` que ejecuta la misma lógica
+de `ConfiguracionTarifaDinamica` (anticipación, día semana, horario, festivos)
+dentro de la misma llamada a `POST /api/cotizar`.
+
+> El endpoint `/api/tarifa-dinamica/calcular` sigue existiendo para el panel admin
+> (`AdminTarifaDinamica.jsx`), pero **el formulario público ya no lo llama directamente**.
 
 ---
 
 ## Paso 4 — Endpoints del Backend
 
 | Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| `GET` | `/pricing` | No | Retorna toda la configuración de precios (con caché 60s) |
+|--------|------|------|--------------|
+| `POST` | `/api/cotizar` | No | **NUEVO** — Cotización completa con tarifa dinámica + todos los descuentos |
+| `POST` | `/api/cotizar/validar-monto` | No | **NUEVO** — Revalida precio antes de crear pago (tolerancia 1%) |
+| `GET` | `/pricing` | No | Configuración de precios para el panel admin (caché 60s) |
 | `PUT` | `/pricing` | Sí (JWT) | Guarda configuración de precios, invalida caché |
 | `GET` | `/api/descuentos-codigos` | Sí | Lista todos los códigos de descuento |
 | `POST` | `/api/descuentos-codigos` | Sí | Crea nuevo código de descuento |
 | `PUT` | `/api/descuentos-codigos/:id` | Sí | Actualiza código de descuento |
 | `DELETE` | `/api/descuentos-codigos/:id` | Sí | Elimina código de descuento |
 | `POST` | `/api/descuentos-codigos/verificar` | No | Verifica validez de un código |
-| `POST` | `/api/tarifa-dinamica/calcular` | No | Calcula tarifa dinámica con ajustes |
+| `POST` | `/api/tarifa-dinamica/calcular` | No | Tarifa dinámica aislada (solo para admin, no para el formulario público) |
+
+### Payload de `POST /api/cotizar`
+
+```javascript
+// Request
+{
+  origen: "Aeropuerto La Araucanía",   // requerido
+  destino: "Temuco",                    // requerido
+  pasajeros: 2,                         // requerido, entero 1-10
+  fecha: "2026-04-10",                  // requerido, YYYY-MM-DD
+  hora: "14:00",                        // opcional
+  idaVuelta: false,                     // opcional, default false
+  fechaRegreso: "2026-04-12",           // requerido si idaVuelta=true
+  horaRegreso: "18:00",                 // opcional
+  upgradeVan: false,                    // opcional
+  codigoDescuento: "VERANO2026",        // opcional
+  sillaInfantil: false,                 // opcional
+  cantidadSillas: 0                     // opcional
+}
+
+// Response
+{
+  vehiculo: "Sedán",
+  esUpgradeVan: false,
+  precioBaseIda: 20000,
+  precioBaseVuelta: 0,
+  precioBase: 20000,
+  tarifaDinamica: { ida: { precioFinal: 20000, ajustesAplicados: [] } },
+  descuentos: {
+    online: 1000, personalizados: 0, promocion: 0,
+    roundTrip: 0, codigo: 0,
+    total: 1000,             // descuento total ya limitado al 75%
+    limiteAplicado: false,
+    promocionActiva: null,
+    codigoAplicado: null
+  },
+  extras: { sillas: 0, cantidadSillas: 0 },
+  totalConDescuento: 19000,
+  abono: 7600,
+  saldoPendiente: 11400
+}
+```
 
 ### Caché de precios
 
@@ -523,8 +615,11 @@ Agregar este botón junto al botón "Guardar Configuración" en `AdminPricing.js
 
 | Archivo | Descripción breve |
 |---------|-------------------|
-| [src/components/AdminPricing.jsx](src/components/AdminPricing.jsx) | Componente principal del panel de precios |
-| [src/App.jsx](src/App.jsx) | Lógica de cálculo de cotización (líneas 1300-1420) |
+| [src/components/AdminPricing.jsx](src/components/AdminPricing.jsx) | Panel admin de precios (UI) |
+| [src/App.jsx](src/App.jsx) | Integra `useCotizacion` (~líneas 1385-1505) — ya no tiene lógica de precios |
+| [src/hooks/useCotizacion.js](src/hooks/useCotizacion.js) | Hook React — cliente de `POST /api/cotizar` |
+| [backend/services/PricingService.js](backend/services/PricingService.js) | **Fuente de verdad** del cálculo de precios |
+| [backend/endpoints/cotizacion.js](backend/endpoints/cotizacion.js) | Endpoints `/api/cotizar` y `/api/cotizar/validar-monto` |
 | [src/data/destinos.jsx](src/data/destinos.jsx) | Datos base de destinos (fallback) |
-| [backend/server-db.js](backend/server-db.js) | Endpoints de pricing (líneas 1033-1490) |
+| [backend/server-db.js](backend/server-db.js) | Endpoints de pricing admin (líneas 1033-1490) |
 | [DOCUMENTACION_MAESTRA.md](DOCUMENTACION_MAESTRA.md) | Sección 5.10: Descuentos Personalizados |
