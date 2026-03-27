@@ -89,6 +89,8 @@ import {
 	obtenerBloqueosEnRango,
 } from "./utils/bloqueoAgenda.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
+// Endpoint de cotización centralizada (nueva arquitectura de precios en backend)
+import cotizacionRouter from "./endpoints/cotizacion.js";
 
 dotenv.config();
 
@@ -595,6 +597,9 @@ app.options("*", (req, res) => {
 
 // --- RUTAS DE AUTENTICACIÓN ---
 app.use("/api/auth", authRoutes);
+
+// --- ENDPOINT DE COTIZACIÓN CENTRALIZADA (nueva arquitectura de precios) ---
+app.use(cotizacionRouter);
 
 // Configurar rutas de oportunidades
 // --- RUTAS DE PROMOCIONES BANNER ---
