@@ -74,7 +74,11 @@ import addUltimaSolicitudDetalles from "./migrations/add-ultima-solicitud-detall
 import updateVehiculosMinibusToSuv from "./migrations/update-vehiculos-minibus-to-suv.js";
 import addEvaluacionesConductorTable from "./migrations/add-evaluaciones-conductor-table.js";
 import EvaluacionConductor from "./models/EvaluacionConductor.js";
-import { generarTokenEvaluacion, calcularPromedioEvaluacion, crearOrdenFlowPropina } from "./utils/evaluacionesHelper.js";
+import {
+	generarTokenEvaluacion,
+	calcularPromedioEvaluacion,
+	crearOrdenFlowPropina,
+} from "./utils/evaluacionesHelper.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
@@ -89,6 +93,8 @@ import {
 	obtenerBloqueosEnRango,
 } from "./utils/bloqueoAgenda.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
+// Endpoint de cotización centralizada (nueva arquitectura de precios en backend)
+import cotizacionRouter from "./endpoints/cotizacion.js";
 
 dotenv.config();
 
@@ -595,6 +601,9 @@ app.options("*", (req, res) => {
 
 // --- RUTAS DE AUTENTICACIÓN ---
 app.use("/api/auth", authRoutes);
+
+// --- ENDPOINT DE COTIZACIÓN CENTRALIZADA (nueva arquitectura de precios) ---
+app.use(cotizacionRouter);
 
 // Configurar rutas de oportunidades
 // --- RUTAS DE PROMOCIONES BANNER ---
@@ -4735,7 +4744,7 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 		if (registro.reservaVinculadaId) {
 			const reservaOrig = await Reserva.findByPk(registro.reservaVinculadaId);
 			if (reservaOrig) {
-				const responseData = { 
+				const responseData = {
 					...registro.toJSON(),
 					// Incluir datos de la reserva original para que el frontend detecte qué falta
 					fecha: reservaOrig.fecha,
@@ -4745,7 +4754,7 @@ app.get("/api/codigos-pago/:codigo", async (req, res) => {
 					direccionOrigen: reservaOrig.direccionOrigen,
 					direccionDestino: reservaOrig.direccionDestino,
 					numeroVuelo: reservaOrig.numeroVuelo,
-					hotel: reservaOrig.hotel
+					hotel: reservaOrig.hotel,
 				};
 				return res.json({ success: true, codigoPago: responseData });
 			}
@@ -5669,7 +5678,9 @@ app.get("/api/reservas/codigo/:codigo", async (req, res) => {
 			return res.status(404).json({ error: "Reserva no encontrada" });
 		}
 
-		console.log(`✅ Reserva encontrada: ID ${reserva.id}, Precio: $${reserva.precio}, IdaVuelta: ${reserva.idaVuelta}, TipoTramo: ${reserva.tipoTramo}`);
+		console.log(
+			`✅ Reserva encontrada: ID ${reserva.id}, Precio: $${reserva.precio}, IdaVuelta: ${reserva.idaVuelta}, TipoTramo: ${reserva.tipoTramo}`,
+		);
 		res.json(reserva);
 	} catch (error) {
 		console.error("Error buscando reserva por código:", error);
@@ -5770,11 +5781,15 @@ app.post("/api/reservas/:id/generar-link-pago", authAdmin, async (req, res) => {
 		});
 
 		if (!reserva) {
-			return res.status(404).json({ success: false, message: "Reserva no encontrada" });
+			return res
+				.status(404)
+				.json({ success: false, message: "Reserva no encontrada" });
 		}
 
 		if (!monto || parseFloat(monto) <= 0) {
-			return res.status(400).json({ success: false, message: "Monto inválido" });
+			return res
+				.status(400)
+				.json({ success: false, message: "Monto inválido" });
 		}
 
 		// Generar un código único
@@ -5798,24 +5813,31 @@ app.post("/api/reservas/:id/generar-link-pago", authAdmin, async (req, res) => {
 			usosActuales: 0,
 			reservaVinculadaId: reserva.id,
 			codigoReservaVinculado: reserva.codigoReserva,
-			emailCliente: reserva.email || (reserva.cliente ? reserva.cliente.email : null),
-			nombreCliente: reserva.nombre || (reserva.cliente ? reserva.cliente.nombre : null),
-			telefonoCliente: reserva.telefono || (reserva.cliente ? reserva.cliente.telefono : null),
-			direccionCliente: reserva.direccionDestino || reserva.direccionOrigen || null,
-			duracionMinutos: reserva.duracionMinutos || 45
+			emailCliente:
+				reserva.email || (reserva.cliente ? reserva.cliente.email : null),
+			nombreCliente:
+				reserva.nombre || (reserva.cliente ? reserva.cliente.nombre : null),
+			telefonoCliente:
+				reserva.telefono || (reserva.cliente ? reserva.cliente.telefono : null),
+			direccionCliente:
+				reserva.direccionDestino || reserva.direccionOrigen || null,
+			duracionMinutos: reserva.duracionMinutos || 45,
 		});
 
-		const frontendUrl = process.env.FRONTEND_URL || "https://transportesaraucaria.cl";
+		const frontendUrl =
+			process.env.FRONTEND_URL || "https://transportesaraucaria.cl";
 
 		return res.json({
 			success: true,
 			message: "Link de pago generado exitosamente",
 			codigoPago: nuevoCodigo.codigo,
-			url: `${frontendUrl}/#pagar-con-codigo/${nuevoCodigo.codigo}`
+			url: `${frontendUrl}/#pagar-con-codigo/${nuevoCodigo.codigo}`,
 		});
 	} catch (error) {
 		console.error("Error al generar link de pago:", error);
-		res.status(500).json({ success: false, message: "Error interno del servidor" });
+		res
+			.status(500)
+			.json({ success: false, message: "Error interno del servidor" });
 	}
 });
 
@@ -10005,7 +10027,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 
 		// --- Detección y procesamiento de propina de evaluación ---
 		// Si el origen del pago es una propina, procesarlo por separado y no continuar con el flujo normal
-		if (optionalMetadata.paymentOrigin === "propina_evaluacion" && payment.status === 2) {
+		if (
+			optionalMetadata.paymentOrigin === "propina_evaluacion" &&
+			payment.status === 2
+		) {
 			const evaluacionId = optionalMetadata.evaluacionId
 				? Number(optionalMetadata.evaluacionId)
 				: null;
@@ -10017,17 +10042,28 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					if (evaluacion) {
 						await evaluacion.update({
 							propinaPagada: true,
-							propinaPaymentId: String(payment.flowOrder || payment.commerceOrder || ""),
+							propinaPaymentId: String(
+								payment.flowOrder || payment.commerceOrder || "",
+							),
 						});
-						console.log(`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}. FlowOrder: ${payment.flowOrder}`);
+						console.log(
+							`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}. FlowOrder: ${payment.flowOrder}`,
+						);
 					} else {
-						console.warn(`⚠️ [Propina] No se encontró la evaluación ${evaluacionId} en la BD`);
+						console.warn(
+							`⚠️ [Propina] No se encontró la evaluación ${evaluacionId} en la BD`,
+						);
 					}
 				} catch (propinaErr) {
-					console.error(`❌ [Propina] Error al actualizar propina para evaluación ${evaluacionId}:`, propinaErr.message);
+					console.error(
+						`❌ [Propina] Error al actualizar propina para evaluación ${evaluacionId}:`,
+						propinaErr.message,
+					);
 				}
 			} else {
-				console.warn("⚠️ [Propina] Pago de propina confirmado sin evaluacionId válido en metadata");
+				console.warn(
+					"⚠️ [Propina] Pago de propina confirmado sin evaluacionId válido en metadata",
+				);
 			}
 			return; // No continuar con el flujo normal de reservas
 		}
@@ -12406,7 +12442,10 @@ app.get("/api/evaluaciones/validar-token/:token", async (req, res) => {
 			return res.json({ valido: false, motivo: "ya_evaluado" });
 		}
 
-		if (evaluacion.tokenExpiracion && new Date() > new Date(evaluacion.tokenExpiracion)) {
+		if (
+			evaluacion.tokenExpiracion &&
+			new Date() > new Date(evaluacion.tokenExpiracion)
+		) {
 			return res.json({ valido: false, motivo: "expirado" });
 		}
 
@@ -12459,23 +12498,42 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 		});
 
 		if (!evaluacion) {
-			return res.status(404).json({ success: false, error: "Token no encontrado" });
+			return res
+				.status(404)
+				.json({ success: false, error: "Token no encontrado" });
 		}
 
 		if (evaluacion.evaluada) {
-			return res.status(400).json({ success: false, error: "Esta evaluación ya fue completada" });
+			return res
+				.status(400)
+				.json({ success: false, error: "Esta evaluación ya fue completada" });
 		}
 
-		if (evaluacion.tokenExpiracion && new Date() > new Date(evaluacion.tokenExpiracion)) {
-			return res.status(400).json({ success: false, error: "El enlace de evaluación ha expirado" });
+		if (
+			evaluacion.tokenExpiracion &&
+			new Date() > new Date(evaluacion.tokenExpiracion)
+		) {
+			return res
+				.status(400)
+				.json({ success: false, error: "El enlace de evaluación ha expirado" });
 		}
 
 		// Validar calificaciones (1-5)
-		const cats = [calificacion_puntualidad, calificacion_limpieza, calificacion_seguridad, calificacion_comunicacion];
+		const cats = [
+			calificacion_puntualidad,
+			calificacion_limpieza,
+			calificacion_seguridad,
+			calificacion_comunicacion,
+		];
 		for (const c of cats) {
 			const n = Number(c);
 			if (!Number.isInteger(n) || n < 1 || n > 5) {
-				return res.status(400).json({ success: false, error: "Las calificaciones deben ser valores entre 1 y 5" });
+				return res
+					.status(400)
+					.json({
+						success: false,
+						error: "Las calificaciones deben ser valores entre 1 y 5",
+					});
 			}
 		}
 
@@ -12483,7 +12541,7 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 			calificacion_puntualidad,
 			calificacion_limpieza,
 			calificacion_seguridad,
-			calificacion_comunicacion
+			calificacion_comunicacion,
 		);
 
 		const montoPropinaNum = Number(propina_monto) || 0;
@@ -12501,17 +12559,23 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 			fechaEvaluacion: new Date(),
 		});
 
-		console.log(`✅ [Evaluación] Reserva ${evaluacion.reservaId} evaluada. Promedio: ${promedio}. Propina: $${montoPropinaNum}`);
+		console.log(
+			`✅ [Evaluación] Reserva ${evaluacion.reservaId} evaluada. Promedio: ${promedio}. Propina: $${montoPropinaNum}`,
+		);
 
 		// Si hay propina, crear orden de pago en Flow
 		if (montoPropinaNum > 0) {
 			try {
 				const reserva = await Reserva.findByPk(evaluacion.reservaId);
-				const { flowUrl, token: flowToken, flowOrder } = await crearOrdenFlowPropina(
+				const {
+					flowUrl,
+					token: flowToken,
+					flowOrder,
+				} = await crearOrdenFlowPropina(
 					montoPropinaNum,
 					reserva?.codigoReserva || evaluacion.reservaId,
 					evaluacion.id,
-					evaluacion.clienteEmail
+					evaluacion.clienteEmail,
 				);
 
 				// Guardar datos de la orden de propina en la evaluación
@@ -12520,33 +12584,47 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 					propinaFlowOrder: flowOrder,
 				});
 
-				console.log(`💰 [Propina] Orden Flow creada para evaluación ${evaluacion.id}. Order: ${flowOrder}`);
+				console.log(
+					`💰 [Propina] Orden Flow creada para evaluación ${evaluacion.id}. Order: ${flowOrder}`,
+				);
 
 				// Notificar al admin en segundo plano
-				notificarAdminEvaluacion(evaluacion).catch(err =>
-					console.warn("⚠️ [Evaluación] Error al notificar admin:", err.message)
+				notificarAdminEvaluacion(evaluacion).catch((err) =>
+					console.warn(
+						"⚠️ [Evaluación] Error al notificar admin:",
+						err.message,
+					),
 				);
 
 				return res.json({ success: true, flowUrl });
 			} catch (flowError) {
-				console.error("❌ [Propina] Error al crear orden Flow:", flowError.message);
+				console.error(
+					"❌ [Propina] Error al crear orden Flow:",
+					flowError.message,
+				);
 				// La evaluación ya se guardó, solo informamos el error de propina
 				return res.status(500).json({
 					success: false,
-					error: "Evaluación guardada, pero hubo un error al procesar la propina. Contacta al soporte.",
+					error:
+						"Evaluación guardada, pero hubo un error al procesar la propina. Contacta al soporte.",
 				});
 			}
 		}
 
 		// Sin propina: notificar al admin y retornar éxito
-		notificarAdminEvaluacion(evaluacion).catch(err =>
-			console.warn("⚠️ [Evaluación] Error al notificar admin:", err.message)
+		notificarAdminEvaluacion(evaluacion).catch((err) =>
+			console.warn("⚠️ [Evaluación] Error al notificar admin:", err.message),
 		);
 
 		return res.json({ success: true });
 	} catch (error) {
 		console.error("❌ [evaluaciones/guardar] Error:", error.message);
-		return res.status(500).json({ success: false, error: "Error interno al guardar la evaluación" });
+		return res
+			.status(500)
+			.json({
+				success: false,
+				error: "Error interno al guardar la evaluación",
+			});
 	}
 });
 
@@ -12554,7 +12632,8 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 const notificarAdminEvaluacion = async (evaluacion) => {
 	try {
 		const reserva = await Reserva.findByPk(evaluacion.reservaId);
-		const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl";
+		const phpUrl =
+			process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl";
 
 		const payload = {
 			reserva_codigo: reserva?.codigoReserva || `ID-${evaluacion.reservaId}`,
@@ -12572,15 +12651,23 @@ const notificarAdminEvaluacion = async (evaluacion) => {
 			conductor_nombre: evaluacion.conductorNombre || "No especificado",
 		};
 
-		await axios.post(`${phpUrl}/enviar_notificacion_evaluacion_admin.php`, payload, {
-			headers: { "Content-Type": "application/json" },
-			timeout: 10000,
-		});
+		await axios.post(
+			`${phpUrl}/enviar_notificacion_evaluacion_admin.php`,
+			payload,
+			{
+				headers: { "Content-Type": "application/json" },
+				timeout: 10000,
+			},
+		);
 
 		await evaluacion.update({ notificacionAdminEnviada: true });
-		console.log(`📧 [Evaluación] Notificación al admin enviada para evaluación ${evaluacion.id}`);
+		console.log(
+			`📧 [Evaluación] Notificación al admin enviada para evaluación ${evaluacion.id}`,
+		);
 	} catch (error) {
-		console.warn(`⚠️ [Evaluación] No se pudo notificar al admin: ${error.message}`);
+		console.warn(
+			`⚠️ [Evaluación] No se pudo notificar al admin: ${error.message}`,
+		);
 	}
 };
 
@@ -12621,7 +12708,7 @@ app.get("/api/testimonios", async (req, res) => {
 				origen: t.Reserva?.origen,
 				destino: t.Reserva?.destino,
 				fechaViaje: t.Reserva?.fecha,
-			}))
+			})),
 		);
 	} catch (error) {
 		console.error("❌ [testimonios] Error:", error.message);
@@ -12630,108 +12717,137 @@ app.get("/api/testimonios", async (req, res) => {
 });
 
 // --- ENDPOINT ADMIN: Solicitar evaluación para una reserva ---
-app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, apiLimiter, async (req, res) => {
-	try {
-		const reservaId = Number(req.params.reservaId);
-		if (!Number.isInteger(reservaId) || reservaId <= 0) {
-			return res.status(400).json({ success: false, error: "reservaId inválido" });
-		}
+app.post(
+	"/api/admin/evaluaciones/solicitar/:reservaId",
+	authJWT,
+	apiLimiter,
+	async (req, res) => {
+		try {
+			const reservaId = Number(req.params.reservaId);
+			if (!Number.isInteger(reservaId) || reservaId <= 0) {
+				return res
+					.status(400)
+					.json({ success: false, error: "reservaId inválido" });
+			}
 
-		// Verificar si ya existe una solicitud para esta reserva
-		const existente = await EvaluacionConductor.findOne({
-			where: { reservaId },
-		});
+			// Verificar si ya existe una solicitud para esta reserva
+			const existente = await EvaluacionConductor.findOne({
+				where: { reservaId },
+			});
 
-		if (existente) {
-			if (existente.solicitudEnviada) {
-				return res.status(409).json({
-					success: false,
-					error: "Ya se envió una solicitud de evaluación para esta reserva",
-					fechaSolicitud: existente.fechaSolicitud,
-					evaluada: existente.evaluada,
+			if (existente) {
+				if (existente.solicitudEnviada) {
+					return res.status(409).json({
+						success: false,
+						error: "Ya se envió una solicitud de evaluación para esta reserva",
+						fechaSolicitud: existente.fechaSolicitud,
+						evaluada: existente.evaluada,
+					});
+				}
+			}
+
+			// Obtener datos de la reserva
+			const reserva = await Reserva.findByPk(reservaId);
+			if (!reserva) {
+				return res
+					.status(404)
+					.json({ success: false, error: "Reserva no encontrada" });
+			}
+
+			if (!reserva.email) {
+				return res
+					.status(400)
+					.json({
+						success: false,
+						error: "La reserva no tiene email del pasajero",
+					});
+			}
+
+			// Generar token y fecha de expiración (7 días)
+			const tokenEvaluacion = generarTokenEvaluacion();
+			const tokenExpiracion = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+			// Crear o actualizar registro de evaluación
+			let evaluacion;
+			if (existente) {
+				await existente.update({
+					tokenEvaluacion,
+					tokenExpiracion,
+					solicitudEnviada: false, // Se marcará como enviada después del correo
+					conductorNombre: reserva.conductorNombre || reserva.conductor || null,
+					clienteEmail: reserva.email,
+					clienteNombre: reserva.nombre,
+				});
+				evaluacion = existente;
+			} else {
+				evaluacion = await EvaluacionConductor.create({
+					reservaId,
+					conductorNombre: reserva.conductorNombre || reserva.conductor || null,
+					clienteEmail: reserva.email,
+					clienteNombre: reserva.nombre,
+					tokenEvaluacion,
+					tokenExpiracion,
+					solicitudEnviada: false,
 				});
 			}
-		}
 
-		// Obtener datos de la reserva
-		const reserva = await Reserva.findByPk(reservaId);
-		if (!reserva) {
-			return res.status(404).json({ success: false, error: "Reserva no encontrada" });
-		}
+			// Llamar al script PHP para enviar el correo al pasajero
+			try {
+				const phpUrl =
+					process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl";
+				await axios.post(
+					`${phpUrl}/enviar_solicitud_evaluacion.php`,
+					{
+						reserva_id: reserva.id,
+						cliente_nombre: reserva.nombre || "Pasajero",
+						cliente_email: reserva.email,
+						origen: reserva.origen || "",
+						destino: reserva.destino || "",
+						fecha_viaje: reserva.fecha || "",
+						conductor_nombre: evaluacion.conductorNombre || "",
+						token_evaluacion: tokenEvaluacion,
+					},
+					{
+						headers: { "Content-Type": "application/json" },
+						timeout: 15000,
+					},
+				);
 
-		if (!reserva.email) {
-			return res.status(400).json({ success: false, error: "La reserva no tiene email del pasajero" });
-		}
+				await evaluacion.update({
+					solicitudEnviada: true,
+					fechaSolicitud: new Date(),
+				});
 
-		// Generar token y fecha de expiración (7 días)
-		const tokenEvaluacion = generarTokenEvaluacion();
-		const tokenExpiracion = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+				console.log(
+					`📧 [Evaluación] Solicitud enviada para reserva ${reservaId} al pasajero ${reserva.email}`,
+				);
+			} catch (phpError) {
+				console.error(
+					"❌ [Evaluación] Error al llamar PHP para enviar correo:",
+					phpError.message,
+				);
+				// Aunque falle el PHP, guardamos el registro para reintento
+			}
 
-		// Crear o actualizar registro de evaluación
-		let evaluacion;
-		if (existente) {
-			await existente.update({
-				tokenEvaluacion,
+			return res.json({
+				success: true,
+				mensaje: "Solicitud de evaluación enviada",
 				tokenExpiracion,
-				solicitudEnviada: false, // Se marcará como enviada después del correo
-				conductorNombre: reserva.conductorNombre || reserva.conductor || null,
-				clienteEmail: reserva.email,
-				clienteNombre: reserva.nombre,
-			});
-			evaluacion = existente;
-		} else {
-			evaluacion = await EvaluacionConductor.create({
-				reservaId,
-				conductorNombre: reserva.conductorNombre || reserva.conductor || null,
-				clienteEmail: reserva.email,
-				clienteNombre: reserva.nombre,
+				evaluacionId: evaluacion.id,
+				// Devolver el token para que el admin pueda copiar el link manualmente si es necesario
 				tokenEvaluacion,
-				tokenExpiracion,
-				solicitudEnviada: false,
 			});
+		} catch (error) {
+			console.error("❌ [admin/evaluaciones/solicitar] Error:", error.message);
+			return res
+				.status(500)
+				.json({
+					success: false,
+					error: "Error interno al solicitar evaluación",
+				});
 		}
-
-		// Llamar al script PHP para enviar el correo al pasajero
-		try {
-			const phpUrl = process.env.PHP_EMAIL_URL || "https://www.transportesaraucaria.cl";
-			await axios.post(`${phpUrl}/enviar_solicitud_evaluacion.php`, {
-				reserva_id: reserva.id,
-				cliente_nombre: reserva.nombre || "Pasajero",
-				cliente_email: reserva.email,
-				origen: reserva.origen || "",
-				destino: reserva.destino || "",
-				fecha_viaje: reserva.fecha || "",
-				conductor_nombre: evaluacion.conductorNombre || "",
-				token_evaluacion: tokenEvaluacion,
-			}, {
-				headers: { "Content-Type": "application/json" },
-				timeout: 15000,
-			});
-
-			await evaluacion.update({
-				solicitudEnviada: true,
-				fechaSolicitud: new Date(),
-			});
-
-			console.log(`📧 [Evaluación] Solicitud enviada para reserva ${reservaId} al pasajero ${reserva.email}`);
-		} catch (phpError) {
-			console.error("❌ [Evaluación] Error al llamar PHP para enviar correo:", phpError.message);
-			// Aunque falle el PHP, guardamos el registro para reintento
-		}
-
-		return res.json({
-			success: true,
-			mensaje: "Solicitud de evaluación enviada",
-			tokenExpiracion,
-			evaluacionId: evaluacion.id,
-			// Devolver el token para que el admin pueda copiar el link manualmente si es necesario
-			tokenEvaluacion,
-		});
-	} catch (error) {
-		console.error("❌ [admin/evaluaciones/solicitar] Error:", error.message);
-		return res.status(500).json({ success: false, error: "Error interno al solicitar evaluación" });
-	}
-});
+	},
+);
 
 // --- ENDPOINT ADMIN: Listar evaluaciones ---
 app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
@@ -12752,7 +12868,18 @@ app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
 					model: Reserva,
 					as: "Reserva",
 					// Incluir pasajeros y precio para mostrar en el modal de evaluación
-					attributes: ["id", "codigoReserva", "origen", "destino", "fecha", "hora", "nombre", "email", "pasajeros", "precio"],
+					attributes: [
+						"id",
+						"codigoReserva",
+						"origen",
+						"destino",
+						"fecha",
+						"hora",
+						"nombre",
+						"email",
+						"pasajeros",
+						"precio",
+					],
 					required: false,
 				},
 			],
@@ -12774,56 +12901,88 @@ app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
 });
 
 // --- ENDPOINT ADMIN: Publicar testimonio ---
-app.put("/api/admin/evaluaciones/:id/publicar", authJWT, apiLimiter, async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { publicado_nombre } = req.body || {};
+app.put(
+	"/api/admin/evaluaciones/:id/publicar",
+	authJWT,
+	apiLimiter,
+	async (req, res) => {
+		try {
+			const { id } = req.params;
+			const { publicado_nombre } = req.body || {};
 
-		const evaluacion = await EvaluacionConductor.findByPk(id);
-		if (!evaluacion) {
-			return res.status(404).json({ success: false, error: "Evaluación no encontrada" });
+			const evaluacion = await EvaluacionConductor.findByPk(id);
+			if (!evaluacion) {
+				return res
+					.status(404)
+					.json({ success: false, error: "Evaluación no encontrada" });
+			}
+
+			if (!evaluacion.evaluada) {
+				return res
+					.status(400)
+					.json({
+						success: false,
+						error: "Solo se pueden publicar evaluaciones completadas",
+					});
+			}
+
+			await evaluacion.update({
+				publicado: true,
+				publicadoNombre:
+					publicado_nombre || evaluacion.clienteNombre || "Pasajero anónimo",
+				publicadoEn: new Date(),
+			});
+
+			return res.json({
+				success: true,
+				mensaje: "Testimonio publicado exitosamente",
+			});
+		} catch (error) {
+			console.error("❌ [admin/evaluaciones/publicar] Error:", error.message);
+			return res
+				.status(500)
+				.json({ success: false, error: "Error al publicar testimonio" });
 		}
-
-		if (!evaluacion.evaluada) {
-			return res.status(400).json({ success: false, error: "Solo se pueden publicar evaluaciones completadas" });
-		}
-
-		await evaluacion.update({
-			publicado: true,
-			publicadoNombre: publicado_nombre || evaluacion.clienteNombre || "Pasajero anónimo",
-			publicadoEn: new Date(),
-		});
-
-		return res.json({ success: true, mensaje: "Testimonio publicado exitosamente" });
-	} catch (error) {
-		console.error("❌ [admin/evaluaciones/publicar] Error:", error.message);
-		return res.status(500).json({ success: false, error: "Error al publicar testimonio" });
-	}
-});
+	},
+);
 
 // --- ENDPOINT ADMIN: Despublicar testimonio ---
-app.put("/api/admin/evaluaciones/:id/despublicar", authJWT, apiLimiter, async (req, res) => {
-	try {
-		const { id } = req.params;
+app.put(
+	"/api/admin/evaluaciones/:id/despublicar",
+	authJWT,
+	apiLimiter,
+	async (req, res) => {
+		try {
+			const { id } = req.params;
 
-		const evaluacion = await EvaluacionConductor.findByPk(id);
-		if (!evaluacion) {
-			return res.status(404).json({ success: false, error: "Evaluación no encontrada" });
+			const evaluacion = await EvaluacionConductor.findByPk(id);
+			if (!evaluacion) {
+				return res
+					.status(404)
+					.json({ success: false, error: "Evaluación no encontrada" });
+			}
+
+			await evaluacion.update({
+				publicado: false,
+				publicadoNombre: null,
+				publicadoEn: null,
+			});
+
+			return res.json({
+				success: true,
+				mensaje: "Testimonio retirado del sitio",
+			});
+		} catch (error) {
+			console.error(
+				"❌ [admin/evaluaciones/despublicar] Error:",
+				error.message,
+			);
+			return res
+				.status(500)
+				.json({ success: false, error: "Error al retirar testimonio" });
 		}
-
-		await evaluacion.update({
-			publicado: false,
-			publicadoNombre: null,
-			publicadoEn: null,
-		});
-
-		return res.json({ success: true, mensaje: "Testimonio retirado del sitio" });
-	} catch (error) {
-		console.error("❌ [admin/evaluaciones/despublicar] Error:", error.message);
-		return res.status(500).json({ success: false, error: "Error al retirar testimonio" });
-	}
-});
-
+	},
+);
 
 // =====================================================================
 // --- UTILIDADES DE KEEP ALIVE ---
