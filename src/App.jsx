@@ -2,6 +2,7 @@
 
 import "./App.css";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useCotizacion } from "./hooks/useCotizacion";
 
 // --- UTILIDADES ---
 function normalizePhoneToE164(phone) {
@@ -327,11 +328,6 @@ const [configSillas, setConfigSillas] = useState({
 		contacto: false,
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
-	const [tarifaDinamica, setTarifaDinamica] = useState({
-		ajustesAplicados: [],
-		precioFinal: null,
-		cargando: false,
-	});
 	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
 	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
 
@@ -1342,66 +1338,6 @@ const [configSillas, setConfigSillas] = useState({
 		[destinosData]
 	);
 
-	// Función para calcular tarifa dinámica
-	const calcularTarifaDinamica = useCallback(
-		async (precioBase, destino, fecha, hora) => {
-			if (!precioBase || !destino || !fecha) {
-				setTarifaDinamica({
-					ajustesAplicados: [],
-					precioFinal: precioBase,
-					cargando: false,
-				});
-				return precioBase;
-			}
-
-			try {
-				setTarifaDinamica((prev) => ({ ...prev, cargando: true }));
-				const apiUrl =
-					getBackendUrl() || "https://transportes-araucaria.onrender.com";
-
-				const response = await fetch(`${apiUrl}/api/tarifa-dinamica/calcular`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						precioBase,
-						destino,
-						fecha,
-						hora,
-					}),
-				});
-
-				if (!response.ok) {
-					throw new Error("Error al calcular tarifa dinámica");
-				}
-
-				const data = await response.json();
-
-				console.log("✅ Tarifa dinámica calculada:", data);
-
-				setTarifaDinamica({
-					ajustesAplicados: data.ajustesAplicados || [],
-					precioFinal: data.precioFinal,
-					ajusteTotal: data.ajusteTotal,
-					ajusteMonto: data.ajusteMonto,
-					diasAnticipacion: data.diasAnticipacion,
-					cargando: false,
-				});
-
-				return data.precioFinal;
-			} catch (error) {
-				console.error("❌ Error al calcular tarifa dinámica:", error);
-				setTarifaDinamica({
-					ajustesAplicados: [],
-					precioFinal: precioBase,
-					cargando: false,
-				});
-				return precioBase;
-			}
-		},
-		[]
-	);
 
 	useEffect(() => {
 		const handleLocationChange = () => {
@@ -1412,6 +1348,44 @@ const [configSillas, setConfigSillas] = useState({
 		return () => window.removeEventListener("popstate", handleLocationChange);
 	}, []);
 
+	// Parámetros para el hook de cotización centralizada en el backend
+	const paramsCotizacion = useMemo(
+		() => ({
+			origen: formData.origen,
+			destino:
+				formData.destino === "Otro" ? formData.otroDestino : formData.destino,
+			pasajeros: Number(formData.pasajeros),
+			fecha: formData.fecha,
+			hora: formData.hora || undefined,
+			idaVuelta: formData.idaVuelta,
+			fechaRegreso: formData.fechaRegreso || undefined,
+			horaRegreso: formData.horaRegreso || undefined,
+			upgradeVan: formData.upgradeVan,
+			codigoDescuento: codigoAplicado?.codigo || undefined,
+			sillaInfantil: formData.sillaInfantil,
+			cantidadSillas: formData.cantidadSillasInfantiles || 0,
+		}),
+		[
+			formData.origen,
+			formData.destino,
+			formData.otroDestino,
+			formData.pasajeros,
+			formData.fecha,
+			formData.hora,
+			formData.idaVuelta,
+			formData.fechaRegreso,
+			formData.horaRegreso,
+			formData.upgradeVan,
+			codigoAplicado,
+			formData.sillaInfantil,
+			formData.cantidadSillasInfantiles,
+		]
+	);
+
+	// El backend calcula tarifa dinámica + todos los descuentos en una sola llamada
+	const { cotizacion: cotizacionHook } = useCotizacion(paramsCotizacion);
+
+	// Cotización local: usada para vehiculo (display) y validación de código
 	const cotizacion = useMemo(() => {
 		return calcularCotizacion(
 			formData.origen,
@@ -1423,36 +1397,8 @@ const [configSillas, setConfigSillas] = useState({
 		formData.origen,
 		formData.destino,
 		formData.pasajeros,
-		formData.upgradeVan, // AGREGAR
+		formData.upgradeVan,
 		calcularCotizacion,
-	]);
-
-	// Efecto para calcular tarifa dinámica cuando cambian fecha/hora con debounce
-	useEffect(() => {
-		if (cotizacion.precio && formData.fecha) {
-			const tramo = [formData.origen, formData.destino].find(
-				(lugar) => lugar !== "Aeropuerto La Araucanía"
-			);
-			
-			// Establecer un timer de 500ms para evitar llamadas consecutivas (debounce)
-			const timer = setTimeout(() => {
-				calcularTarifaDinamica(
-					cotizacion.precio,
-					tramo,
-					formData.fecha,
-					formData.hora || "12:00"
-				);
-			}, 500);
-
-			return () => clearTimeout(timer);
-		}
-	}, [
-		cotizacion.precio,
-		formData.fecha,
-		formData.hora,
-		formData.origen,
-		formData.destino,
-		calcularTarifaDinamica,
 	]);
 
 	const validarTelefono = (telefono) =>
@@ -1532,184 +1478,24 @@ const [configSillas, setConfigSillas] = useState({
 	};
 
 	const pricing = useMemo(() => {
-		// Usar precio con tarifa dinámica si está disponible, sino usar cotización base
-		const precioIdaBase = cotizacion.precio || 0;
-		const precioIda =
-			tarifaDinamica.precioFinal !== null
-				? tarifaDinamica.precioFinal
-				: precioIdaBase;
-		const precioBase = formData.idaVuelta ? precioIda * 2 : precioIda;
-		const precioOriginal = formData.idaVuelta ? precioIdaBase * 2 : precioIdaBase;
-
-		// 1. DESCUENTOS GLOBALES (se aplican a cualquier tramo)
-		// Descuento online por reservar (se aplica a cada tramo)
-		const descuentoOnlinePorTramo = Math.round(precioIda * onlineDiscountRate);
-		const descuentoOnline = formData.idaVuelta
-			? descuentoOnlinePorTramo * 2
-			: descuentoOnlinePorTramo;
-
-		// Descuentos personalizados (se aplican a cada tramo)
-		const descuentosPersonalizadosPorTramo = Math.round(
-			precioIda * personalizedDiscountRate
-		);
-		const descuentosPersonalizados = formData.idaVuelta
-			? descuentosPersonalizadosPorTramo * 2
-			: descuentosPersonalizadosPorTramo;
-
-		// 2. PROMOCIONES POR TRAMO (se aplican según configuración específica)
-		// Estas se calculan por tramo individual, no sobre el total
-		const descuentoPromocionPorTramo = Math.round(
-			precioIda * (promotionDiscountRate || 0)
-		);
-		const descuentoPromocion = formData.idaVuelta
-			? descuentoPromocionPorTramo * 2
-			: descuentoPromocionPorTramo;
-
-		// 3. DESCUENTO IDA Y VUELTA (solo cuando se selecciona ida y vuelta)
-		const descuentoRoundTrip = formData.idaVuelta
-			? Math.round(precioBase * (roundTripDiscountRate || 0))
-			: 0;
-
-		// 4. DESCUENTO POR RETORNO UNIVERSAL (Nuevo Sistema)
-		let descuentoRetornoUniversal = 0;
-		if (oportunidadesRetornoUniversal && oportunidadesRetornoUniversal.opciones?.length > 0) {
-			const horaSeleccionada = formData.hora;
-			if (horaSeleccionada) {
-				for (const oportunidad of oportunidadesRetornoUniversal.opciones) {
-					const opcionCoincidente = oportunidad.opcionesRetorno.find(
-						(opt) => opt.hora === horaSeleccionada
-					);
-
-					if (opcionCoincidente) {
-						descuentoRetornoUniversal = Math.round(precioBase * (opcionCoincidente.descuento / 100));
-						break; 
-					}
-				}
-			}
-		}
-
-		// 5. DESCUENTO POR CÓDIGO
-		let descuentoCodigo = 0;
-		if (codigoAplicado) {
-			if (codigoAplicado.tipo === "porcentaje") {
-				descuentoCodigo = Math.round(precioBase * (codigoAplicado.valor / 100));
-			} else {
-				descuentoCodigo = Math.min(codigoAplicado.valor, precioBase);
-			}
-		}
-
-		// Calcular descuento total
-		const descuentoTotalSinLimite =
-			descuentoOnline +
-			descuentoPromocion +
-			descuentoRoundTrip +
-			descuentosPersonalizados +
-			descuentoCodigo +
-			descuentoRetornoUniversal;
-
-		// Aplicar límite del 75% al precio base
-		const descuentoMaximo = Math.round(precioBase * 0.75);
-		const descuentoOnlineTotal = Math.min(
-			descuentoTotalSinLimite,
-			descuentoMaximo
-		);
-
-		const costoSillaUnitario = configSillas.precioPorSilla || 5000;
-		const cantidadSillas = formData.sillaInfantil ? (formData.cantidadSillasInfantiles || 1) : 0;
-		const costoSillasTotal = cantidadSillas * costoSillaUnitario;
-
-		let totalConDescuento = Math.max(precioBase - descuentoOnlineTotal, 0) + costoSillasTotal;
-		// Asegurar redondeo para evitar decimales en el total
-		totalConDescuento = Math.round(totalConDescuento);
-		
-		// VALIDACIÓN DE PRECIO MÍNIMO: ELIMINADA para upgrades voluntarios
-		// Los upgrades de 1-3 pasajeros deben permitir descuentos normalmente
-		// Esto garantiza que 3 pax con upgrade siempre sea más barato que 4+ pax
-		// (desactivado porque causaba precios más altos que Van obligatoria)
-		
-		// if (cotizacion.esUpgradeVanSinAdicionales && destinoSeleccionado) {
-		// 	const precioBaseVanMinimo = Number(destinoSeleccionado.precios?.van?.base);
-		// 	if (precioBaseVanMinimo) {
-		// 		const minimoAbsoluto = formData.idaVuelta 
-		// 			? precioBaseVanMinimo * 2
-		// 			: precioBaseVanMinimo;
-		// 		
-		// 		if (totalConDescuento - costoSilla < minimoAbsoluto) {
-		// 			totalConDescuento = minimoAbsoluto + costoSilla;
-		// 		}
-		// 	}
-		// }
-		
-		const abono = Math.round(totalConDescuento * 0.4);
-		const saldoPendiente = Math.max(totalConDescuento - abono, 0);
-
-		// Debug específico para verificar el total final (comentado para reducir ruido)
-		// console.log("💰 TOTAL FINAL CALCULADO:", {
-		// 	precioBase,
-		// 	descuentoOnlineTotal,
-		// 	totalConDescuento,
-		// 	abono,
-		// 	saldoPendiente,
-		// 	descuentoCodigo,
-		// 	codigoAplicado: codigoAplicado?.codigo,
-		// });
-
-		// Debug: mostrar información de descuentos (comentado para reducir ruido)
-		// console.log("💰 DEBUG PRICING CORREGIDO:", {
-		// 	precioIda,
-		// 	precioBase,
-		// 	idaVuelta: formData.idaVuelta,
-		// 	onlineDiscountRate,
-		// 	promotionDiscountRate,
-		// 	roundTripDiscountRate,
-		// 	personalizedDiscountRate,
-		// 	descuentoOnlinePorTramo,
-		// 	descuentoOnline,
-		// 	descuentoPromocionPorTramo,
-		// 	descuentoPromocion,
-		// 	descuentoRoundTrip,
-		// 	descuentosPersonalizados,
-		// 	descuentoCodigo,
-		// 	descuentoTotalSinLimite,
-		// 	descuentoMaximo,
-		// 	descuentoOnlineTotal,
-		// 	effectiveDiscountRate,
-		// 	activePromotion,
-		// 	applicablePromotions,
-		// 	codigoAplicado,
-		// });
-
+		// Mapeo desde cotizacionHook (fuente de verdad: backend) al formato legacy
+		const d = cotizacionHook?.descuentos ?? {};
 		return {
-			precioBase,
-			precioOriginal, // Precio sin tarifa dinámica
-			totalNormal: precioBase, // Alias para usar en componentes que esperan totalNormal (incluye dinámica)
-			descuentoBase: descuentoOnline, // Para mantener compatibilidad
-			descuentoPromocion,
-			descuentoRoundTrip,
-			descuentosPersonalizados,
-			descuentoCodigo,
-			descuentoOnline: descuentoOnlineTotal,
-			descuentoRetornoUniversal, // Exponer nuevo descuento
-			totalConDescuento,
-			abono,
-			saldoPendiente,
+			precioBase: cotizacionHook?.precioBase ?? 0,
+			precioOriginal: cotizacionHook?.precioBase ?? 0,
+			totalNormal: cotizacionHook?.precioBase ?? 0,
+			descuentoBase: d.online ?? 0,
+			descuentoPromocion: d.promocion ?? 0,
+			descuentoRoundTrip: d.roundTrip ?? 0,
+			descuentosPersonalizados: d.personalizados ?? 0,
+			descuentoCodigo: d.codigo ?? 0,
+			descuentoOnline: d.total ?? 0,
+			descuentoRetornoUniversal: 0,
+			totalConDescuento: cotizacionHook?.totalConDescuento ?? 0,
+			abono: cotizacionHook?.abono ?? 0,
+			saldoPendiente: cotizacionHook?.saldoPendiente ?? 0,
 		};
-	}, [
-		cotizacion.precio,
-		cotizacion.esUpgradeVanSinAdicionales, // AGREGAR
-		tarifaDinamica.precioFinal,
-		promotionDiscountRate,
-		roundTripDiscountRate,
-		onlineDiscountRate,
-		personalizedDiscountRate,
-		formData.idaVuelta,
-		formData.sillaInfantil,
-		formData.pasajeros, // AGREGAR para el log
-		formData.hora,
-		codigoAplicado,
-		oportunidadesRetornoUniversal,
-		destinoSeleccionado, // AGREGAR
-	]);
+	}, [cotizacionHook]);
 
 	const { descuentoOnline, totalConDescuento, abono, saldoPendiente } = pricing;
 
