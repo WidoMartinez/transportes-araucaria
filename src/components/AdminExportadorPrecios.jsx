@@ -108,7 +108,8 @@ function AdminExportadorPrecios({ destinos = [] }) {
 		if (!precios) return;
 		const wb = XLSX.utils.book_new();
 		const tramosAExportar = destinosActivos.filter(
-			(d) => tramosSeleccionados === null || tramosSeleccionados.includes(d.nombre),
+			(d) =>
+				tramosSeleccionados === null || tramosSeleccionados.includes(d.nombre),
 		);
 
 		// Una hoja por destino
@@ -124,7 +125,8 @@ function AdminExportadorPrecios({ destinos = [] }) {
 				[`Fecha: ${fecha}${hora ? ` a las ${hora}` : ""}`],
 			];
 			if (durIda) infoFilas.push([`Duración ida: ${durIda}`]);
-			if (idaVuelta && durVuelta) infoFilas.push([`Duración vuelta: ${durVuelta}`]);
+			if (idaVuelta && durVuelta)
+				infoFilas.push([`Duración vuelta: ${durVuelta}`]);
 			infoFilas.push([]);
 
 			// Columnas
@@ -147,10 +149,12 @@ function AdminExportadorPrecios({ destinos = [] }) {
 				if (!d) continue;
 				// Diferencia upgrade van: precio van con tarifa - precio sedán con tarifa
 				const pctTotalXLSX = d.tarifaDinamica?.ida?.porcentajeTotal ?? 0;
-				const soloIdaXLSX = d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0;
+				const soloIdaXLSX =
+					d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0;
 				const precioUpgradeXLSX =
 					pax <= 3 && dest.precios?.van?.base
-						? Math.round(dest.precios.van.base * (1 + pctTotalXLSX / 100)) - soloIdaXLSX
+						? Math.round(dest.precios.van.base * (1 + pctTotalXLSX / 100)) -
+							soloIdaXLSX
 						: "";
 				const fila = [
 					pax,
@@ -167,7 +171,9 @@ function AdminExportadorPrecios({ destinos = [] }) {
 					fila.push(precioIVTD);
 					fila.push(
 						d.preciosRoundTrip?.totalConDescuento ||
-							(d.totalConDescuento ? Math.round(d.totalConDescuento * 2 * 0.9) : 0),
+							(d.totalConDescuento
+								? Math.round(d.totalConDescuento * 2 * 0.9)
+								: 0),
 					);
 				}
 				filasDatos.push(fila);
@@ -303,7 +309,9 @@ function AdminExportadorPrecios({ destinos = [] }) {
 
 		const ventana = window.open("", "_blank", "width=900,height=700");
 		if (!ventana) {
-			setError("El navegador bloqueó la ventana emergente. Permite pop-ups para este sitio.");
+			setError(
+				"El navegador bloqueó la ventana emergente. Permite pop-ups para este sitio.",
+			);
 			return;
 		}
 
@@ -343,7 +351,8 @@ function AdminExportadorPrecios({ destinos = [] }) {
 
 	// Destinos que se muestran según la selección
 	const destinosMostrar = destinosActivos.filter(
-		(d) => tramosSeleccionados === null || tramosSeleccionados.includes(d.nombre),
+		(d) =>
+			tramosSeleccionados === null || tramosSeleccionados.includes(d.nombre),
 	);
 
 	// Formatea la fecha para mostrar en el encabezado del reporte
@@ -559,8 +568,8 @@ function AdminExportadorPrecios({ destinos = [] }) {
 						</div>
 					</div>
 
-				{/* Tablas por destino — solo los seleccionados */}
-				{destinosMostrar.map((dest, idx) => {
+					{/* Tablas por destino — solo los seleccionados */}
+					{destinosMostrar.map((dest, idx) => {
 						const dataDest = precios[dest.nombre] || {};
 						const tieneAjuste = Object.values(dataDest).some(
 							(d) =>
@@ -579,20 +588,21 @@ function AdminExportadorPrecios({ destinos = [] }) {
 									<h3 className="font-bold text-gray-900 text-base">
 										{escapar(dest.nombre)}
 									</h3>
-								{/* Duración real desde duracionIdaMinutos / duracionVueltaMinutos */}
-								{(dest.duracionIdaMinutos || dest.duracionVueltaMinutos) ? (
-									<span className="text-xs text-gray-500">
-										⏱{" "}
-										{formatDuracion(dest.duracionIdaMinutos) ?? "—"}
-										{idaVuelta && dest.duracionVueltaMinutos &&
-											dest.duracionVueltaMinutos !== dest.duracionIdaMinutos &&
-											` / vuelta: ${formatDuracion(dest.duracionVueltaMinutos)}`}
-									</span>
-								) : dest.tiempo ? (
-									<span className="text-xs text-gray-500">
-										⏱ {escapar(dest.tiempo)}
-									</span>
-								) : null}
+									{/* Duración real desde duracionIdaMinutos / duracionVueltaMinutos */}
+									{dest.duracionIdaMinutos || dest.duracionVueltaMinutos ? (
+										<span className="text-xs text-gray-500">
+											⏱ {formatDuracion(dest.duracionIdaMinutos) ?? "—"}
+											{idaVuelta &&
+												dest.duracionVueltaMinutos &&
+												dest.duracionVueltaMinutos !==
+													dest.duracionIdaMinutos &&
+												` / vuelta: ${formatDuracion(dest.duracionVueltaMinutos)}`}
+										</span>
+									) : dest.tiempo ? (
+										<span className="text-xs text-gray-500">
+											⏱ {escapar(dest.tiempo)}
+										</span>
+									) : null}
 									{tieneAjuste && (
 										<span className="text-xs font-medium text-orange-600">
 											⚡ Tarifa dinámica activa
@@ -600,28 +610,29 @@ function AdminExportadorPrecios({ destinos = [] }) {
 									)}
 								</div>
 
-{/* Descripción de ajustes de tarifa dinámica — filtra ajustes con nombre vacío */}
-					{ajustesIda.filter((a) => a.nombre?.trim()).length > 0 && (
-						<div className="mb-2 rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
-							<span className="font-semibold">Ajustes aplicados: </span>
-							{ajustesIda
-								.filter((a) => a.nombre?.trim())
-								.map((a, i) => (
-									<span key={`${a.nombre}-${i}`} className="mr-2">
-										{a.nombre}
-										{a.porcentaje !== 0 && (
-											<span
-												className={
-													a.porcentaje > 0
-														? "badge-recargo ml-1"
-														: "badge-descuento ml-1"
-												}
-											>
-												({a.porcentaje > 0 ? "+" : ""}{a.porcentaje}%)
-											</span>
-										)}
-									</span>
-								))}
+								{/* Descripción de ajustes de tarifa dinámica — filtra ajustes con nombre vacío */}
+								{ajustesIda.filter((a) => a.nombre?.trim()).length > 0 && (
+									<div className="mb-2 rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+										<span className="font-semibold">Ajustes aplicados: </span>
+										{ajustesIda
+											.filter((a) => a.nombre?.trim())
+											.map((a, i) => (
+												<span key={`${a.nombre}-${i}`} className="mr-2">
+													{a.nombre}
+													{a.porcentaje !== 0 && (
+														<span
+															className={
+																a.porcentaje > 0
+																	? "badge-recargo ml-1"
+																	: "badge-descuento ml-1"
+															}
+														>
+															({a.porcentaje > 0 ? "+" : ""}
+															{a.porcentaje}%)
+														</span>
+													)}
+												</span>
+											))}
 									</div>
 								)}
 
@@ -635,7 +646,10 @@ function AdminExportadorPrecios({ destinos = [] }) {
 												<span>
 													🚗 Sedán: base 1 pax, +
 													<strong>
-														{Math.round(dest.precios.auto.porcentajeAdicional * 100)}%
+														{Math.round(
+															dest.precios.auto.porcentajeAdicional * 100,
+														)}
+														%
 													</strong>{" "}
 													por cada pax adicional (2.°, 3.°)
 												</span>
@@ -644,7 +658,10 @@ function AdminExportadorPrecios({ destinos = [] }) {
 												<span>
 													🚐 Van: base 4 pax, +
 													<strong>
-														{Math.round(dest.precios.van.porcentajeAdicional * 100)}%
+														{Math.round(
+															dest.precios.van.porcentajeAdicional * 100,
+														)}
+														%
 													</strong>{" "}
 													por cada pax adicional (5.°, 6.°…)
 												</span>
@@ -695,20 +712,20 @@ function AdminExportadorPrecios({ destinos = [] }) {
 														</th>
 													</>
 												)}
-													<th className="border border-gray-200 px-3 py-2 text-right font-semibold text-gray-700 bg-orange-50">
-														+Upgrade Van
-														<br />
-														<span className="text-xs font-normal text-orange-600">
-															(extra s/sedán, 1–3 pax)
-														</span>
+												<th className="border border-gray-200 px-3 py-2 text-right font-semibold text-gray-700 bg-orange-50">
+													+Upgrade Van
+													<br />
+													<span className="text-xs font-normal text-orange-600">
+														(extra s/sedán, 1–3 pax)
+													</span>
 												</th>
 											</tr>
 										</thead>
 										<tbody>
-										{Array.from(
-											{ length: dest.maxPasajeros || MAX_PAX_ABSOLUTO },
-											(_, i) => i + 1,
-										).map((pax) => {
+											{Array.from(
+												{ length: dest.maxPasajeros || MAX_PAX_ABSOLUTO },
+												(_, i) => i + 1,
+											).map((pax) => {
 												const d = dataDest[pax];
 												if (!d) {
 													return (
@@ -757,20 +774,35 @@ function AdminExportadorPrecios({ destinos = [] }) {
 														key={pax}
 														className={`border-b border-gray-100 ${pax >= 4 ? "bg-slate-50" : ""}`}
 													>
-{/* Pasajeros + indicador de % adicional cuando aplica */}
-												<td className="border border-gray-200 px-3 py-2 font-medium">
-													{pax} {pax === 1 ? "pasajero" : "pasajeros"}
-													{/* Mostrar % adicional solo en pasajeros que generan recargo */}
-													{pax >= 2 && pax <= 3 && dest.precios?.auto?.porcentajeAdicional ? (
-														<span className="ml-1 text-xs text-blue-500 font-normal">
-															(+{Math.round(dest.precios.auto.porcentajeAdicional * 100 * (pax - 1))}% sobre base)
-														</span>
-													) : null}
-													{pax >= 5 && dest.precios?.van?.porcentajeAdicional ? (
-														<span className="ml-1 text-xs text-purple-500 font-normal">
-															(+{Math.round(dest.precios.van.porcentajeAdicional * 100 * (pax - 4))}% sobre base van)
-														</span>
-													) : null}
+														{/* Pasajeros + indicador de % adicional cuando aplica */}
+														<td className="border border-gray-200 px-3 py-2 font-medium">
+															{pax} {pax === 1 ? "pasajero" : "pasajeros"}
+															{/* Mostrar % adicional solo en pasajeros que generan recargo */}
+															{pax >= 2 &&
+															pax <= 3 &&
+															dest.precios?.auto?.porcentajeAdicional ? (
+																<span className="ml-1 text-xs text-blue-500 font-normal">
+																	(+
+																	{Math.round(
+																		dest.precios.auto.porcentajeAdicional *
+																			100 *
+																			(pax - 1),
+																	)}
+																	% sobre base)
+																</span>
+															) : null}
+															{pax >= 5 &&
+															dest.precios?.van?.porcentajeAdicional ? (
+																<span className="ml-1 text-xs text-purple-500 font-normal">
+																	(+
+																	{Math.round(
+																		dest.precios.van.porcentajeAdicional *
+																			100 *
+																			(pax - 4),
+																	)}
+																	% sobre base van)
+																</span>
+															) : null}
 														</td>
 
 														{/* Vehículo */}
@@ -805,37 +837,44 @@ function AdminExportadorPrecios({ destinos = [] }) {
 															{idaVuelta ? "—" : formatPrecio(totalConDto)}
 														</td>
 
-												{/* Upgrade Van: diferencia a pagar sobre el sedán, solo para 1-3 pax */}
-												{(() => {
-													const pctTotal = d.tarifaDinamica?.ida?.porcentajeTotal ?? 0;
-													const vanBase = dest.precios?.van?.base;
-													// soloIda = precio sedán con tarifa dinámica aplicada
-													const soloIda = d.tarifaDinamica?.ida?.precioAjustado ?? d.precioBase ?? 0;
-													const precioUpgrade =
-														pax <= 3 && vanBase
-															? Math.round(vanBase * (1 + pctTotal / 100)) - soloIda
-															: null;
-													return (
-														<td className="border border-gray-200 px-3 py-2 text-right bg-orange-50">
-															{precioUpgrade != null
-																? formatPrecio(precioUpgrade)
-																: <span className="text-gray-300">—</span>}
-														</td>
-													);
-												})()}
+														{/* Upgrade Van: diferencia a pagar sobre el sedán, solo para 1-3 pax */}
+														{(() => {
+															const pctTotal =
+																d.tarifaDinamica?.ida?.porcentajeTotal ?? 0;
+															const vanBase = dest.precios?.van?.base;
+															// soloIda = precio sedán con tarifa dinámica aplicada
+															const soloIda =
+																d.tarifaDinamica?.ida?.precioAjustado ??
+																d.precioBase ??
+																0;
+															const precioUpgrade =
+																pax <= 3 && vanBase
+																	? Math.round(vanBase * (1 + pctTotal / 100)) -
+																		soloIda
+																	: null;
+															return (
+																<td className="border border-gray-200 px-3 py-2 text-right bg-orange-50">
+																	{precioUpgrade != null ? (
+																		formatPrecio(precioUpgrade)
+																	) : (
+																		<span className="text-gray-300">—</span>
+																	)}
+																</td>
+															);
+														})()}
 
-												{/* Ida y vuelta */}
-												{idaVuelta && (
-													<>
-														<td className="border border-gray-200 px-3 py-2 text-right font-semibold bg-blue-50">
-															{formatPrecio(totalIdaVuelta)}
-														</td>
-														<td className="border border-gray-200 px-3 py-2 text-right font-semibold text-purple-700 bg-purple-50">
-															{formatPrecio(totalIdaVueltaConDto)}
-														</td>
-													</>
-												)}
-											</tr>
+														{/* Ida y vuelta */}
+														{idaVuelta && (
+															<>
+																<td className="border border-gray-200 px-3 py-2 text-right font-semibold bg-blue-50">
+																	{formatPrecio(totalIdaVuelta)}
+																</td>
+																<td className="border border-gray-200 px-3 py-2 text-right font-semibold text-purple-700 bg-purple-50">
+																	{formatPrecio(totalIdaVueltaConDto)}
+																</td>
+															</>
+														)}
+													</tr>
 												);
 											})}
 										</tbody>
