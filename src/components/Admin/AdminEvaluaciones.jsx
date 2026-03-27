@@ -138,9 +138,12 @@ function AdminEvaluaciones() {
 	const abrirModal = (ev) => {
 		setModalEval(ev);
 		setNombrePublico(ev.clienteNombre || "");
+		// Limpiar el link al abrir una nueva evaluación
+		setLinkManual("");
+		setLinkExpiracion(null);
 	};
 
-	// Solicitar evaluación (enviar correo)
+	// Solicitar evaluación (enviar correo) y guardar link para mostrar al admin
 	const handleSolicitarEvaluacion = async (evaluacion) => {
 		setAccionando(true);
 		try {
@@ -152,7 +155,13 @@ function AdminEvaluaciones() {
 			if (data.success) {
 				toast.success("Solicitud enviada correctamente");
 				fetchEvaluaciones();
-				setModalEval(null);
+				// Guardar el link generado para que el admin pueda copiarlo si es necesario
+				if (data.tokenEvaluacion) {
+					const base = window.location.origin;
+					setLinkManual(`${base}/#evaluar?token=${data.tokenEvaluacion}`);
+					setLinkExpiracion(data.tokenExpiracion || null);
+				}
+				// No cerrar el modal para mostrar el link al admin
 			} else {
 				toast.error(data.error || "Error al enviar solicitud");
 			}
@@ -340,7 +349,7 @@ function AdminEvaluaciones() {
 			)}
 
 			{/* Modal de detalle */}
-			<Dialog open={!!modalEval} onOpenChange={(open) => !open && setModalEval(null)}>
+			<Dialog open={!!modalEval} onOpenChange={(open) => { if (!open) { setModalEval(null); setLinkManual(""); setLinkExpiracion(null); } }}>
 				{modalEval && (
 					<DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
 						<DialogHeader>
@@ -351,23 +360,65 @@ function AdminEvaluaciones() {
 
 						<div className="space-y-4 py-2">
 							{/* Datos generales */}
-							<div className="bg-amber-50 rounded-lg p-4 space-y-2 text-sm">
-								<p><span className="font-medium">Pasajero:</span> {modalEval.clienteNombre || "—"}</p>
-								<p><span className="font-medium">Email:</span> {modalEval.clienteEmail}</p>
-								{modalEval.conductorNombre && (
-									<p><span className="font-medium">Conductor:</span> {modalEval.conductorNombre}</p>
-								)}
-								{modalEval.Reserva && (
-									<p>
-										<span className="font-medium">Ruta:</span>{" "}
+						<div className="bg-amber-50 rounded-lg p-4 space-y-3 text-sm">
+							{/* Pasajero y Email */}
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<p className="text-xs text-amber-700 font-medium mb-0.5">Pasajero</p>
+									<p className="text-gray-900">{modalEval.clienteNombre || "—"}</p>
+								</div>
+								<div>
+									<p className="text-xs text-amber-700 font-medium mb-0.5">Email</p>
+									<p className="text-gray-900 break-all">{modalEval.clienteEmail || "—"}</p>
+								</div>
+							</div>
+							{/* Tramo realizado */}
+							{modalEval.Reserva && (
+								<div>
+									<p className="text-xs text-amber-700 font-medium mb-0.5">Tramo realizado</p>
+									<p className="text-gray-900 font-semibold">
 										{modalEval.Reserva.origen} → {modalEval.Reserva.destino}
 									</p>
+								</div>
+							)}
+							{/* Fecha servicio, Hora y Nro. pasajeros */}
+							{modalEval.Reserva && (
+								<div className="grid grid-cols-3 gap-3">
+									<div>
+										<p className="text-xs text-amber-700 font-medium mb-0.5">Fecha servicio</p>
+										<p className="text-gray-900">{formatFecha(modalEval.Reserva.fecha)}</p>
+									</div>
+									<div>
+										<p className="text-xs text-amber-700 font-medium mb-0.5">Hora</p>
+										<p className="text-gray-900">{modalEval.Reserva.hora || "—"}</p>
+									</div>
+									<div>
+										<p className="text-xs text-amber-700 font-medium mb-0.5">Nro. pasajeros</p>
+										<p className="text-gray-900">{modalEval.Reserva.pasajeros || "—"}</p>
+									</div>
+								</div>
+							)}
+							{/* Valor del servicio y Conductor */}
+							<div className="grid grid-cols-2 gap-3">
+								{modalEval.Reserva?.precio > 0 && (
+									<div>
+										<p className="text-xs text-amber-700 font-medium mb-0.5">Valor servicio</p>
+										<p className="text-gray-900 font-semibold">{formatCurrency(modalEval.Reserva.precio)}</p>
+									</div>
 								)}
-								<p>
-									<span className="font-medium">Fecha evaluación:</span>{" "}
-									{formatFecha(modalEval.fechaEvaluacion)}
-								</p>
+								{modalEval.conductorNombre && (
+									<div>
+										<p className="text-xs text-amber-700 font-medium mb-0.5">Conductor</p>
+										<p className="text-gray-900">{modalEval.conductorNombre}</p>
+									</div>
+								)}
 							</div>
+							{/* Fecha evaluación */}
+							<div className="border-t border-amber-200 pt-2">
+								<p className="text-xs text-amber-700 font-medium mb-0.5">Fecha evaluación</p>
+								<p className="text-gray-900">{formatFecha(modalEval.fechaEvaluacion)}</p>
+							</div>
+						</div>
 
 							{/* Calificaciones */}
 							{modalEval.evaluada && (
@@ -423,9 +474,9 @@ function AdminEvaluaciones() {
 									</div>
 								</div>
 							)}
-							{/* Botón para solicitar si está pendiente */}
+							{/* Botón para solicitar si está pendiente + link generado */}
 							{!modalEval.evaluada && (
-								<div className="border-t pt-4">
+								<div className="border-t pt-4 space-y-3">
 									<Button
 										onClick={() => handleSolicitarEvaluacion(modalEval)}
 										disabled={accionando}
@@ -438,9 +489,38 @@ function AdminEvaluaciones() {
 										)}
 										Enviar solicitud de evaluación por correo
 									</Button>
-									<p className="text-xs text-gray-400 mt-2 text-center">
+									<p className="text-xs text-gray-400 text-center">
 										Se enviará un correo al pasajero con el link para evaluar el servicio.
 									</p>
+									{/* Link generado tras envío: permite copiarlo para compartirlo manualmente */}
+									{linkManual && (
+										<div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+											<p className="text-xs font-medium text-blue-700 mb-2 flex items-center gap-1">
+												<Link2 className="h-3.5 w-3.5" />
+												Link de evaluación generado
+												{linkExpiracion && (
+													<span className="text-blue-500 ml-1">· Expira {formatFecha(linkExpiracion)}</span>
+												)}
+											</p>
+											<div className="flex gap-2">
+												<Input
+													value={linkManual}
+													readOnly
+													className="text-xs bg-white"
+												/>
+												<Button
+													size="sm"
+													variant="outline"
+													onClick={() => {
+														navigator.clipboard.writeText(linkManual);
+														toast.success("Link copiado al portapapeles");
+													}}
+												>
+													<Copy className="h-3.5 w-3.5" />
+												</Button>
+											</div>
+										</div>
+									)}
 								</div>
 							)}
 
