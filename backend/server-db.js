@@ -12724,6 +12724,8 @@ app.post("/api/admin/evaluaciones/solicitar/:reservaId", authJWT, apiLimiter, as
 			mensaje: "Solicitud de evaluación enviada",
 			tokenExpiracion,
 			evaluacionId: evaluacion.id,
+			// Devolver el token para que el admin pueda copiar el link manualmente si es necesario
+			tokenEvaluacion,
 		});
 	} catch (error) {
 		console.error("❌ [admin/evaluaciones/solicitar] Error:", error.message);
@@ -12749,7 +12751,8 @@ app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
 				{
 					model: Reserva,
 					as: "Reserva",
-					attributes: ["id", "codigoReserva", "origen", "destino", "fecha", "hora", "nombre", "email"],
+					// Incluir pasajeros y precio para mostrar en el modal de evaluación
+					attributes: ["id", "codigoReserva", "origen", "destino", "fecha", "hora", "nombre", "email", "pasajeros", "precio"],
 					required: false,
 				},
 			],
