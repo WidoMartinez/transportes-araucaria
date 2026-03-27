@@ -65,24 +65,32 @@ router.post("/api/cotizar", async (req, res) => {
 		// ── Validación de campos requeridos ───────────────────────────────────
 		if (!origen || !destino || !pasajeros || !fecha) {
 			return res.status(400).json({
-				error: "Faltan parámetros requeridos: origen, destino, pasajeros, fecha.",
+				error:
+					"Faltan parámetros requeridos: origen, destino, pasajeros, fecha.",
 			});
 		}
 
 		// Validar formato de fecha (YYYY-MM-DD)
 		const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
 		if (!regexFecha.test(fecha)) {
-			return res.status(400).json({ error: "El campo 'fecha' debe tener formato YYYY-MM-DD." });
+			return res
+				.status(400)
+				.json({ error: "El campo 'fecha' debe tener formato YYYY-MM-DD." });
 		}
 
 		if (idaVuelta && !fechaRegreso) {
 			return res.status(400).json({
-				error: "El campo 'fechaRegreso' es requerido cuando 'idaVuelta' es true.",
+				error:
+					"El campo 'fechaRegreso' es requerido cuando 'idaVuelta' es true.",
 			});
 		}
 
 		const numPasajeros = parseInt(pasajeros, 10);
-		if (!Number.isFinite(numPasajeros) || numPasajeros <= 0 || numPasajeros > 10) {
+		if (
+			!Number.isFinite(numPasajeros) ||
+			numPasajeros <= 0 ||
+			numPasajeros > 10
+		) {
 			return res.status(400).json({
 				error: "El campo 'pasajeros' debe ser un número entre 1 y 10.",
 			});
@@ -141,7 +149,9 @@ router.post("/api/cotizar/validar-monto", async (req, res) => {
 		const { montoCliente, ...paramsCotizacion } = req.body || {};
 
 		if (montoCliente === undefined || montoCliente === null) {
-			return res.status(400).json({ error: "El campo 'montoCliente' es requerido." });
+			return res
+				.status(400)
+				.json({ error: "El campo 'montoCliente' es requerido." });
 		}
 
 		// Reutilizar la lógica de /api/cotizar para mayor consistencia

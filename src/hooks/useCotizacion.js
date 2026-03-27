@@ -28,7 +28,7 @@ const getBackendUrl = () =>
 	typeof window !== "undefined" && window.__BACKEND_URL__
 		? window.__BACKEND_URL__
 		: import.meta.env?.VITE_BACKEND_URL ||
-		  "https://transportes-araucaria.onrender.com";
+			"https://transportes-araucaria.onrender.com";
 
 /** Estado inicial del resultado de cotización (cuando no hay datos aún) */
 const COTIZACION_VACIA = {
@@ -64,9 +64,18 @@ const COTIZACION_VACIA = {
 const sonIguales = (a, b) => {
 	if (!a || !b) return a === b;
 	const campos = [
-		"origen", "destino", "pasajeros", "fecha", "hora",
-		"idaVuelta", "fechaRegreso", "horaRegreso", "upgradeVan",
-		"codigoDescuento", "sillaInfantil", "cantidadSillas",
+		"origen",
+		"destino",
+		"pasajeros",
+		"fecha",
+		"hora",
+		"idaVuelta",
+		"fechaRegreso",
+		"horaRegreso",
+		"upgradeVan",
+		"codigoDescuento",
+		"sillaInfantil",
+		"cantidadSillas",
 	];
 	return campos.every((c) => a[c] === b[c]);
 };
@@ -131,7 +140,12 @@ export const useCotizacion = (params, { debounceMs = 400 } = {}) => {
 
 	useEffect(() => {
 		// Si no hay params o faltan campos mínimos, resetear
-		if (!params?.origen || !params?.destino || !params?.pasajeros || !params?.fecha) {
+		if (
+			!params?.origen ||
+			!params?.destino ||
+			!params?.pasajeros ||
+			!params?.fecha
+		) {
 			setCotizacion(COTIZACION_VACIA);
 			setError(null);
 			setCargando(false);
