@@ -1745,11 +1745,9 @@ function App() {
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
 			if (typeof window !== "undefined" && typeof window.gtag === "function") {
-				// Lead: valor potencial de la reserva para que Google Ads tenga datos incluso si el usuario no regresa tras pagar
+				// Lead: intención de pago (sin valor para no duplicar con la compra final)
 				window.gtag("event", "conversion", {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,
-					value: Number(totalConDescuento) || Number(cotizacion?.precio) || 0,
-					currency: "CLP",
 				});
 			}
 

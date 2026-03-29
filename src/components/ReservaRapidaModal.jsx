@@ -206,10 +206,7 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
         if (typeof window.gtag === "function") {
           const conversionData = {
             send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-            // Valor e identificador de la transacción (obligatorio para que Google Ads registre el monto del Lead)
-            value: precioTotal,
-            currency: "CLP",
-            transaction_id: `lead_banner_${data.reserva.id}_${Date.now()}`,
+            // Lead sin valor de transacción para no duplicar el ROAS con la Compra
           };
 
           // Enhanced Conversions
@@ -230,7 +227,7 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
           }
 
           window.gtag("event", "conversion", conversionData);
-          console.log(`🚀 [ReservaRapidaModal] Lead banner disparado: value=${precioTotal}, reservaId=${data.reserva.id}`);
+          console.log(`🚀 [ReservaRapidaModal] Lead banner disparado: reservaId=${data.reserva.id}`);
         }
 
         // Guardar monto en localStorage como respaldo para la conversión de Purchase
