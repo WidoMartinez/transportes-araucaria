@@ -204,11 +204,7 @@ function LandingTraslados() {
 			<header className="bg-white border-b sticky top-0 z-50 shadow-sm">
 				<div className="container mx-auto px-4 py-3 flex items-center justify-between">
 					<a href="/" aria-label="Volver al inicio">
-						<img
-							src={logoColor}
-							alt="Transportes Araucaria"
-							className="h-10"
-						/>
+						<img src={logoColor} alt="Transportes Araucaria" className="h-10" />
 					</a>
 					<div className="flex items-center gap-3">
 						<a
@@ -267,10 +263,7 @@ function LandingTraslados() {
 						{/* Tipos de traslado resumidos */}
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							{TIPOS_TRASLADO.slice(0, 4).map((tipo) => (
-								<div
-									key={tipo}
-									className="text-sm text-gray-700"
-								>
+								<div key={tipo} className="text-sm text-gray-700">
 									{tipo}
 								</div>
 							))}
@@ -313,9 +306,7 @@ function LandingTraslados() {
 								key={label}
 								className="bg-[#d9f0db]/80 border border-green-200 rounded-2xl p-6 text-center backdrop-blur-sm"
 							>
-								<div className="text-3xl font-bold text-[#2d5a27]">
-									{valor}
-								</div>
+								<div className="text-3xl font-bold text-[#2d5a27]">{valor}</div>
 								<div className="text-sm text-gray-700 mt-1">{label}</div>
 							</div>
 						))}

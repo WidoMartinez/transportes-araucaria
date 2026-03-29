@@ -205,9 +205,10 @@ export const calcularTarifaDinamica = async (
 		});
 
 		// Si el festivo encontrado no es recurrente y la fecha exacta no coincide, descartarlo
-		const festivoAplicable = festivo && (festivo.fecha === fecha || festivo.recurrente)
-			? festivo
-			: null;
+		const festivoAplicable =
+			festivo && (festivo.fecha === fecha || festivo.recurrente)
+				? festivo
+				: null;
 
 		if (festivoAplicable?.porcentajeRecargo) {
 			ajustes.push({

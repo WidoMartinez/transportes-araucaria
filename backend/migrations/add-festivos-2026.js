@@ -41,7 +41,8 @@ const addFestivos2026 = async () => {
 				nombre: "Día Nacional de los Pueblos Indígenas",
 				tipo: "feriado_nacional",
 				recurrente: false,
-				descripcion: "Día Nacional de los Pueblos Indígenas 2026 (trasladado desde el 21/06 que cae domingo)",
+				descripcion:
+					"Día Nacional de los Pueblos Indígenas 2026 (trasladado desde el 21/06 que cae domingo)",
 			},
 			// San Pedro y San Pablo: 29 junio 2026 cae lunes
 			{
