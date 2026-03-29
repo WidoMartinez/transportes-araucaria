@@ -19,12 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import logoBlanco from "../assets/logoblanco.png";
 import { getBackendUrl } from "../lib/backend";
 
@@ -126,8 +121,15 @@ function LandingTraslados() {
 		setError("");
 
 		// Validación mínima en frontera del sistema
-		if (!form.nombre.trim() || !form.telefono.trim() || !form.origen.trim() || !form.destino.trim()) {
-			setError("Por favor completa los campos obligatorios: nombre, teléfono, origen y destino.");
+		if (
+			!form.nombre.trim() ||
+			!form.telefono.trim() ||
+			!form.origen.trim() ||
+			!form.destino.trim()
+		) {
+			setError(
+				"Por favor completa los campos obligatorios: nombre, teléfono, origen y destino.",
+			);
 			return;
 		}
 
@@ -143,12 +145,12 @@ function LandingTraslados() {
 			// Si el endpoint aún no existe, igual registramos la conversión y redirigimos a WhatsApp
 			const mensaje = encodeURIComponent(
 				`Hola, quiero cotizar un traslado privado:\n` +
-				`📍 Origen: ${form.origen}\n` +
-				`📍 Destino: ${form.destino}\n` +
-				`📅 Fecha: ${form.fecha || "Por definir"}\n` +
-				`👥 Pasajeros: ${form.pasajeros}\n` +
-				`📝 ${form.mensaje || "Sin comentarios adicionales"}\n` +
-				`👤 ${form.nombre} | ${form.telefono}`
+					`📍 Origen: ${form.origen}\n` +
+					`📍 Destino: ${form.destino}\n` +
+					`📅 Fecha: ${form.fecha || "Por definir"}\n` +
+					`👥 Pasajeros: ${form.pasajeros}\n` +
+					`📝 ${form.mensaje || "Sin comentarios adicionales"}\n` +
+					`👤 ${form.nombre} | ${form.telefono}`,
 			);
 
 			trackCotizacionConversion();
@@ -157,21 +159,29 @@ function LandingTraslados() {
 				setEnviado(true);
 			} else {
 				// Fallback: abrir WhatsApp con los datos del formulario
-				window.open(`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${mensaje}`, "_blank", "noopener,noreferrer");
+				window.open(
+					`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${mensaje}`,
+					"_blank",
+					"noopener,noreferrer",
+				);
 				setEnviado(true);
 			}
 		} catch {
 			// Error de red: fallback a WhatsApp
 			const mensaje = encodeURIComponent(
 				`Hola, quiero cotizar un traslado privado:\n` +
-				`📍 Origen: ${form.origen}\n` +
-				`📍 Destino: ${form.destino}\n` +
-				`📅 Fecha: ${form.fecha || "Por definir"}\n` +
-				`👥 Pasajeros: ${form.pasajeros}\n` +
-				`👤 ${form.nombre} | ${form.telefono}`
+					`📍 Origen: ${form.origen}\n` +
+					`📍 Destino: ${form.destino}\n` +
+					`📅 Fecha: ${form.fecha || "Por definir"}\n` +
+					`👥 Pasajeros: ${form.pasajeros}\n` +
+					`👤 ${form.nombre} | ${form.telefono}`,
 			);
 			trackCotizacionConversion();
-			window.open(`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${mensaje}`, "_blank", "noopener,noreferrer");
+			window.open(
+				`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${mensaje}`,
+				"_blank",
+				"noopener,noreferrer",
+			);
 			setEnviado(true);
 		} finally {
 			setEnviando(false);
@@ -183,18 +193,21 @@ function LandingTraslados() {
 		window.open(
 			`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${encodeURIComponent("Hola, necesito cotizar un traslado privado.")}`,
 			"_blank",
-			"noopener,noreferrer"
+			"noopener,noreferrer",
 		);
 	};
 
 	return (
 		<div className="min-h-screen bg-white font-sans">
-
 			{/* ========== HEADER MINIMALISTA ========== */}
 			<header className="bg-white border-b sticky top-0 z-50 shadow-sm">
 				<div className="container mx-auto px-4 py-3 flex items-center justify-between">
 					<a href="/" aria-label="Volver al inicio">
-						<img src={logoBlanco} alt="Transportes Araucaria" className="h-10 brightness-0" />
+						<img
+							src={logoBlanco}
+							alt="Transportes Araucaria"
+							className="h-10 brightness-0"
+						/>
 					</a>
 					<div className="flex items-center gap-3">
 						<a
@@ -219,7 +232,6 @@ function LandingTraslados() {
 			{/* ========== HERO ========== */}
 			<section className="bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 md:py-24">
 				<div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-
 					{/* Texto hero */}
 					<div className="space-y-6">
 						<div className="inline-flex items-center gap-2 bg-primary/20 border border-primary/30 rounded-full px-4 py-1.5 text-sm font-medium text-primary-foreground">
@@ -227,19 +239,23 @@ function LandingTraslados() {
 							Transporte privado de confianza
 						</div>
 						<h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-							Traslados Privados<br />
+							Traslados Privados
+							<br />
 							<span className="text-yellow-400">a cualquier destino</span>
 						</h1>
 						<p className="text-lg text-slate-300 max-w-md">
 							Aeropuertos, ciudades, parques, eventos o donde necesites.
-							Servicio de transporte privado en La Araucanía y más allá,
-							con conductores certificados y vehículos modernos.
+							Servicio de transporte privado en La Araucanía y más allá, con
+							conductores certificados y vehículos modernos.
 						</p>
 
 						{/* Tipos de traslado resumidos */}
 						<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
 							{TIPOS_TRASLADO.slice(0, 4).map((tipo) => (
-								<div key={tipo} className="flex items-center gap-2 text-sm text-slate-300">
+								<div
+									key={tipo}
+									className="flex items-center gap-2 text-sm text-slate-300"
+								>
 									<CheckCircle className="h-4 w-4 text-yellow-400 shrink-0" />
 									{tipo}
 								</div>
@@ -248,7 +264,11 @@ function LandingTraslados() {
 
 						<div className="flex flex-wrap gap-3 pt-2">
 							<Button
-								onClick={() => document.getElementById("formulario-cotizacion")?.scrollIntoView({ behavior: "smooth" })}
+								onClick={() =>
+									document
+										.getElementById("formulario-cotizacion")
+										?.scrollIntoView({ behavior: "smooth" })
+								}
 								size="lg"
 								className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold gap-2"
 							>
@@ -275,8 +295,13 @@ function LandingTraslados() {
 							{ valor: "24/7", label: "Disponibilidad" },
 							{ valor: "100%", label: "Conductores certificados" },
 						].map(({ valor, label }) => (
-							<div key={label} className="bg-white/10 border border-white/20 rounded-2xl p-6 text-center backdrop-blur-sm">
-								<div className="text-3xl font-bold text-yellow-400">{valor}</div>
+							<div
+								key={label}
+								className="bg-white/10 border border-white/20 rounded-2xl p-6 text-center backdrop-blur-sm"
+							>
+								<div className="text-3xl font-bold text-yellow-400">
+									{valor}
+								</div>
 								<div className="text-sm text-slate-300 mt-1">{label}</div>
 							</div>
 						))}
@@ -298,11 +323,17 @@ function LandingTraslados() {
 						<Card className="border-green-200 bg-green-50">
 							<CardContent className="pt-8 pb-8 text-center space-y-4">
 								<CheckCircle className="h-14 w-14 text-green-600 mx-auto" />
-								<h3 className="text-xl font-bold text-green-800">¡Solicitud enviada!</h3>
+								<h3 className="text-xl font-bold text-green-800">
+									¡Solicitud enviada!
+								</h3>
 								<p className="text-green-700">
-									Recibimos tu cotización. Te contactaremos a la brevedad por WhatsApp o teléfono.
+									Recibimos tu cotización. Te contactaremos a la brevedad por
+									WhatsApp o teléfono.
 								</p>
-								<Button onClick={abrirWhatsApp} className="bg-green-600 hover:bg-green-700 text-white gap-2">
+								<Button
+									onClick={abrirWhatsApp}
+									className="bg-green-600 hover:bg-green-700 text-white gap-2"
+								>
 									<MessageCircle className="h-4 w-4" />
 									Seguir por WhatsApp
 								</Button>
@@ -405,7 +436,10 @@ function LandingTraslados() {
 											/>
 										</div>
 										<div className="space-y-1">
-											<label className="text-sm font-medium" htmlFor="pasajeros">
+											<label
+												className="text-sm font-medium"
+												htmlFor="pasajeros"
+											>
 												N° de pasajeros
 											</label>
 											<div className="relative">
@@ -482,9 +516,12 @@ function LandingTraslados() {
 			<section className="py-16 bg-white">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-10">
-						<h2 className="text-3xl font-bold mb-3">¿Qué tipo de traslado necesitas?</h2>
+						<h2 className="text-3xl font-bold mb-3">
+							¿Qué tipo de traslado necesitas?
+						</h2>
 						<p className="text-muted-foreground max-w-xl mx-auto">
-							Cubrimos todo tipo de viajes. Si no ves el tuyo en la lista, contáctanos igual.
+							Cubrimos todo tipo de viajes. Si no ves el tuyo en la lista,
+							contáctanos igual.
 						</p>
 					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
@@ -507,20 +544,27 @@ function LandingTraslados() {
 						<h2 className="text-3xl font-bold mb-3">¿Por qué elegirnos?</h2>
 					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-					{BENEFICIOS.map((beneficio) => {
-						const IconComp = beneficio.icon;
-						return (
-							<Card key={beneficio.titulo} className="text-center shadow-sm hover:shadow-md transition-shadow">
-								<CardContent className="pt-8 pb-6 space-y-3">
-									<div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-										<IconComp className="h-6 w-6 text-primary" />
-									</div>
-									<h3 className="font-semibold text-base">{beneficio.titulo}</h3>
-									<p className="text-sm text-muted-foreground">{beneficio.desc}</p>
-								</CardContent>
-							</Card>
-						);
-					})}
+						{BENEFICIOS.map((beneficio) => {
+							const IconComp = beneficio.icon;
+							return (
+								<Card
+									key={beneficio.titulo}
+									className="text-center shadow-sm hover:shadow-md transition-shadow"
+								>
+									<CardContent className="pt-8 pb-6 space-y-3">
+										<div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+											<IconComp className="h-6 w-6 text-primary" />
+										</div>
+										<h3 className="font-semibold text-base">
+											{beneficio.titulo}
+										</h3>
+										<p className="text-sm text-muted-foreground">
+											{beneficio.desc}
+										</p>
+									</CardContent>
+								</Card>
+							);
+						})}
 					</div>
 				</div>
 			</section>
@@ -528,9 +572,12 @@ function LandingTraslados() {
 			{/* ========== CTA FINAL ========== */}
 			<section className="py-16 bg-slate-900 text-white text-center">
 				<div className="container mx-auto px-4 space-y-6 max-w-xl">
-					<h2 className="text-3xl font-bold">¿Listo para reservar tu traslado?</h2>
+					<h2 className="text-3xl font-bold">
+						¿Listo para reservar tu traslado?
+					</h2>
 					<p className="text-slate-300">
-						Respuesta inmediata por WhatsApp o cotización formal en el formulario de arriba.
+						Respuesta inmediata por WhatsApp o cotización formal en el
+						formulario de arriba.
 					</p>
 					<div className="flex flex-col sm:flex-row justify-center gap-4">
 						<Button
@@ -542,7 +589,11 @@ function LandingTraslados() {
 							Escribir por WhatsApp
 						</Button>
 						<Button
-							onClick={() => document.getElementById("formulario-cotizacion")?.scrollIntoView({ behavior: "smooth" })}
+							onClick={() =>
+								document
+									.getElementById("formulario-cotizacion")
+									?.scrollIntoView({ behavior: "smooth" })
+							}
 							size="lg"
 							variant="outline"
 							className="border-white text-white hover:bg-white/10 gap-2"
@@ -564,9 +615,15 @@ function LandingTraslados() {
 			{/* ========== FOOTER SIMPLIFICADO ========== */}
 			<footer className="bg-slate-950 text-slate-400 py-8 text-sm text-center">
 				<div className="container mx-auto px-4 space-y-2">
-					<p>© {new Date().getFullYear()} Transportes Araucaria. Todos los derechos reservados.</p>
 					<p>
-						<a href="/" className="hover:text-white transition-colors underline">
+						© {new Date().getFullYear()} Transportes Araucaria. Todos los
+						derechos reservados.
+					</p>
+					<p>
+						<a
+							href="/"
+							className="hover:text-white transition-colors underline"
+						>
 							Volver al sitio principal
 						</a>
 					</p>

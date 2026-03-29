@@ -251,7 +251,9 @@ const resolveIsEvaluarView = () => {
 };
 
 function App() {
-	const [isTrasladosView, setIsTrasladosView] = useState(resolveIsTrasladosView);
+	const [isTrasladosView, setIsTrasladosView] = useState(
+		resolveIsTrasladosView,
+	);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
 	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
