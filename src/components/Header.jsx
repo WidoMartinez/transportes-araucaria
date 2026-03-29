@@ -42,7 +42,7 @@ const MENU_ITEMS = [
   { label: "Destinos", href: "#destinos", icon: MapPin },
   { label: "Tours", href: "#tours", icon: Calendar },
   { label: "Temporada", href: "#destacados", icon: Star },
-  { label: "Fletes", href: "/#fletes", external: true, icon: Briefcase },
+  { label: "Traslados Privados", href: "/traslados", external: true, icon: Briefcase },
   { label: "Consultar Reserva", href: "#consultar-reserva", highlight: true, icon: Calendar },
   { label: "Pagar con Código", href: "#pagar-con-codigo", highlight: true, icon: Briefcase },
   { label: "Contacto", href: "#contacto", icon: Phone },

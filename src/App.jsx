@@ -41,7 +41,7 @@ import Testimonios from "./components/Testimonios";
 import PaginaEvaluar from "./components/Evaluar/PaginaEvaluar";
 import SeccionTestimonios from "./components/Testimonios/SeccionTestimonios";
 import Contacto from "./components/Contacto";
-import FletesLanding from "./components/FletesLanding";
+
 import Footer from "./components/Footer";
 import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
@@ -53,6 +53,7 @@ import CompletarDetalles from "./components/CompletarDetalles"; // Importar comp
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
 import OportunidadesTraslado from "./pages/OportunidadesTraslado"; // Página de oportunidades de traslado
+import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ads para traslados privados
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -182,17 +183,6 @@ const resolveIsAdminView = () => {
 	);
 };
 
-const resolveIsFreightView = () => {
-	if (typeof window === "undefined") return false;
-	const pathname = window.location.pathname.toLowerCase();
-	const hash = window.location.hash.toLowerCase();
-	return (
-		pathname === "/fletes" ||
-		pathname.startsWith("/fletes/") ||
-		hash === "#fletes"
-	);
-};
-
 // Resolver si la URL es para consultar reserva
 const resolveIsConsultaView = () => {
 	const hash = window.location.hash;
@@ -226,6 +216,13 @@ const resolveIsFlowReturnView = () => {
 };
 
 // Resolver si la URL es la página de prueba de Google Ads
+// Resolver si la URL es la landing de traslados privados (campaña Google Ads)
+const resolveIsTrasladosView = () => {
+	if (typeof window === "undefined") return false;
+	const pathname = window.location.pathname.toLowerCase();
+	return pathname === "/traslados" || pathname.startsWith("/traslados/");
+};
+
 // Resolver si la URL es la página de oportunidades
 const resolveIsOportunidadesView = () => {
 	const pathname = window.location.pathname.toLowerCase();
@@ -254,7 +251,7 @@ const resolveIsEvaluarView = () => {
 };
 
 function App() {
-	const [isFreightView, setIsFreightView] = useState(resolveIsFreightView);
+	const [isTrasladosView, setIsTrasladosView] = useState(resolveIsTrasladosView);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
 	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
@@ -388,17 +385,6 @@ function App() {
 		}, 500);
 		return () => clearTimeout(timer);
 	}, [formData.origen, formData.destino, formData.fecha]);
-
-	// Sincronizar vista de Fletes cuando cambia el hash o el historial
-	useEffect(() => {
-		const syncFreight = () => setIsFreightView(resolveIsFreightView());
-		window.addEventListener("hashchange", syncFreight);
-		window.addEventListener("popstate", syncFreight);
-		return () => {
-			window.removeEventListener("hashchange", syncFreight);
-			window.removeEventListener("popstate", syncFreight);
-		};
-	}, []);
 
 	// Sincronizar vista de Consulta por Código cuando cambia el hash o el historial
 	useEffect(() => {
@@ -1410,7 +1396,6 @@ function App() {
 	useEffect(() => {
 		const handleLocationChange = () => {
 			setIsAdminView(resolveIsAdminView());
-			setIsFreightView(resolveIsFreightView());
 		};
 		window.addEventListener("popstate", handleLocationChange);
 		return () => window.removeEventListener("popstate", handleLocationChange);
@@ -2055,8 +2040,8 @@ function App() {
 	const destinoFinal =
 		formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 
-	if (isFreightView) {
-		return <FletesLanding />;
+	if (isTrasladosView) {
+		return <LandingTraslados />;
 	}
 
 	if (isAdminView) {
