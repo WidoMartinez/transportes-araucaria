@@ -47,6 +47,7 @@ import addProductosTables from "./migrations/add-productos-tables.js";
 import addTarifaDinamicaTable from "./migrations/add-tarifa-dinamica-table.js";
 import addTarifaDinamicaFields from "./migrations/add-tarifa-dinamica-fields.js";
 import addFestivosTable from "./migrations/add-festivos-table.js";
+import addFestivos2026 from "./migrations/add-festivos-2026.js";
 import addDisponibilidadConfig from "./migrations/add-disponibilidad-config.js";
 import addPendingEmailsTable from "./migrations/add-pending-emails-table.js";
 import addBloqueosAgendaTable from "./migrations/add-bloqueos-agenda-table.js";
@@ -96,7 +97,7 @@ import { apiLimiter } from "./middleware/rateLimiter.js";
 // Endpoint de cotización centralizada (nueva arquitectura de precios en backend)
 import cotizacionRouter from "./endpoints/cotizacion.js";
 // Función de cotización para recalcular precios cuando el cliente envía 0
-import { cotizar } from "./services/PricingService.js";
+import { cotizar, calcularTarifaDinamica } from "./services/PricingService.js";
 
 dotenv.config();
 
@@ -813,6 +814,7 @@ const initializeDatabase = async () => {
 		await addTarifaDinamicaTable(); // Migración para tabla de tarifa dinámica
 		await addTarifaDinamicaFields(); // Migración para campos de tarifa dinámica en reservas
 		await addFestivosTable(); // Migración para tabla de festivos
+		await addFestivos2026(); // Migración para feriados nacionales de Chile 2026
 		await addDisponibilidadConfig(); // Migración para configuración de disponibilidad y descuentos por retorno
 		await addPorcentajeAdicionalColumns(); // Migración para columnas de porcentaje adicional
 		await addAddressColumns(); // Migración para columnas de dirección
@@ -8402,6 +8404,7 @@ app.delete("/api/tarifa-dinamica/:id", authAdmin, async (req, res) => {
 });
 
 // Calcular tarifa dinámica para un viaje específico
+// Delega completamente a PricingService.calcularTarifaDinamica() para evitar lógica duplicada
 app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 	try {
 		const { precioBase, destino, fecha, hora } = req.body;
@@ -8412,232 +8415,31 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 			});
 		}
 
-		// Obtener todas las configuraciones activas ordenadas por prioridad
-		const configuraciones = await ConfiguracionTarifaDinamica.findAll({
-			where: { activo: true },
-			order: [["prioridad", "DESC"]],
-		});
-
-		// Calcular ajustes aplicables
-		const ajustesAplicados = [];
-		let porcentajeTotal = 0;
-
-		// Analizar la fecha como YYYY-MM-DD para evitar problemas de zona horaria
-		const [year, month, day] = fecha.split("-");
-		const fechaViaje = new Date(
-			parseInt(year),
-			parseInt(month) - 1,
-			parseInt(day),
-		);
-		const diaSemana = fechaViaje.getDay(); // 0=domingo, 1=lunes, ..., 6=sábado
-
-		// Helper para formateo monetario
-		const formatMoney = (amount) =>
-			`$${parseFloat(amount || 0).toLocaleString("es-CL")}`;
-
-		// Logs silenciados para reducir ruido en Render (según solicitud de usuario)
-		/*
-	console.log("\n" + "=".repeat(50));
-	console.log("💰 CALCULANDO TARIFA DINÁMICA");
-	console.log("=".repeat(50));
-	console.log(`📍 Destino:                ${destino || "No especificado"}`);
-	console.log(`💵 Precio Base:            ${formatMoney(precioBase)}`);
-	console.log(`📅 Fecha Viaje:            ${fecha}`);
-	console.log(`🕐 Hora:                   ${hora || "No especificada"}`);
-	console.log("-".repeat(50));
-    */
-
-		// Calcular los días de anticipación usando solo la fecha (sin hora) para evitar problemas de zona horaria
-		const ahora = new Date();
-		const hoyInicio = new Date(
-			ahora.getFullYear(),
-			ahora.getMonth(),
-			ahora.getDate(),
-		);
-		const diasAnticipacion = Math.floor(
-			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24),
-		);
-
-		// Verificar si la fecha es festivo
-		const fechaStr = fecha; // Usar la cadena de fecha original
-		const festivo = await Festivo.findOne({
-			where: {
-				activo: true,
-				[Op.or]: [
-					{ fecha: fechaStr },
-					{
-						recurrente: true,
-						[Op.and]: sequelize.where(
-							sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
-							sequelize.fn("DATE_FORMAT", fechaStr, "%m-%d"),
-						),
-					},
-				],
-			},
-		});
-
-		// Si es festivo y tiene recargo específico, aplicarlo
-		if (festivo && festivo.porcentajeRecargo) {
-			ajustesAplicados.push({
-				nombre: `Festivo: ${festivo.nombre}`,
-				tipo: "festivo",
-				porcentaje: parseFloat(festivo.porcentajeRecargo),
-				detalle: festivo.nombre,
-				descripcion:
-					festivo.descripcion || `Recargo por festivo: ${festivo.nombre}`,
-			});
-			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
+		const base = parseFloat(precioBase);
+		if (!Number.isFinite(base) || base <= 0) {
+			return res.status(400).json({ error: "precioBase debe ser un número positivo" });
 		}
 
-		const nombreDia = [
-			"Domingo",
-			"Lunes",
-			"Martes",
-			"Miércoles",
-			"Jueves",
-			"Viernes",
-			"Sábado",
-		][diaSemana];
-		/*
-	console.log(`📆 Día:                    ${nombreDia}`);
-	console.log(`⏰ Anticipación:           ${diasAnticipacion} días`);
-	if (festivo) {
-		console.log(`🎉 Festivo Detectado:      ${festivo.nombre}`);
-	}
-	console.log("-".repeat(50));
-	console.log(`🔍 Evaluando ${configuraciones.length} configuraciones activas...`);
-    */
+		const { precioAjustado, ajustes, porcentajeTotal } =
+			await calcularTarifaDinamica(base, destino || "", fecha, hora);
 
-		for (const config of configuraciones) {
-			// console.log(`  ⚙️  "${config.nombre}" (${config.tipo})`);
-
-			// Verificar si el destino está excluido
-			if (
-				config.destinosExcluidos &&
-				Array.isArray(config.destinosExcluidos) &&
-				config.destinosExcluidos.includes(destino)
-			) {
-				// Destino excluido de esta configuración — se omite sin log (es flujo normal/repetitivo)
-				continue;
-			}
-
-			let aplica = false;
-			let detalle = "";
-
-			switch (config.tipo) {
-				case "anticipacion":
-					if (
-						diasAnticipacion >= config.diasMinimos &&
-						(config.diasMaximos === null ||
-							diasAnticipacion <= config.diasMaximos)
-					) {
-						aplica = true;
-						detalle = `${config.diasMinimos}${
-							config.diasMaximos ? `-${config.diasMaximos}` : "+"
-						} días de anticipación`;
-					}
-					break;
-
-				case "dia_semana":
-					if (
-						config.diasSemana &&
-						Array.isArray(config.diasSemana) &&
-						config.diasSemana.includes(diaSemana)
-					) {
-						aplica = true;
-						const nombresDias = [
-							"Domingo",
-							"Lunes",
-							"Martes",
-							"Miércoles",
-							"Jueves",
-							"Viernes",
-							"Sábado",
-						];
-						detalle = `${nombresDias[diaSemana]}`;
-						// console.log(`    ✅ Aplica - ${detalle}`);
-					} else {
-						// console.log(`    ⏭️  No aplica`);
-					}
-					break;
-
-				case "horario":
-					if (hora && config.horaInicio && config.horaFin) {
-						const horaViaje = hora.substring(0, 5);
-						const horaInicio = config.horaInicio.substring(0, 5);
-						const horaFin = config.horaFin.substring(0, 5);
-
-						// Manejar rangos horarios que cruzan la medianoche (por ejemplo, 22:00 - 06:00)
-						let dentroRango = false;
-						if (horaInicio <= horaFin) {
-							// Rango horario normal (por ejemplo, 08:00 - 20:00)
-							dentroRango = horaViaje >= horaInicio && horaViaje <= horaFin;
-						} else {
-							// Rango que abarca la medianoche (por ejemplo, 22:00 - 06:00)
-							dentroRango = horaViaje >= horaInicio || horaViaje <= horaFin;
-						}
-
-						if (dentroRango) {
-							aplica = true;
-							detalle = `Horario ${horaInicio} - ${horaFin}`;
-						}
-					}
-					break;
-
-				case "descuento_retorno":
-					// Este tipo requiere lógica adicional de disponibilidad de vehículos
-					// Por ahora lo dejamos para implementación futura
-					break;
-			}
-
-			if (aplica) {
-				// console.log(`    ✅ Ajuste aplicado: ${config.porcentajeAjuste}%`);
-				ajustesAplicados.push({
-					nombre: config.nombre,
-					tipo: config.tipo,
-					porcentaje: parseFloat(config.porcentajeAjuste),
-					detalle: detalle,
-					descripcion: config.descripcion,
-				});
-				porcentajeTotal += parseFloat(config.porcentajeAjuste);
-			}
-		}
-
-		// Calcular montos
-		const ajusteMonto = Math.round((precioBase * porcentajeTotal) / 100);
-		const precioFinal = Math.max(0, precioBase + ajusteMonto); // Garantiza que el precio final nunca sea menor que cero
-
-		/*
-    console.log("-".repeat(50));
-	console.log("📊 AJUSTES APLICADOS:");
-	if (ajustesAplicados.length > 0) {
-		ajustesAplicados.forEach((ajuste, index) => {
-			const signo = ajuste.porcentaje >= 0 ? "+" : "";
-			console.log(`  ${index + 1}. ${ajuste.nombre}: ${signo}${ajuste.porcentaje}%`);
-			if (ajuste.detalle) {
-				console.log(`     └─ ${ajuste.detalle}`);
-			}
-		});
-	} else {
-		console.log("  (Ninguno)");
-	}
-	console.log("-".repeat(50));
-	console.log(`💵 Precio Base:            ${formatMoney(precioBase)}`);
-	if (porcentajeTotal !== 0) {
-		const signo = porcentajeTotal >= 0 ? "+" : "";
-		console.log(`📈 Ajuste Total:           ${signo}${porcentajeTotal}% (${formatMoney(ajusteMonto)})`);
-	}
-	console.log(`✅ PRECIO FINAL:           ${formatMoney(precioFinal)}`);
-	console.log("=".repeat(50) + "\n");
-    */
+		// Calcular días de anticipación para incluirlos en la respuesta (compatibilidad con frontend)
+		const [year, month, day] = fecha.split("-").map(Number);
+		const fechaViaje = new Date(year, month - 1, day);
+		const hoyInicio = new Date();
+		hoyInicio.setHours(0, 0, 0, 0);
+		const diasAnticipacion = Math.max(
+			0,
+			Math.floor((fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24)),
+		);
 
 		res.json({
-			precioBase: parseFloat(precioBase),
+			precioBase: base,
 			ajusteTotal: porcentajeTotal,
-			ajusteMonto: ajusteMonto,
-			precioFinal: precioFinal,
-			diasAnticipacion: diasAnticipacion,
-			ajustesAplicados: ajustesAplicados,
+			ajusteMonto: precioAjustado - base,
+			precioFinal: precioAjustado,
+			diasAnticipacion,
+			ajustesAplicados: ajustes,
 		});
 	} catch (error) {
 		console.error("Error calculando tarifa dinámica:", error);

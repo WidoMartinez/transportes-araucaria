@@ -185,31 +185,38 @@ export const calcularTarifaDinamica = async (
 			(fechaViaje - hoyInicio) / (1000 * 60 * 60 * 24),
 		);
 
-		// Verificar festivo
+		// Verificar festivo: extraer MM-DD en JS para comparar con festivos recurrentes
+		const [_year, mm, dd] = fecha.split("-");
+		const mesDia = `${mm}-${dd}`; // Formato MM-DD para comparar recurrentes
+
 		const festivo = await Festivo.findOne({
 			where: {
 				activo: true,
 				[Op.or]: [
 					{ fecha },
-					{
-						recurrente: true,
-						[Op.and]: sequelize.where(
-							sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
-							sequelize.fn("DATE_FORMAT", fecha, "%m-%d"),
-						),
-					},
+					sequelize.where(
+						sequelize.fn("DATE_FORMAT", sequelize.col("fecha"), "%m-%d"),
+						{ [Op.eq]: mesDia },
+					),
 				],
+				// El filtro recurrente se aplica en JS para evitar que coincidan
+				// festivos no recurrentes de años anteriores con la misma fecha MM-DD
 			},
 		});
 
-		if (festivo?.porcentajeRecargo) {
+		// Si el festivo encontrado no es recurrente y la fecha exacta no coincide, descartarlo
+		const festivoAplicable = festivo && (festivo.fecha === fecha || festivo.recurrente)
+			? festivo
+			: null;
+
+		if (festivoAplicable?.porcentajeRecargo) {
 			ajustes.push({
-				nombre: `Festivo: ${festivo.nombre}`,
+				nombre: `Festivo: ${festivoAplicable.nombre}`,
 				tipo: "festivo",
-				porcentaje: parseFloat(festivo.porcentajeRecargo),
-				detalle: festivo.nombre,
+				porcentaje: parseFloat(festivoAplicable.porcentajeRecargo),
+				detalle: festivoAplicable.nombre,
 			});
-			porcentajeTotal += parseFloat(festivo.porcentajeRecargo);
+			porcentajeTotal += parseFloat(festivoAplicable.porcentajeRecargo);
 		}
 
 		// Obtener configuraciones activas ordenadas por prioridad

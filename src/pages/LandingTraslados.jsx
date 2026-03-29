@@ -20,7 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import logoBlanco from "../assets/logoblanco.png";
+import logoColor from "../assets/logo.png";
+import fondoTraslados from "../assets/fondotraslados.png";
 import { getBackendUrl } from "../lib/backend";
 
 // --- Constantes ---
@@ -204,9 +205,9 @@ function LandingTraslados() {
 				<div className="container mx-auto px-4 py-3 flex items-center justify-between">
 					<a href="/" aria-label="Volver al inicio">
 						<img
-							src={logoBlanco}
+							src={logoColor}
 							alt="Transportes Araucaria"
-							className="h-10 brightness-0"
+							className="h-10"
 						/>
 					</a>
 					<div className="flex items-center gap-3">
@@ -230,20 +231,34 @@ function LandingTraslados() {
 			</header>
 
 			{/* ========== HERO ========== */}
-			<section className="bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 md:py-24">
-				<div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
+			<section
+				className="relative py-16 md:py-24 overflow-hidden"
+				style={{
+					backgroundImage: `url(${fondoTraslados})`,
+					backgroundSize: "contain",
+					backgroundPosition: "right center",
+					backgroundRepeat: "no-repeat",
+					minHeight: "620px",
+				}}
+			>
+				{/* Degradado blanco desde la izquierda para legibilidad del texto */}
+				<div className="absolute inset-0 bg-linear-to-r from-white via-white/92 to-transparent pointer-events-none" />
+
+				<div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center relative z-10">
 					{/* Texto hero */}
 					<div className="space-y-6">
-						<div className="inline-flex items-center gap-2 bg-primary/20 border border-primary/30 rounded-full px-4 py-1.5 text-sm font-medium text-primary-foreground">
-							<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+						<div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 text-sm font-medium text-green-800">
+							<Star className="h-3.5 w-3.5 fill-green-600 text-green-600" />
 							Transporte privado de confianza
 						</div>
 						<h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-							Traslados Privados
+							<span className="text-[#6b2f0e]">Traslados Privados</span>
 							<br />
-							<span className="text-yellow-400">a cualquier destino</span>
+							<span className="text-gray-800">a </span>
+							<span className="text-gray-500 font-semibold">cualquier</span>
+							<span className="text-[#6b2f0e]"> destino</span>
 						</h1>
-						<p className="text-lg text-slate-300 max-w-md">
+						<p className="text-lg text-gray-600 max-w-md">
 							Aeropuertos, ciudades, parques, eventos o donde necesites.
 							Servicio de transporte privado en La Araucanía y más allá, con
 							conductores certificados y vehículos modernos.
@@ -254,9 +269,8 @@ function LandingTraslados() {
 							{TIPOS_TRASLADO.slice(0, 4).map((tipo) => (
 								<div
 									key={tipo}
-									className="flex items-center gap-2 text-sm text-slate-300"
+									className="text-sm text-gray-700"
 								>
-									<CheckCircle className="h-4 w-4 text-yellow-400 shrink-0" />
 									{tipo}
 								</div>
 							))}
@@ -270,7 +284,7 @@ function LandingTraslados() {
 										?.scrollIntoView({ behavior: "smooth" })
 								}
 								size="lg"
-								className="bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold gap-2"
+								className="bg-[#2d5a27] hover:bg-[#1e3d1b] text-white font-bold gap-2"
 							>
 								Cotiza ahora gratis
 								<ArrowRight className="h-4 w-4" />
@@ -279,16 +293,16 @@ function LandingTraslados() {
 								onClick={abrirWhatsApp}
 								size="lg"
 								variant="outline"
-								className="border-white text-white hover:bg-white/10 gap-2"
+								className="border-gray-400 text-gray-700 bg-white/80 hover:bg-white gap-2"
 							>
-								<MessageCircle className="h-4 w-4" />
+								<MessageCircle className="h-4 w-4 text-green-600" />
 								Escribir por WhatsApp
 							</Button>
 						</div>
 					</div>
 
 					{/* Tarjetas de stats */}
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-2 gap-4 md:mt-40 lg:mt-48">
 						{[
 							{ valor: "+500", label: "Traslados realizados" },
 							{ valor: "4.9★", label: "Calificación promedio" },
@@ -297,12 +311,12 @@ function LandingTraslados() {
 						].map(({ valor, label }) => (
 							<div
 								key={label}
-								className="bg-white/10 border border-white/20 rounded-2xl p-6 text-center backdrop-blur-sm"
+								className="bg-[#d9f0db]/80 border border-green-200 rounded-2xl p-6 text-center backdrop-blur-sm"
 							>
-								<div className="text-3xl font-bold text-yellow-400">
+								<div className="text-3xl font-bold text-[#2d5a27]">
 									{valor}
 								</div>
-								<div className="text-sm text-slate-300 mt-1">{label}</div>
+								<div className="text-sm text-gray-700 mt-1">{label}</div>
 							</div>
 						))}
 					</div>
