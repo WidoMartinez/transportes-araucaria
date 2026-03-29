@@ -1383,7 +1383,7 @@ const [configSillas, setConfigSillas] = useState({
 	);
 
 	// El backend calcula tarifa dinámica + todos los descuentos en una sola llamada
-	const { cotizacion: cotizacionHook } = useCotizacion(paramsCotizacion);
+	const { cotizacion: cotizacionHook, cargando: cotizacionCargando } = useCotizacion(paramsCotizacion);
 
 	// Cotización local: usada para vehiculo (display) y validación de código
 	const cotizacion = useMemo(() => {
@@ -1748,6 +1748,28 @@ const [configSillas, setConfigSillas] = useState({
 		}
 
 		if (isSubmitting) return { success: false, error: "procesando" };
+
+		// Validar que el precio esté disponible antes de enviar (evita race condition con useCotizacion)
+		const esRutaEstandar =
+			formData.origen !== "Otro" && formData.destino !== "Otro";
+		if (esRutaEstandar && (!pricing.totalConDescuento || pricing.totalConDescuento <= 0)) {
+			if (cotizacionCargando) {
+				return {
+					success: false,
+					error: "cotizacion_cargando",
+					message:
+						"El precio se está calculando, por favor espera un momento e intenta nuevamente.",
+				};
+			} else {
+				return {
+					success: false,
+					error: "sin_precio",
+					message:
+						"No se pudo obtener el precio para este trayecto. Verifica el origen y destino seleccionados.",
+				};
+			}
+		}
+
 		setIsSubmitting(true);
 
 		const destinoFinal =

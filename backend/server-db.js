@@ -95,6 +95,8 @@ import {
 import { apiLimiter } from "./middleware/rateLimiter.js";
 // Endpoint de cotización centralizada (nueva arquitectura de precios en backend)
 import cotizacionRouter from "./endpoints/cotizacion.js";
+// Función de cotización para recalcular precios cuando el cliente envía 0
+import { cotizar } from "./services/PricingService.js";
 
 dotenv.config();
 
@@ -3548,7 +3550,67 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
-		// 🔍 VALIDACIÓN PREVENTIVA: Si es pago con código, verificar primero si ya tiene reserva vinculada
+		// � CORRECCIÓN AUTOMÁTICA: Si el cliente envió totalConDescuento=0 para una ruta real,
+		// recalcular en el servidor para evitar reservas con precio cero (race condition en frontend)
+		const totalRecibido = parseFloat(datosReserva.totalConDescuento) || 0;
+		const esRutaReal =
+			datosReserva.origen &&
+			datosReserva.destino &&
+			datosReserva.origen !== "Otro" &&
+			datosReserva.destino !== "Otro";
+
+		if (totalRecibido <= 0 && esRutaReal && datosReserva.pasajeros && datosReserva.fecha) {
+			console.warn(
+				`⚠️ [RECALCULO] totalConDescuento=0 recibido del cliente para ruta ${datosReserva.origen} → ${datosReserva.destino}. Recalculando en backend...`,
+			);
+			try {
+				const cotizacionBackend = await cotizar({
+					origen: datosReserva.origen,
+					destino: datosReserva.destino,
+					pasajeros: parseInt(datosReserva.pasajeros, 10),
+					fecha: datosReserva.fecha,
+					hora: datosReserva.hora || null,
+					idaVuelta: Boolean(datosReserva.idaVuelta),
+					fechaRegreso: datosReserva.fechaRegreso || null,
+					horaRegreso: datosReserva.horaRegreso || null,
+					upgradeVan: Boolean(datosReserva.upgradeVan),
+					codigoDescuento: datosReserva.codigoDescuento || null,
+					sillaInfantil: Boolean(datosReserva.sillaInfantil),
+					cantidadSillas:
+						parseInt(datosReserva.cantidadSillasInfantiles, 10) || 1,
+				});
+
+				if (!cotizacionBackend.error && cotizacionBackend.totalConDescuento > 0) {
+					console.log(
+						`✅ [RECALCULO] Precio corregido: $${cotizacionBackend.totalConDescuento} (antes era $0)`,
+					);
+					datosReserva.totalConDescuento = cotizacionBackend.totalConDescuento;
+					datosReserva.precio = cotizacionBackend.precioBase;
+					datosReserva.abonoSugerido = cotizacionBackend.abono;
+					datosReserva.saldoPendiente = cotizacionBackend.saldoPendiente;
+					datosReserva.descuentoBase = cotizacionBackend.descuentos?.online || 0;
+					datosReserva.descuentoPromocion =
+						cotizacionBackend.descuentos?.promocion || 0;
+					datosReserva.descuentoRoundTrip =
+						cotizacionBackend.descuentos?.roundTrip || 0;
+					datosReserva.descuentoOnline =
+						cotizacionBackend.descuentos?.total || 0;
+				} else {
+					console.warn(
+						`⚠️ [RECALCULO] No se pudo recalcular precio: ${
+							cotizacionBackend.error || "resultado vacío"
+						}`,
+					);
+				}
+			} catch (errorCotizacion) {
+				console.error(
+					"❌ [RECALCULO] Error al intentar recalcular precio:",
+					errorCotizacion.message,
+				);
+			}
+		}
+
+		// �🔍 VALIDACIÓN PREVENTIVA: Si es pago con código, verificar primero si ya tiene reserva vinculada
 		if (datosReserva.referenciaPago && datosReserva.source === "codigo_pago") {
 			const codigoPagoExistente = await CodigoPago.findOne({
 				where: { codigo: datosReserva.referenciaPago },

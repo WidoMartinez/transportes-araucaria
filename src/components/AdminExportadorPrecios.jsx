@@ -221,8 +221,12 @@ function AdminExportadorPrecios({ destinos = [] }) {
 			const combinaciones = [];
 
 			for (const dest of destinos) {
-				if (!dest.activo) continue;
-
+				if (!dest.activo) continue;			// Solo calcular los tramos seleccionados por el usuario
+			if (
+				tramosSeleccionados !== null &&
+				!tramosSeleccionados.includes(dest.nombre)
+			)
+				continue;
 				// Usar maxPasajeros real del destino (puede ser 7, 8, etc.)
 				const maxPax = dest.maxPasajeros || MAX_PAX_ABSOLUTO;
 				for (let pax = 1; pax <= maxPax; pax++) {
@@ -283,7 +287,7 @@ function AdminExportadorPrecios({ destinos = [] }) {
 		} finally {
 			setCargando(false);
 		}
-	}, [fecha, hora, idaVuelta, destinos]);
+	}, [fecha, hora, idaVuelta, destinos, tramosSeleccionados]);
 
 	/**
 	 * Abre una ventana nueva con solo el contenido del reporte y dispara la impresión.
@@ -435,51 +439,12 @@ function AdminExportadorPrecios({ destinos = [] }) {
 					</div>
 				</div>
 
-				{/* Botones */}
-				<div className="flex flex-wrap gap-3">
-					<button
-						type="button"
-						onClick={calcularPrecios}
-						disabled={cargando || !fecha}
-						className="flex items-center gap-2 rounded-md bg-chocolate-600 px-4 py-2 text-sm font-medium text-white hover:bg-chocolate-700 disabled:opacity-50"
-					>
-						{cargando ? (
-							<Loader2 className="h-4 w-4 animate-spin" />
-						) : (
-							<RefreshCw className="h-4 w-4" />
-						)}
-						{cargando ? "Calculando…" : "Calcular precios"}
-					</button>
-
-					{precios && (
-						<>
-							<button
-								type="button"
-								onClick={imprimir}
-								className="flex items-center gap-2 rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 border border-slate-600"
-							>
-								<Printer className="h-4 w-4" />
-								Imprimir / Guardar PDF
-							</button>
-							<button
-								type="button"
-								onClick={exportarXLSX}
-								disabled={destinosMostrar.length === 0}
-								className="flex items-center gap-2 rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:opacity-50"
-							>
-								<FileSpreadsheet className="h-4 w-4" />
-								Exportar .xlsx
-							</button>
-						</>
-					)}
-				</div>
-
-				{/* Selector de tramos */}
-				{precios && destinosActivos.length > 1 && (
-					<div className="mt-2 rounded-md border border-slate-700 bg-slate-800/60 p-3">
+				{/* Selector de tramos — visible siempre que haya más de un destino activo */}
+				{destinosActivos.length > 1 && (
+					<div className="rounded-md border border-slate-700 bg-slate-800/60 p-3">
 						<div className="flex items-center justify-between mb-2">
 							<span className="text-xs font-medium text-slate-300">
-								Tramos a incluir en impresión / exportación:
+								Tramos a calcular / exportar:
 							</span>
 							<div className="flex gap-2">
 								<button
@@ -528,7 +493,46 @@ function AdminExportadorPrecios({ destinos = [] }) {
 					</div>
 				)}
 
-				{/* Error */}
+				{/* Botones */}
+				<div className="flex flex-wrap gap-3">
+					<button
+						type="button"
+						onClick={calcularPrecios}
+						disabled={cargando || !fecha || (tramosSeleccionados !== null && tramosSeleccionados.length === 0)}
+						className="flex items-center gap-2 rounded-md bg-chocolate-600 px-4 py-2 text-sm font-medium text-white hover:bg-chocolate-700 disabled:opacity-50"
+					>
+						{cargando ? (
+							<Loader2 className="h-4 w-4 animate-spin" />
+						) : (
+							<RefreshCw className="h-4 w-4" />
+						)}
+						{cargando ? "Calculando…" : "Calcular precios"}
+					</button>
+
+					{precios && (
+						<>
+							<button
+								type="button"
+								onClick={imprimir}
+								className="flex items-center gap-2 rounded-md bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 border border-slate-600"
+							>
+								<Printer className="h-4 w-4" />
+								Imprimir / Guardar PDF
+							</button>
+							<button
+								type="button"
+								onClick={exportarXLSX}
+								disabled={destinosMostrar.length === 0}
+								className="flex items-center gap-2 rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:opacity-50"
+							>
+								<FileSpreadsheet className="h-4 w-4" />
+								Exportar .xlsx
+							</button>
+						</>
+					)}
+				</div>
+
+					{/* Error */}
 				{error && (
 					<div className="rounded-md bg-red-900/50 px-4 py-3 text-sm text-red-200">
 						{error}
