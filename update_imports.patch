@@ -1,0 +1,10 @@
+--- src/pages/LandingTraslados.jsx
++++ src/pages/LandingTraslados.jsx
+@@ -21,6 +21,7 @@
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import logoBlanco from "../assets/logoblanco.png";
+ import { getBackendUrl } from "../lib/backend";
++import heroVan from "../assets/hero-van.png";
+
+ // --- Constantes ---
+ const WHATSAPP_NUMBER = "+56942409065";
