@@ -6,12 +6,12 @@ import { useCotizacion } from "./hooks/useCotizacion";
 
 // --- UTILIDADES ---
 function normalizePhoneToE164(phone) {
-	if (!phone) return '';
-	let cleaned = phone.replace(/[\s\-()]/g, '');
-	if (cleaned.startsWith('+56')) return cleaned;
-	if (cleaned.startsWith('56')) return '+' + cleaned;
-	if (cleaned.startsWith('9') && cleaned.length >= 9) return '+56' + cleaned;
-	return '+56' + cleaned;
+	if (!phone) return "";
+	let cleaned = phone.replace(/[\s\-()]/g, "");
+	if (cleaned.startsWith("+56")) return cleaned;
+	if (cleaned.startsWith("56")) return "+" + cleaned;
+	if (cleaned.startsWith("9") && cleaned.length >= 9) return "+56" + cleaned;
+	return "+56" + cleaned;
 }
 
 // --- Componentes UI ---
@@ -89,13 +89,13 @@ const normalizePromotions = (promotions = []) => {
 			? diasMetadata.length > 0
 				? diasMetadata
 				: Array.isArray(promo.dias)
-				? promo.dias.filter(Boolean)
-				: metadata?.diaIndividual
-				? [metadata.diaIndividual]
-				: []
+					? promo.dias.filter(Boolean)
+					: metadata?.diaIndividual
+						? [metadata.diaIndividual]
+						: []
 			: [];
 		const porcentaje = Number(
-			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0
+			metadata?.porcentaje ?? promo.descuentoPorcentaje ?? 0,
 		);
 		const aplicaTipoViajeMetadata = metadata?.aplicaTipoViaje || {};
 
@@ -202,7 +202,9 @@ const resolveIsConsultaView = () => {
 // Resolver si la URL es para pagar con código
 const resolveIsPayCodeView = () => {
 	const hash = window.location.hash.toLowerCase();
-	return hash.startsWith("#pagar-con-codigo") || hash.startsWith("#pago-codigo");
+	return (
+		hash.startsWith("#pagar-con-codigo") || hash.startsWith("#pago-codigo")
+	);
 };
 
 // Resolver si la URL es para comprar productos
@@ -257,16 +259,16 @@ function App() {
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
 	const [isPayCodeView, setIsPayCodeView] = useState(resolveIsPayCodeView);
 	const [isCompraProductosView, setIsCompraProductosView] = useState(
-		resolveIsCompraProductosView
+		resolveIsCompraProductosView,
 	);
 	const [isFlowReturnView, setIsFlowReturnView] = useState(
-		resolveIsFlowReturnView
+		resolveIsFlowReturnView,
 	);
 	const [isOportunidadesView, setIsOportunidadesView] = useState(
-		resolveIsOportunidadesView
+		resolveIsOportunidadesView,
 	);
 	const [isTestGoogleAdsView, setIsTestGoogleAdsView] = useState(
-		resolveIsTestGoogleAdsView
+		resolveIsTestGoogleAdsView,
 	);
 	const [isEvaluarView, setIsEvaluarView] = useState(resolveIsEvaluarView);
 	const [destinosData, setDestinosData] = useState(destinosBase);
@@ -279,15 +281,15 @@ function App() {
 
 	// Estado para vista de completar detalles post-pago
 	const [vistaCompletarDetalles, setVistaCompletarDetalles] = useState({
-    activo: false,
-    reservaId: null,
-});
+		activo: false,
+		reservaId: null,
+	});
 
-const [configSillas, setConfigSillas] = useState({
-    habilitado: false,
-    maxSillas: 2,
-    precioPorSilla: 5000
-});
+	const [configSillas, setConfigSillas] = useState({
+		habilitado: false,
+		maxSillas: 2,
+		precioPorSilla: 5000,
+	});
 
 	// Estados para códigos de descuento
 	const [codigoAplicado, setCodigoAplicado] = useState(null);
@@ -328,7 +330,8 @@ const [configSillas, setConfigSillas] = useState({
 		contacto: false,
 	});
 	const [loadingGateway, setLoadingGateway] = useState(null);
-	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] = useState(null);
+	const [oportunidadesRetornoUniversal, setOportunidadesRetornoUniversal] =
+		useState(null);
 	const [buscandoRetornos, setBuscandoRetornos] = useState(false);
 
 	// --- LÓGICA DE RETORNOS UNIVERSALES (CENTRALIZADA) ---
@@ -344,20 +347,20 @@ const [configSillas, setConfigSillas] = useState({
 
 		setBuscandoRetornos(true);
 		try {
-			const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+			const apiUrl =
+				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 			const response = await fetch(
 				`${apiUrl}/api/disponibilidad/buscar-retornos-disponibles`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ origen, destino, fecha }),
-				}
+				},
 			);
 
 			if (response.ok) {
 				const data = await response.json();
 				if (data.hayOportunidades && data.opciones?.length > 0) {
-
 					setOportunidadesRetornoUniversal(data);
 				} else {
 					setOportunidadesRetornoUniversal(null);
@@ -377,7 +380,11 @@ const [configSillas, setConfigSillas] = useState({
 	useEffect(() => {
 		// Debounce pequeño para evitar muchas peticiones mientras se escribe/selecciona
 		const timer = setTimeout(() => {
-			buscarRetornosUniversal(formData.origen, formData.destino, formData.fecha);
+			buscarRetornosUniversal(
+				formData.origen,
+				formData.destino,
+				formData.fecha,
+			);
 		}, 500);
 		return () => clearTimeout(timer);
 	}, [formData.origen, formData.destino, formData.fecha]);
@@ -429,8 +436,7 @@ const [configSillas, setConfigSillas] = useState({
 
 	// Sincronizar vista de retorno de Flow (confirmación de pago)
 	useEffect(() => {
-		const syncFlowReturn = () =>
-			setIsFlowReturnView(resolveIsFlowReturnView());
+		const syncFlowReturn = () => setIsFlowReturnView(resolveIsFlowReturnView());
 		window.addEventListener("hashchange", syncFlowReturn);
 		window.addEventListener("popstate", syncFlowReturn);
 		return () => {
@@ -473,7 +479,7 @@ const [configSillas, setConfigSillas] = useState({
 					setVistaCompletarDetalles({
 						activo: true,
 						reservaId: id,
-						initialAmount: 0 
+						initialAmount: 0,
 					});
 				}
 			}
@@ -499,9 +505,13 @@ const [configSillas, setConfigSillas] = useState({
 		// FLUJO PENDIENTE (reserva_express): Flow confirmó el pago solo vía webhook (status=2),
 		// pero el navegador recibió status=1 primero. Hacer polling hasta que la DB refleje el pago.
 		if (flowPending && reservaId) {
-			console.warn(`⏳ [App.jsx] Pago Express PENDIENTE para reserva ${reservaId}. Iniciando polling...`);
+			console.warn(
+				`⏳ [App.jsx] Pago Express PENDIENTE para reserva ${reservaId}. Iniciando polling...`,
+			);
 
-			const apiBase = import.meta.env.VITE_API_URL || "https://transportes-araucaria.onrender.com";
+			const apiBase =
+				import.meta.env.VITE_API_URL ||
+				"https://transportes-araucaria.onrender.com";
 			const MAX_INTENTOS = 24; // 24 × 5s = 2 minutos
 			let intentos = 0;
 			let cancelado = false;
@@ -510,11 +520,15 @@ const [configSillas, setConfigSillas] = useState({
 				if (cancelado) return;
 				intentos++;
 				try {
-					const resp = await fetch(`${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(reservaId)}`);
+					const resp = await fetch(
+						`${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(reservaId)}`,
+					);
 					if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 					const data = await resp.json();
 
-					console.log(`🔄 [App.jsx] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`);
+					console.log(
+						`🔄 [App.jsx] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`,
+					);
 
 					if (data.pagado) {
 						clearInterval(pollingInterval);
@@ -523,22 +537,31 @@ const [configSillas, setConfigSillas] = useState({
 						const montoConfirmado = data.monto || amount || "";
 						const nuevaUrl = new URL(window.location.href);
 						nuevaUrl.searchParams.set("flow_payment", "success");
-						if (montoConfirmado) nuevaUrl.searchParams.set("amount", montoConfirmado);
+						if (montoConfirmado)
+							nuevaUrl.searchParams.set("amount", montoConfirmado);
 						// Reemplazar la URL para que el useEffect se active con success
 						window.location.replace(nuevaUrl.toString());
 					}
 				} catch (e) {
-					console.warn(`⚠️ [App.jsx] Error en polling (intento ${intentos}):`, e.message);
+					console.warn(
+						`⚠️ [App.jsx] Error en polling (intento ${intentos}):`,
+						e.message,
+					);
 				}
 
 				if (intentos >= MAX_INTENTOS && !cancelado) {
 					clearInterval(pollingInterval);
 					cancelado = true;
-					console.log("⏲️ [App.jsx] Polling finalizado sin confirmación (timeout 2 min).");
+					console.log(
+						"⏲️ [App.jsx] Polling finalizado sin confirmación (timeout 2 min).",
+					);
 				}
 			}, 5000);
 
-			return () => { cancelado = true; clearInterval(pollingInterval); };
+			return () => {
+				cancelado = true;
+				clearInterval(pollingInterval);
+			};
 		}
 
 		if (flowSuccess) {
@@ -546,39 +569,50 @@ const [configSillas, setConfigSillas] = useState({
 				amount,
 				reservaId,
 				warning,
-				flowToken: flowToken ? 'presente' : 'ausente',
-				encodedData: encodedData ? 'presente' : 'ausente'
+				flowToken: flowToken ? "presente" : "ausente",
+				encodedData: encodedData ? "presente" : "ausente",
 			});
 
 			// DISPARAR CONVERSIÓN DE GOOGLE ADS (con polling para evitar race condition con gtag.js)
 			// gtag.js se carga de forma asíncrona; si aún no está disponible, esperamos hasta 5 segundos.
-			const waitForGtag = () => new Promise((resolve) => {
-				if (typeof window.gtag === "function") {
-					resolve(true);
-					return;
-				}
-				const startTime = Date.now();
-				const interval = setInterval(() => {
+			const waitForGtag = () =>
+				new Promise((resolve) => {
 					if (typeof window.gtag === "function") {
-						clearInterval(interval);
-						console.log(`✅ [App.jsx] gtag disponible tras ${Date.now() - startTime}ms`);
 						resolve(true);
-					} else if (Date.now() - startTime >= 5000) {
-						clearInterval(interval);
-						console.warn("⚠️ [App.jsx] Timeout esperando gtag (5s). No se pudo disparar la conversión.");
-						resolve(false);
+						return;
 					}
-				}, 100);
-			});
+					const startTime = Date.now();
+					const interval = setInterval(() => {
+						if (typeof window.gtag === "function") {
+							clearInterval(interval);
+							console.log(
+								`✅ [App.jsx] gtag disponible tras ${Date.now() - startTime}ms`,
+							);
+							resolve(true);
+						} else if (Date.now() - startTime >= 5000) {
+							clearInterval(interval);
+							console.warn(
+								"⚠️ [App.jsx] Timeout esperando gtag (5s). No se pudo disparar la conversión.",
+							);
+							resolve(false);
+						}
+					}, 100);
+				});
 
 			const dispararConversionExpress = async () => {
 				try {
-					const uniqueSuffix = flowToken ? flowToken.substring(0,8) : Date.now().toString().substring(7);
-					const transactionId = reservaId ? `${reservaId}_${uniqueSuffix}` : `exp_${Date.now()}`;
+					const uniqueSuffix = flowToken
+						? flowToken.substring(0, 8)
+						: Date.now().toString().substring(7);
+					const transactionId = reservaId
+						? `${reservaId}_${uniqueSuffix}`
+						: `exp_${Date.now()}`;
 					const conversionKey = `flow_conversion_express_${transactionId}`;
 
 					if (sessionStorage.getItem(conversionKey)) {
-						console.log("ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.");
+						console.log(
+							"ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.",
+						);
 						return;
 					}
 
@@ -588,25 +622,35 @@ const [configSillas, setConfigSillas] = useState({
 						const parsed = Number(amount);
 						if (!isNaN(parsed) && parsed > 0) {
 							conversionValue = parsed;
-							console.log(`✅ [App.jsx] Valor de conversión parseado: ${conversionValue}`);
+							console.log(
+								`✅ [App.jsx] Valor de conversión parseado: ${conversionValue}`,
+							);
 						} else {
-							console.warn(`⚠️ [App.jsx] Parseo falló. amount="${amount}", parsed=${parsed}`);
+							console.warn(
+								`⚠️ [App.jsx] Parseo falló. amount="${amount}", parsed=${parsed}`,
+							);
 						}
 					} else {
-						console.warn(`⚠️ [App.jsx] Amount no presente en URL. amount=${amount}`);
+						console.warn(
+							`⚠️ [App.jsx] Amount no presente en URL. amount=${amount}`,
+						);
 					}
 
 					if (conversionValue <= 0) {
-						console.warn("⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.");
+						console.warn(
+							"⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.",
+						);
 						// ALERTA: si este log aparece en producción, el backend no está pasando 'amount' en la URL de retorno Express
 						// Esto distorsiona el valor promedio de conversión en Google Ads → revisar /api/payment-result en Render
-						console.error('❌ [GA-ALERTA] Conversión Express disparada con value=1.0 (fallback). Verificar que backend pase amount en URL.');
+						console.error(
+							"❌ [GA-ALERTA] Conversión Express disparada con value=1.0 (fallback). Verificar que backend pase amount en URL.",
+						);
 						conversionValue = 1.0;
 					}
 
-					let userEmail = '';
-					let userName = '';
-					let userPhone = '';
+					let userEmail = "";
+					let userName = "";
+					let userPhone = "";
 
 					// Decodificar datos de usuario de Base64 (si vienen en el parámetro 'd')
 					if (encodedData) {
@@ -614,17 +658,24 @@ const [configSillas, setConfigSillas] = useState({
 							// ✅ Decodificar Base64 con soporte UTF-8 usando TextDecoder (sin escape() deprecated)
 							const decodedFromUrl = decodeURIComponent(encodedData);
 							const base64Decoded = atob(decodedFromUrl);
-							const bytes = Uint8Array.from(base64Decoded, c => c.charCodeAt(0));
-							const utf8Decoded = new TextDecoder('utf-8').decode(bytes);
+							const bytes = Uint8Array.from(base64Decoded, (c) =>
+								c.charCodeAt(0),
+							);
+							const utf8Decoded = new TextDecoder("utf-8").decode(bytes);
 							const userData = JSON.parse(utf8Decoded);
-							if (userData && typeof userData === 'object') {
-								userEmail = userData.email || '';
-								userName = userData.nombre || '';
-								userPhone = userData.telefono || '';
-								console.log('✅ [App.jsx] Datos de usuario recuperados para Enhanced Conversions');
+							if (userData && typeof userData === "object") {
+								userEmail = userData.email || "";
+								userName = userData.nombre || "";
+								userPhone = userData.telefono || "";
+								console.log(
+									"✅ [App.jsx] Datos de usuario recuperados para Enhanced Conversions",
+								);
 							}
 						} catch (e) {
-							console.warn('⚠️ [App.jsx] Error decodificando datos de usuario:', e.message);
+							console.warn(
+								"⚠️ [App.jsx] Error decodificando datos de usuario:",
+								e.message,
+							);
 						}
 					}
 
@@ -638,13 +689,14 @@ const [configSillas, setConfigSillas] = useState({
 					// ✅ Enhanced Conversions: usar gtag('set', 'user_data', ...) para máxima compatibilidad
 					const userData = {};
 					if (userEmail) userData.email = userEmail.toLowerCase().trim();
-					if (userPhone) userData.phone_number = normalizePhoneToE164(userPhone);
+					if (userPhone)
+						userData.phone_number = normalizePhoneToE164(userPhone);
 					if (userName) {
-						const nameParts = userName.trim().split(' ');
+						const nameParts = userName.trim().split(" ");
 						userData.address = {
-							first_name: nameParts[0]?.toLowerCase() || '',
-							last_name: nameParts.slice(1).join(' ')?.toLowerCase() || '',
-							country: 'CL'
+							first_name: nameParts[0]?.toLowerCase() || "",
+							last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+							country: "CL",
 						};
 					}
 
@@ -657,19 +709,28 @@ const [configSillas, setConfigSillas] = useState({
 					const gtagListo = await waitForGtag();
 					if (!gtagListo) return;
 
-					console.log(`🚀 [App.jsx] Disparando conversión Google Ads:`, conversionData);
+					console.log(
+						`🚀 [App.jsx] Disparando conversión Google Ads:`,
+						conversionData,
+					);
 					window.gtag("event", "conversion", conversionData);
 
 					// Marcar como enviada para evitar duplicados
-					sessionStorage.setItem(conversionKey, 'true');
+					sessionStorage.setItem(conversionKey, "true");
 					// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también por ID de reserva
 					if (reservaId) {
-						sessionStorage.setItem(`flow_conversion_express_${reservaId}`, 'true');
+						sessionStorage.setItem(
+							`flow_conversion_express_${reservaId}`,
+							"true",
+						);
 					}
 					// Limpiar el pending de localStorage al disparar exitosamente
-					localStorage.removeItem('ga_pending_conversion_express');
+					localStorage.removeItem("ga_pending_conversion_express");
 				} catch (conversionError) {
-					console.error("❌ [App.jsx] Error crítico disparando conversión:", conversionError);
+					console.error(
+						"❌ [App.jsx] Error crítico disparando conversión:",
+						conversionError,
+					);
 				}
 			};
 
@@ -692,20 +753,26 @@ const [configSillas, setConfigSillas] = useState({
 		// RECOVERY: Si no hay flow_payment en URL, verificar si hay una conversión pendiente
 		// (cubre el caso donde el pago se completó en otra pestaña y esta no recibió el retorno)
 		if (!flowPending) {
-			const pendingRaw = localStorage.getItem('ga_pending_conversion_express');
+			const pendingRaw = localStorage.getItem("ga_pending_conversion_express");
 			if (pendingRaw) {
 				try {
 					const pending = JSON.parse(pendingRaw);
 					const edadMs = Date.now() - (pending.timestamp || 0);
 					// Verificar solo si el pending tiene menos de 2 horas
 					if (pending.reservaId && edadMs < 2 * 60 * 60 * 1000) {
-						const apiBase = import.meta.env.VITE_API_URL || 'https://transportes-araucaria.onrender.com';
-						fetch(`${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(pending.reservaId)}`)
-							.then(r => r.ok ? r.json() : null)
-							.then(data => {
+						const apiBase =
+							import.meta.env.VITE_API_URL ||
+							"https://transportes-araucaria.onrender.com";
+						fetch(
+							`${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(pending.reservaId)}`,
+						)
+							.then((r) => (r.ok ? r.json() : null))
+							.then((data) => {
 								if (data?.pagado) {
-									console.log(`✅ [App.jsx Recovery] Pago detectado para reserva ${pending.reservaId}. Activando CompletarDetalles.`);
-									localStorage.removeItem('ga_pending_conversion_express');
+									console.log(
+										`✅ [App.jsx Recovery] Pago detectado para reserva ${pending.reservaId}. Activando CompletarDetalles.`,
+									);
+									localStorage.removeItem("ga_pending_conversion_express");
 									// CompletarDetalles disparará la conversión de respaldo (sessionStorage no tiene la clave)
 									setVistaCompletarDetalles({
 										activo: true,
@@ -717,7 +784,7 @@ const [configSillas, setConfigSillas] = useState({
 							.catch(() => {}); // Ignorar errores de red silenciosamente
 					}
 				} catch (e) {
-					localStorage.removeItem('ga_pending_conversion_express'); // limpiar dato corrupto
+					localStorage.removeItem("ga_pending_conversion_express"); // limpiar dato corrupto
 				}
 			}
 		}
@@ -787,13 +854,13 @@ const [configSillas, setConfigSillas] = useState({
 			}
 			setDescuentosGlobales(nuevosDescuentos);
 		} else {
-            // Si no vienen descuentos globales, resetear a valores seguros
-            setDescuentosGlobales({
-                descuentoOnline: { valor: 0, activo: false },
-                descuentoRoundTrip: { valor: 0, activo: false },
-                descuentosPersonalizados: [],
-            });
-        }
+			// Si no vienen descuentos globales, resetear a valores seguros
+			setDescuentosGlobales({
+				descuentoOnline: { valor: 0, activo: false },
+				descuentoRoundTrip: { valor: 0, activo: false },
+				descuentosPersonalizados: [],
+			});
+		}
 
 		return true;
 	}, []);
@@ -801,14 +868,12 @@ const [configSillas, setConfigSillas] = useState({
 	// --- FUNCION PARA RECARGAR DATOS ---
 	const recargarDatosPrecios = useCallback(
 		async ({ signal, payload } = {}) => {
-
 			try {
 				let data = payload;
 
 				if (!data) {
 					const apiUrl =
 						getBackendUrl() || "https://transportes-araucaria.onrender.com";
-
 
 					const response = await fetch(`${apiUrl}/pricing`, {
 						signal,
@@ -818,7 +883,6 @@ const [configSillas, setConfigSillas] = useState({
 					}
 					data = await response.json();
 				} else {
-
 				}
 
 				if (signal?.aborted) {
@@ -826,7 +890,6 @@ const [configSillas, setConfigSillas] = useState({
 				}
 
 				const applied = applyPricingPayload(data, { signal });
-
 
 				return applied;
 			} catch (error) {
@@ -837,7 +900,7 @@ const [configSillas, setConfigSillas] = useState({
 				return false;
 			}
 		},
-		[applyPricingPayload]
+		[applyPricingPayload],
 	);
 
 	// Funciones para manejar códigos de descuento
@@ -852,7 +915,7 @@ const [configSillas, setConfigSillas] = useState({
 			const userAgent = navigator.userAgent.substring(0, 20);
 			usuarioId = `user_${timestamp}_${random}_${btoa(userAgent).substring(
 				0,
-				8
+				8,
 			)}`;
 			localStorage.setItem("usuarioId", usuarioId);
 		}
@@ -951,7 +1014,7 @@ const [configSillas, setConfigSillas] = useState({
 						if (error?.name !== "AbortError") {
 							console.error(
 								"Error aplicando payload de precios desde storage:",
-								error
+								error,
 							);
 						}
 					});
@@ -959,7 +1022,7 @@ const [configSillas, setConfigSillas] = useState({
 				} catch (parseError) {
 					console.warn(
 						"No se pudo parsear payload de precios desde storage:",
-						parseError
+						parseError,
 					);
 				}
 			}
@@ -969,7 +1032,7 @@ const [configSillas, setConfigSillas] = useState({
 					if (error?.name !== "AbortError") {
 						console.error(
 							"Error recargando precios tras cambio en storage:",
-							error
+							error,
 						);
 					}
 				});
@@ -986,7 +1049,7 @@ const [configSillas, setConfigSillas] = useState({
 					if (error?.name !== "AbortError") {
 						console.error(
 							"Error aplicando payload de precios desde evento:",
-							error
+							error,
 						);
 					}
 				});
@@ -1044,7 +1107,7 @@ const [configSillas, setConfigSillas] = useState({
 	// --- LÓGICA DE RUTAS Y PASAJEROS DINÁMICOS ---
 	const todosLosTramos = useMemo(
 		() => ["Aeropuerto La Araucanía", ...destinosData.map((d) => d.nombre)],
-		[destinosData]
+		[destinosData],
 	);
 
 	const destinosDisponibles = useMemo(() => {
@@ -1057,7 +1120,7 @@ const [configSillas, setConfigSillas] = useState({
 			...destinosData.map((d) => d.nombre),
 			"Otro",
 		],
-		[destinosData]
+		[destinosData],
 	);
 
 	// ==================================================================
@@ -1066,7 +1129,7 @@ const [configSillas, setConfigSillas] = useState({
 	const destinoSeleccionado = useMemo(() => {
 		const tramo = [formData.origen, formData.destino].find(
 			(lugar) =>
-				lugar && lugar !== "Aeropuerto La Araucanía" && lugar !== "Otro"
+				lugar && lugar !== "Aeropuerto La Araucanía" && lugar !== "Otro",
 		);
 		if (!tramo) return null;
 		return destinosData.find((d) => d.nombre === tramo) || null;
@@ -1174,7 +1237,7 @@ const [configSillas, setConfigSillas] = useState({
 				promo.descuentoPorcentaje > (best?.descuentoPorcentaje ?? 0)
 					? promo
 					: best,
-			null
+			null,
 		);
 	}, [applicablePromotions]);
 
@@ -1231,7 +1294,7 @@ const [configSillas, setConfigSillas] = useState({
 			promotionDiscountRate +
 			roundTripDiscountRate +
 			personalizedDiscountRate,
-		0.75
+		0.75,
 	);
 
 	useEffect(() => {
@@ -1263,16 +1326,20 @@ const [configSillas, setConfigSillas] = useState({
 	const calcularCotizacion = useCallback(
 		(origen, destino, pasajeros, upgradeVan = false) => {
 			const tramo = [origen, destino].find(
-				(lugar) => lugar !== "Aeropuerto La Araucanía"
+				(lugar) => lugar !== "Aeropuerto La Araucanía",
 			);
 			const destinoInfo = destinosData.find((d) => d.nombre === tramo);
 
 			if (!origen || !destinoInfo || !pasajeros || destino === "Otro") {
-				return { precio: null, vehiculo: null, esUpgradeVanSinAdicionales: false };
+				return {
+					precio: null,
+					vehiculo: null,
+					esUpgradeVanSinAdicionales: false,
+				};
 			}
 
 			const numPasajeros = parseInt(pasajeros);
-			
+
 			let vehiculoAsignado;
 			let precioFinal = null;
 			let esUpgradeVanSinAdicionales = false;
@@ -1282,24 +1349,25 @@ const [configSillas, setConfigSillas] = useState({
 					// UPGRADE VOLUNTARIO: 1-3 pasajeros eligieron Van
 					vehiculoAsignado = "Van de Pasajeros (Upgrade)";
 					const precios = destinoInfo.precios.van;
-					if (!precios) return { 
-						precio: null, 
-						vehiculo: vehiculoAsignado, 
-						esUpgradeVanSinAdicionales: false 
-					};
-					
+					if (!precios)
+						return {
+							precio: null,
+							vehiculo: vehiculoAsignado,
+							esUpgradeVanSinAdicionales: false,
+						};
+
 					precioFinal = Number(precios.base);
 					esUpgradeVanSinAdicionales = true; // Activar protección de precio mínimo
-					
 				} else {
 					// SEDÁN: Flujo normal para 1-3 pasajeros (Antes: Auto Privado)
 					vehiculoAsignado = "Sedán";
 					const precios = destinoInfo.precios.auto;
-					if (!precios) return { 
-						precio: null, 
-						vehiculo: vehiculoAsignado, 
-						esUpgradeVanSinAdicionales: false 
-					};
+					if (!precios)
+						return {
+							precio: null,
+							vehiculo: vehiculoAsignado,
+							esUpgradeVanSinAdicionales: false,
+						};
 
 					const precioBase = Number(precios.base);
 					const pasajerosAdicionales = numPasajeros - 1;
@@ -1313,11 +1381,12 @@ const [configSillas, setConfigSillas] = useState({
 				// VAN OBLIGATORIA: 4+ pasajeros (FLUJO ORIGINAL adaptado)
 				vehiculoAsignado = "Van de Pasajeros";
 				const precios = destinoInfo.precios.van;
-				if (!precios) return { 
-					precio: null, 
-					vehiculo: "Van (Consultar)", 
-					esUpgradeVanSinAdicionales: false 
-				};
+				if (!precios)
+					return {
+						precio: null,
+						vehiculo: "Van (Consultar)",
+						esUpgradeVanSinAdicionales: false,
+					};
 
 				const precioBase = Number(precios.base);
 				const pasajerosAdicionales = numPasajeros - 4;
@@ -1328,16 +1397,15 @@ const [configSillas, setConfigSillas] = useState({
 				vehiculoAsignado = "Consultar disponibilidad";
 				precioFinal = null;
 			}
-			
+
 			return {
 				precio: precioFinal !== null ? Math.round(precioFinal) : null,
 				vehiculo: vehiculoAsignado,
-				esUpgradeVanSinAdicionales
+				esUpgradeVanSinAdicionales,
 			};
 		},
-		[destinosData]
+		[destinosData],
 	);
-
 
 	useEffect(() => {
 		const handleLocationChange = () => {
@@ -1379,11 +1447,12 @@ const [configSillas, setConfigSillas] = useState({
 			codigoAplicado,
 			formData.sillaInfantil,
 			formData.cantidadSillasInfantiles,
-		]
+		],
 	);
 
 	// El backend calcula tarifa dinámica + todos los descuentos en una sola llamada
-	const { cotizacion: cotizacionHook, cargando: cotizacionCargando } = useCotizacion(paramsCotizacion);
+	const { cotizacion: cotizacionHook, cargando: cotizacionCargando } =
+		useCotizacion(paramsCotizacion);
 
 	// Cotización local: usada para vehiculo (display) y validación de código
 	const cotizacion = useMemo(() => {
@@ -1391,7 +1460,7 @@ const [configSillas, setConfigSillas] = useState({
 			formData.origen,
 			formData.destino,
 			formData.pasajeros,
-			formData.upgradeVan
+			formData.upgradeVan,
 		);
 	}, [
 		formData.origen,
@@ -1407,7 +1476,9 @@ const [configSillas, setConfigSillas] = useState({
 	// Helper para generar observaciones con nota de upgrade
 	const generarObservaciones = (mensaje, upgradeVan) => {
 		if (upgradeVan) {
-			return (mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]";
+			return (
+				(mensaje || "") + " [Cliente solicitó upgrade a Van para mayor confort]"
+			);
 		}
 		return mensaje;
 	};
@@ -1467,7 +1538,7 @@ const [configSillas, setConfigSillas] = useState({
 			fechaRegreso: "",
 			horaRegreso: "",
 			upgradeVan: false, // NUEVO CAMPO
-		codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
+			codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
 		});
 	};
 
@@ -1502,7 +1573,7 @@ const [configSillas, setConfigSillas] = useState({
 	const handlePayment = async (
 		gateway,
 		type = "abono",
-		identificadores = {}
+		identificadores = {},
 	) => {
 		// Prevenir múltiples peticiones
 		if (loadingGateway) {
@@ -1530,10 +1601,10 @@ const [configSillas, setConfigSillas] = useState({
 			type === "total"
 				? `Pago total con descuento para ${destinoFinal} (${
 						vehiculo || "A confirmar"
-				  })`
+					})`
 				: `Abono reserva (40%) para ${destinoFinal} (${
 						vehiculo || "A confirmar"
-				  })`;
+					})`;
 
 		const apiUrl =
 			getBackendUrl() || "https://transportes-araucaria.onrender.com";
@@ -1543,7 +1614,7 @@ const [configSillas, setConfigSillas] = useState({
 			// Si no hay identificadores, significa que la reserva no se creó correctamente
 			if (!reservaIdParaPago && !codigoReservaParaPago) {
 				throw new Error(
-					"No se pudo identificar la reserva. Por favor, intenta nuevamente."
+					"No se pudo identificar la reserva. Por favor, intenta nuevamente.",
 				);
 			}
 
@@ -1571,16 +1642,19 @@ const [configSillas, setConfigSillas] = useState({
 				// Guardar intención de conversión en localStorage ANTES de abrir Flow
 				// Permite recuperar la conversión si la nueva pestaña se cierra antes del redirect
 				if (reservaIdParaPago) {
-					localStorage.setItem('ga_pending_conversion_express', JSON.stringify({
-						reservaId: String(reservaIdParaPago),
-						amount: String(amount),
-						timestamp: Date.now()
-					}));
+					localStorage.setItem(
+						"ga_pending_conversion_express",
+						JSON.stringify({
+							reservaId: String(reservaIdParaPago),
+							amount: String(amount),
+							timestamp: Date.now(),
+						}),
+					);
 				}
 				window.open(data.url, "_blank");
 			} else {
 				throw new Error(
-					data.message || "No se pudo generar el enlace de pago."
+					data.message || "No se pudo generar el enlace de pago.",
 				);
 			}
 		} catch (error) {
@@ -1735,7 +1809,7 @@ const [configSillas, setConfigSillas] = useState({
 	const enviarReservaExpress = async (source) => {
 		if (!validarTelefono(formData.telefono)) {
 			setPhoneError(
-				"Introduce un número de móvil chileno válido (ej: +56 9 1234 5678)."
+				"Introduce un número de móvil chileno válido (ej: +56 9 1234 5678).",
 			);
 			return { success: false, error: "telefono" };
 		}
@@ -1744,7 +1818,11 @@ const [configSillas, setConfigSillas] = useState({
 		// Validar horario mínimo de anticipación
 		const validacionHorario = validarHorarioReserva();
 		if (!validacionHorario.esValido && formData.destino !== "Otro") {
-			return { success: false, error: "horario", message: validacionHorario.mensaje };
+			return {
+				success: false,
+				error: "horario",
+				message: validacionHorario.mensaje,
+			};
 		}
 
 		if (isSubmitting) return { success: false, error: "procesando" };
@@ -1752,7 +1830,10 @@ const [configSillas, setConfigSillas] = useState({
 		// Validar que el precio esté disponible antes de enviar (evita race condition con useCotizacion)
 		const esRutaEstandar =
 			formData.origen !== "Otro" && formData.destino !== "Otro";
-		if (esRutaEstandar && (!pricing.totalConDescuento || pricing.totalConDescuento <= 0)) {
+		if (
+			esRutaEstandar &&
+			(!pricing.totalConDescuento || pricing.totalConDescuento <= 0)
+		) {
 			if (cotizacionCargando) {
 				return {
 					success: false,
@@ -1786,8 +1867,14 @@ const [configSillas, setConfigSillas] = useState({
 			idaVuelta: formData.idaVuelta,
 			fechaRegreso: formData.fechaRegreso,
 			horaRegreso: formData.horaRegreso,
-			direccionOrigen: formData.origen === "Otro" ? formData.otroOrigen : (formData.direccionOrigen || ""),
-			direccionDestino: formData.destino === "Otro" ? formData.otroDestino : (formData.direccionDestino || ""),
+			direccionOrigen:
+				formData.origen === "Otro"
+					? formData.otroOrigen
+					: formData.direccionOrigen || "",
+			direccionDestino:
+				formData.destino === "Otro"
+					? formData.otroDestino
+					: formData.direccionDestino || "",
 			source,
 
 			// Datos de pricing calculados
@@ -1806,7 +1893,10 @@ const [configSillas, setConfigSillas] = useState({
 			upgradeVan: formData.upgradeVan || false,
 			sillaInfantil: formData.sillaInfantil || false,
 			cantidadSillasInfantiles: formData.cantidadSillasInfantiles || 0,
-			observaciones: generarObservaciones(formData.mensaje, formData.upgradeVan),
+			observaciones: generarObservaciones(
+				formData.mensaje,
+				formData.upgradeVan,
+			),
 			// Estado inicial: marcar como pendiente hasta confirmar pago
 			estado: "pendiente",
 			estadoPago: "pendiente",
@@ -1870,7 +1960,11 @@ const [configSillas, setConfigSillas] = useState({
 			if (!response.ok) {
 				// Si la respuesta indica que está bloqueado, mostrar mensaje específico
 				if (result.bloqueado || result.message === "Agenda completada") {
-					throw new Error("Agenda completada. " + (result.error || "Esta fecha/hora no está disponible para reservas."));
+					throw new Error(
+						"Agenda completada. " +
+							(result.error ||
+								"Esta fecha/hora no está disponible para reservas."),
+					);
 				}
 				throw new Error(result.message || "Error en el servidor.");
 			}
@@ -1931,27 +2025,29 @@ const [configSillas, setConfigSillas] = useState({
 
 	const minDateTime = useMemo(() => {
 		const horasAnticipacion = destinoSeleccionado?.minHorasAnticipacion || 5;
-		
+
 		// Obtener "ahora" en Chile
-		const ahoraChile = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
-		
+		const ahoraChile = new Date(
+			new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }),
+		);
+
 		// Calcular fecha mínima sumando anticipación
 		const fechaMinima = new Date(ahoraChile.getTime());
 		fechaMinima.setHours(fechaMinima.getHours() + horasAnticipacion);
-		
+
 		// Formatear como YYYY-MM-DD usando la zona horaria de Chile
-		return new Intl.DateTimeFormat('fr-CA', {
-			timeZone: 'America/Santiago',
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit'
+		return new Intl.DateTimeFormat("fr-CA", {
+			timeZone: "America/Santiago",
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
 		}).format(fechaMinima);
 	}, [destinoSeleccionado]);
 
 	const currencyFormatter = useMemo(
 		() =>
 			new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP" }),
-		[]
+		[],
 	);
 	const formatCurrency = (value) => currencyFormatter.format(value || 0);
 

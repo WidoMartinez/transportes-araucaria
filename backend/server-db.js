@@ -3559,7 +3559,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			datosReserva.origen !== "Otro" &&
 			datosReserva.destino !== "Otro";
 
-		if (totalRecibido <= 0 && esRutaReal && datosReserva.pasajeros && datosReserva.fecha) {
+		if (
+			totalRecibido <= 0 &&
+			esRutaReal &&
+			datosReserva.pasajeros &&
+			datosReserva.fecha
+		) {
 			console.warn(
 				`⚠️ [RECALCULO] totalConDescuento=0 recibido del cliente para ruta ${datosReserva.origen} → ${datosReserva.destino}. Recalculando en backend...`,
 			);
@@ -3580,7 +3585,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 						parseInt(datosReserva.cantidadSillasInfantiles, 10) || 1,
 				});
 
-				if (!cotizacionBackend.error && cotizacionBackend.totalConDescuento > 0) {
+				if (
+					!cotizacionBackend.error &&
+					cotizacionBackend.totalConDescuento > 0
+				) {
 					console.log(
 						`✅ [RECALCULO] Precio corregido: $${cotizacionBackend.totalConDescuento} (antes era $0)`,
 					);
@@ -3588,7 +3596,8 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					datosReserva.precio = cotizacionBackend.precioBase;
 					datosReserva.abonoSugerido = cotizacionBackend.abono;
 					datosReserva.saldoPendiente = cotizacionBackend.saldoPendiente;
-					datosReserva.descuentoBase = cotizacionBackend.descuentos?.online || 0;
+					datosReserva.descuentoBase =
+						cotizacionBackend.descuentos?.online || 0;
 					datosReserva.descuentoPromocion =
 						cotizacionBackend.descuentos?.promocion || 0;
 					datosReserva.descuentoRoundTrip =
@@ -12590,12 +12599,10 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 		for (const c of cats) {
 			const n = Number(c);
 			if (!Number.isInteger(n) || n < 1 || n > 5) {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						error: "Las calificaciones deben ser valores entre 1 y 5",
-					});
+				return res.status(400).json({
+					success: false,
+					error: "Las calificaciones deben ser valores entre 1 y 5",
+				});
 			}
 		}
 
@@ -12681,12 +12688,10 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 		return res.json({ success: true });
 	} catch (error) {
 		console.error("❌ [evaluaciones/guardar] Error:", error.message);
-		return res
-			.status(500)
-			.json({
-				success: false,
-				error: "Error interno al guardar la evaluación",
-			});
+		return res.status(500).json({
+			success: false,
+			error: "Error interno al guardar la evaluación",
+		});
 	}
 });
 
@@ -12817,12 +12822,10 @@ app.post(
 			}
 
 			if (!reserva.email) {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						error: "La reserva no tiene email del pasajero",
-					});
+				return res.status(400).json({
+					success: false,
+					error: "La reserva no tiene email del pasajero",
+				});
 			}
 
 			// Generar token y fecha de expiración (7 días)
@@ -12901,12 +12904,10 @@ app.post(
 			});
 		} catch (error) {
 			console.error("❌ [admin/evaluaciones/solicitar] Error:", error.message);
-			return res
-				.status(500)
-				.json({
-					success: false,
-					error: "Error interno al solicitar evaluación",
-				});
+			return res.status(500).json({
+				success: false,
+				error: "Error interno al solicitar evaluación",
+			});
 		}
 	},
 );
@@ -12980,12 +12981,10 @@ app.put(
 			}
 
 			if (!evaluacion.evaluada) {
-				return res
-					.status(400)
-					.json({
-						success: false,
-						error: "Solo se pueden publicar evaluaciones completadas",
-					});
+				return res.status(400).json({
+					success: false,
+					error: "Solo se pueden publicar evaluaciones completadas",
+				});
 			}
 
 			await evaluacion.update({

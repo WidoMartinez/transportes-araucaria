@@ -221,12 +221,12 @@ function AdminExportadorPrecios({ destinos = [] }) {
 			const combinaciones = [];
 
 			for (const dest of destinos) {
-				if (!dest.activo) continue;			// Solo calcular los tramos seleccionados por el usuario
-			if (
-				tramosSeleccionados !== null &&
-				!tramosSeleccionados.includes(dest.nombre)
-			)
-				continue;
+				if (!dest.activo) continue; // Solo calcular los tramos seleccionados por el usuario
+				if (
+					tramosSeleccionados !== null &&
+					!tramosSeleccionados.includes(dest.nombre)
+				)
+					continue;
 				// Usar maxPasajeros real del destino (puede ser 7, 8, etc.)
 				const maxPax = dest.maxPasajeros || MAX_PAX_ABSOLUTO;
 				for (let pax = 1; pax <= maxPax; pax++) {
@@ -498,7 +498,11 @@ function AdminExportadorPrecios({ destinos = [] }) {
 					<button
 						type="button"
 						onClick={calcularPrecios}
-						disabled={cargando || !fecha || (tramosSeleccionados !== null && tramosSeleccionados.length === 0)}
+						disabled={
+							cargando ||
+							!fecha ||
+							(tramosSeleccionados !== null && tramosSeleccionados.length === 0)
+						}
 						className="flex items-center gap-2 rounded-md bg-chocolate-600 px-4 py-2 text-sm font-medium text-white hover:bg-chocolate-700 disabled:opacity-50"
 					>
 						{cargando ? (
@@ -532,7 +536,7 @@ function AdminExportadorPrecios({ destinos = [] }) {
 					)}
 				</div>
 
-					{/* Error */}
+				{/* Error */}
 				{error && (
 					<div className="rounded-md bg-red-900/50 px-4 py-3 text-sm text-red-200">
 						{error}
