@@ -1,4 +1,6 @@
 <?php
+// AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
+// Cualquier cambio local debe subirse manualmente al servidor.
 // enviar_solicitud_detalles.php
 // Script para enviar recordatorio de completar detalles de reserva
 // Desplegar manualmente en Hostinger
@@ -39,7 +41,7 @@ $emailHost = getenv('EMAIL_HOST') ?: 'smtp.hostinger.com';
 $emailPort = getenv('EMAIL_PORT') ?: 465;
 $emailUser = getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl';
 $emailPass = getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.';
-$emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
+$emailTo = getenv('EMAIL_TO') ?: 'contacto@transportesaraucaria.cl';
 $brandName = 'Transportes Araucaria';
 
 // Obtiene el cuerpo de la solicitud JSON

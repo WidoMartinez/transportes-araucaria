@@ -1,4 +1,6 @@
 <?php
+// AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
+// Cualquier cambio local debe subirse manualmente al servidor.
 // enviar_correo_completo.php
 // Versión final con correo mejorado y sin envío al cliente
 // Habilitar la visualización de errores para depuración
@@ -39,7 +41,7 @@ $emailHost = getenv('EMAIL_HOST') ?: 'smtp.titan.email';
 $emailPort = getenv('EMAIL_PORT') ?: 465;
 $emailUser = getenv('EMAIL_USER') ?: 'contacto@anunciads.cl';
 $emailPass = getenv('EMAIL_PASS') ?: 'TeamoGadiel7.';
-$emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
+$emailTo = getenv('EMAIL_TO') ?: 'contacto@transportesaraucaria.cl';
 
 // Configuración del archivo de reservas
 $reservasFile = 'reservas_data.json';

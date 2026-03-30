@@ -2,8 +2,21 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Zap, CheckCircle, Mail, Clock, Percent, MessageCircle } from "lucide-react";
+import { 
+	X, 
+	Zap, 
+	CheckCircle2, 
+	Mail, 
+	Clock, 
+	Percent, 
+	MessageCircle, 
+	ShieldCheck,
+	MousePointerClick,
+	CalendarCheck,
+	Sparkles
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Modal de intercepción para WhatsApp
@@ -33,7 +46,6 @@ export default function WhatsAppInterceptModal({
 				console.log("💰 Conversión de clic en WhatsApp (Modal) enviada.");
 			}
 		}
-
 	};
 
 	React.useEffect(() => {
@@ -61,21 +73,29 @@ export default function WhatsAppInterceptModal({
 					title: `${discountData.valor}% de Descuento`,
 					description: "Exclusivo para reservas online",
 					highlight: true,
+					color: "text-amber-500",
+					bg: "bg-amber-500/10"
 				},
 				{
-					icon: CheckCircle,
+					icon: ShieldCheck,
 					title: "Confirmación Instantánea",
 					description: "Recibe tu comprobante al instante",
+					color: "text-emerald-500",
+					bg: "bg-emerald-500/10"
 				},
 				{
 					icon: Mail,
 					title: "Comprobante por Email",
 					description: "Toda la información en tu correo",
+					color: "text-blue-500",
+					bg: "bg-blue-500/10"
 				},
 				{
-					icon: Zap,
+					icon: MousePointerClick,
 					title: "Sin Esperas",
 					description: "Reserva en menos de 2 minutos",
+					color: "text-purple-500",
+					bg: "bg-purple-500/10"
 				},
 		  ]
 		: [
@@ -84,21 +104,29 @@ export default function WhatsAppInterceptModal({
 					title: "Confirmación Instantánea",
 					description: "Sin esperar respuesta de WhatsApp",
 					highlight: true,
+					color: "text-amber-500",
+					bg: "bg-amber-500/10"
 				},
 				{
-					icon: CheckCircle,
+					icon: Sparkles,
 					title: "Disponibilidad en Tiempo Real",
 					description: "Ve horarios y precios actualizados",
+					color: "text-emerald-500",
+					bg: "bg-emerald-500/10"
 				},
 				{
 					icon: Mail,
 					title: "Comprobante Automático",
 					description: "Recibe tu reserva por email",
+					color: "text-blue-500",
+					bg: "bg-blue-500/10"
 				},
 				{
-					icon: Clock,
+					icon: CalendarCheck,
 					title: "Disponible 24/7",
 					description: "Reserva a cualquier hora del día",
+					color: "text-rose-500",
+					bg: "bg-rose-500/10"
 				},
 		  ];
 
@@ -112,10 +140,10 @@ export default function WhatsAppInterceptModal({
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={onClose}
-						className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+						className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9998]"
 					/>
 
-					{/* Modal Container with safe scrolling layout */}
+					{/* Modal Container */}
 					<div className="fixed inset-0 z-[9999] overflow-y-auto">
 						<div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
 							<motion.div
@@ -123,53 +151,53 @@ export default function WhatsAppInterceptModal({
 								animate={{ opacity: 1, scale: 1, y: 0 }}
 								exit={{ opacity: 0, scale: 0.9, y: 20 }}
 								transition={{ type: "spring", duration: 0.5 }}
-								className="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white shadow-2xl text-left my-8"
+								className="relative w-full max-w-md transform overflow-hidden rounded-3xl bg-white shadow-2xl text-left my-8"
 							>
 								{/* Header */}
-								<div className="relative bg-[#6B4423] text-white p-6 pb-8">
-									<div className="absolute inset-0 bg-gradient-to-br from-[#6B4423] to-[#8B5A3C] opacity-90" />
-									<div className="relative z-10">
+								<div className="relative bg-[#2a4e25] text-white p-6 pb-8">
+									<div className="absolute inset-0 bg-gradient-to-br from-[#2a4e25] to-[#1a3317] opacity-95" />
+									<div className="relative z-10 text-center">
 										<button
 											onClick={onClose}
-											className="absolute -top-2 -right-2 p-2 hover:bg-white/20 rounded-full transition-colors"
+											className="absolute -top-1 -right-1 p-2 hover:bg-white/20 rounded-full transition-colors"
 											aria-label="Cerrar"
 										>
 											<X className="w-5 h-5" />
 										</button>
 
-										<div className="text-center">
+										<div className="mb-4">
 											{hasDiscount ? (
 												<>
 													<motion.div
-														initial={{ scale: 0 }}
-														animate={{ scale: 1 }}
+														initial={{ scale: 0, rotate: -15 }}
+														animate={{ scale: 1, rotate: 0 }}
 														transition={{ delay: 0.2, type: "spring" }}
-														className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4" 
+														className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4 backdrop-blur-md shadow-inner" 
 													>
 														<Percent className="w-8 h-8" />
 													</motion.div>
-													<h2 className="text-2xl font-bold mb-2">
-														¡Reserva Online y Ahorra {discountData.valor}%!
+													<h2 className="text-2xl font-extrabold mb-1 tracking-tight">
+														Ahorra {discountData.valor}% Online
 													</h2>
-													<p className="text-white/90">
-														Obtén tu descuento exclusivo reservando ahora
+													<p className="text-white/80 font-medium">
+														Obtén tarifa exclusiva reservando ahora mismo
 													</p>
 												</>
 											) : (
 												<>
 													<motion.div
-														initial={{ scale: 0 }}
-														animate={{ scale: 1 }}
+														initial={{ scale: 0, scaleY: 0 }}
+														animate={{ scale: 1, scaleY: 1 }}
 														transition={{ delay: 0.2, type: "spring" }}
-														className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4"
+														className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4 backdrop-blur-md shadow-inner"
 													>
 														<Zap className="w-8 h-8" />
 													</motion.div>
-													<h2 className="text-2xl font-bold mb-2">
-														¡Reserva más rápido aquí!
+													<h2 className="text-2xl font-extrabold mb-1 tracking-tight">
+														Sáltate la Fila
 													</h2>
-													<p className="text-white/90">
-														Confirmación instantánea sin esperas
+													<p className="text-white/80 font-medium">
+														Confirmación instantánea sin esperar chats
 													</p>
 												</>
 											)}
@@ -185,53 +213,47 @@ export default function WhatsAppInterceptModal({
 											initial={{ opacity: 0, x: -20 }}
 											animate={{ opacity: 1, x: 0 }}
 											transition={{ delay: 0.1 * index }}
-											className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-												benefit.highlight
-													? "bg-[#6B4423]/5 border border-[#6B4423]/20"
-													: "hover:bg-gray-50"
-											}`}
+											className={cn(
+												"flex items-center gap-4 p-4 rounded-2xl transition-all duration-300",
+												benefit.highlight 
+													? "bg-[#2a4e25]/5 border border-[#2a4e25]/20 shadow-sm"
+													: "hover:bg-gray-50 border border-transparent"
+											)}
 										>
-											<div
-												className={`p-2 rounded-lg ${
-													benefit.highlight
-														? "bg-[#6B4423]/10 text-[#6B4423]"
-														: "bg-gray-100 text-gray-600"
-												}`}
-											>
-												<benefit.icon className="w-5 h-5" />
+											<div className={cn(
+												"p-2.5 rounded-xl border border-white shadow-sm flex items-center justify-center",
+												benefit.bg
+											)}>
+												<benefit.icon className={cn("w-5 h-5", benefit.color)} />
 											</div>
 											<div className="flex-1">
-												<h3
-													className={`font-semibold ${
-														benefit.highlight ? "text-[#6B4423]" : "text-gray-900"
-													}`}
-												>
+												<h3 className="font-bold text-gray-900 leading-none mb-1">
 													{benefit.title}
 												</h3>
-												<p className="text-sm text-gray-600">{benefit.description}</p>
+												<p className="text-sm text-gray-500 font-medium">{benefit.description}</p>
 											</div>
 										</motion.div>
 									))}
 								</div>
 
-							{/* Actions */}
-							<div className="p-6 pt-0 space-y-3">
-								<Button
-									onClick={handleReserve}
-									className="w-full bg-[#6B4423] hover:bg-[#8B5A3C] text-white py-6 text-lg font-semibold rounded-xl shadow-lg shadow-[#6B4423]/20"
-								>
-									<CheckCircle className="w-5 h-5 mr-2" />
-									Reservar Ahora
-								</Button>
+								{/* Actions */}
+								<div className="p-6 pt-0 space-y-3">
+									<Button
+										onClick={handleReserve}
+										className="group w-full bg-[#2a4e25] hover:bg-[#1a3317] text-white py-7 text-lg font-bold rounded-2xl shadow-xl shadow-[#2a4e25]/20 transition-all flex items-center justify-center gap-2"
+									>
+										<Sparkles className="w-5 h-5 transition-transform group-hover:scale-125" />
+										Reservar Online Ahora
+									</Button>
 
-								<button
-									onClick={handleWhatsApp}
-									className="w-full flex items-center justify-center gap-2 py-3 text-gray-600 hover:text-gray-900 font-medium transition-colors"
-								>
-									<MessageCircle className="w-4 h-4" />
-									Continuar a WhatsApp
-								</button>
-							</div>
+									<button
+										onClick={handleWhatsApp}
+										className="w-full flex items-center justify-center gap-2 py-3 text-gray-500 hover:text-gray-900 font-bold transition-colors text-sm"
+									>
+										<MessageCircle className="w-4 h-4" />
+										Preguntar algo por WhatsApp
+									</button>
+								</div>
 							</motion.div>
 						</div>
 					</div>

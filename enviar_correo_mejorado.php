@@ -46,7 +46,7 @@ $emailHost = getenv('EMAIL_HOST') ?: 'smtp.hostinger.com';
 $emailPort = getenv('EMAIL_PORT') ?: 465;
 $emailUser = getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl';
 $emailPass = getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.';
-$emailTo = getenv('EMAIL_TO') ?: 'widomartinez@gmail.com';
+$emailTo = getenv('EMAIL_TO') ?: 'contacto@transportesaraucaria.cl';
 
 // Configuración adicional
 $sendCustomerConfirmation = true; // Enviar correo de confirmación al cliente si tiene email válido

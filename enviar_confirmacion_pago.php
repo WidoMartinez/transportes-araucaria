@@ -1,4 +1,6 @@
 <?php
+// AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
+// Cualquier cambio local debe subirse manualmente al servidor.
 // enviar_confirmacion_pago.php
 // Endpoint para enviar correos de confirmación de pago al cliente y admin
 
@@ -120,13 +122,13 @@ try {
     // Destinatario principal (cliente)
     $mail->addAddress($email, $nombre);
 
-    // Copia oculta al admin
+    // Copia directa al admin (addAddress en lugar de BCC para evitar filtros de spam)
     if (!empty($emailConfig['to'])) {
-        $mail->addBCC($emailConfig['to'], 'Admin');
+        $mail->addAddress($emailConfig['to'], 'Admin Transportes Araucaria');
     }
 
     // Logging explícito del destinatario para debug
-    error_log("Preparando envío de confirmación de pago a: {$email} (Copia a: {$emailConfig['to']})");
+    error_log("Preparando envío de confirmación de pago a: {$email} (Copia al admin: {$emailConfig['to']})");
 
     // Contenido del correo
     $mail->isHTML(true);

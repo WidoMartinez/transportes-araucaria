@@ -14,6 +14,10 @@ import {
 	Trees,
 	Clock,
 	CheckCircle,
+	Car,
+	ShieldCheck,
+	UserCheck,
+	Sparkles
 } from "lucide-react";
 
 // Importa las imágenes que usarás para cada tour
@@ -21,12 +25,14 @@ import conguillioImage from "../assets/conguilllio.jpg";
 import corralcoImage from "../assets/corralco.jpg";
 
 // Componente interno para los puntos del itinerario
-const ItineraryStop = ({ icon: Icon, title, description }) => (
-	<div className="flex items-start">
-		<Icon className="h-6 w-6 text-primary mr-4 mt-1 flex-shrink-0" />
+const ItineraryStop = ({ icon: Icon, title, description, color = "text-primary" }) => (
+	<div className="flex items-start group">
+		<div className="p-2 rounded-xl bg-primary/5 border border-primary/10 mr-4 mt-1 transition-transform group-hover:scale-110">
+			<Icon className={cn("h-6 w-6", color)} />
+		</div>
 		<div>
-			<p className="font-semibold">{title}</p>
-			<p className="text-muted-foreground text-sm">{description}</p>
+			<p className="font-bold text-gray-800">{title}</p>
+			<p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
 		</div>
 	</div>
 );
@@ -158,27 +164,38 @@ function Tours() {
 					</AccordionItem>
 				</Accordion>
 
-				<div className="mt-16 p-6 bg-muted/40 rounded-lg max-w-5xl mx-auto">
-					<div className="flex flex-col md:flex-row items-center text-center md:text-left gap-6">
-						<Clock className="h-12 w-12 text-primary flex-shrink-0" />
-						<div>
-							<h4 className="text-xl font-bold mb-1">
+				<div className="mt-16 p-8 rounded-3xl bg-primary/5 border border-primary/10 max-w-5xl mx-auto shadow-sm relative overflow-hidden">
+					{/* Decoración sutil */}
+					<div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+					
+					<div className="flex flex-col md:flex-row items-center text-center md:text-left gap-8 relative z-10">
+						<div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner">
+							<Sparkles className="h-8 w-8 text-primary animate-pulse-subtle" />
+						</div>
+						<div className="flex-1">
+							<h4 className="text-2xl font-extrabold mb-4 text-gray-900 tracking-tight">
 								Todos nuestros tours incluyen:
 							</h4>
-							<p className="text-muted-foreground">
-								<span className="inline-flex items-center mr-4">
-									<CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-									Transporte privado climatizado.
-								</span>
-								<span className="inline-flex items-center mr-4">
-									<CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-									Conductor profesional.
-								</span>
-								<span className="inline-flex items-center">
-									<CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-									Flexibilidad horaria.
-								</span>
-							</p>
+							<div className="flex flex-wrap justify-center md:justify-start gap-x-8 gap-y-4">
+								<div className="flex items-center gap-3">
+									<div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+										<Car className="h-4 w-4 text-emerald-600" />
+									</div>
+									<span className="font-bold text-gray-700">Transporte privado climatizado</span>
+								</div>
+								<div className="flex items-center gap-3">
+									<div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+										<UserCheck className="h-4 w-4 text-emerald-600" />
+									</div>
+									<span className="font-bold text-gray-700">Conductor profesional</span>
+								</div>
+								<div className="flex items-center gap-3">
+									<div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+										<Clock className="h-4 w-4 text-emerald-600" />
+									</div>
+									<span className="font-bold text-gray-700">Flexibilidad horaria</span>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>

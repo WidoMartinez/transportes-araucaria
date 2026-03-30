@@ -53,7 +53,7 @@ import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ad
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
-import fondovariante from "./assets/fondovariante.png";
+import fondovariantevan from "./assets/fondovariantevan.png";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -2103,8 +2103,8 @@ function App() {
 
 	return (
 		<div 
-			className="min-h-screen text-foreground bg-cover bg-center bg-fixed"
-			style={{ backgroundImage: `url(${fondovariante})` }}
+			className="min-h-screen text-foreground bg-cover bg-fixed"
+			style={{ backgroundImage: `url(${fondovariantevan})`, backgroundPosition: 'center 80%' }}
 		>
 			{loadingPrecios && (
 				<div className="fixed top-0 left-0 w-full h-full bg-black/50 z-[100] flex items-center justify-center text-white">

@@ -12,7 +12,8 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { Switch } from "./ui/switch";
-import { Baby, LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles } from "lucide-react";
+import { Baby, LoaderCircle, ArrowRight, ArrowLeft, ArrowRightLeft, MapPin, Calendar, Clock, Users, CheckCircle2, ShieldCheck, CreditCard, Info, Mountain, Lightbulb, Plane, Star, Sparkles, Zap, Radio } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
 import { useIsMobile } from "../hooks/use-mobile";
@@ -304,7 +305,16 @@ function HeroExpress({
 			return { title: `Viaja desde ${formData.origen}`, subtitle: "Comenzamos el viaje donde tú estés." };
 		}
 
-		return { title: "Transporte Privado", subtitle: "Conecta con Pucón, Villarrica y toda la región." };
+		return { 
+			title: "Transporte Privado", 
+			subtitle: "Conecta con Pucón, Villarrica, Lican Ray, Malalcahuello y toda La Araucanía.",
+			descripcion: "Traslados exclusivos puerta a puerta, disponibles las 24 horas para todos los destinos de la región y el sur de Chile. Nuestra flota cuenta con vehículos modernos y conductores profesionales para brindarte la mejor experiencia.",
+			beneficios: [
+				{ text: "Tarifas fijas y transparentes", icon: ShieldCheck, color: "text-emerald-400" },
+				{ text: "Reserva inmediata 100% online", icon: Zap, color: "text-amber-400" },
+				{ text: "Monitoreo en tiempo real de tu vuelo", icon: Radio, color: "text-blue-400" }
+			]
+		};
 	}, [targetName, currentStep, formData.destino, formData.origen]);
 
 	// Lógica de retornos universales movida a App.jsx para centralizar precios
@@ -627,6 +637,9 @@ function HeroExpress({
 
 			{/* Mobile Header (Visual) - Optimizado para rendimiento móvil */}
 			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-transparent">
+				{/* Degradado oscuro para asegurar contraste en móvil */}
+				<div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-black/60 via-black/30 to-transparent z-0 pointer-events-none" />
+				
 				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom flex flex-col items-center text-center">
 					<motion.div
 						key={richInfo.title}
@@ -635,10 +648,10 @@ function HeroExpress({
 						transition={{ duration: 0.3 }}
 						className="flex flex-col items-center"
 					>
-						<h1 className="text-4xl lg:text-2xl font-bold text-foreground leading-tight drop-shadow-lg mb-1">
+						<h1 className="text-4xl lg:text-2xl font-bold text-white leading-tight mb-1" style={{textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)'}}>
 							{richInfo.isRich ? richInfo.titulo : richInfo.title}
 						</h1>
-						<p className="text-base text-foreground/90 font-medium drop-shadow-md mb-2 line-clamp-2 max-w-[85%]">
+						<p className="text-base text-white font-medium mb-2 line-clamp-2 max-w-[85%]" style={{textShadow: '0 1px 8px rgba(0,0,0,0.85)'}}>
 							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 						</p>
 
@@ -713,7 +726,7 @@ function HeroExpress({
 								</motion.div>
 							</div>
 
-							<div className="space-y-5 md:space-y-4 bg-white p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/50">
+							<div className="space-y-5 md:space-y-4 bg-white/80 backdrop-blur-md p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/50">
 								{/* Selectores de origen y destino - Con botón swap en desktop */}
 								<div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-3 md:items-end">
 									<div className="space-y-2">
@@ -1571,13 +1584,63 @@ function HeroExpress({
 					>
 						{/* Título y Bajada */}
 						<motion.div variants={itemVariants}>
-							<h1 className="text-6xl font-bold text-foreground mb-4 tracking-tight leading-none drop-shadow-lg">
+							<h1 className="text-6xl font-extrabold text-white mb-6 tracking-tight leading-none" style={{textShadow: '0 4px 20px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9)'}}>
 								{richInfo.isRich ? richInfo.titulo : richInfo.title}
 							</h1>
-							<p className="text-xl text-foreground/90 font-medium border-l-4 border-[#2a4e25]/30 pl-4">
+							<p className="text-2xl text-white font-semibold border-l-4 border-primary/80 pl-4 py-1" style={{textShadow: '0 2px 10px rgba(0,0,0,0.7)'}}>
 								{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 							</p>
 						</motion.div>
+
+						{/* Info extra solo en el estado inicial (sin destino rico seleccionado) */}
+						{!richInfo.isRich && !richInfo.isSummary && richInfo.descripcion && (
+							<motion.div 
+								variants={itemVariants} 
+								className="p-6 rounded-3xl bg-black/60 backdrop-blur-md border border-white/20 shadow-2xl space-y-6 overflow-hidden relative"
+							>
+								{/* Decoración sutil */}
+								<div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
+								
+								<p className="text-white text-lg leading-relaxed font-medium relative z-10">
+									{richInfo.descripcion}
+								</p>
+								
+								{richInfo.beneficios && (
+									<ul className="grid grid-cols-1 gap-5 relative z-10">
+										{richInfo.beneficios.map((b, i) => (
+											<li key={i} className="flex items-start gap-4 text-white group">
+												<div className={cn(
+													"p-2.5 rounded-xl bg-white/10 border border-white/20 shadow-lg backdrop-blur-sm transition-transform group-hover:scale-110 duration-300",
+													"flex items-center justify-center relative overflow-hidden"
+												)}>
+													{/* Brillo interno */}
+													<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50" />
+													<b.icon className={cn("w-5 h-5 drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]", b.color)} />
+												</div>
+												<div className="flex flex-col">
+													<span className="font-bold text-base tracking-tight" style={{textShadow: '0 1px 4px rgba(0,0,0,0.5)'}}>{b.text}</span>
+												</div>
+											</li>
+										))}
+									</ul>
+								)}
+								
+								{/* Badge de confianza adicional */}
+								<div className="flex items-center gap-4 pt-2 border-t border-white/10">
+									<div className="flex -space-x-2">
+										{[1,2,3].map(i => (
+											<div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-gray-200 overflow-hidden flex items-center justify-center">
+												<Users className="w-4 h-4 text-gray-600" />
+											</div>
+										))}
+									</div>
+									<div className="text-sm text-white/80">
+										<p className="font-bold text-white">+5,000 servicios realizados</p>
+										<p>Con la confianza de toda la región</p>
+									</div>
+								</div>
+							</motion.div>
+						)}
 
 						{/* Información de Viaje (Rich Data) */}
 						{richInfo.isRich && !richInfo.isSummary && (

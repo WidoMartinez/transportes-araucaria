@@ -19,6 +19,8 @@ import {
 	Mountain,
 	Building2,
 	Wine,
+	Sparkles,
+	BadgeCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,21 +84,29 @@ const BENEFICIOS = [
 		icon: ShieldCheck,
 		titulo: "Servicio Certificado",
 		desc: "Conductores habilitados, vehículos al día y cobertura de seguro en cada viaje.",
+		color: "text-emerald-500",
+		bg: "bg-emerald-500/10"
 	},
 	{
 		icon: Clock,
 		titulo: "Puntualidad Garantizada",
 		desc: "Monitoreo en tiempo real y confirmación de horario 24 horas antes.",
+		color: "text-amber-500",
+		bg: "bg-amber-500/10"
 	},
 	{
 		icon: Car,
 		titulo: "Flota Moderna",
 		desc: "Autos, camionetas y vans para grupos de 1 a 7 pasajeros con climatización.",
+		color: "text-blue-500",
+		bg: "bg-blue-500/10"
 	},
 	{
 		icon: MapPin,
 		titulo: "Cualquier Destino",
 		desc: "Traslados dentro de La Araucanía y a cualquier ciudad de Chile.",
+		color: "text-purple-500",
+		bg: "bg-purple-500/10"
 	},
 ];
 
@@ -298,10 +308,12 @@ function LandingTraslados() {
 							<div id="formulario-cotizacion">
 								{enviado ? (
 									<Card className="border border-green-200/50 bg-white/20 backdrop-blur-md shadow-xl rounded-[2rem]">
-										<CardContent className="pt-8 pb-8 text-center space-y-3">
-											<CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
-											<h3 className="text-xl font-bold text-green-800">
-												¡Solicitud enviada!
+										<CardContent className="pt-10 pb-10 text-center space-y-4">
+											<div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner border border-green-200">
+												<Sparkles className="h-10 w-10 text-green-600" />
+											</div>
+											<h3 className="text-2xl font-bold text-green-800">
+												¡Cotización Enviada!
 											</h3>
 											<p className="text-green-700 text-[15px]">
 												Recibimos tu cotización. Te contactaremos rápido.
@@ -431,7 +443,7 @@ function LandingTraslados() {
 						{TIPOS_TRASLADO.map((tipo) => (
 							<div
 								key={tipo}
-								className="flex items-center gap-3 bg-gray-50 border rounded-xl px-4 py-3 text-sm font-medium text-gray-700 hover:bg-primary/5 hover:border-primary/30 transition-colors"
+								className="flex items-center gap-3 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-5 py-4 text-sm font-bold text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300 shadow-sm"
 							>
 								{tipo}
 							</div>
@@ -452,16 +464,20 @@ function LandingTraslados() {
 							return (
 								<Card
 									key={beneficio.titulo}
-									className="text-center shadow-sm hover:shadow-md transition-shadow"
+									className="group text-center border-white/10 bg-white/5 backdrop-blur-sm shadow-sm hover:shadow-xl hover:scale-105 transition-all duration-500"
 								>
-									<CardContent className="pt-8 pb-6 space-y-3">
-										<div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-											<IconComp className="h-6 w-6 text-primary" />
+									<CardContent className="pt-10 pb-8 space-y-4">
+										<div className={cn(
+											"mx-auto w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 relative overflow-hidden shadow-lg border border-white/20",
+											beneficio.bg
+										)}>
+											<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-50" />
+											<IconComp className={cn("h-7 w-7 drop-shadow-md", beneficio.color)} />
 										</div>
-										<h3 className="font-semibold text-base">
+										<h3 className="font-bold text-lg text-white group-hover:text-amber-200 transition-colors">
 											{beneficio.titulo}
 										</h3>
-										<p className="text-sm text-muted-foreground">
+										<p className="text-sm text-white/70 leading-relaxed font-medium">
 											{beneficio.desc}
 										</p>
 									</CardContent>

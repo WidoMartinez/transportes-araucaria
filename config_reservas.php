@@ -1,4 +1,6 @@
 <?php
+// AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
+// Cualquier cambio local debe subirse manualmente al servidor.
 // config_reservas.php
 // Archivo de configuración para el sistema de reservas
 
@@ -27,7 +29,7 @@ $EMAIL_CONFIG = [
     'port' => getenv('EMAIL_PORT') ?: 465,
     'username' => getenv('EMAIL_USER') ?: 'contacto@transportesaraucaria.cl',
     'password' => getenv('EMAIL_PASS') ?: 'TransportesAraucaria7.',
-    'to' => getenv('EMAIL_TO') ?: 'widomartinez@gmail.com',
+    'to' => getenv('EMAIL_TO') ?: 'contacto@transportesaraucaria.cl',
     'from_name' => 'Sistema de Reservas - Transportes Araucaria'
 ];
 

@@ -202,7 +202,7 @@ function Header() {
 					"fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
 					isScrolled
 						? "bg-[#2a4e25]/95 backdrop-blur-md shadow-sm border-[#1a3317]/30 py-0.5 md:py-1.5"
-						: "bg-[#2a4e25] backdrop-blur-sm border-transparent py-1.5 md:py-3",
+						: "bg-[#2a4e25] backdrop-blur-sm brder-transparent py-1.5 md:py-3",
 				)}
 				initial={{ y: -100 }}
 				animate={{ y: 0 }}

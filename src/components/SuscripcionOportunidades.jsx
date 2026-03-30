@@ -5,8 +5,9 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Bell, CheckCircle2, Mail, MapPin, Percent } from "lucide-react";
+import { Bell, BadgeCheck, Mail, MapPin, Percent, Sparkles } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
+import { cn } from "@/lib/utils";
 
 /**
  * Componente para suscribirse a alertas de oportunidades
@@ -107,17 +108,19 @@ setLoading(false);
 };
 
 return (
-<Card className="max-w-4xl mx-auto">
-<CardHeader>
-<div className="flex items-center gap-3">
-<Bell className="h-8 w-8 text-chocolate-600" />
+<Card className="max-w-4xl mx-auto border-white/10 bg-white/5 backdrop-blur-md shadow-2xl rounded-[2rem] overflow-hidden">
+<CardHeader className="bg-chocolate-600/10 border-b border-chocolate-600/10 p-8">
+<div className="flex items-center gap-5">
+<div className="w-16 h-16 rounded-2xl bg-chocolate-600/20 flex items-center justify-center shadow-inner border border-chocolate-600/20">
+<Bell className="h-8 w-8 text-chocolate-600 animate-pulse-subtle" />
+</div>
 <div>
-<CardTitle className="text-2xl">
+<CardTitle className="text-3xl font-extrabold tracking-tight text-gray-900">
 Recibe Alertas de Oportunidades
 </CardTitle>
-<p className="text-sm text-muted-foreground mt-1">
+<p className="text-lg text-gray-600 font-medium mt-1">
 Te notificaremos por email cuando haya traslados disponibles en
-tus rutas de interés
+tus rutas de interés con descuentos imbatibles.
 </p>
 </div>
 </div>
@@ -173,15 +176,18 @@ return (
 key={index}
 type="button"
 variant={isSelected ? "default" : "outline"}
-className={
+className={cn(
+"h-14 text-sm font-bold transition-all duration-300 rounded-xl flex items-center justify-between px-6",
 isSelected
-? "bg-chocolate-600 hover:bg-chocolate-700"
-: ""
-}
+? "bg-chocolate-600 hover:bg-chocolate-700 shadow-lg shadow-chocolate-600/20 scale-[1.02]"
+: "hover:bg-chocolate-50 border-gray-200"
+)}
 onClick={() => toggleRuta(ruta)}
 >
-{isSelected && <CheckCircle2 className="h-4 w-4 mr-2" />}
+<span className={isSelected ? "text-white" : "text-gray-700"}>
 {ruta.origen} → {ruta.destino}
+</span>
+{isSelected && <BadgeCheck className="h-5 w-5 text-white animate-in zoom-in duration-300" />}
 </Button>
 );
 })}
