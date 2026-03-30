@@ -115,7 +115,7 @@ try {
 
     // Remitente
     $mail->setFrom($emailConfig['username'], $emailConfig['from_name']);
-    
+
     // Responder a (ayuda a la entregabilidad y permite responder directo al cliente)
     $mail->addReplyTo($email, $nombre);
 

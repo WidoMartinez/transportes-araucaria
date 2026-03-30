@@ -53,7 +53,8 @@ $sendCustomerConfirmation = true; // Enviar correo de confirmación al cliente s
 $brandName = 'Transportes Araucaria';
 
 // Utilidad: actualizar flags de correo en la reserva guardada
-function actualizarFlagsCorreoReserva($archivo, $reservaId, $flags) {
+function actualizarFlagsCorreoReserva($archivo, $reservaId, $flags)
+{
     if (!$reservaId || !file_exists($archivo)) return false;
     $contenido = file_get_contents($archivo);
     $reservas = json_decode($contenido, true);
@@ -281,9 +282,9 @@ if ($action === 'send_lead_recovery') {
         $backendBase = getenv('BACKEND_URL') ?: 'https://transportes-araucaria.onrender.com';
         $payLink = "{$backendBase}/api/reservas/{$reservaCompleta['id']}/pay-redirect?type=abono";
         $totalHtml = $totalConDescuento ? ('$' . number_format($totalConDescuento, 0, ',', '.') . ' CLP') : ('$' . number_format($precio, 0, ',', '.') . ' CLP');
-        
+
         $mail3->Subject = "🚐 ¡No pierdas tu traslado! Asegura tu cupo ahora - {$brandName}";
-        
+
         $mail3->Body = "
         <div style='font-family: \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #1f2937; max-width: 600px; margin: 20px auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);'>
             <div style='background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: #ffffff; padding: 32px 24px; text-align: center;'>
@@ -402,7 +403,7 @@ if ($action === 'send_discount_offer') {
         $precioConDescuentoHtml = '$' . number_format($precioConDescuentoEspecial, 0, ',', '.') . ' CLP';
 
         $mail4->Subject = "🎉 ¡Oferta Exclusiva! {$DESCUENTO_OFERTA_ESPECIAL}% de descuento en tu traslado - {$brandName}";
-        
+
         $mail4->Body = "<div style='font-family: Arial, sans-serif; line-height:1.6; color:#333; max-width:600px; margin:20px auto; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;'>
             <div style='background: linear-gradient(135deg, #059669 0%, #10b981 100%); color:#fff; padding:24px 22px; text-align:center;'>
                 <h2 style='margin:0; font-size:24px;'>{$vehiculoIcono} ¡Oferta Exclusiva para Ti!</h2>
@@ -510,7 +511,7 @@ $emailHtml = "
             " . ($reservaGuardada ? "<p style='margin: 5px 0 0; font-size: 12px;'>✅ Reserva guardada en sistema</p>" : "<p style='margin: 5px 0 0; font-size: 12px; color: #ffeb3b;'>⚠️ Reserva NO guardada en sistema</p>") . "
         </div>
         <div style='padding: 20px;'>"
-        . ($codigoReserva ? "
+    . ($codigoReserva ? "
             <div style='background-color: #3b82f6; color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 25px;'>
                 <h2 style='margin: 0 0 10px; font-size: 18px;'>📋 CÓDIGO DE RESERVA</h2>
                 <div style='background-color: white; color: #3b82f6; padding: 15px; border-radius: 5px; font-size: 24px; font-weight: bold; letter-spacing: 2px;'>
@@ -724,8 +725,8 @@ try {
                 // Cliente NO HA PAGADO - Enviar correo único de descuento para captar atención
                 // Usar el precio disponible (totalConDescuento o precio original como fallback)
                 $precioBase = $totalConDescuento > 0 ? $totalConDescuento : $precio;
-                $precioConDescuentoEspecial = $precioBase > 0 
-                    ? round($precioBase * (1 - $DESCUENTO_OFERTA_ESPECIAL / 100)) 
+                $precioConDescuentoEspecial = $precioBase > 0
+                    ? round($precioBase * (1 - $DESCUENTO_OFERTA_ESPECIAL / 100))
                     : 0;
                 $precioConDescuentoHtml = '$' . number_format($precioConDescuentoEspecial, 0, ',', '.') . ' CLP';
 
@@ -778,7 +779,6 @@ try {
                         <p style='margin-top:16px;'>Saludos,<br><strong>{$brandName}</strong></p>
                     </div>
                 </div>";
-
             }
         } catch (Exception $e2) {
             // No interrumpir la respuesta por fallo en confirmación al cliente
@@ -793,7 +793,7 @@ try {
         'reserva_guardada'      => $reservaGuardada,
         'id_reserva'            => $reservaCompleta['id'] ?? null,
         'correo_admin_enviado'  => $adminEmailEnviado,
-        'correo_cliente_enviado'=> $confirmacionEnviada
+        'correo_cliente_enviado' => $confirmacionEnviada
     ]);
 } catch (Exception $e) {
     http_response_code(500);
@@ -803,6 +803,6 @@ try {
         'reserva_guardada'      => $reservaGuardada,
         'id_reserva'            => $reservaCompleta['id'] ?? null,
         'correo_admin_enviado'  => $adminEmailEnviado,
-        'correo_cliente_enviado'=> $confirmacionEnviada
+        'correo_cliente_enviado' => $confirmacionEnviada
     ]);
 }
