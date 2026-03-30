@@ -26,11 +26,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import logoColor from "../assets/logo.png";
 import fondoTraslados from "../assets/fondotraslados.png";
+import fondomovil from "../assets/fondomovil.png";
+import fondovariante from "../assets/fondovariante.png";
 import { getBackendUrl } from "../lib/backend";
 
 // --- Constantes ---
-const WHATSAPP_NUMBER = "+56942409065";
-const PHONE_NUMBER = "+56942409065";
+const WHATSAPP_NUMBER = "+56936643540";
+const PHONE_NUMBER = "+56936643540";
 
 // --- Tracker de conversión Google Ads (campaña traslados) ---
 const trackCotizacionConversion = () => {
@@ -205,25 +207,25 @@ function LandingTraslados() {
 	return (
 		<div className="min-h-screen bg-white font-sans">
 			{/* ========== HEADER MINIMALISTA ========== */}
-			<header className="bg-[#FAFBF9] sm:bg-white border-b border-gray-100 sticky top-0 z-50">
-				<div className="container mx-auto px-4 py-3 flex items-center justify-between">
-					<a href="/" aria-label="Volver al inicio">
-						<img src={logoColor} alt="Transportes Araucaria" className="h-10" />
+			<header className="bg-[#2a4e25] shadow-lg sticky top-0 z-50">
+				<div className="container mx-auto px-4 py-2 md:py-1 flex items-center justify-between">
+					<a href="/" aria-label="Volver al inicio" className="flex items-center relative z-50">
+						<img src={logoColor} alt="Transportes Araucaria" className="h-14 md:h-14 lg:h-16 transition-all duration-300 object-contain brightness-0 invert" />
 					</a>
-					<div className="flex items-center gap-3">
+					<div className="flex items-center space-x-3 ml-4">
 						<a
 							href={`tel:${PHONE_NUMBER}`}
-							className="hidden sm:flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-primary transition-colors"
+							className="hidden sm:flex items-center text-white hover:text-green-200 transition-colors p-2 rounded-full hover:bg-white/10"
+							title="Llamar ahora"
 						>
-							<Phone className="h-4 w-4" />
-							{PHONE_NUMBER}
+							<Phone className="w-5 h-5 mr-1" />
+							<span className="font-medium">{PHONE_NUMBER}</span>
 						</a>
 						<Button
 							onClick={abrirWhatsApp}
-							size="sm"
-							className="bg-green-600 hover:bg-green-700 text-white gap-1"
+							className="bg-[#25D366] hover:bg-[#128C7E] text-white font-bold rounded-full px-5 shadow-md gap-1.5"
 						>
-							<MessageCircle className="h-4 w-4" />
+							<MessageCircle className="w-4 h-4" />
 							WhatsApp
 						</Button>
 					</div>
@@ -232,29 +234,35 @@ function LandingTraslados() {
 
 			{/* ========== HERO UNIFICADO CON FORMULARIO ========== */}
 			<section className="relative min-h-[800px] flex items-center pt-12 pb-16 lg:pt-20 lg:pb-20 overflow-hidden">
-				{/* Fondo full width 100% visible, invertida horizontalmente (efecto espejo) */}
+				{/* Fondo Desktop reducido al 80% */}
 				<div 
-					className="absolute inset-0 w-full h-full z-0"
+					className="absolute inset-0 w-full h-full z-0 hidden md:block"
 					style={{
 						backgroundImage: `url(${fondoTraslados})`,
+						backgroundSize: "100% auto",
+						backgroundRepeat: "no-repeat",
+						backgroundPosition: "top center",
+					}}
+				/>
+				{/* Fondo Móvil */}
+				<div 
+					className="absolute inset-0 w-full h-full z-0 block md:hidden"
+					style={{
+						backgroundImage: `url(${fondomovil})`,
 						backgroundSize: "cover",
-						backgroundPosition: "center",
-						transform: "scaleX(-1)"
+						backgroundPosition: "top center",
 					}}
 				/>
 
 				<div className="container mx-auto px-4 relative z-10 w-full">
-					{/* Stack de Texto y Formulario alineado a la derecha, con los botones alineados a su altura via flexbox */}
+					{/* Stack de Texto y Formulario alineado a la izquierda */}
 					<div className="grid lg:grid-cols-12 gap-4 lg:gap-6 items-stretch mt-4 lg:mt-6 pb-8">
 						
-						{/* Bloque vacío a la izquierda para asentar el fondo pleno visualmente */}
-						<div className="hidden lg:block lg:col-span-6 xl:col-span-7"></div>
-
-						{/* Columna Derecha: Texto compacto arriba, Formulario chico abajo */}
-						<div className="col-span-1 lg:col-span-6 xl:col-span-5 flex flex-col gap-4 relative z-20 xl:pr-4">
+						{/* Columna Izquierda: Texto compacto arriba, Formulario chico abajo */}
+						<div className="col-span-1 lg:col-span-6 xl:col-span-5 flex flex-col gap-4 relative z-20 xl:pl-4">
 							
 							{/* Text Container (Compacto) */}
-							<div className="bg-white/85 backdrop-blur-md p-5 sm:p-6 rounded-[2rem] shadow-xl border border-white/60 space-y-4">
+							<div className="bg-white/20 backdrop-blur-md p-5 sm:p-6 rounded-[2rem] shadow-xl border border-white/20 space-y-4">
 								<h1 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold leading-[1.05] tracking-tight">
 									<span className="text-[#592a15]">Traslados Privados</span>
 									<br />
@@ -289,7 +297,7 @@ function LandingTraslados() {
 							{/* Form Container (Acortado) */}
 							<div id="formulario-cotizacion">
 								{enviado ? (
-									<Card className="border border-green-200 bg-white/95 backdrop-blur-sm shadow-xl rounded-[2rem]">
+									<Card className="border border-green-200/50 bg-white/20 backdrop-blur-md shadow-xl rounded-[2rem]">
 										<CardContent className="pt-8 pb-8 text-center space-y-3">
 											<CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
 											<h3 className="text-xl font-bold text-green-800">
@@ -308,8 +316,8 @@ function LandingTraslados() {
 										</CardContent>
 									</Card>
 								) : (
-									<Card className="shadow-2xl border-white/50 bg-white/95 backdrop-blur-md rounded-[2rem]">
-										<CardHeader className="bg-gray-50/50 rounded-t-[2rem] border-b border-gray-100 pb-3 pt-4 px-5">
+									<Card className="shadow-2xl border-white/20 bg-white/20 backdrop-blur-md rounded-[2rem]">
+										<CardHeader className="bg-white/10 rounded-t-[2rem] border-b border-white/20 pb-3 pt-4 px-5">
 											<CardTitle className="flex items-center gap-2 text-lg text-[#391e10]">
 												<Car className="h-[18px] w-[18px]" />
 												Cotiza tu traslado
@@ -395,12 +403,20 @@ function LandingTraslados() {
 							</div>
 
 						</div>
+
+						{/* Bloque vacío a la derecha para empujar el contenido visualmente al otro lado */}
+						<div className="hidden lg:block lg:col-span-6 xl:col-span-7"></div>
 					</div>
 				</div>
 			</section>
 
-			{/* ========== TIPOS DE TRASLADO ========== */}
-			<section className="py-16 bg-white">
+			{/* ========== WRAPPER CON FONDO VARIANTE ========== */}
+			<div
+				className="relative bg-cover bg-center"
+				style={{ backgroundImage: `url(${fondovariante})`, backgroundAttachment: "fixed" }}
+			>
+				{/* ========== TIPOS DE TRASLADO ========== */}
+				<section className="py-16 bg-white/10">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-10">
 						<h2 className="text-3xl font-bold mb-3">
@@ -424,8 +440,8 @@ function LandingTraslados() {
 				</div>
 			</section>
 
-			{/* ========== BENEFICIOS ========== */}
-			<section className="py-16 bg-gray-50">
+				{/* ========== BENEFICIOS ========== */}
+				<section className="py-16 bg-white/5 border-y border-white/10">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-10">
 						<h2 className="text-3xl font-bold mb-3">¿Por qué elegirnos?</h2>
@@ -456,8 +472,8 @@ function LandingTraslados() {
 				</div>
 			</section>
 
-			{/* ========== CTA FINAL ========== */}
-			<section className="py-16 bg-slate-900 text-white text-center">
+				{/* ========== CTA FINAL ========== */}
+				<section className="py-16 bg-[#2a4e25]/60 text-white text-center">
 				<div className="container mx-auto px-4 space-y-6 max-w-xl">
 					<h2 className="text-3xl font-bold">
 						¿Listo para reservar tu traslado?
@@ -499,23 +515,24 @@ function LandingTraslados() {
 				</div>
 			</section>
 
-			{/* ========== FOOTER SIMPLIFICADO ========== */}
-			<footer className="bg-slate-950 text-slate-400 py-8 text-sm text-center">
-				<div className="container mx-auto px-4 space-y-2">
-					<p>
-						© {new Date().getFullYear()} Transportes Araucaria. Todos los
-						derechos reservados.
-					</p>
-					<p>
-						<a
-							href="/"
-							className="hover:text-white transition-colors underline"
-						>
-							Volver al sitio principal
-						</a>
-					</p>
-				</div>
-			</footer>
+				{/* ========== FOOTER SIMPLIFICADO ========== */}
+				<footer className="bg-[#391e10] text-white/80 py-8 text-sm text-center border-t border-white/10">
+					<div className="container mx-auto px-4 space-y-2">
+						<p>
+							© {new Date().getFullYear()} Transportes Araucaria. Todos los
+							derechos reservados.
+						</p>
+						<p>
+							<a
+								href="/"
+								className="hover:text-white transition-colors underline"
+							>
+								Volver al sitio principal
+							</a>
+						</p>
+					</div>
+				</footer>
+			</div>
 		</div>
 	);
 }

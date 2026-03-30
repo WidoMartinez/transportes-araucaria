@@ -34,16 +34,12 @@ import PromocionBanners from "./components/PromocionBanners";
 // Hero eliminado - solo flujo express disponible
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
-import Destinos from "./components/Destinos";
 import Destacados from "./components/Destacados";
-import PorQueElegirnos from "./components/PorQueElegirnos";
-import Testimonios from "./components/Testimonios";
 import PaginaEvaluar from "./components/Evaluar/PaginaEvaluar";
 import SeccionTestimonios from "./components/Testimonios/SeccionTestimonios";
 import Contacto from "./components/Contacto";
 
 import Footer from "./components/Footer";
-import Fidelizacion from "./components/Fidelizacion";
 import AdminDashboard from "./components/AdminDashboard";
 import CodigoDescuento from "./components/CodigoDescuento";
 import ConsultarReserva from "./components/ConsultarReserva";
@@ -57,6 +53,7 @@ import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ad
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
+import fondovariante from "./assets/fondovariante.png";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -2105,7 +2102,10 @@ function App() {
 	}
 
 	return (
-		<div className="min-h-screen bg-background text-foreground">
+		<div 
+			className="min-h-screen text-foreground bg-cover bg-center bg-fixed"
+			style={{ backgroundImage: `url(${fondovariante})` }}
+		>
 			{loadingPrecios && (
 				<div className="fixed top-0 left-0 w-full h-full bg-black/50 z-[100] flex items-center justify-center text-white">
 					<LoaderCircle className="animate-spin mr-2" />
@@ -2199,12 +2199,8 @@ function App() {
 				<PromocionBanners />
 
 				<Servicios />
-				<Destinos />
 				<Destacados destinos={destacadosData} />
-				<Fidelizacion />
-				<PorQueElegirnos />
 				<SeccionTestimonios />
-				<Testimonios />
 				<Contacto />
 			</main>
 

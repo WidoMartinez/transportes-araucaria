@@ -21,7 +21,7 @@ function Destacados({ destinos }) {
 	const autoplayPlugin = Autoplay({ delay: 5000, stopOnInteraction: false });
 
 	return (
-		<section id="destacados" className="py-20 bg-muted/40 overflow-hidden">
+		<section id="destacados" className="py-20 bg-transparent overflow-hidden">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
 					<h2 className="text-4xl font-bold mb-4">

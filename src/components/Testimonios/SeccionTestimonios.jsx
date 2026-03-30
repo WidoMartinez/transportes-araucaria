@@ -63,7 +63,7 @@ function SeccionTestimonios() {
 	}
 
 	return (
-		<section className="py-20 bg-gradient-to-br from-amber-50 to-orange-50">
+		<section className="py-20 bg-transparent">
 			<div className="container mx-auto px-4">
 				{/* Encabezado */}
 				<div className="text-center mb-14">

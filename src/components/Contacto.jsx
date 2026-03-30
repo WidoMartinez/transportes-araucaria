@@ -23,7 +23,7 @@ const InfoItem = ({ icon: Icon, title, children }) => (
 
 function Contacto() {
 	return (
-		<section id="contacto" className="py-24 bg-gray-50/50">
+		<section id="contacto" className="py-24 bg-transparent">
 			<div className="container mx-auto px-4">
 				<div className="text-center mb-16">
 					<h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">

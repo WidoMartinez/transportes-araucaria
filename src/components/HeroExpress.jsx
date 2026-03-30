@@ -17,6 +17,7 @@ import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
 import { useIsMobile } from "../hooks/use-mobile";
 import heroVan from "../assets/hero-van.png";
+import fondovariante from "../assets/fondovariante.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
 import { destinosInfo } from "../data/destinos";
@@ -622,19 +623,10 @@ function HeroExpress({
 	};
 
 	return (
-		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-background pt-20">
+		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-transparent pt-20">
 
 			{/* Mobile Header (Visual) - Optimizado para rendimiento móvil */}
-			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-primary">
-				<img
-					src={imageLoadError ? heroVan : selectedDestinoImage}
-                    onError={() => setImageLoadError(true)}
-					alt={`Imagen del destino ${formData.destino || 'seleccionado'}`}
-					loading="eager"
-					decoding="async"
-					className="w-full h-full object-cover opacity-70 will-change-transform"
-				/>
-				<div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-primary/20" />
+			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-transparent">
 				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom flex flex-col items-center text-center">
 					<motion.div
 						key={richInfo.title}
@@ -643,10 +635,10 @@ function HeroExpress({
 						transition={{ duration: 0.3 }}
 						className="flex flex-col items-center"
 					>
-						<h1 className="text-4xl lg:text-2xl font-bold text-white leading-tight drop-shadow-lg mb-1">
+						<h1 className="text-4xl lg:text-2xl font-bold text-foreground leading-tight drop-shadow-lg mb-1">
 							{richInfo.isRich ? richInfo.titulo : richInfo.title}
 						</h1>
-						<p className="text-base text-white/95 font-medium drop-shadow-md mb-2 line-clamp-2 max-w-[85%]">
+						<p className="text-base text-foreground/90 font-medium drop-shadow-md mb-2 line-clamp-2 max-w-[85%]">
 							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 						</p>
 
@@ -686,7 +678,9 @@ function HeroExpress({
 			</div>
 
 			{/* Left Panel: Interaction (Form) - Padding optimizado para móvil */}
-			<div className="relative flex flex-col justify-start lg:justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 -mt-6 mx-4 sm:mx-6 lg:mx-0 rounded-t-3xl rounded-b-3xl lg:mt-0 lg:rounded-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-none mb-6 lg:mb-0">
+			<div 
+				className="relative flex flex-col justify-start lg:justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-16 xl:p-24 overflow-y-auto bg-transparent z-10 -mt-6 mx-4 sm:mx-6 lg:mx-0 rounded-t-3xl rounded-b-3xl lg:mt-0 lg:rounded-none shadow-none mb-6 lg:mb-0"
+			>
 
 				<AnimatePresence mode="wait">
 					{currentStep === 0 && (
@@ -699,12 +693,6 @@ function HeroExpress({
 							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto"
 						>
 							<div className="mb-6 hidden lg:block">
-								<h2 className="text-4xl font-bold tracking-tight text-foreground mb-2">
-									{richInfo.isRich ? richInfo.titulo : richInfo.title}
-								</h2>
-								<p className="text-muted-foreground text-lg mb-4">
-									{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
-								</p>
 								
 								{/* 📢 NUEVO: Badge promocional de Tarifas Bajas */}
 								<motion.div 
@@ -725,7 +713,7 @@ function HeroExpress({
 								</motion.div>
 							</div>
 
-							<div className="space-y-5 md:space-y-4">
+							<div className="space-y-5 md:space-y-4 bg-white p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/50">
 								{/* Selectores de origen y destino - Con botón swap en desktop */}
 								<div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-3 md:items-end">
 									<div className="space-y-2">
@@ -1167,7 +1155,7 @@ function HeroExpress({
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: 20 }}
 							transition={{ duration: 0.3 }}
-							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto"
+							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto bg-white p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-xl border border-gray-100/50"
 						>
 							{/* Header del paso 2 con botón volver optimizado para táctil */}
 							<div className="flex items-center gap-3 md:gap-4 mb-2">
@@ -1571,24 +1559,9 @@ function HeroExpress({
 			</div>
 
 			{/* Right Panel: Dynamic Visuals (Desktop) */}
-			<div className="relative hidden lg:block h-full overflow-hidden bg-primary sticky top-0">
-				<AnimatePresence mode="wait">
-					<motion.img
-						key={selectedDestinoImage}
-						src={selectedDestinoImage}
-						alt="Destino"
-						loading="lazy"
-						initial={{ opacity: 0, scale: 1.1 }}
-						animate={{ opacity: 0.6, scale: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 1 }}
-						className="absolute inset-0 w-full h-full object-cover"
-					/>
-				</AnimatePresence>
+			<div className="relative hidden lg:block h-full overflow-hidden bg-transparent sticky top-0">
 
-				<div className="absolute inset-0 bg-gradient-to-t from-primary/95 via-primary/50 to-primary/20" />
-
-				<div className="absolute bottom-0 left-0 w-full p-16 z-10 flex flex-col justify-end h-full">
+				<div className="absolute top-0 left-0 w-full px-16 py-24 z-10 flex flex-col justify-start h-full">
 					<motion.div
 						key={richInfo.title}
 						variants={containerVariants}
@@ -1598,10 +1571,10 @@ function HeroExpress({
 					>
 						{/* Título y Bajada */}
 						<motion.div variants={itemVariants}>
-							<h1 className="text-6xl font-bold text-primary-foreground mb-4 tracking-tight leading-none drop-shadow-lg">
+							<h1 className="text-6xl font-bold text-foreground mb-4 tracking-tight leading-none drop-shadow-lg">
 								{richInfo.isRich ? richInfo.titulo : richInfo.title}
 							</h1>
-							<p className="text-xl text-primary-foreground/90 font-medium border-l-4 border-white/30 pl-4">
+							<p className="text-xl text-foreground/90 font-medium border-l-4 border-[#2a4e25]/30 pl-4">
 								{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
 							</p>
 						</motion.div>
@@ -1610,35 +1583,35 @@ function HeroExpress({
 						{richInfo.isRich && !richInfo.isSummary && (
 							<>
 								<motion.div variants={itemVariants} className="flex gap-4">
-									<div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 flex-1">
-										<div className="p-2 bg-white/20 rounded-full">
-											<Plane className="w-5 h-5 text-white" />
+									<div className="flex items-center gap-3 bg-[#2a4e25]/10 backdrop-blur-md rounded-xl p-4 border border-[#2a4e25]/10 flex-1">
+										<div className="p-2 bg-[#2a4e25]/20 rounded-full">
+											<Plane className="w-5 h-5 text-[#2a4e25]" />
 										</div>
 										<div>
-											<p className="text-xs text-white/70 uppercase font-semibold">Distancia</p>
-											<p className="text-white font-bold">{richInfo.distancia}</p>
+											<p className="text-xs text-foreground/70 uppercase font-semibold">Distancia</p>
+											<p className="text-foreground font-bold">{richInfo.distancia}</p>
 										</div>
 									</div>
-									<div className="flex items-center gap-3 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/10 flex-1">
-										<div className="p-2 bg-white/20 rounded-full">
-											<Clock className="w-5 h-5 text-white" />
+									<div className="flex items-center gap-3 bg-[#2a4e25]/10 backdrop-blur-md rounded-xl p-4 border border-[#2a4e25]/10 flex-1">
+										<div className="p-2 bg-[#2a4e25]/20 rounded-full">
+											<Clock className="w-5 h-5 text-[#2a4e25]" />
 										</div>
 										<div>
-											<p className="text-xs text-white/70 uppercase font-semibold">Tiempo Estimado</p>
-											<p className="text-white font-bold">{richInfo.tiempo}</p>
+											<p className="text-xs text-foreground/70 uppercase font-semibold">Tiempo Estimado</p>
+											<p className="text-foreground font-bold">{richInfo.tiempo}</p>
 										</div>
 									</div>
 								</motion.div>
 
 								<motion.div variants={itemVariants} className="space-y-4">
 									<div className="flex items-center gap-2">
-										<Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-										<h3 className="text-lg font-bold text-white">Imperdibles</h3>
+										<Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+										<h3 className="text-lg font-bold text-foreground">Imperdibles</h3>
 									</div>
 									<ul className="grid gap-3">
 										{richInfo.puntosInteres?.map((punto, i) => (
-											<li key={i} className="flex items-center gap-3 text-white/90 font-medium">
-												<CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+											<li key={i} className="flex items-center gap-3 text-foreground/90 font-medium">
+												<CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
 												{punto}
 											</li>
 										))}

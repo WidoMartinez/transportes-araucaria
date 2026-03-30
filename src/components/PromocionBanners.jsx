@@ -73,7 +73,7 @@ return null;
   return (
     <>
 
-    <section className="bg-white py-8 md:py-16 overflow-hidden">
+    <section className="bg-transparent py-8 md:py-16 overflow-hidden">
       <div className="container mx-auto px-4">
         {/* Encabezado de la Sección */}
         <div className="text-center mb-10 md:mb-16">

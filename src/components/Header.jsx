@@ -201,8 +201,8 @@ function Header() {
 				className={cn(
 					"fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
 					isScrolled
-						? "bg-[#6B4423]/95 md:bg-white/90 backdrop-blur-md shadow-sm border-[#8B5A3C]/30 md:border-gray-200/50 py-1 md:py-2"
-						: "bg-[#6B4423] md:bg-transparent md:backdrop-blur-sm border-transparent md:border-transparent py-2 md:py-4",
+						? "bg-[#2a4e25]/95 backdrop-blur-md shadow-sm border-[#1a3317]/30 py-0.5 md:py-1.5"
+						: "bg-[#2a4e25] backdrop-blur-sm border-transparent py-1.5 md:py-3",
 				)}
 				initial={{ y: -100 }}
 				animate={{ y: 0 }}
@@ -216,10 +216,10 @@ function Header() {
 								src={logo}
 								alt="Transportes Araucaria"
 								className={cn(
-									"transition-all duration-300 object-contain",
+									"transition-all duration-300 object-contain brightness-0 invert",
 									isScrolled
-										? "h-12 md:h-16 brightness-0 invert md:brightness-100 md:invert-0"
-										: "h-20 md:h-20 lg:h-24 brightness-0 invert md:brightness-100 md:invert-0",
+										? "h-10 md:h-12"
+										: "h-16 md:h-16 lg:h-20",
 								)}
 								layout
 							/>
@@ -251,12 +251,12 @@ function Header() {
 									className={cn(
 										"relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
 										item.highlight
-											? "text-primary hover:text-primary-foreground hover:bg-primary/10"
-											: "text-gray-600 hover:text-primary",
+											? "text-green-300 hover:text-white hover:bg-white/10"
+											: "text-white/80 hover:text-white",
 									)}
 								>
 									{/* Pill Hover Effect Background */}
-									<span className="absolute inset-0 rounded-full bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10 scale-90 group-hover:scale-100" />
+									<span className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10 scale-90 group-hover:scale-100" />
 
 									<span className="relative z-10 flex items-center gap-2">
 										{item.label}
@@ -266,14 +266,14 @@ function Header() {
 
 							{/* CTA Buttons */}
 							<motion.div
-								className="flex items-center space-x-3 ml-4 pl-4 border-l border-gray-200"
+								className="flex items-center space-x-3 ml-4 pl-4 border-l border-white/20"
 								initial={{ opacity: 0, x: 20 }}
 								animate={{ opacity: 1, x: 0 }}
 								transition={{ delay: 0.5 }}
 							>
 								<a
 									href="tel:+56936643540"
-									className="text-gray-600 hover:text-primary transition-colors p-2 rounded-full hover:bg-gray-50"
+									className="text-white hover:text-green-200 transition-colors p-2 rounded-full hover:bg-white/10"
 									title="Llamar ahora"
 								>
 									<Phone className="w-5 h-5" />
@@ -310,10 +310,10 @@ function Header() {
 										variant="ghost"
 										size="icon"
 										className={cn(
-											"h-12 w-12 rounded-full transition-colors text-white md:text-gray-800",
+											"h-10 w-10 rounded-full transition-colors text-white",
 											isScrolled
-												? "hover:bg-white/20 md:hover:bg-gray-100"
-												: "hover:bg-white/20 md:hover:bg-gray-100",
+												? "hover:bg-white/20"
+												: "hover:bg-white/20",
 										)}
 									>
 										<Menu className="w-7 h-7" />
