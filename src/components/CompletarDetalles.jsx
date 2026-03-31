@@ -290,7 +290,10 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 
 	const formatDate = (dateString) => {
 		if (!dateString) return "No especificada";
-		const date = new Date(dateString);
+		// Agregar T12:00:00 para evitar el desfase de un día por zona horaria UTC
+		// new Date("YYYY-MM-DD") se interpreta como UTC medianoche, dando el día anterior en Chile
+		const soloFecha = dateString.split("T")[0];
+		const date = new Date(soloFecha + "T12:00:00");
 		return date.toLocaleDateString("es-CL", {
 			dateStyle: "long",
 			timeZone: "America/Santiago",
