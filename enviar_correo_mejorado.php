@@ -441,6 +441,77 @@ if ($action === 'send_discount_offer') {
 }
 
 // =========================================================
+// RAMA: notify_admin_payment — notificación de pago recibido al admin
+// Usa HTML mínimo para evitar bloqueos por filtros de contenido (MailChannels [CS])
+// =========================================================
+if ($action === 'notify_admin_payment') {
+    $mail6 = new PHPMailer(true);
+    try {
+        $mail6->isSMTP();
+        $mail6->Host       = $emailHost;
+        $mail6->SMTPAuth   = true;
+        $mail6->Username   = $emailUser;
+        $mail6->Password   = $emailPass;
+        $mail6->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail6->Port       = $emailPort;
+        $mail6->CharSet    = 'UTF-8';
+
+        // Remitente y destinatario
+        $mail6->setFrom($emailUser, 'Sistema Transportes Araucaria');
+        $mail6->addAddress($emailTo);
+        // Sin Reply-To externo para no activar filtros anti-spam
+
+        $mail6->isHTML(true);
+
+        // Datos del pago
+        $reservaId      = htmlspecialchars($data['reservaId'] ?? '');
+        $codigoReserva  = htmlspecialchars($data['codigoReserva'] ?? '');
+        $nombre         = htmlspecialchars($data['nombre'] ?? 'No especificado');
+        $monto          = $data['monto'] ?? 0;
+        $metodo         = htmlspecialchars($data['metodo'] ?? 'Flow');
+        $fecha          = htmlspecialchars($data['fecha'] ?? '');
+        $hora           = htmlspecialchars($data['hora'] ?? '');
+        $origen         = htmlspecialchars($data['origen'] ?? '');
+        $destino        = htmlspecialchars($data['destino'] ?? '');
+        $idaVuelta      = !empty($data['idaVuelta']);
+        $upgradeVan     = !empty($data['upgradeVan']);
+        $motivo         = htmlspecialchars($data['motivo'] ?? '');
+        $montoFmt       = '$' . number_format((float)$monto, 0, ',', '.') . ' CLP';
+
+        // Asunto neutro para evitar filtros de contenido
+        $mail6->Subject = "AR: Pago recibido reserva {$codigoReserva} - {$nombre}";
+
+        // Cuerpo HTML simple y sin patrones que activen filtros [CS]
+        $extras = '';
+        if ($idaVuelta)  $extras .= '<li>Ida y vuelta</li>';
+        if ($upgradeVan) $extras .= '<li>Upgrade Van</li>';
+        if ($motivo)     $extras .= "<li>Motivo: {$motivo}</li>";
+
+        $mail6->Body = "
+<html><body style='font-family:Arial,sans-serif;font-size:14px;color:#333;max-width:500px;margin:0 auto'>
+<p><strong>Reserva confirmada:</strong> {$codigoReserva}</p>
+<p><strong>Pasajero:</strong> {$nombre}</p>
+<p><strong>Ruta:</strong> {$origen} &rarr; {$destino}</p>
+<p><strong>Fecha/Hora:</strong> {$fecha} {$hora}</p>
+<p><strong>Metodo:</strong> {$metodo}</p>
+<p><strong>Total recibido:</strong> {$montoFmt}</p>
+" . ($extras ? "<ul>{$extras}</ul>" : '') . "
+<hr>
+<p style='font-size:12px;color:#777'>Notificacion automatica del sistema de reservas.</p>
+</body></html>";
+
+        $mail6->AltBody = "Reserva {$codigoReserva} | {$nombre} | {$origen} -> {$destino} | {$fecha} {$hora} | {$metodo} | {$montoFmt}";
+
+        $mail6->send();
+        echo json_encode(['success' => true, 'message' => 'Notificacion de pago al admin enviada.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Error notificando admin: ' . $mail6->ErrorInfo]);
+    }
+    exit;
+}
+
+// =========================================================
 // RAMA: notify_admin_failed_email — fallo en cron
 // =========================================================
 if ($action === 'notify_admin_failed_email') {

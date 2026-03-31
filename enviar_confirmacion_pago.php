@@ -116,23 +116,19 @@ try {
     // Remitente
     $mail->setFrom($emailConfig['username'], $emailConfig['from_name']);
 
-    // Responder a (ayuda a la entregabilidad y permite responder directo al cliente)
-    $mail->addReplyTo($email, $nombre);
+    // Reply-To al sistema (NO al cliente externo, evita activar filtros anti-spam en el admin)
+    $mail->addReplyTo($emailConfig['username'], $emailConfig['from_name']);
 
-    // Destinatario principal (cliente)
+    // Destinatario: SOLO el cliente
     $mail->addAddress($email, $nombre);
 
-    // Copia directa al admin (addAddress en lugar de BCC para evitar filtros de spam)
-    if (!empty($emailConfig['to'])) {
-        $mail->addAddress($emailConfig['to'], 'Admin Transportes Araucaria');
-    }
-
     // Logging explícito del destinatario para debug
-    error_log("Preparando envío de confirmación de pago a: {$email} (Copia al admin: {$emailConfig['to']})");
+    error_log("Preparando envío de confirmación de pago al cliente: {$email}");
 
-    // Contenido del correo
+    // Contenido del correo al cliente
     $mail->isHTML(true);
-    $mail->Subject = "✅ Pago Confirmado - Reserva {$codigoReserva} - Transportes Araucaria";
+    // Asunto sin emojis complejos para mayor compatibilidad
+    $mail->Subject = "Reserva {$codigoReserva} confirmada - Transportes Araucaria";
 
     // Cuerpo del correo HTML
     $mail->Body = "
@@ -384,8 +380,56 @@ try {
     © 2025 Transportes Araucaria
     ";
 
-    // Enviar correo
+    // Enviar correo al cliente
     $mail->send();
+    error_log("Email de confirmacion de pago enviado al cliente: {$email}");
+
+    // Enviar notificacion separada al admin con HTML simple para evitar filtros [CS] de MailChannels
+    if (!empty($emailConfig['to'])) {
+        try {
+            $mailAdmin = new PHPMailer(true);
+            $mailAdmin->isSMTP();
+            $mailAdmin->Host       = $emailConfig['host'];
+            $mailAdmin->SMTPAuth   = true;
+            $mailAdmin->Username   = $emailConfig['username'];
+            $mailAdmin->Password   = $emailConfig['password'];
+            $mailAdmin->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            $mailAdmin->Port       = $emailConfig['port'];
+            $mailAdmin->CharSet    = 'UTF-8';
+
+            $mailAdmin->setFrom($emailConfig['username'], 'Sistema AR');
+            $mailAdmin->addAddress($emailConfig['to'], 'Admin');
+            // Sin Reply-To externo para no activar filtros
+            $mailAdmin->isHTML(true);
+            // Asunto neutro y sin emojis
+            $mailAdmin->Subject = "AR: Reserva {$codigoReserva} - pago recibido de {$nombre}";
+
+            $extras = '';
+            if ($upgradeVan) $extras .= '<li>Upgrade a Van</li>';
+            if ($idaVuelta && $fechaRegreso) $extras .= "<li>Regreso: {$fechaRegreso} {$horaRegreso}</li>";
+            if ($motivo) $extras .= "<li>Motivo: {$motivo}</li>";
+
+            $mailAdmin->Body = "
+<html><body style='font-family:Arial,sans-serif;font-size:14px;color:#333;max-width:500px'>
+<p><strong>Codigo:</strong> {$codigoReserva}</p>
+<p><strong>Cliente:</strong> " . htmlspecialchars($nombre) . " ({$email})</p>
+<p><strong>Ruta:</strong> " . htmlspecialchars($origen) . " &rarr; " . htmlspecialchars($destino) . "</p>
+<p><strong>Fecha:</strong> {$fecha} {$hora}</p>
+<p><strong>Pasajeros:</strong> {$pasajeros}</p>
+<p><strong>Vehiculo:</strong> " . htmlspecialchars($vehiculo) . "</p>
+<p><strong>Metodo de pago:</strong> {$gateway} (ID: {$paymentId})</p>
+<p><strong>Monto recibido:</strong> {$montoFormateado}</p>
+" . ($extras ? "<ul>{$extras}</ul>" : '') . "
+<hr><p style='font-size:11px;color:#999'>Notificacion automatica - Sistema de Reservas Araucaria</p>
+</body></html>";
+            $mailAdmin->AltBody = "Reserva {$codigoReserva} | {$nombre} | {$origen}->{$destino} | {$fecha} | {$gateway} | {$montoFormateado}";
+            $mailAdmin->send();
+            error_log("Notificacion de pago al admin enviada: {$emailConfig['to']}");
+        } catch (Exception $adminEx) {
+            // No detener el flujo si falla la notificacion al admin
+            error_log("Error al notificar pago al admin: " . $mailAdmin->ErrorInfo);
+        }
+    }
 
     echo json_encode([
         'success' => true,
