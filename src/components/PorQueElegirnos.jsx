@@ -6,7 +6,8 @@ import {
 	CreditCard, 
 	CalendarCheck, 
 	Radio,
-	Sparkles
+	Sparkles,
+	Baby
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,11 +48,18 @@ const VENTAJAS = [
 		bg: "bg-rose-400/10"
 	},
 	{
-		titulo: "Seguimiento en Tiempo Real",
-		desc: "Monitoreo del vuelo y comunicación constante vía WhatsApp para tu total tranquilidad.",
-		icon: Radio,
+		titulo: "Sillas para Niños",
+		desc: "Uso obligatorio de sillas de seguridad para niños en todos nuestros servicios sin costo adicional.",
+		icon: Baby,
 		color: "text-cyan-400",
 		bg: "bg-cyan-400/10"
+	},
+	{
+		titulo: "Pago en Cuotas",
+		desc: "Flexibilidad total: paga hasta en 3 cuotas sin intereses con Flow en todos tus viajes.",
+		icon: CreditCard,
+		color: "text-emerald-400",
+		bg: "bg-emerald-400/10"
 	}
 ];
 
@@ -81,7 +89,7 @@ function PorQueElegirnos() {
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
 					{VENTAJAS.map((v, i) => (
 						<div key={i} className="group relative">
-							<div className="flex items-start gap-5 p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/5 h-full">
+							<div className="flex items-start gap-5 p-6 rounded-3xl bg-black/10 border border-white/20 hover:bg-black/20 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10 h-full text-white">
 								<div className={cn(
 									"p-4 rounded-2xl shrink-0 transition-all duration-500 group-hover:scale-110",
 									v.bg,
@@ -90,10 +98,10 @@ function PorQueElegirnos() {
 									<v.icon className={cn("w-7 h-7 drop-shadow-md", v.color)} />
 								</div>
 								<div className="pt-1">
-									<h3 className="text-xl font-bold mb-3 tracking-tight group-hover:text-primary transition-colors">
+									<h3 className="text-xl font-bold mb-3 tracking-tight group-hover:text-amber-400 transition-colors drop-shadow-md">
 										{v.titulo}
 									</h3>
-									<p className="opacity-70 leading-relaxed text-[15px]">
+									<p className="opacity-90 font-medium leading-relaxed text-[15px] drop-shadow-sm">
 										{v.desc}
 									</p>
 								</div>

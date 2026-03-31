@@ -77,15 +77,15 @@ export default function PromocionBanners() {
 
 	return (
 		<>
-			<section className="bg-white py-8 md:py-16 overflow-hidden">
+			<section className="bg-transparent py-8 md:py-16 overflow-hidden">
 				<div className="container mx-auto px-4">
 					{/* Encabezado de la Sección */}
 					<div className="text-center mb-10 md:mb-16">
-						<h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 mb-4 tracking-tight">
+						<h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight drop-shadow-lg">
 							Ofertas <span className="text-emerald-500">Especiales</span>
 						</h2>
 						<div className="w-24 h-1.5 bg-emerald-500 mx-auto rounded-full mb-6" />
-						<p className="text-slate-600 text-lg md:text-xl font-medium max-w-2xl mx-auto px-4">
+						<p className="text-white/90 text-lg md:text-xl font-medium max-w-2xl mx-auto px-4 drop-shadow-md">
 							Aprovecha nuestros traslados en promoción y viaja con la comodidad
 							de siempre al mejor precio.
 						</p>

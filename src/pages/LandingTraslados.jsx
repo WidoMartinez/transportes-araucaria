@@ -20,7 +20,9 @@ import {
 	Building2,
 	Wine,
 	Sparkles,
-	BadgeCheck
+	BadgeCheck,
+	Baby,
+	CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ import fondoTraslados from "../assets/fondotraslados.png";
 import fondomovil from "../assets/fondomovil.png";
 import fondovariante from "../assets/fondovariante.png";
 import { getBackendUrl } from "../lib/backend";
+import { cn } from "@/lib/utils";
 
 // --- Constantes ---
 const WHATSAPP_NUMBER = "+56936643540";
@@ -88,11 +91,18 @@ const BENEFICIOS = [
 		bg: "bg-emerald-500/10"
 	},
 	{
-		icon: Clock,
-		titulo: "Puntualidad Garantizada",
-		desc: "Monitoreo en tiempo real y confirmación de horario 24 horas antes.",
-		color: "text-amber-500",
-		bg: "bg-amber-500/10"
+		icon: Baby,
+		titulo: "Sillas para Niños",
+		desc: "Uso obligatorio de sillas de seguridad para niños en todos nuestros servicios para su total seguridad.",
+		color: "text-blue-500",
+		bg: "bg-blue-500/10"
+	},
+	{
+		icon: CreditCard,
+		titulo: "Pago en Cuotas",
+		desc: "Flexibilidad para tu viaje: paga hasta en 3 cuotas sin intereses con tu tarjeta de crédito.",
+		color: "text-emerald-500",
+		bg: "bg-emerald-500/10"
 	},
 	{
 		icon: Car,
@@ -427,14 +437,17 @@ function LandingTraslados() {
 				className="relative bg-cover bg-center"
 				style={{ backgroundImage: `url(${fondovariante})`, backgroundAttachment: "fixed" }}
 			>
+				{/* Overlay oscuro para que el texto blanco sea legible sobre el fondo claro */}
+				<div className="absolute inset-0 bg-[#1a3317]/75 pointer-events-none" />
+
 				{/* ========== TIPOS DE TRASLADO ========== */}
-				<section className="py-16 bg-white/10">
+				<section className="relative z-10 py-16 bg-white/5">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-10">
-						<h2 className="text-3xl font-bold mb-3">
+						<h2 className="text-3xl font-bold mb-3 text-white">
 							¿Qué tipo de traslado necesitas?
 						</h2>
-						<p className="text-muted-foreground max-w-xl mx-auto">
+						<p className="text-white/70 max-w-xl mx-auto">
 							Cubrimos todo tipo de viajes. Si no ves el tuyo en la lista,
 							contáctanos igual.
 						</p>
@@ -443,7 +456,7 @@ function LandingTraslados() {
 						{TIPOS_TRASLADO.map((tipo) => (
 							<div
 								key={tipo}
-								className="flex items-center gap-3 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-5 py-4 text-sm font-bold text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300 shadow-sm"
+								className="flex items-center gap-3 bg-white/10 border border-white/25 backdrop-blur-sm rounded-2xl px-5 py-4 text-sm font-bold text-white hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-sm"
 							>
 								{tipo}
 							</div>
@@ -453,18 +466,18 @@ function LandingTraslados() {
 			</section>
 
 				{/* ========== BENEFICIOS ========== */}
-				<section className="py-16 bg-white/5 border-y border-white/10">
+				<section className="relative z-10 py-16 bg-white/5 border-y border-white/10">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-10">
-						<h2 className="text-3xl font-bold mb-3">¿Por qué elegirnos?</h2>
+						<h2 className="text-3xl font-bold mb-3 text-white">¿Por qué elegirnos?</h2>
 					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 max-w-5xl mx-auto">
 						{BENEFICIOS.map((beneficio) => {
 							const IconComp = beneficio.icon;
 							return (
 								<Card
 									key={beneficio.titulo}
-									className="group text-center border-white/10 bg-white/5 backdrop-blur-sm shadow-sm hover:shadow-xl hover:scale-105 transition-all duration-500"
+									className="group text-center border-white/25 bg-white/10 backdrop-blur-sm shadow-md hover:shadow-xl hover:scale-105 transition-all duration-500"
 								>
 									<CardContent className="pt-10 pb-8 space-y-4">
 										<div className={cn(
@@ -489,7 +502,7 @@ function LandingTraslados() {
 			</section>
 
 				{/* ========== CTA FINAL ========== */}
-				<section className="py-16 bg-[#2a4e25]/60 text-white text-center">
+				<section className="relative z-10 py-16 bg-[#2a4e25]/60 text-white text-center">
 				<div className="container mx-auto px-4 space-y-6 max-w-xl">
 					<h2 className="text-3xl font-bold">
 						¿Listo para reservar tu traslado?

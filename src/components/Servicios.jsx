@@ -52,7 +52,7 @@ function Servicios() {
 					{servicios.map((servicio, index) => (
 						<Card
 							key={index}
-							className="text-center group border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/5"
+							className="text-center group border-white/20 bg-black/10 backdrop-blur-md hover:bg-black/20 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-primary/20"
 						>
 							<CardHeader>
 								<div className="mx-auto mb-6 relative">
@@ -66,12 +66,12 @@ function Servicios() {
 										<servicio.icono className={cn("w-10 h-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", servicio.color)} />
 									</div>
 								</div>
-								<CardTitle className="text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors">
+								<CardTitle className="text-2xl font-bold tracking-tight text-white group-hover:text-primary transition-colors drop-shadow-md">
 									{servicio.titulo}
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<p className="text-white opacity-70 leading-relaxed">
+								<p className="text-white opacity-90 leading-relaxed font-medium drop-shadow-sm">
 									{servicio.descripcion}
 								</p>
 							</CardContent>

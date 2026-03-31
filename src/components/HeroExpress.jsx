@@ -312,7 +312,8 @@ function HeroExpress({
 			beneficios: [
 				{ text: "Tarifas fijas y transparentes", icon: ShieldCheck, color: "text-emerald-400" },
 				{ text: "Reserva inmediata 100% online", icon: Zap, color: "text-amber-400" },
-				{ text: "Monitoreo en tiempo real de tu vuelo", icon: Radio, color: "text-blue-400" }
+				{ text: "Sillas para niños obligatorias", icon: Baby, color: "text-blue-400" },
+				{ text: "Paga en hasta 3 cuotas sin intereses", icon: CreditCard, color: "text-emerald-400" }
 			]
 		};
 	}, [targetName, currentStep, formData.destino, formData.origen]);

@@ -556,7 +556,7 @@ onReservar={handleReservar}
               <Badge className="mb-4 bg-green-500 text-white text-base px-4 py-2">
                 100% Privado
               </Badge>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-700 font-medium">
                 El vehículo es solo para ti y tu grupo
               </p>
             </div>
@@ -564,7 +564,7 @@ onReservar={handleReservar}
               <Badge className="mb-4 bg-blue-500 text-white text-base px-4 py-2">
                 Mismo Servicio
               </Badge>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-700 font-medium">
                 Calidad premium sin diferencias
               </p>
             </div>
@@ -572,7 +572,7 @@ onReservar={handleReservar}
               <Badge className="mb-4 bg-purple-500 text-white text-base px-4 py-2">
                 Conductores Pro
               </Badge>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-700 font-medium">
                 Certificados y con experiencia
               </p>
             </div>
@@ -580,7 +580,7 @@ onReservar={handleReservar}
               <Badge className="mb-4 bg-yellow-500 text-white text-base px-4 py-2">
                  Mejor Precio
               </Badge>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-gray-700 font-medium">
                 Hasta 60% de ahorro garantizado
               </p>
             </div>
