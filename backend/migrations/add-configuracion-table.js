@@ -4,18 +4,18 @@
 import sequelize from "../config/database.js";
 
 const addConfiguracionTable = async () => {
-try {
-console.log("🔄 Verificando tabla configuracion...");
+	try {
+		console.log("🔄 Verificando tabla configuracion...");
 
-// Verificar si la tabla ya existe
-const [results] = await sequelize.query(`
+		// Verificar si la tabla ya existe
+		const [results] = await sequelize.query(`
 SHOW TABLES LIKE 'configuracion';
 `);
 
-if (results.length === 0) {
-console.log("📋 Creando tabla configuracion...");
+		if (results.length === 0) {
+			console.log("📋 Creando tabla configuracion...");
 
-await sequelize.query(`
+			await sequelize.query(`
 CREATE TABLE IF NOT EXISTS configuracion (
 id INT AUTO_INCREMENT PRIMARY KEY,
 clave VARCHAR(100) NOT NULL UNIQUE COMMENT 'Clave única de configuración',
@@ -29,12 +29,12 @@ UNIQUE INDEX idx_clave (clave)
 COMMENT='Tabla de configuraciones generales del sistema';
 `);
 
-console.log("✅ Tabla configuracion creada exitosamente");
+			console.log("✅ Tabla configuracion creada exitosamente");
 
-// Inicializar configuración de modal WhatsApp (activo por defecto)
-console.log("📋 Inicializando configuración de WhatsApp intercept...");
+			// Inicializar configuración de modal WhatsApp (activo por defecto)
+			console.log("📋 Inicializando configuración de WhatsApp intercept...");
 
-await sequelize.query(`
+			await sequelize.query(`
 INSERT INTO configuracion (clave, valor, tipo, descripcion)
 VALUES (
 'whatsapp_intercept_activo',
@@ -44,10 +44,12 @@ VALUES (
 );
 `);
 
-console.log("✅ Configuración inicial de WhatsApp establecida (activo: true)");
+			console.log(
+				"✅ Configuración inicial de WhatsApp establecida (activo: true)",
+			);
 
-// Insertar recargo default de feriados (10%) junto con la creación de la tabla
-await sequelize.query(`
+			// Insertar recargo default de feriados (10%) junto con la creación de la tabla
+			await sequelize.query(`
 INSERT INTO configuracion (clave, valor, tipo, descripcion)
 VALUES (
 'recargo_feriados_default',
@@ -57,19 +59,21 @@ VALUES (
 );
 `);
 
-console.log("✅ Configuración recargo_feriados_default establecida (10%)");
-} else {
-console.log("✅ Tabla configuracion ya existe");
+			console.log(
+				"✅ Configuración recargo_feriados_default establecida (10%)",
+			);
+		} else {
+			console.log("✅ Tabla configuracion ya existe");
 
-// Verificar si la configuración de WhatsApp existe
-const [configExists] = await sequelize.query(`
+			// Verificar si la configuración de WhatsApp existe
+			const [configExists] = await sequelize.query(`
 SELECT * FROM configuracion WHERE clave = 'whatsapp_intercept_activo';
 `);
 
-if (configExists.length === 0) {
-console.log("📋 Inicializando configuración de WhatsApp intercept...");
+			if (configExists.length === 0) {
+				console.log("📋 Inicializando configuración de WhatsApp intercept...");
 
-await sequelize.query(`
+				await sequelize.query(`
 INSERT INTO configuracion (clave, valor, tipo, descripcion)
 VALUES (
 'whatsapp_intercept_activo',
@@ -79,20 +83,24 @@ VALUES (
 );
 `);
 
-console.log("✅ Configuración inicial de WhatsApp establecida (activo: true)");
-} else {
-console.log("✅ Configuración de WhatsApp ya existe");
-}
+				console.log(
+					"✅ Configuración inicial de WhatsApp establecida (activo: true)",
+				);
+			} else {
+				console.log("✅ Configuración de WhatsApp ya existe");
+			}
 
-// Verificar si ya existe el recargo default de feriados; insertarlo si falta
-const [feriadoConfigExists] = await sequelize.query(`
+			// Verificar si ya existe el recargo default de feriados; insertarlo si falta
+			const [feriadoConfigExists] = await sequelize.query(`
 SELECT * FROM configuracion WHERE clave = 'recargo_feriados_default';
 `);
 
-if (feriadoConfigExists.length === 0) {
-console.log("📋 Inicializando configuración recargo_feriados_default...");
+			if (feriadoConfigExists.length === 0) {
+				console.log(
+					"📋 Inicializando configuración recargo_feriados_default...",
+				);
 
-await sequelize.query(`
+				await sequelize.query(`
 INSERT INTO configuracion (clave, valor, tipo, descripcion)
 VALUES (
 'recargo_feriados_default',
@@ -102,17 +110,19 @@ VALUES (
 );
 `);
 
-console.log("✅ Configuración recargo_feriados_default establecida (10%)");
-} else {
-console.log("✅ Configuración recargo_feriados_default ya existe");
-}
-}
+				console.log(
+					"✅ Configuración recargo_feriados_default establecida (10%)",
+				);
+			} else {
+				console.log("✅ Configuración recargo_feriados_default ya existe");
+			}
+		}
 
-console.log("✅ Migración de configuracion completada");
-} catch (error) {
-console.error("❌ Error en migración de configuracion:", error.message);
-// No lanzar error para no detener el servidor
-}
+		console.log("✅ Migración de configuracion completada");
+	} catch (error) {
+		console.error("❌ Error en migración de configuracion:", error.message);
+		// No lanzar error para no detener el servidor
+	}
 };
 
 export default addConfiguracionTable;

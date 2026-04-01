@@ -1775,6 +1775,58 @@ app.put("/api/configuracion/ofertas-sillas", authAdmin, async (req, res) => {
 	}
 });
 
+/**
+ * GET /api/configuracion/recargo-feriados
+ * Obtiene el porcentaje de recargo por defecto aplicado en días feriados
+ * cuando el festivo no tiene un recargo específico configurado.
+ */
+app.get("/api/configuracion/recargo-feriados", async (req, res) => {
+	try {
+		const recargo = await Configuracion.getValorParseado(
+			"recargo_feriados_default",
+			10,
+		);
+		res.json({ success: true, porcentaje: recargo });
+	} catch (error) {
+		console.error("Error obteniendo recargo feriados:", error);
+		res.status(500).json({ error: "Error al obtener configuración" });
+	}
+});
+
+/**
+ * PUT /api/configuracion/recargo-feriados
+ * Actualiza el porcentaje de recargo por defecto para días feriados.
+ * Requiere autenticación de administrador.
+ */
+app.put("/api/configuracion/recargo-feriados", authAdmin, async (req, res) => {
+	try {
+		const { porcentaje } = req.body;
+		const valor = parseFloat(porcentaje);
+
+		if (!Number.isFinite(valor) || valor < 0 || valor > 200) {
+			return res
+				.status(400)
+				.json({ error: "El porcentaje debe ser un número entre 0 y 200." });
+		}
+
+		await Configuracion.setValor(
+			"recargo_feriados_default",
+			valor,
+			"number",
+			"Porcentaje de recargo aplicado en días feriados cuando el festivo no tiene recargo específico",
+		);
+
+		res.json({
+			success: true,
+			mensaje: "Recargo de feriados actualizado correctamente",
+			porcentaje: valor,
+		});
+	} catch (error) {
+		console.error("Error actualizando recargo feriados:", error);
+		res.status(500).json({ error: "Error al actualizar configuración" });
+	}
+});
+
 // --- ENDPOINTS PARA CODIGOS DE DESCUENTO ---
 app.get("/api/codigos", async (req, res) => {
 	try {

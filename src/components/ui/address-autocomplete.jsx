@@ -76,7 +76,9 @@ export function AddressAutocomplete({
 					const emitirValor = (val) => {
 						if (onChange) onChange({ target: { name, value: val } });
 					};
-					shadowInput.addEventListener("input", (e) => emitirValor(e.target.value));
+					shadowInput.addEventListener("input", (e) =>
+						emitirValor(e.target.value),
+					);
 					shadowInput.addEventListener("blur", (e) => {
 						if (e.target.value) emitirValor(e.target.value);
 					});
@@ -95,7 +97,9 @@ export function AddressAutocomplete({
 				const shadowInput = element.shadowRoot?.querySelector("input");
 				const textoEscrito = shadowInput?.value || "";
 				if (wrapperRef.current?.contains(element)) {
-					try { wrapperRef.current.removeChild(element); } catch (_) {}
+					try {
+						wrapperRef.current.removeChild(element);
+					} catch (_) {}
 				}
 				elementRef.current = null;
 				if (textoEscrito && onChange) {

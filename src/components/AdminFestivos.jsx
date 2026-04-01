@@ -23,6 +23,9 @@ function AdminFestivos() {
 	const [success, setSuccess] = useState("");
 	const [editingFestivo, setEditingFestivo] = useState(null);
 	const [nuevoFestivo, setNuevoFestivo] = useState(null);
+	// Estado para el recargo por defecto de feriados
+	const [recargoDefault, setRecargoDefault] = useState("");
+	const [savingRecargo, setSavingRecargo] = useState(false);
 
 	const festivoTemplate = {
 		fecha: "",
@@ -36,7 +39,38 @@ function AdminFestivos() {
 
 	useEffect(() => {
 		cargarFestivos();
+		cargarRecargoDefault();
 	}, []);
+
+	const cargarRecargoDefault = async () => {
+		try {
+			const response = await authenticatedFetch(`/api/configuracion/recargo-feriados`);
+			if (!response.ok) return;
+			const data = await response.json();
+			setRecargoDefault(data.porcentaje ?? 10);
+		} catch {
+			// Si falla, no bloquear; se usa el valor por defecto del backend
+		}
+	};
+
+	const handleGuardarRecargoDefault = async () => {
+		try {
+			setSavingRecargo(true);
+			setError("");
+			setSuccess("");
+			const response = await authenticatedFetch(`/api/configuracion/recargo-feriados`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ porcentaje: recargoDefault }),
+			});
+			if (!response.ok) throw new Error("Error al guardar recargo");
+			setSuccess("Recargo por defecto de feriados actualizado correctamente");
+		} catch (err) {
+			setError("Error al guardar recargo: " + err.message);
+		} finally {
+			setSavingRecargo(false);
+		}
+	};
 
 	const cargarFestivos = async () => {
 		try {
@@ -137,6 +171,40 @@ function AdminFestivos() {
 					<Plus className="mr-2 h-4 w-4" />
 					Agregar Festivo
 				</Button>
+			</div>
+
+			{/* Configuración global de recargo para feriados */}
+			<div className="rounded-lg border border-slate-700 bg-slate-900/50 p-5">
+				<h3 className="mb-3 text-base font-semibold text-white">
+					Recargo por defecto en días feriados
+				</h3>
+				<p className="mb-4 text-sm text-slate-400">
+					Porcentaje que se aplica automáticamente cuando un festivo no tiene
+					recargo específico configurado. Valor actual en BD:{" "}
+					<span className="font-semibold text-orange-300">{recargoDefault}%</span>
+				</p>
+				<div className="flex items-center gap-3">
+					<input
+						type="number"
+						value={recargoDefault}
+						onChange={(e) => setRecargoDefault(parseFloat(e.target.value) || 0)}
+						className="w-28 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-white"
+						min="0"
+						max="200"
+						step="1"
+					/>
+					<span className="text-slate-400">%</span>
+					<Button
+						size="sm"
+						onClick={handleGuardarRecargoDefault}
+						disabled={savingRecargo}
+					>
+						{savingRecargo ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : null}
+						Guardar
+					</Button>
+				</div>
 			</div>
 
 			{error && (
@@ -353,7 +421,7 @@ function FormularioFestivo({
 						placeholder="Ej: 15"
 					/>
 					<p className="mt-1 text-xs text-slate-500">
-						Dejar vacío para usar configuración de día de semana
+						Dejar vacío para usar el recargo por defecto de feriados configurado arriba
 					</p>
 				</div>
 			</div>
