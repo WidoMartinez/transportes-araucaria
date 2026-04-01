@@ -185,7 +185,7 @@ const Reserva = sequelize.define(
 				"pendiente_detalles",
 				"confirmada",
 				"cancelada",
-				"completada"
+				"completada",
 			),
 			defaultValue: "pendiente",
 		},
@@ -195,10 +195,12 @@ const Reserva = sequelize.define(
 			get() {
 				// Una reserva tiene detalles completos si tiene una dirección geográfica mapeada
 				// (direccionOrigen o direccionDestino) según el sentido del viaje.
-				const tieneDireccionMapa = 
-					(this.getDataValue("direccionOrigen") && this.getDataValue("direccionOrigen").trim() !== "") ||
-					(this.getDataValue("direccionDestino") && this.getDataValue("direccionDestino").trim() !== "");
-				
+				const tieneDireccionMapa =
+					(this.getDataValue("direccionOrigen") &&
+						this.getDataValue("direccionOrigen").trim() !== "") ||
+					(this.getDataValue("direccionDestino") &&
+						this.getDataValue("direccionDestino").trim() !== "");
+
 				return tieneDireccionMapa;
 			},
 		},
@@ -231,7 +233,7 @@ const Reserva = sequelize.define(
 				"parcial",
 				"pagado",
 				"fallido",
-				"reembolsado"
+				"reembolsado",
 			),
 			defaultValue: "pendiente",
 		},
@@ -329,7 +331,8 @@ const Reserva = sequelize.define(
 			type: DataTypes.DATE,
 			allowNull: true,
 			field: "ultima_solicitud_detalles",
-			comment: "Fecha y hora del último correo de solicitud de detalles enviado",
+			comment:
+				"Fecha y hora del último correo de solicitud de detalles enviado",
 		},
 		// Campo para upgrade voluntario a Van (no comentar: es necesario para guardar y leer el upgrade)
 		upgradeVan: {
@@ -351,7 +354,7 @@ const Reserva = sequelize.define(
 			{ fields: ["rut"] },
 			{ fields: ["codigo_reserva"], unique: true },
 		],
-	}
+	},
 );
 
 export default Reserva;

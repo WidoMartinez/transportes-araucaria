@@ -84,16 +84,16 @@ import {
 // Helper para generar texto formateado para conductor (WhatsApp)
 const generarTextoConductor = (reserva) => {
 	if (!reserva) return "";
-	
+
 	const AEROPUERTO_BUSQUEDA = "aeropuerto";
-	
+
 	// Formato de fecha y hora local
-	const fechaStr = reserva.fecha 
-		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL") 
+	const fechaStr = reserva.fecha
+		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL")
 		: "Sin fecha";
-	
+
 	const horaStr = reserva.hora || "Sin hora";
-	
+
 	// Referencia (Hotel, etc)
 	const hotelRefStr = reserva.hotel ? ` [${reserva.hotel}]` : "";
 
@@ -117,22 +117,28 @@ const generarTextoConductor = (reserva) => {
 	}
 
 	// Generar enlaces de Google Maps para el punto "específico" (el que no es aeropuerto)
-	const esOrigenAero = (reserva.origen || "").toLowerCase().includes(AEROPUERTO_BUSQUEDA);
-	
-	const addressEspecifica = esOrigenAero 
-		? (reserva.direccionDestino || reserva.destino || "")
-		: (reserva.direccionOrigen || reserva.origen || "");
+	const esOrigenAero = (reserva.origen || "")
+		.toLowerCase()
+		.includes(AEROPUERTO_BUSQUEDA);
 
-	const mapsLink = addressEspecifica 
-		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressEspecifica)}` 
+	const addressEspecifica = esOrigenAero
+		? reserva.direccionDestino || reserva.destino || ""
+		: reserva.direccionOrigen || reserva.origen || "";
+
+	const mapsLink = addressEspecifica
+		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressEspecifica)}`
 		: "";
-	
+
 	// info adicional
-	const vueloStr = reserva.numeroVuelo ? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}` : "";
-	const observacionesStr = reserva.observaciones ? `\n📝 *Obs:* ${reserva.observaciones}` : "";
-	
+	const vueloStr = reserva.numeroVuelo
+		? `\n✈️ *Vuelo:* ${reserva.numeroVuelo}`
+		: "";
+	const observacionesStr = reserva.observaciones
+		? `\n📝 *Obs:* ${reserva.observaciones}`
+		: "";
+
 	const mapsStr = mapsLink ? `\n📍 *Maps:* ${mapsLink}` : "";
-	
+
 	return `*NUEVO SERVICIO ASIGNADO* 🚖
 
 🗓 *Fecha:* ${fechaStr}
@@ -162,10 +168,10 @@ const copiarInfoFinanzas = (reserva) => {
 
 const copiarInfoItinerario = (reserva) => {
 	if (!reserva) return "";
-	const fechaStr = reserva.fecha 
-		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL") 
+	const fechaStr = reserva.fecha
+		? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL")
 		: "Sin fecha";
-	
+
 	let text = `*ITINERARIO DE VIAJE* 🗓️
 🗓️ *Fecha:* ${fechaStr}
 ⏰ *Hora:* ${reserva.hora || "Sin hora"}
@@ -177,13 +183,15 @@ const copiarInfoItinerario = (reserva) => {
 		const vuelta = reserva.tramoVuelta || {};
 		const fVuelta = vuelta.fecha || reserva.fechaRegreso;
 		const hVuelta = vuelta.hora || reserva.horaRegreso;
-		const fVueltaStr = fVuelta ? new Date(fVuelta + "T00:00:00").toLocaleDateString("es-CL") : "Sin fecha";
-		
+		const fVueltaStr = fVuelta
+			? new Date(fVuelta + "T00:00:00").toLocaleDateString("es-CL")
+			: "Sin fecha";
+
 		text += `\n\n*REGRESO* 🔄
 🗓️ *Fecha:* ${fVueltaStr}
 ⏰ *Hora:* ${hVuelta || "Sin hora"}`;
 	}
-	
+
 	return text;
 };
 
@@ -192,7 +200,8 @@ const copiarInfoComplementos = (reserva) => {
 	let text = `*DETALLES ADICIONALES* ➕`;
 	if (reserva.numeroVuelo) text += `\n✈️ *Vuelo:* ${reserva.numeroVuelo}`;
 	if (reserva.hotel) text += `\n🏨 *Hotel/Ref:* ${reserva.hotel}`;
-	if (reserva.equipajeEspecial) text += `\n🎒 *Equipaje:* ${reserva.equipajeEspecial}`;
+	if (reserva.equipajeEspecial)
+		text += `\n🎒 *Equipaje:* ${reserva.equipajeEspecial}`;
 	if (reserva.sillaInfantil) text += `\n👶 *Silla:* REQUERIDA`;
 	return text;
 };
@@ -227,10 +236,10 @@ function AdminReservas() {
 	// Sistema de autenticación moderno
 	const { accessToken } = useAuth();
 	const { authenticatedFetch } = useAuthenticatedFetch();
-	
+
 	// Detección de dispositivos móviles
-	const isMobile = useMediaQuery('(max-width: 767px)');
-	const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
+	const isMobile = useMediaQuery("(max-width: 767px)");
+	const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
 
 	const [reservas, setReservas] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -269,9 +278,9 @@ function AdminReservas() {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ monto: montoGenerarLink }),
-				}
+				},
 			);
-			
+
 			const data = await response.json();
 			if (data.success && data.url) {
 				setLinkGenerado(data.url);
@@ -305,7 +314,7 @@ function AdminReservas() {
 		if (!selectedReserva) return;
 		try {
 			const resp = await fetch(
-				`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`
+				`${apiUrl}/api/reservas/${selectedReserva.id}/pagos`,
 			);
 			if (resp.ok) {
 				const data = await resp.json();
@@ -320,24 +329,33 @@ function AdminReservas() {
 
 	// ELIMINAR PAGO INDIVIDUAL
 	const handleDeletePago = async (pagoId) => {
-		if (!confirm("¿Estás seguro de que deseas eliminar este registro de pago? El saldo de la reserva se recalculará automáticamente.")) return;
-		
+		if (
+			!confirm(
+				"¿Estás seguro de que deseas eliminar este registro de pago? El saldo de la reserva se recalculará automáticamente.",
+			)
+		)
+			return;
+
 		try {
 			const resp = await fetch(`${apiUrl}/api/pagos/${pagoId}`, {
 				method: "DELETE",
-				headers: { Authorization: `Bearer ${accessToken}` }
+				headers: { Authorization: `Bearer ${accessToken}` },
 			});
 			if (resp.ok) {
 				toast.success("Pago eliminado correctamente");
 				fetchPagoHistorial();
 				// Recargar la reserva para ver el nuevo saldo
 				if (selectedReserva) {
-					const res = await authenticatedFetch(`/api/reservas/${selectedReserva.id}`);
+					const res = await authenticatedFetch(
+						`/api/reservas/${selectedReserva.id}`,
+					);
 					if (res.ok) {
 						const updated = await res.json();
 						setSelectedReserva(updated);
 						// Actualizar en el listado general
-						setReservas(prev => prev.map(r => r.id === updated.id ? updated : r));
+						setReservas((prev) =>
+							prev.map((r) => (r.id === updated.id ? updated : r)),
+						);
 					}
 				}
 			} else {
@@ -354,7 +372,7 @@ function AdminReservas() {
 	const handleEditPago = async (pago) => {
 		const nuevoMonto = prompt("Ingresa el nuevo monto (CLP):", pago.amount);
 		if (nuevoMonto === null) return;
-		
+
 		const montoNum = parseFloat(nuevoMonto);
 		if (isNaN(montoNum) || montoNum < 0) {
 			toast.error("Monto inválido");
@@ -364,26 +382,30 @@ function AdminReservas() {
 		try {
 			const resp = await fetch(`${apiUrl}/api/pagos/${pago.id}`, {
 				method: "PUT",
-				headers: { 
+				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${accessToken}` 
+					Authorization: `Bearer ${accessToken}`,
 				},
 				body: JSON.stringify({
 					amount: montoNum,
 					metodo: pago.metodo,
-					referencia: pago.referencia
-				})
+					referencia: pago.referencia,
+				}),
 			});
-			
+
 			if (resp.ok) {
 				toast.success("Pago actualizado");
 				fetchPagoHistorial();
 				if (selectedReserva) {
-					const res = await authenticatedFetch(`/api/reservas/${selectedReserva.id}`);
+					const res = await authenticatedFetch(
+						`/api/reservas/${selectedReserva.id}`,
+					);
 					if (res.ok) {
 						const updated = await res.json();
 						setSelectedReserva(updated);
-						setReservas(prev => prev.map(r => r.id === updated.id ? updated : r));
+						setReservas((prev) =>
+							prev.map((r) => (r.id === updated.id ? updated : r)),
+						);
 					}
 				}
 			} else {
@@ -410,8 +432,10 @@ function AdminReservas() {
 	const [conductorSeleccionado, setConductorSeleccionado] = useState("");
 	const [loadingAsignacion, setLoadingAsignacion] = useState(false);
 	const [enviarNotificacion, setEnviarNotificacion] = useState(true);
-	const [enviarNotificacionConductor, setEnviarNotificacionConductor] = useState(true);
-	const [enviarActualizacionConductor, setEnviarActualizacionConductor] = useState(false);
+	const [enviarNotificacionConductor, setEnviarNotificacionConductor] =
+		useState(true);
+	const [enviarActualizacionConductor, setEnviarActualizacionConductor] =
+		useState(false);
 	// Estados para pre-cargar y validar contra asignaciÃ³n actual
 	const [assignedPatente, setAssignedPatente] = useState("");
 	const [assignedConductorNombre, setAssignedConductorNombre] = useState("");
@@ -420,13 +444,16 @@ function AdminReservas() {
 	// Estados para manejar reservas vinculadas (ida y vuelta)
 	const [reservaVuelta, setReservaVuelta] = useState(null);
 	const [asignarAmbas, setAsignarAmbas] = useState(true);
-	const [vueltaVehiculoSeleccionado, setVueltaVehiculoSeleccionado] = useState("");
-	const [vueltaConductorSeleccionado, setVueltaConductorSeleccionado] = useState("");
+	const [vueltaVehiculoSeleccionado, setVueltaVehiculoSeleccionado] =
+		useState("");
+	const [vueltaConductorSeleccionado, setVueltaConductorSeleccionado] =
+		useState("");
 	const [historialAsignaciones, setHistorialAsignaciones] = useState([]);
 	const [loadingHistorial, setLoadingHistorial] = useState(false);
 	// Estados para diálogo de completar reservas vinculadas
 	const [showDialogoCompletar, setShowDialogoCompletar] = useState(false);
-	const [dialogoCompletarOpciones, setDialogoCompletarOpciones] = useState(null);
+	const [dialogoCompletarOpciones, setDialogoCompletarOpciones] =
+		useState(null);
 
 	// Filtros y bÃºsqueda
 	const [searchTerm, setSearchTerm] = useState("");
@@ -437,10 +464,13 @@ function AdminReservas() {
 	// Nuevo selector de rango y filtros inteligentes
 	const [filtroInteligente, setFiltroInteligente] = useState("todos"); // 'sin_asignacion', 'incompletas', 'archivadas'
 	const [rangoFecha, setRangoFecha] = useState("todos");
-	
+
 	// Estado de ordenamiento
-	const [sortConfig, setSortConfig] = useState({ key: "created_at", direction: "desc" });
-	
+	const [sortConfig, setSortConfig] = useState({
+		key: "created_at",
+		direction: "desc",
+	});
+
 	// Función para manejar el ordenamiento
 	const handleSort = (key) => {
 		let direction = "asc";
@@ -454,7 +484,7 @@ function AdminReservas() {
 	const handleRangoFechaChange = (valor) => {
 		setRangoFecha(valor);
 		const hoy = new Date();
-		
+
 		// Helper para formatear fecha localmente como YYYY-MM-DD
 		const formatDateLocal = (date) => {
 			const year = date.getFullYear();
@@ -476,17 +506,20 @@ function AdminReservas() {
 			const ayerStr = formatDateLocal(ayer);
 			desde = ayerStr;
 			hasta = ayerStr;
-		} else if (valor === "semana") { // Últimos 7 días
+		} else if (valor === "semana") {
+			// Últimos 7 días
 			const hace7 = new Date(hoy);
 			hace7.setDate(hoy.getDate() - 7);
 			desde = formatDateLocal(hace7);
 			hasta = formatDateLocal(hoy);
-		} else if (valor === "quincena") { // Últimos 15 días
+		} else if (valor === "quincena") {
+			// Últimos 15 días
 			const hace15 = new Date(hoy);
 			hace15.setDate(hoy.getDate() - 15);
 			desde = formatDateLocal(hace15);
 			hasta = formatDateLocal(hoy);
-		} else if (valor === "mes") { // Mes actual
+		} else if (valor === "mes") {
+			// Mes actual
 			// Primer día del mes actual
 			const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 			desde = formatDateLocal(primerDia);
@@ -497,14 +530,13 @@ function AdminReservas() {
 			desde = "";
 			hasta = "";
 		}
-		
+
 		// Si es 'personalizado', no cambiamos las fechas automÃ¡ticamente
 		if (valor !== "personalizado") {
 			setFechaDesde(desde);
 			setFechaHasta(hasta);
 		}
 	};
-
 
 	// PaginaciÃ³n
 	const [currentPage, setCurrentPage] = useState(1);
@@ -598,7 +630,7 @@ function AdminReservas() {
 					: [];
 				const uniqueNames = [...new Set(names)];
 				const includesAeropuerto = uniqueNames.some(
-					(n) => normalizeDestino(n) === normalizeDestino(AEROPUERTO_LABEL)
+					(n) => normalizeDestino(n) === normalizeDestino(AEROPUERTO_LABEL),
 				);
 				const merged = includesAeropuerto
 					? uniqueNames
@@ -632,7 +664,7 @@ function AdminReservas() {
 
 	const destinoExiste = useCallback(
 		(valor) => destinosSet.has(normalizeDestino(valor)),
-		[destinosSet]
+		[destinosSet],
 	);
 
 	// Estados para autocompletado de clientes
@@ -715,7 +747,7 @@ function AdminReservas() {
 		try {
 			localStorage.setItem(
 				COLUMNAS_STORAGE_KEY,
-				JSON.stringify(columnasVisibles)
+				JSON.stringify(columnasVisibles),
 			);
 		} catch {
 			// Ignorar errores de localStorage
@@ -759,7 +791,7 @@ function AdminReservas() {
 			const seleccionObjs = reservas.filter(
 				(r) =>
 					selectedReservas.includes(r.id) ||
-					selectedReservas.includes(String(r.id))
+					selectedReservas.includes(String(r.id)),
 			);
 			seleccionObjs.forEach((reserva) => {
 				const fila = columnasExportar.map((col) => {
@@ -819,7 +851,7 @@ function AdminReservas() {
 
 	// Estado para mostrar la sección de ajustes manuales inline en el diálogo de edición
 	const [showAdjustments, setShowAdjustments] = useState(false);
-	
+
 	// Estado para modal de exportación de calendario
 	const [showCalendarDialog, setShowCalendarDialog] = useState(false);
 	const [calendarStartDate, setCalendarStartDate] = useState("");
@@ -841,7 +873,7 @@ function AdminReservas() {
 			const resp = await fetch(`${apiUrl}/api/reservas/calendario?${query}`, {
 				headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
 			});
-			
+
 			if (resp.ok) {
 				const data = await resp.json();
 				const eventos = data.eventos || [];
@@ -849,18 +881,20 @@ function AdminReservas() {
 				// Generar HTML para impresión
 				const printWindow = window.open("", "_blank");
 				if (!printWindow) {
-					alert("Permite las ventanas emergentes para imprimir la planificación");
+					alert(
+						"Permite las ventanas emergentes para imprimir la planificación",
+					);
 					return;
 				}
 
 				// Agrupar por fecha
 				const eventosPorFecha = {};
-				eventos.forEach(evt => {
+				eventos.forEach((evt) => {
 					const fechaStr = evt.fecha; // YYYY-MM-DD
 					if (!eventosPorFecha[fechaStr]) eventosPorFecha[fechaStr] = [];
 					eventosPorFecha[fechaStr].push(evt);
 				});
-				
+
 				// Ordenar fechas
 				const fechasOrdenadas = Object.keys(eventosPorFecha).sort();
 
@@ -939,41 +973,54 @@ function AdminReservas() {
 				`;
 
 				if (fechasOrdenadas.length === 0) {
-					htmlContent += "<p style='text-align:center;'>No hay viajes programados en este período.</p>";
+					htmlContent +=
+						"<p style='text-align:center;'>No hay viajes programados en este período.</p>";
 				}
 
-				fechasOrdenadas.forEach(fecha => {
-				// Formatear fecha amigable (e.g. Lunes 25 de Diciembre)
-				const fechaObj = new Date(fecha + "T00:00:00");
-				const fechaTexto = fechaObj.toLocaleDateString("es-CL", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-				
-				// Clasificar eventos por dirección
-				const eventosDelDia = eventosPorFecha[fecha];
-				const viajesHaciaAero = eventosDelDia.filter(ev => {
-					const destinoNorm = (ev.destino || '').toLowerCase();
-					return destinoNorm === 'aeropuerto la araucanía' || destinoNorm.includes('aeropuerto');
-				});
-				const viajesDesdeAero = eventosDelDia.filter(ev => {
-					const origenNorm = (ev.origen || '').toLowerCase();
-					return origenNorm === 'aeropuerto la araucanía' || origenNorm.includes('aeropuerto');
-				});
-				const otrosViajes = eventosDelDia.filter(ev => 
-					!viajesHaciaAero.includes(ev) && !viajesDesdeAero.includes(ev)
-				);
-				
-				htmlContent += `<div class="dia-block">
+				fechasOrdenadas.forEach((fecha) => {
+					// Formatear fecha amigable (e.g. Lunes 25 de Diciembre)
+					const fechaObj = new Date(fecha + "T00:00:00");
+					const fechaTexto = fechaObj.toLocaleDateString("es-CL", {
+						weekday: "long",
+						year: "numeric",
+						month: "long",
+						day: "numeric",
+					});
+
+					// Clasificar eventos por dirección
+					const eventosDelDia = eventosPorFecha[fecha];
+					const viajesHaciaAero = eventosDelDia.filter((ev) => {
+						const destinoNorm = (ev.destino || "").toLowerCase();
+						return (
+							destinoNorm === "aeropuerto la araucanía" ||
+							destinoNorm.includes("aeropuerto")
+						);
+					});
+					const viajesDesdeAero = eventosDelDia.filter((ev) => {
+						const origenNorm = (ev.origen || "").toLowerCase();
+						return (
+							origenNorm === "aeropuerto la araucanía" ||
+							origenNorm.includes("aeropuerto")
+						);
+					});
+					const otrosViajes = eventosDelDia.filter(
+						(ev) =>
+							!viajesHaciaAero.includes(ev) && !viajesDesdeAero.includes(ev),
+					);
+
+					htmlContent += `<div class="dia-block">
 					<div class="dia-header">${fechaTexto.toUpperCase()}</div>`;
-				
-				// Función auxiliar para renderizar un grupo de viajes
-				const renderGrupoViajes = (viajes, tituloGrupo, claseCSS) => {
-					if (viajes.length === 0) return '';
-					
-					let html = '';
-					if (tituloGrupo) {
-						html += `<div class="direccion-header ${claseCSS}">${tituloGrupo}</div>`;
-					}
-					
-					html += `<table>
+
+					// Función auxiliar para renderizar un grupo de viajes
+					const renderGrupoViajes = (viajes, tituloGrupo, claseCSS) => {
+						if (viajes.length === 0) return "";
+
+						let html = "";
+						if (tituloGrupo) {
+							html += `<div class="direccion-header ${claseCSS}">${tituloGrupo}</div>`;
+						}
+
+						html += `<table>
 						<thead>
 							<tr>
 								<th style="width: 80px;">Hora</th>
@@ -984,19 +1031,20 @@ function AdminReservas() {
 							</tr>
 						</thead>
 						<tbody>`;
-					
-					viajes.forEach(ev => {
-						const tipoBadge = ev.tipo === "RETORNO" 
-							? `<span class="retorno-badge">RETORNO</span>` 
-							: `<span class="ida-badge">IDA</span>`;
-						
-						const contacto = `
+
+						viajes.forEach((ev) => {
+							const tipoBadge =
+								ev.tipo === "RETORNO"
+									? `<span class="retorno-badge">RETORNO</span>`
+									: `<span class="ida-badge">IDA</span>`;
+
+							const contacto = `
 							<b>${ev.cliente}</b><br>
-							${ev.telefono || '-'}<br>
-							<small>${ev.email || ''}</small>
+							${ev.telefono || "-"}<br>
+							<small>${ev.email || ""}</small>
 						`;
 
-						const ruta = `
+							const ruta = `
 							<b>Origen:</b> ${ev.direccionOrigen || ev.origen}<br>
 							<b>Destino:</b> ${ev.direccionDestino || ev.destino}<br>
 							<div style="margin-top:4px;">
@@ -1004,62 +1052,72 @@ function AdminReservas() {
 							</div>
 						`;
 
-		
-					let asignacion = `<span style="color:#999;">Sin asignar</span>`;
-					if (ev.vehiculoPatente || ev.conductorNombre) {
-						// Construir información del vehículo
-						let vehiculoInfo = '';
-						if (ev.vehiculoPatente) {
-							vehiculoInfo = ev.vehiculoTipo 
-								? `${ev.vehiculoTipo} (${ev.vehiculoPatente})`
-								: ev.vehiculoPatente;
-						} else if (ev.vehiculo) {
-							vehiculoInfo = ev.vehiculo;
-						}
-						
-						// Construir información del conductor
-						let conductorInfo = '';
-						if (ev.conductorNombre) {
-							conductorInfo = `👤 ${ev.conductorNombre}`;
-						} else if (ev.conductorId) {
-							conductorInfo = '(Conductor asignado)';
-						}
-						
-						asignacion = `
-							${vehiculoInfo ? `🚗 ${vehiculoInfo}` : ''}<br>
+							let asignacion = `<span style="color:#999;">Sin asignar</span>`;
+							if (ev.vehiculoPatente || ev.conductorNombre) {
+								// Construir información del vehículo
+								let vehiculoInfo = "";
+								if (ev.vehiculoPatente) {
+									vehiculoInfo = ev.vehiculoTipo
+										? `${ev.vehiculoTipo} (${ev.vehiculoPatente})`
+										: ev.vehiculoPatente;
+								} else if (ev.vehiculo) {
+									vehiculoInfo = ev.vehiculo;
+								}
+
+								// Construir información del conductor
+								let conductorInfo = "";
+								if (ev.conductorNombre) {
+									conductorInfo = `👤 ${ev.conductorNombre}`;
+								} else if (ev.conductorId) {
+									conductorInfo = "(Conductor asignado)";
+								}
+
+								asignacion = `
+							${vehiculoInfo ? `🚗 ${vehiculoInfo}` : ""}<br>
 							${conductorInfo}
 						`;
-					} else if (ev.vehiculo || ev.conductorId) {
-						// Fallback a información genérica si no hay datos específicos
-						asignacion = `
-							${ev.vehiculo || ''}<br>
-							${ev.conductorId ? '(Conductor asignado)' : ''}
+							} else if (ev.vehiculo || ev.conductorId) {
+								// Fallback a información genérica si no hay datos específicos
+								asignacion = `
+							${ev.vehiculo || ""}<br>
+							${ev.conductorId ? "(Conductor asignado)" : ""}
 						`;
-					}
-		
+							}
 
-						html += `
+							html += `
 							<tr class="reserva-row">
-								<td style="font-size:14px; font-weight:bold;">${ev.hora ? ev.hora.substring(0,5) : "--:--"} ${tipoBadge}</td>
-								<td style="font-size:11px; color:#666;">${ev.codigoReserva || '-'}</td>
+								<td style="font-size:14px; font-weight:bold;">${ev.hora ? ev.hora.substring(0, 5) : "--:--"} ${tipoBadge}</td>
+								<td style="font-size:11px; color:#666;">${ev.codigoReserva || "-"}</td>
 								<td>${contacto}</td>
 								<td>${ruta}</td>
 								<td>${asignacion}</td>
 							</tr>
 						`;
-					});
+						});
 
-					html += `</tbody></table>`;
-					return html;
-				};
-				
-				// Renderizar grupos en orden: Hacia Aeropuerto, Desde Aeropuerto, Otros
-				htmlContent += renderGrupoViajes(viajesHaciaAero, '✈️ HACIA EL AEROPUERTO', 'hacia-aero');
-				htmlContent += renderGrupoViajes(viajesDesdeAero, '🏠 DESDE EL AEROPUERTO', 'desde-aero');
-				htmlContent += renderGrupoViajes(otrosViajes, otrosViajes.length > 0 ? '🚗 OTROS VIAJES' : null, 'otros');
-				
-				htmlContent += `</div>`;
-			});
+						html += `</tbody></table>`;
+						return html;
+					};
+
+					// Renderizar grupos en orden: Hacia Aeropuerto, Desde Aeropuerto, Otros
+					htmlContent += renderGrupoViajes(
+						viajesHaciaAero,
+						"✈️ HACIA EL AEROPUERTO",
+						"hacia-aero",
+					);
+					htmlContent += renderGrupoViajes(
+						viajesDesdeAero,
+						"🏠 DESDE EL AEROPUERTO",
+						"desde-aero",
+					);
+					htmlContent += renderGrupoViajes(
+						otrosViajes,
+						otrosViajes.length > 0 ? "🚗 OTROS VIAJES" : null,
+						"otros",
+					);
+
+					htmlContent += `</div>`;
+				});
 
 				htmlContent += `
 						<div class="no-print" style="margin-top:20px; text-align:center;">
@@ -1071,7 +1129,7 @@ function AdminReservas() {
 
 				printWindow.document.write(htmlContent);
 				printWindow.document.close();
-				
+
 				setShowCalendarDialog(false);
 			} else {
 				alert("Error al cargar la planificación");
@@ -1088,16 +1146,14 @@ function AdminReservas() {
 	const fetchEstadisticas = async () => {
 		try {
 			const response = await fetch(`${apiUrl}/api/reservas/estadisticas`, {
-				headers: accessToken
-					? { Authorization: `Bearer ${accessToken}` }
-					: {},
+				headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
 			});
 			if (response.ok) {
 				const data = await response.json();
 				setEstadisticas(data);
 			} else {
 				console.warn(
-					`Error cargando estadÃ­sticas: ${response.status} ${response.statusText}`
+					`Error cargando estadÃ­sticas: ${response.status} ${response.statusText}`,
 				);
 				// Establecer estadÃ­sticas por defecto en caso de error
 				setEstadisticas({
@@ -1149,7 +1205,7 @@ function AdminReservas() {
 	// Abrir diálogo de asignación
 	const handleAsignar = async (reserva) => {
 		setSelectedReserva(reserva);
-		
+
 		// RESETEAR ESTADO VISUAL DE ASIGNACIÓN ANTERIOR
 		// Esto es crucial para que no aparezcan deshabilitados vehículos/conductores
 		// de la reserva que se vio anteriormente si la actual no tiene asignación.
@@ -1162,14 +1218,20 @@ function AdminReservas() {
 		let reservaVueltaData = null;
 		if (reserva.tramoHijoId) {
 			try {
-				const response = await authenticatedFetch(`/api/reservas/${reserva.tramoHijoId}`);
+				const response = await authenticatedFetch(
+					`/api/reservas/${reserva.tramoHijoId}`,
+				);
 				if (response.ok) {
 					reservaVueltaData = await response.json();
 					setReservaVuelta(reservaVueltaData);
-					
+
 					// Verificar si ya tienen el mismo conductor y vehículo asignado
-					const mismoConductor = reserva.conductorId && reserva.conductorId === reservaVueltaData.conductorId;
-					const mismoVehiculo = reserva.vehiculoId && reserva.vehiculoId === reservaVueltaData.vehiculoId;
+					const mismoConductor =
+						reserva.conductorId &&
+						reserva.conductorId === reservaVueltaData.conductorId;
+					const mismoVehiculo =
+						reserva.vehiculoId &&
+						reserva.vehiculoId === reservaVueltaData.vehiculoId;
 					setAsignarAmbas(mismoConductor && mismoVehiculo);
 				}
 			} catch (error) {
@@ -1180,23 +1242,31 @@ function AdminReservas() {
 			// Se abrió desde la VUELTA → cargar la IDA como reserva principal del modal
 			// para que la UI siempre muestre IDA arriba y VUELTA abajo.
 			try {
-				const responseIda = await authenticatedFetch(`/api/reservas/${reserva.tramoPadreId}`);
+				const responseIda = await authenticatedFetch(
+					`/api/reservas/${reserva.tramoPadreId}`,
+				);
 				if (responseIda.ok) {
 					const reservaIdaData = await responseIda.json();
 					// Intercambiar: la IDA es la principal, la VUELTA (actual) es la secundaria
 					setSelectedReserva(reservaIdaData);
 					reservaVueltaData = reserva; // la reserva original (vuelta) pasa a ser la vuelta
 					setReservaVuelta(reserva);
-					
+
 					// Verificar mismo conductor/vehículo
-					const mismoConductor = reservaIdaData.conductorId && reservaIdaData.conductorId === reserva.conductorId;
-					const mismoVehiculo = reservaIdaData.vehiculoId && reservaIdaData.vehiculoId === reserva.vehiculoId;
+					const mismoConductor =
+						reservaIdaData.conductorId &&
+						reservaIdaData.conductorId === reserva.conductorId;
+					const mismoVehiculo =
+						reservaIdaData.vehiculoId &&
+						reservaIdaData.vehiculoId === reserva.vehiculoId;
 					setAsignarAmbas(mismoConductor && mismoVehiculo);
 
 					// Pre-cargar selección para IDA (reservaIdaData)
 					let preVehIda = "";
 					if (vehiculos.length > 0 && reservaIdaData.vehiculoId) {
-						const foundIda = vehiculos.find(v => v.id === reservaIdaData.vehiculoId);
+						const foundIda = vehiculos.find(
+							(v) => v.id === reservaIdaData.vehiculoId,
+						);
 						if (foundIda) {
 							preVehIda = foundIda.id.toString();
 							setAssignedVehiculoId(foundIda.id);
@@ -1206,7 +1276,9 @@ function AdminReservas() {
 
 					let preConIda = "none";
 					if (conductores.length > 0 && reservaIdaData.conductorId) {
-						const foundConIda = conductores.find(c => c.id === reservaIdaData.conductorId);
+						const foundConIda = conductores.find(
+							(c) => c.id === reservaIdaData.conductorId,
+						);
 						if (foundConIda) {
 							preConIda = foundConIda.id.toString();
 							setAssignedConductorId(foundConIda.id);
@@ -1217,14 +1289,18 @@ function AdminReservas() {
 					// Pre-cargar selección para VUELTA (reserva original)
 					let preVehVuelta = "";
 					if (vehiculos.length > 0 && reserva.vehiculoId) {
-						const foundVuelta = vehiculos.find(v => v.id === reserva.vehiculoId);
+						const foundVuelta = vehiculos.find(
+							(v) => v.id === reserva.vehiculoId,
+						);
 						if (foundVuelta) preVehVuelta = foundVuelta.id.toString();
 					}
 					setVueltaVehiculoSeleccionado(preVehVuelta);
 
 					let preConVuelta = "none";
 					if (conductores.length > 0 && reserva.conductorId) {
-						const foundConVuelta = conductores.find(c => c.id === reserva.conductorId);
+						const foundConVuelta = conductores.find(
+							(c) => c.id === reserva.conductorId,
+						);
 						if (foundConVuelta) preConVuelta = foundConVuelta.id.toString();
 					}
 					setVueltaConductorSeleccionado(preConVuelta);
@@ -1243,7 +1319,7 @@ function AdminReservas() {
 		} else {
 			setReservaVuelta(null);
 		}
-		
+
 		// 2. Derivar patente del label "TIPO PATENTE" o "TIPO (patente PATENTE)"
 		const vehiculoStr = (reserva.vehiculo || "").trim();
 		let pat = "";
@@ -1256,18 +1332,18 @@ function AdminReservas() {
 			pat = vehiculoStr.split(" ").pop().toUpperCase();
 		}
 		setAssignedPatente(pat || "");
-		
+
 		// 3. Intentar extraer nombre de conductor desde observaciones
 		const obs = (reserva.observaciones || "").toString();
 		const m = obs.match(/Conductor asignado:\s*([^(|\n]+?)(?:\s*\(|$)/i);
 		const nombreCon = m ? m[1].trim() : "";
 		setAssignedConductorNombre(nombreCon);
-		
+
 		// 4. Intentar preseleccionar si los catálogos ya existen
 		let preVeh = "";
 		if (vehiculos.length > 0 && pat) {
 			const found = vehiculos.find(
-				(v) => (v.patente || "").toUpperCase() === pat
+				(v) => (v.patente || "").toUpperCase() === pat,
 			);
 			if (found) {
 				preVeh = found.id.toString();
@@ -1276,7 +1352,7 @@ function AdminReservas() {
 		}
 		// Si no encontró por patente, intentar por vehiculoId directo
 		if (!preVeh && vehiculos.length > 0 && reserva.vehiculoId) {
-			const foundById = vehiculos.find(v => v.id === reserva.vehiculoId);
+			const foundById = vehiculos.find((v) => v.id === reserva.vehiculoId);
 			if (foundById) {
 				preVeh = foundById.id.toString();
 				setAssignedVehiculoId(foundById.id);
@@ -1285,9 +1361,7 @@ function AdminReservas() {
 		let preCon = "none";
 		if (conductores.length > 0 && nombreCon) {
 			const foundC = conductores.find(
-				(c) =>
-					(c.nombre || "").toLowerCase() ===
-					nombreCon.toLowerCase()
+				(c) => (c.nombre || "").toLowerCase() === nombreCon.toLowerCase(),
 			);
 			if (foundC) {
 				preCon = foundC.id.toString();
@@ -1296,7 +1370,7 @@ function AdminReservas() {
 		}
 		// Si no encontró por nombre, intentar por conductorId directo
 		if (preCon === "none" && conductores.length > 0 && reserva.conductorId) {
-			const foundCById = conductores.find(c => c.id === reserva.conductorId);
+			const foundCById = conductores.find((c) => c.id === reserva.conductorId);
 			if (foundCById) {
 				preCon = foundCById.id.toString();
 				setAssignedConductorId(foundCById.id);
@@ -1304,30 +1378,34 @@ function AdminReservas() {
 		}
 		setVehiculoSeleccionado(preVeh);
 		setConductorSeleccionado(preCon);
-		
+
 		// 5. Si hay VUELTA, pre-cargar sus asignaciones también
 		if (reservaVueltaData) {
 			// Pre-seleccionar vehículo de VUELTA
 			let preVehVuelta = "";
 			if (vehiculos.length > 0 && reservaVueltaData.vehiculoId) {
-				const foundVuelta = vehiculos.find(v => v.id === reservaVueltaData.vehiculoId);
+				const foundVuelta = vehiculos.find(
+					(v) => v.id === reservaVueltaData.vehiculoId,
+				);
 				if (foundVuelta) {
 					preVehVuelta = foundVuelta.id.toString();
 				}
 			}
 			setVueltaVehiculoSeleccionado(preVehVuelta);
-			
+
 			// Pre-seleccionar conductor de VUELTA
 			let preConVuelta = "none";
 			if (conductores.length > 0 && reservaVueltaData.conductorId) {
-				const foundConVuelta = conductores.find(c => c.id === reservaVueltaData.conductorId);
+				const foundConVuelta = conductores.find(
+					(c) => c.id === reservaVueltaData.conductorId,
+				);
 				if (foundConVuelta) {
 					preConVuelta = foundConVuelta.id.toString();
 				}
 			}
 			setVueltaConductorSeleccionado(preConVuelta);
 		}
-		
+
 		setEnviarNotificacion(true);
 		setEnviarNotificacionConductor(true);
 		setShowAsignarDialog(true);
@@ -1341,7 +1419,7 @@ function AdminReservas() {
 		if (!showAsignarDialog) return;
 		if (!vehiculoSeleccionado && assignedPatente && vehiculos.length > 0) {
 			const found = vehiculos.find(
-				(v) => (v.patente || "").toUpperCase() === assignedPatente
+				(v) => (v.patente || "").toUpperCase() === assignedPatente,
 			);
 			if (found) {
 				setVehiculoSeleccionado(found.id.toString());
@@ -1352,7 +1430,7 @@ function AdminReservas() {
 			const foundC = conductores.find(
 				(c) =>
 					(c.nombre || "").toLowerCase() ===
-					assignedConductorNombre.toLowerCase()
+					assignedConductorNombre.toLowerCase(),
 			);
 			if (foundC) {
 				setConductorSeleccionado(foundC.id.toString());
@@ -1374,7 +1452,7 @@ function AdminReservas() {
 			alert("Debe seleccionar al menos un vehículo para la IDA");
 			return;
 		}
-		
+
 		// Validar que si hay VUELTA y NO está marcado "asignar ambas", debe tener vehículo seleccionado
 		if (reservaVuelta && !asignarAmbas && !vueltaVehiculoSeleccionado) {
 			alert("Debe seleccionar un vehículo para la VUELTA");
@@ -1401,19 +1479,25 @@ function AdminReservas() {
 						sendEmail: Boolean(enviarNotificacion),
 						sendEmailDriver: Boolean(enviarNotificacionConductor),
 					}),
-				}
+				},
 			);
-			
+
 			if (!responseIda.ok) {
 				const data = await responseIda.json();
-				throw new Error(data.error || "Error al asignar vehículo/conductor a la IDA");
+				throw new Error(
+					data.error || "Error al asignar vehículo/conductor a la IDA",
+				);
 			}
-			
+
 			// 2. Asignar VUELTA (si existe)
 			if (reservaVuelta) {
-				const vueltaVehiculo = asignarAmbas ? vehiculoSeleccionado : vueltaVehiculoSeleccionado;
-				const vueltaConductor = asignarAmbas ? conductorSeleccionado : vueltaConductorSeleccionado;
-				
+				const vueltaVehiculo = asignarAmbas
+					? vehiculoSeleccionado
+					: vueltaVehiculoSeleccionado;
+				const vueltaConductor = asignarAmbas
+					? conductorSeleccionado
+					: vueltaConductorSeleccionado;
+
 				const responseVuelta = await fetch(
 					`${apiUrl}/api/reservas/${reservaVuelta.id}/asignar`,
 					{
@@ -1431,24 +1515,26 @@ function AdminReservas() {
 							sendEmail: Boolean(enviarNotificacion),
 							sendEmailDriver: Boolean(enviarNotificacionConductor),
 						}),
-					}
+					},
 				);
-				
+
 				if (!responseVuelta.ok) {
 					const data = await responseVuelta.json();
-					throw new Error(data.error || "Error al asignar vehículo/conductor a la VUELTA");
+					throw new Error(
+						data.error || "Error al asignar vehículo/conductor a la VUELTA",
+					);
 				}
 			}
 
 			await fetchReservas(); // Recargar reservas
 			setShowAsignarDialog(false);
-			
+
 			// Mensaje de éxito
 			const mensaje = reservaVuelta
 				? "Vehículo y conductor asignados correctamente para IDA y VUELTA"
 				: "Vehículo y conductor asignados correctamente";
 			alert(mensaje);
-			
+
 			// Refrescar historial si estamos viendo detalles
 			if (showDetailDialog && selectedReserva?.id) {
 				setLoadingHistorial(true);
@@ -1460,12 +1546,12 @@ function AdminReservas() {
 							headers: accessToken
 								? { Authorization: `Bearer ${accessToken}` }
 								: {},
-						}
+						},
 					);
 					if (resp.ok) {
 						const data = await resp.json();
 						setHistorialAsignaciones(
-							Array.isArray(data.historial) ? data.historial : []
+							Array.isArray(data.historial) ? data.historial : [],
 						);
 					}
 				} catch {
@@ -1553,10 +1639,14 @@ function AdminReservas() {
 			setTotalReservas(data.pagination?.total || 0);
 
 			// Cargar estados de evaluaciones para reservas completadas en el lote actual
-			const completadas = reservasNormalizadas.filter((r) => r.estado === "completada");
+			const completadas = reservasNormalizadas.filter(
+				(r) => r.estado === "completada",
+			);
 			if (completadas.length > 0) {
 				try {
-					const evalResp = await authenticatedFetch(`/api/admin/evaluaciones?soloEvaluadas=false&limit=100`);
+					const evalResp = await authenticatedFetch(
+						`/api/admin/evaluaciones?soloEvaluadas=false&limit=100`,
+					);
 					if (evalResp.ok) {
 						const evalData = await evalResp.json();
 						const evalMap = {};
@@ -1587,7 +1677,15 @@ function AdminReservas() {
 		fetchReservas();
 		fetchEstadisticas();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [currentPage, estadoFiltro, fechaDesde, fechaHasta, itemsPerPage, filtroInteligente, sortConfig]);
+	}, [
+		currentPage,
+		estadoFiltro,
+		fechaDesde,
+		fechaHasta,
+		itemsPerPage,
+		filtroInteligente,
+		sortConfig,
+	]);
 
 	// Filtrar reservas localmente por bÃºsqueda
 	const reservasFiltradas = useMemo(() => {
@@ -1601,7 +1699,7 @@ function AdminReservas() {
 					r.nombre?.toLowerCase().includes(term) ||
 					r.email?.toLowerCase().includes(term) ||
 					r.telefono?.toLowerCase().includes(term) ||
-					r.id?.toString().includes(term)
+					r.id?.toString().includes(term),
 			);
 		}
 
@@ -1615,39 +1713,54 @@ function AdminReservas() {
 
 	// Abrir modal de edición	// Acción rápida para marcar como completada y hacer scroll
 	const handleMarcarCompletadaYScroll = () => {
-		setFormData(prev => ({ ...prev, estado: "completada" }));
+		setFormData((prev) => ({ ...prev, estado: "completada" }));
 		setTimeout(() => {
 			const seccion = document.getElementById("seccion-estado-reserva");
 			const boton = document.getElementById("boton-guardar-cambios");
 			if (seccion) {
 				seccion.scrollIntoView({ behavior: "smooth", block: "center" });
-				seccion.classList.add("ring-2", "ring-chocolate-500", "ring-offset-2", "transition-all", "rounded-lg");
+				seccion.classList.add(
+					"ring-2",
+					"ring-chocolate-500",
+					"ring-offset-2",
+					"transition-all",
+					"rounded-lg",
+				);
 				setTimeout(() => {
-					seccion.classList.remove("ring-2", "ring-chocolate-500", "ring-offset-2");
+					seccion.classList.remove(
+						"ring-2",
+						"ring-chocolate-500",
+						"ring-offset-2",
+					);
 				}, 3000);
 			}
-			toast.info("Estado cambiado a 'Completada'. No olvides guardar los cambios.");
+			toast.info(
+				"Estado cambiado a 'Completada'. No olvides guardar los cambios.",
+			);
 		}, 100);
 	};
 
 	const handleEdit = async (reserva) => {
 		setSelectedReserva(reserva);
-		
+
 		// SOLUCIÓN: Cargar datos del tramo de vuelta si existe tramoHijoId
 		let reservaVuelta = null;
 		if (reserva.tramoHijoId) {
 			try {
 				const responseVuelta = await authenticatedFetch(
-					`/api/reservas/${reserva.tramoHijoId}?t=${Date.now()}`
+					`/api/reservas/${reserva.tramoHijoId}?t=${Date.now()}`,
 				);
 				if (responseVuelta.ok) {
 					reservaVuelta = await responseVuelta.json();
 				}
 			} catch (errorVuelta) {
-				console.warn(`No se pudo cargar la reserva de vuelta vinculada (ID: ${reserva.tramoHijoId}) para edición de la reserva #${reserva.id}:`, errorVuelta);
+				console.warn(
+					`No se pudo cargar la reserva de vuelta vinculada (ID: ${reserva.tramoHijoId}) para edición de la reserva #${reserva.id}:`,
+					errorVuelta,
+				);
 			}
 		}
-		
+
 		setFormData({
 			nombre: reserva.nombre || "",
 			email: reserva.email || "",
@@ -1669,9 +1782,11 @@ function AdminReservas() {
 			equipajeEspecial: reserva.equipajeEspecial || "",
 			sillaInfantil: reserva.sillaInfantil || false,
 			// SOLUCIÓN: Si hay reservaVuelta, cargar sus datos; sino usar los de la reserva principal (legacy)
-			horaRegreso: reservaVuelta ? (reservaVuelta.hora || "") : (reserva.horaRegreso || ""),
+			horaRegreso: reservaVuelta
+				? reservaVuelta.hora || ""
+				: reserva.horaRegreso || "",
 			idaVuelta: Boolean(reserva.idaVuelta || reservaVuelta),
-			fechaRegreso: reservaVuelta 
+			fechaRegreso: reservaVuelta
 				? (reservaVuelta.fecha || "").toString().substring(0, 10)
 				: (reserva.fechaRegreso || "").toString().substring(0, 10),
 			direccionOrigen: reserva.direccionOrigen || "",
@@ -1695,38 +1810,41 @@ function AdminReservas() {
 		// Cargar versión fresca de la reserva desde el backend antes de abrir el modal
 		try {
 			const response = await authenticatedFetch(
-				`/api/reservas/${reserva.id}?t=${Date.now()}`
+				`/api/reservas/${reserva.id}?t=${Date.now()}`,
 			);
 			if (!response.ok) {
 				throw new Error("Error al cargar la reserva");
 			}
 			const reservaActualizada = await response.json();
-			
+
 			// SOLUCIÓN C: Si esta reserva tiene un tramoHijoId, cargar también la reserva de vuelta
 			let reservaVuelta = null;
 			if (reservaActualizada.tramoHijoId) {
 				try {
 					const responseVuelta = await authenticatedFetch(
-						`/api/reservas/${reservaActualizada.tramoHijoId}?t=${Date.now()}`
+						`/api/reservas/${reservaActualizada.tramoHijoId}?t=${Date.now()}`,
 					);
 					if (responseVuelta.ok) {
 						reservaVuelta = await responseVuelta.json();
 					}
 				} catch (errorVuelta) {
-					console.warn(`No se pudo cargar la reserva de vuelta vinculada (ID: ${reservaActualizada.tramoHijoId}) para la reserva #${reservaActualizada.id}:`, errorVuelta);
+					console.warn(
+						`No se pudo cargar la reserva de vuelta vinculada (ID: ${reservaActualizada.tramoHijoId}) para la reserva #${reservaActualizada.id}:`,
+						errorVuelta,
+					);
 				}
 			}
-			
+
 			// Agregar la reserva de vuelta al objeto principal para usarla en el modal
 			setSelectedReserva({
 				...reservaActualizada,
-				tramoVuelta: reservaVuelta
+				tramoVuelta: reservaVuelta,
 			});
 			setShowDetailDialog(true);
 		} catch (error) {
 			console.error("Error al cargar detalles de la reserva:", error);
 			alert(
-				"No se pudieron cargar los detalles de la reserva. Inténtalo nuevamente."
+				"No se pudieron cargar los detalles de la reserva. Inténtalo nuevamente.",
 			);
 			// No abrir el modal si falló la carga para evitar mostrar datos desactualizados
 			return;
@@ -1736,12 +1854,12 @@ function AdminReservas() {
 		setLoadingHistorial(true);
 		try {
 			const resp = await authenticatedFetch(
-				`/api/reservas/${reserva.id}/asignaciones`
+				`/api/reservas/${reserva.id}/asignaciones`,
 			);
 			if (resp.ok) {
 				const data = await resp.json();
 				setHistorialAsignaciones(
-					Array.isArray(data.historial) ? data.historial : []
+					Array.isArray(data.historial) ? data.historial : [],
 				);
 			} else {
 				setHistorialAsignaciones([]);
@@ -1757,7 +1875,7 @@ function AdminReservas() {
 		setLoadingTransacciones(true);
 		try {
 			const respTrans = await authenticatedFetch(
-				`/api/reservas/${reserva.id}/transacciones`
+				`/api/reservas/${reserva.id}/transacciones`,
 			);
 			if (respTrans.ok) {
 				const dataTrans = await respTrans.json();
@@ -1781,20 +1899,18 @@ function AdminReservas() {
 	};
 
 	const getVehiculoInfo = (reserva) => {
-		if (reserva.vehiculo_asignado) return `${reserva.vehiculo_asignado.tipo} (${reserva.vehiculo_asignado.patente})`;
+		if (reserva.vehiculo_asignado)
+			return `${reserva.vehiculo_asignado.tipo} (${reserva.vehiculo_asignado.patente})`;
 		if (reserva.vehiculo) return reserva.vehiculo;
 		return "Sin asignar";
 	};
 
 	const completarReserva = async (id) => {
-		const response = await authenticatedFetch(
-			`/api/reservas/${id}/estado`,
-			{
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ estado: "completada" }),
-			}
-		);
+		const response = await authenticatedFetch(`/api/reservas/${id}/estado`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ estado: "completada" }),
+		});
 		if (!response.ok) {
 			throw new Error(`Error al completar la reserva #${id}`);
 		}
@@ -1824,7 +1940,9 @@ function AdminReservas() {
 		let reservaVueltaData = null;
 		if (reserva.tramoHijoId) {
 			try {
-				const response = await authenticatedFetch(`/api/reservas/${reserva.tramoHijoId}`);
+				const response = await authenticatedFetch(
+					`/api/reservas/${reserva.tramoHijoId}`,
+				);
 				if (response.ok) {
 					reservaVueltaData = await response.json();
 				}
@@ -1835,7 +1953,11 @@ function AdminReservas() {
 
 		if (!reservaVueltaData) {
 			// Flujo normal para reservas simples
-			if (!confirm(`¿Confirmar que deseas completar la reserva ${reserva.codigoReserva} y agregar gastos?`)) {
+			if (
+				!confirm(
+					`¿Confirmar que deseas completar la reserva ${reserva.codigoReserva} y agregar gastos?`,
+				)
+			) {
 				return;
 			}
 			try {
@@ -1850,19 +1972,22 @@ function AdminReservas() {
 		}
 
 		// 2. Verificar si tienen mismo conductor y vehículo
-		const mismoConductor = reserva.conductorId && 
-							 reserva.conductorId === reservaVueltaData.conductorId;
-		const mismoVehiculo = reserva.vehiculoId && 
-							reserva.vehiculoId === reservaVueltaData.vehiculoId;
+		const mismoConductor =
+			reserva.conductorId &&
+			reserva.conductorId === reservaVueltaData.conductorId;
+		const mismoVehiculo =
+			reserva.vehiculoId && reserva.vehiculoId === reservaVueltaData.vehiculoId;
 		const esUnificado = mismoConductor && mismoVehiculo;
 
 		// 3. Mostrar diálogo apropiado
 		if (esUnificado) {
 			// Flujo unificado: mismo conductor y vehículo
-			if (confirm(
-				`Este viaje de IDA y VUELTA fue realizado por el mismo conductor y vehículo.\n\n` +
-				`¿Deseas completar ambos tramos juntos e ingresar gastos unificados?`
-			)) {
+			if (
+				confirm(
+					`Este viaje de IDA y VUELTA fue realizado por el mismo conductor y vehículo.\n\n` +
+						`¿Deseas completar ambos tramos juntos e ingresar gastos unificados?`,
+				)
+			) {
 				try {
 					await completarAmbasReservas([reserva.id, reservaVueltaData.id]);
 					await fetchReservas();
@@ -1874,14 +1999,15 @@ function AdminReservas() {
 			}
 		} else {
 			// Flujo separado: diferentes conductores/vehículos o sin asignar
-			const mensaje = !reserva.conductorId || !reserva.vehiculoId
-				? `Este viaje tiene IDA y VUELTA, pero aún no tienen conductor/vehículo asignados en ambos tramos.\n\n` +
-				  `¿Qué deseas hacer?`
-				: `Este viaje tiene IDA y VUELTA con diferentes conductores o vehículos:\n\n` +
-				  `IDA: ${getNombreConductor(reserva)} - ${getVehiculoInfo(reserva)}\n` +
-				  `VUELTA: ${getNombreConductor(reservaVueltaData)} - ${getVehiculoInfo(reservaVueltaData)}\n\n` +
-				  `¿Qué deseas hacer?`;
-			
+			const mensaje =
+				!reserva.conductorId || !reserva.vehiculoId
+					? `Este viaje tiene IDA y VUELTA, pero aún no tienen conductor/vehículo asignados en ambos tramos.\n\n` +
+						`¿Qué deseas hacer?`
+					: `Este viaje tiene IDA y VUELTA con diferentes conductores o vehículos:\n\n` +
+						`IDA: ${getNombreConductor(reserva)} - ${getVehiculoInfo(reserva)}\n` +
+						`VUELTA: ${getNombreConductor(reservaVueltaData)} - ${getVehiculoInfo(reservaVueltaData)}\n\n` +
+						`¿Qué deseas hacer?`;
+
 			setDialogoCompletarOpciones({
 				mensaje,
 				reservaIda: reserva,
@@ -1906,55 +2032,70 @@ function AdminReservas() {
 				? editOtroDestino || formData.destino
 				: formData.destino;
 
-			if (editDestinoEsOtro && destinoFinalEdit && !destinoExiste(destinoFinalEdit)) {
+			if (
+				editDestinoEsOtro &&
+				destinoFinalEdit &&
+				!destinoExiste(destinoFinalEdit)
+			) {
 				await fetch(`${apiUrl}/api/destinos`, {
 					method: "POST",
-					headers: { 
-						"Content-Type": "application/json", 
-						Authorization: `Bearer ${accessToken}` 
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
 					},
-					body: JSON.stringify({ 
-						nombre: destinoFinalEdit, 
-						activo: false, 
-						precioIda: 0, 
-						precioVuelta: 0, 
-						precioIdaVuelta: 0 
+					body: JSON.stringify({
+						nombre: destinoFinalEdit,
+						activo: false,
+						precioIda: 0,
+						precioVuelta: 0,
+						precioIdaVuelta: 0,
 					}),
 				}).catch(() => {});
 			}
-			if (editOrigenEsOtro && origenFinalEdit && !destinoExiste(origenFinalEdit)) {
+			if (
+				editOrigenEsOtro &&
+				origenFinalEdit &&
+				!destinoExiste(origenFinalEdit)
+			) {
 				await fetch(`${apiUrl}/api/destinos`, {
 					method: "POST",
-					headers: { 
-						"Content-Type": "application/json", 
-						Authorization: `Bearer ${accessToken}` 
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
 					},
-					body: JSON.stringify({ 
-						nombre: origenFinalEdit, 
-						activo: false, 
-						precioIda: 0, 
-						precioVuelta: 0, 
-						precioIdaVuelta: 0 
+					body: JSON.stringify({
+						nombre: origenFinalEdit,
+						activo: false,
+						precioIda: 0,
+						precioVuelta: 0,
+						precioIdaVuelta: 0,
 					}),
 				}).catch(() => {});
 			}
 
 			// 2. Preparar lógica de negocio para el payload consolidado
-			let estadoFinal = formData.estado || selectedReserva.estado || "pendiente";
-			const estadoPagoActual = formData.estadoPago || selectedReserva.estadoPago || "pendiente";
-			let estadoPagoSolicitado = estadoFinal === "completada" ? "pagado" : estadoPagoActual;
+			let estadoFinal =
+				formData.estado || selectedReserva.estado || "pendiente";
+			const estadoPagoActual =
+				formData.estadoPago || selectedReserva.estadoPago || "pendiente";
+			let estadoPagoSolicitado =
+				estadoFinal === "completada" ? "pagado" : estadoPagoActual;
 
 			let montoPagadoValue = null;
-			const montoManual = formData.montoPagado !== undefined && formData.montoPagado !== null 
-				? Number(formData.montoPagado) 
-				: NaN;
-			
+			const montoManual =
+				formData.montoPagado !== undefined && formData.montoPagado !== null
+					? Number(formData.montoPagado)
+					: NaN;
+
 			if (!Number.isNaN(montoManual) && montoManual > 0) {
 				montoPagadoValue = montoManual;
 			}
-			
+
 			const tipo = formData.tipoPago;
-			const totalReserva = Number(selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0) || 0;
+			const totalReserva =
+				Number(
+					selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0,
+				) || 0;
 			const abonoSugerido = Number(selectedReserva?.abonoSugerido || 0) || 0;
 			const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
 			const umbralAbono = Math.max(totalReserva * 0.4, abonoSugerido || 0);
@@ -1963,7 +2104,6 @@ function AdminReservas() {
 			// ya que causa que reservas sin pagos se marquen como pagadas al editarlas (ej. cambiar email).
 			// El monto ya viene en formData.montoPagado si el usuario lo cambió en el select de tipoPago
 			// o lo ingresó manualmente.
-
 
 			// 3. Payload UNIFICADO
 			const bulkPayload = {
@@ -1984,44 +2124,54 @@ function AdminReservas() {
 					direccionOrigen: formData.direccionOrigen,
 					direccionDestino: formData.direccionDestino,
 				},
-				ruta: (origenFinalEdit !== selectedReserva.origen || destinoFinalEdit !== selectedReserva.destino) ? {
-					origen: origenFinalEdit,
-					destino: destinoFinalEdit
-				} : null,
+				ruta:
+					origenFinalEdit !== selectedReserva.origen ||
+					destinoFinalEdit !== selectedReserva.destino
+						? {
+								origen: origenFinalEdit,
+								destino: destinoFinalEdit,
+							}
+						: null,
 				pago: {
 					estadoPago: estadoPagoSolicitado,
 					metodoPago: formData.metodoPago || selectedReserva.metodoPago || null,
-					referenciaPago: formData.referenciaPago || selectedReserva.referenciaPago || null,
+					referenciaPago:
+						formData.referenciaPago || selectedReserva.referenciaPago || null,
 					tipoPago: formData.tipoPago || null,
 					estadoReserva: estadoFinal,
-					montoPagado: montoPagadoValue
+					montoPagado: montoPagadoValue,
 				},
 				estado: estadoFinal,
-				observaciones: formData.observaciones
+				observaciones: formData.observaciones,
 			};
 
 			// 4. Llamada ÚNICA al endpoint de bulk-update
-			const response = await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/bulk-update`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${accessToken}`,
+			const response = await fetch(
+				`${apiUrl}/api/reservas/${selectedReserva.id}/bulk-update`,
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
+					},
+					body: JSON.stringify(bulkPayload),
 				},
-				body: JSON.stringify(bulkPayload),
-			});
+			);
 
 			if (!response.ok) {
 				const errData = await response.json().catch(() => ({}));
-				throw new Error(errData.error || "No se pudo realizar la actualización unificada");
+				throw new Error(
+					errData.error || "No se pudo realizar la actualización unificada",
+				);
 			}
 
 			// 5. Notificación al conductor (se mantiene como llamada separada por su lógica de email)
 			if (enviarActualizacionConductor && isAsignada(selectedReserva)) {
 				await fetch(`${apiUrl}/api/reservas/${selectedReserva.id}/asignar`, {
 					method: "PUT",
-					headers: { 
-						"Content-Type": "application/json", 
-						Authorization: `Bearer ${accessToken}` 
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${accessToken}`,
 					},
 					body: JSON.stringify({
 						vehiculoId: selectedReserva.vehiculoId,
@@ -2029,14 +2179,17 @@ function AdminReservas() {
 						sendEmail: false,
 						sendEmailDriver: true,
 					}),
-				}).catch(e => console.warn("Error enviando email al conductor:", e));
+				}).catch((e) => console.warn("Error enviando email al conductor:", e));
 			}
 
 			await fetchReservas();
 			await fetchEstadisticas();
-			
+
 			// SOLUCIÓN: Si hay una reserva de vuelta vinculada, actualizar sus datos también
-			if (formData.tramoVueltaId && (formData.fechaRegreso || formData.horaRegreso)) {
+			if (
+				formData.tramoVueltaId &&
+				(formData.fechaRegreso || formData.horaRegreso)
+			) {
 				try {
 					const vueltaPayload = {
 						datosGenerales: {
@@ -2046,31 +2199,42 @@ function AdminReservas() {
 							nombre: formData.nombre,
 							email: formData.email,
 							telefono: formData.telefono,
-							pasajeros: Number(formData.pasajeros) || selectedReserva.pasajeros,
+							pasajeros:
+								Number(formData.pasajeros) || selectedReserva.pasajeros,
 						},
 						estado: estadoFinal, // Sincronizar estado con la reserva de ida
-						observaciones: formData.observaciones
+						observaciones: formData.observaciones,
 					};
-					
-					const responseVuelta = await fetch(`${apiUrl}/api/reservas/${formData.tramoVueltaId}/bulk-update`, {
-						method: "PUT",
-						headers: {
-							"Content-Type": "application/json",
-							Authorization: `Bearer ${accessToken}`,
+
+					const responseVuelta = await fetch(
+						`${apiUrl}/api/reservas/${formData.tramoVueltaId}/bulk-update`,
+						{
+							method: "PUT",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: `Bearer ${accessToken}`,
+							},
+							body: JSON.stringify(vueltaPayload),
 						},
-						body: JSON.stringify(vueltaPayload),
-					});
-					
+					);
+
 					if (!responseVuelta.ok) {
-						console.warn("⚠️ No se pudo actualizar la reserva de vuelta vinculada");
+						console.warn(
+							"⚠️ No se pudo actualizar la reserva de vuelta vinculada",
+						);
 					} else {
-						console.log(`✅ Reserva de vuelta #${formData.tramoVueltaId} actualizada correctamente`);
+						console.log(
+							`✅ Reserva de vuelta #${formData.tramoVueltaId} actualizada correctamente`,
+						);
 					}
 				} catch (errorVuelta) {
-					console.warn("⚠️ Error al actualizar reserva de vuelta:", errorVuelta);
+					console.warn(
+						"⚠️ Error al actualizar reserva de vuelta:",
+						errorVuelta,
+					);
 				}
 			}
-			
+
 			setShowEditDialog(false);
 			setSelectedReserva(null);
 			// Feedback de éxito
@@ -2166,7 +2330,6 @@ function AdminReservas() {
 			variant = "secondary";
 		}
 
-
 		return (
 			<div className="flex flex-col text-sm">
 				<Badge variant={variant}>{label}</Badge>
@@ -2180,7 +2343,8 @@ function AdminReservas() {
 	// (sin patente real) indican que aÃºn no se ha asignado uno real.
 	const isAsignada = (reserva) => {
 		const v = (reserva?.vehiculo || "").trim().toLowerCase();
-		if (!v || ["por asignar", "auto privado", "sedan", "sedán"].includes(v)) return false;
+		if (!v || ["por asignar", "auto privado", "sedan", "sedán"].includes(v))
+			return false;
 		const parts = v.split(" ");
 		if (parts.length < 2) return false;
 		const last = parts[parts.length - 1];
@@ -2190,9 +2354,9 @@ function AdminReservas() {
 
 	const hasVehiculoAsignado = Boolean(
 		selectedReserva &&
-			(selectedReserva.vehiculo_asignado ||
-				selectedReserva.vehiculoId ||
-				isAsignada(selectedReserva))
+		(selectedReserva.vehiculo_asignado ||
+			selectedReserva.vehiculoId ||
+			isAsignada(selectedReserva)),
 	);
 
 	// Extraer nombre del conductor desde observaciones (formato legacy: "Conductor asignado: NOMBRE")
@@ -2205,11 +2369,11 @@ function AdminReservas() {
 
 	const hasConductorAsignado = Boolean(
 		selectedReserva &&
-			(selectedReserva.conductor_asignado ||
-				selectedReserva.conductorId ||
-				(selectedReserva.conductor &&
-					selectedReserva.conductor !== "Por asignar") ||
-				conductorEnObsIda)
+		(selectedReserva.conductor_asignado ||
+			selectedReserva.conductorId ||
+			(selectedReserva.conductor &&
+				selectedReserva.conductor !== "Por asignar") ||
+			conductorEnObsIda),
 	);
 
 	// Formatear moneda
@@ -2234,11 +2398,11 @@ function AdminReservas() {
 		// Si viene en formato ISO con tiempo y termina en Z o corresponde a medianoche UTC,
 		// extraer la parte de fecha para evitar conversiones indeseadas.
 		const isoMidnightZ = date.match(
-			/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.000)?Z?$/
+			/^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.000)?Z?$/,
 		);
 		if (isoMidnightZ) {
 			return new Date(isoMidnightZ[1] + "T00:00:00").toLocaleDateString(
-				"es-CL"
+				"es-CL",
 			);
 		}
 
@@ -2256,9 +2420,12 @@ function AdminReservas() {
 	// Reenviar correo de confirmación al cliente de una reserva
 	const reenviarCorreoConfirmacion = async (reservaId) => {
 		try {
-			const response = await authenticatedFetch(`/api/reservas/${reservaId}/reenviar-confirmacion`, {
-				method: "POST",
-			});
+			const response = await authenticatedFetch(
+				`/api/reservas/${reservaId}/reenviar-confirmacion`,
+				{
+					method: "POST",
+				},
+			);
 			if (response.ok) {
 				alert("✅ Correo reenviado exitosamente");
 			} else {
@@ -2290,23 +2457,32 @@ function AdminReservas() {
 	// Copiar información de la reserva al portapapeles en formato WhatsApp
 	const copiarInfoWhatsApp = (reserva) => {
 		const texto = generarTextoConductor(reserva);
-		navigator.clipboard.writeText(texto).then(() => {
-			alert("✅ Información copiada al portapapeles");
-		}).catch(() => {
-			alert("❌ No se pudo copiar al portapapeles");
-		});
+		navigator.clipboard
+			.writeText(texto)
+			.then(() => {
+				alert("✅ Información copiada al portapapeles");
+			})
+			.catch(() => {
+				alert("❌ No se pudo copiar al portapapeles");
+			});
 	};
 
 	// Copiar mensaje de seguimiento para leads abandonados
 	const copiarMensajeSeguimiento = (reserva) => {
 		if (!reserva) return;
-		
-		const fechaStr = reserva.fecha 
-			? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL", { day: 'numeric', month: 'long' }) 
+
+		const fechaStr = reserva.fecha
+			? new Date(reserva.fecha + "T00:00:00").toLocaleDateString("es-CL", {
+					day: "numeric",
+					month: "long",
+				})
 			: "[Fecha]";
-			
+
 		const montoStr = formatCurrency(reserva.totalConDescuento);
-		const nombreCliente = reserva.nombre && !reserva.nombre.includes("Cliente Potencial") ? reserva.nombre : "cliente";
+		const nombreCliente =
+			reserva.nombre && !reserva.nombre.includes("Cliente Potencial")
+				? reserva.nombre
+				: "cliente";
 
 		const mensaje = `Hola ${nombreCliente}, te saluda el equipo de Transportes Araucaria. 👋
 
@@ -2314,11 +2490,14 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 ¿Te gustaría que te ayudemos a concretar la reserva o tienes alguna duda con el servicio? Estamos atentos para asistirte. 😊`;
 
-		navigator.clipboard.writeText(mensaje).then(() => {
-			alert("✅ Mensaje de seguimiento copiado");
-		}).catch(() => {
-			alert("❌ Error al copiar mensaje");
-		});
+		navigator.clipboard
+			.writeText(mensaje)
+			.then(() => {
+				alert("✅ Mensaje de seguimiento copiado");
+			})
+			.catch(() => {
+				alert("❌ Error al copiar mensaje");
+			});
 	};
 
 	// Buscar clientes para autocompletar
@@ -2331,7 +2510,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 		try {
 			const response = await fetch(
-				`${apiUrl}/api/clientes/buscar?query=${encodeURIComponent(query)}`
+				`${apiUrl}/api/clientes/buscar?query=${encodeURIComponent(query)}`,
 			);
 			if (response.ok) {
 				const data = await response.json();
@@ -2364,7 +2543,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 	const verHistorialCliente = async (clienteId) => {
 		try {
 			const response = await fetch(
-				`${apiUrl}/api/clientes/${clienteId}/historial`
+				`${apiUrl}/api/clientes/${clienteId}/historial`,
 			);
 			if (response.ok) {
 				const data = await response.json();
@@ -2389,7 +2568,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 						esCliente: !esCliente,
 						marcadoManualmente: true,
 					}),
-				}
+				},
 			);
 
 			if (response.ok) {
@@ -2397,7 +2576,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				alert(
 					`Cliente ${
 						!esCliente ? "marcado" : "desmarcado"
-					} como cliente exitosamente`
+					} como cliente exitosamente`,
 				);
 			}
 		} catch (error) {
@@ -2464,7 +2643,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 			!newReservaForm.telefono
 		) {
 			alert(
-				"Por favor completa los campos obligatorios: Nombre, Email y Teléfono"
+				"Por favor completa los campos obligatorios: Nombre, Email y Teléfono",
 			);
 			return;
 		}
@@ -2483,18 +2662,18 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 		// Validaciones de pago inicial
 		if (newReservaForm.registrarPagoInicial) {
 			const monto = parseFloat(newReservaForm.pagoMonto);
-			
+
 			// Validar NaN además de <= 0
 			if (isNaN(monto) || monto <= 0) {
 				alert("⚠️ El monto del pago no es válido o debe ser mayor a 0");
 				return;
 			}
-			
+
 			console.log(`💰 [AdminReservas] Registrando pago inicial:`, {
 				monto,
 				reservaNombre: newReservaForm.nombre,
 				estadoPago: newReservaForm.estadoPago,
-				total: parseFloat(newReservaForm.precio) || 0
+				total: parseFloat(newReservaForm.precio) || 0,
 			});
 
 			// Validar coherencia con estado de pago
@@ -2503,7 +2682,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 			// Si marca como "Pagado Completo" pero el monto es menor al total
 			if (newReservaForm.estadoPago === "pagado" && monto < total) {
 				const confirmar = confirm(
-					`⚠️ Advertencia:\n\nMarcaste como "Pagado Completo" pero el monto ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}).\n\n¿Deseas continuar de todas formas?`
+					`⚠️ Advertencia:\n\nMarcaste como "Pagado Completo" pero el monto ($${monto.toLocaleString()}) es menor al total ($${total.toLocaleString()}).\n\n¿Deseas continuar de todas formas?`,
 				);
 				if (!confirmar) {
 					return;
@@ -2515,7 +2694,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				newReservaForm.estadoPago === "pendiente" &&
 				monto > 0 &&
 				!confirm(
-					`Has marcado el estado como "Pendiente" pero estás registrando un pago de $${monto.toLocaleString()}.\n\n¿Deseas continuar o prefieres cambiar el estado a "Pagado Parcialmente"?`
+					`Has marcado el estado como "Pendiente" pero estás registrando un pago de $${monto.toLocaleString()}.\n\n¿Deseas continuar o prefieres cambiar el estado a "Pagado Parcialmente"?`,
 				)
 			) {
 				return;
@@ -2539,7 +2718,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							email: newReservaForm.email,
 							telefono: newReservaForm.telefono,
 						}),
-					}
+					},
 				);
 
 				if (clienteResponse.ok) {
@@ -2634,7 +2813,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				} catch (e) {
 					console.warn(
 						"No se pudo registrar destino nuevo (no crÃ­tico)",
-						e.message
+						e.message,
 					);
 				}
 			}
@@ -2672,7 +2851,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 				try {
 					console.log(
-						`💰 Registrando pago inicial de $${montoPago} para reserva #${reservaId}`
+						`💰 Registrando pago inicial de $${montoPago} para reserva #${reservaId}`,
 					);
 
 					const pagoResp = await authenticatedFetch(
@@ -2688,12 +2867,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								referencia: newReservaForm.pagoReferencia || "",
 								source: "manual",
 							}),
-						}
+						},
 					);
 
 					if (!pagoResp.ok) {
 						console.warn(
-							"⚠️ No se pudo registrar el pago inicial en el historial"
+							"⚠️ No se pudo registrar el pago inicial en el historial",
 						);
 					} else {
 						console.log("✅ Pago inicial registrado exitosamente");
@@ -2722,12 +2901,20 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 	// Solicitar evaluación al pasajero (acción manual del admin)
 	const handleSolicitarEvaluacion = async (reserva) => {
 		if (!reserva) return;
-		if (!window.confirm(`¿Enviar solicitud de evaluación al pasajero ${reserva.nombre} (${reserva.email})?`)) return;
+		if (
+			!window.confirm(
+				`¿Enviar solicitud de evaluación al pasajero ${reserva.nombre} (${reserva.email})?`,
+			)
+		)
+			return;
 		setSolicitandoEvaluacion(true);
 		try {
-			const resp = await authenticatedFetch(`/api/admin/evaluaciones/solicitar/${reserva.id}`, {
-				method: "POST",
-			});
+			const resp = await authenticatedFetch(
+				`/api/admin/evaluaciones/solicitar/${reserva.id}`,
+				{
+					method: "POST",
+				},
+			);
 			const data = await resp.json();
 			if (!resp.ok && resp.status !== 409) {
 				throw new Error(data.error || "Error al solicitar evaluación");
@@ -2742,7 +2929,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				},
 			}));
 			if (resp.status === 409) {
-				alert(`Ya se había enviado una solicitud de evaluación el ${new Date(data.fechaSolicitud).toLocaleDateString("es-CL")}.`);
+				alert(
+					`Ya se había enviado una solicitud de evaluación el ${new Date(data.fechaSolicitud).toLocaleDateString("es-CL")}.`,
+				);
 			} else {
 				alert("✅ Solicitud de evaluación enviada exitosamente al pasajero.");
 			}
@@ -2755,15 +2944,22 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 	const handleSolicitarDetalles = async (reserva) => {
 		if (!reserva) return;
-		
-		if (!window.confirm(`¿Seguro que deseas enviar un recordatorio por correo a ${reserva.nombre} para que complete su dirección?`)) {
+
+		if (
+			!window.confirm(
+				`¿Seguro que deseas enviar un recordatorio por correo a ${reserva.nombre} para que complete su dirección?`,
+			)
+		) {
 			return;
 		}
 
 		try {
-			const response = await authenticatedFetch(`/api/reservas/${reserva.id}/solicitar-detalles`, {
-				method: 'POST'
-			});
+			const response = await authenticatedFetch(
+				`/api/reservas/${reserva.id}/solicitar-detalles`,
+				{
+					method: "POST",
+				},
+			);
 
 			const data = await response.json();
 
@@ -2799,29 +2995,39 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 	// Eliminar reservas seleccionadas
 	const handleBulkDelete = async () => {
 		// Validar si hay reservas confirmadas seleccionadas
-		const reservasAVerificar = reservas.filter(r => selectedReservas.includes(r.id));
-		const confirmadas = reservasAVerificar.filter(r => r.estado === "confirmada");
-		
+		const reservasAVerificar = reservas.filter((r) =>
+			selectedReservas.includes(r.id),
+		);
+		const confirmadas = reservasAVerificar.filter(
+			(r) => r.estado === "confirmada",
+		);
+
 		if (confirmadas.length > 0) {
-			const names = confirmadas.map(r => `#${r.id}`).join(", ");
-			alert(`No se pueden eliminar reservas con estado "Confirmada" (${names}).\n\nPor favor, cámbielas a "Cancelada" primero si realmente desea eliminarlas.`);
-			
+			const names = confirmadas.map((r) => `#${r.id}`).join(", ");
+			alert(
+				`No se pueden eliminar reservas con estado "Confirmada" (${names}).\n\nPor favor, cámbielas a "Cancelada" primero si realmente desea eliminarlas.`,
+			);
+
 			// Si solo había confirmadas, salir
 			if (confirmadas.length === selectedReservas.length) {
 				setShowBulkDeleteDialog(false);
 				return;
 			}
-			
+
 			// Si hay mezcla, preguntar si proceder con el resto
-			if (!confirm(`Hay ${confirmadas.length} reservas confirmadas que NO se eliminarán. ¿Deseas proceder con la eliminación de las otras ${selectedReservas.length - confirmadas.length} reserva(s)?`)) {
+			if (
+				!confirm(
+					`Hay ${confirmadas.length} reservas confirmadas que NO se eliminarán. ¿Deseas proceder con la eliminación de las otras ${selectedReservas.length - confirmadas.length} reserva(s)?`,
+				)
+			) {
 				return;
 			}
 		}
 
 		// Filtrar solo las que NO están confirmadas para enviar al backend
 		const idsAEliminar = reservasAVerificar
-			.filter(r => r.estado !== "confirmada")
-			.map(r => r.id);
+			.filter((r) => r.estado !== "confirmada")
+			.map((r) => r.id);
 
 		setProcessingBulk(true);
 		try {
@@ -2830,8 +3036,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				idsAEliminar.map((id) =>
 					authenticatedFetch(`/api/reservas/${id}`, {
 						method: "DELETE",
-					})
-				)
+					}),
+				),
 			);
 
 			// Verificar si todas las peticiones fueron exitosas
@@ -2842,14 +3048,19 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 					failures.push({
 						id: idsAEliminar[i],
 						status: results[i].status,
-						error: errorData.error || "Error desconocido"
+						error: errorData.error || "Error desconocido",
 					});
 				}
 			}
 
 			if (failures.length > 0) {
-				console.error(`❌ Fallaron ${failures.length} eliminaciones:`, failures);
-				const errorMsgs = failures.map(f => `Reserva #${f.id}: ${f.error}`).join("\n");
+				console.error(
+					`❌ Fallaron ${failures.length} eliminaciones:`,
+					failures,
+				);
+				const errorMsgs = failures
+					.map((f) => `Reserva #${f.id}: ${f.error}`)
+					.join("\n");
 				alert(`Hubo errores al eliminar algunas reservas:\n\n${errorMsgs}`);
 			} else {
 				alert(`${idsAEliminar.length} reserva(s) eliminada(s) exitosamente`);
@@ -2881,7 +3092,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ estado: bulkEstado }),
-				})
+				}),
 			);
 
 			await Promise.all(promises);
@@ -2908,7 +3119,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 			!window.confirm(
 				`¿Estás seguro de que deseas ${
 					reserva.archivada ? "desarchivar" : "archivar"
-				} esta reserva?`
+				} esta reserva?`,
 			)
 		) {
 			return;
@@ -2924,7 +3135,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 						Authorization: `Bearer ${accessToken}`,
 					},
 					body: JSON.stringify({ archivada: !reserva.archivada }),
-				}
+				},
 			);
 
 			if (response.ok) {
@@ -3050,120 +3261,118 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				</CardHeader>
 				<CardContent>
 					<div className="flex flex-col md:flex-row gap-4 mb-6">
-				<div className="flex-1">
-					<Label className="mb-2 block">Buscar</Label>
-					<div className="relative">
-						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-						<Input
-							placeholder="Nombre, email, teléfono, ID..."
-							className="pl-8 h-12 md:h-10 text-base"
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-						/>
+						<div className="flex-1">
+							<Label className="mb-2 block">Buscar</Label>
+							<div className="relative">
+								<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+								<Input
+									placeholder="Nombre, email, teléfono, ID..."
+									className="pl-8 h-12 md:h-10 text-base"
+									value={searchTerm}
+									onChange={(e) => setSearchTerm(e.target.value)}
+								/>
+							</div>
+						</div>
+						<div className="w-full md:w-[180px]">
+							<Label className="mb-2 block">Rango Fechas</Label>
+							<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
+								<SelectTrigger className="h-12 md:h-10 text-base">
+									<SelectValue placeholder="Seleccionar rango" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="todos">Todo el tiempo</SelectItem>
+									<SelectItem value="hoy">Hoy</SelectItem>
+									<SelectItem value="ayer">Ayer</SelectItem>
+									<SelectItem value="semana">Últimos 7 días</SelectItem>
+									<SelectItem value="quincena">Últimos 15 días</SelectItem>
+									<SelectItem value="mes">Este Mes</SelectItem>
+									<SelectItem value="personalizado">Personalizado</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						{rangoFecha === "personalizado" && (
+							<>
+								<div className="w-full md:w-[150px]">
+									<Label className="mb-2 block">Fecha Desde</Label>
+									<div className="relative">
+										<Input
+											type="date"
+											value={fechaDesde}
+											onChange={(e) => setFechaDesde(e.target.value)}
+											className="pl-8 h-12 md:h-10 text-base"
+										/>
+										<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+									</div>
+								</div>
+								<div className="w-full md:w-[150px]">
+									<Label className="mb-2 block">Fecha Hasta</Label>
+									<div className="relative">
+										<Input
+											type="date"
+											value={fechaHasta}
+											onChange={(e) => setFechaHasta(e.target.value)}
+											className="pl-8 h-12 md:h-10 text-base"
+										/>
+										<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+									</div>
+								</div>
+							</>
+						)}
+						<div className="w-full md:w-[200px]">
+							<Label className="mb-2 block">Filtros Inteligentes</Label>
+							<Select
+								value={filtroInteligente}
+								onValueChange={setFiltroInteligente}
+							>
+								<SelectTrigger className="h-12 md:h-10 text-base">
+									<SelectValue placeholder="Aplicar filtro..." />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="todos">Ninguno</SelectItem>
+									<SelectItem value="sin_asignacion">
+										⚠️ Sin Asignación
+									</SelectItem>
+									<SelectItem value="incompletas">
+										📋 Faltan Detalles
+									</SelectItem>
+									<SelectItem value="archivadas">📦 Ver Archivadas</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="w-full md:w-[150px]">
+							<Label className="mb-2 block">Estado</Label>
+							<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+								<SelectTrigger className="h-12 md:h-10 text-base">
+									<SelectValue placeholder="Todos" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="todos">Todos</SelectItem>
+									<SelectItem value="pendiente">Pendiente</SelectItem>
+									<SelectItem value="confirmada">Confirmada</SelectItem>
+									<SelectItem value="completada">Completada</SelectItem>
+									<SelectItem value="cancelada">Cancelada</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="w-full md:w-[150px]">
+							<Label className="mb-2 block">Estado de Pago</Label>
+							<Select
+								value={estadoPagoFiltro}
+								onValueChange={setEstadoPagoFiltro}
+							>
+								<SelectTrigger className="h-12 md:h-10 text-base">
+									<SelectValue placeholder="Todos" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="todos">Todos</SelectItem>
+									<SelectItem value="pendiente">Pendiente</SelectItem>
+									<SelectItem value="pagado">Pagado</SelectItem>
+									<SelectItem value="parcial">Parcial</SelectItem>
+									<SelectItem value="reembolsado">Reembolsado</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 					</div>
-				</div>
-				<div className="w-full md:w-[180px]">
-					<Label className="mb-2 block">Rango Fechas</Label>
-					<Select value={rangoFecha} onValueChange={handleRangoFechaChange}>
-						<SelectTrigger className="h-12 md:h-10 text-base">
-							<SelectValue placeholder="Seleccionar rango" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Todo el tiempo</SelectItem>
-							<SelectItem value="hoy">Hoy</SelectItem>
-							<SelectItem value="ayer">Ayer</SelectItem>
-							<SelectItem value="semana">Últimos 7 días</SelectItem>
-							<SelectItem value="quincena">Últimos 15 días</SelectItem>
-							<SelectItem value="mes">Este Mes</SelectItem>
-							<SelectItem value="personalizado">Personalizado</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				{rangoFecha === "personalizado" && (
-					<>
-						<div className="w-full md:w-[150px]">
-							<Label className="mb-2 block">Fecha Desde</Label>
-							<div className="relative">
-								<Input
-									type="date"
-									value={fechaDesde}
-									onChange={(e) => setFechaDesde(e.target.value)}
-									className="pl-8 h-12 md:h-10 text-base"
-								/>
-								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-							</div>
-						</div>
-						<div className="w-full md:w-[150px]">
-							<Label className="mb-2 block">Fecha Hasta</Label>
-							<div className="relative">
-								<Input
-									type="date"
-									value={fechaHasta}
-									onChange={(e) => setFechaHasta(e.target.value)}
-									className="pl-8 h-12 md:h-10 text-base"
-								/>
-								<Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-							</div>
-						</div>
-					</>
-				)}
-				<div className="w-full md:w-[200px]">
-					<Label className="mb-2 block">Filtros Inteligentes</Label>
-					<Select
-						value={filtroInteligente}
-						onValueChange={setFiltroInteligente}
-					>
-						<SelectTrigger className="h-12 md:h-10 text-base">
-							<SelectValue placeholder="Aplicar filtro..." />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Ninguno</SelectItem>
-							<SelectItem value="sin_asignacion">
-								⚠️ Sin Asignación
-							</SelectItem>
-							<SelectItem value="incompletas">
-								📋 Faltan Detalles
-							</SelectItem>
-							<SelectItem value="archivadas">
-								📦 Ver Archivadas
-							</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="w-full md:w-[150px]">
-					<Label className="mb-2 block">Estado</Label>
-					<Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-						<SelectTrigger className="h-12 md:h-10 text-base">
-							<SelectValue placeholder="Todos" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Todos</SelectItem>
-							<SelectItem value="pendiente">Pendiente</SelectItem>
-							<SelectItem value="confirmada">Confirmada</SelectItem>
-							<SelectItem value="completada">Completada</SelectItem>
-							<SelectItem value="cancelada">Cancelada</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="w-full md:w-[150px]">
-					<Label className="mb-2 block">Estado de Pago</Label>
-					<Select
-						value={estadoPagoFiltro}
-						onValueChange={setEstadoPagoFiltro}
-					>
-						<SelectTrigger className="h-12 md:h-10 text-base">
-							<SelectValue placeholder="Todos" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="todos">Todos</SelectItem>
-							<SelectItem value="pendiente">Pendiente</SelectItem>
-							<SelectItem value="pagado">Pagado</SelectItem>
-							<SelectItem value="parcial">Parcial</SelectItem>
-							<SelectItem value="reembolsado">Reembolsado</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
 					<div className="mt-4 flex justify-between items-center">
 						<p className="text-sm text-muted-foreground">
 							Mostrando {reservasFiltradas.length} de {totalReservas} reservas
@@ -3192,7 +3401,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Lista de Reservas</CardTitle>
 					<div className="flex gap-2">
-						<Dialog open={showCalendarDialog} onOpenChange={setShowCalendarDialog}>
+						<Dialog
+							open={showCalendarDialog}
+							onOpenChange={setShowCalendarDialog}
+						>
 							<DialogTrigger asChild>
 								<Button variant="outline" size="sm">
 									<Printer className="w-4 h-4 mr-2" />
@@ -3203,50 +3415,81 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								<DialogHeader>
 									<DialogTitle>Generar Planificación</DialogTitle>
 									<DialogDescription>
-										Selecciona el rango de fechas para generar la vista de impresión tipo calendario.
+										Selecciona el rango de fechas para generar la vista de
+										impresión tipo calendario.
 									</DialogDescription>
 								</DialogHeader>
 								<div className="space-y-4 py-4">
 									<div className="flex flex-col gap-2">
 										<Label>Fecha Inicio</Label>
-										<Input 
+										<Input
 											type="date"
 											value={calendarStartDate}
-											onChange={(e) => setCalendarStartDate(e.target.value)} 
+											onChange={(e) => setCalendarStartDate(e.target.value)}
 										/>
 									</div>
 									<div className="flex flex-col gap-2">
 										<Label>Fecha Término</Label>
-										<Input 
+										<Input
 											type="date"
 											value={calendarEndDate}
-											onChange={(e) => setCalendarEndDate(e.target.value)} 
+											onChange={(e) => setCalendarEndDate(e.target.value)}
 										/>
 									</div>
 									<div className="flex gap-2 justify-center pt-2">
-										<Button variant="ghost" size="sm" onClick={() => {
-											const today = new Date();
-											const str = today.toISOString().split('T')[0];
-											setCalendarStartDate(str);
-											setCalendarEndDate(str);
-										}}>Hoy</Button>
-										<Button variant="ghost" size="sm" onClick={() => {
-											const today = new Date();
-											const tomorrow = new Date(today);
-											tomorrow.setDate(tomorrow.getDate() + 1);
-											setCalendarStartDate(today.toISOString().split('T')[0]);
-											setCalendarEndDate(tomorrow.toISOString().split('T')[0]);
-										}}>Mañana</Button>
-										<Button variant="ghost" size="sm" onClick={() => {
-											const today = new Date();
-											const nextWeek = new Date(today);
-											nextWeek.setDate(nextWeek.getDate() + 7);
-											setCalendarStartDate(today.toISOString().split('T')[0]);
-											setCalendarEndDate(nextWeek.toISOString().split('T')[0]);
-										}}>Próx. 7 días</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => {
+												const today = new Date();
+												const str = today.toISOString().split("T")[0];
+												setCalendarStartDate(str);
+												setCalendarEndDate(str);
+											}}
+										>
+											Hoy
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => {
+												const today = new Date();
+												const tomorrow = new Date(today);
+												tomorrow.setDate(tomorrow.getDate() + 1);
+												setCalendarStartDate(today.toISOString().split("T")[0]);
+												setCalendarEndDate(
+													tomorrow.toISOString().split("T")[0],
+												);
+											}}
+										>
+											Mañana
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => {
+												const today = new Date();
+												const nextWeek = new Date(today);
+												nextWeek.setDate(nextWeek.getDate() + 7);
+												setCalendarStartDate(today.toISOString().split("T")[0]);
+												setCalendarEndDate(
+													nextWeek.toISOString().split("T")[0],
+												);
+											}}
+										>
+											Próx. 7 días
+										</Button>
 									</div>
-									<Button onClick={handleGenerarCalendario} disabled={generatingCalendar} className="w-full">
-										{generatingCalendar ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+									<Button
+										onClick={handleGenerarCalendario}
+										disabled={generatingCalendar}
+										className="w-full"
+									>
+										{generatingCalendar ? (
+											<RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+										) : (
+											<Printer className="mr-2 h-4 w-4" />
+										)}
 										Generar Vista de Impresión
 									</Button>
 								</div>
@@ -3260,74 +3503,74 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									Columnas
 								</Button>
 							</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Configurar Columnas Visibles</DialogTitle>
-								<DialogDescription>
-									Selecciona las columnas que deseas ver en la tabla
-								</DialogDescription>
-							</DialogHeader>
-							<div className="space-y-2">
-								{COLUMN_DEFINITIONS.map(({ key, label }) => (
-									<div key={key} className="flex items-center space-x-2">
-										<input
-											type="checkbox"
-											id={`col-${key}`}
-											checked={Boolean(columnasVisibles[key])}
-											onChange={(e) =>
-												setColumnasVisibles({
-													...columnasVisibles,
-													[key]: e.target.checked,
-												})
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>Configurar Columnas Visibles</DialogTitle>
+									<DialogDescription>
+										Selecciona las columnas que deseas ver en la tabla
+									</DialogDescription>
+								</DialogHeader>
+								<div className="space-y-2">
+									{COLUMN_DEFINITIONS.map(({ key, label }) => (
+										<div key={key} className="flex items-center space-x-2">
+											<input
+												type="checkbox"
+												id={`col-${key}`}
+												checked={Boolean(columnasVisibles[key])}
+												onChange={(e) =>
+													setColumnasVisibles({
+														...columnasVisibles,
+														[key]: e.target.checked,
+													})
+												}
+												className="w-4 h-4"
+											/>
+											<Label htmlFor={`col-${key}`} className="cursor-pointer">
+												{label}
+											</Label>
+										</div>
+									))}
+								</div>
+								<div className="flex justify-end gap-2 mt-4">
+									<Button
+										variant="outline"
+										onClick={() => {
+											setColumnasVisibles(DEFAULT_COLUMNAS_VISIBLES);
+											try {
+												localStorage.setItem(
+													COLUMNAS_STORAGE_KEY,
+													JSON.stringify(DEFAULT_COLUMNAS_VISIBLES),
+												);
+											} catch (e) {
+												// Log en espaÃ±ol para facilitar debugging
+												console.warn(
+													"No se pudo restablecer columnas en localStorage:",
+													e,
+												);
 											}
-											className="w-4 h-4"
-										/>
-										<Label htmlFor={`col-${key}`} className="cursor-pointer">
-											{label}
-										</Label>
-									</div>
-								))}
-							</div>
-							<div className="flex justify-end gap-2 mt-4">
-								<Button
-									variant="outline"
-									onClick={() => {
-										setColumnasVisibles(DEFAULT_COLUMNAS_VISIBLES);
-										try {
-											localStorage.setItem(
-												COLUMNAS_STORAGE_KEY,
-												JSON.stringify(DEFAULT_COLUMNAS_VISIBLES)
-											);
-										} catch (e) {
-											// Log en espaÃ±ol para facilitar debugging
-											console.warn(
-												"No se pudo restablecer columnas en localStorage:",
-												e
-											);
-										}
-									}}
-								>
-									Restablecer columnas
-								</Button>
-								<Button
-									onClick={() => {
-										try {
-											localStorage.setItem(
-												COLUMNAS_STORAGE_KEY,
-												JSON.stringify(columnasVisibles)
-											);
-											alert("Columnas guardadas");
-										} catch {
-											alert("No se pudo guardar la configuraciÃ³n");
-										}
-									}}
-								>
-									Guardar columnas
-								</Button>
-							</div>
-						</DialogContent>
-					</Dialog>
-				</div>
+										}}
+									>
+										Restablecer columnas
+									</Button>
+									<Button
+										onClick={() => {
+											try {
+												localStorage.setItem(
+													COLUMNAS_STORAGE_KEY,
+													JSON.stringify(columnasVisibles),
+												);
+												alert("Columnas guardadas");
+											} catch {
+												alert("No se pudo guardar la configuraciÃ³n");
+											}
+										}}
+									>
+										Guardar columnas
+									</Button>
+								</div>
+							</DialogContent>
+						</Dialog>
+					</div>
 
 					{/* Modal para registrar pago manual */}
 					<Dialog
@@ -3403,7 +3646,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															metodo: regPagoMetodo,
 															referencia: regPagoReferencia,
 														}),
-													}
+													},
 												);
 												if (!resp.ok) throw new Error("Error registrando pago");
 												setShowRegisterPayment(false);
@@ -3441,31 +3684,48 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							<DialogHeader>
 								<DialogTitle>Generar Link de Pago</DialogTitle>
 								<DialogDescription>
-									Genera un enlace único para que el cliente pague su saldo pendiente. El cliente completará sus datos antes de pagar.
+									Genera un enlace único para que el cliente pague su saldo
+									pendiente. El cliente completará sus datos antes de pagar.
 								</DialogDescription>
 							</DialogHeader>
-							
+
 							{reservaParaLink && !linkGenerado && (
 								<div className="space-y-4 mt-4">
 									<div className="bg-slate-50 p-3 rounded border">
-										<p className="text-sm font-semibold mb-1">Reserva #{reservaParaLink.id}</p>
-										<p className="text-xs text-muted-foreground">{reservaParaLink.nombre} - {reservaParaLink.email || "Sin email"}</p>
+										<p className="text-sm font-semibold mb-1">
+											Reserva #{reservaParaLink.id}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											{reservaParaLink.nombre} -{" "}
+											{reservaParaLink.email || "Sin email"}
+										</p>
 									</div>
 									<div className="space-y-2">
 										<Label>Monto a cobrar (CLP)</Label>
 										<Input
 											type="number"
 											value={montoGenerarLink}
-											onChange={(e) => setMontoGenerarLink(Number(e.target.value))}
+											onChange={(e) =>
+												setMontoGenerarLink(Number(e.target.value))
+											}
 											min="1"
 										/>
-										<p className="text-xs text-muted-foreground">Saldo actual de la reserva: {formatCurrency(reservaParaLink.saldoPendiente)}</p>
+										<p className="text-xs text-muted-foreground">
+											Saldo actual de la reserva:{" "}
+											{formatCurrency(reservaParaLink.saldoPendiente)}
+										</p>
 									</div>
 									<div className="flex justify-end gap-2 pt-4">
-										<Button variant="outline" onClick={() => setShowGenerarLinkDialog(false)}>
+										<Button
+											variant="outline"
+											onClick={() => setShowGenerarLinkDialog(false)}
+										>
 											Cancelar
 										</Button>
-										<Button onClick={handleGenerarLinkPago} disabled={generandoLink}>
+										<Button
+											onClick={handleGenerarLinkPago}
+											disabled={generandoLink}
+										>
 											{generandoLink ? "Generando..." : "Generar Link"}
 										</Button>
 									</div>
@@ -3476,16 +3736,18 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								<div className="space-y-4 mt-4">
 									<div className="bg-green-50 text-green-800 p-4 rounded-lg border border-green-200 space-y-2">
 										<p className="font-semibold text-sm">¡Enlace listo!</p>
-										<p className="text-xs mb-2">Envía este enlace al cliente por WhatsApp o email:</p>
+										<p className="text-xs mb-2">
+											Envía este enlace al cliente por WhatsApp o email:
+										</p>
 										<div className="flex bg-white rounded border overflow-hidden">
-											<input 
-												type="text" 
-												readOnly 
-												value={linkGenerado} 
-												className="flex-1 px-2 text-xs outline-none" 
+											<input
+												type="text"
+												readOnly
+												value={linkGenerado}
+												className="flex-1 px-2 text-xs outline-none"
 												onClick={(e) => e.target.select()}
 											/>
-											<Button 
+											<Button
 												className="rounded-none border-l h-auto py-2"
 												onClick={() => {
 													navigator.clipboard.writeText(linkGenerado);
@@ -3584,8 +3846,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									{columnasVisibles.ruta && <TableHead>Ruta</TableHead>}
 									{columnasVisibles.fechaHora && (
 										<TableHead>
-											<Button 
-												variant="ghost" 
+											<Button
+												variant="ghost"
 												onClick={() => handleSort("fecha")}
 												className="h-8 px-2 -ml-2 hover:bg-accent hover:text-accent-foreground font-bold"
 											>
@@ -3596,8 +3858,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									)}
 									{columnasVisibles.fechaCreacion && (
 										<TableHead>
-											<Button 
-												variant="ghost" 
+											<Button
+												variant="ghost"
 												onClick={() => handleSort("created_at")}
 												className="h-8 px-2 -ml-2 hover:bg-accent hover:text-accent-foreground font-bold"
 											>
@@ -3654,16 +3916,17 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															</div>
 														)}
 														{/* Badges de Tramos */}
-														{reserva.tipoTramo === 'ida' && reserva.tramoHijoId ? (
+														{reserva.tipoTramo === "ida" &&
+														reserva.tramoHijoId ? (
 															<div className="mt-1 flex gap-1">
-																<Badge 
-																	variant="outline" 
+																<Badge
+																	variant="outline"
 																	className="text-[10px] px-1 py-0 h-4 bg-green-50 text-green-700 border-green-200"
 																>
 																	IDA
 																</Badge>
-																<Badge 
-																	variant="outline" 
+																<Badge
+																	variant="outline"
 																	className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200"
 																>
 																	🔗 + VUELTA
@@ -3671,25 +3934,39 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															</div>
 														) : reserva.tipoTramo ? (
 															<div className="mt-1">
-																<Badge 
-																	variant={reserva.tipoTramo === 'vuelta' ? 'secondary' : 'outline'} 
-																	className={`text-[10px] px-1 py-0 h-4 ${reserva.tipoTramo === 'vuelta' ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-green-50 text-green-700 border-green-200'}`}
+																<Badge
+																	variant={
+																		reserva.tipoTramo === "vuelta"
+																			? "secondary"
+																			: "outline"
+																	}
+																	className={`text-[10px] px-1 py-0 h-4 ${reserva.tipoTramo === "vuelta" ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" : "bg-green-50 text-green-700 border-green-200"}`}
 																>
-																	{reserva.tipoTramo === 'vuelta' ? 'RETORNO' : 'IDA'}
+																	{reserva.tipoTramo === "vuelta"
+																		? "RETORNO"
+																		: "IDA"}
 																</Badge>
 															</div>
-														) : reserva.idaVuelta && (
-															<div className="mt-1">
-																<Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-purple-200 text-purple-700 bg-purple-50">
-																	IDA Y VUELTA
-																</Badge>
-															</div>
+														) : (
+															reserva.idaVuelta && (
+																<div className="mt-1">
+																	<Badge
+																		variant="outline"
+																		className="text-[10px] px-1 py-0 h-4 border-purple-200 text-purple-700 bg-purple-50"
+																	>
+																		IDA Y VUELTA
+																	</Badge>
+																</div>
+															)
 														)}
 
 														{/* Badge de Detalles Incompletos */}
 														{!reserva.detallesCompletos && (
 															<div className="mt-1">
-																<Badge variant="destructive" className="text-[10px] px-1 py-0 h-4 animate-pulse">
+																<Badge
+																	variant="destructive"
+																	className="text-[10px] px-1 py-0 h-4 animate-pulse"
+																>
 																	⚠️ Detalles Incompletos
 																</Badge>
 															</div>
@@ -3749,16 +4026,18 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																? () =>
 																		toggleClienteManual(
 																			reserva.clienteId,
-																			reserva.esCliente
+																			reserva.esCliente,
 																		)
 																: undefined
 														}
 													>
 														{
 															// Nueva lógica: Prioridad a "Cliente con código"
-															(reserva?.source === "codigo_pago" || 
-															(reserva?.referenciaPago && String(reserva.referenciaPago).trim().length > 0) ||
-															reserva?.metodoPago === "codigo") ? (
+															reserva?.source === "codigo_pago" ||
+															(reserva?.referenciaPago &&
+																String(reserva.referenciaPago).trim().length >
+																	0) ||
+															reserva?.metodoPago === "codigo" ? (
 																"Cliente con código"
 															) : reserva.esCliente ? (
 																<>
@@ -3824,30 +4103,42 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<div className="space-y-1 text-sm">
 														<div className="flex items-center gap-1">
 															<Calendar className="w-3 h-3 text-muted-foreground" />
-															<span className="font-semibold">{formatDate(reserva.fecha)}</span>
+															<span className="font-semibold">
+																{formatDate(reserva.fecha)}
+															</span>
 														</div>
 														<div className="flex items-center gap-1">
 															<Clock className="w-3 h-3 text-muted-foreground" />
 															<span>{reserva.hora || "-"}</span>
 														</div>
 														{/* Mostrar fecha de vuelta si existe y es roundtrip */}
-														{reserva.idaVuelta && (reserva.tramoHijo || reserva.fechaRegreso) && (
-															<div className="mt-1 pt-1 border-t border-dashed border-gray-200">
-																<div className="text-xs text-muted-foreground flex items-center gap-1">
-																	<span className="text-[10px] font-bold text-blue-600">VUELTA:</span>
+														{reserva.idaVuelta &&
+															(reserva.tramoHijo || reserva.fechaRegreso) && (
+																<div className="mt-1 pt-1 border-t border-dashed border-gray-200">
+																	<div className="text-xs text-muted-foreground flex items-center gap-1">
+																		<span className="text-[10px] font-bold text-blue-600">
+																			VUELTA:
+																		</span>
+																	</div>
+																	<div className="flex items-center gap-1 text-xs">
+																		<Calendar className="w-3 h-3 text-blue-400" />
+																		<span>
+																			{formatDate(
+																				reserva.tramoHijo?.fecha ||
+																					reserva.fechaRegreso,
+																			)}
+																		</span>
+																	</div>
+																	<div className="flex items-center gap-1 text-xs">
+																		<Clock className="w-3 h-3 text-blue-400" />
+																		<span>
+																			{reserva.tramoHijo?.hora ||
+																				reserva.horaRegreso ||
+																				"-"}
+																		</span>
+																	</div>
 																</div>
-																<div className="flex items-center gap-1 text-xs">
-																	<Calendar className="w-3 h-3 text-blue-400" />
-																	<span>
-																		{formatDate(reserva.tramoHijo?.fecha || reserva.fechaRegreso)}
-																	</span>
-																</div>
-																<div className="flex items-center gap-1 text-xs">
-																	<Clock className="w-3 h-3 text-blue-400" />
-																	<span>{reserva.tramoHijo?.hora || reserva.horaRegreso || "-"}</span>
-																</div>
-															</div>
-														)}
+															)}
 													</div>
 												</TableCell>
 											)}
@@ -3864,8 +4155,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																		hour: "2-digit",
 																		minute: "2-digit",
 																		hour12: false,
-																	}
-															  )
+																	},
+																)
 															: "-"}
 													</div>
 												</TableCell>
@@ -3882,14 +4173,18 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														{reserva.sillaInfantil && (
 															<div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 w-fit">
 																<Baby className="w-3 h-3" />
-																<span className="text-[10px] font-medium">Silla</span>
+																<span className="text-[10px] font-medium">
+																	Silla
+																</span>
 															</div>
 														)}
 														{/* Indicador de Upgrade visible en columna pasajeros */}
 														{reserva.upgradeVan && (
 															<div className="flex items-center gap-1 text-purple-700 bg-purple-50 px-1 py-0.5 rounded border border-purple-200 w-fit">
 																<Star className="w-3 h-3 fill-purple-600" />
-																<span className="text-[10px] font-bold">Upgrade</span>
+																<span className="text-[10px] font-bold">
+																	Upgrade
+																</span>
 															</div>
 														)}
 													</div>
@@ -3898,8 +4193,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											{columnasVisibles.total && (
 												<TableCell className="font-semibold">
 													{formatCurrency(
-														Number(reserva.totalConDescuento || 0) + 
-														Number(reserva.tramoHijo?.totalConDescuento || 0)
+														Number(reserva.totalConDescuento || 0) +
+															Number(reserva.tramoHijo?.totalConDescuento || 0),
 													)}
 												</TableCell>
 											)}
@@ -3911,16 +4206,24 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													{/* Cuando hay tramo hijo, calculamos un badge de estado de pago agregado o mostramos el del padre con indicación */}
 													{getEstadoPagoBadge({
 														...reserva,
-														pagoMonto: Number(reserva.pagoMonto || 0) + Number(reserva.tramoHijo?.pagoMonto || 0),
-														totalConDescuento: Number(reserva.totalConDescuento || 0) + Number(reserva.tramoHijo?.totalConDescuento || 0),
-														saldoPendiente: Number(reserva.saldoPendiente || 0) + Number(reserva.tramoHijo?.saldoPendiente || 0)
+														pagoMonto:
+															Number(reserva.pagoMonto || 0) +
+															Number(reserva.tramoHijo?.pagoMonto || 0),
+														totalConDescuento:
+															Number(reserva.totalConDescuento || 0) +
+															Number(reserva.tramoHijo?.totalConDescuento || 0),
+														saldoPendiente:
+															Number(reserva.saldoPendiente || 0) +
+															Number(reserva.tramoHijo?.saldoPendiente || 0),
 													})}
 												</TableCell>
 											)}
 											{columnasVisibles.saldo && (
 												<TableCell>
 													{(() => {
-														const saldoTotal = Number(reserva.saldoPendiente || 0) + Number(reserva.tramoHijo?.saldoPendiente || 0);
+														const saldoTotal =
+															Number(reserva.saldoPendiente || 0) +
+															Number(reserva.tramoHijo?.saldoPendiente || 0);
 														return (
 															<span
 																className={
@@ -3943,7 +4246,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															Van Upgrade
 														</Badge>
 													) : (
-														<span className="text-muted-foreground text-xs">-</span>
+														<span className="text-muted-foreground text-xs">
+															-
+														</span>
 													)}
 												</TableCell>
 											)}
@@ -3965,27 +4270,38 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<Edit className="w-4 h-4" />
 														</Button>
 														{/* Botón para generar Link de Pago */}
-														{["pendiente", "confirmada"].includes(reserva.estado) && 
+														{["pendiente", "confirmada"].includes(
+															reserva.estado,
+														) &&
 															reserva.estadoPago !== "pagado" &&
-															(Number(reserva.totalConDescuento) > 0 && Number(reserva.pagoMonto || 0) < Number(reserva.totalConDescuento)) && (
-															<Button
-																variant="outline"
-																size="sm"
-																onClick={() => {
-																	setReservaParaLink(reserva);
-																	const suggestedAmount = Number(reserva.saldoPendiente) > 0 
-																		? Number(reserva.saldoPendiente) 
-																		: (Number(reserva.totalConDescuento || 0) - Number(reserva.pagoMonto || 0));
-																	setMontoGenerarLink(suggestedAmount > 0 ? suggestedAmount : Number(reserva.totalConDescuento));
-																	setLinkGenerado("");
-																	setShowGenerarLinkDialog(true);
-																}}
-																title="Generar Link de Pago"
-																className="border-blue-200 text-blue-700 hover:bg-blue-50"
-															>
-																<Link2 className="w-4 h-4" />
-															</Button>
-														)}
+															Number(reserva.totalConDescuento) > 0 &&
+															Number(reserva.pagoMonto || 0) <
+																Number(reserva.totalConDescuento) && (
+																<Button
+																	variant="outline"
+																	size="sm"
+																	onClick={() => {
+																		setReservaParaLink(reserva);
+																		const suggestedAmount =
+																			Number(reserva.saldoPendiente) > 0
+																				? Number(reserva.saldoPendiente)
+																				: Number(
+																						reserva.totalConDescuento || 0,
+																					) - Number(reserva.pagoMonto || 0);
+																		setMontoGenerarLink(
+																			suggestedAmount > 0
+																				? suggestedAmount
+																				: Number(reserva.totalConDescuento),
+																		);
+																		setLinkGenerado("");
+																		setShowGenerarLinkDialog(true);
+																	}}
+																	title="Generar Link de Pago"
+																	className="border-blue-200 text-blue-700 hover:bg-blue-50"
+																>
+																	<Link2 className="w-4 h-4" />
+																</Button>
+															)}
 														{/* Mostrar botón de asignar / reasignar cuando la reserva está confirmada */}
 														{reserva?.estado === "confirmada" && (
 															<Button
@@ -4007,12 +4323,14 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														)}
 
 														{/* Botón de Seguimiento WhatsApp para leads abandonados */}
-														{reserva?.source === 'lead_hero_abandonado' && (
+														{reserva?.source === "lead_hero_abandonado" && (
 															<Button
 																variant="outline"
 																size="sm"
 																className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-																onClick={() => copiarMensajeSeguimiento(reserva)}
+																onClick={() =>
+																	copiarMensajeSeguimiento(reserva)
+																}
 																title="Copiar mensaje de seguimiento para WhatsApp"
 															>
 																<MessageSquare className="w-4 h-4" />
@@ -4038,13 +4356,17 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															title={
 																reserva.archivada
 																	? "Desarchivar"
-																	: ["pendiente", "cancelada"].includes(reserva.estado)
-																	? "Archivar"
-																	: "Solo se pueden archivar reservas pendientes o canceladas"
+																	: ["pendiente", "cancelada"].includes(
+																				reserva.estado,
+																		  )
+																		? "Archivar"
+																		: "Solo se pueden archivar reservas pendientes o canceladas"
 															}
 															disabled={
 																!reserva.archivada &&
-																!["pendiente", "cancelada"].includes(reserva.estado)
+																!["pendiente", "cancelada"].includes(
+																	reserva.estado,
+																)
 															}
 														>
 															{reserva.archivada ? (
@@ -4140,7 +4462,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									</DialogDescription>
 								</div>
 							</div>
-							
+
 							<div className="flex flex-wrap gap-2 w-full md:w-auto">
 								<Button
 									size="sm"
@@ -4186,7 +4508,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											variant="outline"
 											className="gap-2 bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
 											onClick={() => {
-												const text = generarTextoConductor(selectedReserva?.tramoVuelta);
+												const text = generarTextoConductor(
+													selectedReserva?.tramoVuelta,
+												);
 												navigator.clipboard.writeText(text);
 												toast.success("Info VUELTA copiada");
 											}}
@@ -4224,8 +4548,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										<div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500"></div>
 										<div className="relative z-10 flex justify-between items-start">
 											<div>
-												<p className="text-chocolate-100 text-xs font-bold uppercase tracking-widest mb-1">Código de Seguimiento</p>
-												<h4 className="text-3xl font-black tracking-tighter">{selectedReserva.codigoReserva}</h4>
+												<p className="text-chocolate-100 text-xs font-bold uppercase tracking-widest mb-1">
+													Código de Seguimiento
+												</p>
+												<h4 className="text-3xl font-black tracking-tighter">
+													{selectedReserva.codigoReserva}
+												</h4>
 											</div>
 											<div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
 												<Hash className="w-5 h-5 text-white" />
@@ -4256,7 +4584,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													WhatsApp
 												</button>
 												{selectedReserva.clienteId && (
-													<Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 font-mono">
+													<Badge
+														variant="secondary"
+														className="text-[10px] bg-slate-100 text-slate-600 font-mono"
+													>
 														ID: {selectedReserva.clienteId}
 													</Badge>
 												)}
@@ -4265,38 +4596,62 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 										<div className="space-y-3">
 											<div className="group relative bg-slate-50 p-3 rounded-xl border border-transparent hover:border-chocolate-200 hover:bg-white transition-all">
-												<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 block">Nombre Completo</Label>
-												<p className="font-semibold text-slate-900 group-hover:text-chocolate-700 transition-colors uppercase">{selectedReserva.nombre}</p>
+												<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 block">
+													Nombre Completo
+												</Label>
+												<p className="font-semibold text-slate-900 group-hover:text-chocolate-700 transition-colors uppercase">
+													{selectedReserva.nombre}
+												</p>
 											</div>
 
 											<div className="group relative bg-slate-50 p-3 rounded-xl border border-transparent hover:border-chocolate-200 hover:bg-white transition-all">
 												<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 block flex justify-between items-center">
 													Correo Electrónico
-													<button 
-														onClick={() => { navigator.clipboard.writeText(selectedReserva.email); toast.success("Email copiado"); }}
+													<button
+														onClick={() => {
+															navigator.clipboard.writeText(
+																selectedReserva.email,
+															);
+															toast.success("Email copiado");
+														}}
 														className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white border rounded shadow-sm text-chocolate-600"
 													>
 														<Copy className="w-3 h-3" />
 													</button>
 												</Label>
-												<p className="font-medium text-slate-700 truncate">{selectedReserva.email}</p>
+												<p className="font-medium text-slate-700 truncate">
+													{selectedReserva.email}
+												</p>
 											</div>
 
 											<div className="group relative bg-slate-50 p-3 rounded-xl border border-transparent hover:border-chocolate-200 hover:bg-white transition-all">
 												<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1 block flex justify-between items-center">
 													Teléfono de Contacto
 													<div className="flex gap-1">
-														<button 
-															onClick={() => { navigator.clipboard.writeText(selectedReserva.telefono); toast.success("Teléfono copiado"); }}
+														<button
+															onClick={() => {
+																navigator.clipboard.writeText(
+																	selectedReserva.telefono,
+																);
+																toast.success("Teléfono copiado");
+															}}
 															className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white border rounded shadow-sm text-chocolate-600"
 														>
 															<Copy className="w-3 h-3" />
 														</button>
-														<button 
+														<button
 															onClick={() => {
-																const phone = selectedReserva.telefono.replace(/\D/g, "");
-																const text = encodeURIComponent(`Hola ${selectedReserva.nombre}, te contacto de Transportes Araucaria para coordinar tu viaje con código ${selectedReserva.codigoReserva}.`);
-																window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
+																const phone = selectedReserva.telefono.replace(
+																	/\D/g,
+																	"",
+																);
+																const text = encodeURIComponent(
+																	`Hola ${selectedReserva.nombre}, te contacto de Transportes Araucaria para coordinar tu viaje con código ${selectedReserva.codigoReserva}.`,
+																);
+																window.open(
+																	`https://wa.me/${phone}?text=${text}`,
+																	"_blank",
+																);
 															}}
 															className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-green-500 border border-green-600 rounded shadow-sm text-white"
 														>
@@ -4304,7 +4659,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														</button>
 													</div>
 												</Label>
-												<p className="font-bold text-slate-900">{selectedReserva.telefono}</p>
+												<p className="font-bold text-slate-900">
+													{selectedReserva.telefono}
+												</p>
 											</div>
 										</div>
 									</div>
@@ -4333,8 +4690,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<MessageSquare className="w-3 h-3" />
 													WhatsApp
 												</button>
-												{(selectedReserva.idaVuelta || selectedReserva.tramoVuelta) && (
-													<Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 gap-1.5">
+												{(selectedReserva.idaVuelta ||
+													selectedReserva.tramoVuelta) && (
+													<Badge
+														variant="secondary"
+														className="bg-blue-50 text-blue-700 border-blue-100 gap-1.5"
+													>
 														<RefreshCcw className="w-3 h-3" />
 														Ida y Vuelta
 													</Badge>
@@ -4350,19 +4711,37 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<div className="flex flex-col md:flex-row justify-between gap-4">
 														<div className="flex-1 space-y-3">
 															<div className="flex items-center justify-between">
-																<span className="text-[10px] font-black uppercase text-green-700 tracking-wider">Origen</span>
-																<Badge variant="outline" className="text-[10px] bg-white text-green-700 border-green-200">IDA</Badge>
+																<span className="text-[10px] font-black uppercase text-green-700 tracking-wider">
+																	Origen
+																</span>
+																<Badge
+																	variant="outline"
+																	className="text-[10px] bg-white text-green-700 border-green-200"
+																>
+																	IDA
+																</Badge>
 															</div>
-															<p className="text-lg font-bold text-slate-900 leading-tight">{selectedReserva.origen}</p>
+															<p className="text-lg font-bold text-slate-900 leading-tight">
+																{selectedReserva.origen}
+															</p>
 															{selectedReserva.direccionOrigen && (
 																<div className="flex items-start gap-2 bg-white/60 p-2.5 rounded-xl border border-green-200/50 group/addr">
 																	<MapPin className="w-4 h-4 text-green-600 mt-0.5" />
 																	<div className="flex-1 min-w-0">
-																		<p className="text-xs font-bold text-green-800 mb-0.5">Dirección Específica</p>
-																		<p className="text-sm font-medium text-slate-700 truncate">{selectedReserva.direccionOrigen}</p>
+																		<p className="text-xs font-bold text-green-800 mb-0.5">
+																			Dirección Específica
+																		</p>
+																		<p className="text-sm font-medium text-slate-700 truncate">
+																			{selectedReserva.direccionOrigen}
+																		</p>
 																	</div>
-																	<button 
-																		onClick={() => { navigator.clipboard.writeText(selectedReserva.direccionOrigen); toast.success("Dirección copiada"); }}
+																	<button
+																		onClick={() => {
+																			navigator.clipboard.writeText(
+																				selectedReserva.direccionOrigen,
+																			);
+																			toast.success("Dirección copiada");
+																		}}
 																		className="opacity-0 group-hover/addr:opacity-100 p-1 hover:bg-green-100 rounded text-green-700 transition-all"
 																	>
 																		<Copy className="w-3 h-3" />
@@ -4374,17 +4753,30 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														<div className="w-px h-auto bg-green-200/50 hidden md:block"></div>
 
 														<div className="flex-1 space-y-3">
-															<span className="text-[10px] font-black uppercase text-green-700 tracking-wider">Destino</span>
-															<p className="text-lg font-bold text-slate-900 leading-tight">{selectedReserva.destino}</p>
+															<span className="text-[10px] font-black uppercase text-green-700 tracking-wider">
+																Destino
+															</span>
+															<p className="text-lg font-bold text-slate-900 leading-tight">
+																{selectedReserva.destino}
+															</p>
 															{selectedReserva.direccionDestino && (
 																<div className="flex items-start gap-2 bg-white/60 p-2.5 rounded-xl border border-green-200/50 group/addr">
 																	<MapPin className="w-4 h-4 text-green-600 mt-0.5" />
 																	<div className="flex-1 min-w-0">
-																		<p className="text-xs font-bold text-green-800 mb-0.5">Dirección Específica</p>
-																		<p className="text-sm font-medium text-slate-700 truncate">{selectedReserva.direccionDestino}</p>
+																		<p className="text-xs font-bold text-green-800 mb-0.5">
+																			Dirección Específica
+																		</p>
+																		<p className="text-sm font-medium text-slate-700 truncate">
+																			{selectedReserva.direccionDestino}
+																		</p>
 																	</div>
-																	<button 
-																		onClick={() => { navigator.clipboard.writeText(selectedReserva.direccionDestino); toast.success("Dirección copiada"); }}
+																	<button
+																		onClick={() => {
+																			navigator.clipboard.writeText(
+																				selectedReserva.direccionDestino,
+																			);
+																			toast.success("Dirección copiada");
+																		}}
 																		className="opacity-0 group-hover/addr:opacity-100 p-1 hover:bg-green-100 rounded text-green-700 transition-all"
 																	>
 																		<Copy className="w-3 h-3" />
@@ -4397,38 +4789,60 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<div className="mt-4 pt-3 border-t border-green-200 flex flex-wrap gap-4">
 														<div className="flex items-center gap-2">
 															<Calendar className="w-4 h-4 text-green-700" />
-															<span className="text-sm font-bold text-slate-900">{formatDate(selectedReserva.fecha)}</span>
+															<span className="text-sm font-bold text-slate-900">
+																{formatDate(selectedReserva.fecha)}
+															</span>
 														</div>
 														<div className="flex items-center gap-2">
 															<Clock className="w-4 h-4 text-green-700" />
-															<span className="text-sm font-bold text-slate-900">{selectedReserva.hora || "Sin hora"}</span>
+															<span className="text-sm font-bold text-slate-900">
+																{selectedReserva.hora || "Sin hora"}
+															</span>
 														</div>
 														<div className="flex items-center gap-2 ml-auto">
 															<Users className="w-4 h-4 text-green-700" />
-															<span className="text-sm font-bold text-slate-900">{selectedReserva.pasajeros} PAX</span>
+															<span className="text-sm font-bold text-slate-900">
+																{selectedReserva.pasajeros} PAX
+															</span>
 														</div>
 													</div>
 												</div>
 											</div>
 
 											{/* TRAMO VUELTA (Si existe) */}
-											{(selectedReserva.idaVuelta || selectedReserva.tramoVuelta) && (
+											{(selectedReserva.idaVuelta ||
+												selectedReserva.tramoVuelta) && (
 												<div className="relative pl-8 border-l-2 border-slate-100">
 													<div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white shadow-sm"></div>
 													<div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 transition-all hover:shadow-md hover:shadow-blue-100/50">
 														<div className="flex flex-col md:flex-row justify-between gap-4">
 															<div className="flex-1 space-y-3">
 																<div className="flex items-center justify-between">
-																	<span className="text-[10px] font-black uppercase text-blue-700 tracking-wider">Origen</span>
-																	<Badge variant="outline" className="text-[10px] bg-white text-blue-700 border-blue-200">VUELTA</Badge>
+																	<span className="text-[10px] font-black uppercase text-blue-700 tracking-wider">
+																		Origen
+																	</span>
+																	<Badge
+																		variant="outline"
+																		className="text-[10px] bg-white text-blue-700 border-blue-200"
+																	>
+																		VUELTA
+																	</Badge>
 																</div>
 																<p className="text-lg font-bold text-slate-900 leading-tight">
-																	{selectedReserva.tramoVuelta ? selectedReserva.tramoVuelta.origen : selectedReserva.destino}
+																	{selectedReserva.tramoVuelta
+																		? selectedReserva.tramoVuelta.origen
+																		: selectedReserva.destino}
 																</p>
-																{selectedReserva.tramoVuelta?.direccionOrigen && (
+																{selectedReserva.tramoVuelta
+																	?.direccionOrigen && (
 																	<div className="flex items-start gap-2 bg-white/60 p-2.5 rounded-xl border border-blue-200/50">
 																		<MapPin className="w-3.5 h-3.5 text-blue-600 mt-0.5" />
-																		<p className="text-xs font-medium text-slate-700 truncate">{selectedReserva.tramoVuelta.direccionOrigen}</p>
+																		<p className="text-xs font-medium text-slate-700 truncate">
+																			{
+																				selectedReserva.tramoVuelta
+																					.direccionOrigen
+																			}
+																		</p>
 																	</div>
 																)}
 															</div>
@@ -4436,14 +4850,24 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<div className="w-px h-auto bg-blue-200/50 hidden md:block"></div>
 
 															<div className="flex-1 space-y-3">
-																<span className="text-[10px] font-black uppercase text-blue-700 tracking-wider">Destino</span>
+																<span className="text-[10px] font-black uppercase text-blue-700 tracking-wider">
+																	Destino
+																</span>
 																<p className="text-lg font-bold text-slate-900 leading-tight">
-																	{selectedReserva.tramoVuelta ? selectedReserva.tramoVuelta.destino : selectedReserva.origen}
+																	{selectedReserva.tramoVuelta
+																		? selectedReserva.tramoVuelta.destino
+																		: selectedReserva.origen}
 																</p>
-																{selectedReserva.tramoVuelta?.direccionDestino && (
+																{selectedReserva.tramoVuelta
+																	?.direccionDestino && (
 																	<div className="flex items-start gap-2 bg-white/60 p-2.5 rounded-xl border border-blue-200/50">
 																		<MapPin className="w-3.5 h-3.5 text-blue-600 mt-0.5" />
-																		<p className="text-xs font-medium text-slate-700 truncate">{selectedReserva.tramoVuelta.direccionDestino}</p>
+																		<p className="text-xs font-medium text-slate-700 truncate">
+																			{
+																				selectedReserva.tramoVuelta
+																					.direccionDestino
+																			}
+																		</p>
 																	</div>
 																)}
 															</div>
@@ -4453,19 +4877,23 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<div className="flex items-center gap-2">
 																<Calendar className="w-4 h-4 text-blue-700" />
 																<span className="text-sm font-bold text-slate-900">
-																	{selectedReserva.tramoVuelta 
-																		? (selectedReserva.tramoVuelta.fecha ? formatDate(selectedReserva.tramoVuelta.fecha) : "-")
-																		: (selectedReserva.fechaRegreso ? formatDate(selectedReserva.fechaRegreso) : "-")
-																	}
+																	{selectedReserva.tramoVuelta
+																		? selectedReserva.tramoVuelta.fecha
+																			? formatDate(
+																					selectedReserva.tramoVuelta.fecha,
+																				)
+																			: "-"
+																		: selectedReserva.fechaRegreso
+																			? formatDate(selectedReserva.fechaRegreso)
+																			: "-"}
 																</span>
 															</div>
 															<div className="flex items-center gap-2">
 																<Clock className="w-4 h-4 text-blue-700" />
 																<span className="text-sm font-bold text-slate-900">
-																	{selectedReserva.tramoVuelta 
-																		? selectedReserva.tramoVuelta.hora 
-																		: (selectedReserva.horaRegreso || "-")
-																	}
+																	{selectedReserva.tramoVuelta
+																		? selectedReserva.tramoVuelta.hora
+																		: selectedReserva.horaRegreso || "-"}
 																</span>
 															</div>
 														</div>
@@ -4496,11 +4924,15 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												<MessageSquare className="w-3 h-3" />
 												WhatsApp
 											</button>
-											
+
 											<div className="space-y-2">
 												<div className="flex justify-between text-sm">
-													<span className="text-slate-500 font-medium">Precio por Servicio</span>
-													<span className="font-semibold text-slate-900">{formatCurrency(selectedReserva.precio)}</span>
+													<span className="text-slate-500 font-medium">
+														Precio por Servicio
+													</span>
+													<span className="font-semibold text-slate-900">
+														{formatCurrency(selectedReserva.precio)}
+													</span>
 												</div>
 												{selectedReserva.descuentoTotal > 0 && (
 													<div className="flex justify-between text-sm">
@@ -4508,24 +4940,49 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<Tag className="w-3 h-3" />
 															Descuentos Aplicados
 														</span>
-														<span className="font-bold text-green-600">-{formatCurrency(selectedReserva.descuentoTotal || (selectedReserva.precio - selectedReserva.totalConDescuento))}</span>
+														<span className="font-bold text-green-600">
+															-
+															{formatCurrency(
+																selectedReserva.descuentoTotal ||
+																	selectedReserva.precio -
+																		selectedReserva.totalConDescuento,
+															)}
+														</span>
 													</div>
 												)}
 												<div className="pt-2 border-t flex justify-between items-center text-lg">
-													<span className="font-black text-slate-800">Total a Cobrar</span>
-													<span className="font-black text-chocolate-700">{formatCurrency(selectedReserva.totalConDescuento)}</span>
+													<span className="font-black text-slate-800">
+														Total a Cobrar
+													</span>
+													<span className="font-black text-chocolate-700">
+														{formatCurrency(selectedReserva.totalConDescuento)}
+													</span>
 												</div>
 											</div>
 
 											<div className="grid grid-cols-2 gap-3 pt-2">
 												<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-													<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Pagado hasta ahora</p>
-													<p className="text-base font-black text-green-600">{formatCurrency(selectedReserva.pagoMonto || 0)}</p>
+													<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">
+														Pagado hasta ahora
+													</p>
+													<p className="text-base font-black text-green-600">
+														{formatCurrency(selectedReserva.pagoMonto || 0)}
+													</p>
 												</div>
-												<div className={`p-2.5 rounded-xl border ${selectedReserva.saldoPendiente > 0 ? "bg-red-50 border-red-100" : "bg-green-50 border-green-100"}`}>
-													<p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${selectedReserva.saldoPendiente > 0 ? "text-red-500" : "text-green-500"}`}>Saldo Pendiente</p>
-													<p className={`text-base font-black ${selectedReserva.saldoPendiente > 0 ? "text-red-600" : "text-green-600"}`}>
-														{selectedReserva.saldoPendiente > 0 ? formatCurrency(selectedReserva.saldoPendiente) : "SIN DEUDA"}
+												<div
+													className={`p-2.5 rounded-xl border ${selectedReserva.saldoPendiente > 0 ? "bg-red-50 border-red-100" : "bg-green-50 border-green-100"}`}
+												>
+													<p
+														className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${selectedReserva.saldoPendiente > 0 ? "text-red-500" : "text-green-500"}`}
+													>
+														Saldo Pendiente
+													</p>
+													<p
+														className={`text-base font-black ${selectedReserva.saldoPendiente > 0 ? "text-red-600" : "text-green-600"}`}
+													>
+														{selectedReserva.saldoPendiente > 0
+															? formatCurrency(selectedReserva.saldoPendiente)
+															: "SIN DEUDA"}
 													</p>
 												</div>
 											</div>
@@ -4534,19 +4991,43 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										<div className="w-full md:w-64 bg-slate-50 border-l border-slate-100 p-5 space-y-4">
 											<div className="space-y-3">
 												<div>
-													<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Estado del Abono</Label>
-													<Badge variant={selectedReserva.abonoPagado ? "default" : "secondary"} className={`w-full justify-center h-8 rounded-lg ${selectedReserva.abonoPagado ? "bg-green-600" : "bg-slate-200 text-slate-500 border-none"}`}>
-														{selectedReserva.abonoPagado ? "PAGADO" : "PENDIENTE"}
+													<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
+														Estado del Abono
+													</Label>
+													<Badge
+														variant={
+															selectedReserva.abonoPagado
+																? "default"
+																: "secondary"
+														}
+														className={`w-full justify-center h-8 rounded-lg ${selectedReserva.abonoPagado ? "bg-green-600" : "bg-slate-200 text-slate-500 border-none"}`}
+													>
+														{selectedReserva.abonoPagado
+															? "PAGADO"
+															: "PENDIENTE"}
 													</Badge>
 												</div>
 												<div>
-													<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Estado del Saldo</Label>
-													<Badge variant={selectedReserva.saldoPagado ? "default" : "secondary"} className={`w-full justify-center h-8 rounded-lg ${selectedReserva.saldoPagado ? "bg-green-600" : "bg-slate-200 text-slate-500 border-none"}`}>
-														{selectedReserva.saldoPagado ? "PAGADO" : "PENDIENTE"}
+													<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
+														Estado del Saldo
+													</Label>
+													<Badge
+														variant={
+															selectedReserva.saldoPagado
+																? "default"
+																: "secondary"
+														}
+														className={`w-full justify-center h-8 rounded-lg ${selectedReserva.saldoPagado ? "bg-green-600" : "bg-slate-200 text-slate-500 border-none"}`}
+													>
+														{selectedReserva.saldoPagado
+															? "PAGADO"
+															: "PENDIENTE"}
 													</Badge>
 												</div>
 												<div className="pt-2 border-t">
-													<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Método Preferido</Label>
+													<Label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
+														Método Preferido
+													</Label>
 													<p className="text-sm font-bold text-slate-700 uppercase flex items-center gap-2">
 														<CreditCard className="w-4 h-4 text-chocolate-600" />
 														{selectedReserva.metodoPago || "No especificado"}
@@ -4557,238 +5038,298 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									</div>
 								</div>
 							</div>
-								{/* Fila Inferior: Información Adicional e Historial */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-									{/* Tarjeta de Información Adicional */}
-									<div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-										<h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
-											<div className="p-1 bg-slate-100 rounded">
-												<Plus className="w-3.5 h-3.5 text-chocolate-600" />
-											</div>
-											Complementos
-										</h3>
-										<button
-											onClick={() => {
-												const text = copiarInfoComplementos(selectedReserva);
-												navigator.clipboard.writeText(text);
-												toast.success("Complementos copiados");
-											}}
-											className="p-1 px-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase"
-											title="Copiar para WhatsApp"
-										>
-											<MessageSquare className="w-3 h-3" />
-											WhatsApp
-										</button>
-										<div className="grid grid-cols-2 gap-4">
-											{selectedReserva.numeroVuelo && (
-												<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-													<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Nº Vuelo</p>
-													<p className="text-sm font-black text-slate-900">{selectedReserva.numeroVuelo}</p>
-												</div>
-											)}
-											{selectedReserva.hotel && (
-												<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-													<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Ref / Hotel</p>
-													<p className="text-sm font-bold text-slate-700">{selectedReserva.hotel}</p>
-												</div>
-											)}
-											{selectedReserva.equipajeEspecial && (
-												<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 col-span-2">
-													<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Equipaje Especial</p>
-													<p className="text-sm font-medium text-slate-700">{selectedReserva.equipajeEspecial}</p>
-												</div>
-											)}
-											{selectedReserva.sillaInfantil && (
-												<div className="bg-orange-50 p-2.5 rounded-xl border border-orange-100 col-span-2 flex items-center gap-2">
-													<div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
-													<p className="text-xs font-bold text-orange-700 tracking-tight">SILLA INFANTIL REQUERIDA</p>
-												</div>
-											)}
-											{/* Upgrade a Van visible en modal de detalle */}
-											{selectedReserva.upgradeVan && (
-												<div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 col-span-2 flex items-center gap-3">
-													<div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
-													<Star className="w-4 h-4 text-purple-600 fill-purple-500 flex-shrink-0" />
-													<p className="text-xs font-bold text-purple-800 tracking-tight">✨ UPGRADE A VAN SOLICITADO — El pasajero pagó por vehículo tipo Van</p>
-												</div>
-											)}
+							{/* Fila Inferior: Información Adicional e Historial */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+								{/* Tarjeta de Información Adicional */}
+								<div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+									<h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+										<div className="p-1 bg-slate-100 rounded">
+											<Plus className="w-3.5 h-3.5 text-chocolate-600" />
 										</div>
-									</div>
-
-									{/* Tarjeta de Historial Interno */}
-									<div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
-										<h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
-											<div className="p-1 bg-slate-100 rounded">
-												<History className="w-3.5 h-3.5 text-chocolate-600" />
+										Complementos
+									</h3>
+									<button
+										onClick={() => {
+											const text = copiarInfoComplementos(selectedReserva);
+											navigator.clipboard.writeText(text);
+											toast.success("Complementos copiados");
+										}}
+										className="p-1 px-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase"
+										title="Copiar para WhatsApp"
+									>
+										<MessageSquare className="w-3 h-3" />
+										WhatsApp
+									</button>
+									<div className="grid grid-cols-2 gap-4">
+										{selectedReserva.numeroVuelo && (
+											<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+												<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">
+													Nº Vuelo
+												</p>
+												<p className="text-sm font-black text-slate-900">
+													{selectedReserva.numeroVuelo}
+												</p>
 											</div>
-											Historial Interno
-										</h3>
-										<div className="max-h-[140px] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-200">
-											{loadingHistorial ? (
-												<p className="text-xs text-slate-400 italic">Cargando...</p>
-											) : historialAsignaciones.length === 0 ? (
-												<p className="text-xs text-slate-400 italic">Sin cambios de asignación previos</p>
-											) : (
-												historialAsignaciones.map((h) => (
-													<div key={h.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px]">
-														<div className="flex justify-between items-start mb-1">
-															<span className="font-bold text-chocolate-700 uppercase">{h.vehiculo || "Vehículo N/A"}</span>
-															<span className="text-slate-400">{new Date(h.created_at).toLocaleString("es-CL", { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-														</div>
-														<p className="text-slate-600 font-medium">Asignado a: <span className="text-slate-900">{h.conductor || "Sin conductor"}</span></p>
-													</div>
-												))
-											)}
-										</div>
+										)}
+										{selectedReserva.hotel && (
+											<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+												<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">
+													Ref / Hotel
+												</p>
+												<p className="text-sm font-bold text-slate-700">
+													{selectedReserva.hotel}
+												</p>
+											</div>
+										)}
+										{selectedReserva.equipajeEspecial && (
+											<div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 col-span-2">
+												<p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">
+													Equipaje Especial
+												</p>
+												<p className="text-sm font-medium text-slate-700">
+													{selectedReserva.equipajeEspecial}
+												</p>
+											</div>
+										)}
+										{selectedReserva.sillaInfantil && (
+											<div className="bg-orange-50 p-2.5 rounded-xl border border-orange-100 col-span-2 flex items-center gap-2">
+												<div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+												<p className="text-xs font-bold text-orange-700 tracking-tight">
+													SILLA INFANTIL REQUERIDA
+												</p>
+											</div>
+										)}
+										{/* Upgrade a Van visible en modal de detalle */}
+										{selectedReserva.upgradeVan && (
+											<div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 col-span-2 flex items-center gap-3">
+												<div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
+												<Star className="w-4 h-4 text-purple-600 fill-purple-500 flex-shrink-0" />
+												<p className="text-xs font-bold text-purple-800 tracking-tight">
+													✨ UPGRADE A VAN SOLICITADO — El pasajero pagó por
+													vehículo tipo Van
+												</p>
+											</div>
+										)}
 									</div>
 								</div>
 
-								{/* Observaciones y Notas */}
-								{(selectedReserva.observaciones || selectedReserva.mensaje) && (
-									<div className="bg-chocolate-50 p-5 rounded-2xl border border-chocolate-100 space-y-4 mt-6">
-										<h3 className="font-bold text-chocolate-900 flex items-center gap-2 text-sm uppercase tracking-wider">
-											<MessageSquare className="w-4 h-4" />
-											Notas y Observaciones
-										</h3>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											{selectedReserva.mensaje && (
-												<div className="space-y-1">
-													<Label className="text-[10px] text-chocolate-700 font-bold uppercase">Mensaje del Cliente</Label>
-													<p className="text-sm p-3 bg-white rounded-xl border border-chocolate-200 text-slate-800 font-medium">{selectedReserva.mensaje}</p>
-												</div>
-											)}
-											{selectedReserva.observaciones && (
-												<div className="space-y-1">
-													<Label className="text-[10px] text-chocolate-700 font-bold uppercase">Notas Administrativas</Label>
-													<p className="text-sm p-3 bg-white rounded-xl border border-chocolate-200 text-slate-800 font-medium italic">{selectedReserva.observaciones}</p>
-												</div>
-											)}
+								{/* Tarjeta de Historial Interno */}
+								<div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4">
+									<h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider">
+										<div className="p-1 bg-slate-100 rounded">
+											<History className="w-3.5 h-3.5 text-chocolate-600" />
 										</div>
-									</div>
-								)}
-
-								{/* Sección de Evaluación del Servicio (solo para reservas completadas) */}
-								{selectedReserva.estado === "completada" && (
-									<div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
-										<h4 className="text-sm font-bold text-amber-800 mb-3">
-											⭐ Evaluación del Servicio
-										</h4>
-										{(() => {
-											const infoEval = solicitudEvaluacion[selectedReserva.id];
-											if (infoEval?.evaluada) {
-												return (
-													<div className="flex items-center gap-2">
-														<span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
-															✅ Evaluada
-														</span>
-														<button
-															className="text-xs text-amber-700 underline"
-															onClick={() => {
-																setShowDetailDialog(false);
-															}}
-														>
-															Ver en Evaluaciones
-														</button>
-													</div>
-												);
-											}
-											if (infoEval?.enviada) {
-												// Construir link de evaluación para envío por WhatsApp
-												const linkEval = infoEval.token
-													? `https://www.transportesaraucaria.cl/#evaluar?token=${infoEval.token}`
-													: null;
-												const telefonoPasajero = selectedReserva.telefono?.replace(/\D/g, "");
-												const mensajeWhatsApp = linkEval
-													? encodeURIComponent(
-														`Hola ${selectedReserva.nombre || "pasajero"}, gracias por viajar con Transportes Araucanía. Tu opinión es muy importante para nosotros. ¿Podrías evaluar tu experiencia? Solo toma un momento: ${linkEval}`
-													  )
-													: null;
-												return (
-													<div className="flex flex-wrap items-center gap-2">
-														<span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
-															⏳ Correo enviado el {new Date(infoEval.fecha).toLocaleDateString("es-CL")}
-														</span>
-														{/* Botón para reenviar link de evaluación por WhatsApp */}
-														{linkEval && telefonoPasajero && (
-															<a
-																href={`https://wa.me/${telefonoPasajero}?text=${mensajeWhatsApp}`}
-																target="_blank"
-																rel="noopener noreferrer"
-																className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-															>
-																📲 Enviar link por WhatsApp
-															</a>
-														)}
-														{/* Botón para copiar link si no hay teléfono disponible */}
-														{linkEval && !telefonoPasajero && (
-															<button
-																onClick={() => { navigator.clipboard.writeText(linkEval); alert("Link copiado al portapapeles"); }}
-																className="flex items-center gap-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-															>
-																📋 Copiar link
-															</button>
-														)}
-													</div>
-												);
-											}
-											return (
-												<button
-													onClick={() => handleSolicitarEvaluacion(selectedReserva)}
-													disabled={solicitandoEvaluacion || !selectedReserva.email}
-													className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+										Historial Interno
+									</h3>
+									<div className="max-h-[140px] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-slate-200">
+										{loadingHistorial ? (
+											<p className="text-xs text-slate-400 italic">
+												Cargando...
+											</p>
+										) : historialAsignaciones.length === 0 ? (
+											<p className="text-xs text-slate-400 italic">
+												Sin cambios de asignación previos
+											</p>
+										) : (
+											historialAsignaciones.map((h) => (
+												<div
+													key={h.id}
+													className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px]"
 												>
-													{solicitandoEvaluacion ? "⏳ Enviando..." : "📧 Solicitar evaluación al pasajero"}
-												</button>
-											);
-										})()}
-									</div>
-								)}
-
-								{/* Footer de Acciones Rápidas */}
-								<div className="pt-6 border-t flex flex-wrap justify-between items-center gap-4 mt-6">
-									<div className="flex gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-										<div className="flex items-center gap-1.5">
-											<div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-											Creado: {new Date(selectedReserva.created_at).toLocaleDateString()}
-										</div>
-										<div className="flex items-center gap-1.5">
-											<div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
-											IP: {selectedReserva.ipAddress || "Interna"}
-										</div>
-										<div className="flex items-center gap-1.5">
-											<div className="w-1.5 h-1.5 rounded-full bg-chocolate-400"></div>
-											Fuente: {selectedReserva.source || "WEB_APP"}
-										</div>
-									</div>
-
-									<div className="flex gap-3">
-										<Button
-											variant="ghost"
-											size="sm"
-											className="text-slate-500 font-bold text-xs uppercase hover:bg-slate-100"
-											onClick={() => setShowDetailDialog(false)}
-										>
-											Cerrar Vista
-										</Button>
-										
-										{!isAsignada(selectedReserva) && (
-											<Button
-												size="sm"
-												className="bg-chocolate-600 hover:bg-chocolate-700 text-white font-bold text-xs uppercase px-6"
-												onClick={() => {
-													setShowDetailDialog(false);
-													setShowEditDialog(true);
-												}}
-											>
-												Asignar Conductor
-											</Button>
+													<div className="flex justify-between items-start mb-1">
+														<span className="font-bold text-chocolate-700 uppercase">
+															{h.vehiculo || "Vehículo N/A"}
+														</span>
+														<span className="text-slate-400">
+															{new Date(h.created_at).toLocaleString("es-CL", {
+																day: "2-digit",
+																month: "2-digit",
+																hour: "2-digit",
+																minute: "2-digit",
+															})}
+														</span>
+													</div>
+													<p className="text-slate-600 font-medium">
+														Asignado a:{" "}
+														<span className="text-slate-900">
+															{h.conductor || "Sin conductor"}
+														</span>
+													</p>
+												</div>
+											))
 										)}
 									</div>
 								</div>
 							</div>
-						)}
-					</DialogContent>
-				</Dialog>
+
+							{/* Observaciones y Notas */}
+							{(selectedReserva.observaciones || selectedReserva.mensaje) && (
+								<div className="bg-chocolate-50 p-5 rounded-2xl border border-chocolate-100 space-y-4 mt-6">
+									<h3 className="font-bold text-chocolate-900 flex items-center gap-2 text-sm uppercase tracking-wider">
+										<MessageSquare className="w-4 h-4" />
+										Notas y Observaciones
+									</h3>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										{selectedReserva.mensaje && (
+											<div className="space-y-1">
+												<Label className="text-[10px] text-chocolate-700 font-bold uppercase">
+													Mensaje del Cliente
+												</Label>
+												<p className="text-sm p-3 bg-white rounded-xl border border-chocolate-200 text-slate-800 font-medium">
+													{selectedReserva.mensaje}
+												</p>
+											</div>
+										)}
+										{selectedReserva.observaciones && (
+											<div className="space-y-1">
+												<Label className="text-[10px] text-chocolate-700 font-bold uppercase">
+													Notas Administrativas
+												</Label>
+												<p className="text-sm p-3 bg-white rounded-xl border border-chocolate-200 text-slate-800 font-medium italic">
+													{selectedReserva.observaciones}
+												</p>
+											</div>
+										)}
+									</div>
+								</div>
+							)}
+
+							{/* Sección de Evaluación del Servicio (solo para reservas completadas) */}
+							{selectedReserva.estado === "completada" && (
+								<div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
+									<h4 className="text-sm font-bold text-amber-800 mb-3">
+										⭐ Evaluación del Servicio
+									</h4>
+									{(() => {
+										const infoEval = solicitudEvaluacion[selectedReserva.id];
+										if (infoEval?.evaluada) {
+											return (
+												<div className="flex items-center gap-2">
+													<span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">
+														✅ Evaluada
+													</span>
+													<button
+														className="text-xs text-amber-700 underline"
+														onClick={() => {
+															setShowDetailDialog(false);
+														}}
+													>
+														Ver en Evaluaciones
+													</button>
+												</div>
+											);
+										}
+										if (infoEval?.enviada) {
+											// Construir link de evaluación para envío por WhatsApp
+											const linkEval = infoEval.token
+												? `https://www.transportesaraucaria.cl/#evaluar?token=${infoEval.token}`
+												: null;
+											const telefonoPasajero =
+												selectedReserva.telefono?.replace(/\D/g, "");
+											const mensajeWhatsApp = linkEval
+												? encodeURIComponent(
+														`Hola ${selectedReserva.nombre || "pasajero"}, gracias por viajar con Transportes Araucanía. Tu opinión es muy importante para nosotros. ¿Podrías evaluar tu experiencia? Solo toma un momento: ${linkEval}`,
+													)
+												: null;
+											return (
+												<div className="flex flex-wrap items-center gap-2">
+													<span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
+														⏳ Correo enviado el{" "}
+														{new Date(infoEval.fecha).toLocaleDateString(
+															"es-CL",
+														)}
+													</span>
+													{/* Botón para reenviar link de evaluación por WhatsApp */}
+													{linkEval && telefonoPasajero && (
+														<a
+															href={`https://wa.me/${telefonoPasajero}?text=${mensajeWhatsApp}`}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+														>
+															📲 Enviar link por WhatsApp
+														</a>
+													)}
+													{/* Botón para copiar link si no hay teléfono disponible */}
+													{linkEval && !telefonoPasajero && (
+														<button
+															onClick={() => {
+																navigator.clipboard.writeText(linkEval);
+																alert("Link copiado al portapapeles");
+															}}
+															className="flex items-center gap-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+														>
+															📋 Copiar link
+														</button>
+													)}
+												</div>
+											);
+										}
+										return (
+											<button
+												onClick={() =>
+													handleSolicitarEvaluacion(selectedReserva)
+												}
+												disabled={
+													solicitandoEvaluacion || !selectedReserva.email
+												}
+												className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+											>
+												{solicitandoEvaluacion
+													? "⏳ Enviando..."
+													: "📧 Solicitar evaluación al pasajero"}
+											</button>
+										);
+									})()}
+								</div>
+							)}
+
+							{/* Footer de Acciones Rápidas */}
+							<div className="pt-6 border-t flex flex-wrap justify-between items-center gap-4 mt-6">
+								<div className="flex gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+									<div className="flex items-center gap-1.5">
+										<div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+										Creado:{" "}
+										{new Date(selectedReserva.created_at).toLocaleDateString()}
+									</div>
+									<div className="flex items-center gap-1.5">
+										<div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+										IP: {selectedReserva.ipAddress || "Interna"}
+									</div>
+									<div className="flex items-center gap-1.5">
+										<div className="w-1.5 h-1.5 rounded-full bg-chocolate-400"></div>
+										Fuente: {selectedReserva.source || "WEB_APP"}
+									</div>
+								</div>
+
+								<div className="flex gap-3">
+									<Button
+										variant="ghost"
+										size="sm"
+										className="text-slate-500 font-bold text-xs uppercase hover:bg-slate-100"
+										onClick={() => setShowDetailDialog(false)}
+									>
+										Cerrar Vista
+									</Button>
+
+									{!isAsignada(selectedReserva) && (
+										<Button
+											size="sm"
+											className="bg-chocolate-600 hover:bg-chocolate-700 text-white font-bold text-xs uppercase px-6"
+											onClick={() => {
+												setShowDetailDialog(false);
+												setShowEditDialog(true);
+											}}
+										>
+											Asignar Conductor
+										</Button>
+									)}
+								</div>
+							</div>
+						</div>
+					)}
+				</DialogContent>
+			</Dialog>
 
 			{/* Modal de Edición */}
 			<Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -4806,7 +5347,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => reenviarCorreoConfirmacion(selectedReserva.id)}
+										onClick={() =>
+											reenviarCorreoConfirmacion(selectedReserva.id)
+										}
 									>
 										<Mail className="w-4 h-4 mr-2" />
 										Reenviar Email
@@ -4815,7 +5358,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => verReservaVinculada(selectedReserva.tramoHijoId)}
+											onClick={() =>
+												verReservaVinculada(selectedReserva.tramoHijoId)
+											}
 										>
 											Ver Tramo Vuelta →
 										</Button>
@@ -4838,10 +5383,14 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							{/* Información del Cliente (EDITABLE) */}
 							<div className="bg-muted p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="space-y-1">
-									<Label className="text-muted-foreground">Nombre del Cliente</Label>
+									<Label className="text-muted-foreground">
+										Nombre del Cliente
+									</Label>
 									<Input
 										value={formData.nombre || ""}
-										onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+										onChange={(e) =>
+											setFormData({ ...formData, nombre: e.target.value })
+										}
 										placeholder="Nombre completo"
 									/>
 								</div>
@@ -4850,7 +5399,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									<Input
 										type="email"
 										value={formData.email || ""}
-										onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+										onChange={(e) =>
+											setFormData({ ...formData, email: e.target.value })
+										}
 										placeholder="correo@ejemplo.com"
 									/>
 								</div>
@@ -4858,13 +5409,18 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									<Label className="text-muted-foreground">Teléfono</Label>
 									<Input
 										value={formData.telefono || ""}
-										onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+										onChange={(e) =>
+											setFormData({ ...formData, telefono: e.target.value })
+										}
 										placeholder="+56 9 ..."
 									/>
 								</div>
 								<div className="space-y-1 flex items-end">
 									{selectedReserva?.clienteId && (
-										<Badge variant="outline" className="h-10 px-4 gap-2 bg-white">
+										<Badge
+											variant="outline"
+											className="h-10 px-4 gap-2 bg-white"
+										>
 											<User className="w-4 h-4 text-chocolate-600" />
 											ID Cliente: {selectedReserva.clienteId}
 										</Badge>
@@ -4876,16 +5432,26 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							{(() => {
 								// Parsear fecha de la reserva una sola vez para las alertas
 								const fechaReserva = selectedReserva.fecha
-									? new Date(selectedReserva.fecha + (selectedReserva.fecha.length === 10 ? "T00:00:00" : ""))
+									? new Date(
+											selectedReserva.fecha +
+												(selectedReserva.fecha.length === 10
+													? "T00:00:00"
+													: ""),
+										)
 									: null;
 								const hoy = new Date();
 								const dosDias = new Date(hoy);
 								dosDias.setDate(dosDias.getDate() + 2);
 
 								const esPasada = fechaReserva && fechaReserva < hoy;
-								const esProxima = fechaReserva && fechaReserva < dosDias && fechaReserva > hoy;
-								const noCompletada = selectedReserva.estado !== "completada" && selectedReserva.estado !== "cancelada";
-								const pagoPendiente = selectedReserva.estadoPago === "pendiente" || selectedReserva.saldoPendiente > 0;
+								const esProxima =
+									fechaReserva && fechaReserva < dosDias && fechaReserva > hoy;
+								const noCompletada =
+									selectedReserva.estado !== "completada" &&
+									selectedReserva.estado !== "cancelada";
+								const pagoPendiente =
+									selectedReserva.estadoPago === "pendiente" ||
+									selectedReserva.saldoPendiente > 0;
 
 								return (
 									<div className="space-y-2">
@@ -4893,9 +5459,13 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										{esPasada && noCompletada && (
 											<Alert className="bg-yellow-50 border-yellow-200">
 												<AlertCircle className="h-4 w-4 text-yellow-600" />
-												<AlertTitle className="text-yellow-800">Reserva Vencida</AlertTitle>
+												<AlertTitle className="text-yellow-800">
+													Reserva Vencida
+												</AlertTitle>
 												<AlertDescription className="text-yellow-700">
-													Esta reserva pasó de fecha ({formatDate(selectedReserva.fecha)}) y no está marcada como completada.{" "}
+													Esta reserva pasó de fecha (
+													{formatDate(selectedReserva.fecha)}) y no está marcada
+													como completada.{" "}
 													<Button
 														variant="link"
 														size="sm"
@@ -4910,47 +5480,63 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 										{/* Pago pendiente próximo a la fecha */}
 										{esProxima && pagoPendiente && (
-											<Alert variant="destructive" className="bg-red-50 border-red-200">
+											<Alert
+												variant="destructive"
+												className="bg-red-50 border-red-200"
+											>
 												<AlertCircle className="h-4 w-4 text-red-600" />
-												<AlertTitle className="text-red-800">Urgente: Pago Pendiente</AlertTitle>
+												<AlertTitle className="text-red-800">
+													Urgente: Pago Pendiente
+												</AlertTitle>
 												<AlertDescription className="text-red-700">
-													La reserva es en menos de 48 horas ({formatDate(selectedReserva.fecha)}) y tiene un saldo pendiente de {formatCurrency(selectedReserva.saldoPendiente)}.
+													La reserva es en menos de 48 horas (
+													{formatDate(selectedReserva.fecha)}) y tiene un saldo
+													pendiente de{" "}
+													{formatCurrency(selectedReserva.saldoPendiente)}.
 												</AlertDescription>
 											</Alert>
 										)}
 
 										{/* Falta dirección específica */}
-										{!selectedReserva.direccionOrigen && !selectedReserva.direccionDestino && (
-											<Alert className="bg-blue-50 border-blue-200">
-												<MapPin className="h-4 w-4 text-blue-600" />
-												<AlertTitle className="text-blue-800">Dirección Incompleta</AlertTitle>
-												<AlertDescription className="text-blue-700">
-													Falta la dirección específica de recogida o entrega. Esto puede causar problemas al conductor.
-												</AlertDescription>
-											</Alert>
-										)}
+										{!selectedReserva.direccionOrigen &&
+											!selectedReserva.direccionDestino && (
+												<Alert className="bg-blue-50 border-blue-200">
+													<MapPin className="h-4 w-4 text-blue-600" />
+													<AlertTitle className="text-blue-800">
+														Dirección Incompleta
+													</AlertTitle>
+													<AlertDescription className="text-blue-700">
+														Falta la dirección específica de recogida o entrega.
+														Esto puede causar problemas al conductor.
+													</AlertDescription>
+												</Alert>
+											)}
 
 										{/* Reserva confirmada sin vehículo asignado */}
-										{selectedReserva.estado === "confirmada" && !isAsignada(selectedReserva) && (
-											<Alert className="bg-orange-50 border-orange-200">
-												<Car className="h-4 w-4 text-orange-600" />
-												<AlertTitle className="text-orange-800">Sin Vehículo Asignado</AlertTitle>
-												<AlertDescription className="text-orange-700">
-													Esta reserva está confirmada pero no tiene vehículo ni conductor asignado.{" "}
-													<Button
-														variant="link"
-														size="sm"
-														className="text-orange-800 underline p-0 h-auto"
-														onClick={() => {
-															setShowEditDialog(false);
-															handleAsignar(selectedReserva);
-														}}
-													>
-														Asignar ahora
-													</Button>
-												</AlertDescription>
-											</Alert>
-										)}
+										{selectedReserva.estado === "confirmada" &&
+											!isAsignada(selectedReserva) && (
+												<Alert className="bg-orange-50 border-orange-200">
+													<Car className="h-4 w-4 text-orange-600" />
+													<AlertTitle className="text-orange-800">
+														Sin Vehículo Asignado
+													</AlertTitle>
+													<AlertDescription className="text-orange-700">
+														Esta reserva está confirmada pero no tiene vehículo
+														ni conductor asignado.{" "}
+														<Button
+															variant="link"
+															size="sm"
+															className="text-orange-800 underline p-0 h-auto"
+															onClick={() => {
+																setShowEditDialog(false);
+																handleAsignar(selectedReserva);
+															}}
+														>
+															Asignar ahora
+														</Button>
+													</AlertDescription>
+												</Alert>
+											)}
 									</div>
 								);
 							})()}
@@ -5010,7 +5596,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 							{/* Detalles del Trayecto */}
 							<div className="bg-muted p-4 rounded-lg space-y-4">
-								<h3 className="font-semibold border-b pb-2">Detalles del Trayecto</h3>
+								<h3 className="font-semibold border-b pb-2">
+									Detalles del Trayecto
+								</h3>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div className="space-y-1">
 										<Label>Origen General</Label>
@@ -5052,61 +5640,74 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											</SelectContent>
 										</Select>
 									</div>
-											<>
-												<div className="space-y-4 md:col-span-2">
-													<div className="space-y-1">
-														<Label className="flex items-center gap-2">
-															<MapPin className="h-4 w-4" />
-															Dirección Específica (Ubicación Google) *
-														</Label>
-														<AddressAutocomplete
-															id="hotel-edit"
-															name="hotel"
-															value={formData.direccionOrigen || formData.direccionDestino || ""}
-															placeholder="Busca la dirección exacta en Google Maps..."
-															onChange={(e) => {
-																const newVal = e.target.value;
-																const isFromAirport =
-																	formData.origen === "Aeropuerto La Araucanía";
-																const isToAirport =
-																	formData.destino === "Aeropuerto La Araucanía";
+									<>
+										<div className="space-y-4 md:col-span-2">
+											<div className="space-y-1">
+												<Label className="flex items-center gap-2">
+													<MapPin className="h-4 w-4" />
+													Dirección Específica (Ubicación Google) *
+												</Label>
+												<AddressAutocomplete
+													id="hotel-edit"
+													name="hotel"
+													value={
+														formData.direccionOrigen ||
+														formData.direccionDestino ||
+														""
+													}
+													placeholder="Busca la dirección exacta en Google Maps..."
+													onChange={(e) => {
+														const newVal = e.target.value;
+														const isFromAirport =
+															formData.origen === "Aeropuerto La Araucanía";
+														const isToAirport =
+															formData.destino === "Aeropuerto La Araucanía";
 
-																setFormData({
-																	...formData,
-																	// Sincronizar dirección específica según el sentido del viaje
-																	direccionDestino: isFromAirport
-																		? newVal
-																		: formData.direccionDestino,
-																	direccionOrigen: isToAirport
-																		? newVal
-																		: formData.direccionOrigen,
-																});
-															}}
-															className="bg-white"
-														/>
-													</div>
-													<div className="space-y-1">
-														<Label>Referencia / Hotel (Opcional)</Label>
-														<Input
-															value={formData.hotel || ""}
-															placeholder="Ej: Hotel Antumalal, Depto 201"
-															onChange={(e) =>
-																setFormData({ ...formData, hotel: e.target.value })
-															}
-															className="bg-white"
-														/>
-													</div>
-												</div>
-											</>
-
+														setFormData({
+															...formData,
+															// Sincronizar dirección específica según el sentido del viaje
+															direccionDestino: isFromAirport
+																? newVal
+																: formData.direccionDestino,
+															direccionOrigen: isToAirport
+																? newVal
+																: formData.direccionOrigen,
+														});
+													}}
+													className="bg-white"
+												/>
+											</div>
+											<div className="space-y-1">
+												<Label>Referencia / Hotel (Opcional)</Label>
+												<Input
+													value={formData.hotel || ""}
+													placeholder="Ej: Hotel Antumalal, Depto 201"
+													onChange={(e) =>
+														setFormData({ ...formData, hotel: e.target.value })
+													}
+													className="bg-white"
+												/>
+											</div>
+										</div>
+									</>
 								</div>
-								
+
 								{/* SOLUCIÓN: Campos para editar viaje de vuelta cuando existe */}
 								{formData.idaVuelta && (
 									<div className="pt-4 border-t mt-4">
 										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-											<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+											<svg
+												className="w-5 h-5"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={2}
+													d="M7 16l-4-4m0 0l4-4m-4 4h18"
+												/>
 											</svg>
 											Viaje de Vuelta
 											{formData.tramoVueltaId && (
@@ -5122,7 +5723,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													type="date"
 													value={formData.fechaRegreso || ""}
 													onChange={(e) =>
-														setFormData({ ...formData, fechaRegreso: e.target.value })
+														setFormData({
+															...formData,
+															fechaRegreso: e.target.value,
+														})
 													}
 													required
 												/>
@@ -5133,7 +5737,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													type="time"
 													value={formData.horaRegreso || ""}
 													onChange={(e) =>
-														setFormData({ ...formData, horaRegreso: e.target.value })
+														setFormData({
+															...formData,
+															horaRegreso: e.target.value,
+														})
 													}
 													required
 												/>
@@ -5141,18 +5748,33 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										</div>
 										{(!formData.fechaRegreso || !formData.horaRegreso) && (
 											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
-												<svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+												<svg
+													className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+													/>
 												</svg>
 												<div>
-													<p className="text-sm font-semibold text-yellow-800">Información Requerida</p>
-													<p className="text-xs text-yellow-700 mt-1">Es necesario completar la fecha y hora del regreso para coordinar el servicio.</p>
+													<p className="text-sm font-semibold text-yellow-800">
+														Información Requerida
+													</p>
+													<p className="text-xs text-yellow-700 mt-1">
+														Es necesario completar la fecha y hora del regreso
+														para coordinar el servicio.
+													</p>
 												</div>
 											</div>
 										)}
 									</div>
 								)}
-								
+
 								{/* Opción de notificar al conductor si hubo cambios importantes y ya tiene conductor */}
 								{hasConductorAsignado && (
 									<div className="pt-2 border-t mt-2">
@@ -5166,7 +5788,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												htmlFor="enviarActualizacionConductor"
 												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 											>
-												Notificar actualización al conductor (Reenviar correo con nueva dirección)
+												Notificar actualización al conductor (Reenviar correo
+												con nueva dirección)
 											</label>
 										</div>
 									</div>
@@ -5220,7 +5843,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											} else if (value === "pendiente") {
 												if (
 													["confirmada", "completada", "cancelada"].includes(
-														prev.estado
+														prev.estado,
 													)
 												) {
 													nextEstado = "pendiente";
@@ -5279,7 +5902,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												</SelectTrigger>
 												<SelectContent>
 													<SelectItem value="flow">Flow</SelectItem>
-													<SelectItem value="transferencia">Transferencia</SelectItem>
+													<SelectItem value="transferencia">
+														Transferencia
+													</SelectItem>
 													<SelectItem value="efectivo">Efectivo</SelectItem>
 													<SelectItem value="otro">Otro</SelectItem>
 												</SelectContent>
@@ -5296,7 +5921,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												placeholder="ID de transacción, número de transferencia, etc."
 												value={formData.referenciaPago}
 												onChange={(e) =>
-													setFormData({ ...formData, referenciaPago: e.target.value })
+													setFormData({
+														...formData,
+														referenciaPago: e.target.value,
+													})
 												}
 											/>
 										</div>
@@ -5311,13 +5939,13 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													parseFloat(
 														selectedReserva?.totalConDescuento ||
 															selectedReserva?.precio ||
-															0
+															0,
 													) || 0;
 												const abonoSugeridoNum =
 													parseFloat(selectedReserva?.abonoSugerido || 0) || 0;
 												const umbralAbono = Math.max(
 													totalReservaNum * 0.4,
-													abonoSugeridoNum || 0
+													abonoSugeridoNum || 0,
 												);
 												const yaAbono40 =
 													Boolean(selectedReserva?.abonoPagado) ||
@@ -5331,31 +5959,35 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	parseFloat(
 																		selectedReserva?.totalConDescuento ||
 																			selectedReserva?.precio ||
-																			0
+																			0,
 																	) || 0;
 																const abonoSugeridoNum =
-																	parseFloat(selectedReserva?.abonoSugerido || 0) ||
-																	0;
+																	parseFloat(
+																		selectedReserva?.abonoSugerido || 0,
+																	) || 0;
 																const pagoPrevioNum =
-																	parseFloat(selectedReserva?.pagoMonto || 0) || 0;
+																	parseFloat(selectedReserva?.pagoMonto || 0) ||
+																	0;
 																const umbralAbono = Math.max(
 																	totalReservaNum * 0.4,
-																	abonoSugeridoNum || 0
+																	abonoSugeridoNum || 0,
 																);
 
 																let computedMonto = null;
 																if (value === "saldo" || value === "total") {
 																	const restante = Math.max(
 																		totalReservaNum - pagoPrevioNum,
-																		0
+																		0,
 																	);
-																	computedMonto = restante > 0 ? restante : null;
+																	computedMonto =
+																		restante > 0 ? restante : null;
 																} else if (value === "abono") {
 																	const necesario = Math.max(
 																		umbralAbono - pagoPrevioNum,
-																		0
+																		0,
 																	);
-																	computedMonto = necesario > 0 ? necesario : null;
+																	computedMonto =
+																		necesario > 0 ? necesario : null;
 																}
 
 																return {
@@ -5374,11 +6006,17 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														</SelectTrigger>
 														<SelectContent>
 															{yaAbono40 ? (
-																<SelectItem value="saldo">Completar pago</SelectItem>
+																<SelectItem value="saldo">
+																	Completar pago
+																</SelectItem>
 															) : (
 																<>
-																	<SelectItem value="abono">Abono 40%</SelectItem>
-																	<SelectItem value="total">Abono total</SelectItem>
+																	<SelectItem value="abono">
+																		Abono 40%
+																	</SelectItem>
+																	<SelectItem value="total">
+																		Abono total
+																	</SelectItem>
 																</>
 															)}
 														</SelectContent>
@@ -5390,20 +6028,26 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										{/* Monto del pago */}
 										<div className="space-y-2">
 											<div className="flex justify-between items-center">
-												<Label htmlFor="montoPagado">Monto a registrar (CLP)</Label>
+												<Label htmlFor="montoPagado">
+													Monto a registrar (CLP)
+												</Label>
 												{(selectedReserva?.pagoMonto || 0) > 0 && (
-													<Button 
-														type="button" 
-														variant="ghost" 
-														size="sm" 
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
 														className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
 														onClick={() => {
-															if (confirm("¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.")) {
+															if (
+																confirm(
+																	"¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.",
+																)
+															) {
 																setFormData({
 																	...formData,
 																	montoPagado: "0",
 																	estadoPago: "pendiente",
-																	estado: "pendiente"
+																	estado: "pendiente",
 																});
 															}
 														}}
@@ -5426,20 +6070,25 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														: ""
 												}
 												onChange={(e) =>
-													setFormData({ ...formData, montoPagado: e.target.value })
+													setFormData({
+														...formData,
+														montoPagado: e.target.value,
+													})
 												}
 											/>
 											<div className="text-xs text-muted-foreground mt-1 bg-amber-50 p-2 rounded border border-amber-100 italic">
 												<p>
-													<strong>Aviso:</strong> El monto ingresado se <strong>sumará</strong> al total ya registrado de{" "}
+													<strong>Aviso:</strong> El monto ingresado se{" "}
+													<strong>sumará</strong> al total ya registrado de{" "}
 													<span className="font-semibold text-amber-700">
 														{selectedReserva.pagoMonto
 															? new Intl.NumberFormat("es-CL", {
 																	style: "currency",
 																	currency: "CLP",
-															  }).format(selectedReserva.pagoMonto)
+																}).format(selectedReserva.pagoMonto)
 															: "$0"}
-													</span>.
+													</span>
+													.
 												</p>
 											</div>
 										</div>
@@ -5451,11 +6100,20 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							<div className="space-y-4 border rounded-lg p-4 bg-slate-50">
 								<div className="flex justify-between items-center">
 									<div>
-										<Label className="text-base font-semibold">Historial de Pagos</Label>
+										<Label className="text-base font-semibold">
+											Historial de Pagos
+										</Label>
 										<p className="text-sm text-muted-foreground">
 											Total registrado:{" "}
 											<span className="font-medium">
-												{formatCurrency(pagoHistorial ? pagoHistorial.reduce((sum, p) => sum + (p.amount || 0), 0) : 0)}
+												{formatCurrency(
+													pagoHistorial
+														? pagoHistorial.reduce(
+																(sum, p) => sum + (p.amount || 0),
+																0,
+															)
+														: 0,
+												)}
 											</span>
 										</p>
 									</div>
@@ -5472,79 +6130,109 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									{(() => {
 										// Combinar pagos del historial con el pago principal de Flow si no está en el historial
 										const allPagos = [...(pagoHistorial || [])];
-										
+
 										// Si la reserva tiene un pago de Flow pero no aparece en el historial detallado, agregarlo virtualmente
-										const hasFlowInHistory = allPagos.some(p => p.metodo?.toLowerCase() === 'flow' || p.source === 'web');
-										if (!hasFlowInHistory && (selectedReserva.pagoMonto || 0) > 0 && (selectedReserva.pagoGateway === 'flow' || selectedReserva.metodoPago === 'flow')) {
+										const hasFlowInHistory = allPagos.some(
+											(p) =>
+												p.metodo?.toLowerCase() === "flow" ||
+												p.source === "web",
+										);
+										if (
+											!hasFlowInHistory &&
+											(selectedReserva.pagoMonto || 0) > 0 &&
+											(selectedReserva.pagoGateway === "flow" ||
+												selectedReserva.metodoPago === "flow")
+										) {
 											allPagos.push({
-												id: 'virtual-flow',
+												id: "virtual-flow",
 												amount: selectedReserva.pagoMonto,
-												metodo: 'Flow',
-												referencia: selectedReserva.referenciaPago || selectedReserva.pagoId,
-												source: 'web',
+												metodo: "Flow",
+												referencia:
+													selectedReserva.referenciaPago ||
+													selectedReserva.pagoId,
+												source: "web",
 												isVirtual: true,
-												createdAt: selectedReserva.pagoFecha || selectedReserva.createdAt
+												createdAt:
+													selectedReserva.pagoFecha ||
+													selectedReserva.createdAt,
 											});
 										}
 
 										if (allPagos.length > 0) {
 											return (
 												<div className="space-y-1">
-													{allPagos.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((p) => (
-														<div
-															key={p.id}
-															className="flex justify-between items-center py-2 border-b last:border-0 hover:bg-slate-50 rounded px-2"
-														>
-															<div className="flex-1">
-																<div className="flex items-center gap-2">
-																	<Badge variant={p.source === "web" ? "default" : "secondary"} className="text-[10px] h-4 px-1">
-																		{p.source === "web" ? "Automático" : "Manual"}
-																	</Badge>
-																	<span className="font-semibold text-slate-800">
-																		{formatCurrency(p.amount)}
-																	</span>
-																	<span className="text-[10px] text-muted-foreground bg-slate-100 px-1 rounded uppercase">
-																		{p.metodo || "Sin método"}
-																	</span>
+													{allPagos
+														.sort(
+															(a, b) =>
+																new Date(b.createdAt) - new Date(a.createdAt),
+														)
+														.map((p) => (
+															<div
+																key={p.id}
+																className="flex justify-between items-center py-2 border-b last:border-0 hover:bg-slate-50 rounded px-2"
+															>
+																<div className="flex-1">
+																	<div className="flex items-center gap-2">
+																		<Badge
+																			variant={
+																				p.source === "web"
+																					? "default"
+																					: "secondary"
+																			}
+																			className="text-[10px] h-4 px-1"
+																		>
+																			{p.source === "web"
+																				? "Automático"
+																				: "Manual"}
+																		</Badge>
+																		<span className="font-semibold text-slate-800">
+																			{formatCurrency(p.amount)}
+																		</span>
+																		<span className="text-[10px] text-muted-foreground bg-slate-100 px-1 rounded uppercase">
+																			{p.metodo || "Sin método"}
+																		</span>
+																	</div>
+																	<div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+																		<Calendar className="w-3 h-3" />
+																		{new Date(p.createdAt).toLocaleString(
+																			"es-CL",
+																			{
+																				day: "2-digit",
+																				month: "2-digit",
+																				year: "2-digit",
+																				hour: "2-digit",
+																				minute: "2-digit",
+																			},
+																		)}
+																		{p.referencia && ` • Ref: ${p.referencia}`}
+																	</div>
 																</div>
-																<div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
-																	<Calendar className="w-3 h-3" />
-																	{new Date(p.createdAt).toLocaleString("es-CL", {
-																		day: "2-digit",
-																		month: "2-digit",
-																		year: "2-digit",
-																		hour: "2-digit",
-																		minute: "2-digit",
-																	})}
-																	{p.referencia && ` • Ref: ${p.referencia}`}
-																</div>
+																{!p.isVirtual && (
+																	<div className="flex items-center gap-1 ml-2">
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="icon"
+																			className="h-7 w-7 text-slate-400 hover:text-indigo-600"
+																			onClick={() => handleEditPago(p)}
+																			title="Editar monto"
+																		>
+																			<Edit className="w-3.5 h-3.5" />
+																		</Button>
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="icon"
+																			className="h-7 w-7 text-slate-400 hover:text-red-600"
+																			onClick={() => handleDeletePago(p.id)}
+																			title="Eliminar pago"
+																		>
+																			<Trash2 className="w-3.5 h-3.5" />
+																		</Button>
+																	</div>
+																)}
 															</div>
-															{!p.isVirtual && (
-																<div className="flex items-center gap-1 ml-2">
-																	<Button
-																		type="button"
-																		variant="ghost"
-																		size="icon"
-																		className="h-7 w-7 text-slate-400 hover:text-indigo-600"
-																		onClick={() => handleEditPago(p)}
-																		title="Editar monto"
-																	>
-																		<Edit className="w-3.5 h-3.5" />
-																	</Button>
-																	<Button
-																		type="button"
-																		variant="ghost"
-																		size="icon"
-																		className="h-7 w-7 text-slate-400 hover:text-red-600"
-																		onClick={() => handleDeletePago(p.id)}
-																		title="Eliminar pago"
-																	>
-																		<Trash2 className="w-3.5 h-3.5" />
-																	</Button>
-																</div>
-															)}
-														</div>
-													))}
+														))}
 												</div>
 											);
 										}
@@ -5604,45 +6292,68 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										<DollarSign className="w-4 h-4 text-chocolate-600" />
 										Resumen Financiero
 									</h4>
-									<Badge variant="outline" className="text-[10px] uppercase font-bold text-chocolate-700 border-chocolate-200">
-										{selectedReserva.source?.toLowerCase().includes("express") ? "Módulo Express" : 
-										 selectedReserva.source === "codigo_pago" ? "Pago con Código" : 
-										 "Manual / Web"}
+									<Badge
+										variant="outline"
+										className="text-[10px] uppercase font-bold text-chocolate-700 border-chocolate-200"
+									>
+										{selectedReserva.source?.toLowerCase().includes("express")
+											? "Módulo Express"
+											: selectedReserva.source === "codigo_pago"
+												? "Pago con Código"
+												: "Manual / Web"}
 									</Badge>
 								</div>
-								
+
 								<div className="space-y-2 text-sm">
 									{/* BLOQUE 1: Desglose por HeroExpress */}
-									{selectedReserva.source?.toLowerCase().includes("express") && (
+									{selectedReserva.source
+										?.toLowerCase()
+										.includes("express") && (
 										<div className="space-y-1 pb-2 border-b border-chocolate-200/30">
 											<div className="flex justify-between text-chocolate-700">
-												<span className="text-xs">Precio Base ({selectedReserva.pasajeros} pax):</span>
+												<span className="text-xs">
+													Precio Base ({selectedReserva.pasajeros} pax):
+												</span>
 												<span>{formatCurrency(selectedReserva.precio)}</span>
 											</div>
-											
+
 											{/* Descuentos Individuales (no basados en el consolidado online) */}
 											{Number(selectedReserva.descuentoBase || 0) > 0 && (
 												<div className="flex justify-between text-green-700 text-xs italic">
 													<span>Descuento Reserva Online:</span>
-													<span>-{formatCurrency(selectedReserva.descuentoBase)}</span>
+													<span>
+														-{formatCurrency(selectedReserva.descuentoBase)}
+													</span>
 												</div>
 											)}
 											{Number(selectedReserva.descuentoPromocion || 0) > 0 && (
 												<div className="flex justify-between text-green-700 text-xs italic">
 													<span>Promoción Aplicada:</span>
-													<span>-{formatCurrency(selectedReserva.descuentoPromocion)}</span>
+													<span>
+														-
+														{formatCurrency(selectedReserva.descuentoPromocion)}
+													</span>
 												</div>
 											)}
 											{Number(selectedReserva.descuentoRoundTrip || 0) > 0 && (
 												<div className="flex justify-between text-green-700 text-xs italic">
 													<span>Descuento de Ida y Vuelta:</span>
-													<span>-{formatCurrency(selectedReserva.descuentoRoundTrip)}</span>
+													<span>
+														-
+														{formatCurrency(selectedReserva.descuentoRoundTrip)}
+													</span>
 												</div>
 											)}
-											{Number(selectedReserva.descuentosPersonalizados || 0) > 0 && (
+											{Number(selectedReserva.descuentosPersonalizados || 0) >
+												0 && (
 												<div className="flex justify-between text-green-700 text-xs italic">
 													<span>Descuento Personalizado:</span>
-													<span>-{formatCurrency(selectedReserva.descuentosPersonalizados)}</span>
+													<span>
+														-
+														{formatCurrency(
+															selectedReserva.descuentosPersonalizados,
+														)}
+													</span>
 												</div>
 											)}
 											{selectedReserva.codigoDescuento && (
@@ -5658,19 +6369,29 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									{selectedReserva.source === "codigo_pago" && (
 										<div className="space-y-1 pb-2 border-b border-chocolate-200/30">
 											<div className="flex justify-between text-chocolate-700">
-												<span className="text-xs">Código de Reserva usado:</span>
-												<span className="font-mono font-bold text-indigo-700">{selectedReserva.referenciaPago}</span>
+												<span className="text-xs">
+													Código de Reserva usado:
+												</span>
+												<span className="font-mono font-bold text-indigo-700">
+													{selectedReserva.referenciaPago}
+												</span>
 											</div>
 											{selectedReserva.pagoFecha && (
 												<div className="flex justify-between text-chocolate-700">
 													<span className="text-xs">Fecha del Pago:</span>
-													<span className="text-[11px]">{new Date(selectedReserva.pagoFecha).toLocaleString("es-CL")}</span>
+													<span className="text-[11px]">
+														{new Date(selectedReserva.pagoFecha).toLocaleString(
+															"es-CL",
+														)}
+													</span>
 												</div>
 											)}
 											{selectedReserva.pagoGateway && (
 												<div className="flex justify-between text-chocolate-700">
 													<span className="text-xs">Pasarela:</span>
-													<span className="capitalize">{selectedReserva.pagoGateway}</span>
+													<span className="capitalize">
+														{selectedReserva.pagoGateway}
+													</span>
 												</div>
 											)}
 										</div>
@@ -5679,31 +6400,57 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									{/* BLOQUE 3: Totales Finales (Común para todos) */}
 									<div className="space-y-1.5 pt-1">
 										<div className="flex justify-between items-center">
-											<span className="font-medium text-chocolate-800">Total Final Cobrado:</span>
+											<span className="font-medium text-chocolate-800">
+												Total Final Cobrado:
+											</span>
 											<span className="text-base font-bold text-chocolate-950">
 												{formatCurrency(selectedReserva.totalConDescuento)}
 											</span>
 										</div>
 
 										<div className="flex justify-between items-center py-1 bg-white/40 px-2 rounded -mx-1 border border-chocolate-100/50">
-											<span className="font-semibold text-chocolate-900">Saldo Pendiente:</span>
-											<span className={`text-base font-black ${
-												selectedReserva.saldoPendiente > 0 ? "text-red-600" : "text-green-600"
-											}`}>
+											<span className="font-semibold text-chocolate-900">
+												Saldo Pendiente:
+											</span>
+											<span
+												className={`text-base font-black ${
+													selectedReserva.saldoPendiente > 0
+														? "text-red-600"
+														: "text-green-600"
+												}`}
+											>
 												{formatCurrency(selectedReserva.saldoPendiente)}
 											</span>
 										</div>
-										
+
 										<div className="grid grid-cols-2 gap-2 mt-2">
 											<div className="flex flex-col gap-1">
-												<span className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider">Estado Abono</span>
-												<Badge variant={selectedReserva.abonoPagado ? "default" : "secondary"} className="w-fit text-[10px] py-0 h-5">
+												<span className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider">
+													Estado Abono
+												</span>
+												<Badge
+													variant={
+														selectedReserva.abonoPagado
+															? "default"
+															: "secondary"
+													}
+													className="w-fit text-[10px] py-0 h-5"
+												>
 													{selectedReserva.abonoPagado ? "Pagado" : "Pendiente"}
 												</Badge>
 											</div>
 											<div className="flex flex-col gap-1">
-												<span className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider">Estado Saldo</span>
-												<Badge variant={selectedReserva.saldoPagado ? "default" : "secondary"} className="w-fit text-[10px] py-0 h-5">
+												<span className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider">
+													Estado Saldo
+												</span>
+												<Badge
+													variant={
+														selectedReserva.saldoPagado
+															? "default"
+															: "secondary"
+													}
+													className="w-fit text-[10px] py-0 h-5"
+												>
 													{selectedReserva.saldoPagado ? "Pagado" : "Pendiente"}
 												</Badge>
 											</div>
@@ -5721,7 +6468,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								>
 									Cancelar
 								</Button>
-								<Button id="boton-guardar-cambios" onClick={handleSave} disabled={saving}>
+								<Button
+									id="boton-guardar-cambios"
+									onClick={handleSave}
+									disabled={saving}
+								>
 									{saving ? (
 										<>
 											<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -5906,7 +6657,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											checked={sentidoViaje === "hacia_aeropuerto"}
 											onChange={() => {
 												setSentidoViaje("hacia_aeropuerto");
-												setNewReservaForm({ ...newReservaForm, origen: "", destino: AEROPUERTO_LABEL });
+												setNewReservaForm({
+													...newReservaForm,
+													origen: "",
+													destino: AEROPUERTO_LABEL,
+												});
 											}}
 										/>
 										Hacia Aeropuerto
@@ -5919,7 +6674,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											checked={sentidoViaje === "desde_aeropuerto"}
 											onChange={() => {
 												setSentidoViaje("desde_aeropuerto");
-												setNewReservaForm({ ...newReservaForm, origen: AEROPUERTO_LABEL, destino: "" });
+												setNewReservaForm({
+													...newReservaForm,
+													origen: AEROPUERTO_LABEL,
+													destino: "",
+												});
 											}}
 										/>
 										Desde Aeropuerto
@@ -5932,7 +6691,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											checked={sentidoViaje === "otro"}
 											onChange={() => {
 												setSentidoViaje("otro");
-												setNewReservaForm({ ...newReservaForm, origen: "", destino: "" });
+												setNewReservaForm({
+													...newReservaForm,
+													origen: "",
+													destino: "",
+												});
 											}}
 										/>
 										Interurbano / Otro
@@ -6041,7 +6804,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									>
 										<option value="">Seleccionar...</option>
 										{TIME_OPTIONS.map((h) => (
-											<option key={h} value={h}>{h}</option>
+											<option key={h} value={h}>
+												{h}
+											</option>
 										))}
 									</select>
 								</div>
@@ -6128,7 +6893,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										>
 											<option value="">Seleccionar...</option>
 											{TIME_OPTIONS.map((h) => (
-												<option key={`regreso-${h}`} value={h}>{h}</option>
+												<option key={`regreso-${h}`} value={h}>
+													{h}
+												</option>
 											))}
 										</select>
 									</div>
@@ -6247,7 +7014,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									<strong>Saldo Pendiente:</strong>{" "}
 									{formatCurrency(
 										(parseFloat(newReservaForm.precio) || 0) -
-											(parseFloat(newReservaForm.abonoSugerido) || 0)
+											(parseFloat(newReservaForm.abonoSugerido) || 0),
 									)}
 								</p>
 							</div>
@@ -6259,8 +7026,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								Pago Inicial (Opcional)
 							</h3>
 							<p className="text-sm text-muted-foreground">
-								Si el cliente ya realizó un pago, regístralo aquí para que
-								quede en el historial
+								Si el cliente ya realizó un pago, regístralo aquí para que quede
+								en el historial
 							</p>
 
 							{/* Checkbox para activar registro de pago */}
@@ -6593,7 +7360,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										</p>
 										<p className="text-2xl font-bold text-chocolate-600">
 											{formatCurrency(
-												historialCliente.estadisticas.totalGastado
+												historialCliente.estadisticas.totalGastado,
 											)}
 										</p>
 									</CardContent>
@@ -6789,7 +7556,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								<strong>Pasajeros:</strong> {selectedReserva?.pasajeros}
 							</p>
 						</div>
-					
+
 						{/* Alerta de viaje de IDA y VUELTA */}
 						{reservaVuelta && (
 							<div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -6801,16 +7568,20 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								</div>
 								<p className="text-sm text-blue-700 mb-3">
 									Vuelta: {reservaVuelta.origen} → {reservaVuelta.destino} el{" "}
-									{reservaVuelta.fecha ? new Date(reservaVuelta.fecha).toLocaleDateString("es-CL") : ""}
+									{reservaVuelta.fecha
+										? new Date(reservaVuelta.fecha).toLocaleDateString("es-CL")
+										: ""}
 								</p>
 								<div className="flex items-center gap-2">
 									<Checkbox
 										id="asignar-ambas"
 										checked={asignarAmbas}
-										onCheckedChange={(checked) => setAsignarAmbas(Boolean(checked))}
+										onCheckedChange={(checked) =>
+											setAsignarAmbas(Boolean(checked))
+										}
 									/>
-									<label 
-										htmlFor="asignar-ambas" 
+									<label
+										htmlFor="asignar-ambas"
 										className="text-sm cursor-pointer text-blue-900"
 									>
 										Asignar el mismo conductor y vehículo para ambos tramos
@@ -6820,106 +7591,44 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 						)}
 
 						{/* Sección IDA */}
-					<div className="space-y-4">
-						{reservaVuelta && (
-							<div className="font-medium flex items-center gap-2">
-								<Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-									IDA
-								</Badge>
-								{selectedReserva?.origen} → {selectedReserva?.destino}
-							</div>
-						)}
-						
-						{/* Selector de vehículo */}
-						<div className="space-y-2">
-							<Label htmlFor="vehiculo">
-								Vehículo <span className="text-red-500">*</span>
-							</Label>
-							<Select
-								value={vehiculoSeleccionado}
-								onValueChange={setVehiculoSeleccionado}
-							>
-								<SelectTrigger id="vehiculo">
-									<SelectValue placeholder="Selecciona un vehículo" />
-								</SelectTrigger>
-								<SelectContent>
-									{vehiculos
-										.filter((v) => v.capacidad >= (selectedReserva?.pasajeros || 1))
-										.map((v) => (
-											<SelectItem
-												key={v.id}
-												value={v.id.toString()}
-												disabled={
-													assignedVehiculoId !== null &&
-													assignedVehiculoId === v.id
-												}
-											>
-												{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
-												{v.capacidad} pasajeros
-											</SelectItem>
-										))}
-								</SelectContent>
-							</Select>
-						</div>
+						<div className="space-y-4">
+							{reservaVuelta && (
+								<div className="font-medium flex items-center gap-2">
+									<Badge
+										variant="outline"
+										className="bg-green-50 text-green-700 border-green-200"
+									>
+										IDA
+									</Badge>
+									{selectedReserva?.origen} → {selectedReserva?.destino}
+								</div>
+							)}
 
-						{/* Selector de conductor (opcional) */}
-						<div className="space-y-2">
-							<Label htmlFor="conductor">Conductor (opcional)</Label>
-							<Select
-								value={conductorSeleccionado}
-								onValueChange={setConductorSeleccionado}
-							>
-								<SelectTrigger id="conductor">
-									<SelectValue placeholder="Selecciona un conductor (opcional)" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="none">Sin asignar</SelectItem>
-									{conductores.map((c) => (
-										<SelectItem
-											key={c.id}
-											value={c.id.toString()}
-											disabled={
-												assignedConductorId !== null &&
-												assignedConductorId === c.id
-											}
-										>
-											{c.nombre} - {c.rut}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
-					
-					{/* Sección VUELTA (solo si existe y NO está marcado "asignar ambas") */}
-					{reservaVuelta && !asignarAmbas && (
-						<div className="space-y-4 pt-4 border-t">
-							<div className="font-medium flex items-center gap-2">
-								<Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-									VUELTA
-								</Badge>
-								{reservaVuelta.origen} → {reservaVuelta.destino}
-							</div>
-
-							{/* Selector de vehículo VUELTA */}
+							{/* Selector de vehículo */}
 							<div className="space-y-2">
-								<Label htmlFor="vehiculo-vuelta">
+								<Label htmlFor="vehiculo">
 									Vehículo <span className="text-red-500">*</span>
 								</Label>
 								<Select
-									value={vueltaVehiculoSeleccionado}
-									onValueChange={setVueltaVehiculoSeleccionado}
+									value={vehiculoSeleccionado}
+									onValueChange={setVehiculoSeleccionado}
 								>
-									<SelectTrigger id="vehiculo-vuelta">
+									<SelectTrigger id="vehiculo">
 										<SelectValue placeholder="Selecciona un vehículo" />
 									</SelectTrigger>
 									<SelectContent>
 										{vehiculos
-											.filter((v) => v.capacidad >= (reservaVuelta?.pasajeros || selectedReserva?.pasajeros || 1))
+											.filter(
+												(v) => v.capacidad >= (selectedReserva?.pasajeros || 1),
+											)
 											.map((v) => (
 												<SelectItem
 													key={v.id}
 													value={v.id.toString()}
+													disabled={
+														assignedVehiculoId !== null &&
+														assignedVehiculoId === v.id
+													}
 												>
 													{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
 													{v.capacidad} pasajeros
@@ -6929,14 +7638,14 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								</Select>
 							</div>
 
-							{/* Selector de conductor VUELTA (opcional) */}
+							{/* Selector de conductor (opcional) */}
 							<div className="space-y-2">
-								<Label htmlFor="conductor-vuelta">Conductor (opcional)</Label>
+								<Label htmlFor="conductor">Conductor (opcional)</Label>
 								<Select
-									value={vueltaConductorSeleccionado}
-									onValueChange={setVueltaConductorSeleccionado}
+									value={conductorSeleccionado}
+									onValueChange={setConductorSeleccionado}
 								>
-									<SelectTrigger id="conductor-vuelta">
+									<SelectTrigger id="conductor">
 										<SelectValue placeholder="Selecciona un conductor (opcional)" />
 									</SelectTrigger>
 									<SelectContent>
@@ -6945,6 +7654,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											<SelectItem
 												key={c.id}
 												value={c.id.toString()}
+												disabled={
+													assignedConductorId !== null &&
+													assignedConductorId === c.id
+												}
 											>
 												{c.nombre} - {c.rut}
 											</SelectItem>
@@ -6953,7 +7666,73 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								</Select>
 							</div>
 						</div>
-					)}
+
+						{/* Sección VUELTA (solo si existe y NO está marcado "asignar ambas") */}
+						{reservaVuelta && !asignarAmbas && (
+							<div className="space-y-4 pt-4 border-t">
+								<div className="font-medium flex items-center gap-2">
+									<Badge
+										variant="outline"
+										className="bg-blue-50 text-blue-700 border-blue-200"
+									>
+										VUELTA
+									</Badge>
+									{reservaVuelta.origen} → {reservaVuelta.destino}
+								</div>
+
+								{/* Selector de vehículo VUELTA */}
+								<div className="space-y-2">
+									<Label htmlFor="vehiculo-vuelta">
+										Vehículo <span className="text-red-500">*</span>
+									</Label>
+									<Select
+										value={vueltaVehiculoSeleccionado}
+										onValueChange={setVueltaVehiculoSeleccionado}
+									>
+										<SelectTrigger id="vehiculo-vuelta">
+											<SelectValue placeholder="Selecciona un vehículo" />
+										</SelectTrigger>
+										<SelectContent>
+											{vehiculos
+												.filter(
+													(v) =>
+														v.capacidad >=
+														(reservaVuelta?.pasajeros ||
+															selectedReserva?.pasajeros ||
+															1),
+												)
+												.map((v) => (
+													<SelectItem key={v.id} value={v.id.toString()}>
+														{v.patente} - {v.tipo} ({v.marca} {v.modelo}) -{" "}
+														{v.capacidad} pasajeros
+													</SelectItem>
+												))}
+										</SelectContent>
+									</Select>
+								</div>
+
+								{/* Selector de conductor VUELTA (opcional) */}
+								<div className="space-y-2">
+									<Label htmlFor="conductor-vuelta">Conductor (opcional)</Label>
+									<Select
+										value={vueltaConductorSeleccionado}
+										onValueChange={setVueltaConductorSeleccionado}
+									>
+										<SelectTrigger id="conductor-vuelta">
+											<SelectValue placeholder="Selecciona un conductor (opcional)" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="none">Sin asignar</SelectItem>
+											{conductores.map((c) => (
+												<SelectItem key={c.id} value={c.id.toString()}>
+													{c.nombre} - {c.rut}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+						)}
 
 						{/* Sin ediciÃ³n de ruta en reasignaciÃ³n */}
 
@@ -6977,7 +7756,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							<Checkbox
 								id="enviar-notificacion-conductor"
 								checked={enviarNotificacionConductor}
-								onCheckedChange={(v) => setEnviarNotificacionConductor(Boolean(v))}
+								onCheckedChange={(v) =>
+									setEnviarNotificacionConductor(Boolean(v))
+								}
 							/>
 							<label
 								htmlFor="enviar-notificacion-conductor"
@@ -6988,67 +7769,77 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 						</div>
 
 						{/* Mostrar info de asignación solo si la reserva confirmada ya tiene vehículo */}
-				{selectedReserva?.estado === "confirmada" &&
-					hasVehiculoAsignado && (
-						<div className="bg-chocolate-50 p-3 rounded-lg space-y-2 text-sm">
-							<p className="font-semibold">Asignación actual:</p>
+						{selectedReserva?.estado === "confirmada" &&
+							hasVehiculoAsignado && (
+								<div className="bg-chocolate-50 p-3 rounded-lg space-y-2 text-sm">
+									<p className="font-semibold">Asignación actual:</p>
 
-							{/* IDA */}
-							<div className={reservaVuelta ? "border-b pb-2" : ""}>
-								{reservaVuelta && (
-									<p className="text-xs font-medium text-green-700 mb-1">↗ IDA</p>
-								)}
-								{selectedReserva.vehiculo_asignado ? (
-									<p>
-										🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} (
-										{selectedReserva.vehiculo_asignado.patente})
-									</p>
-								) : selectedReserva?.vehiculo ? (
-									<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
-								) : null}
-								{hasConductorAsignado ? (
-									selectedReserva.conductor_asignado ? (
-										<p>
-											👤 Conductor:{" "}
-											{selectedReserva.conductor_asignado.nombre}
-										</p>
-									) : selectedReserva?.conductor && selectedReserva.conductor !== "Por asignar" ? (
-										<p>👤 Conductor: {selectedReserva.conductor}</p>
-									) : conductorEnObsIda ? (
-										<p>👤 Conductor: {conductorEnObsIda}</p>
-									) : null
-								) : (
-									<p className="text-muted-foreground">
-										No hay conductor asignado actualmente.
-									</p>
-								)}
-							</div>
+									{/* IDA */}
+									<div className={reservaVuelta ? "border-b pb-2" : ""}>
+										{reservaVuelta && (
+											<p className="text-xs font-medium text-green-700 mb-1">
+												↗ IDA
+											</p>
+										)}
+										{selectedReserva.vehiculo_asignado ? (
+											<p>
+												🚗 Vehículo: {selectedReserva.vehiculo_asignado.tipo} (
+												{selectedReserva.vehiculo_asignado.patente})
+											</p>
+										) : selectedReserva?.vehiculo ? (
+											<p>🚗 Vehículo: {selectedReserva.vehiculo}</p>
+										) : null}
+										{hasConductorAsignado ? (
+											selectedReserva.conductor_asignado ? (
+												<p>
+													👤 Conductor:{" "}
+													{selectedReserva.conductor_asignado.nombre}
+												</p>
+											) : selectedReserva?.conductor &&
+											  selectedReserva.conductor !== "Por asignar" ? (
+												<p>👤 Conductor: {selectedReserva.conductor}</p>
+											) : conductorEnObsIda ? (
+												<p>👤 Conductor: {conductorEnObsIda}</p>
+											) : null
+										) : (
+											<p className="text-muted-foreground">
+												No hay conductor asignado actualmente.
+											</p>
+										)}
+									</div>
 
-							{/* VUELTA (si existe y tiene algo asignado) */}
-							{reservaVuelta && (reservaVuelta.vehiculo || reservaVuelta.vehiculoId) && (
-								<div className="pt-1">
-									<p className="text-xs font-medium text-blue-700 mb-1">↩ VUELTA</p>
-									{reservaVuelta.vehiculo ? (
-										<p>🚗 Vehículo: {reservaVuelta.vehiculo}</p>
-									) : null}
-									{(() => {
-									const conductorEnObsVuelta = getConductorFromObs(reservaVuelta?.observaciones);
-									const nombreConductorVuelta = conductores.find(c => c.id === reservaVuelta?.conductorId)?.nombre ||
-										reservaVuelta?.conductor ||
-										conductorEnObsVuelta;
-									return nombreConductorVuelta ? (
-										<p>👤 Conductor: {nombreConductorVuelta}</p>
-									) : (
-										<p className="text-muted-foreground">
-											No hay conductor asignado actualmente.
-										</p>
-									);
-								})()}
+									{/* VUELTA (si existe y tiene algo asignado) */}
+									{reservaVuelta &&
+										(reservaVuelta.vehiculo || reservaVuelta.vehiculoId) && (
+											<div className="pt-1">
+												<p className="text-xs font-medium text-blue-700 mb-1">
+													↩ VUELTA
+												</p>
+												{reservaVuelta.vehiculo ? (
+													<p>🚗 Vehículo: {reservaVuelta.vehiculo}</p>
+												) : null}
+												{(() => {
+													const conductorEnObsVuelta = getConductorFromObs(
+														reservaVuelta?.observaciones,
+													);
+													const nombreConductorVuelta =
+														conductores.find(
+															(c) => c.id === reservaVuelta?.conductorId,
+														)?.nombre ||
+														reservaVuelta?.conductor ||
+														conductorEnObsVuelta;
+													return nombreConductorVuelta ? (
+														<p>👤 Conductor: {nombreConductorVuelta}</p>
+													) : (
+														<p className="text-muted-foreground">
+															No hay conductor asignado actualmente.
+														</p>
+													);
+												})()}
+											</div>
+										)}
 								</div>
 							)}
-
-						</div>
-					)}
 
 						<div className="flex justify-end gap-2">
 							<Button
@@ -7065,10 +7856,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									Number(vehiculoSeleccionado) === Number(assignedVehiculoId) &&
 									String(assignedConductorId ?? "none") ===
 										String(conductorSeleccionado || "none");
-								
+
 								// Permitir guardar si faltan los IDs internos aunque visualmente sea igual
-								const missingIds = !selectedReserva?.vehiculoId || (selectedReserva?.conductor && !selectedReserva?.conductorId);
-								
+								const missingIds =
+									!selectedReserva?.vehiculoId ||
+									(selectedReserva?.conductor && !selectedReserva?.conductorId);
+
 								return (
 									<Button
 										onClick={handleGuardarAsignacion}
@@ -7076,7 +7869,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											loadingAsignacion ||
 											!vehiculoSeleccionado ||
 											// Permitir si hay ids faltantes O si se quiere notificar (checkboxes activos)
-											(sameAssignment && !missingIds && !enviarNotificacion && !enviarNotificacionConductor)
+											(sameAssignment &&
+												!missingIds &&
+												!enviarNotificacion &&
+												!enviarNotificacionConductor)
 										}
 									>
 										{loadingAsignacion ? (
@@ -7097,7 +7893,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				</DialogContent>
 			</Dialog>
 			{/* Dialog para completar reservas vinculadas */}
-			<Dialog open={showDialogoCompletar} onOpenChange={setShowDialogoCompletar}>
+			<Dialog
+				open={showDialogoCompletar}
+				onOpenChange={setShowDialogoCompletar}
+			>
 				<DialogContent className="max-w-md">
 					<DialogHeader>
 						<DialogTitle>Completar Viaje de Ida y Vuelta</DialogTitle>
@@ -7105,27 +7904,32 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							Selecciona cómo deseas completar este servicio vinculado.
 						</DialogDescription>
 					</DialogHeader>
-					
+
 					<div className="space-y-4 py-4">
 						<div className="p-3 bg-muted rounded-md text-sm whitespace-pre-line">
 							{dialogoCompletarOpciones?.mensaje}
 						</div>
-						
+
 						<div className="space-y-2">
 							<Button
 								className="w-full justify-start h-auto py-3 text-left items-start"
 								variant="outline"
 								onClick={async () => {
-									if (!confirm("¿Confirmas que deseas completar AMBOS tramos y agregar gastos?")) return;
+									if (
+										!confirm(
+											"¿Confirmas que deseas completar AMBOS tramos y agregar gastos?",
+										)
+									)
+										return;
 									try {
 										await completarAmbasReservas([
 											dialogoCompletarOpciones.reservaIda.id,
-											dialogoCompletarOpciones.reservaVuelta.id
+											dialogoCompletarOpciones.reservaVuelta.id,
 										]);
 										await fetchReservas();
 										redirigirAGastos([
 											dialogoCompletarOpciones.reservaIda.id,
-											dialogoCompletarOpciones.reservaVuelta.id
+											dialogoCompletarOpciones.reservaVuelta.id,
 										]);
 										setShowDialogoCompletar(false);
 									} catch (error) {
@@ -7139,18 +7943,26 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										Completar ambas juntas
 									</span>
 									<span className="text-xs text-muted-foreground mt-1">
-										Marca IDA y VUELTA como completadas y permite ingresar gastos unificados.
+										Marca IDA y VUELTA como completadas y permite ingresar
+										gastos unificados.
 									</span>
 								</div>
 							</Button>
-							
+
 							<Button
 								className="w-full justify-start h-auto py-3 text-left items-start"
 								variant="outline"
 								onClick={async () => {
-									if (!confirm("¿Confirmas que deseas completar solo la IDA y agregar gastos?")) return;
+									if (
+										!confirm(
+											"¿Confirmas que deseas completar solo la IDA y agregar gastos?",
+										)
+									)
+										return;
 									try {
-										await completarReserva(dialogoCompletarOpciones.reservaIda.id);
+										await completarReserva(
+											dialogoCompletarOpciones.reservaIda.id,
+										);
 										await fetchReservas();
 										redirigirAGastos([dialogoCompletarOpciones.reservaIda.id]);
 										setShowDialogoCompletar(false);
@@ -7161,7 +7973,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							>
 								<div className="flex flex-col">
 									<span className="font-semibold flex items-center gap-2">
-										<div className="w-4 h-4 rounded-full border border-chocolate-600 flex items-center justify-center text-[10px] font-bold text-chocolate-600">1</div>
+										<div className="w-4 h-4 rounded-full border border-chocolate-600 flex items-center justify-center text-[10px] font-bold text-chocolate-600">
+											1
+										</div>
 										Solo completar IDA
 									</span>
 									<span className="text-xs text-muted-foreground mt-1">
@@ -7169,16 +7983,25 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									</span>
 								</div>
 							</Button>
-							
+
 							<Button
 								className="w-full justify-start h-auto py-3 text-left items-start"
 								variant="outline"
 								onClick={async () => {
-									if (!confirm("¿Confirmas que deseas completar solo la VUELTA y agregar gastos?")) return;
+									if (
+										!confirm(
+											"¿Confirmas que deseas completar solo la VUELTA y agregar gastos?",
+										)
+									)
+										return;
 									try {
-										await completarReserva(dialogoCompletarOpciones.reservaVuelta.id);
+										await completarReserva(
+											dialogoCompletarOpciones.reservaVuelta.id,
+										);
 										await fetchReservas();
-										redirigirAGastos([dialogoCompletarOpciones.reservaVuelta.id]);
+										redirigirAGastos([
+											dialogoCompletarOpciones.reservaVuelta.id,
+										]);
 										setShowDialogoCompletar(false);
 									} catch (error) {
 										alert("Error al completar la reserva de vuelta");
@@ -7187,7 +8010,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							>
 								<div className="flex flex-col">
 									<span className="font-semibold flex items-center gap-2">
-										<div className="w-4 h-4 rounded-full border border-chocolate-600 flex items-center justify-center text-[10px] font-bold text-chocolate-600">2</div>
+										<div className="w-4 h-4 rounded-full border border-chocolate-600 flex items-center justify-center text-[10px] font-bold text-chocolate-600">
+											2
+										</div>
 										Solo completar VUELTA
 									</span>
 									<span className="text-xs text-muted-foreground mt-1">
@@ -7197,9 +8022,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							</Button>
 						</div>
 					</div>
-					
+
 					<DialogFooter>
-						<Button variant="ghost" onClick={() => setShowDialogoCompletar(false)}>
+						<Button
+							variant="ghost"
+							onClick={() => setShowDialogoCompletar(false)}
+						>
 							Cancelar
 						</Button>
 					</DialogFooter>
