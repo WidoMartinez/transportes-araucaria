@@ -66,18 +66,41 @@ export function AddressAutocomplete({
 			wrapperRef.current.appendChild(element);
 			elementRef.current = element;
 
+			// Sincronizar texto escrito manualmente desde el input interno del Shadow DOM.
+			// PlaceAutocompleteElement solo dispara onChange al seleccionar sugerencia;
+			// si el usuario escribe sin seleccionar, el estado de React quedaría vacío.
+			// Se usa un pequeño timeout para esperar que el shadow DOM se inicialice.
+			const sincronizarInputShadow = () => {
+				const shadowInput = element.shadowRoot?.querySelector("input");
+				if (shadowInput) {
+					const emitirValor = (val) => {
+						if (onChange) onChange({ target: { name, value: val } });
+					};
+					shadowInput.addEventListener("input", (e) => emitirValor(e.target.value));
+					shadowInput.addEventListener("blur", (e) => {
+						if (e.target.value) emitirValor(e.target.value);
+					});
+				}
+			};
+			setTimeout(sincronizarInputShadow, 300);
+
 			// Detectar errores de red (403 billing, restricciones de dominio, etc.)
-			// y degradar el componente a input de texto simple
+			// y degradar el componente a input de texto simple preservando el texto ya escrito
 			element.addEventListener("gmp-requesterror", (evt) => {
 				console.warn(
 					"[AddressAutocomplete] Error en la API de Google Maps (sin facturación o restricción de dominio). Cambiando a modo de texto simple.",
 					evt.error?.status || evt,
 				);
-				// Remover el elemento roto y cambiar a modo degradado
+				// Preservar el texto que el usuario ya escribió antes de degradar
+				const shadowInput = element.shadowRoot?.querySelector("input");
+				const textoEscrito = shadowInput?.value || "";
 				if (wrapperRef.current?.contains(element)) {
 					try { wrapperRef.current.removeChild(element); } catch (_) {}
 				}
 				elementRef.current = null;
+				if (textoEscrito && onChange) {
+					onChange({ target: { name, value: textoEscrito } });
+				}
 				setUseFallback(true);
 			});
 

@@ -45,6 +45,19 @@ VALUES (
 `);
 
 console.log("✅ Configuración inicial de WhatsApp establecida (activo: true)");
+
+// Insertar recargo default de feriados (10%) junto con la creación de la tabla
+await sequelize.query(`
+INSERT INTO configuracion (clave, valor, tipo, descripcion)
+VALUES (
+'recargo_feriados_default',
+'10',
+'number',
+'Porcentaje de recargo aplicado automáticamente en días feriados cuando el festivo no tiene recargo específico definido'
+);
+`);
+
+console.log("✅ Configuración recargo_feriados_default establecida (10%)");
 } else {
 console.log("✅ Tabla configuracion ya existe");
 
@@ -69,6 +82,29 @@ VALUES (
 console.log("✅ Configuración inicial de WhatsApp establecida (activo: true)");
 } else {
 console.log("✅ Configuración de WhatsApp ya existe");
+}
+
+// Verificar si ya existe el recargo default de feriados; insertarlo si falta
+const [feriadoConfigExists] = await sequelize.query(`
+SELECT * FROM configuracion WHERE clave = 'recargo_feriados_default';
+`);
+
+if (feriadoConfigExists.length === 0) {
+console.log("📋 Inicializando configuración recargo_feriados_default...");
+
+await sequelize.query(`
+INSERT INTO configuracion (clave, valor, tipo, descripcion)
+VALUES (
+'recargo_feriados_default',
+'10',
+'number',
+'Porcentaje de recargo aplicado automáticamente en días feriados cuando el festivo no tiene recargo específico definido'
+);
+`);
+
+console.log("✅ Configuración recargo_feriados_default establecida (10%)");
+} else {
+console.log("✅ Configuración recargo_feriados_default ya existe");
 }
 }
 

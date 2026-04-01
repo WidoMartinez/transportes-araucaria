@@ -950,7 +950,7 @@ function PagarConCodigo() {
 														name="direccionDestino"
 														value={formData.direccionDestino}
 														onChange={handleInputChange}
-														placeholder="Av. Alemania 1234, Temuco"
+														placeholder="Escriba su dirección"
 														className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 														required
 													/>

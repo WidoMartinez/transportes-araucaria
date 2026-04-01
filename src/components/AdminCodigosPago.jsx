@@ -1101,7 +1101,7 @@ function AdminCodigosPago() {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="direccionCliente">Dirección Específica</Label>
-									<Input id="direccionCliente" name="direccionCliente" value={formData.direccionCliente} onChange={handleInputChange} placeholder="Av. Alemania 1234, Temuco" className="h-12 md:h-10 text-base" />
+									<Input id="direccionCliente" name="direccionCliente" value={formData.direccionCliente} onChange={handleInputChange} placeholder="Escriba su dirección" className="h-12 md:h-10 text-base" />
 								</div>
 							</div>
 						</div>

@@ -210,14 +210,31 @@ export const calcularTarifaDinamica = async (
 				? festivo
 				: null;
 
-		if (festivoAplicable?.porcentajeRecargo) {
-			ajustes.push({
-				nombre: `Festivo: ${festivoAplicable.nombre}`,
-				tipo: "festivo",
-				porcentaje: parseFloat(festivoAplicable.porcentajeRecargo),
-				detalle: festivoAplicable.nombre,
-			});
-			porcentajeTotal += parseFloat(festivoAplicable.porcentajeRecargo);
+		if (festivoAplicable) {
+			// Si el festivo tiene recargo específico se usa ese; de lo contrario se
+			// consulta la clave 'recargo_feriados_default' en la tabla Configuracion.
+			// Si tampoco existe esa clave se usa 10% como valor de seguridad.
+			let pctFestivo = festivoAplicable.porcentajeRecargo
+				? parseFloat(festivoAplicable.porcentajeRecargo)
+				: null;
+
+			if (pctFestivo === null) {
+				const defaultRecargo = await Configuracion.getValorParseado(
+					"recargo_feriados_default",
+					10,
+				);
+				pctFestivo = typeof defaultRecargo === "number" ? defaultRecargo : 10;
+			}
+
+			if (pctFestivo !== 0) {
+				ajustes.push({
+					nombre: `Festivo: ${festivoAplicable.nombre}`,
+					tipo: "festivo",
+					porcentaje: pctFestivo,
+					detalle: festivoAplicable.nombre,
+				});
+				porcentajeTotal += pctFestivo;
+			}
 		}
 
 		// Obtener configuraciones activas ordenadas por prioridad
