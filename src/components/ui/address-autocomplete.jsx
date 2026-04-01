@@ -3,19 +3,26 @@ import { useGoogleMaps } from "../../hooks/useGoogleMaps";
 import { MapPin, Loader2 } from "lucide-react";
 
 /**
- * Componente de autocompletado de direcciones usando la nueva API
- * google.maps.places.PlaceAutocompleteElement (reemplaza la API legacy Autocomplete).
- * Funciona en modo degradado (input de texto simple) si no hay API key o si la API no está disponible.
+ * Componente de autocompletado de direcciones.
  *
- * @param {string} props.value - Valor actual del campo (para modo fallback)
+ * Arquitectura:
+ * - Un <input> controlado por React es SIEMPRE el elemento visible y la fuente de verdad.
+ *   Esto garantiza que el formulario siempre funcione aunque la API de Google falle.
+ * - Si la API de Google Maps está cargada y con billing habilitado, se activa
+ *   PlaceAutocompleteElement como mejora: cuando el usuario selecciona una sugerencia,
+ *   se actualiza el input controlado con la dirección normalizada.
+ * - Si la API devuelve 403 (billing no habilitado) o cualquier otro error, el input
+ *   de texto simple sigue funcionando sin interrupciones.
+ *
+ * @param {string} props.value - Valor actual del campo
  * @param {Function} props.onChange - Callback cuando cambia el valor
  * @param {Function} props.onPlaceSelected - Callback opcional con datos completos del lugar
  * @param {string} props.placeholder - Texto de placeholder
  * @param {string} props.id - ID del input
- * @param {string} props.name - Nombre del campo (usado en el evento onChange)
- * @param {string} props.className - Clases CSS adicionales para el contenedor
+ * @param {string} props.name - Nombre del campo
+ * @param {string} props.className - Clases CSS adicionales
  * @param {boolean} props.required - Si el campo es requerido
- * @param {Object} props.autocompleteOptions - Opciones adicionales para el elemento
+ * @param {Object} props.autocompleteOptions - Opciones adicionales para PlaceAutocompleteElement
  */
 export function AddressAutocomplete({
 	value,
@@ -29,179 +36,149 @@ export function AddressAutocomplete({
 	autocompleteOptions = {},
 	...props
 }) {
-	const wrapperRef = useRef(null);
+	const inputRef = useRef(null);
 	const elementRef = useRef(null);
+	const containerRef = useRef(null);
 	const { isLoaded, isAvailable } = useGoogleMaps();
 	const [isInitializing, setIsInitializing] = useState(false);
-	const [useFallback, setUseFallback] = useState(false);
+	// Indica si el Web Component está activo y superpuesto sobre el input nativo
+	const [webComponentActive, setWebComponentActive] = useState(false);
 
 	// Inicializar PlaceAutocompleteElement cuando la API esté lista
 	useEffect(() => {
-		if (!isAvailable || !isLoaded || !wrapperRef.current) return;
-		// Evitar reinicialización
+		if (!isAvailable || !isLoaded) return;
 		if (elementRef.current) return;
 
 		if (!window.google?.maps?.places?.PlaceAutocompleteElement) {
-			console.warn(
-				"[AddressAutocomplete] PlaceAutocompleteElement no disponible, usando modo degradado.",
-			);
-			setUseFallback(true);
 			return;
 		}
+
+		// Capturar el nodo al inicio del efecto para usarlo en el cleanup
+		const containerNode = containerRef.current;
+		if (!containerNode) return;
 
 		setIsInitializing(true);
 
 		try {
-			// Crear el nuevo Web Component de autocompletado
 			const element = new window.google.maps.places.PlaceAutocompleteElement({
 				componentRestrictions: { country: "cl" },
 				types: ["address"],
 				...autocompleteOptions,
 			});
 
-			// Atributos del elemento
-			if (id) element.id = id;
 			if (placeholder) element.setAttribute("placeholder", placeholder);
 
-			wrapperRef.current.appendChild(element);
-			elementRef.current = element;
+			if (containerRef.current) {
+				containerRef.current.appendChild(element);
+				elementRef.current = element;
+			}
 
-			// Sincronizar texto escrito manualmente desde el input interno del Shadow DOM.
-			// PlaceAutocompleteElement solo dispara onChange al seleccionar sugerencia;
-			// si el usuario escribe sin seleccionar, el estado de React quedaría vacío.
-			// Se usa un pequeño timeout para esperar que el shadow DOM se inicialice.
-			const sincronizarInputShadow = () => {
-				const shadowInput = element.shadowRoot?.querySelector("input");
-				if (shadowInput) {
-					const emitirValor = (val) => {
-						if (onChange) onChange({ target: { name, value: val } });
-					};
-					shadowInput.addEventListener("input", (e) =>
-						emitirValor(e.target.value),
-					);
-					shadowInput.addEventListener("blur", (e) => {
-						if (e.target.value) emitirValor(e.target.value);
-					});
+			// Capturar el texto del input interno del Web Component mientras el usuario escribe.
+			// Los eventos 'input' del shadow DOM son composed:true, por lo que burbujean
+			// hacia afuera. composedPath()[0] da acceso al elemento real (dentro del shadow DOM).
+			// Esto mantiene React state sincronizado aunque el billing no esté habilitado.
+			element.addEventListener("input", (evt) => {
+				const innerTarget = evt.composedPath?.()[0];
+				const text = innerTarget?.value ?? evt.target?.value ?? "";
+				if (text !== undefined && onChange) {
+					onChange({ target: { name, value: text } });
 				}
-			};
-			setTimeout(sincronizarInputShadow, 300);
-
-			// Detectar errores de red (403 billing, restricciones de dominio, etc.)
-			// y degradar el componente a input de texto simple preservando el texto ya escrito
-			element.addEventListener("gmp-requesterror", (evt) => {
-				console.warn(
-					"[AddressAutocomplete] Error en la API de Google Maps (sin facturación o restricción de dominio). Cambiando a modo de texto simple.",
-					evt.error?.status || evt,
-				);
-				// Preservar el texto que el usuario ya escribió antes de degradar
-				const shadowInput = element.shadowRoot?.querySelector("input");
-				const textoEscrito = shadowInput?.value || "";
-				if (wrapperRef.current?.contains(element)) {
-					try {
-						wrapperRef.current.removeChild(element);
-					} catch (_) {}
-				}
-				elementRef.current = null;
-				if (textoEscrito && onChange) {
-					onChange({ target: { name, value: textoEscrito } });
-				}
-				setUseFallback(true);
 			});
 
-			// Escuchar evento de selección de lugar (nueva API)
-			element.addEventListener(
-				"gmp-placeautocomplete-place-changed",
-				async () => {
-					// En la nueva API, el lugar seleccionado se obtiene desde element.value
-					const place = element.value;
-					if (!place) return;
+			// Si hay error de billing o dominio bloqueado, ocultar el Web Component.
+			// El input nativo React sigue activo y captura el texto sin interrupciones.
+			// Como el evento 'input' ya sincronizó el valor, el input nativo mostrará
+			// el mismo texto que tenía el Web Component.
+			element.addEventListener("gmp-requesterror", (evt) => {
+				console.warn(
+					"[AddressAutocomplete] API no disponible (sin billing o dominio bloqueado).",
+					evt.error?.status || "",
+				);
+				setWebComponentActive(false);
+			});
 
-					try {
-						await place.fetchFields({
-							fields: [
-								"addressComponents",
-								"formattedAddress",
-								"location",
-								"displayName",
-							],
-						});
+			// Cuando el usuario selecciona una sugerencia, actualizar el input nativo
+			element.addEventListener("gmp-placeautocomplete-place-changed", async () => {
+				const place = element.value;
+				if (!place) return;
 
-						const address = place.formattedAddress || "";
-
-						if (onChange) {
-							onChange({ target: { name, value: address } });
-						}
-
+				try {
+					// fetchFields obtiene la dirección normalizada (requiere billing)
+					await place.fetchFields({
+						fields: ["formattedAddress", "addressComponents", "location"],
+					});
+					const address = place.formattedAddress || "";
+					if (address) {
+						if (onChange) onChange({ target: { name, value: address } });
 						if (onPlaceSelected) {
 							onPlaceSelected({
 								address,
 								components: place.addressComponents,
 								geometry: place.location ? { location: place.location } : null,
-								name: place.displayName,
 							});
 						}
-					} catch (err) {
-						console.error(
-							"[AddressAutocomplete] Error al obtener detalles del lugar:",
-							err,
-						);
 					}
-				},
-			);
+				} catch (fetchErr) {
+					// Sin billing, fetchFields falla: el input nativo ya tiene el texto escrito
+					void fetchErr;
+				}
+			});
+
+			setWebComponentActive(true);
 		} catch (error) {
-			console.error(
-				"[AddressAutocomplete] Error al crear PlaceAutocompleteElement:",
-				error,
-			);
-			setUseFallback(true);
+			console.error("[AddressAutocomplete] Error al crear PlaceAutocompleteElement:", error);
 		} finally {
 			setIsInitializing(false);
 		}
 
 		return () => {
-			// Cleanup: remover el elemento del DOM
-			if (
-				elementRef.current &&
-				wrapperRef.current?.contains(elementRef.current)
-			) {
-				try {
-					wrapperRef.current.removeChild(elementRef.current);
-				} catch (_) {}
+			const el = elementRef.current;
+			if (el && containerNode?.contains(el)) {
+				try { containerNode.removeChild(el); } catch (e) { void e; }
 			}
 			elementRef.current = null;
 		};
 	}, [isLoaded, isAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Modo degradado: input de texto simple cuando no hay API key o hay un error
-	if (!isAvailable || useFallback) {
-		return (
-			<div className="relative">
-				<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
-				<input
-					id={id}
-					name={name}
-					value={value || ""}
-					onChange={onChange}
-					placeholder={placeholder}
-					className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-10 ${className}`}
-					required={required}
-					autoComplete="off"
-					{...props}
-				/>
-			</div>
-		);
-	}
-
 	return (
 		<div className="relative">
 			<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
-			{/* El PlaceAutocompleteElement se inyecta aquí por JS */}
-			<div
-				ref={wrapperRef}
-				className={`gmp-autocomplete-wrapper ${className}`}
+
+			{/* Input nativo React: SIEMPRE en el DOM como fuente de verdad del formulario.
+			    Cuando el Web Component está activo, se vuelve invisible (opacity:0) para
+			    evitar la superposición de texto/placeholder, pero sigue recibiendo el valor
+			    y permite que la validación funcione correctamente. */}
+			<input
+				ref={inputRef}
+				id={id}
+				name={name}
+				value={value || ""}
+				onChange={onChange}
+				placeholder={placeholder}
+				className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-10 ${className}`}
+				required={required}
+				autoComplete="off"
+				style={webComponentActive ? { opacity: 0, pointerEvents: "none" } : undefined}
+				{...props}
 			/>
+
+			{/* PlaceAutocompleteElement: superpuesto sobre el input nativo,
+			    solo cuando billing está activo y sin errores de red. */}
+			{isAvailable && (
+				<div
+					ref={containerRef}
+					className="gmp-autocomplete-wrapper"
+					style={{
+						position: "absolute",
+						inset: 0,
+						display: webComponentActive ? "block" : "none",
+						zIndex: 1,
+					}}
+				/>
+			)}
+
 			{isInitializing && (
-				<Loader2 className="absolute right-3 top-3 h-5 w-5 text-muted-foreground animate-spin pointer-events-none" />
+				<Loader2 className="absolute right-3 top-3 h-5 w-5 text-muted-foreground animate-spin pointer-events-none z-10" />
 			)}
 		</div>
 	);

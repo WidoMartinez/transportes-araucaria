@@ -3305,3 +3305,52 @@ Para verificar que el polling funciona, revisar en consola del navegador:
 > **Para nuevos flujos de pago**: Si el nuevo flujo puede recibir `status=1` (pendiente) al retornar de Flow, **siempre implementar el polling** usando `/api/payment-status`. No basta con detectar `status=2` en la URL de retorno porque Flow puede no enviarlo al navegador.
 
 ---
+
+## 10. Errores de Transferencia SCP en Despliegue (Conexión Cerrada)
+
+**Implementado: 1 Abril 2026**
+
+### Problema
+
+Al intentar desplegar el build del frontend (`dist/`) mediante el comando `scp -r`, la conexión se cierra inesperadamente después de ingresar la contraseña ("Connection closed by 82.112.246.242 port 65002").
+
+### Causa Raíz
+
+- **Límites de Hosting Compartido**: Hostinger puede cerrar conexiones SCP que intentan transferir demasiados archivos pequeños de forma simultánea o que superan un umbral de tiempo/datos en una sola sesión.
+- **Latencia y Overhead**: El build de React/Vite genera cientos de archivos en `assets/`, lo que genera mucho overhead en el protocolo SCP.
+
+### Solución (Estrategia de Compresión)
+
+La forma más robusta de transferir el build es comprimirlo localmente, subir un solo archivo y descomprimirlo en el servidor.
+
+#### Opción A: Pipe con Tar (Recomendado - Windows/Linux)
+
+Este comando comprime, transfiere y descomprime en un solo paso sin dejar archivos temporales pesados:
+
+```bash
+tar -czf - -C dist . | ssh -p 65002 u419311572@82.112.246.242 "tar -xzf - -C /home/u419311572/domains/transportesaraucaria.cl/public_html/"
+```
+
+#### Opción B: Proceso Manual de 3 Pasos
+
+Si el pipe falla, realizar el proceso por partes:
+
+1. **Comprimir localmente**:
+   ```bash
+   tar -czf dist.tar.gz -C dist .
+   ```
+2. **Subir archivo único**:
+   ```bash
+   scp -P 65002 dist.tar.gz u419311572@82.112.246.242:/home/u419311572/domains/transportesaraucaria.cl/public_html/
+   ```
+3. **Descomprimir y limpiar en el servidor**:
+   ```bash
+   ssh -p 65002 u419311572@82.112.246.242 "tar -xzf /home/u419311572/domains/transportesaraucaria.cl/public_html/dist.tar.gz -C /home/u419311572/domains/transportesaraucaria.cl/public_html/ && rm /home/u419311572/domains/transportesaraucaria.cl/public_html/dist.tar.gz"
+   ```
+
+### Verificación
+
+1. Acceder al sitio web y verificar que los cambios visuales están presentes.
+2. Si el sitio muestra pantalla en blanco, verificar que `index.html` y la carpeta `assets/` estén correctamente ubicados en `public_html/`.
+
+---
