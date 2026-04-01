@@ -42,7 +42,9 @@ export function AddressAutocomplete({
 		if (elementRef.current) return;
 
 		if (!window.google?.maps?.places?.PlaceAutocompleteElement) {
-			console.warn("[AddressAutocomplete] PlaceAutocompleteElement no disponible, usando modo degradado.");
+			console.warn(
+				"[AddressAutocomplete] PlaceAutocompleteElement no disponible, usando modo degradado.",
+			);
 			setUseFallback(true);
 			return;
 		}
@@ -65,36 +67,50 @@ export function AddressAutocomplete({
 			elementRef.current = element;
 
 			// Escuchar evento de selección de lugar (nueva API)
-			element.addEventListener("gmp-placeautocomplete-place-changed", async () => {
-				// En la nueva API, el lugar seleccionado se obtiene desde element.value
-				const place = element.value;
-				if (!place) return;
+			element.addEventListener(
+				"gmp-placeautocomplete-place-changed",
+				async () => {
+					// En la nueva API, el lugar seleccionado se obtiene desde element.value
+					const place = element.value;
+					if (!place) return;
 
-				try {
-					await place.fetchFields({
-						fields: ["addressComponents", "formattedAddress", "location", "displayName"],
-					});
-
-					const address = place.formattedAddress || "";
-
-					if (onChange) {
-						onChange({ target: { name, value: address } });
-					}
-
-					if (onPlaceSelected) {
-						onPlaceSelected({
-							address,
-							components: place.addressComponents,
-							geometry: place.location ? { location: place.location } : null,
-							name: place.displayName,
+					try {
+						await place.fetchFields({
+							fields: [
+								"addressComponents",
+								"formattedAddress",
+								"location",
+								"displayName",
+							],
 						});
+
+						const address = place.formattedAddress || "";
+
+						if (onChange) {
+							onChange({ target: { name, value: address } });
+						}
+
+						if (onPlaceSelected) {
+							onPlaceSelected({
+								address,
+								components: place.addressComponents,
+								geometry: place.location ? { location: place.location } : null,
+								name: place.displayName,
+							});
+						}
+					} catch (err) {
+						console.error(
+							"[AddressAutocomplete] Error al obtener detalles del lugar:",
+							err,
+						);
 					}
-				} catch (err) {
-					console.error("[AddressAutocomplete] Error al obtener detalles del lugar:", err);
-				}
-			});
+				},
+			);
 		} catch (error) {
-			console.error("[AddressAutocomplete] Error al crear PlaceAutocompleteElement:", error);
+			console.error(
+				"[AddressAutocomplete] Error al crear PlaceAutocompleteElement:",
+				error,
+			);
 			setUseFallback(true);
 		} finally {
 			setIsInitializing(false);
@@ -102,8 +118,13 @@ export function AddressAutocomplete({
 
 		return () => {
 			// Cleanup: remover el elemento del DOM
-			if (elementRef.current && wrapperRef.current?.contains(elementRef.current)) {
-				try { wrapperRef.current.removeChild(elementRef.current); } catch (_) {}
+			if (
+				elementRef.current &&
+				wrapperRef.current?.contains(elementRef.current)
+			) {
+				try {
+					wrapperRef.current.removeChild(elementRef.current);
+				} catch (_) {}
 			}
 			elementRef.current = null;
 		};

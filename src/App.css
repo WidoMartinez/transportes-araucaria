@@ -303,7 +303,9 @@ gmp-place-autocomplete::part(input)::placeholder {
 }
 
 gmp-place-autocomplete::part(input):focus {
-	box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+	box-shadow:
+		0 0 0 2px hsl(var(--background)),
+		0 0 0 4px hsl(var(--ring));
 }
 
 /* Cuando el wrapper tiene altura mayor (h-11 o h-12), el input hereda la altura */

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 export function useGoogleMaps() {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [loadError, setLoadError] = useState(null);
-	
+
 	const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 	useEffect(() => {
@@ -29,9 +29,9 @@ export function useGoogleMaps() {
 
 		// Si ya hay un script cargándose
 		const existingScript = document.querySelector(
-			'script[src*="maps.googleapis.com"]'
+			'script[src*="maps.googleapis.com"]',
 		);
-		
+
 		if (existingScript) {
 			// Si el script ya existe, comprobamos si ya terminó de cargar
 			if (window.google && window.google.maps && window.google.maps.places) {
@@ -40,7 +40,11 @@ export function useGoogleMaps() {
 				// Si no, esperamos un poco o reintentamos verificar
 				// Nota: Esto es un fallback por si el callback original ya se disparó
 				const interval = setInterval(() => {
-					if (window.google && window.google.maps && window.google.maps.places) {
+					if (
+						window.google &&
+						window.google.maps &&
+						window.google.maps.places
+					) {
 						setIsLoaded(true);
 						clearInterval(interval);
 					}
