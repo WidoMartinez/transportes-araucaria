@@ -1566,6 +1566,7 @@ function AdminReservas() {
 								fecha: ev.fechaSolicitud,
 								evaluada: ev.evaluada,
 								promedio: ev.calificacionPromedio,
+								token: ev.tokenEvaluacion || null,
 							};
 						});
 						setSolicitudEvaluacion(evalMap);
@@ -2737,6 +2738,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 					enviada: true,
 					fecha: data.fechaSolicitud || new Date().toISOString(),
 					evaluada: data.evaluada || false,
+					token: data.tokenEvaluacion || null,
 				},
 			}));
 			if (resp.status === 409) {
@@ -3883,6 +3885,13 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																<span className="text-[10px] font-medium">Silla</span>
 															</div>
 														)}
+														{/* Indicador de Upgrade visible en columna pasajeros */}
+														{reserva.upgradeVan && (
+															<div className="flex items-center gap-1 text-purple-700 bg-purple-50 px-1 py-0.5 rounded border border-purple-200 w-fit">
+																<Star className="w-3 h-3 fill-purple-600" />
+																<span className="text-[10px] font-bold">Upgrade</span>
+															</div>
+														)}
 													</div>
 												</TableCell>
 											)}
@@ -4595,6 +4604,14 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<p className="text-xs font-bold text-orange-700 tracking-tight">SILLA INFANTIL REQUERIDA</p>
 												</div>
 											)}
+											{/* Upgrade a Van visible en modal de detalle */}
+											{selectedReserva.upgradeVan && (
+												<div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 col-span-2 flex items-center gap-3">
+													<div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
+													<Star className="w-4 h-4 text-purple-600 fill-purple-500 flex-shrink-0" />
+													<p className="text-xs font-bold text-purple-800 tracking-tight">✨ UPGRADE A VAN SOLICITADO — El pasajero pagó por vehículo tipo Van</p>
+												</div>
+											)}
 										</div>
 									</div>
 
@@ -4676,10 +4693,42 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												);
 											}
 											if (infoEval?.enviada) {
+												// Construir link de evaluación para envío por WhatsApp
+												const linkEval = infoEval.token
+													? `https://www.transportesaraucaria.cl/#evaluar?token=${infoEval.token}`
+													: null;
+												const telefonoPasajero = selectedReserva.telefono?.replace(/\D/g, "");
+												const mensajeWhatsApp = linkEval
+													? encodeURIComponent(
+														`Hola ${selectedReserva.nombre || "pasajero"}, gracias por viajar con Transportes Araucanía. Tu opinión es muy importante para nosotros. ¿Podrías evaluar tu experiencia? Solo toma un momento: ${linkEval}`
+													  )
+													: null;
 												return (
-													<span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
-														⏳ Solicitud enviada el {new Date(infoEval.fecha).toLocaleDateString("es-CL")}
-													</span>
+													<div className="flex flex-wrap items-center gap-2">
+														<span className="bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full">
+															⏳ Correo enviado el {new Date(infoEval.fecha).toLocaleDateString("es-CL")}
+														</span>
+														{/* Botón para reenviar link de evaluación por WhatsApp */}
+														{linkEval && telefonoPasajero && (
+															<a
+																href={`https://wa.me/${telefonoPasajero}?text=${mensajeWhatsApp}`}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+															>
+																📲 Enviar link por WhatsApp
+															</a>
+														)}
+														{/* Botón para copiar link si no hay teléfono disponible */}
+														{linkEval && !telefonoPasajero && (
+															<button
+																onClick={() => { navigator.clipboard.writeText(linkEval); alert("Link copiado al portapapeles"); }}
+																className="flex items-center gap-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+															>
+																📋 Copiar link
+															</button>
+														)}
+													</div>
 												);
 											}
 											return (
