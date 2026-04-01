@@ -98,35 +98,43 @@ export function AddressAutocomplete({
 			});
 
 			// Cuando el usuario selecciona una sugerencia, actualizar el input nativo
-			element.addEventListener("gmp-placeautocomplete-place-changed", async () => {
-				const place = element.value;
-				if (!place) return;
+			element.addEventListener(
+				"gmp-placeautocomplete-place-changed",
+				async () => {
+					const place = element.value;
+					if (!place) return;
 
-				try {
-					// fetchFields obtiene la dirección normalizada (requiere billing)
-					await place.fetchFields({
-						fields: ["formattedAddress", "addressComponents", "location"],
-					});
-					const address = place.formattedAddress || "";
-					if (address) {
-						if (onChange) onChange({ target: { name, value: address } });
-						if (onPlaceSelected) {
-							onPlaceSelected({
-								address,
-								components: place.addressComponents,
-								geometry: place.location ? { location: place.location } : null,
-							});
+					try {
+						// fetchFields obtiene la dirección normalizada (requiere billing)
+						await place.fetchFields({
+							fields: ["formattedAddress", "addressComponents", "location"],
+						});
+						const address = place.formattedAddress || "";
+						if (address) {
+							if (onChange) onChange({ target: { name, value: address } });
+							if (onPlaceSelected) {
+								onPlaceSelected({
+									address,
+									components: place.addressComponents,
+									geometry: place.location
+										? { location: place.location }
+										: null,
+								});
+							}
 						}
+					} catch (fetchErr) {
+						// Sin billing, fetchFields falla: el input nativo ya tiene el texto escrito
+						void fetchErr;
 					}
-				} catch (fetchErr) {
-					// Sin billing, fetchFields falla: el input nativo ya tiene el texto escrito
-					void fetchErr;
-				}
-			});
+				},
+			);
 
 			setWebComponentActive(true);
 		} catch (error) {
-			console.error("[AddressAutocomplete] Error al crear PlaceAutocompleteElement:", error);
+			console.error(
+				"[AddressAutocomplete] Error al crear PlaceAutocompleteElement:",
+				error,
+			);
 		} finally {
 			setIsInitializing(false);
 		}
@@ -134,7 +142,11 @@ export function AddressAutocomplete({
 		return () => {
 			const el = elementRef.current;
 			if (el && containerNode?.contains(el)) {
-				try { containerNode.removeChild(el); } catch (e) { void e; }
+				try {
+					containerNode.removeChild(el);
+				} catch (e) {
+					void e;
+				}
 			}
 			elementRef.current = null;
 		};
@@ -158,7 +170,9 @@ export function AddressAutocomplete({
 				className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-10 ${className}`}
 				required={required}
 				autoComplete="off"
-				style={webComponentActive ? { opacity: 0, pointerEvents: "none" } : undefined}
+				style={
+					webComponentActive ? { opacity: 0, pointerEvents: "none" } : undefined
+				}
 				{...props}
 			/>
 
