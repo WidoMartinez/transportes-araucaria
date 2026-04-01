@@ -1,30 +1,21 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import { Input } from "./input";
+import React, { useEffect, useRef, useState } from "react";
 import { useGoogleMaps } from "../../hooks/useGoogleMaps";
 import { MapPin, Loader2 } from "lucide-react";
 
-// Opciones por defecto para el autocompletado de Google Places
-// Definidas fuera del componente para evitar recreación en cada render
-const DEFAULT_AUTOCOMPLETE_OPTIONS = {
-	componentRestrictions: { country: "cl" },
-	fields: ["address_components", "formatted_address", "geometry", "name"],
-	types: ["address"],
-};
-
 /**
- * Componente de autocompletado de direcciones con Google Places
- * Funciona en modo degradado si no hay API key disponible
- * 
- * @param {Object} props - Propiedades del componente
- * @param {string} props.value - Valor actual del campo
+ * Componente de autocompletado de direcciones usando la nueva API
+ * google.maps.places.PlaceAutocompleteElement (reemplaza la API legacy Autocomplete).
+ * Funciona en modo degradado (input de texto simple) si no hay API key o si la API no está disponible.
+ *
+ * @param {string} props.value - Valor actual del campo (para modo fallback)
  * @param {Function} props.onChange - Callback cuando cambia el valor
- * @param {Function} props.onPlaceSelected - Callback cuando se selecciona un lugar (opcional)
+ * @param {Function} props.onPlaceSelected - Callback opcional con datos completos del lugar
  * @param {string} props.placeholder - Texto de placeholder
  * @param {string} props.id - ID del input
- * @param {string} props.name - Nombre del input
- * @param {string} props.className - Clases CSS adicionales
+ * @param {string} props.name - Nombre del campo (usado en el evento onChange)
+ * @param {string} props.className - Clases CSS adicionales para el contenedor
  * @param {boolean} props.required - Si el campo es requerido
- * @param {Object} props.autocompleteOptions - Opciones para el autocompletado de Google
+ * @param {Object} props.autocompleteOptions - Opciones adicionales para el elemento
  */
 export function AddressAutocomplete({
 	value,
@@ -38,116 +29,113 @@ export function AddressAutocomplete({
 	autocompleteOptions = {},
 	...props
 }) {
-
-	const inputRef = useRef(null);
-	const autocompleteRef = useRef(null);
+	const wrapperRef = useRef(null);
+	const elementRef = useRef(null);
 	const { isLoaded, isAvailable } = useGoogleMaps();
 	const [isInitializing, setIsInitializing] = useState(false);
-	const [loadError, setLoadError] = useState(null);
+	const [useFallback, setUseFallback] = useState(false);
 
-	// Memoizar las opciones para evitar recreación en cada render
-	const finalOptions = useMemo(() => ({
-		...DEFAULT_AUTOCOMPLETE_OPTIONS,
-		...autocompleteOptions,
-	}), [autocompleteOptions]);
-
+	// Inicializar PlaceAutocompleteElement cuando la API esté lista
 	useEffect(() => {
-		// Si no está disponible o no está cargado, no hacer nada
-		if (!isAvailable || !isLoaded || !inputRef.current) {
-			return;
-		}
+		if (!isAvailable || !isLoaded || !wrapperRef.current) return;
+		// Evitar reinicialización
+		if (elementRef.current) return;
 
-		// Si ya está inicializado, no reinicializar
-		if (autocompleteRef.current) {
+		if (!window.google?.maps?.places?.PlaceAutocompleteElement) {
+			console.warn("[AddressAutocomplete] PlaceAutocompleteElement no disponible, usando modo degradado.");
+			setUseFallback(true);
 			return;
 		}
 
 		setIsInitializing(true);
 
 		try {
-			// Comprobar si la API está realmente disponible
-			if (!window.google || !window.google.maps || !window.google.maps.places) {
-				console.warn("Google Maps Places API no está disponible completamente.");
-				setLoadError("API no disponible");
-				return;
-			}
-
-			// Crear instancia de autocomplete
-			// Nota: Se usa la clase Autocomplete "legacy".
-			// Aunque hay advertencias de deprecación, es la única forma de mantener
-			// el estilo custom del input actual sin reescribir todo el CSS para Shadow DOM.
-			const autocomplete = new window.google.maps.places.Autocomplete(
-				inputRef.current,
-				finalOptions
-			);
-
-			// Manejar selección de lugar
-			autocomplete.addListener("place_changed", () => {
-				const place = autocomplete.getPlace();
-
-				if (place.formatted_address) {
-					// Actualizar el valor del input
-					if (onChange) {
-						onChange({
-							target: {
-								name: name,
-								value: place.formatted_address,
-							},
-						});
-					}
-
-					// Callback adicional con información completa del lugar
-					if (onPlaceSelected) {
-						onPlaceSelected({
-							address: place.formatted_address,
-							components: place.address_components,
-							geometry: place.geometry,
-							name: place.name,
-						});
-					}
-				}
+			// Crear el nuevo Web Component de autocompletado
+			const element = new window.google.maps.places.PlaceAutocompleteElement({
+				componentRestrictions: { country: "cl" },
+				types: ["address"],
+				...autocompleteOptions,
 			});
 
-			autocompleteRef.current = autocomplete;
+			// Atributos del elemento
+			if (id) element.id = id;
+			if (placeholder) element.setAttribute("placeholder", placeholder);
+
+			wrapperRef.current.appendChild(element);
+			elementRef.current = element;
+
+			// Escuchar evento de selección de lugar (nueva API)
+			element.addEventListener("gmp-placeautocomplete-place-changed", async () => {
+				// En la nueva API, el lugar seleccionado se obtiene desde element.value
+				const place = element.value;
+				if (!place) return;
+
+				try {
+					await place.fetchFields({
+						fields: ["addressComponents", "formattedAddress", "location", "displayName"],
+					});
+
+					const address = place.formattedAddress || "";
+
+					if (onChange) {
+						onChange({ target: { name, value: address } });
+					}
+
+					if (onPlaceSelected) {
+						onPlaceSelected({
+							address,
+							components: place.addressComponents,
+							geometry: place.location ? { location: place.location } : null,
+							name: place.displayName,
+						});
+					}
+				} catch (err) {
+					console.error("[AddressAutocomplete] Error al obtener detalles del lugar:", err);
+				}
+			});
 		} catch (error) {
-			console.error("Error al inicializar Google Places Autocomplete:", error);
-			// No bloqueamos la UI, el input queda como texto normal
+			console.error("[AddressAutocomplete] Error al crear PlaceAutocompleteElement:", error);
+			setUseFallback(true);
 		} finally {
 			setIsInitializing(false);
 		}
 
 		return () => {
-			// Cleanup: remover listeners si existen
-			if (autocompleteRef.current) {
-				window.google.maps.event.clearInstanceListeners(
-					autocompleteRef.current
-				);
-				autocompleteRef.current = null;
+			// Cleanup: remover el elemento del DOM
+			if (elementRef.current && wrapperRef.current?.contains(elementRef.current)) {
+				try { wrapperRef.current.removeChild(elementRef.current); } catch (_) {}
 			}
+			elementRef.current = null;
 		};
-	}, [isLoaded, isAvailable, name, onChange, onPlaceSelected, finalOptions]);
+	}, [isLoaded, isAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Manejar cambios manuales del input
-	const handleChange = (e) => {
-		if (onChange) {
-			onChange(e);
-		}
-	};
+	// Modo degradado: input de texto simple cuando no hay API key o hay un error
+	if (!isAvailable || useFallback) {
+		return (
+			<div className="relative">
+				<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
+				<input
+					id={id}
+					name={name}
+					value={value || ""}
+					onChange={onChange}
+					placeholder={placeholder}
+					className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-10 ${className}`}
+					required={required}
+					autoComplete="off"
+					{...props}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div className="relative">
 			<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
-			<Input
-				ref={inputRef}
-				id={id}
-				name={name}
-				value={value}
-				onChange={handleChange}
-				placeholder={placeholder}
-				className={`pl-10 ${className}`}
-				required={required}
-				autoComplete="off"
-				{...props}
+			{/* El PlaceAutocompleteElement se inyecta aquí por JS */}
+			<div
+				ref={wrapperRef}
+				className={`gmp-autocomplete-wrapper ${className}`}
 			/>
 			{isInitializing && (
 				<Loader2 className="absolute right-3 top-3 h-5 w-5 text-muted-foreground animate-spin pointer-events-none" />

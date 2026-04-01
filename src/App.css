@@ -271,8 +271,49 @@
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-/* Fix for Google Maps Autocomplete in Modals */
-.pac-container {
-	z-index: 99999 !important; /* Ensure it's above Radix UI Dialogs (z-50) */
-	pointer-events: auto !important; /* Ensure it's clickable */
+/* === Estilos para PlaceAutocompleteElement (nueva API de Google Maps Places) === */
+/* Reemplaza los estilos legacy de .pac-container */
+
+/* El Web Component ocupa el ancho completo de su contenedor */
+gmp-place-autocomplete {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+/* Estilo del input interno vía CSS Part (Shadow DOM) */
+gmp-place-autocomplete::part(input) {
+	display: flex;
+	height: 2.5rem;
+	width: 100%;
+	border-radius: 0.375rem;
+	border: 1px solid hsl(var(--input));
+	background-color: hsl(var(--background) / 0.5);
+	padding: 0.5rem 0.75rem 0.5rem 2.5rem; /* pl-10 para el ícono MapPin */
+	font-size: 0.875rem;
+	font-family: inherit;
+	color: hsl(var(--foreground));
+	outline: none;
+	transition: box-shadow 0.15s;
+	box-sizing: border-box;
+}
+
+gmp-place-autocomplete::part(input)::placeholder {
+	color: hsl(var(--muted-foreground));
+}
+
+gmp-place-autocomplete::part(input):focus {
+	box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+}
+
+/* Cuando el wrapper tiene altura mayor (h-11 o h-12), el input hereda la altura */
+.gmp-autocomplete-wrapper gmp-place-autocomplete::part(input) {
+	height: 100%;
+	min-height: 2.5rem;
+}
+
+/* Asegurar que el dropdown de sugerencias aparezca sobre modales de Radix UI */
+gmp-place-autocomplete {
+	z-index: 99999;
+	position: relative;
 }
