@@ -66,6 +66,21 @@ export function AddressAutocomplete({
 			wrapperRef.current.appendChild(element);
 			elementRef.current = element;
 
+			// Detectar errores de red (403 billing, restricciones de dominio, etc.)
+			// y degradar el componente a input de texto simple
+			element.addEventListener("gmp-requesterror", (evt) => {
+				console.warn(
+					"[AddressAutocomplete] Error en la API de Google Maps (sin facturación o restricción de dominio). Cambiando a modo de texto simple.",
+					evt.error?.status || evt,
+				);
+				// Remover el elemento roto y cambiar a modo degradado
+				if (wrapperRef.current?.contains(element)) {
+					try { wrapperRef.current.removeChild(element); } catch (_) {}
+				}
+				elementRef.current = null;
+				setUseFallback(true);
+			});
+
 			// Escuchar evento de selección de lugar (nueva API)
 			element.addEventListener(
 				"gmp-placeautocomplete-place-changed",
