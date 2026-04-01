@@ -8469,7 +8469,9 @@ app.post("/api/tarifa-dinamica/calcular", async (req, res) => {
 
 		const base = parseFloat(precioBase);
 		if (!Number.isFinite(base) || base <= 0) {
-			return res.status(400).json({ error: "precioBase debe ser un número positivo" });
+			return res
+				.status(400)
+				.json({ error: "precioBase debe ser un número positivo" });
 		}
 
 		const { precioAjustado, ajustes, porcentajeTotal } =

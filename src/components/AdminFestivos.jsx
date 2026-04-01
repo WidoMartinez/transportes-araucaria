@@ -44,7 +44,9 @@ function AdminFestivos() {
 
 	const cargarRecargoDefault = async () => {
 		try {
-			const response = await authenticatedFetch(`/api/configuracion/recargo-feriados`);
+			const response = await authenticatedFetch(
+				`/api/configuracion/recargo-feriados`,
+			);
 			if (!response.ok) return;
 			const data = await response.json();
 			setRecargoDefault(data.porcentaje ?? 10);
@@ -58,11 +60,14 @@ function AdminFestivos() {
 			setSavingRecargo(true);
 			setError("");
 			setSuccess("");
-			const response = await authenticatedFetch(`/api/configuracion/recargo-feriados`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ porcentaje: recargoDefault }),
-			});
+			const response = await authenticatedFetch(
+				`/api/configuracion/recargo-feriados`,
+				{
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ porcentaje: recargoDefault }),
+				},
+			);
 			if (!response.ok) throw new Error("Error al guardar recargo");
 			setSuccess("Recargo por defecto de feriados actualizado correctamente");
 		} catch (err) {
@@ -94,9 +99,7 @@ function AdminFestivos() {
 			setError("");
 			setSuccess("");
 
-			const url = festivo.id
-				? `/api/festivos/${festivo.id}`
-				: `/api/festivos`;
+			const url = festivo.id ? `/api/festivos/${festivo.id}` : `/api/festivos`;
 
 			const response = await authenticatedFetch(url, {
 				method: festivo.id ? "PUT" : "POST",
@@ -181,7 +184,9 @@ function AdminFestivos() {
 				<p className="mb-4 text-sm text-slate-400">
 					Porcentaje que se aplica automáticamente cuando un festivo no tiene
 					recargo específico configurado. Valor actual en BD:{" "}
-					<span className="font-semibold text-orange-300">{recargoDefault}%</span>
+					<span className="font-semibold text-orange-300">
+						{recargoDefault}%
+					</span>
 				</p>
 				<div className="flex items-center gap-3">
 					<input
@@ -288,7 +293,7 @@ function TarjetaFestivo({ festivo, onEditar, onEliminar, saving }) {
 		// Analizar la fecha como UTC para evitar problemas de zona horaria
 		const [year, month, day] = fecha.split("-");
 		const d = new Date(
-			Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day))
+			Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)),
 		);
 		return d.toLocaleDateString("es-CL", {
 			day: "2-digit",
@@ -421,7 +426,8 @@ function FormularioFestivo({
 						placeholder="Ej: 15"
 					/>
 					<p className="mt-1 text-xs text-slate-500">
-						Dejar vacío para usar el recargo por defecto de feriados configurado arriba
+						Dejar vacío para usar el recargo por defecto de feriados configurado
+						arriba
 					</p>
 				</div>
 			</div>
