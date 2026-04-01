@@ -81,6 +81,12 @@ import {
 	RefreshCcw,
 } from "lucide-react";
 
+// Helper que detecta upgrade revisando el booleano upgradeVan Y el campo vehiculo
+// (cubre reservas históricas donde upgradeVan=false pero vehiculo contiene 'Upgrade')
+const esUpgrade = (reserva) =>
+	Boolean(reserva?.upgradeVan) ||
+	Boolean(reserva?.vehiculo?.includes("Upgrade"));
+
 // Helper para generar texto formateado para conductor (WhatsApp)
 const generarTextoConductor = (reserva) => {
 	if (!reserva) return "";
@@ -4179,7 +4185,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															</div>
 														)}
 														{/* Indicador de Upgrade visible en columna pasajeros */}
-														{reserva.upgradeVan && (
+														{esUpgrade(reserva) && (
 															<div className="flex items-center gap-1 text-purple-700 bg-purple-50 px-1 py-0.5 rounded border border-purple-200 w-fit">
 																<Star className="w-3 h-3 fill-purple-600" />
 																<span className="text-[10px] font-bold">
@@ -4240,7 +4246,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											)}
 											{columnasVisibles.upgrade && (
 												<TableCell>
-													{reserva.upgradeVan ? (
+													{esUpgrade(reserva) ? (
 														<Badge className="bg-chocolate-600 text-white hover:bg-chocolate-700 whitespace-nowrap">
 															<Star className="w-3 h-3 mr-1 fill-white" />
 															Van Upgrade
@@ -5100,7 +5106,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											</div>
 										)}
 										{/* Upgrade a Van visible en modal de detalle */}
-										{selectedReserva.upgradeVan && (
+										{esUpgrade(selectedReserva) && (
 											<div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 col-span-2 flex items-center gap-3">
 												<div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></div>
 												<Star className="w-4 h-4 text-purple-600 fill-purple-500 flex-shrink-0" />
