@@ -197,7 +197,7 @@ export function AddressAutocomplete({
 					style={{
 						position: "absolute",
 						inset: 0,
-					display: showWebComponent ? "block" : "none",
+						display: showWebComponent ? "block" : "none",
 						zIndex: 1,
 					}}
 				/>

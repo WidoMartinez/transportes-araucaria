@@ -6,10 +6,10 @@ import { Badge } from "./ui/badge";
 import { Alert, AlertDescription } from "./ui/alert";
 import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
-import { 
-	LoaderCircle, 
-	CheckCircle, 
-	AlertCircle, 
+import {
+	LoaderCircle,
+	CheckCircle,
+	AlertCircle,
 	CreditCard,
 	MapPin,
 	Calendar,
@@ -23,7 +23,7 @@ import {
 	Shield,
 	Baby,
 	Info,
-	Edit
+	Edit,
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import { validatePaymentAmount } from "../utils/paymentValidation";
@@ -103,48 +103,51 @@ function PagarConCodigo() {
 		selectedPaymentType === "abono" ? abonoSugerido : montoTotal;
 	const esIdaVuelta = Boolean(codigoValidado?.idaVuelta);
 	const incluyeSillaInfantil = Boolean(codigoValidado?.sillaInfantil);
-	const isPagoVinculado = !!(codigoValidado?.codigoReservaVinculado || codigoValidado?.reservaVinculadaId);
+	const isPagoVinculado = !!(
+		codigoValidado?.codigoReservaVinculado || codigoValidado?.reservaVinculadaId
+	);
 
 	// Calcular tiempo restante hasta el vencimiento del código
 	const calcularTiempoRestante = (fechaVencimiento) => {
 		if (!fechaVencimiento) return null;
-		
+
 		const ahora = new Date();
 		const vencimiento = new Date(fechaVencimiento);
 		const diff = vencimiento - ahora;
-		
-		if (diff <= 0) return { vencido: true, texto: 'Código vencido', urgente: true };
-		
+
+		if (diff <= 0)
+			return { vencido: true, texto: "Código vencido", urgente: true };
+
 		const minutos = Math.floor(diff / 60000);
 		const horas = Math.floor(minutos / 60);
-		
+
 		if (horas > 0) {
 			const urgente = horas < 2;
-			return { 
-				vencido: false, 
-				texto: `${horas}h ${minutos % 60}m`, 
-				urgente
+			return {
+				vencido: false,
+				texto: `${horas}h ${minutos % 60}m`,
+				urgente,
 			};
 		}
-		return { 
-			vencido: false, 
-			texto: `${minutos} minutos`, 
-			urgente: minutos < 15
+		return {
+			vencido: false,
+			texto: `${minutos} minutos`,
+			urgente: minutos < 15,
 		};
 	};
 
 	// Actualizar tiempo restante cada minuto
 	useEffect(() => {
 		if (!codigoValidado?.fechaVencimiento) return;
-		
+
 		const actualizar = () => {
 			const tiempo = calcularTiempoRestante(codigoValidado.fechaVencimiento);
 			setTiempoRestante(tiempo);
 		};
-		
+
 		actualizar(); // Actualizar inmediatamente
 		const intervalo = setInterval(actualizar, 60000); // Cada minuto
-		
+
 		return () => clearInterval(intervalo);
 	}, [codigoValidado]);
 
@@ -152,7 +155,10 @@ function PagarConCodigo() {
 	useEffect(() => {
 		if (autoValidadoInicial) return;
 		const hash = window.location.hash;
-		if (hash.startsWith("#pagar-con-codigo/") || hash.startsWith("#pago-codigo/")) {
+		if (
+			hash.startsWith("#pagar-con-codigo/") ||
+			hash.startsWith("#pago-codigo/")
+		) {
 			const parts = hash.split("/");
 			if (parts.length > 1 && parts[1]) {
 				const paramCodigo = parts[1].toUpperCase();
@@ -165,7 +171,8 @@ function PagarConCodigo() {
 
 	// Validar el código de pago
 	const validarCodigo = async (codigoForzado) => {
-		const codigoAValidar = (typeof codigoForzado === "string" ? codigoForzado : codigo);
+		const codigoAValidar =
+			typeof codigoForzado === "string" ? codigoForzado : codigo;
 		if (!codigoAValidar.trim()) {
 			setError("Por favor ingresa un código de pago");
 			return;
@@ -178,22 +185,25 @@ function PagarConCodigo() {
 
 		try {
 			const response = await fetch(
-				`${backendUrl}/api/codigos-pago/${codigoAValidar.toUpperCase()}`
+				`${backendUrl}/api/codigos-pago/${codigoAValidar.toUpperCase()}`,
 			);
 
 			const data = await response.json();
 
 			if (!response.ok || data.success === false) {
-				const isExpiredOrUsed = data.estado === "vencido" || data.estado === "usado";
-				
+				const isExpiredOrUsed =
+					data.estado === "vencido" || data.estado === "usado";
+
 				if (isExpiredOrUsed) {
-					setError("Lo sentimos, debido a la alta demanda, este cupo ha sido reservado por otro pasajero.");
+					setError(
+						"Lo sentimos, debido a la alta demanda, este cupo ha sido reservado por otro pasajero.",
+					);
 					setShowContactButton(true);
 				} else {
 					setError(data.message || "Código inválido");
 					setShowContactButton(false);
 				}
-				
+
 				setCodigoValidado(null);
 				return;
 			}
@@ -210,18 +220,18 @@ function PagarConCodigo() {
 				// Determinar qué campo de dirección usar según el sentido del viaje
 				direccionDestino:
 					data.codigoPago.origen === "Aeropuerto La Araucanía"
-						? (data.codigoPago.direccionDestino || prev.direccionDestino)
+						? data.codigoPago.direccionDestino || prev.direccionDestino
 						: prev.direccionDestino,
 				direccionOrigen:
 					data.codigoPago.destino === "Aeropuerto La Araucanía"
-						? (data.codigoPago.direccionOrigen || prev.direccionOrigen)
+						? data.codigoPago.direccionOrigen || prev.direccionOrigen
 						: prev.direccionOrigen,
 				fecha: data.codigoPago.fecha || prev.fecha,
 				hora: data.codigoPago.hora || prev.hora,
 				fechaRegreso: data.codigoPago.fechaRegreso || prev.fechaRegreso,
 				horaRegreso: data.codigoPago.horaRegreso || prev.horaRegreso,
 				numeroVuelo: data.codigoPago.numeroVuelo || prev.numeroVuelo,
-				hotel: data.codigoPago.hotel || prev.hotel
+				hotel: data.codigoPago.hotel || prev.hotel,
 			}));
 
 			setSelectedPaymentType("total");
@@ -288,7 +298,7 @@ function PagarConCodigo() {
 			}
 			const salida = new Date(`${formData.fecha}T${formData.hora}`);
 			const regreso = new Date(
-				`${formData.fechaRegreso}T${formData.horaRegreso}`
+				`${formData.fechaRegreso}T${formData.horaRegreso}`,
 			);
 			if (Number.isNaN(regreso.getTime())) {
 				setError("La fecha de regreso no es válida");
@@ -296,7 +306,7 @@ function PagarConCodigo() {
 			}
 			if (!Number.isNaN(salida.getTime()) && regreso <= salida) {
 				setError(
-					"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora ingresadas."
+					"El regreso debe ser posterior al viaje de ida. Revisa la fecha y hora ingresadas.",
 				);
 				return false;
 			}
@@ -335,10 +345,10 @@ function PagarConCodigo() {
 
 		// Validación robusta del monto usando utilidad centralizada
 		const montoValidado = validatePaymentAmount(montoSeleccionado);
-		
+
 		if (montoValidado <= 0) {
 			setError(
-				"El monto a pagar no es válido. Contacta a soporte para obtener ayuda."
+				"El monto a pagar no es válido. Contacta a soporte para obtener ayuda.",
 			);
 			setProcesando(false);
 			setLoadingGateway(null);
@@ -350,7 +360,7 @@ function PagarConCodigo() {
 			montoValidado: montoValidado,
 			codigoPago: codigoValidado.codigo,
 			email: formData.email,
-			tipoPago: selectedPaymentType
+			tipoPago: selectedPaymentType,
 		});
 
 		const descripcionPago =
@@ -407,7 +417,9 @@ function PagarConCodigo() {
 
 			// SI EL CÓDIGO YA ESTÁ VINCULADO A UNA RESERVA (POR ID O POR CÓDIGO AR-...), NO CREAMOS UNA NUEVA
 			if (isPagoVinculado) {
-				console.log("🔗 Pago vinculado detectado. Saltando creación de reserva express.");
+				console.log(
+					"🔗 Pago vinculado detectado. Saltando creación de reserva express.",
+				);
 				reservaId = codigoValidado.reservaVinculadaId || null;
 				codigoReservaGenerado = codigoValidado.codigoReservaVinculado || null;
 			} else {
@@ -436,7 +448,7 @@ function PagarConCodigo() {
 				console.log(
 					"Reserva creada (detalles pendientes) ID:",
 					reservaId,
-					"- no se llamará a completar-reserva-detalles desde frontend"
+					"- no se llamará a completar-reserva-detalles desde frontend",
 				);
 			}
 
@@ -465,7 +477,7 @@ function PagarConCodigo() {
 					numeroVuelo: formData.numeroVuelo,
 					hotel: formData.hotel,
 					fechaRegreso: formData.fechaRegreso,
-					horaRegreso: formData.horaRegreso
+					horaRegreso: formData.horaRegreso,
 				}),
 			});
 			const pj = await p.json();
@@ -474,13 +486,15 @@ function PagarConCodigo() {
 				// Si el usuario no completa el pago, Google queda con el Lead; si completa, se suma el Purchase al regresar.
 				if (typeof window.gtag === "function") {
 					const conversionData = {
-						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB"
+						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 					};
 
 					// Enhanced Conversions
 					const userData = {};
-					if (formData.email) userData.email = formData.email.toLowerCase().trim();
-					if (formData.telefono) userData.phone_number = normalizePhoneToE164(formData.telefono);
+					if (formData.email)
+						userData.email = formData.email.toLowerCase().trim();
+					if (formData.telefono)
+						userData.phone_number = normalizePhoneToE164(formData.telefono);
 					if (formData.nombre) {
 						const nameParts = formData.nombre.trim().split(" ");
 						userData.address = {
@@ -509,7 +523,10 @@ function PagarConCodigo() {
 	};
 
 	return (
-		<section id="pagar-con-codigo" className="relative w-full min-h-screen flex flex-col lg:flex-row bg-background">
+		<section
+			id="pagar-con-codigo"
+			className="relative w-full min-h-screen flex flex-col lg:flex-row bg-background"
+		>
 			{/* Panel izquierdo: Formulario */}
 			<div className="relative flex flex-col justify-start lg:justify-center px-6 py-8 lg:p-16 xl:p-24 overflow-y-auto bg-card z-10 w-full lg:w-1/2">
 				<div className="space-y-6 w-full max-w-lg mx-auto">
@@ -519,23 +536,30 @@ function PagarConCodigo() {
 							Pagar con Código
 						</h2>
 						<p className="text-muted-foreground text-lg">
-							{step === 1 
+							{step === 1
 								? "Ingresa el código que recibiste por WhatsApp."
-								: `Código: ${codigoValidado?.codigo || ""}`
-							}
+								: `Código: ${codigoValidado?.codigo || ""}`}
 						</p>
 						{codigoValidado?.codigoReservaVinculado && (
 							<div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-lg flex items-start gap-3">
 								<Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
 								<div className="flex-1">
-									<p className="text-sm font-semibold text-primary">Pago de Diferencia</p>
+									<p className="text-sm font-semibold text-primary">
+										Pago de Diferencia
+									</p>
 									<p className="text-xs text-primary/80 mt-1">
-										Este pago está vinculado a la reserva <strong>{codigoValidado.codigoReservaVinculado}</strong>. No se generará un nuevo viaje.
+										Este pago está vinculado a la reserva{" "}
+										<strong>{codigoValidado.codigoReservaVinculado}</strong>. No
+										se generará un nuevo viaje.
 									</p>
 									{codigoValidado.descripcion && (
 										<div className="mt-2 pt-2 border-t border-primary/20">
-											<p className="text-xs text-primary/70 font-medium">Motivo:</p>
-											<p className="text-sm text-primary font-semibold italic">"{codigoValidado.descripcion}"</p>
+											<p className="text-xs text-primary/70 font-medium">
+												Motivo:
+											</p>
+											<p className="text-sm text-primary font-semibold italic">
+												"{codigoValidado.descripcion}"
+											</p>
 										</div>
 									)}
 								</div>
@@ -548,7 +572,10 @@ function PagarConCodigo() {
 						<div className="space-y-4">
 							{/* Campo de código */}
 							<div className="space-y-2">
-								<Label htmlFor="codigo" className="text-sm font-semibold text-foreground">
+								<Label
+									htmlFor="codigo"
+									className="text-sm font-semibold text-foreground"
+								>
 									Código de Pago
 								</Label>
 								<div className="relative">
@@ -558,7 +585,7 @@ function PagarConCodigo() {
 										type="text"
 										value={codigo}
 										onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-										onKeyDown={(e) => e.key === 'Enter' && validarCodigo()}
+										onKeyDown={(e) => e.key === "Enter" && validarCodigo()}
 										placeholder="Ej: A-TCO-25"
 										className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-ring focus:border-transparent"
 										disabled={validando}
@@ -575,9 +602,9 @@ function PagarConCodigo() {
 									</div>
 									{showContactButton && (
 										<div className="w-full flex justify-end">
-											<WhatsAppButton 
-												variant="outline" 
-												size="sm" 
+											<WhatsAppButton
+												variant="outline"
+												size="sm"
 												className="bg-white/10 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
 												message={`Hola, intenté pagar el código ${codigo} pero me indica que el cupo fue reservado. ¿Me pueden ayudar?`}
 											>
@@ -622,16 +649,26 @@ function PagarConCodigo() {
 							<div className="bg-muted/50 rounded-lg p-4 space-y-3">
 								<div className="flex justify-between items-center">
 									<span className="text-sm text-muted-foreground">Ruta:</span>
-									<span className="font-medium">{codigoValidado.origen} → {codigoValidado.destino}</span>
+									<span className="font-medium">
+										{codigoValidado.origen} → {codigoValidado.destino}
+									</span>
 								</div>
 								<div className="flex justify-between items-center">
-									<span className="text-sm text-muted-foreground">Pasajeros:</span>
-									<span className="font-medium">{codigoValidado.pasajeros} persona(s)</span>
+									<span className="text-sm text-muted-foreground">
+										Pasajeros:
+									</span>
+									<span className="font-medium">
+										{codigoValidado.pasajeros} persona(s)
+									</span>
 								</div>
 								{codigoValidado.vehiculo && (
 									<div className="flex justify-between items-center">
-										<span className="text-sm text-muted-foreground">Vehículo:</span>
-										<Badge variant="outline" className="uppercase bg-white">{codigoValidado.vehiculo}</Badge>
+										<span className="text-sm text-muted-foreground">
+											Vehículo:
+										</span>
+										<Badge variant="outline" className="uppercase bg-white">
+											{codigoValidado.vehiculo}
+										</Badge>
 									</div>
 								)}
 								{esIdaVuelta && (
@@ -642,28 +679,39 @@ function PagarConCodigo() {
 								)}
 								{incluyeSillaInfantil && (
 									<div className="flex justify-between items-center">
-										<span className="text-sm text-muted-foreground">Extras:</span>
-										<Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+										<span className="text-sm text-muted-foreground">
+											Extras:
+										</span>
+										<Badge
+											variant="outline"
+											className="border-blue-200 bg-blue-50 text-blue-700"
+										>
 											<Baby className="h-3 w-3 mr-1" /> Silla de Niño
 										</Badge>
 									</div>
 								)}
 								<div className="flex justify-between items-center pt-2 border-t">
 									<span className="text-sm font-semibold">Total:</span>
-									<span className="text-xl font-bold text-primary">{formatCurrency(montoTotal)}</span>
+									<span className="text-xl font-bold text-primary">
+										{formatCurrency(montoTotal)}
+									</span>
 								</div>
 							</div>
 
 							{/* Alerta de tiempo restante minimalista */}
 							{tiempoRestante && (
-								<div className={`text-xs py-1.5 px-3 rounded border text-center font-medium ${
-									tiempoRestante.vencido 
-										? 'bg-red-50 border-red-100 text-red-600' 
-										: tiempoRestante.urgente 
-											? 'bg-orange-50 border-orange-100 text-orange-600' 
-											: 'bg-blue-50 border-blue-100 text-blue-600'
-								}`}>
-									{tiempoRestante.vencido ? 'El código ha vencido' : `Expira en: ${tiempoRestante.texto}`}
+								<div
+									className={`text-xs py-1.5 px-3 rounded border text-center font-medium ${
+										tiempoRestante.vencido
+											? "bg-red-50 border-red-100 text-red-600"
+											: tiempoRestante.urgente
+												? "bg-orange-50 border-orange-100 text-orange-600"
+												: "bg-blue-50 border-blue-100 text-blue-600"
+									}`}
+								>
+									{tiempoRestante.vencido
+										? "El código ha vencido"
+										: `Expira en: ${tiempoRestante.texto}`}
 								</div>
 							)}
 
@@ -672,7 +720,7 @@ function PagarConCodigo() {
 								{/* Resumen del pasajero si ya tenemos sus datos (PAGOS VINCULADOS) */}
 								{(() => {
 									if (!isPagoVinculado || editandoDatos) return null;
-									
+
 									const hasNombre = !!codigoValidado?.nombreCliente?.trim();
 									const hasEmail = !!codigoValidado?.emailCliente?.trim();
 									const hasTelefono = !!codigoValidado?.telefonoCliente?.trim();
@@ -682,16 +730,26 @@ function PagarConCodigo() {
 										return (
 											<div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3.5 mb-2 flex items-start justify-between">
 												<div className="grid grid-cols-1 gap-1">
-													<p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">Datos del Pasajero</p>
-													<p className="text-sm font-semibold text-emerald-900 leading-none">{codigoValidado.nombreCliente}</p>
+													<p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-0.5">
+														Datos del Pasajero
+													</p>
+													<p className="text-sm font-semibold text-emerald-900 leading-none">
+														{codigoValidado.nombreCliente}
+													</p>
 													<div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 opacity-80">
-														<p className="text-[11px] text-emerald-800 flex items-center"><Mail className="w-2.5 h-2.5 mr-1" /> {codigoValidado.emailCliente}</p>
-														<p className="text-[11px] text-emerald-800 flex items-center"><Phone className="w-2.5 h-2.5 mr-1" /> {codigoValidado.telefonoCliente}</p>
+														<p className="text-[11px] text-emerald-800 flex items-center">
+															<Mail className="w-2.5 h-2.5 mr-1" />{" "}
+															{codigoValidado.emailCliente}
+														</p>
+														<p className="text-[11px] text-emerald-800 flex items-center">
+															<Phone className="w-2.5 h-2.5 mr-1" />{" "}
+															{codigoValidado.telefonoCliente}
+														</p>
 													</div>
 												</div>
-												<Button 
-													variant="ghost" 
-													size="sm" 
+												<Button
+													variant="ghost"
+													size="sm"
 													className="h-7 px-2 text-[10px] text-emerald-700 hover:text-emerald-800 hover:bg-emerald-100/50 -mt-1"
 													onClick={() => setEditandoDatos(true)}
 												>
@@ -705,9 +763,18 @@ function PagarConCodigo() {
 
 								{/* Datos personales - SOLO SI FALTAN O NO ESTÁ VINCULADO O ESTAMOS EDITANDO */}
 								{(() => {
-									const showNombre = !isPagoVinculado || editandoDatos || !codigoValidado?.nombreCliente?.trim();
-									const showEmail = !isPagoVinculado || editandoDatos || !codigoValidado?.emailCliente?.trim();
-									const showTelefono = !isPagoVinculado || editandoDatos || !codigoValidado?.telefonoCliente?.trim();
+									const showNombre =
+										!isPagoVinculado ||
+										editandoDatos ||
+										!codigoValidado?.nombreCliente?.trim();
+									const showEmail =
+										!isPagoVinculado ||
+										editandoDatos ||
+										!codigoValidado?.emailCliente?.trim();
+									const showTelefono =
+										!isPagoVinculado ||
+										editandoDatos ||
+										!codigoValidado?.telefonoCliente?.trim();
 									const showAny = showNombre || showEmail || showTelefono;
 
 									if (!showAny) return null;
@@ -719,11 +786,15 @@ function PagarConCodigo() {
 													Para continuar, completa los datos faltantes:
 												</p>
 											)}
-											
+
 											{showNombre && (
 												<div className="space-y-2">
-													<Label htmlFor="nombre" className="text-sm font-semibold text-foreground">
-														Nombre completo <span className="text-red-500">*</span>
+													<Label
+														htmlFor="nombre"
+														className="text-sm font-semibold text-foreground"
+													>
+														Nombre completo{" "}
+														<span className="text-red-500">*</span>
 													</Label>
 													<div className="relative">
 														<User className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
@@ -743,7 +814,10 @@ function PagarConCodigo() {
 												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 													{showEmail && (
 														<div className="space-y-2">
-															<Label htmlFor="email" className="text-sm font-semibold text-foreground">
+															<Label
+																htmlFor="email"
+																className="text-sm font-semibold text-foreground"
+															>
 																Email <span className="text-red-500">*</span>
 															</Label>
 															<div className="relative">
@@ -762,7 +836,10 @@ function PagarConCodigo() {
 													)}
 													{showTelefono && (
 														<div className="space-y-2">
-															<Label htmlFor="telefono" className="text-sm font-semibold text-foreground">
+															<Label
+																htmlFor="telefono"
+																className="text-sm font-semibold text-foreground"
+															>
 																Teléfono <span className="text-red-500">*</span>
 															</Label>
 															<div className="relative">
@@ -784,82 +861,120 @@ function PagarConCodigo() {
 									);
 								})()}
 
-
 								{/* Resumen de datos de viaje ya existentes */}
-					{(() => {
-						if (!isPagoVinculado) return null;
-						const hasFecha = !!codigoValidado?.fecha;
-						const hasHora = !!codigoValidado?.hora;
-						const hasDireccionOrigen = !!codigoValidado?.direccionOrigen;
-						const hasDireccionDestino = !!codigoValidado?.direccionDestino;
-						const hasAny = hasFecha || hasHora || hasDireccionOrigen || hasDireccionDestino;
-						if (!hasAny) return null;
+								{(() => {
+									if (!isPagoVinculado) return null;
+									const hasFecha = !!codigoValidado?.fecha;
+									const hasHora = !!codigoValidado?.hora;
+									const hasDireccionOrigen = !!codigoValidado?.direccionOrigen;
+									const hasDireccionDestino =
+										!!codigoValidado?.direccionDestino;
+									const hasAny =
+										hasFecha ||
+										hasHora ||
+										hasDireccionOrigen ||
+										hasDireccionDestino;
+									if (!hasAny) return null;
 
-						const formatFecha = (f) => {
-							if (!f) return null;
-							try { return new Date(f).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
-							catch { return f; }
-						};
+									const formatFecha = (f) => {
+										if (!f) return null;
+										try {
+											return new Date(f).toLocaleDateString("es-CL", {
+												day: "2-digit",
+												month: "2-digit",
+												year: "numeric",
+											});
+										} catch {
+											return f;
+										}
+									};
 
-						return (
-							<div className="bg-sky-50/50 border border-sky-100 rounded-lg p-3.5 mb-2">
-								<p className="text-[10px] font-bold text-sky-700 uppercase tracking-wider mb-1.5">Detalles del Traslado</p>
-								<div className="grid grid-cols-1 gap-1 text-[11px] text-sky-800 opacity-85">
-									{(hasFecha || hasHora) && (
-										<p className="flex items-center gap-1">
-											<Calendar className="w-3 h-3 shrink-0" />
-											<span>{[formatFecha(codigoValidado.fecha), codigoValidado.hora].filter(Boolean).join(' a las ')}</span>
-										</p>
-									)}
-									{hasDireccionOrigen && (
-										<p className="flex items-center gap-1">
-											<MapPin className="w-3 h-3 shrink-0" />
-											<span>Origen: {codigoValidado.direccionOrigen}</span>
-										</p>
-									)}
-									{hasDireccionDestino && (
-										<p className="flex items-center gap-1">
-											<MapPin className="w-3 h-3 shrink-0" />
-											<span>Destino: {codigoValidado.direccionDestino}</span>
-										</p>
-									)}
-								</div>
-							</div>
-						);
-					})()}
+									return (
+										<div className="bg-sky-50/50 border border-sky-100 rounded-lg p-3.5 mb-2">
+											<p className="text-[10px] font-bold text-sky-700 uppercase tracking-wider mb-1.5">
+												Detalles del Traslado
+											</p>
+											<div className="grid grid-cols-1 gap-1 text-[11px] text-sky-800 opacity-85">
+												{(hasFecha || hasHora) && (
+													<p className="flex items-center gap-1">
+														<Calendar className="w-3 h-3 shrink-0" />
+														<span>
+															{[
+																formatFecha(codigoValidado.fecha),
+																codigoValidado.hora,
+															]
+																.filter(Boolean)
+																.join(" a las ")}
+														</span>
+													</p>
+												)}
+												{hasDireccionOrigen && (
+													<p className="flex items-center gap-1">
+														<MapPin className="w-3 h-3 shrink-0" />
+														<span>
+															Origen: {codigoValidado.direccionOrigen}
+														</span>
+													</p>
+												)}
+												{hasDireccionDestino && (
+													<p className="flex items-center gap-1">
+														<MapPin className="w-3 h-3 shrink-0" />
+														<span>
+															Destino: {codigoValidado.direccionDestino}
+														</span>
+													</p>
+												)}
+											</div>
+										</div>
+									);
+								})()}
 
 								{/* Datos de viaje (Fecha, Hora, Dirección, etc.) */}
 								{(() => {
 									const showFecha = !isPagoVinculado || !codigoValidado?.fecha;
 									const showHora = !isPagoVinculado || !codigoValidado?.hora;
-									const showRegreso = esIdaVuelta && (!isPagoVinculado || !codigoValidado?.fechaRegreso || !codigoValidado?.horaRegreso);
-									const showDireccionDestino = 
-										codigoValidado?.origen === "Aeropuerto La Araucanía" && 
+									const showRegreso =
+										esIdaVuelta &&
+										(!isPagoVinculado ||
+											!codigoValidado?.fechaRegreso ||
+											!codigoValidado?.horaRegreso);
+									const showDireccionDestino =
+										codigoValidado?.origen === "Aeropuerto La Araucanía" &&
 										(!isPagoVinculado || !codigoValidado?.direccionDestino);
-									const showDireccionOrigen = 
-										codigoValidado?.destino === "Aeropuerto La Araucanía" && 
+									const showDireccionOrigen =
+										codigoValidado?.destino === "Aeropuerto La Araucanía" &&
 										(!isPagoVinculado || !codigoValidado?.direccionOrigen);
-								// Mostrar número de vuelo si el viaje involucra el aeropuerto y el código no trae el dato precargado
-								const esTraladoAereopuerto = 
-									codigoValidado?.origen === "Aeropuerto La Araucanía" || 
-									codigoValidado?.destino === "Aeropuerto La Araucanía";
-								const showNumeroVuelo = esTraladoAereopuerto && !codigoValidado?.numeroVuelo;
-								const showCualquiera = showFecha || showHora || showRegreso || showDireccionDestino || showDireccionOrigen || showNumeroVuelo;
+									// Mostrar número de vuelo si el viaje involucra el aeropuerto y el código no trae el dato precargado
+									const esTraladoAereopuerto =
+										codigoValidado?.origen === "Aeropuerto La Araucanía" ||
+										codigoValidado?.destino === "Aeropuerto La Araucanía";
+									const showNumeroVuelo =
+										esTraladoAereopuerto && !codigoValidado?.numeroVuelo;
+									const showCualquiera =
+										showFecha ||
+										showHora ||
+										showRegreso ||
+										showDireccionDestino ||
+										showDireccionOrigen ||
+										showNumeroVuelo;
 
-								if (!showCualquiera) return null;
+									if (!showCualquiera) return null;
 
-								return (
-									<div className="space-y-4 pt-2 border-t border-border/30">
-										<p className="text-xs font-semibold text-primary mb-2 uppercase tracking-tight">
-											Detalles del traslado faltantes:
-										</p>
+									return (
+										<div className="space-y-4 pt-2 border-t border-border/30">
+											<p className="text-xs font-semibold text-primary mb-2 uppercase tracking-tight">
+												Detalles del traslado faltantes:
+											</p>
 
-										{/* Fecha y Hora */}
-										{(showFecha || showHora) && (
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-												{showFecha && (
+											{/* Fecha y Hora */}
+											{(showFecha || showHora) && (
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													{showFecha && (
 														<div className="space-y-2">
-															<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
+															<Label
+																htmlFor="fecha"
+																className="text-sm font-semibold text-foreground"
+															>
 																Fecha <span className="text-red-500">*</span>
 															</Label>
 															<div className="relative">
@@ -878,7 +993,10 @@ function PagarConCodigo() {
 													)}
 													{showHora && (
 														<div className="space-y-2">
-															<Label htmlFor="hora" className="text-sm font-semibold text-foreground">
+															<Label
+																htmlFor="hora"
+																className="text-sm font-semibold text-foreground"
+															>
 																Hora <span className="text-red-500">*</span>
 															</Label>
 															<div className="relative">
@@ -892,7 +1010,9 @@ function PagarConCodigo() {
 																>
 																	<option value="">Seleccionar...</option>
 																	{TIME_OPTIONS.map((hora) => (
-																		<option key={hora} value={hora}>{hora}</option>
+																		<option key={hora} value={hora}>
+																			{hora}
+																		</option>
 																	))}
 																</select>
 															</div>
@@ -905,8 +1025,12 @@ function PagarConCodigo() {
 											{showRegreso && (
 												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 													<div className="space-y-2">
-														<Label htmlFor="fechaRegreso" className="text-sm font-semibold text-foreground">
-															Fecha regreso <span className="text-red-500">*</span>
+														<Label
+															htmlFor="fechaRegreso"
+															className="text-sm font-semibold text-foreground"
+														>
+															Fecha regreso{" "}
+															<span className="text-red-500">*</span>
 														</Label>
 														<div className="relative">
 															<Calendar className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
@@ -916,14 +1040,21 @@ function PagarConCodigo() {
 																type="date"
 																value={formData.fechaRegreso}
 																onChange={handleInputChange}
-																min={formData.fecha || new Date().toISOString().split("T")[0]}
+																min={
+																	formData.fecha ||
+																	new Date().toISOString().split("T")[0]
+																}
 																className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 															/>
 														</div>
 													</div>
 													<div className="space-y-2">
-														<Label htmlFor="horaRegreso" className="text-sm font-semibold text-foreground">
-															Hora regreso <span className="text-red-500">*</span>
+														<Label
+															htmlFor="horaRegreso"
+															className="text-sm font-semibold text-foreground"
+														>
+															Hora regreso{" "}
+															<span className="text-red-500">*</span>
 														</Label>
 														<div className="relative">
 															<Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
@@ -936,7 +1067,9 @@ function PagarConCodigo() {
 															>
 																<option value="">Seleccionar...</option>
 																{TIME_OPTIONS.map((hora) => (
-																	<option key={`regreso-${hora}`} value={hora}>{hora}</option>
+																	<option key={`regreso-${hora}`} value={hora}>
+																		{hora}
+																	</option>
 																))}
 															</select>
 														</div>
@@ -947,8 +1080,12 @@ function PagarConCodigo() {
 											{/* Dirección (según sentido del viaje) */}
 											{showDireccionDestino && (
 												<div className="space-y-2">
-													<Label htmlFor="direccionDestino" className="text-sm font-semibold text-foreground">
-														Dirección de destino <span className="text-red-500">*</span>
+													<Label
+														htmlFor="direccionDestino"
+														className="text-sm font-semibold text-foreground"
+													>
+														Dirección de destino{" "}
+														<span className="text-red-500">*</span>
 													</Label>
 													<AddressAutocomplete
 														id="direccionDestino"
@@ -963,8 +1100,12 @@ function PagarConCodigo() {
 											)}
 											{showDireccionOrigen && (
 												<div className="space-y-2">
-													<Label htmlFor="direccionOrigen" className="text-sm font-semibold text-foreground">
-														Dirección de origen <span className="text-red-500">*</span>
+													<Label
+														htmlFor="direccionOrigen"
+														className="text-sm font-semibold text-foreground"
+													>
+														Dirección de origen{" "}
+														<span className="text-red-500">*</span>
 													</Label>
 													<AddressAutocomplete
 														id="direccionOrigen"
@@ -981,8 +1122,14 @@ function PagarConCodigo() {
 											{/* Número de vuelo opcional (solo traslados con aeropuerto) */}
 											{showNumeroVuelo && (
 												<div className="space-y-2">
-													<Label htmlFor="numeroVuelo" className="text-sm font-semibold text-foreground">
-														Número de vuelo <span className="text-muted-foreground font-normal">(opcional)</span>
+													<Label
+														htmlFor="numeroVuelo"
+														className="text-sm font-semibold text-foreground"
+													>
+														Número de vuelo{" "}
+														<span className="text-muted-foreground font-normal">
+															(opcional)
+														</span>
 													</Label>
 													<div className="relative">
 														<Plane className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
@@ -995,7 +1142,9 @@ function PagarConCodigo() {
 															className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 														/>
 													</div>
-													<p className="text-xs text-muted-foreground">Nos ayuda a monitorear retrasos del vuelo</p>
+													<p className="text-xs text-muted-foreground">
+														Nos ayuda a monitorear retrasos del vuelo
+													</p>
 												</div>
 											)}
 										</div>
@@ -1014,7 +1163,9 @@ function PagarConCodigo() {
 							{/* Selección de monto */}
 							{codigoValidado?.permitirAbono && (
 								<div className="space-y-3">
-									<Label className="text-sm font-semibold text-foreground">Monto a pagar</Label>
+									<Label className="text-sm font-semibold text-foreground">
+										Monto a pagar
+									</Label>
 									<div className="grid grid-cols-2 gap-3">
 										<button
 											type="button"
@@ -1026,7 +1177,9 @@ function PagarConCodigo() {
 											}`}
 										>
 											<p className="text-sm font-medium">Abono 40%</p>
-											<p className="text-lg font-bold">{formatCurrency(abonoSugerido)}</p>
+											<p className="text-lg font-bold">
+												{formatCurrency(abonoSugerido)}
+											</p>
 										</button>
 										<button
 											type="button"
@@ -1038,7 +1191,9 @@ function PagarConCodigo() {
 											}`}
 										>
 											<p className="text-sm font-medium">Pago Total</p>
-											<p className="text-lg font-bold">{formatCurrency(montoTotal)}</p>
+											<p className="text-lg font-bold">
+												{formatCurrency(montoTotal)}
+											</p>
 										</button>
 									</div>
 								</div>
@@ -1047,7 +1202,9 @@ function PagarConCodigo() {
 							{/* Botón de pago */}
 							<Button
 								onClick={procesarPagoConCodigoFlow}
-								disabled={procesando || !montoSeleccionado || montoSeleccionado <= 0}
+								disabled={
+									procesando || !montoSeleccionado || montoSeleccionado <= 0
+								}
 								className="w-full h-12 text-base font-semibold"
 								size="lg"
 							>
