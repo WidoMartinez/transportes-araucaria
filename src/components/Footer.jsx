@@ -1,6 +1,6 @@
 import React from "react";
 import logoBlanco from "../assets/logoblanco.png";
-import { Facebook, Instagram, Linkedin, Twitter } from "lucide-react";
+import { Facebook, Instagram } from "lucide-react";
 
 // Componente interno para manejar los enlaces del footer de manera consistente
 const FooterLink = ({ href, children }) => (
@@ -33,7 +33,7 @@ function Footer() {
 					<div className="space-y-4">
 						<img
 							src={logoBlanco}
-                                                     alt="Transportes Araucaria Logo"
+							alt="Transportes Araucaria Logo"
 							className="h-20"
 						/>
 						<p className="text-muted-foreground">
@@ -52,7 +52,9 @@ function Footer() {
 							<FooterLink href="#servicios">Servicios</FooterLink>
 							<FooterLink href="#destinos">Destinos</FooterLink>
 							<FooterLink href="#contacto">Contacto</FooterLink>
-							<FooterLink href="#consultar-reserva">Consultar Reserva</FooterLink>
+							<FooterLink href="#consultar-reserva">
+								Consultar Reserva
+							</FooterLink>
 							<FooterLink href="#">Términos y Condiciones</FooterLink>
 						</nav>
 					</div>
@@ -85,11 +87,18 @@ function Footer() {
 							Síguenos
 						</h3>
 						<div className="flex space-x-4">
-							<SocialIcon href="#" icon={Facebook} />
-							<SocialIcon href="#" icon={Instagram} />
-							<SocialIcon href="#" icon={Twitter} />
-							<SocialIcon href="#" icon={Linkedin} />
+							<SocialIcon
+								href="https://web.facebook.com/rutaaraucaria/"
+								icon={Facebook}
+							/>
+							<SocialIcon
+								href="https://www.instagram.com/rutaaraucaria/"
+								icon={Instagram}
+							/>
 						</div>
+						<p className="text-muted-foreground text-sm">
+							Súmate a nuestra comunidad y comparte el viaje.
+						</p>
 					</div>
 				</div>
 			</div>
@@ -98,7 +107,7 @@ function Footer() {
 			<div className="border-t border-chocolate-800">
 				<div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
 					<p>
-                                            &copy; {new Date().getFullYear()} Transportes Araucaria. Todos los
+						&copy; {new Date().getFullYear()} Transportes Araucaria. Todos los
 						derechos reservados.
 					</p>
 					<p className="mt-4 md:mt-0">

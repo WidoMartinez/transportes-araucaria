@@ -37,6 +37,7 @@ import Servicios from "./components/Servicios";
 import Destacados from "./components/Destacados";
 import PaginaEvaluar from "./components/Evaluar/PaginaEvaluar";
 import SeccionTestimonios from "./components/Testimonios/SeccionTestimonios";
+import SeccionRedesSociales from "./components/SeccionRedesSociales";
 import Contacto from "./components/Contacto";
 
 import Footer from "./components/Footer";
@@ -2102,9 +2103,12 @@ function App() {
 	}
 
 	return (
-		<div 
+		<div
 			className="min-h-screen text-foreground bg-cover bg-fixed"
-			style={{ backgroundImage: `url(${fondovariantevan})`, backgroundPosition: 'center 80%' }}
+			style={{
+				backgroundImage: `url(${fondovariantevan})`,
+				backgroundPosition: "center 80%",
+			}}
 		>
 			{loadingPrecios && (
 				<div className="fixed top-0 left-0 w-full h-full bg-black/50 z-[100] flex items-center justify-center text-white">
@@ -2201,6 +2205,7 @@ function App() {
 				<Servicios />
 				<Destacados destinos={destacadosData} />
 				<SeccionTestimonios />
+				<SeccionRedesSociales />
 				<Contacto />
 			</main>
 
