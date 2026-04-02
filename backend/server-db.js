@@ -12379,10 +12379,7 @@ app.get("/api/evaluaciones/validar-token/:token", async (req, res) => {
 
 		// Si ya fue evaluado, verificar si hay una propina pendiente de pago
 		if (evaluacion.evaluada) {
-			if (
-				Number(evaluacion.propinaMonto) > 0 &&
-				!evaluacion.propinaPagada
-			) {
+			if (Number(evaluacion.propinaMonto) > 0 && !evaluacion.propinaPagada) {
 				// Caso especial: evaluación completada pero propina pendiente de pago
 				return res.json({
 					valido: false,
@@ -12591,24 +12588,39 @@ app.post("/api/evaluaciones/reintentar-propina", async (req, res) => {
 		});
 
 		if (!evaluacion) {
-			return res.status(404).json({ success: false, error: "Token no encontrado" });
+			return res
+				.status(404)
+				.json({ success: false, error: "Token no encontrado" });
 		}
 
 		if (!evaluacion.evaluada) {
-			return res.status(400).json({ success: false, error: "La evaluación aún no fue completada" });
+			return res
+				.status(400)
+				.json({ success: false, error: "La evaluación aún no fue completada" });
 		}
 
 		if (evaluacion.propinaPagada) {
-			return res.status(400).json({ success: false, error: "La propina ya fue pagada" });
+			return res
+				.status(400)
+				.json({ success: false, error: "La propina ya fue pagada" });
 		}
 
 		if (!evaluacion.propinaMonto || Number(evaluacion.propinaMonto) <= 0) {
-			return res.status(400).json({ success: false, error: "No hay propina pendiente para esta evaluación" });
+			return res
+				.status(400)
+				.json({
+					success: false,
+					error: "No hay propina pendiente para esta evaluación",
+				});
 		}
 
 		// Crear nueva orden de pago en Flow para la propina
 		const reserva = await Reserva.findByPk(evaluacion.reservaId);
-		const { flowUrl, token: flowToken, flowOrder } = await crearOrdenFlowPropina(
+		const {
+			flowUrl,
+			token: flowToken,
+			flowOrder,
+		} = await crearOrdenFlowPropina(
 			Number(evaluacion.propinaMonto),
 			reserva?.codigoReserva || evaluacion.reservaId,
 			evaluacion.id,

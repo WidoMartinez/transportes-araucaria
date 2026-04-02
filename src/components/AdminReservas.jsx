@@ -5245,8 +5245,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													{mensajePredeterminado && (
 														<button
 															onClick={() => {
-																navigator.clipboard.writeText(mensajePredeterminado);
-																toast.success("Mensaje copiado. Pégalo en WhatsApp.");
+																navigator.clipboard.writeText(
+																	mensajePredeterminado,
+																);
+																toast.success(
+																	"Mensaje copiado. Pégalo en WhatsApp.",
+																);
 															}}
 															className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
 														>

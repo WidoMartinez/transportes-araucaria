@@ -40,7 +40,9 @@ function PaginaEvaluar() {
 
 		const validarToken = async () => {
 			try {
-				const resp = await fetch(`${apiUrl}/api/evaluaciones/validar-token/${encodeURIComponent(token)}`);
+				const resp = await fetch(
+					`${apiUrl}/api/evaluaciones/validar-token/${encodeURIComponent(token)}`,
+				);
 				const data = await resp.json();
 
 				if (!data.valido) {
@@ -69,7 +71,9 @@ function PaginaEvaluar() {
 			} catch (err) {
 				console.error("[PaginaEvaluar] Error al validar token:", err);
 				setEstado("invalido");
-				setErrorMsg("No se pudo verificar el enlace. Por favor intenta más tarde.");
+				setErrorMsg(
+					"No se pudo verificar el enlace. Por favor intenta más tarde.",
+				);
 			}
 		};
 
@@ -81,11 +85,14 @@ function PaginaEvaluar() {
 		setReintentandoPropina(true);
 		setErrorPropina("");
 		try {
-			const resp = await fetch(`${apiUrl}/api/evaluaciones/reintentar-propina`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ token }),
-			});
+			const resp = await fetch(
+				`${apiUrl}/api/evaluaciones/reintentar-propina`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ token }),
+				},
+			);
 			const data = await resp.json();
 			if (!resp.ok || !data.success) {
 				throw new Error(data.error || "Error al generar el enlace de pago");
@@ -100,7 +107,11 @@ function PaginaEvaluar() {
 	};
 
 	const formatCLP = (v) =>
-		new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(v);
+		new Intl.NumberFormat("es-CL", {
+			style: "currency",
+			currency: "CLP",
+			maximumFractionDigits: 0,
+		}).format(v);
 
 	// --- Estados de la página ---
 
@@ -109,7 +120,9 @@ function PaginaEvaluar() {
 			<div className="min-h-screen bg-amber-50 flex items-center justify-center">
 				<div className="text-center">
 					<LoaderCircle className="h-10 w-10 animate-spin text-amber-700 mx-auto mb-4" />
-					<p className="text-amber-800 text-lg font-medium">Cargando evaluación...</p>
+					<p className="text-amber-800 text-lg font-medium">
+						Cargando evaluación...
+					</p>
 				</div>
 			</div>
 		);
@@ -127,7 +140,8 @@ function PaginaEvaluar() {
 						{errorMsg || "El enlace de evaluación no es válido."}
 					</p>
 					<p className="text-gray-400 text-sm">
-						Si crees que esto es un error, contáctanos a través de nuestro sitio web.
+						Si crees que esto es un error, contáctanos a través de nuestro sitio
+						web.
 					</p>
 				</div>
 			</div>
@@ -143,10 +157,12 @@ function PaginaEvaluar() {
 						Enlace expirado
 					</h2>
 					<p className="text-gray-500 mb-4">
-						El enlace de evaluación ha expirado. Los enlaces tienen una validez de 7 días.
+						El enlace de evaluación ha expirado. Los enlaces tienen una validez
+						de 7 días.
 					</p>
 					<p className="text-gray-400 text-sm">
-						Si deseas dejar tu evaluación de igual forma, por favor contáctanos directamente.
+						Si deseas dejar tu evaluación de igual forma, por favor contáctanos
+						directamente.
 					</p>
 				</div>
 			</div>
@@ -166,7 +182,9 @@ function PaginaEvaluar() {
 						Tu evaluación fue registrada exitosamente.
 					</p>
 					<p className="text-amber-700 mb-6">
-						Tienes una propina de <strong>{formatCLP(propinaMontoPendiente)}</strong> pendiente de pago para tu conductor.
+						Tienes una propina de{" "}
+						<strong>{formatCLP(propinaMontoPendiente)}</strong> pendiente de
+						pago para tu conductor.
 					</p>
 					{errorPropina && (
 						<p className="text-red-600 text-sm mb-4">{errorPropina}</p>
@@ -179,11 +197,15 @@ function PaginaEvaluar() {
 						{reintentandoPropina ? (
 							<LoaderCircle className="h-5 w-5 animate-spin mr-2" />
 						) : (
-							<>💳 Pagar propina con Flow<ChevronRight className="h-5 w-5 ml-2" /></>
+							<>
+								💳 Pagar propina con Flow
+								<ChevronRight className="h-5 w-5 ml-2" />
+							</>
 						)}
 					</Button>
 					<p className="text-gray-400 text-xs">
-						La propina es completamente opcional. Si prefieres no pagarla, puedes cerrar esta página.
+						La propina es completamente opcional. Si prefieres no pagarla,
+						puedes cerrar esta página.
 					</p>
 				</div>
 			</div>
@@ -199,10 +221,12 @@ function PaginaEvaluar() {
 						¡Ya evaluaste este viaje!
 					</h2>
 					<p className="text-gray-500 mb-4">
-						Ya registraste tu evaluación para este viaje. ¡Muchas gracias por tu tiempo!
+						Ya registraste tu evaluación para este viaje. ¡Muchas gracias por tu
+						tiempo!
 					</p>
 					<p className="text-gray-400 text-sm">
-						Tu opinión es muy valiosa para nosotros y nos ayuda a seguir mejorando.
+						Tu opinión es muy valiosa para nosotros y nos ayuda a seguir
+						mejorando.
 					</p>
 				</div>
 			</div>
