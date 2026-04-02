@@ -12610,12 +12610,10 @@ app.post("/api/evaluaciones/reintentar-propina", async (req, res) => {
 		}
 
 		if (!evaluacion.propinaMonto || Number(evaluacion.propinaMonto) <= 0) {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					error: "No hay propina pendiente para esta evaluación",
-				});
+			return res.status(400).json({
+				success: false,
+				error: "No hay propina pendiente para esta evaluación",
+			});
 		}
 
 		// Crear nueva orden de pago en Flow para la propina

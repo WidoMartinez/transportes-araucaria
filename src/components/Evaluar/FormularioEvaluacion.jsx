@@ -2,7 +2,14 @@
 // Formulario de evaluación de conductor post-viaje con estrellas y propina opcional.
 
 import { useState } from "react";
-import { Star, Clock, Sparkles, Shield, MessageSquare, ChevronRight } from "lucide-react";
+import {
+	Star,
+	Clock,
+	Sparkles,
+	Shield,
+	MessageSquare,
+	ChevronRight,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { getBackendUrl } from "../../lib/backend";
@@ -75,7 +82,11 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 
 	// Formatear monto en CLP
 	const formatCLP = (v) =>
-		new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(v);
+		new Intl.NumberFormat("es-CL", {
+			style: "currency",
+			currency: "CLP",
+			maximumFractionDigits: 0,
+		}).format(v);
 
 	// Validar que todas las calificaciones estén completadas
 	const califsCompletas =
@@ -143,11 +154,12 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 						¡Evaluación guardada!
 					</h2>
 					<p className="text-amber-700 mb-6">
-						Tu calificación fue registrada. Ahora puedes proceder a pagar
-						la propina de <strong>{formatCLP(montoFinal)}</strong> de forma segura con Flow.
+						Tu calificación fue registrada. Ahora puedes proceder a pagar la
+						propina de <strong>{formatCLP(montoFinal)}</strong> de forma segura
+						con Flow.
 					</p>
 					<Button
-						onClick={() => window.location.href = flowUrl}
+						onClick={() => (window.location.href = flowUrl)}
 						className="w-full bg-amber-700 hover:bg-amber-800 text-white text-lg py-6 rounded-xl"
 					>
 						💳 Pagar propina con Flow
@@ -174,8 +186,8 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 						¡Gracias por tu evaluación!
 					</h2>
 					<p className="text-amber-700 mb-4">
-						Tu opinión nos ayuda a seguir mejorando el servicio de
-						Transportes Araucaria.
+						Tu opinión nos ayuda a seguir mejorando el servicio de Transportes
+						Araucaria.
 					</p>
 					<div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
 						<p className="text-amber-800 text-sm">
@@ -199,7 +211,7 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
-		  })
+			})
 		: null;
 
 	return (
@@ -208,9 +220,7 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 				{/* Header */}
 				<div className="bg-gradient-to-br from-amber-900 to-amber-700 rounded-2xl p-6 mb-6 text-center text-white shadow-lg">
 					<div className="text-4xl mb-2">⭐</div>
-					<h1 className="text-2xl font-bold mb-1">
-						¿Cómo fue tu viaje?
-					</h1>
+					<h1 className="text-2xl font-bold mb-1">¿Cómo fue tu viaje?</h1>
 					<p className="text-amber-200 text-sm">
 						Tu opinión nos ayuda a mejorar cada día
 					</p>
@@ -272,12 +282,15 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 				{/* Comentario */}
 				<div className="bg-white rounded-xl shadow-sm border border-amber-100 p-5 mb-5">
 					<h2 className="text-base font-bold text-amber-900 mb-3">
-						💬 Comentario <span className="font-normal text-gray-400">(opcional)</span>
+						💬 Comentario{" "}
+						<span className="font-normal text-gray-400">(opcional)</span>
 					</h2>
 					<Textarea
 						placeholder="¿Algo que quieras destacar de tu viaje?"
 						value={comentario}
-						onChange={(e) => setComentario(e.target.value.slice(0, MAX_COMENTARIO))}
+						onChange={(e) =>
+							setComentario(e.target.value.slice(0, MAX_COMENTARIO))
+						}
 						rows={3}
 						className="resize-none border-amber-200 focus:border-amber-400 focus:ring-amber-400"
 					/>
@@ -289,10 +302,12 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 				{/* Propina */}
 				<div className="bg-white rounded-xl shadow-sm border border-amber-100 p-5 mb-5">
 					<h2 className="text-base font-bold text-amber-900 mb-1">
-						💰 Propina <span className="font-normal text-gray-400">(opcional)</span>
+						💰 Propina{" "}
+						<span className="font-normal text-gray-400">(opcional)</span>
 					</h2>
 					<p className="text-sm text-gray-500 mb-4">
-						Si deseas reconocer el esfuerzo de tu conductor, puedes dejarle una propina mediante pago seguro con Flow.
+						Si deseas reconocer el esfuerzo de tu conductor, puedes dejarle una
+						propina mediante pago seguro con Flow.
 					</p>
 					<div className="flex flex-wrap gap-2 mb-3">
 						{MONTOS_PRESET.map((m) => (
@@ -339,7 +354,8 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 					)}
 					{montoFinal > 0 && (
 						<p className="text-sm text-amber-700 mt-2 font-medium">
-							💳 Se procesará un pago de <strong>{formatCLP(montoFinal)}</strong> con Flow
+							💳 Se procesará un pago de{" "}
+							<strong>{formatCLP(montoFinal)}</strong> con Flow
 						</p>
 					)}
 				</div>
@@ -368,9 +384,7 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 							<ChevronRight className="h-5 w-5 ml-2" />
 						</>
 					) : (
-						<>
-							✅ Enviar Evaluación
-						</>
+						<>✅ Enviar Evaluación</>
 					)}
 				</Button>
 

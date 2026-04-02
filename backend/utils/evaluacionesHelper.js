@@ -23,7 +23,12 @@ export const generarTokenEvaluacion = () => {
  * @param {number} comunicacion - Calificación de comunicación (1-5)
  * @returns {number} Promedio con 2 decimales
  */
-export const calcularPromedioEvaluacion = (puntualidad, limpieza, seguridad, comunicacion) => {
+export const calcularPromedioEvaluacion = (
+	puntualidad,
+	limpieza,
+	seguridad,
+	comunicacion,
+) => {
 	const valores = [
 		Number(puntualidad),
 		Number(limpieza),
@@ -59,9 +64,15 @@ const signFlowParams = (params) => {
  * @param {string} clienteEmail - Email del pasajero que paga la propina
  * @returns {Promise<{url: string, token: string, flowOrder: number}>} Datos de la orden creada
  */
-export const crearOrdenFlowPropina = async (monto, reservaCodigo, evaluacionId, clienteEmail) => {
+export const crearOrdenFlowPropina = async (
+	monto,
+	reservaCodigo,
+	evaluacionId,
+	clienteEmail,
+) => {
 	const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
-	const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
+	const backendBase =
+		process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 
 	// Sanitizar email: eliminar espacios y convertir a minúsculas
 	// (equivalente a sanitizarEmailRobusto de server-db.js)
@@ -72,7 +83,9 @@ export const crearOrdenFlowPropina = async (monto, reservaCodigo, evaluacionId, 
 		.replace(/\s+/g, "");
 
 	if (!emailSanitizado || !emailSanitizado.includes("@")) {
-		throw new Error(`Email inválido para crear propina en Flow: "${clienteEmail}"`);
+		throw new Error(
+			`Email inválido para crear propina en Flow: "${clienteEmail}"`,
+		);
 	}
 
 	// Flow CLP requiere monto entero exacto, sin decimales
@@ -117,14 +130,17 @@ export const crearOrdenFlowPropina = async (monto, reservaCodigo, evaluacionId, 
 		response = await axios.post(
 			`${flowApiUrl}/payment/create`,
 			new URLSearchParams(params).toString(),
-			{ headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+			{ headers: { "Content-Type": "application/x-www-form-urlencoded" } },
 		);
 	} catch (axiosError) {
 		// Loguear el cuerpo completo de la respuesta de Flow para facilitar diagnóstico
 		const flowErrorBody = axiosError.response?.data;
-		console.error(`❌ [Propina] Flow respondió con error HTTP ${axiosError.response?.status}:`, flowErrorBody);
+		console.error(
+			`❌ [Propina] Flow respondió con error HTTP ${axiosError.response?.status}:`,
+			flowErrorBody,
+		);
 		throw new Error(
-			`Flow error ${axiosError.response?.status}: ${JSON.stringify(flowErrorBody) || axiosError.message}`
+			`Flow error ${axiosError.response?.status}: ${JSON.stringify(flowErrorBody) || axiosError.message}`,
 		);
 	}
 
