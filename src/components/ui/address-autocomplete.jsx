@@ -41,8 +41,15 @@ export function AddressAutocomplete({
 	const containerRef = useRef(null);
 	const { isLoaded, isAvailable } = useGoogleMaps();
 	const [isInitializing, setIsInitializing] = useState(false);
-	// Indica si el Web Component está activo y superpuesto sobre el input nativo
+	// Indica si el Web Component se creó correctamente (billing activo)
 	const [webComponentActive, setWebComponentActive] = useState(false);
+	// Indica si el usuario está interactuando activamente con el Web Component
+	const [wcFocused, setWcFocused] = useState(false);
+
+	// El overlay se muestra solo cuando: Web Component activo Y (campo vacío O usuario activo).
+	// Si ya hay una dirección guardada y el usuario no está editando, se muestra
+	// el input React con el valor existente, evitando el campo aparentemente vacío.
+	const showWebComponent = webComponentActive && (!value || wcFocused);
 
 	// Inicializar PlaceAutocompleteElement cuando la API esté lista
 	useEffect(() => {
@@ -72,6 +79,11 @@ export function AddressAutocomplete({
 				containerRef.current.appendChild(element);
 				elementRef.current = element;
 			}
+
+			// Detectar foco/desenfoque del Web Component para activar/desactivar el overlay.
+			// focusin/focusout son eventos composed:true, burbujean desde el shadow DOM.
+			element.addEventListener("focusin", () => setWcFocused(true));
+			element.addEventListener("focusout", () => setWcFocused(false));
 
 			// Capturar el texto del input interno del Web Component mientras el usuario escribe.
 			// Los eventos 'input' del shadow DOM son composed:true, por lo que burbujean
@@ -171,7 +183,7 @@ export function AddressAutocomplete({
 				required={required}
 				autoComplete="off"
 				style={
-					webComponentActive ? { opacity: 0, pointerEvents: "none" } : undefined
+					showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined
 				}
 				{...props}
 			/>
@@ -185,7 +197,7 @@ export function AddressAutocomplete({
 					style={{
 						position: "absolute",
 						inset: 0,
-						display: webComponentActive ? "block" : "none",
+					display: showWebComponent ? "block" : "none",
 						zIndex: 1,
 					}}
 				/>

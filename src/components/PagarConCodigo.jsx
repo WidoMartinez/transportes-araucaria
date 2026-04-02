@@ -839,20 +839,25 @@ function PagarConCodigo() {
 									const showDireccionOrigen = 
 										codigoValidado?.destino === "Aeropuerto La Araucanía" && 
 										(!isPagoVinculado || !codigoValidado?.direccionOrigen);
-									const showCualquiera = showFecha || showHora || showRegreso || showDireccionDestino || showDireccionOrigen;
+								// Mostrar número de vuelo si el viaje involucra el aeropuerto y el código no trae el dato precargado
+								const esTraladoAereopuerto = 
+									codigoValidado?.origen === "Aeropuerto La Araucanía" || 
+									codigoValidado?.destino === "Aeropuerto La Araucanía";
+								const showNumeroVuelo = esTraladoAereopuerto && !codigoValidado?.numeroVuelo;
+								const showCualquiera = showFecha || showHora || showRegreso || showDireccionDestino || showDireccionOrigen || showNumeroVuelo;
 
-									if (!showCualquiera) return null;
+								if (!showCualquiera) return null;
 
-									return (
-										<div className="space-y-4 pt-2 border-t border-border/30">
-											<p className="text-xs font-semibold text-primary mb-2 uppercase tracking-tight">
-												Detalles del traslado faltantes:
-											</p>
+								return (
+									<div className="space-y-4 pt-2 border-t border-border/30">
+										<p className="text-xs font-semibold text-primary mb-2 uppercase tracking-tight">
+											Detalles del traslado faltantes:
+										</p>
 
-											{/* Fecha y Hora */}
-											{(showFecha || showHora) && (
-												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-													{showFecha && (
+										{/* Fecha y Hora */}
+										{(showFecha || showHora) && (
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+												{showFecha && (
 														<div className="space-y-2">
 															<Label htmlFor="fecha" className="text-sm font-semibold text-foreground">
 																Fecha <span className="text-red-500">*</span>
@@ -970,6 +975,27 @@ function PagarConCodigo() {
 														className="w-full h-11 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
 														required
 													/>
+												</div>
+											)}
+
+											{/* Número de vuelo opcional (solo traslados con aeropuerto) */}
+											{showNumeroVuelo && (
+												<div className="space-y-2">
+													<Label htmlFor="numeroVuelo" className="text-sm font-semibold text-foreground">
+														Número de vuelo <span className="text-muted-foreground font-normal">(opcional)</span>
+													</Label>
+													<div className="relative">
+														<Plane className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+														<Input
+															id="numeroVuelo"
+															name="numeroVuelo"
+															value={formData.numeroVuelo}
+															onChange={handleInputChange}
+															placeholder="Ej: LA123, JA456"
+															className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-input rounded-lg text-sm focus:ring-2 focus:ring-ring focus:border-transparent"
+														/>
+													</div>
+													<p className="text-xs text-muted-foreground">Nos ayuda a monitorear retrasos del vuelo</p>
 												</div>
 											)}
 										</div>
