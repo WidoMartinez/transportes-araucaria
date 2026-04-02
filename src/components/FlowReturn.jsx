@@ -95,6 +95,19 @@ function FlowReturn() {
 		const verifyPayment = async () => {
 			console.log(`🔍 [FlowReturn] Verificando estado: Status=${statusParam}, Error=${errorParam}, Amount=${amountParam}`);
 
+			// Detección de retorno de propina: mostrar éxito sin disparar conversiones de reserva
+			const esPropina = urlParams.get("propina") === "1";
+			if (esPropina) {
+				if (statusParam === "error") {
+					setPaymentStatus("error");
+				} else {
+					setPaymentStatus("success");
+					// Guardar flag para que el render muestre mensaje de propina
+					sessionStorage.setItem("flow_return_propina", "1");
+				}
+				return;
+			}
+
 			// Si el backend nos dice explícitamente que hubo error
 			if (statusParam === "error" || errorParam) {
 				console.warn(`❌ Error en pago detectado. Status: ${statusParam}, Error: ${errorParam}, FlowStatus: ${flowStatusParam}`);
@@ -351,10 +364,14 @@ function FlowReturn() {
 									</div>
 								</div>
 								<CardTitle className="text-3xl text-green-600">
-									¡Pago Exitoso!
+									{sessionStorage.getItem("flow_return_propina") === "1"
+										? "¡Propina enviada!"
+										: "¡Pago Exitoso!"}
 								</CardTitle>
 								<p className="text-gray-600 mt-2 text-lg">
-									Tu reserva ha sido confirmada
+									{sessionStorage.getItem("flow_return_propina") === "1"
+										? "Tu propina fue pagada exitosamente. ¡Muchas gracias!"
+										: "Tu reserva ha sido confirmada"}
 								</p>
 							</>
 						)}

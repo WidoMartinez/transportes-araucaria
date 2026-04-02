@@ -9466,6 +9466,18 @@ app.post("/api/payment-result", async (req, res) => {
 
 			console.log(`💰 [DEBUG] Monto parseado de Flow: ${montoFlowActual}`);
 
+			// --- Detección temprana de propina: redirigir a página de agradecimiento ---
+			if (optionalData?.paymentOrigin === "propina_evaluacion") {
+				const estadoPropina = flowData.status === 2 ? "success" : "error";
+				console.log(
+					`💰 [Propina/payment-result] Retorno de pago de propina. Status Flow: ${flowData.status}. Redirigiendo al frontend.`,
+				);
+				return res.redirect(
+					303,
+					`${frontendBase}/flow-return?status=${estadoPropina}&propina=1&amount=${montoFlowActual}`,
+				);
+			}
+
 			// Si tenemos reservaId y el pago fue exitoso (2)
 			if (reservaId && flowData.status === 2) {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
@@ -12365,7 +12377,20 @@ app.get("/api/evaluaciones/validar-token/:token", async (req, res) => {
 			return res.json({ valido: false, motivo: "no_encontrado" });
 		}
 
+		// Si ya fue evaluado, verificar si hay una propina pendiente de pago
 		if (evaluacion.evaluada) {
+			if (
+				Number(evaluacion.propinaMonto) > 0 &&
+				!evaluacion.propinaPagada
+			) {
+				// Caso especial: evaluación completada pero propina pendiente de pago
+				return res.json({
+					valido: false,
+					motivo: "propina_pendiente",
+					propinaMonto: Number(evaluacion.propinaMonto),
+					evaluacionId: evaluacion.id,
+				});
+			}
 			return res.json({ valido: false, motivo: "ya_evaluado" });
 		}
 
@@ -12547,6 +12572,65 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 		return res.status(500).json({
 			success: false,
 			error: "Error interno al guardar la evaluación",
+		});
+	}
+});
+
+// --- ENDPOINT PÚBLICO: Reintentar pago de propina pendiente ---
+// Permite recrear una orden de pago en Flow para una propina que quedó sin pagar
+app.post("/api/evaluaciones/reintentar-propina", async (req, res) => {
+	try {
+		const { token } = req.body || {};
+
+		if (!token) {
+			return res.status(400).json({ success: false, error: "Token requerido" });
+		}
+
+		const evaluacion = await EvaluacionConductor.findOne({
+			where: { tokenEvaluacion: token },
+		});
+
+		if (!evaluacion) {
+			return res.status(404).json({ success: false, error: "Token no encontrado" });
+		}
+
+		if (!evaluacion.evaluada) {
+			return res.status(400).json({ success: false, error: "La evaluación aún no fue completada" });
+		}
+
+		if (evaluacion.propinaPagada) {
+			return res.status(400).json({ success: false, error: "La propina ya fue pagada" });
+		}
+
+		if (!evaluacion.propinaMonto || Number(evaluacion.propinaMonto) <= 0) {
+			return res.status(400).json({ success: false, error: "No hay propina pendiente para esta evaluación" });
+		}
+
+		// Crear nueva orden de pago en Flow para la propina
+		const reserva = await Reserva.findByPk(evaluacion.reservaId);
+		const { flowUrl, token: flowToken, flowOrder } = await crearOrdenFlowPropina(
+			Number(evaluacion.propinaMonto),
+			reserva?.codigoReserva || evaluacion.reservaId,
+			evaluacion.id,
+			evaluacion.clienteEmail,
+		);
+
+		// Actualizar los datos del nuevo intento de pago
+		await evaluacion.update({
+			propinaFlowToken: flowToken,
+			propinaFlowOrder: flowOrder,
+		});
+
+		console.log(
+			`🔁 [Propina] Reintento de pago para evaluación ${evaluacion.id}. Nuevo Order: ${flowOrder}`,
+		);
+
+		return res.json({ success: true, flowUrl });
+	} catch (err) {
+		console.error("❌ [reintentar-propina] Error:", err.message);
+		return res.status(500).json({
+			success: false,
+			error: "Error al crear nueva orden de pago. Inténtalo más tarde.",
 		});
 	}
 });

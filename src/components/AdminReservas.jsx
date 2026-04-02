@@ -5226,16 +5226,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											);
 										}
 										if (infoEval?.enviada) {
-											// Construir link de evaluación para envío por WhatsApp
+											// Construir mensaje predeterminado para copiar y enviar manualmente por WhatsApp
 											const linkEval = infoEval.token
 												? `https://www.transportesaraucaria.cl/#evaluar?token=${infoEval.token}`
 												: null;
-											const telefonoPasajero =
-												selectedReserva.telefono?.replace(/\D/g, "");
-											const mensajeWhatsApp = linkEval
-												? encodeURIComponent(
-														`Hola ${selectedReserva.nombre || "pasajero"}, gracias por viajar con Transportes Araucanía. Tu opinión es muy importante para nosotros. ¿Podrías evaluar tu experiencia? Solo toma un momento: ${linkEval}`,
-													)
+											const mensajePredeterminado = linkEval
+												? `Hola ${selectedReserva.nombre || "pasajero"}, gracias por viajar con Transportes Araucanía 🙏. Tu opinión es muy importante para nosotros. ¿Podrías evaluar tu experiencia? Solo toma un momento: ${linkEval}`
 												: null;
 											return (
 												<div className="flex flex-wrap items-center gap-2">
@@ -5245,27 +5241,16 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															"es-CL",
 														)}
 													</span>
-													{/* Botón para reenviar link de evaluación por WhatsApp */}
-													{linkEval && telefonoPasajero && (
-														<a
-															href={`https://wa.me/${telefonoPasajero}?text=${mensajeWhatsApp}`}
-															target="_blank"
-															rel="noopener noreferrer"
-															className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-														>
-															📲 Enviar link por WhatsApp
-														</a>
-													)}
-													{/* Botón para copiar link si no hay teléfono disponible */}
-													{linkEval && !telefonoPasajero && (
+													{/* Botón para copiar el mensaje predeterminado y pegarlo manualmente en WhatsApp */}
+													{mensajePredeterminado && (
 														<button
 															onClick={() => {
-																navigator.clipboard.writeText(linkEval);
-																alert("Link copiado al portapapeles");
+																navigator.clipboard.writeText(mensajePredeterminado);
+																toast.success("Mensaje copiado. Pégalo en WhatsApp.");
 															}}
-															className="flex items-center gap-2 bg-slate-500 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+															className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
 														>
-															📋 Copiar link
+															📋 Copiar mensaje para WhatsApp
 														</button>
 													)}
 												</div>

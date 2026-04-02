@@ -3,7 +3,7 @@
 // Muestra únicamente las evaluaciones que el admin ha aprobado para publicar.
 
 import { useState, useEffect } from "react";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, UserCircle2 } from "lucide-react";
 import { getBackendUrl } from "../../lib/backend";
 
 // Renderiza estrellas para una calificación
@@ -100,17 +100,29 @@ function SeccionTestimonios() {
 
 							{/* Divisor */}
 							<div className="border-t border-amber-100 pt-3">
-								{/* Nombre y ruta */}
-								<div className="flex items-start justify-between gap-2">
-									<div>
-										<p className="font-semibold text-gray-900 text-sm">
-											{t.nombre}
-										</p>
-										{t.origen && t.destino && (
-											<p className="text-xs text-amber-700 mt-0.5">
-												{t.origen} → {t.destino}
+								{/* Avatar, nombre, ruta y fecha */}
+								<div className="flex items-center justify-between gap-2">
+									<div className="flex items-center gap-2">
+										{/* Avatar con inicial del nombre o ícono genérico */}
+										<div className="w-9 h-9 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+											{t.nombre ? (
+												<span className="text-amber-700 font-bold text-sm uppercase">
+													{t.nombre.charAt(0)}
+												</span>
+											) : (
+												<UserCircle2 className="w-5 h-5 text-amber-400" />
+											)}
+										</div>
+										<div>
+											<p className="font-semibold text-gray-900 text-sm leading-tight">
+												{t.nombre}
 											</p>
-										)}
+											{t.origen && t.destino && (
+												<p className="text-xs text-amber-700 mt-0.5">
+													{t.origen} → {t.destino}
+												</p>
+											)}
+										</div>
 									</div>
 									{t.fecha && (
 										<span className="text-xs text-gray-400 whitespace-nowrap capitalize">
