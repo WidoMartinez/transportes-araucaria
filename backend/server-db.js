@@ -12549,11 +12549,15 @@ app.post("/api/evaluaciones/guardar", async (req, res) => {
 					"❌ [Propina] Error al crear orden Flow:",
 					flowError.message,
 				);
+				console.error(
+					"❌ [Propina] Detalle del error:",
+					flowError.response?.data || "(sin cuerpo de respuesta)",
+				);
 				// La evaluación ya se guardó, solo informamos el error de propina
 				return res.status(500).json({
 					success: false,
 					error:
-						"Evaluación guardada, pero hubo un error al procesar la propina. Contacta al soporte.",
+						"Evaluación guardada, pero hubo un error al procesar la propina. Por favor usa el mismo enlace para reintentar el pago.",
 				});
 			}
 		}

@@ -63,6 +63,24 @@ export const crearOrdenFlowPropina = async (monto, reservaCodigo, evaluacionId, 
 	const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
 	const backendBase = process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 
+	// Sanitizar email: eliminar espacios y convertir a minúsculas
+	// (equivalente a sanitizarEmailRobusto de server-db.js)
+	const emailSanitizado = (clienteEmail || "")
+		.trim()
+		.toLowerCase()
+		.replace(/[^\x20-\x7E]/g, "")
+		.replace(/\s+/g, "");
+
+	if (!emailSanitizado || !emailSanitizado.includes("@")) {
+		throw new Error(`Email inválido para crear propina en Flow: "${clienteEmail}"`);
+	}
+
+	// Flow CLP requiere monto entero exacto, sin decimales
+	const montoEntero = Math.round(Number(monto));
+	if (!montoEntero || montoEntero <= 0) {
+		throw new Error(`Monto de propina inválido: ${monto}`);
+	}
+
 	const commerceOrder = `PROPINA-${reservaCodigo || evaluacionId}-${Date.now()}`;
 
 	// Metadata para identificar la propina en el webhook de confirmación
@@ -77,8 +95,8 @@ export const crearOrdenFlowPropina = async (monto, reservaCodigo, evaluacionId, 
 		commerceOrder,
 		subject: `Propina - Reserva #${reservaCodigo || evaluacionId}`,
 		currency: "CLP",
-		amount: Number(monto),
-		email: clienteEmail,
+		amount: montoEntero,
+		email: emailSanitizado,
 		urlConfirmation: `${backendBase}/api/flow-confirmation`,
 		urlReturn: `${backendBase}/api/payment-result`,
 		optional: JSON.stringify(optionalPayload),
@@ -86,15 +104,34 @@ export const crearOrdenFlowPropina = async (monto, reservaCodigo, evaluacionId, 
 
 	params.s = signFlowParams(params);
 
-	const response = await axios.post(
-		`${flowApiUrl}/payment/create`,
-		new URLSearchParams(params).toString(),
-		{ headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-	);
+	console.log(`🚀 [Propina] Enviando orden a Flow:`, {
+		commerceOrder,
+		amount: montoEntero,
+		email: emailSanitizado,
+		urlConfirmation: params.urlConfirmation,
+		urlReturn: params.urlReturn,
+	});
+
+	let response;
+	try {
+		response = await axios.post(
+			`${flowApiUrl}/payment/create`,
+			new URLSearchParams(params).toString(),
+			{ headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+		);
+	} catch (axiosError) {
+		// Loguear el cuerpo completo de la respuesta de Flow para facilitar diagnóstico
+		const flowErrorBody = axiosError.response?.data;
+		console.error(`❌ [Propina] Flow respondió con error HTTP ${axiosError.response?.status}:`, flowErrorBody);
+		throw new Error(
+			`Flow error ${axiosError.response?.status}: ${JSON.stringify(flowErrorBody) || axiosError.message}`
+		);
+	}
 
 	const payment = response.data;
 
 	if (!payment.url || !payment.token) {
+		console.error("❌ [Propina] Respuesta inesperada de Flow:", payment);
 		throw new Error("Respuesta inválida desde Flow al crear orden de propina");
 	}
 

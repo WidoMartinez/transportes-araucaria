@@ -109,6 +109,13 @@ function FormularioEvaluacion({ token, reserva, evaluacion }) {
 
 			const data = await resp.json();
 
+			// Si la evaluación se guardó pero hubo error de propina, quedó en estado pendiente
+			// El usuario puede reintentarlo desde el mismo enlace
+			if (!resp.ok && data.error && data.error.includes("propina")) {
+				setEnviado(true); // La evaluación se guardó correctamente
+				return;
+			}
+
 			if (!resp.ok || !data.success) {
 				throw new Error(data.error || "Error al enviar la evaluación");
 			}
