@@ -43,13 +43,13 @@ export function AddressAutocomplete({
 	const [isInitializing, setIsInitializing] = useState(false);
 	// Indica si el Web Component se creó correctamente (billing activo)
 	const [webComponentActive, setWebComponentActive] = useState(false);
-	// Indica si el usuario está interactuando activamente con el Web Component
-	const [wcFocused, setWcFocused] = useState(false);
+	// Indica si el usuario está interactuando activamente con el campo (React o Web Component)
+	const [active, setActive] = useState(false);
 
 	// El overlay se muestra solo cuando: Web Component activo Y (campo vacío O usuario activo).
 	// Si ya hay una dirección guardada y el usuario no está editando, se muestra
 	// el input React con el valor existente, evitando el campo aparentemente vacío.
-	const showWebComponent = webComponentActive && (!value || wcFocused);
+	const showWebComponent = webComponentActive && (!value || active);
 
 	// Inicializar PlaceAutocompleteElement cuando la API esté lista
 	useEffect(() => {
@@ -82,8 +82,8 @@ export function AddressAutocomplete({
 
 			// Detectar foco/desenfoque del Web Component para activar/desactivar el overlay.
 			// focusin/focusout son eventos composed:true, burbujean desde el shadow DOM.
-			element.addEventListener("focusin", () => setWcFocused(true));
-			element.addEventListener("focusout", () => setWcFocused(false));
+			element.addEventListener("focusin", () => setActive(true));
+			element.addEventListener("focusout", () => setActive(false));
 
 			// Capturar el texto del input interno del Web Component mientras el usuario escribe.
 			// Los eventos 'input' del shadow DOM son composed:true, por lo que burbujean
@@ -182,6 +182,16 @@ export function AddressAutocomplete({
 				className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-10 ${className}`}
 				required={required}
 				autoComplete="off"
+				onFocus={() => {
+					// Cuando el usuario hace focus en el input React y el Web Component
+					// está disponible, activar el overlay y delegar el foco al Web Component.
+					// Esto permite que se despliegue el autocompletado aunque el campo
+					// ya tenga un valor guardado (modo edición de reserva).
+					if (webComponentActive) {
+						setActive(true);
+						requestAnimationFrame(() => elementRef.current?.focus());
+					}
+				}}
 				style={
 					showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined
 				}
