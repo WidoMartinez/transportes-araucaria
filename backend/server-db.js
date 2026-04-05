@@ -85,6 +85,7 @@ import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import setupOportunidadesRoutes from "./routes/oportunidades.js";
+import pagosRouter from "./routes/pagos.js";
 import { authJWT } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
@@ -612,6 +613,9 @@ app.use(cotizacionRouter);
 // --- RUTAS DE PROMOCIONES BANNER ---
 app.use("/api/promociones-banner", promocionesBannerRoutes);
 setupOportunidadesRoutes(app, authAdmin);
+
+// --- RUTAS DE PAGOS MERCADO PAGO ---
+app.use("/api/pagos", pagosRouter);
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 // Función para ejecutar migración automática del código de reserva

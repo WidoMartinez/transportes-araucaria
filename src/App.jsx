@@ -51,6 +51,9 @@ import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago 
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
 import OportunidadesTraslado from "./pages/OportunidadesTraslado"; // Página de oportunidades de traslado
 import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ads para traslados privados
+import PagoExitoso from "./pages/PagoExitoso"; // Página de pago exitoso con Mercado Pago
+import PagoFallido from "./pages/PagoFallido"; // Página de pago fallido con Mercado Pago
+import PagoPendiente from "./pages/PagoPendiente"; // Página de pago pendiente con Mercado Pago
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -248,6 +251,25 @@ const resolveIsEvaluarView = () => {
 	return hash.startsWith("#evaluar");
 };
 
+// Resolvers para páginas de retorno de Mercado Pago
+const resolveIsPagoExitosoView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	return pathname === "/pago-exitoso" || pathname.startsWith("/pago-exitoso/");
+};
+
+const resolveIsPagoFallidoView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	return pathname === "/pago-fallido" || pathname.startsWith("/pago-fallido/");
+};
+
+const resolveIsPagoPendienteView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	return (
+		pathname === "/pago-pendiente" ||
+		pathname.startsWith("/pago-pendiente/")
+	);
+};
+
 function App() {
 	const [isTrasladosView, setIsTrasladosView] = useState(
 		resolveIsTrasladosView,
@@ -268,6 +290,16 @@ function App() {
 		resolveIsTestGoogleAdsView,
 	);
 	const [isEvaluarView, setIsEvaluarView] = useState(resolveIsEvaluarView);
+	// Estados para páginas de retorno de Mercado Pago
+	const [isPagoExitosoView, setIsPagoExitosoView] = useState(
+		resolveIsPagoExitosoView,
+	);
+	const [isPagoFallidoView, setIsPagoFallidoView] = useState(
+		resolveIsPagoFallidoView,
+	);
+	const [isPagoPendienteView, setIsPagoPendienteView] = useState(
+		resolveIsPagoPendienteView,
+	);
 	const [destinosData, setDestinosData] = useState(destinosBase);
 	const [promotions, setPromotions] = useState([]);
 	const [descuentosGlobales, setDescuentosGlobales] = useState({
@@ -452,6 +484,28 @@ function App() {
 			window.removeEventListener("hashchange", syncEvaluar);
 			window.removeEventListener("popstate", syncEvaluar);
 		};
+	}, []);
+
+	// Sincronizar vistas de retorno de Mercado Pago
+	useEffect(() => {
+		const syncPagoExitoso = () =>
+			setIsPagoExitosoView(resolveIsPagoExitosoView());
+		window.addEventListener("popstate", syncPagoExitoso);
+		return () => window.removeEventListener("popstate", syncPagoExitoso);
+	}, []);
+
+	useEffect(() => {
+		const syncPagoFallido = () =>
+			setIsPagoFallidoView(resolveIsPagoFallidoView());
+		window.addEventListener("popstate", syncPagoFallido);
+		return () => window.removeEventListener("popstate", syncPagoFallido);
+	}, []);
+
+	useEffect(() => {
+		const syncPagoPendiente = () =>
+			setIsPagoPendienteView(resolveIsPagoPendienteView());
+		window.addEventListener("popstate", syncPagoPendiente);
+		return () => window.removeEventListener("popstate", syncPagoPendiente);
 	}, []);
 
 	// Sincronizar vista de COMPLETAR DETALLES vía HASH (para el flujo de recuperación)
@@ -2066,6 +2120,19 @@ function App() {
 
 	if (isFlowReturnView) {
 		return <FlowReturn />;
+	}
+
+	// Páginas de retorno de Mercado Pago (Checkout Pro)
+	if (isPagoExitosoView) {
+		return <PagoExitoso />;
+	}
+
+	if (isPagoFallidoView) {
+		return <PagoFallido />;
+	}
+
+	if (isPagoPendienteView) {
+		return <PagoPendiente />;
 	}
 
 	if (isOportunidadesView) {
