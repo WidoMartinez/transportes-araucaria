@@ -106,8 +106,8 @@ DB_USER=u419311572_admin
 DB_PASSWORD=tu_password_aqui
 
 # Pagos
-FLOW_API_KEY=tu_api_key_aqui
-FLOW_SECRET_KEY=tu_secret_key_aqui
+FLOW_API_KEY=68F45AF4-99F4-4F6A-98O3-32DL35O80A3F
+FLOW_SECRET_KEY=66c23b8685b57649baa43da1562a610bee200ac4
 ```
 
 ## ✨ Resultado Final
