@@ -112,6 +112,38 @@ return 0;
 }
 };
 
+/**
+ * Obtiene el offset horario de Chile (America/Santiago) para una fecha dada.
+ * Retorna la diferencia en horas respecto a UTC (ej: -4 en invierno, -3 en verano).
+ * Necesario porque el servidor en Render puede correr en UTC.
+ */
+const getChileOffsetHoras = (fechaStr) => {
+  // Referencia: 15:00 UTC evita ambigüedades de medianoche
+  const ref = new Date(`${fechaStr}T15:00:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Santiago",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(ref);
+  const horaSantiago = parseInt(parts.find((p) => p.type === "hour")?.value ?? "11");
+  return horaSantiago - 15; // ej: 11 - 15 = -4 (invierno), 12 - 15 = -3 (verano)
+};
+
+/**
+ * Construye un objeto Date representando una fecha+hora local de Chile,
+ * sin depender de la zona horaria del servidor.
+ * @param {string} fechaStr - Fecha en formato "YYYY-MM-DD"
+ * @param {string} horaStr  - Hora en formato "HH:MM"
+ * @returns {Date} Objeto Date en UTC equivalente a esa hora en Chile
+ */
+const crearFechaChile = (fechaStr, horaStr = "00:00") => {
+  const [h, m] = (horaStr || "00:00").split(":");
+  const offsetHoras = getChileOffsetHoras(fechaStr); // ej: -4
+  // Medianoche Chile en UTC = medianoche UTC + |offset| horas
+  const medianochChileUTC = new Date(`${fechaStr}T00:00:00Z`).getTime() + (-offsetHoras) * 3600000;
+  const horaMs = parseInt(h) * 3600000 + parseInt(m) * 60000;
+  return new Date(medianochChileUTC + horaMs);
+};
 
 // Función para detectar y generar oportunidades desde reservas confirmadas
 export const detectarYGenerarOportunidades = async (reserva) => {
@@ -174,28 +206,26 @@ if (
 
 if (!existeRetorno) {
 // Calcular hora aproximada: hora de llegada al destino + 30 minutos
+// Aritmética pura en minutos para evitar dependencia de zona horaria del servidor
 let horaAproximada = null;
 if (reserva.hora) {
 const [horas, minutos] = reserva.hora.split(":");
-const horaSalida = new Date();
-horaSalida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
-// Sumar duración del viaje + 30 min de buffer
-const horaLlegada = new Date(horaSalida.getTime() + duracionViajeMinutos * 60000);
-const horaDisponible = new Date(horaLlegada.getTime() + 30 * 60000);
-horaAproximada = `${String(horaDisponible.getHours()).padStart(2, "0")}:${String(horaDisponible.getMinutes()).padStart(2, "0")}`;
+const salidaEnMinutos = parseInt(horas) * 60 + parseInt(minutos);
+const disponibleEnMinutos = salidaEnMinutos + duracionViajeMinutos + 30;
+const hh = Math.floor(disponibleEnMinutos / 60) % 24;
+const mm = disponibleEnMinutos % 60;
+horaAproximada = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
-// Calcular validez: hasta X horas antes del viaje (desde configuración)
+// Calcular validez: hasta X horas antes del viaje de retorno
+// Se usa crearFechaChile() para construir el timestamp correcto sin depender de la TZ del servidor
 let validoHasta = null;
 const horasAnticipacionRetorno = configOfertas.anticipacionRetorno || 2;
-if (horaAproximada) {
-  const [h, m] = horaAproximada.split(":");
-  validoHasta = new Date(`${reserva.fecha}T${h}:${m}:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionRetorno);
-} else {
-  validoHasta = new Date(`${reserva.fecha}T00:00:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionRetorno);
-}
+const horaRefRetorno = horaAproximada || "00:00";
+validoHasta = new Date(
+  crearFechaChile(reserva.fecha, horaRefRetorno).getTime() -
+  horasAnticipacionRetorno * 3600000
+);
 
 // Solo crear si es futuro
 if (validoHasta > new Date()) {
@@ -248,27 +278,26 @@ estado: ["disponible", "reservada"],
 
 if (!existeIda) {
 // Calcular hora aproximada: hora de recogida - duración del viaje - 30 min buffer
+// Aritmética pura en minutos para evitar dependencia de zona horaria del servidor
 let horaAproximada = null;
 if (reserva.hora) {
 const [horas, minutos] = reserva.hora.split(":");
-const horaRecogida = new Date();
-horaRecogida.setHours(parseInt(horas), parseInt(minutos), 0, 0);
-// Restar duración del viaje + 30 min de buffer
-const horaSalidaNecesaria = new Date(horaRecogida.getTime() - duracionViajeMinutos * 60000 - 30 * 60000);
-horaAproximada = `${String(horaSalidaNecesaria.getHours()).padStart(2, "0")}:${String(horaSalidaNecesaria.getMinutes()).padStart(2, "0")}`;
+const recogidaEnMinutos = parseInt(horas) * 60 + parseInt(minutos);
+const salidaNecesariaEnMinutos = recogidaEnMinutos - duracionViajeMinutos - 30;
+// Ajustar si el resultado cae antes de medianoche
+const salidaAjustada = ((salidaNecesariaEnMinutos % 1440) + 1440) % 1440;
+horaAproximada = `${String(Math.floor(salidaAjustada / 60)).padStart(2, "0")}:${String(salidaAjustada % 60).padStart(2, "0")}`;
 }
 
-// Calcular validez: hasta X horas antes del viaje (desde configuración)
+// Calcular validez: hasta X horas antes de la hora del viaje de referencia
+// Se usa crearFechaChile() para construir el timestamp correcto sin depender de la TZ del servidor
 let validoHasta = null;
 const horasAnticipacionIda = configOfertas.anticipacionIda || 3;
-if (reserva.hora) {
-  const [h, m] = reserva.hora.split(":");
-  validoHasta = new Date(`${reserva.fecha}T${h}:${m}:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionIda);
-} else {
-  validoHasta = new Date(`${reserva.fecha}T00:00:00-03:00`);
-  validoHasta.setHours(validoHasta.getHours() - horasAnticipacionIda);
-}
+const horaRefIda = reserva.hora ? reserva.hora.substring(0, 5) : "00:00";
+validoHasta = new Date(
+  crearFechaChile(reserva.fecha, horaRefIda).getTime() -
+  horasAnticipacionIda * 3600000
+);
 
 // Solo crear si es futuro
 if (validoHasta > new Date()) {
