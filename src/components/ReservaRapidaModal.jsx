@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -135,6 +135,48 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
     }
     return { precioTotal: total, desgloseSillas: extraSillas };
   }, [promocion, formData.sillaInfantil, formData.cantidadSillasInfantiles]);
+
+  // --- CAPTURA DE LEAD (REMARKETING) DESDE BANNER PROMOCIONAL ---
+  // Se dispara silenciosamente cuando el usuario ingresa un email válido,
+  // con debounce de 2s para no saturar el backend mientras escribe.
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email || !emailRegex.test(formData.email)) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const apiUrl = getBackendUrl() || "https://transportes-araucaria.onrender.com";
+        const leadData = {
+          nombre: formData.nombre,
+          email: formData.email,
+          telefono: formData.telefono,
+          origen: promocion.origen,
+          destino: promocion.destino,
+          fecha: formData.fecha_ida,
+          hora: formData.hora_ida,
+          pasajeros: formData.cantidad_pasajeros,
+          precio: promocion.precio,
+          totalConDescuento: precioTotal,
+          source: "lead_banner_abandonado",
+        };
+
+        const response = await fetch(`${apiUrl}/api/reservas/capturar-lead`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(leadData),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("🎯 Lead banner capturado:", data.codigoReserva);
+        }
+      } catch (error) {
+        console.error("❌ Error capturando lead desde banner:", error);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [formData.email, formData.nombre, formData.telefono, formData.fecha_ida, formData.hora_ida, formData.cantidad_pasajeros, precioTotal]);
 
   if (!promocion) return null;
 

@@ -4474,6 +4474,11 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 				.json({ success: false, message: "Email es requerido" });
 		}
 
+		// Permitir source personalizado para diferenciar leads de hero vs banners
+		const sourceLead = datos.source === "lead_banner_abandonado"
+			? "lead_banner_abandonado"
+			: "lead_hero_abandonado";
+
 		// 1. Buscar si hay un lead reciente (24h) para este email para actualizarlo en lugar de crear uno nuevo
 		const hace24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -4481,7 +4486,7 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 			where: {
 				email: emailNormalizado,
 				estado: "pendiente",
-				source: "lead_hero_abandonado",
+				source: sourceLead,
 				created_at: { [Op.gte]: hace24Horas },
 			},
 			order: [["created_at", "DESC"]],
@@ -4515,7 +4520,7 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 				reservaLead ? reservaLead.totalConDescuento : 0,
 			),
 			vehiculo: datos.vehiculo || (reservaLead ? reservaLead.vehiculo : ""),
-			source: "lead_hero_abandonado",
+			source: sourceLead,
 			estado: "pendiente",
 			estadoPago: "pendiente",
 			ipAddress: req.ip || req.connection.remoteAddress || "",
