@@ -4475,9 +4475,10 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 		}
 
 		// Permitir source personalizado para diferenciar leads de hero vs banners
-		const sourceLead = datos.source === "lead_banner_abandonado"
-			? "lead_banner_abandonado"
-			: "lead_hero_abandonado";
+		const sourceLead =
+			datos.source === "lead_banner_abandonado"
+				? "lead_banner_abandonado"
+				: "lead_hero_abandonado";
 
 		// 1. Buscar si hay un lead reciente (24h) para este email para actualizarlo en lugar de crear uno nuevo
 		const hace24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
