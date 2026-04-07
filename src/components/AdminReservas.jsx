@@ -4941,7 +4941,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													</span>
 												</div>
 												{/* Desglose detallado de descuentos cuando aplica */}
-												{(Number(selectedReserva.precio) - Number(selectedReserva.totalConDescuento)) > 0 && (
+												{Number(selectedReserva.precio) -
+													Number(selectedReserva.totalConDescuento) >
+													0 && (
 													<>
 														{Number(selectedReserva.descuentoBase) > 0 && (
 															<div className="flex justify-between text-sm">
@@ -4950,7 +4952,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	Descuento base
 																</span>
 																<span className="font-bold text-green-600">
-																	-{formatCurrency(selectedReserva.descuentoBase)}
+																	-
+																	{formatCurrency(
+																		selectedReserva.descuentoBase,
+																	)}
 																</span>
 															</div>
 														)}
@@ -4961,7 +4966,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	Descuento online
 																</span>
 																<span className="font-bold text-green-600">
-																	-{formatCurrency(selectedReserva.descuentoOnline)}
+																	-
+																	{formatCurrency(
+																		selectedReserva.descuentoOnline,
+																	)}
 																</span>
 															</div>
 														)}
@@ -4972,7 +4980,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	Descuento ida y vuelta
 																</span>
 																<span className="font-bold text-green-600">
-																	-{formatCurrency(selectedReserva.descuentoRoundTrip)}
+																	-
+																	{formatCurrency(
+																		selectedReserva.descuentoRoundTrip,
+																	)}
 																</span>
 															</div>
 														)}
@@ -4980,26 +4991,38 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<div className="flex justify-between text-sm">
 																<span className="text-green-600 font-medium flex items-center gap-1">
 																	<Tag className="w-3 h-3" />
-																	Promoción{selectedReserva.codigoDescuento ? ` (${selectedReserva.codigoDescuento})` : ""}
+																	Promoción
+																	{selectedReserva.codigoDescuento
+																		? ` (${selectedReserva.codigoDescuento})`
+																		: ""}
 																</span>
 																<span className="font-bold text-green-600">
-																	-{formatCurrency(selectedReserva.descuentoPromocion)}
+																	-
+																	{formatCurrency(
+																		selectedReserva.descuentoPromocion,
+																	)}
 																</span>
 															</div>
 														)}
 														{/* Si hay descuento pero ninguno de los campos individuales lo explica,
 														    mostrar el total calculado como fallback */}
-														{!(Number(selectedReserva.descuentoBase) > 0 ||
+														{!(
+															Number(selectedReserva.descuentoBase) > 0 ||
 															Number(selectedReserva.descuentoOnline) > 0 ||
 															Number(selectedReserva.descuentoRoundTrip) > 0 ||
-															Number(selectedReserva.descuentoPromocion) > 0) && (
+															Number(selectedReserva.descuentoPromocion) > 0
+														) && (
 															<div className="flex justify-between text-sm">
 																<span className="text-green-600 font-medium flex items-center gap-1">
 																	<Tag className="w-3 h-3" />
 																	Descuentos Aplicados
 																</span>
 																<span className="font-bold text-green-600">
-																	-{formatCurrency(Number(selectedReserva.precio) - Number(selectedReserva.totalConDescuento))}
+																	-
+																	{formatCurrency(
+																		Number(selectedReserva.precio) -
+																			Number(selectedReserva.totalConDescuento),
+																	)}
 																</span>
 															</div>
 														)}
