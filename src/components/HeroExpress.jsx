@@ -397,11 +397,12 @@ function HeroExpress({
 	}, [reservaActiva, formData.hora, formData.fecha, formData.origen, formData.destino, horaTerminoServicioActivo]);
 
 	const handleSwap = () => {
-		if (formData.origen === "Aeropuerto La Araucanía") {
-			handleInputChange({ target: { name: "origen", value: formData.destino } });
-		} else {
-			handleInputChange({ target: { name: "destino", value: formData.origen } });
-		}
+		// Intercambiar origen y destino de forma atómica para evitar estados intermedios inconsistentes
+		setFormData(prev => ({
+			...prev,
+			origen: prev.destino || prev.origen,
+			destino: prev.origen || prev.destino,
+		}));
 	};
 
 	const verificarDisponibilidadYRetorno = async () => {
@@ -637,57 +638,89 @@ function HeroExpress({
 		<section id="inicio" className="relative w-full min-h-screen flex flex-col lg:grid lg:grid-cols-2 bg-transparent pt-20">
 
 			{/* Mobile Header (Visual) - Optimizado para rendimiento móvil */}
-			<div className="lg:hidden relative h-[35vh] min-h-[200px] w-full overflow-hidden bg-transparent">
-				{/* Degradado oscuro para asegurar contraste en móvil */}
-				<div className="absolute inset-x-0 bottom-0 h-full bg-gradient-to-t from-black/60 via-black/30 to-transparent z-0 pointer-events-none" />
+			<div className="lg:hidden relative h-[35vh] min-h-50 w-full overflow-hidden bg-gray-900">
+				{/* Imagen de fondo dinámica según destino */}
+				<img
+					src={selectedDestinoImage}
+					alt={targetName || "Transporte privado"}
+					loading="eager"
+					onError={(e) => { e.currentTarget.src = heroVan; }}
+					className="absolute inset-0 w-full h-full object-cover object-center"
+				/>
+				{/* Degradado oscuro para asegurar contraste */}
+				<div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/30 to-transparent z-0 pointer-events-none" />
 				
-				<div className="absolute bottom-14 left-4 right-4 z-10 safe-area-inset-bottom flex flex-col items-center text-center">
-					<motion.div
-						key={richInfo.title}
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.3 }}
-						className="flex flex-col items-center"
-					>
-						<h1 className="text-4xl lg:text-2xl font-bold text-white leading-tight mb-1" style={{textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)'}}>
-							{richInfo.isRich ? richInfo.titulo : richInfo.title}
-						</h1>
-						<p className="text-base text-white font-medium mb-2 line-clamp-2 max-w-[85%]" style={{textShadow: '0 1px 8px rgba(0,0,0,0.85)'}}>
-							{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
-						</p>
-
-						{/* 📢 NUEVO: Badge promocional de Tarifas Bajas para Móvil */}
-						<motion.div 
-							initial={{ opacity: 0, scale: 0.9 }}
-							animate={{ opacity: 1, scale: 1 }}
-							transition={{ delay: 0.6 }}
-							className="mt-2 mb-4"
-						>
-							<a 
-								href="/oportunidades" 
-								className="flex items-center gap-2 px-4 py-2 bg-chocolate-600/90 backdrop-blur-md rounded-full border border-chocolate-400 shadow-xl animate-pulse-subtle"
+				<div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col items-center text-center">
+					<AnimatePresence mode="wait">
+						{richInfo.isSummary ? (
+							/* Paso 1: vista de resumen — icono de check + texto compacto */
+							<motion.div
+								key="summary"
+								initial={{ opacity: 0, scale: 0.95 }}
+								animate={{ opacity: 1, scale: 1 }}
+								exit={{ opacity: 0, scale: 0.95 }}
+								transition={{ duration: 0.25 }}
+								className="flex flex-col items-center gap-2"
 							>
-								<Sparkles className="h-4 w-4 text-chocolate-100" />
-								<span className="text-sm font-bold text-white">
-									¡Ahorra un 50%! Ver Oportunidades
-								</span>
-							</a>
-						</motion.div>
+								<div className="w-12 h-12 rounded-full bg-emerald-500/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
+									<CheckCircle2 className="w-7 h-7 text-white" />
+								</div>
+								<h1 className="text-xl font-bold text-white" style={{textShadow: '0 2px 8px rgba(0,0,0,0.8)'}}>
+									Resumen de tu viaje
+								</h1>
+								<p className="text-sm text-white/90 font-medium" style={{textShadow: '0 1px 6px rgba(0,0,0,0.8)'}}>
+									{formData.origen} → {formData.destino}
+								</p>
+							</motion.div>
+						) : (
+							/* Paso 0: vista de selección — título dinámico + badge */
+							<motion.div
+								key={richInfo.title}
+								initial={{ opacity: 0, y: 10 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={{ opacity: 0, y: -10 }}
+								transition={{ duration: 0.3 }}
+								className="flex flex-col items-center"
+							>
+								<h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-1" style={{textShadow: '0 2px 12px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.9)'}}>
+									{richInfo.isRich ? richInfo.titulo : richInfo.title}
+								</h1>
+								<p className="text-sm text-white font-medium mb-2 line-clamp-2 max-w-[85%]" style={{textShadow: '0 1px 8px rgba(0,0,0,0.85)'}}>
+									{richInfo.isRich ? richInfo.bajada : richInfo.subtitle}
+								</p>
 
-						{/* Mobile Summary Pill - Tamaño táctil mejorado */}
-						{richInfo.isRich && (
-							<div className="flex flex-wrap justify-center gap-2 mt-2">
-								<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
-									<Plane className="w-3 h-3" /> {richInfo.distancia}
-								</Badge>
-								{richInfo.tiempo && (
-									<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
-										<Clock className="w-3 h-3" /> {richInfo.tiempo}
-									</Badge>
+								{/* Badge promocional — solo en paso 0 */}
+								<motion.div
+									initial={{ opacity: 0, scale: 0.9 }}
+									animate={{ opacity: 1, scale: 1 }}
+									transition={{ delay: 0.5 }}
+									className="mt-1"
+								>
+									<a
+										href="/oportunidades"
+										className="flex items-center gap-2 px-4 py-2 bg-chocolate-600/90 backdrop-blur-md rounded-full border border-chocolate-400 shadow-xl"
+									>
+										<Sparkles className="h-3.5 w-3.5 text-chocolate-100" />
+										<span className="text-xs font-bold text-white">¡Ahorra un 50%! Ver Oportunidades</span>
+									</a>
+								</motion.div>
+
+								{/* Badges de distancia/tiempo para destino rico */}
+								{richInfo.isRich && (
+									<div className="flex flex-wrap justify-center gap-2 mt-2">
+										<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
+											<Plane className="w-3 h-3" /> {richInfo.distancia}
+										</Badge>
+										{richInfo.tiempo && (
+											<Badge variant="secondary" className="bg-white/90 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 h-7 flex items-center gap-1.5 text-primary border-0 shadow-sm">
+												<Clock className="w-3 h-3" /> {richInfo.tiempo}
+											</Badge>
+										)}
+									</div>
 								)}
-							</div>
+							</motion.div>
 						)}
-					</motion.div>
+					</AnimatePresence>
 				</div>
 			</div>
 
@@ -695,6 +728,11 @@ function HeroExpress({
 			<div 
 				className="relative flex flex-col justify-start lg:justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-16 xl:p-24 overflow-y-auto bg-transparent z-10 -mt-6 mx-4 sm:mx-6 lg:mx-0 rounded-t-3xl rounded-b-3xl lg:mt-0 lg:rounded-none shadow-none mb-6 lg:mb-0"
 			>
+				{/* Indicador de pasos — visible en móvil, oculto en desktop */}
+				<div className="flex items-center justify-center gap-2 mb-4 lg:hidden">
+					<div className={`h-2 rounded-full transition-all duration-300 ${currentStep === 0 ? 'w-6 bg-primary' : 'w-2 bg-primary/30'}`} />
+					<div className={`h-2 rounded-full transition-all duration-300 ${currentStep === 1 ? 'w-6 bg-primary' : 'w-2 bg-primary/30'}`} />
+				</div>
 
 				<AnimatePresence mode="wait">
 					{currentStep === 0 && (
@@ -728,7 +766,21 @@ function HeroExpress({
 							</div>
 
 							<div className="space-y-5 md:space-y-4 bg-white/80 backdrop-blur-md p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100/50">
-								{/* Selectores de origen y destino - Con botón swap en desktop */}
+								{/* Selectores de origen y destino - Con botón swap en desktop y móvil */}
+								{/* Botón swap visible solo en móvil — encima de los selectores */}
+								<div className="flex md:hidden justify-end -mb-1">
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={handleSwap}
+										className="h-8 px-3 rounded-full bg-white border border-gray-200 shadow-sm text-muted-foreground hover:text-primary flex items-center gap-1.5 touch-manipulation text-xs"
+										aria-label="Intercambiar origen y destino"
+									>
+										<ArrowRightLeft className="h-3.5 w-3.5" />
+										Intercambiar
+									</Button>
+								</div>
 								<div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 md:gap-3 md:items-end">
 									<div className="space-y-2">
 										<Label htmlFor="origen" className="text-base md:text-sm font-semibold text-foreground">Origen</Label>
@@ -1169,7 +1221,7 @@ function HeroExpress({
 							animate={{ opacity: 1, x: 0 }}
 							exit={{ opacity: 0, x: 20 }}
 							transition={{ duration: 0.3 }}
-							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto bg-white p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-xl border border-gray-100/50"
+							className="space-y-5 md:space-y-6 w-full max-w-lg mx-auto bg-white p-6 sm:p-8 rounded-3xl lg:rounded-[2rem] shadow-xl border border-gray-100/50 overflow-y-auto"
 						>
 							{/* Header del paso 2 con botón volver optimizado para táctil */}
 							<div className="flex items-center gap-3 md:gap-4 mb-2">
@@ -1313,23 +1365,23 @@ function HeroExpress({
 								
 								return (
 									<div className="mt-6 pt-6 border-t border-border">
-										<div className={`flex items-start gap-3 p-4 rounded-lg border transition-all ${
-											formData.upgradeVan 
-												? 'bg-muted/50 border-border shadow-sm' 
-												: 'bg-muted/30 border-border hover:bg-muted/40'
-										}`}>
-											<input
-												type="checkbox"
-												id="upgrade-van"
-												checked={formData.upgradeVan || false}
-												onChange={(e) => {
-													setFormData(prev => ({
-														...prev,
-														upgradeVan: e.target.checked
-													}));
-												}}
-												className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
-											/>
+										{/* Upgrade a Van — área táctil grande para móvil */}
+										<div
+											className={`flex items-start gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer touch-manipulation min-h-20 active:scale-[0.99] ${
+												formData.upgradeVan 
+													? 'bg-primary/5 border-primary shadow-sm' 
+													: 'bg-muted/30 border-border hover:bg-muted/40 active:bg-muted/60'
+											}`}
+											onClick={() => setFormData(prev => ({ ...prev, upgradeVan: !prev.upgradeVan }))}
+										>
+											{/* Checkbox visualmente grande */}
+											<div className={`mt-0.5 w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${formData.upgradeVan ? 'bg-primary border-primary' : 'bg-white border-input'}`}>
+												{formData.upgradeVan && (
+													<svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+													</svg>
+												)}
+											</div>
 											<label htmlFor="upgrade-van" className="flex-1 cursor-pointer">
 												<div className="flex items-center justify-between gap-3 mb-2">
 													<div className="flex items-center gap-2 flex-wrap">
@@ -1536,8 +1588,8 @@ function HeroExpress({
 								</div>
 							)}
 
-							{/* Botones de pago - Optimizados para móvil */}
-							<div className="pt-2 space-y-3">
+							{/* Botones de pago - Optimizados para móvil con safe-area para notch */}
+							<div className="pt-2 space-y-3 pb-[env(safe-area-inset-bottom,0px)]">
 								{mostrarPrecio && !requiereCotizacionManual ? (
 									<Button
 										onClick={() => handleProcesarPago("flow", "total")}
