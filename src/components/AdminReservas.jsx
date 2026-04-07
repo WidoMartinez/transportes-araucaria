@@ -4940,21 +4940,70 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														{formatCurrency(selectedReserva.precio)}
 													</span>
 												</div>
-												{selectedReserva.descuentoTotal > 0 && (
-													<div className="flex justify-between text-sm">
-														<span className="text-green-600 font-medium flex items-center gap-1">
-															<Tag className="w-3 h-3" />
-															Descuentos Aplicados
-														</span>
-														<span className="font-bold text-green-600">
-															-
-															{formatCurrency(
-																selectedReserva.descuentoTotal ||
-																	selectedReserva.precio -
-																		selectedReserva.totalConDescuento,
-															)}
-														</span>
-													</div>
+												{/* Desglose detallado de descuentos cuando aplica */}
+												{(Number(selectedReserva.precio) - Number(selectedReserva.totalConDescuento)) > 0 && (
+													<>
+														{Number(selectedReserva.descuentoBase) > 0 && (
+															<div className="flex justify-between text-sm">
+																<span className="text-green-600 font-medium flex items-center gap-1">
+																	<Tag className="w-3 h-3" />
+																	Descuento base
+																</span>
+																<span className="font-bold text-green-600">
+																	-{formatCurrency(selectedReserva.descuentoBase)}
+																</span>
+															</div>
+														)}
+														{Number(selectedReserva.descuentoOnline) > 0 && (
+															<div className="flex justify-between text-sm">
+																<span className="text-green-600 font-medium flex items-center gap-1">
+																	<Tag className="w-3 h-3" />
+																	Descuento online
+																</span>
+																<span className="font-bold text-green-600">
+																	-{formatCurrency(selectedReserva.descuentoOnline)}
+																</span>
+															</div>
+														)}
+														{Number(selectedReserva.descuentoRoundTrip) > 0 && (
+															<div className="flex justify-between text-sm">
+																<span className="text-green-600 font-medium flex items-center gap-1">
+																	<Tag className="w-3 h-3" />
+																	Descuento ida y vuelta
+																</span>
+																<span className="font-bold text-green-600">
+																	-{formatCurrency(selectedReserva.descuentoRoundTrip)}
+																</span>
+															</div>
+														)}
+														{Number(selectedReserva.descuentoPromocion) > 0 && (
+															<div className="flex justify-between text-sm">
+																<span className="text-green-600 font-medium flex items-center gap-1">
+																	<Tag className="w-3 h-3" />
+																	Promoción{selectedReserva.codigoDescuento ? ` (${selectedReserva.codigoDescuento})` : ""}
+																</span>
+																<span className="font-bold text-green-600">
+																	-{formatCurrency(selectedReserva.descuentoPromocion)}
+																</span>
+															</div>
+														)}
+														{/* Si hay descuento pero ninguno de los campos individuales lo explica,
+														    mostrar el total calculado como fallback */}
+														{!(Number(selectedReserva.descuentoBase) > 0 ||
+															Number(selectedReserva.descuentoOnline) > 0 ||
+															Number(selectedReserva.descuentoRoundTrip) > 0 ||
+															Number(selectedReserva.descuentoPromocion) > 0) && (
+															<div className="flex justify-between text-sm">
+																<span className="text-green-600 font-medium flex items-center gap-1">
+																	<Tag className="w-3 h-3" />
+																	Descuentos Aplicados
+																</span>
+																<span className="font-bold text-green-600">
+																	-{formatCurrency(Number(selectedReserva.precio) - Number(selectedReserva.totalConDescuento))}
+																</span>
+															</div>
+														)}
+													</>
 												)}
 												<div className="pt-2 border-t flex justify-between items-center text-lg">
 													<span className="font-black text-slate-800">

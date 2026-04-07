@@ -12890,7 +12890,7 @@ app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
 				{
 					model: Reserva,
 					as: "Reserva",
-					// Incluir pasajeros y precio para mostrar en el modal de evaluación
+					// Incluir precio base, descuentos y total real pagado para el modal de evaluación
 					attributes: [
 						"id",
 						"codigoReserva",
@@ -12902,6 +12902,12 @@ app.get("/api/admin/evaluaciones", authJWT, apiLimiter, async (req, res) => {
 						"email",
 						"pasajeros",
 						"precio",
+						"totalConDescuento",
+						"descuentoBase",
+						"descuentoPromocion",
+						"descuentoRoundTrip",
+						"descuentoOnline",
+						"codigoDescuento",
 					],
 					required: false,
 				},

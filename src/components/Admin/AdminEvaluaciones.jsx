@@ -398,21 +398,83 @@ function AdminEvaluaciones() {
 									</div>
 								</div>
 							)}
-							{/* Valor del servicio y Conductor */}
-							<div className="grid grid-cols-2 gap-3">
-								{modalEval.Reserva?.precio > 0 && (
-									<div>
-										<p className="text-xs text-amber-700 font-medium mb-0.5">Valor servicio</p>
-										<p className="text-gray-900 font-semibold">{formatCurrency(modalEval.Reserva.precio)}</p>
+							{/* Valor del servicio, desglose de descuentos y Conductor */}
+							{modalEval.Reserva?.precio > 0 && (() => {
+								const precioBase = Number(modalEval.Reserva.precio) || 0;
+								const totalReal = Number(modalEval.Reserva.totalConDescuento) || precioBase;
+								const totalDescuento = precioBase - totalReal;
+								const tieneDescuento = totalDescuento > 0;
+								return (
+									<div className="space-y-1">
+										{/* Fila: precio base y conductor en paralelo */}
+										<div className="grid grid-cols-2 gap-3">
+											<div>
+												<p className="text-xs text-amber-700 font-medium mb-0.5">
+													{tieneDescuento ? "Precio base" : "Valor servicio"}
+												</p>
+												<p className={`font-semibold ${tieneDescuento ? "text-gray-500 line-through text-sm" : "text-gray-900"}`}>
+													{formatCurrency(precioBase)}
+												</p>
+											</div>
+											{modalEval.conductorNombre && (
+												<div>
+													<p className="text-xs text-amber-700 font-medium mb-0.5">Conductor</p>
+													<p className="text-gray-900">{modalEval.conductorNombre}</p>
+												</div>
+											)}
+										</div>
+										{/* Desglose de descuentos cuando aplica */}
+										{tieneDescuento && (
+											<div className="bg-green-50 border border-green-200 rounded-lg p-2 space-y-1 text-xs">
+												{Number(modalEval.Reserva.descuentoBase) > 0 && (
+													<div className="flex justify-between text-green-700">
+														<span>Descuento base</span>
+														<span>-{formatCurrency(modalEval.Reserva.descuentoBase)}</span>
+													</div>
+												)}
+												{Number(modalEval.Reserva.descuentoOnline) > 0 && (
+													<div className="flex justify-between text-green-700">
+														<span>Descuento online</span>
+														<span>-{formatCurrency(modalEval.Reserva.descuentoOnline)}</span>
+													</div>
+												)}
+												{Number(modalEval.Reserva.descuentoRoundTrip) > 0 && (
+													<div className="flex justify-between text-green-700">
+														<span>Descuento ida y vuelta</span>
+														<span>-{formatCurrency(modalEval.Reserva.descuentoRoundTrip)}</span>
+													</div>
+												)}
+												{Number(modalEval.Reserva.descuentoPromocion) > 0 && (
+													<div className="flex justify-between text-green-700">
+														<span>Promoción
+															{modalEval.Reserva.codigoDescuento ? ` (${modalEval.Reserva.codigoDescuento})` : ""}
+														</span>
+														<span>-{formatCurrency(modalEval.Reserva.descuentoPromocion)}</span>
+													</div>
+												)}
+												<div className="flex justify-between font-bold text-green-800 border-t border-green-300 pt-1 mt-1">
+													<span>Total descuentos</span>
+													<span>-{formatCurrency(totalDescuento)}</span>
+												</div>
+											</div>
+										)}
+										{/* Valor real pagado */}
+										{tieneDescuento && (
+											<div>
+												<p className="text-xs text-amber-700 font-medium mb-0.5">Valor real pagado</p>
+												<p className="text-gray-900 font-bold text-base">{formatCurrency(totalReal)}</p>
+											</div>
+										)}
 									</div>
-								)}
-								{modalEval.conductorNombre && (
-									<div>
-										<p className="text-xs text-amber-700 font-medium mb-0.5">Conductor</p>
-										<p className="text-gray-900">{modalEval.conductorNombre}</p>
-									</div>
-								)}
-							</div>
+								);
+							})()}
+							{/* Conductor cuando no hay precio */}
+							{!(modalEval.Reserva?.precio > 0) && modalEval.conductorNombre && (
+								<div>
+									<p className="text-xs text-amber-700 font-medium mb-0.5">Conductor</p>
+									<p className="text-gray-900">{modalEval.conductorNombre}</p>
+								</div>
+							)}
 							{/* Fecha evaluación */}
 							<div className="border-t border-amber-200 pt-2">
 								<p className="text-xs text-amber-700 font-medium mb-0.5">Fecha evaluación</p>
