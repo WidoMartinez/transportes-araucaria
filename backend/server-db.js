@@ -9320,12 +9320,13 @@ app.get("/api/payment-status", async (req, res) => {
 
 		let reservaId = reserva_id ? parseInt(reserva_id, 10) : null;
 		let tokenResuelto = token || null;
+		let flowTokenRecord = null; // Guardar el registro completo para acceder a metadata
 
 		// Si se recibe token pero no reserva_id, buscar la reserva asociada en FlowToken
 		if (token && !reservaId) {
-			const flowToken = await FlowToken.findByPk(token);
-			if (flowToken?.reservaId) {
-				reservaId = flowToken.reservaId;
+			flowTokenRecord = await FlowToken.findByPk(token);
+			if (flowTokenRecord?.reservaId) {
+				reservaId = flowTokenRecord.reservaId;
 			}
 		}
 
@@ -9333,12 +9334,12 @@ app.get("/api/payment-status", async (req, res) => {
 		// Necesario para poder consultar a Flow directamente como fallback
 		if (reservaId && !tokenResuelto) {
 			try {
-				const flowTokenByReserva = await FlowToken.findOne({
+				flowTokenRecord = await FlowToken.findOne({
 					where: { reservaId: reservaId },
 					order: [["created_at", "DESC"]],
 				});
-				if (flowTokenByReserva?.token) {
-					tokenResuelto = flowTokenByReserva.token;
+				if (flowTokenRecord?.token) {
+					tokenResuelto = flowTokenRecord.token;
 				}
 			} catch (tokenBusquedaErr) {
 				console.warn(
@@ -9348,24 +9349,21 @@ app.get("/api/payment-status", async (req, res) => {
 			}
 		}
 
+		// Si tenemos token pero aún no cargamos el registro FlowToken, cargarlo ahora
+		if (tokenResuelto && !flowTokenRecord) {
+			try {
+				flowTokenRecord = await FlowToken.findByPk(tokenResuelto);
+			} catch {
+				// No crítico, seguir sin metadata
+			}
+		}
+
 		if (!reservaId) {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
 		}
 
-		const reserva = await Reserva.findByPk(reservaId, {
-			attributes: [
-				"id",
-				"estadoPago",
-				"pagoMonto",
-				"totalConDescuento",
-				"precio",
-				"estado",
-				"saldoPendiente",
-				"abonoPagado",
-				"saldoPagado",
-				"tipoPago",
-			],
-		});
+		// Cargar la reserva completa (sin restricción de atributos) para poder actualizarla si es necesario
+		const reserva = await Reserva.findByPk(reservaId);
 
 		if (!reserva) {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
@@ -9442,7 +9440,7 @@ app.get("/api/payment-status", async (req, res) => {
 						}
 
 						try {
-							await reserva.reload(); // Leer la fila completa para poder actualizar
+							// Reserva ya fue cargada completa (sin restricción de atributos), actualizar directo
 							await reserva.update({
 								estadoPago: nuevoEstadoPago,
 								pagoId: flowData.flowOrder?.toString() || null,
@@ -9458,6 +9456,102 @@ app.get("/api/payment-status", async (req, res) => {
 							console.log(
 								`✅ [payment-status] Reserva ${reservaId} actualizada a estadoPago="${nuevoEstadoPago}" vía fallback Flow API.`,
 							);
+
+							// --- Actualizar CodigoPago si corresponde (flujo "pagar con código") ---
+							// Solo aplica cuando el webhook se perdió y la reserva proviene de un código de pago
+							try {
+								const metadataToken = flowTokenRecord?.metadata || {};
+								const codigoPagoIdFallback = metadataToken.codigoPagoId
+									? Number(metadataToken.codigoPagoId)
+									: null;
+								let registroCodigo = null;
+
+								if (codigoPagoIdFallback && !isNaN(codigoPagoIdFallback)) {
+									registroCodigo = await CodigoPago.findByPk(codigoPagoIdFallback);
+								}
+								if (!registroCodigo && reserva.referenciaPago) {
+									const codigoStr = reserva.referenciaPago.trim().toUpperCase();
+									registroCodigo = await CodigoPago.findOne({
+										where: { codigo: codigoStr },
+									});
+								}
+
+								if (registroCodigo && registroCodigo.estado !== "usado") {
+									const nuevosUsos = (parseInt(registroCodigo.usosActuales, 10) || 0) + 1;
+									const nuevoEstadoCodigo =
+										nuevosUsos >= registroCodigo.usosMaximos
+											? "usado"
+											: registroCodigo.estado;
+									await registroCodigo.update({
+										usosActuales: nuevosUsos,
+										reservaId: reserva.id,
+										emailCliente: reserva.email,
+										fechaUso: new Date(),
+										estado: nuevoEstadoCodigo,
+									});
+									console.log(
+										`✅ [payment-status fallback] CodigoPago "${registroCodigo.codigo}" actualizado (${nuevosUsos}/${registroCodigo.usosMaximos}, estado: ${nuevoEstadoCodigo})`,
+									);
+								}
+							} catch (cpFallbackErr) {
+								console.warn(
+									"⚠️ [payment-status fallback] No se pudo actualizar CodigoPago:",
+									cpFallbackErr.message,
+								);
+							}
+
+							// --- Enviar correo de confirmación de pago (si aún no fue enviado) ---
+							// Solo disparar si el estadoPago resultante es "pagado" para evitar envíos parciales
+							if (nuevoEstadoPago === "pagado") {
+								try {
+									const phpUrl =
+										process.env.PHP_PAYMENT_CONFIRMATION_URL ||
+										"https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php";
+									const emailDataFallback = {
+										email: reserva.email,
+										nombre: reserva.nombre,
+										codigoReserva: reserva.codigoReserva,
+										origen: reserva.origen,
+										destino: reserva.destino,
+										fecha: reserva.fecha,
+										hora: reserva.hora,
+										pasajeros: reserva.pasajeros,
+										vehiculo: reserva.vehiculo,
+										hotel: reserva.hotel || "",
+										monto: flowData.amount,
+										gateway: "Flow",
+										paymentId: flowData.flowOrder?.toString() || "",
+										estadoPago: "approved",
+										idaVuelta: reserva.idaVuelta,
+										fechaRegreso: reserva.fechaRegreso || "",
+										horaRegreso: reserva.horaRegreso || "",
+										upgradeVan: reserva.upgradeVan,
+										motivo: "",
+									};
+									// No await para no bloquear la respuesta al cliente ya que el correo es no crítico
+									axios
+										.post(phpUrl, emailDataFallback, {
+											headers: { "Content-Type": "application/json" },
+											timeout: 30000,
+										})
+										.then(() =>
+											console.log(
+												`📧 [payment-status fallback] Correo de confirmación enviado a ${reserva.email}`,
+											),
+										)
+										.catch((mailErr) =>
+											console.warn(
+												"⚠️ [payment-status fallback] Error enviando correo:",
+												mailErr.message,
+											),
+										);
+								} catch (mailDispatchErr) {
+									console.warn(
+										"⚠️ [payment-status fallback] No se pudo despachar correo:",
+										mailDispatchErr.message,
+									);
+								}
+							}
 						} catch (updateErr) {
 							console.error(
 								"❌ [payment-status] Error actualizando reserva:",
