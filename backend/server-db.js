@@ -4507,7 +4507,9 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 			telefono: datos.telefono || (reservaLead ? reservaLead.telefono : ""),
 			origen: datos.origen || (reservaLead ? reservaLead.origen : ""),
 			destino: datos.destino || (reservaLead ? reservaLead.destino : ""),
-			fecha: datos.fecha || (reservaLead ? reservaLead.fecha : null),
+			// fecha es NOT NULL en la BD; para leads sin fecha elegida se usa la fecha actual
+			// El valor real se actualiza cuando el usuario completa la reserva
+			fecha: datos.fecha || (reservaLead ? reservaLead.fecha : null) || new Date().toISOString().split("T")[0],
 			hora:
 				normalizeTimeGlobal(datos.hora) ||
 				(reservaLead ? reservaLead.hora : null),
@@ -13536,6 +13538,8 @@ const startServer = async () => {
 						amount: amountNum,
 						email: email || "",
 						status: "pending",
+						// La preferencia MP expira en 2 horas (configurado en expires_in)
+						expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
 					});
 				} catch (tokenErr) {
 					// No fatal: si falla el guardado del token, el pago puede continuar
