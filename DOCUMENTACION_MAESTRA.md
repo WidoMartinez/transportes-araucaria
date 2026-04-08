@@ -1707,15 +1707,15 @@ Frontend (selector UI)
 
 #### Componentes creados / modificados
 
-| Archivo | Tipo | Cambio |
-|---|---|---|
-| `src/components/MercadoPagoReturn.jsx` | **Nuevo** | Página de retorno post-pago MP, análoga a `FlowReturn.jsx` |
-| `src/App.jsx` | Modificado | Nuevo resolver `resolveIsMpReturnView`, estado `isMpReturnView`, render de `MercadoPagoReturn` |
-| `src/components/PagarConCodigo.jsx` | Modificado | Estado `pasarela`, función `procesarPagoConCodigoMP()`, selector UI |
-| `src/components/ConsultarReserva.jsx` | Modificado | Estado `pasarela`, lógica bifurcada en `continuarPago()`, selector UI |
-| `src/components/HeroExpress.jsx` | Modificado | Estado `pasarela`, selector UI, `handleProcesarPago(pasarela, ...)` |
-| `backend/server-db.js` | Modificado | Endpoints `POST /api/create-payment-mp` y `POST /api/mp-confirmation` + import SDK |
-| `backend/package.json` | Modificado | Dependencia `mercadopago` SDK v2 instalada |
+| Archivo                                | Tipo       | Cambio                                                                                         |
+| -------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| `src/components/MercadoPagoReturn.jsx` | **Nuevo**  | Página de retorno post-pago MP, análoga a `FlowReturn.jsx`                                     |
+| `src/App.jsx`                          | Modificado | Nuevo resolver `resolveIsMpReturnView`, estado `isMpReturnView`, render de `MercadoPagoReturn` |
+| `src/components/PagarConCodigo.jsx`    | Modificado | Estado `pasarela`, función `procesarPagoConCodigoMP()`, selector UI                            |
+| `src/components/ConsultarReserva.jsx`  | Modificado | Estado `pasarela`, lógica bifurcada en `continuarPago()`, selector UI                          |
+| `src/components/HeroExpress.jsx`       | Modificado | Estado `pasarela`, selector UI, `handleProcesarPago(pasarela, ...)`                            |
+| `backend/server-db.js`                 | Modificado | Endpoints `POST /api/create-payment-mp` y `POST /api/mp-confirmation` + import SDK             |
+| `backend/package.json`                 | Modificado | Dependencia `mercadopago` SDK v2 instalada                                                     |
 
 #### Endpoints backend
 
@@ -1742,6 +1742,7 @@ Crea una preferencia de pago en Mercado Pago y retorna la URL de redirección.
 ```
 
 Campos de la preferencia que cumplen el checklist de calidad MP (14 campos requeridos):
+
 - `items`: `id`, `title`, `description`, `category_id`, `quantity`, `unit_price`, `currency_id`
 - `payer`: `email`, `first_name`, `last_name`, `phone`
 - `back_urls`: `success`, `pending`, `failure` (con `amount`, `reserva_id`, `codigo`, `d` Base64)
@@ -1776,6 +1777,7 @@ Procesa notificaciones de pago de Mercado Pago.
 Análogo a `FlowReturn.jsx`. Se activa cuando `window.location.pathname === "/mp-return"`.
 
 **Parámetros URL recibidos desde MP:**
+
 - `collection_id` / `payment_id`: ID único del pago en MP
 - `status`: estado del pago (`approved`, `pending`, `failure`)
 - `amount`: monto embebido en `back_url` por el backend
@@ -1783,6 +1785,7 @@ Análogo a `FlowReturn.jsx`. Se activa cuando `window.location.pathname === "/mp
 - `d`: datos del usuario en Base64 (email, nombre, teléfono) para Enhanced Conversions
 
 **Conversión Google Ads:**
+
 - Etiqueta de compra: `AW-17529712870/yZz-CJqiicUbEObh6KZB`
 - `transaction_id`: usa `collection_id` de MP (único garantizado)
 - Deduplicación: clave `mp_conversion_{collection_id}` en `sessionStorage`
