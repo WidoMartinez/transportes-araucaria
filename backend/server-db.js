@@ -9400,10 +9400,9 @@ app.get("/api/payment-status", async (req, res) => {
 
 					const flowApiUrl =
 						process.env.FLOW_API_URL || "https://www.flow.cl/api";
-					const flowResp = await axios.get(
-						`${flowApiUrl}/payment/getStatus`,
-						{ params: paramsFlow },
-					);
+					const flowResp = await axios.get(`${flowApiUrl}/payment/getStatus`, {
+						params: paramsFlow,
+					});
 					const flowData = flowResp.data;
 
 					console.log(
