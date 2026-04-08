@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 13 Marzo 2026
-> **Versión**: 1.9
+> **Última Actualización**: 8 Abril 2026
+> **Versión**: 2.0
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -40,6 +40,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Sistema de Persistencia y Robustez de Pagos](#524-sistema-de-persistencia-y-robustez-de-pagos)
    - [Almacenamiento Persistente de Imágenes (Cloudinary)](#525-almacenamiento-persistente-de-imágenes-cloudinary)
    - [Estrategia de Logs en Render](#526-estrategia-de-logs-en-render)
+   - [Integración Mercado Pago Checkout Pro](#527-integración-mercado-pago-checkout-pro)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -1675,6 +1676,146 @@ Los estados de Flow se mapean a texto legible: `1→PENDIENTE`, `2→PAGADO`, `3
 
 > [!IMPORTANT]
 > Si en el futuro se agrega lógica que itera sobre colecciones (tarifas, configuraciones, destinos), **nunca poner logs dentro del bucle**. Acumular resultados y loguear una sola vez al final si es necesario.
+
+---
+
+### 5.27 Integración Mercado Pago Checkout Pro
+
+**Implementado: 8 Abril 2026**
+
+#### Descripción General
+
+Se integró **Mercado Pago Checkout Pro** como segunda pasarela de pago junto a **Flow**, disponible en todos los puntos de entrada de pago del sistema. El usuario puede seleccionar entre ambas pasarelas antes de confirmar el pago.
+
+#### Arquitectura
+
+```
+Frontend (selector UI)
+  ├── pasarela = "flow"        → POST /create-payment      → Flow
+  └── pasarela = "mercadopago" → POST /api/create-payment-mp → Mercado Pago
+                                         ↓
+                               Preference (SDK v2)
+                                         ↓
+                               Redirect a init_point
+                                         ↓
+                               Webhook POST /api/mp-confirmation
+                                         ↓
+                               DB update + email + oportunidades
+                                         ↓
+                               Retorno a /mp-return → MercadoPagoReturn.jsx
+```
+
+#### Componentes creados / modificados
+
+| Archivo | Tipo | Cambio |
+|---|---|---|
+| `src/components/MercadoPagoReturn.jsx` | **Nuevo** | Página de retorno post-pago MP, análoga a `FlowReturn.jsx` |
+| `src/App.jsx` | Modificado | Nuevo resolver `resolveIsMpReturnView`, estado `isMpReturnView`, render de `MercadoPagoReturn` |
+| `src/components/PagarConCodigo.jsx` | Modificado | Estado `pasarela`, función `procesarPagoConCodigoMP()`, selector UI |
+| `src/components/ConsultarReserva.jsx` | Modificado | Estado `pasarela`, lógica bifurcada en `continuarPago()`, selector UI |
+| `src/components/HeroExpress.jsx` | Modificado | Estado `pasarela`, selector UI, `handleProcesarPago(pasarela, ...)` |
+| `backend/server-db.js` | Modificado | Endpoints `POST /api/create-payment-mp` y `POST /api/mp-confirmation` + import SDK |
+| `backend/package.json` | Modificado | Dependencia `mercadopago` SDK v2 instalada |
+
+#### Endpoints backend
+
+**`POST /api/create-payment-mp`**
+
+Crea una preferencia de pago en Mercado Pago y retorna la URL de redirección.
+
+```json
+// Request
+{
+  "amount": 45000,
+  "description": "Traslado ZCO - Temuco",
+  "email": "cliente@example.com",
+  "nombre": "Juan Pérez",
+  "telefono": "+56912345678",
+  "reservaId": 123,
+  "codigoReserva": "AR-20260408-0001",
+  "tipoPago": "total",
+  "paymentOrigin": "reserva_express"
+}
+
+// Response
+{ "url": "https://www.mercadopago.cl/checkout/v1/redirect?...", "preferenceId": "..." }
+```
+
+Campos de la preferencia que cumplen el checklist de calidad MP (14 campos requeridos):
+- `items`: `id`, `title`, `description`, `category_id`, `quantity`, `unit_price`, `currency_id`
+- `payer`: `email`, `first_name`, `last_name`, `phone`
+- `back_urls`: `success`, `pending`, `failure` (con `amount`, `reserva_id`, `codigo`, `d` Base64)
+- `auto_return`: `"approved"`
+- `notification_url`: `https://transportes-araucaria.onrender.com/api/mp-confirmation`
+- `external_reference`: `reserva_{id}_{codigo}`
+- `statement_descriptor`: `"Transportes Araucaria"`
+- `metadata`: campos completos de la reserva
+- `expires`: `true` con ventana de 2 horas
+
+Guarda el `preference.id` en tabla `FlowToken` con `gateway: "mercadopago"`.
+
+En desarrollo (`NODE_ENV=development` o `MP_SANDBOX=true`) usa `sandbox_init_point`.
+
+**`POST /api/mp-confirmation`** (webhook IPN)
+
+Procesa notificaciones de pago de Mercado Pago.
+
+1. Responde HTTP 200 de inmediato (requerido por MP)
+2. Solo procesa eventos `type === "payment"`
+3. Consulta el estado real del pago al API de MP vía SDK
+4. Solo actúa si `status === "approved"`
+5. Extrae `reservaId` desde `external_reference`
+6. Actualiza BD: `estadoPago: "pagado"`, `estado: "confirmada"`, `metodoPago: "mercadopago"`, `referenciaPagoExterno: paymentId`
+7. Guarda en tabla `Transaccion`
+8. Envía email de confirmación vía PHPMailer
+9. Llama a `detectarYGenerarOportunidades()`
+10. Idempotencia: si `reserva.estadoPago === "pagado"` ya, retorna sin procesar
+
+#### Componente MercadoPagoReturn.jsx
+
+Análogo a `FlowReturn.jsx`. Se activa cuando `window.location.pathname === "/mp-return"`.
+
+**Parámetros URL recibidos desde MP:**
+- `collection_id` / `payment_id`: ID único del pago en MP
+- `status`: estado del pago (`approved`, `pending`, `failure`)
+- `amount`: monto embebido en `back_url` por el backend
+- `reserva_id`, `codigo`: identificadores de la reserva
+- `d`: datos del usuario en Base64 (email, nombre, teléfono) para Enhanced Conversions
+
+**Conversión Google Ads:**
+- Etiqueta de compra: `AW-17529712870/yZz-CJqiicUbEObh6KZB`
+- `transaction_id`: usa `collection_id` de MP (único garantizado)
+- Deduplicación: clave `mp_conversion_{collection_id}` en `sessionStorage`
+- Enhanced Conversions: decodifica `d` (Base64) → `gtag('set', 'user_data', {...})`
+- Estrategia de polling para pagos pending: 6 × 5s rápidos + 18 × 15s lentos (~5 min)
+
+#### Variables de entorno requeridas (Render.com)
+
+```env
+MP_ACCESS_TOKEN=APP_USR-7632289193248021-XXXXXX...   # Token de producción
+MP_SANDBOX=false                                       # Omitir o false en producción
+```
+
+> [!IMPORTANT]
+> El `MP_ACCESS_TOKEN` debe ser el token de **producción** de la aplicación "Ruta Araucaria pasarela" (AppID `7632289193248021`). Se obtiene en mercadopago.com/developers.
+
+#### Selector de pasarela (UI)
+
+En los tres puntos de entrada de pago se muestra un selector de 2 botones antes del botón de pago:
+
+```
+[ 💳 Flow ]  [ 🟦 Mercado Pago ]
+```
+
+- Por defecto: `Flow` (sin cambio de comportamiento para usuarios existentes)
+- El texto del indicador de seguridad se adapta dinámicamente a la pasarela seleccionada
+- La lógica en `handlePayment` (App.jsx) selecciona el endpoint correcto según `gateway`
+
+#### Consideraciones de seguridad
+
+- El webhook no confía en el monto enviado por MP en el IPN; siempre re-consulta el estado real al API de MP vía SDK
+- El monto de retorno es embebido por el backend en la `back_url` al crear la preferencia, nunca depende solo de lo que devuelve MP en el redirect
+- Idempotencia implementada en el webhook para evitar doble procesamiento
 
 ---
 
