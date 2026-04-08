@@ -210,7 +210,10 @@ function MercadoPagoReturn() {
 					transaction_id: transactionId,
 				};
 
-				console.log(`🚀 [MPReturn] Disparando conversión Google Ads:`, conversionData);
+				console.log(
+					`🚀 [MPReturn] Disparando conversión Google Ads:`,
+					conversionData,
+				);
 				window.gtag("event", "conversion", conversionData);
 				sessionStorage.setItem(conversionKey, "true");
 			} catch (convErr) {
@@ -275,8 +278,7 @@ function MercadoPagoReturn() {
 						if (data.pagado) {
 							cancelado = true;
 							setPaymentStatus("success");
-							const montoConfirmado =
-								data.monto?.toString() || amountParam;
+							const montoConfirmado = data.monto?.toString() || amountParam;
 							const gtagListo = await waitForGtag();
 							if (gtagListo) {
 								triggerConversion(
@@ -441,8 +443,8 @@ function MercadoPagoReturn() {
 										<li className="flex items-start">
 											<span className="mr-2">✓</span>
 											<span>
-												Nuestro equipo te contactará para coordinar los
-												detalles finales
+												Nuestro equipo te contactará para coordinar los detalles
+												finales
 											</span>
 										</li>
 										<li className="flex items-start">
@@ -483,9 +485,7 @@ function MercadoPagoReturn() {
 									</li>
 									<li className="flex items-start">
 										<span className="mr-2">•</span>
-										<span>
-											Si tienes dudas, contáctanos por WhatsApp
-										</span>
+										<span>Si tienes dudas, contáctanos por WhatsApp</span>
 									</li>
 								</ul>
 							</div>

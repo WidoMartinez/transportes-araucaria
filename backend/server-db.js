@@ -99,7 +99,11 @@ import cotizacionRouter from "./endpoints/cotizacion.js";
 // Función de cotización para recalcular precios cuando el cliente envía 0
 import { cotizar, calcularTarifaDinamica } from "./services/PricingService.js";
 // SDK oficial de Mercado Pago (Checkout Pro)
-import { MercadoPagoConfig, Preference, Payment as MpPayment } from "mercadopago";
+import {
+	MercadoPagoConfig,
+	Preference,
+	Payment as MpPayment,
+} from "mercadopago";
 
 dotenv.config();
 
@@ -13513,7 +13517,9 @@ const startServer = async () => {
 			};
 
 			const preferenceClient = new Preference(mpClient);
-			const preference = await preferenceClient.create({ body: preferenceData });
+			const preference = await preferenceClient.create({
+				body: preferenceData,
+			});
 
 			console.log(
 				`✅ [MP] Preferencia creada: ${preference.id} para reserva ${reservaId}`,
@@ -13541,7 +13547,9 @@ const startServer = async () => {
 			}
 
 			// Usar sandbox en test/development, init_point en producción
-			const useSandbox = process.env.NODE_ENV === "development" || process.env.MP_SANDBOX === "true";
+			const useSandbox =
+				process.env.NODE_ENV === "development" ||
+				process.env.MP_SANDBOX === "true";
 			const payUrl = useSandbox
 				? preference.sandbox_init_point
 				: preference.init_point;
@@ -13592,7 +13600,9 @@ const startServer = async () => {
 			const paymentClient = new MpPayment(mpClient);
 			const paymentData = await paymentClient.get({ id: paymentId });
 
-			console.log(`🔔 [MP-webhook] Pago ${paymentId}: status=${paymentData.status}, external_ref=${paymentData.external_reference}`);
+			console.log(
+				`🔔 [MP-webhook] Pago ${paymentId}: status=${paymentData.status}, external_ref=${paymentData.external_reference}`,
+			);
 
 			// Solo procesar pagos aprobados
 			if (paymentData.status !== "approved") {
@@ -13629,7 +13639,9 @@ const startServer = async () => {
 
 			// Evitar reprocesar una reserva ya pagada (idempotencia)
 			if (reserva.estadoPago === "pagado") {
-				console.log(`ℹ️ [MP-webhook] Reserva ${reservaId} ya estaba pagada. Omitiendo.`);
+				console.log(
+					`ℹ️ [MP-webhook] Reserva ${reservaId} ya estaba pagada. Omitiendo.`,
+				);
 				return;
 			}
 
@@ -13664,7 +13676,9 @@ const startServer = async () => {
 
 			try {
 				const reservaActualizada = await Reserva.findByPk(reservaId);
-				const emailDestino = sanitizarEmailRobusto(reservaActualizada?.email || "");
+				const emailDestino = sanitizarEmailRobusto(
+					reservaActualizada?.email || "",
+				);
 
 				if (emailDestino) {
 					await axios.post(
@@ -13705,7 +13719,11 @@ const startServer = async () => {
 				);
 			}
 		} catch (error) {
-			console.error("❌ [MP-webhook] Error procesando notificación:", error.message, error);
+			console.error(
+				"❌ [MP-webhook] Error procesando notificación:",
+				error.message,
+				error,
+			);
 		}
 	});
 

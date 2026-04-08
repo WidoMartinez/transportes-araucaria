@@ -516,10 +516,6 @@ function PagarConCodigo() {
 			} else {
 				throw new Error(pj.message || "No se pudo generar el enlace de pago");
 			}
-				window.location.href = pj.url;
-			} else {
-				throw new Error(pj.message || "No se pudo generar el enlace de pago");
-			}
 		} catch (e) {
 			setError(e.message || "Error al procesar el pago.");
 		} finally {
