@@ -4509,7 +4509,10 @@ app.post("/api/reservas/capturar-lead", async (req, res) => {
 			destino: datos.destino || (reservaLead ? reservaLead.destino : ""),
 			// fecha es NOT NULL en la BD; para leads sin fecha elegida se usa la fecha actual
 			// El valor real se actualiza cuando el usuario completa la reserva
-			fecha: datos.fecha || (reservaLead ? reservaLead.fecha : null) || new Date().toISOString().split("T")[0],
+			fecha:
+				datos.fecha ||
+				(reservaLead ? reservaLead.fecha : null) ||
+				new Date().toISOString().split("T")[0],
 			hora:
 				normalizeTimeGlobal(datos.hora) ||
 				(reservaLead ? reservaLead.hora : null),
