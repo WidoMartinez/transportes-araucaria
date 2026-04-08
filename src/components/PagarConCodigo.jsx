@@ -661,7 +661,9 @@ function PagarConCodigo() {
 				}
 				window.location.href = pj.url;
 			} else {
-				throw new Error(pj.message || "No se pudo generar el enlace de Mercado Pago");
+				throw new Error(
+					pj.message || "No se pudo generar el enlace de Mercado Pago",
+				);
 			}
 		} catch (e) {
 			setError(e.message || "Error al procesar el pago con Mercado Pago.");
@@ -1365,7 +1367,9 @@ function PagarConCodigo() {
 									>
 										<span className="text-lg">💳</span>
 										<div>
-											<p className="text-xs font-semibold leading-tight">Flow</p>
+											<p className="text-xs font-semibold leading-tight">
+												Flow
+											</p>
 											<p className="text-[10px] text-muted-foreground leading-tight">
 												Tarjeta / Débito
 											</p>
@@ -1382,7 +1386,9 @@ function PagarConCodigo() {
 									>
 										<span className="text-lg">🟦</span>
 										<div>
-											<p className="text-xs font-semibold leading-tight">Mercado Pago</p>
+											<p className="text-xs font-semibold leading-tight">
+												Mercado Pago
+											</p>
 											<p className="text-[10px] text-muted-foreground leading-tight">
 												MP / Débito / Cuotas
 											</p>
