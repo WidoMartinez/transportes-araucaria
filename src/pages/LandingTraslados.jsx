@@ -120,16 +120,16 @@ const BENEFICIOS = [
 	},
 ];
 
-// --- Tipos de traslado que ofrecemos (para SEO y confianza) ---
+// --- Tipos de traslado (amplitud de destinos para SEO y confianza del usuario) ---
 const TIPOS_TRASLADO = [
-	"✈️ Aeropuertos (Temuco, SCL, y más)",
-	"🏔️ Lagos y parques nacionales",
-	"🏙️ Ciudad a ciudad (Temuco ↔ Santiago, Valdivia, etc.)",
-	"🎉 Eventos, matrimonios y celebraciones",
-	"🏥 Traslados médicos y hospitalarios",
-	"🎓 Universidades y colegios",
-	"🏕️ Excursiones y turismo aventura",
+	"✈️ Transfer Aeropuerto La Araucanía",
+	"🏔️ Transfer a Pucón y Villarrica",
+	"🌊 Transfer Lican Ray, Coñaripe y Liquiñe",
+	"🌋 Transfer Malalcahuello y Conguillio",
+	"🏙️ Traslados interciudades (SCL, Valdivia, Osorno)",
+	"🎉 Transfer para eventos y matrimonios",
 	"🏢 Traslados corporativos y ejecutivos",
+	"🏥 Traslados médicos y hospitalarios",
 ];
 
 // --- Componente principal ---
@@ -283,35 +283,37 @@ function LandingTraslados() {
 							
 							{/* Text Container (Compacto) */}
 							<div className="bg-white/20 backdrop-blur-md p-5 sm:p-6 rounded-[2rem] shadow-xl border border-white/20 space-y-4">
-								<h1 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold leading-[1.05] tracking-tight">
-									<span className="text-[#592a15]">Traslados Privados</span>
-									<br />
-									<span className="text-[#1a1c20]">a cualquier</span>
-									<span className="text-[#592a15]"> destino</span>
-								</h1>
-								<p className="text-[14px] sm:text-[15px] text-gray-800 font-medium leading-relaxed">
-									Aeropuertos, ciudades, eventos o donde necesites en La Araucanía. Vehículos modernos y 100% seguros.
-								</p>
+{/* H1 optimizado: keyword 'transfer aeropuerto araucanía' visible above the fold */}
+							<h1 className="text-3xl sm:text-4xl lg:text-[40px] font-extrabold leading-[1.05] tracking-tight">
+								<span className="text-[#592a15]">Transfer Aeropuerto</span>
+								<br />
+								<span className="text-[#1a1c20]">La Araucanía</span>
+								<span className="text-[#592a15]"> — Toda la Región</span>
+							</h1>
+							{/* Párrafo con amplitud de destinos para Quality Score Google Ads */}
+							<p className="text-[14px] sm:text-[15px] text-gray-800 font-medium leading-relaxed">
+								Transfer privado desde Aeropuerto La Araucanía a Temuco, Pucón, Villarrica, Lican Ray, Malalcahuello y cualquier destino del sur. Conductor certificado, vehículo exclusivo, pago online.
+							</p>
 
-								{/* Icon List (Compacta) */}
-								<div className="grid grid-cols-2 gap-y-2 gap-x-3 pt-2">
-									<div className="flex items-start gap-2">
-										<Plane className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
-										<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Aeropuertos</span>
-									</div>
-									<div className="flex items-start gap-2">
-										<Mountain className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
-										<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Turismo y Parques</span>
-									</div>
-									<div className="flex items-start gap-2">
-										<Building2 className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
-										<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Ciudad a Ciudad</span>
-									</div>
-									<div className="flex items-start gap-2">
-										<Wine className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
-										<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Eventos VIP</span>
-									</div>
+							{/* Badges de destinos: amplitud visible para Quality Score */}
+							<div className="grid grid-cols-2 gap-y-2 gap-x-3 pt-2">
+								<div className="flex items-start gap-2">
+									<Plane className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
+									<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Transfer Aeropuerto</span>
 								</div>
+								<div className="flex items-start gap-2">
+									<Mountain className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
+									<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Pucón · Villarrica</span>
+								</div>
+								<div className="flex items-start gap-2">
+									<Building2 className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
+									<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Lican Ray · Coñaripe</span>
+								</div>
+								<div className="flex items-start gap-2">
+									<Wine className="h-[18px] w-[18px] text-gray-600 shrink-0 mt-0.5" strokeWidth={1.5} />
+									<span className="text-[13px] font-semibold text-[#2d3748] leading-tight">Malalcahuello · y más</span>
+								</div>
+							</div>
 							</div>
 
 							{/* Form Container (Acortado) */}
@@ -412,10 +414,11 @@ function LandingTraslados() {
 
 							{/* === BOTONES EXTRA EN LA MISA COLUMNA (Equilibrio perfecto) === */}
 							<div className="flex flex-col sm:flex-row gap-4 w-full mt-2 lg:mt-3 relative z-20">
-								<a href="/" className="w-full sm:w-1/2">
-									<Button className="w-full bg-white/95 hover:bg-white text-[#592a15] border border-white/60 font-bold h-14 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md flex items-center justify-center gap-2.5 text-[14px] xl:text-[15px] transition-all">
-										<Plane className="h-5 w-5" />
-										Ir a Traslados Aeropuerto
+							{/* Botón CTA con keyword de transfer aeropuerto para mejorar Quality Score */}
+							<a href="/" className="w-full sm:w-1/2">
+								<Button className="w-full bg-white/95 hover:bg-white text-[#592a15] border border-white/60 font-bold h-14 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md flex items-center justify-center gap-2.5 text-[14px] xl:text-[15px] transition-all">
+									<Plane className="h-5 w-5" />
+									Transfer Aeropuerto ZCO
 									</Button>
 								</a>
 								<Button onClick={abrirWhatsApp} className="w-full sm:w-1/2 bg-[#25D366]/95 hover:bg-[#25D366] text-white border border-green-500/30 font-bold h-14 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md flex items-center justify-center gap-2.5 text-[14px] xl:text-[15px] transition-all">
@@ -444,8 +447,9 @@ function LandingTraslados() {
 				<section className="relative z-10 py-16 bg-white/5">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-10">
-						<h2 className="text-3xl font-bold mb-3 text-white">
-							¿Qué tipo de traslado necesitas?
+					{/* H2 optimizado: incluye keyword 'transfer' para mejorar relevancia SEO */}
+							<h2 className="text-3xl font-bold mb-3 text-white">
+								¿Qué transfer o traslado necesitas?
 						</h2>
 						<p className="text-white/70 max-w-xl mx-auto">
 							Cubrimos todo tipo de viajes. Si no ves el tuyo en la lista,

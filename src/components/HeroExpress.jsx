@@ -362,9 +362,9 @@ function HeroExpress({
 		}
 
 		return {
-			title: "Transporte Privado",
+			title: "Transfer y Traslados Privados",
 			subtitle:
-				"Conecta con Pucón, Villarrica, Lican Ray, Malalcahuello y toda La Araucanía.",
+				"Transfer aeropuerto · Pucón · Villarrica · Lican Ray · Malalcahuello y toda La Araucanía.",
 			descripcion:
 				"Traslados exclusivos puerta a puerta, disponibles las 24 horas para todos los destinos de la región y el sur de Chile. Nuestra flota cuenta con vehículos modernos y conductores profesionales para brindarte la mejor experiencia.",
 			beneficios: [
