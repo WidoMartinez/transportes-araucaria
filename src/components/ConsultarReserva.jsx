@@ -41,6 +41,8 @@ function ConsultarReserva() {
 	const [paying, setPaying] = useState(false);
 	const [payError, setPayError] = useState(null);
 	const [totalProductos, setTotalProductos] = useState(0);
+	// Pasarela de pago seleccionada: "flow" | "mercadopago"
+	const [pasarela, setPasarela] = useState("flow");
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -88,7 +90,7 @@ function ConsultarReserva() {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
 			
-			console.log(`💰 [ConsultarReserva] Iniciando pago:`, {
+			console.log(`💰 [ConsultarReserva] Iniciando pago (${pasarela}):`, {
 				tipo,
 				montoOriginal: monto,
 				montoValidado: montoValidado,
@@ -106,19 +108,40 @@ function ConsultarReserva() {
 					? `Pago saldo total y productos de reserva ${reserva.codigoReserva}`
 					: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
 
-			const resp = await fetch(`${apiBase}/create-payment`, {
+			// Endpoint y cuerpo según pasarela seleccionada
+			const endpoint =
+				pasarela === "mercadopago"
+					? `${apiBase}/api/create-payment-mp`
+					: `${apiBase}/create-payment`;
+
+			const body =
+				pasarela === "mercadopago"
+					? {
+							amount: montoValidado,
+							description,
+							email: reserva.email,
+							nombre: reserva.nombre,
+							telefono: reserva.telefono,
+							reservaId: reserva.id,
+							codigoReserva: reserva.codigoReserva,
+							tipoPago: tipo,
+							paymentOrigin: "consultar_reserva",
+						}
+					: {
+							gateway: "flow",
+							amount: montoValidado,
+							description,
+							email: reserva.email,
+							reservaId: reserva.id,
+							codigoReserva: reserva.codigoReserva,
+							tipoPago: tipo,
+							paymentOrigin: "consultar_reserva",
+						};
+
+			const resp = await fetch(endpoint, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					gateway: "flow",
-					amount: montoValidado,
-					description,
-					email: reserva.email,
-					reservaId: reserva.id,
-					codigoReserva: reserva.codigoReserva,
-					tipoPago: tipo,
-					paymentOrigin: "consultar_reserva",
-				}),
+				body: JSON.stringify(body),
 			});
 			if (!resp.ok) {
 				let errorMsg = `Error al generar pago (${resp.status})`;
@@ -134,7 +157,7 @@ function ConsultarReserva() {
 			const data = await resp.json();
 			if (!data.url)
 				throw new Error("Respuesta inválida del servidor de pagos");
-			// ✅ Lead: registrar intención de pago antes de redirigir a Flow
+			// Lead de Google Ads antes de redirigir
 			if (typeof window.gtag === "function") {
 				window.gtag("event", "conversion", {
 					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
@@ -663,6 +686,36 @@ function ConsultarReserva() {
 												<span>{payError}</span>
 											</div>
 										)}
+										{/* Selector de pasarela */}
+										<div className="space-y-1">
+											<p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+												Método de pago
+											</p>
+											<div className="flex gap-2">
+												<button
+													type="button"
+													onClick={() => setPasarela("flow")}
+													className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+														pasarela === "flow"
+															? "border-primary bg-primary/5 text-primary"
+															: "border-input text-muted-foreground hover:border-primary/50"
+													}`}
+												>
+													💳 Flow
+												</button>
+												<button
+													type="button"
+													onClick={() => setPasarela("mercadopago")}
+													className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+														pasarela === "mercadopago"
+															? "border-primary bg-primary/5 text-primary"
+															: "border-input text-muted-foreground hover:border-primary/50"
+													}`}
+												>
+													🟦 Mercado Pago
+												</button>
+											</div>
+										</div>
 										<div className="flex flex-wrap gap-3">
 											{paymentOptions.map((option) => (
 												<Button
@@ -690,7 +743,8 @@ function ConsultarReserva() {
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
-											segura con Flow.
+											segura con{" "}
+											{pasarela === "mercadopago" ? "Mercado Pago" : "Flow"}.
 										</p>
 									</div>
 								)}

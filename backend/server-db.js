@@ -98,6 +98,8 @@ import { apiLimiter } from "./middleware/rateLimiter.js";
 import cotizacionRouter from "./endpoints/cotizacion.js";
 // Función de cotización para recalcular precios cuando el cliente envía 0
 import { cotizar, calcularTarifaDinamica } from "./services/PricingService.js";
+// SDK oficial de Mercado Pago (Checkout Pro)
+import { MercadoPagoConfig, Preference, Payment as MpPayment } from "mercadopago";
 
 dotenv.config();
 
@@ -13365,6 +13367,347 @@ const startServer = async () => {
 			"🔄 Continuando sin base de datos - algunas funciones estarán limitadas",
 		);
 	}
+
+	// ─────────────────────────────────────────────────────────────
+	// MERCADO PAGO CHECKOUT PRO
+	// Endpoint para crear una preferencia de pago en Mercado Pago
+	// Devuelve la URL de init_point para redirigir al usuario
+	// ─────────────────────────────────────────────────────────────
+	app.post("/api/create-payment-mp", apiLimiter, async (req, res) => {
+		try {
+			const {
+				amount,
+				description,
+				email,
+				reservaId,
+				codigoReserva,
+				tipoPago,
+				referenciaPago,
+				paymentOrigin,
+				nombre,
+				telefono,
+				// Campos opcionales de dirección para completar-detalles
+				fecha,
+				hora,
+				direccionOrigen,
+				direccionDestino,
+				numeroVuelo,
+				hotel,
+				fechaRegreso,
+				horaRegreso,
+				codigoPagoId,
+			} = req.body;
+
+			// Validar monto
+			const amountNum = Number(amount);
+			if (!amountNum || amountNum <= 0) {
+				return res.status(400).json({ error: "Monto de pago inválido" });
+			}
+
+			// URLs base
+			const frontendBase =
+				process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+			const backendBase =
+				process.env.BACKEND_URL ||
+				process.env.RENDER_EXTERNAL_URL ||
+				"https://transportes-araucaria.onrender.com";
+
+			// Inicializar cliente de Mercado Pago con el access token del entorno
+			const mpClient = new MercadoPagoConfig({
+				accessToken: process.env.MP_ACCESS_TOKEN,
+				options: { timeout: 5000 },
+			});
+
+			// Construir parámetros extra para la URL de retorno (misma estrategia que Flow)
+			// Codificar datos del usuario en Base64 igual que FlowReturn para Enhanced Conversions
+			let encodedUserData = "";
+			if (nombre || email || telefono) {
+				const ud = {};
+				if (email) ud.email = email;
+				if (nombre) ud.nombre = nombre;
+				if (telefono) ud.telefono = telefono;
+				encodedUserData = encodeURIComponent(
+					Buffer.from(JSON.stringify(ud)).toString("base64"),
+				);
+			}
+
+			// URL de retorno exitoso: incluye todos los datos necesarios para tracking de conversión
+			// collection_id y collection_status son parámetros que MP añade automáticamente a la URL
+			const successUrl = `${frontendBase}/mp-return?status=success&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
+			const pendingUrl = `${frontendBase}/mp-return?status=pending&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
+			const failureUrl = `${frontendBase}/mp-return?status=error&reserva_id=${reservaId || ""}`;
+
+			// Separar nombre en first/last para el checklist de calidad de MP
+			const nameParts = (nombre || "Cliente").trim().split(" ");
+			const firstName = nameParts[0] || "Cliente";
+			const lastName = nameParts.slice(1).join(" ") || "Reserva";
+
+			// Referencia externa: usada para identificar la reserva en el webhook/notification
+			const externalRef = reservaId
+				? `reserva_${reservaId}_${codigoReserva || ""}`
+				: `mp_${Date.now()}`;
+
+			// Construir payload de preferencia (14 campos del checklist de calidad de MP)
+			const preferenceData = {
+				// 1. Items con todos los campos requeridos
+				items: [
+					{
+						id: `reserva_${reservaId || Date.now()}`,
+						title: description || "Traslado Transportes Araucanía",
+						description: `Reserva ${codigoReserva || ""}${tipoPago === "abono" ? " - Abono 40%" : " - Pago Total"}`,
+						category_id: "travel",
+						quantity: 1,
+						unit_price: amountNum,
+						currency_id: "CLP",
+					},
+				],
+				// 2. Datos del pagador
+				payer: {
+					email: email || "cliente@transportesaraucania.cl",
+					first_name: firstName,
+					last_name: lastName,
+					phone: telefono
+						? {
+								area_code: "56",
+								number: telefono.replace(/\D/g, "").replace(/^56/, ""),
+							}
+						: undefined,
+				},
+				// 3. URLs de retorno
+				back_urls: {
+					success: successUrl,
+					pending: pendingUrl,
+					failure: failureUrl,
+				},
+				// 4. Redirigir automáticamente al url de éxito cuando el pago es aprobado
+				auto_return: "approved",
+				// 5. URL de notificación para el webhook (IPN)
+				notification_url: `${backendBase}/api/mp-confirmation`,
+				// 6. Referencia externa para identificar la reserva
+				external_reference: externalRef,
+				// 7. Descripción visible en el resumen de MP
+				statement_descriptor: "TRANSPORTES ARAUCANIA",
+				// 8. Metadata adicional (origen del pago)
+				metadata: {
+					reservaId: reservaId || null,
+					codigoReserva: codigoReserva || null,
+					tipoPago: tipoPago || "total",
+					referenciaPago: referenciaPago || null,
+					paymentOrigin: paymentOrigin || "web",
+					codigoPagoId: codigoPagoId || null,
+					fecha: fecha || null,
+					hora: hora || null,
+					direccionOrigen: direccionOrigen || null,
+					direccionDestino: direccionDestino || null,
+					numeroVuelo: numeroVuelo || null,
+					hotel: hotel || null,
+					fechaRegreso: fechaRegreso || null,
+					horaRegreso: horaRegreso || null,
+				},
+				// 9. Tiempo de expiración (24 horas)
+				expires: true,
+				expiration_date_from: new Date().toISOString(),
+				expiration_date_to: new Date(
+					Date.now() + 24 * 60 * 60 * 1000,
+				).toISOString(),
+			};
+
+			const preferenceClient = new Preference(mpClient);
+			const preference = await preferenceClient.create({ body: preferenceData });
+
+			console.log(
+				`✅ [MP] Preferencia creada: ${preference.id} para reserva ${reservaId}`,
+			);
+
+			// Guardar el ID de preferencia en FlowToken para poder rastrearlo después
+			// (reutilizamos el modelo FlowToken con gateway=mercadopago)
+			if (reservaId) {
+				try {
+					await FlowToken.create({
+						token: preference.id,
+						reservaId,
+						gateway: "mercadopago",
+						amount: amountNum,
+						email: email || "",
+						status: "pending",
+					});
+				} catch (tokenErr) {
+					// No fatal: si falla el guardado del token, el pago puede continuar
+					console.warn(
+						"⚠️ [MP] No se pudo guardar token MP en DB:",
+						tokenErr.message,
+					);
+				}
+			}
+
+			// Usar sandbox en test/development, init_point en producción
+			const useSandbox = process.env.NODE_ENV === "development" || process.env.MP_SANDBOX === "true";
+			const payUrl = useSandbox
+				? preference.sandbox_init_point
+				: preference.init_point;
+
+			return res.json({
+				url: payUrl,
+				preferenceId: preference.id,
+			});
+		} catch (error) {
+			console.error("❌ [MP] Error creando preferencia:", error.message, error);
+			return res
+				.status(500)
+				.json({ error: "Error al crear el pago con Mercado Pago" });
+		}
+	});
+
+	// ─────────────────────────────────────────────────────────────
+	// MERCADO PAGO - WEBHOOK (IPN / Notifications)
+	// Recibe la confirmación de pago de Mercado Pago
+	// Actualiza el estado de la reserva y envía el correo de confirmación
+	// ─────────────────────────────────────────────────────────────
+	app.post("/api/mp-confirmation", async (req, res) => {
+		// Responder 200 inmediatamente para que MP no reintente (best practice)
+		res.sendStatus(200);
+
+		try {
+			const { type, data, action } = req.body;
+
+			// Solo procesar notificaciones de tipo "payment"
+			if (type !== "payment" && action !== "payment.updated") {
+				console.log(`ℹ️ [MP-webhook] Notificación ignorada: type=${type}`);
+				return;
+			}
+
+			const paymentId = data?.id;
+			if (!paymentId) {
+				console.warn("⚠️ [MP-webhook] No se recibió ID de pago");
+				return;
+			}
+
+			// Inicializar cliente MP (usa el access token del entorno)
+			const mpClient = new MercadoPagoConfig({
+				accessToken: process.env.MP_ACCESS_TOKEN,
+				options: { timeout: 5000 },
+			});
+
+			// Consultar los datos completos del pago en la API de MP
+			const paymentClient = new MpPayment(mpClient);
+			const paymentData = await paymentClient.get({ id: paymentId });
+
+			console.log(`🔔 [MP-webhook] Pago ${paymentId}: status=${paymentData.status}, external_ref=${paymentData.external_reference}`);
+
+			// Solo procesar pagos aprobados
+			if (paymentData.status !== "approved") {
+				console.log(
+					`ℹ️ [MP-webhook] Pago ${paymentId} no aprobado (${paymentData.status}). Ignorando.`,
+				);
+				return;
+			}
+
+			// Extraer reservaId de la referencia externa
+			const externalRef = paymentData.external_reference || "";
+			const metadata = paymentData.metadata || {};
+			let reservaId = metadata.reserva_id || metadata.reservaId || null;
+
+			if (!reservaId && externalRef.startsWith("reserva_")) {
+				// Formato: reserva_{id}_{codigoReserva}
+				const partes = externalRef.split("_");
+				if (partes.length >= 2) reservaId = parseInt(partes[1], 10) || null;
+			}
+
+			if (!reservaId) {
+				console.warn(
+					`⚠️ [MP-webhook] No se pudo determinar reservaId desde external_reference="${externalRef}"`,
+				);
+				return;
+			}
+
+			// Buscar la reserva en la DB
+			const reserva = await Reserva.findByPk(reservaId);
+			if (!reserva) {
+				console.warn(`⚠️ [MP-webhook] Reserva ID=${reservaId} no encontrada`);
+				return;
+			}
+
+			// Evitar reprocesar una reserva ya pagada (idempotencia)
+			if (reserva.estadoPago === "pagado") {
+				console.log(`ℹ️ [MP-webhook] Reserva ${reservaId} ya estaba pagada. Omitiendo.`);
+				return;
+			}
+
+			// Determinar el monto pagado
+			const montoPagado =
+				Number(paymentData.transaction_amount) ||
+				Number(metadata.amount) ||
+				Number(reserva.totalConDescuento) ||
+				Number(reserva.precio) ||
+				0;
+
+			// Actualizar estado de la reserva
+			await Reserva.update(
+				{
+					estadoPago: "pagado",
+					estado: "confirmada",
+					pagoMonto: montoPagado,
+					metodoPago: "mercadopago",
+					referenciaPagoExterno: String(paymentId),
+				},
+				{ where: { id: reservaId } },
+			);
+
+			console.log(
+				`✅ [MP-webhook] Reserva ${reservaId} actualizada a PAGADA. Monto: ${montoPagado}`,
+			);
+
+			// Enviar correo de confirmación via PHPMailer (mismo sistema que Flow)
+			const frontendBase =
+				process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
+			const phpMailerUrl = `${frontendBase}/enviar_confirmacion_pago.php`;
+
+			try {
+				const reservaActualizada = await Reserva.findByPk(reservaId);
+				const emailDestino = sanitizarEmailRobusto(reservaActualizada?.email || "");
+
+				if (emailDestino) {
+					await axios.post(
+						phpMailerUrl,
+						{
+							reservaId,
+							email: emailDestino,
+							nombre: reservaActualizada?.nombre || "",
+							origen: reservaActualizada?.origen || "",
+							destino: reservaActualizada?.destino || "",
+							fecha: reservaActualizada?.fecha || "",
+							hora: reservaActualizada?.hora || "",
+							monto: montoPagado,
+							codigoReserva: reservaActualizada?.codigoReserva || "",
+							pasarela: "mercadopago",
+						},
+						{ timeout: 10000 },
+					);
+					console.log(
+						`📧 [MP-webhook] Correo de confirmación enviado a ${emailDestino}`,
+					);
+				}
+			} catch (mailError) {
+				// El correo es best-effort: no fallar por esto
+				console.warn(
+					"⚠️ [MP-webhook] Error enviando correo de confirmación:",
+					mailError.message,
+				);
+			}
+
+			// Detectar y generar oportunidades de retorno (mismo que Flow)
+			try {
+				await detectarYGenerarOportunidades(reservaId);
+			} catch (opErr) {
+				console.warn(
+					"⚠️ [MP-webhook] Error generando oportunidades:",
+					opErr.message,
+				);
+			}
+		} catch (error) {
+			console.error("❌ [MP-webhook] Error procesando notificación:", error.message, error);
+		}
+	});
 
 	app.listen(PORT, () => {
 		console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);

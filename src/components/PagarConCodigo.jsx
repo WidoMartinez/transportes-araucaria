@@ -86,6 +86,8 @@ function PagarConCodigo() {
 
 	const [procesando, setProcesando] = useState(false);
 	const [loadingGateway, setLoadingGateway] = useState(null);
+	// Pasarela seleccionada: "flow" | "mercadopago"
+	const [pasarela, setPasarela] = useState("flow");
 	const [tiempoRestante, setTiempoRestante] = useState(null);
 
 	const backendUrl =
@@ -514,8 +516,159 @@ function PagarConCodigo() {
 			} else {
 				throw new Error(pj.message || "No se pudo generar el enlace de pago");
 			}
+				window.location.href = pj.url;
+			} else {
+				throw new Error(pj.message || "No se pudo generar el enlace de pago");
+			}
 		} catch (e) {
 			setError(e.message || "Error al procesar el pago.");
+		} finally {
+			setProcesando(false);
+			setLoadingGateway(null);
+		}
+	};
+
+	// Pago con Mercado Pago Checkout Pro
+	// Llama a /api/create-payment-mp y redirige al init_point de MP
+	const procesarPagoConCodigoMP = async () => {
+		if (!validarDatos() || !codigoValidado) return;
+		setProcesando(true);
+		setLoadingGateway("mercadopago");
+		setError("");
+
+		const montoValidado = validatePaymentAmount(montoSeleccionado);
+		if (montoValidado <= 0) {
+			setError("El monto a pagar no es válido. Contacta a soporte.");
+			setProcesando(false);
+			setLoadingGateway(null);
+			return;
+		}
+
+		const descripcionPago =
+			selectedPaymentType === "abono"
+				? `Abono 40% - Código ${codigoValidado.codigo}`
+				: `Pago total - Código ${codigoValidado.codigo}`;
+		const description = `Traslado ${codigoValidado.origen} - ${codigoValidado.destino}${codigoValidado.descripcion ? ` (${codigoValidado.descripcion})` : ""}`;
+
+		try {
+			let reservaId = null;
+			let codigoReservaGenerado = null;
+
+			if (isPagoVinculado) {
+				reservaId = codigoValidado.reservaVinculadaId || null;
+				codigoReservaGenerado = codigoValidado.codigoReservaVinculado || null;
+			} else {
+				// Crear reserva express antes de iniciar el pago
+				const reservaPayload = {
+					nombre: formData.nombre,
+					email: formData.email,
+					telefono: formData.telefono,
+					origen: codigoValidado.origen,
+					destino: codigoValidado.destino,
+					direccionDestino: formData.direccionDestino,
+					direccionOrigen: formData.direccionOrigen,
+					estado: "pendiente",
+					estadoPago: "pendiente",
+					fecha: formData.fecha,
+					pasajeros: codigoValidado.pasajeros || 1,
+					precio: montoTotal,
+					totalConDescuento: montoTotal,
+					vehiculo: codigoValidado.vehiculo || "Por asignar",
+					numeroVuelo: formData.numeroVuelo,
+					hotel: formData.hotel,
+					mensaje: formData.mensaje,
+					idaVuelta: esIdaVuelta,
+					sillaInfantil: incluyeSillaInfantil,
+					referenciaPago: codigoValidado.codigo,
+					source: "codigo_pago",
+					abonoSugerido: selectedPaymentType === "abono" ? abonoSugerido : 0,
+					saldoPendiente:
+						selectedPaymentType === "abono" ? saldoPendiente : montoTotal,
+					tipoPago: selectedPaymentType,
+					duracionMinutos: codigoValidado.duracionMinutos,
+				};
+				if (formData.hora && formData.hora.trim())
+					reservaPayload.hora = formData.hora;
+				if (esIdaVuelta && formData.fechaRegreso)
+					reservaPayload.fechaRegreso = formData.fechaRegreso;
+				if (esIdaVuelta && formData.horaRegreso && formData.horaRegreso.trim())
+					reservaPayload.horaRegreso = formData.horaRegreso;
+
+				const r = await fetch(`${backendUrl}/enviar-reserva-express`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(reservaPayload),
+				});
+				const rj = await r.json();
+				if (!r.ok || rj.success === false)
+					throw new Error(rj.message || "No se pudo crear la reserva");
+				reservaId = rj.reservaId || rj.reserva?.id || null;
+				codigoReservaGenerado =
+					rj.codigoReserva ||
+					rj.codigo_reserva ||
+					rj.reserva?.codigoReserva ||
+					null;
+			}
+
+			const codigoPagoNormalizado = (codigoValidado.codigo || "")
+				.toString()
+				.toUpperCase();
+
+			const p = await fetch(`${backendUrl}/api/create-payment-mp`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					amount: montoValidado,
+					description: `${description} • ${descripcionPago}`,
+					email: formData.email,
+					nombre: formData.nombre,
+					telefono: formData.telefono,
+					reservaId,
+					codigoReserva: codigoReservaGenerado,
+					tipoPago: selectedPaymentType,
+					referenciaPago: codigoPagoNormalizado,
+					paymentOrigin: "pagar_con_codigo",
+					codigoPagoId: codigoValidado.id,
+					fecha: formData.fecha,
+					hora: formData.hora,
+					direccionOrigen: formData.direccionOrigen,
+					direccionDestino: formData.direccionDestino,
+					numeroVuelo: formData.numeroVuelo,
+					hotel: formData.hotel,
+					fechaRegreso: formData.fechaRegreso,
+					horaRegreso: formData.horaRegreso,
+				}),
+			});
+			const pj = await p.json();
+			if (p.ok && pj.url) {
+				// Evento Lead de Google Ads antes de redirigir a MP
+				if (typeof window.gtag === "function") {
+					const conversionData = {
+						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+					};
+					const userData = {};
+					if (formData.email)
+						userData.email = formData.email.toLowerCase().trim();
+					if (formData.telefono)
+						userData.phone_number = normalizePhoneToE164(formData.telefono);
+					if (formData.nombre) {
+						const nameParts = formData.nombre.trim().split(" ");
+						userData.address = {
+							first_name: nameParts[0]?.toLowerCase() || "",
+							last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+							country: "CL",
+						};
+					}
+					if (Object.keys(userData).length > 0)
+						conversionData.user_data = userData;
+					window.gtag("event", "conversion", conversionData);
+				}
+				window.location.href = pj.url;
+			} else {
+				throw new Error(pj.message || "No se pudo generar el enlace de Mercado Pago");
+			}
+		} catch (e) {
+			setError(e.message || "Error al procesar el pago con Mercado Pago.");
 		} finally {
 			setProcesando(false);
 			setLoadingGateway(null);
@@ -1199,16 +1352,63 @@ function PagarConCodigo() {
 								</div>
 							)}
 
+							{/* Selector de pasarela de pago */}
+							<div className="space-y-2">
+								<Label className="text-sm font-semibold text-foreground">
+									Método de pago
+								</Label>
+								<div className="grid grid-cols-2 gap-2">
+									<button
+										type="button"
+										onClick={() => setPasarela("flow")}
+										className={`p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${
+											pasarela === "flow"
+												? "border-primary bg-primary/5"
+												: "border-input hover:border-primary/50"
+										}`}
+									>
+										<span className="text-lg">💳</span>
+										<div>
+											<p className="text-xs font-semibold leading-tight">Flow</p>
+											<p className="text-[10px] text-muted-foreground leading-tight">
+												Tarjeta / Débito
+											</p>
+										</div>
+									</button>
+									<button
+										type="button"
+										onClick={() => setPasarela("mercadopago")}
+										className={`p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${
+											pasarela === "mercadopago"
+												? "border-primary bg-primary/5"
+												: "border-input hover:border-primary/50"
+										}`}
+									>
+										<span className="text-lg">🟦</span>
+										<div>
+											<p className="text-xs font-semibold leading-tight">Mercado Pago</p>
+											<p className="text-[10px] text-muted-foreground leading-tight">
+												MP / Débito / Cuotas
+											</p>
+										</div>
+									</button>
+								</div>
+							</div>
+
 							{/* Botón de pago */}
 							<Button
-								onClick={procesarPagoConCodigoFlow}
+								onClick={
+									pasarela === "mercadopago"
+										? procesarPagoConCodigoMP
+										: procesarPagoConCodigoFlow
+								}
 								disabled={
 									procesando || !montoSeleccionado || montoSeleccionado <= 0
 								}
 								className="w-full h-12 text-base font-semibold"
 								size="lg"
 							>
-								{loadingGateway === "flow" ? (
+								{loadingGateway !== null ? (
 									<>
 										<LoaderCircle className="h-5 w-5 animate-spin mr-2" />
 										Procesando...

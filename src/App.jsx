@@ -48,6 +48,7 @@ import PagarConCodigo from "./components/PagarConCodigo";
 import CompraProductos from "./components/CompraProductos";
 import CompletarDetalles from "./components/CompletarDetalles"; // Importar componente
 import FlowReturn from "./components/FlowReturn"; // Página de retorno de pago Flow
+import MercadoPagoReturn from "./components/MercadoPagoReturn"; // Página de retorno de pago Mercado Pago
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
 import OportunidadesTraslado from "./pages/OportunidadesTraslado"; // Página de oportunidades de traslado
 import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ads para traslados privados
@@ -213,6 +214,17 @@ const resolveIsFlowReturnView = () => {
 	);
 };
 
+// Resolver si la URL es la página de retorno de Mercado Pago (confirmación de pago)
+const resolveIsMpReturnView = () => {
+	const pathname = window.location.pathname.toLowerCase();
+	const hash = window.location.hash.toLowerCase();
+	return (
+		pathname === "/mp-return" ||
+		pathname.startsWith("/mp-return/") ||
+		hash === "#mp-return"
+	);
+};
+
 // Resolver si la URL es la página de prueba de Google Ads
 // Resolver si la URL es la landing de traslados privados (campaña Google Ads)
 const resolveIsTrasladosView = () => {
@@ -261,6 +273,7 @@ function App() {
 	const [isFlowReturnView, setIsFlowReturnView] = useState(
 		resolveIsFlowReturnView,
 	);
+	const [isMpReturnView, setIsMpReturnView] = useState(resolveIsMpReturnView);
 	const [isOportunidadesView, setIsOportunidadesView] = useState(
 		resolveIsOportunidadesView,
 	);
@@ -428,6 +441,17 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncFlowReturn);
 			window.removeEventListener("popstate", syncFlowReturn);
+		};
+	}, []);
+
+	// Sincronizar vista de retorno de Mercado Pago (confirmación de pago)
+	useEffect(() => {
+		const syncMpReturn = () => setIsMpReturnView(resolveIsMpReturnView());
+		window.addEventListener("hashchange", syncMpReturn);
+		window.addEventListener("popstate", syncMpReturn);
+		return () => {
+			window.removeEventListener("hashchange", syncMpReturn);
+			window.removeEventListener("popstate", syncMpReturn);
 		};
 	}, []);
 
@@ -1603,19 +1627,39 @@ function App() {
 				);
 			}
 
-			const response = await fetch(`${apiUrl}/create-payment`, {
+			// Construir endpoint y payload según pasarela
+			const isMercadoPago = gateway === "mercadopago";
+			const endpoint = isMercadoPago
+				? `${apiUrl}/api/create-payment-mp`
+				: `${apiUrl}/create-payment`;
+
+			const payload = isMercadoPago
+				? {
+						amount,
+						description,
+						email: formData.email,
+						nombre: formData.nombre,
+						telefono: formData.telefono,
+						reservaId: reservaIdParaPago || null,
+						codigoReserva: codigoReservaParaPago || null,
+						tipoPago: type,
+						paymentOrigin: "reserva_express",
+					}
+				: {
+						gateway,
+						amount,
+						description,
+						email: formData.email,
+						reservaId: reservaIdParaPago || null,
+						codigoReserva: codigoReservaParaPago || null,
+						tipoPago: type,
+						paymentOrigin: "reserva_express",
+					};
+
+			const response = await fetch(endpoint, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					gateway,
-					amount,
-					description,
-					email: formData.email,
-					reservaId: reservaIdParaPago || null,
-					codigoReserva: codigoReservaParaPago || null,
-					tipoPago: type,
-					paymentOrigin: "reserva_express", // Identificador para fallback robusto y conversiones GA
-				}),
+				body: JSON.stringify(payload),
 			});
 
 			if (!response.ok) {
@@ -2066,6 +2110,10 @@ function App() {
 
 	if (isFlowReturnView) {
 		return <FlowReturn />;
+	}
+
+	if (isMpReturnView) {
+		return <MercadoPagoReturn />;
 	}
 
 	if (isOportunidadesView) {

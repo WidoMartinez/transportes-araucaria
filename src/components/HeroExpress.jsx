@@ -108,6 +108,8 @@ function HeroExpress({
 	const [paymentConsent, setPaymentConsent] = useState(false);
 	const [selectedPaymentType, setSelectedPaymentType] = useState("total");
 	const [reservaActiva, setReservaActiva] = useState(null);
+	// Pasarela de pago seleccionada: "flow" | "mercadopago"
+	const [pasarela, setPasarela] = useState("flow");
 	const [verificandoReserva, setVerificandoReserva] = useState(false);
 	const [verificandoDisponibilidad, setVerificandoDisponibilidad] =
 		useState(false);
@@ -2010,21 +2012,53 @@ function HeroExpress({
 							{/* Botones de pago - Optimizados para móvil con safe-area para notch */}
 							<div className="pt-2 space-y-3 pb-[env(safe-area-inset-bottom,0px)]">
 								{mostrarPrecio && !requiereCotizacionManual ? (
-									<Button
-										onClick={() => handleProcesarPago("flow", "total")}
-										disabled={isSubmitting || !!loadingGateway}
-										className="w-full h-14 md:h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] touch-manipulation min-h-[56px]"
-										aria-label={`Pagar ${formatCurrency(pricing.totalConDescuento)}`}
-									>
-										{loadingGateway ? (
-											<LoaderCircle className="animate-spin" />
-										) : (
-											<>
-												<CreditCard className="h-5 w-5" />
-												Pagar {formatCurrency(pricing.totalConDescuento)}
-											</>
-										)}
-									</Button>
+									<>
+										{/* Selector de pasarela */}
+										<div className="space-y-1">
+											<p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+												Método de pago
+											</p>
+											<div className="flex gap-2">
+												<button
+													type="button"
+													onClick={() => setPasarela("flow")}
+													className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+														pasarela === "flow"
+															? "border-primary bg-primary/5 text-primary"
+															: "border-input text-muted-foreground hover:border-primary/50"
+													}`}
+												>
+													💳 Flow
+												</button>
+												<button
+													type="button"
+													onClick={() => setPasarela("mercadopago")}
+													className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+														pasarela === "mercadopago"
+															? "border-primary bg-primary/5 text-primary"
+															: "border-input text-muted-foreground hover:border-primary/50"
+													}`}
+												>
+													🟦 Mercado Pago
+												</button>
+											</div>
+										</div>
+										<Button
+											onClick={() => handleProcesarPago(pasarela, "total")}
+											disabled={isSubmitting || !!loadingGateway}
+											className="w-full h-14 md:h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-lg font-bold shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-[0.98] touch-manipulation min-h-[56px]"
+											aria-label={`Pagar ${formatCurrency(pricing.totalConDescuento)}`}
+										>
+											{loadingGateway ? (
+												<LoaderCircle className="animate-spin" />
+											) : (
+												<>
+													<CreditCard className="h-5 w-5" />
+													Pagar {formatCurrency(pricing.totalConDescuento)}
+												</>
+											)}
+										</Button>
+									</>
 								) : (
 									<Button
 										onClick={handleGuardarReserva}
@@ -2042,7 +2076,8 @@ function HeroExpress({
 								{/* Indicador de seguridad - Visible y claro en móvil */}
 								<p className="text-center text-sm md:text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1.5">
 									<ShieldCheck className="h-4 w-4 md:h-3 md:w-3" /> Pago 100%
-									seguro vía Flow
+									seguro vía{" "}
+									{pasarela === "mercadopago" ? "Mercado Pago" : "Flow"}
 								</p>
 							</div>
 						</motion.div>
