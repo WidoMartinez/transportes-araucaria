@@ -9319,12 +9319,32 @@ app.get("/api/payment-status", async (req, res) => {
 		}
 
 		let reservaId = reserva_id ? parseInt(reserva_id, 10) : null;
+		let tokenResuelto = token || null;
 
 		// Si se recibe token pero no reserva_id, buscar la reserva asociada en FlowToken
 		if (token && !reservaId) {
 			const flowToken = await FlowToken.findByPk(token);
 			if (flowToken?.reservaId) {
 				reservaId = flowToken.reservaId;
+			}
+		}
+
+		// Si tenemos reservaId pero no token, intentar recuperar el token desde FlowToken
+		// Necesario para poder consultar a Flow directamente como fallback
+		if (reservaId && !tokenResuelto) {
+			try {
+				const flowTokenByReserva = await FlowToken.findOne({
+					where: { reservaId: reservaId },
+					order: [["created_at", "DESC"]],
+				});
+				if (flowTokenByReserva?.token) {
+					tokenResuelto = flowTokenByReserva.token;
+				}
+			} catch (tokenBusquedaErr) {
+				console.warn(
+					"[payment-status] Error buscando token por reservaId:",
+					tokenBusquedaErr.message,
+				);
 			}
 		}
 
@@ -9339,6 +9359,11 @@ app.get("/api/payment-status", async (req, res) => {
 				"pagoMonto",
 				"totalConDescuento",
 				"precio",
+				"estado",
+				"saldoPendiente",
+				"abonoPagado",
+				"saldoPagado",
+				"tipoPago",
 			],
 		});
 
@@ -9346,8 +9371,143 @@ app.get("/api/payment-status", async (req, res) => {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
 		}
 
+		// Si la reserva ya está pagada en DB, responder directamente sin ir a Flow
+		if (reserva.estadoPago === "pagado") {
+			const monto = Number(
+				reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,
+			);
+			return res.json({ pagado: true, status: "pagado", monto });
+		}
+
+		// FALLBACK ROBUSTO: Si la reserva está pendiente y tenemos un token,
+		// consultar directamente a la API de Flow para verificar el estado real.
+		// Esto compensa el problema del cold start de Render (el webhook pudo haberse perdido
+		// si el servidor estaba dormido cuando Flow intentó notificar la confirmación).
+		if (
+			reserva.estadoPago === "pendiente" ||
+			reserva.estadoPago === "parcial"
+		) {
+			if (tokenResuelto) {
+				try {
+					console.log(
+						`🔄 [payment-status] Reserva ${reservaId} pendiente en DB. Consultando estado real en Flow API...`,
+					);
+					const paramsFlow = {
+						apiKey: process.env.FLOW_API_KEY,
+						token: tokenResuelto,
+					};
+					paramsFlow.s = signParams(paramsFlow);
+
+					const flowApiUrl =
+						process.env.FLOW_API_URL || "https://www.flow.cl/api";
+					const flowResp = await axios.get(
+						`${flowApiUrl}/payment/getStatus`,
+						{ params: paramsFlow },
+					);
+					const flowData = flowResp.data;
+
+					console.log(
+						`💰 [payment-status] Flow API respondió: status=${flowData.status}, amount=${flowData.amount}`,
+					);
+
+					// Si Flow confirma el pago como exitoso y la DB sigue pendiente,
+					// actualizar la reserva ahora (recuperación del webhook perdido)
+					if (flowData.status === 2) {
+						console.log(
+							`✅ [payment-status] Flow confirmó pago para reserva ${reservaId}. Actualizando DB...`,
+						);
+
+						const totalReserva =
+							parseFloat(reserva.totalConDescuento || 0) || 0;
+						const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
+						const montoFlow = Number(flowData.amount) || 0;
+						const pagoAcumulado = pagoPrevio + montoFlow;
+
+						let nuevoEstadoPago = "pagado";
+						let nuevoEstadoReserva = reserva.estado;
+						let nuevoSaldoPendiente = 0;
+						let abonoPagado = true;
+						let saldoPagado = true;
+
+						// Si el pago es menor al total, marcar como parcial
+						if (totalReserva > 0 && pagoAcumulado < totalReserva) {
+							nuevoEstadoPago = "parcial";
+							nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
+							saldoPagado = false;
+						} else if (
+							["pendiente", "pendiente_detalles", "confirmada"].includes(
+								nuevoEstadoReserva,
+							)
+						) {
+							nuevoEstadoReserva = "confirmada";
+						}
+
+						try {
+							await reserva.reload(); // Leer la fila completa para poder actualizar
+							await reserva.update({
+								estadoPago: nuevoEstadoPago,
+								pagoId: flowData.flowOrder?.toString() || null,
+								pagoGateway: "flow",
+								metodoPago: "flow",
+								pagoMonto: pagoAcumulado,
+								pagoFecha: new Date(flowData.paymentDate || new Date()),
+								estado: nuevoEstadoReserva,
+								saldoPendiente: nuevoSaldoPendiente,
+								abonoPagado,
+								saldoPagado,
+							});
+							console.log(
+								`✅ [payment-status] Reserva ${reservaId} actualizada a estadoPago="${nuevoEstadoPago}" vía fallback Flow API.`,
+							);
+						} catch (updateErr) {
+							console.error(
+								"❌ [payment-status] Error actualizando reserva:",
+								updateErr.message,
+							);
+						}
+
+						const montoFinal =
+							pagoAcumulado ||
+							Number(reserva.totalConDescuento || reserva.precio || 0);
+						return res.json({
+							pagado: nuevoEstadoPago === "pagado",
+							status: nuevoEstadoPago,
+							monto: montoFinal,
+							fuente: "flow_api_fallback",
+						});
+					}
+
+					// Si Flow dice pendiente (1), rechazado (3) o anulado (4), retornar ese estado
+					const estadoFlow =
+						flowData.status === 1
+							? "pendiente"
+							: flowData.status === 3
+								? "rechazado"
+								: flowData.status === 4
+									? "anulado"
+									: "pendiente";
+
+					return res.json({
+						pagado: false,
+						status: estadoFlow,
+						monto: null,
+						fuente: "flow_api",
+					});
+				} catch (flowErr) {
+					// Si falla la consulta a Flow, continuar con el estado de DB como fallback
+					console.warn(
+						`⚠️ [payment-status] No se pudo consultar Flow API (usando DB): ${flowErr.message}`,
+					);
+				}
+			} else {
+				console.log(
+					`ℹ️ [payment-status] Reserva ${reservaId} pendiente en DB pero no hay token para consultar Flow.`,
+				);
+			}
+		}
+
+		// Retorno por defecto: estado de la DB
 		const pagado = reserva.estadoPago === "pagado";
-		// Retornar el monto solo cuando el pago está confirmado
 		const monto = pagado
 			? Number(
 					reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,

@@ -139,6 +139,8 @@ function FlowReturn() {
 			// El flujo de Flow envía primero status=1 al navegador del usuario y luego status=2
 			// solo al webhook del servidor. Por eso el usuario queda en "pending" y el redirect
 			// final con status=success nunca llega al browser. Solución: polling al backend.
+			// NOTA: El backend ahora también consulta directamente a Flow API si la DB está pendiente,
+			// compensando el cold start de Render (el webhook pudo haberse perdido).
 			if (statusParam === "pending") {
 				console.warn(
 					`⏳ Pago PENDIENTE detectado. Iniciando polling para verificar confirmación...`,
@@ -148,12 +150,17 @@ function FlowReturn() {
 				const apiBase =
 					import.meta.env.VITE_API_URL ||
 					"https://transportes-araucaria.onrender.com";
-				// Máximo 24 intentos cada 5 segundos = 2 minutos de espera
+				// Estrategia de polling adaptativo:
+				// - Primeros 6 intentos: cada 5s (primeros 30s, para pagos rápidos con tarjeta)
+				// - Siguientes 18 intentos: cada 15s (siguientes 4.5 min, para transferencias lentas)
+				// Total máximo: ~5 minutos de espera activa
+				const INTERVALOS_RAPIDOS = 6;
 				const MAX_INTENTOS = 24;
 				let intentos = 0;
 				let cancelado = false;
+				let timerRef = null;
 
-				const pollingInterval = setInterval(async () => {
+				const ejecutarIntento = async () => {
 					if (cancelado) return;
 					intentos++;
 					try {
@@ -163,19 +170,26 @@ function FlowReturn() {
 						const data = await resp.json();
 
 						console.log(
-							`🔄 [FlowReturn] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`,
+							`🔄 [FlowReturn] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}, fuente=${data.fuente || "db"}`,
 						);
 
 						if (data.pagado) {
-							clearInterval(pollingInterval);
 							cancelado = true;
 							setPaymentStatus("success");
-							// Usar monto retornado por el backend (desde DB) o el que vino en la URL si llega tarde
+							// Usar monto retornado por el backend (desde DB o Flow API) o el que vino en URL
 							const montoConfirmado = data.monto?.toString() || amountParam;
 							const gtagListo = await waitForGtag();
 							if (gtagListo) {
 								triggerConversion(montoConfirmado, reservaIdParam, token);
 							}
+							return; // Detener polling
+						}
+
+						// Si Flow reportó rechazo o anulación, mostrar error
+						if (data.status === "rechazado" || data.status === "anulado") {
+							cancelado = true;
+							setPaymentStatus("error");
+							return;
 						}
 					} catch (e) {
 						console.warn(
@@ -184,19 +198,27 @@ function FlowReturn() {
 						);
 					}
 
-					if (intentos >= MAX_INTENTOS && !cancelado) {
-						clearInterval(pollingInterval);
+					if (intentos >= MAX_INTENTOS) {
 						cancelado = true;
 						console.log(
-							"⏲️ [FlowReturn] Polling finalizado sin confirmación de pago (timeout 2 min). El usuario debe revisar su email.",
+							"⏲️ [FlowReturn] Polling finalizado sin confirmación de pago (timeout ~5 min). El usuario debe revisar su email.",
 						);
+						return;
 					}
-				}, 5000);
+
+					// Programar siguiente intento con intervalo adaptativo
+					const siguienteIntervalo =
+						intentos < INTERVALOS_RAPIDOS ? 5000 : 15000;
+					timerRef = setTimeout(ejecutarIntento, siguienteIntervalo);
+				};
+
+				// Primer intento tras 5 segundos de espera inicial
+				timerRef = setTimeout(ejecutarIntento, 5000);
 
 				// Limpieza si el componente se desmonta antes de completar
 				return () => {
 					cancelado = true;
-					clearInterval(pollingInterval);
+					if (timerRef) clearTimeout(timerRef);
 				};
 			}
 
