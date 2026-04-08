@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 13 Marzo 2026
-> **Versión**: 1.9
+> **Última Actualización**: 5 Abril 2026
+> **Versión**: 2.0
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 

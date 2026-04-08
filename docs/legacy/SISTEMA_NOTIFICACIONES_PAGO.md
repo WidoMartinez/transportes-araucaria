@@ -61,8 +61,8 @@ Ubicación: `/enviar_confirmacion_pago.php` (en servidor Hostinger)
 
 **Configuración requerida:**
 ```env
-FLOW_API_KEY=tu_api_key
-FLOW_SECRET_KEY=tu_secret_key
+FLOW_API_KEY=68F45AF4-99F4-4F6A-98O3-32DL35O80A3F
+FLOW_SECRET_KEY=66c23b8685b57649baa43da1562a610bee200ac4
 ```
 
 ### 3. **Modelo de Reserva Actualizado**
@@ -201,8 +201,8 @@ Los siguientes archivos obsoletos fueron eliminados:
 
 2. **Variables de entorno en Render:**
    ```env
-   FLOW_API_KEY=...
-   FLOW_SECRET_KEY=...
+   FLOW_API_KEY=68F45AF4-99F4-4F6A-98O3-32DL35O80A3F
+   FLOW_SECRET_KEY=66c23b8685b57649baa43da1562a610bee200ac4
    BACKEND_URL=https://tu-backend.onrender.com
    PHP_EMAIL_URL=https://www.transportesaraucaria.cl/enviar_confirmacion_pago.php
    ```
