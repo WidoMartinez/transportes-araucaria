@@ -9467,7 +9467,8 @@ app.get("/api/payment-status", async (req, res) => {
 								let registroCodigo = null;
 
 								if (codigoPagoIdFallback && !isNaN(codigoPagoIdFallback)) {
-									registroCodigo = await CodigoPago.findByPk(codigoPagoIdFallback);
+									registroCodigo =
+										await CodigoPago.findByPk(codigoPagoIdFallback);
 								}
 								if (!registroCodigo && reserva.referenciaPago) {
 									const codigoStr = reserva.referenciaPago.trim().toUpperCase();
@@ -9477,7 +9478,8 @@ app.get("/api/payment-status", async (req, res) => {
 								}
 
 								if (registroCodigo && registroCodigo.estado !== "usado") {
-									const nuevosUsos = (parseInt(registroCodigo.usosActuales, 10) || 0) + 1;
+									const nuevosUsos =
+										(parseInt(registroCodigo.usosActuales, 10) || 0) + 1;
 									const nuevoEstadoCodigo =
 										nuevosUsos >= registroCodigo.usosMaximos
 											? "usado"
