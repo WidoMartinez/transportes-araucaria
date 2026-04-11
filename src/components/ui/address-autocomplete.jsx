@@ -45,6 +45,8 @@ export function AddressAutocomplete({
 	const [webComponentActive, setWebComponentActive] = useState(false);
 	// Indica si el usuario está interactuando activamente con el campo (React o Web Component)
 	const [active, setActive] = useState(false);
+	// Referencia al timer del focusout para poder cancelarlo si se selecciona una sugerencia
+	const focusOutTimerRef = useRef(null);
 
 	// El overlay se muestra solo cuando: Web Component activo Y (campo vacío O usuario activo).
 	// Si ya hay una dirección guardada y el usuario no está editando, se muestra
@@ -82,8 +84,29 @@ export function AddressAutocomplete({
 
 			// Detectar foco/desenfoque del Web Component para activar/desactivar el overlay.
 			// focusin/focusout son eventos composed:true, burbujean desde el shadow DOM.
-			element.addEventListener("focusin", () => setActive(true));
-			element.addEventListener("focusout", () => setActive(false));
+			element.addEventListener("focusin", () => {
+				// Cancelar cualquier ocultamiento pendiente si el usuario vuelve al campo
+				if (focusOutTimerRef.current) {
+					clearTimeout(focusOutTimerRef.current);
+					focusOutTimerRef.current = null;
+				}
+				setActive(true);
+			});
+			element.addEventListener("focusout", () => {
+				// IMPORTANTE: NO ocultar el overlay inmediatamente.
+				// Cuando el usuario hace clic en una sugerencia, el orden es:
+				//   1. mousedown sobre la sugerencia
+				//   2. focusout del Web Component  <-- aquí estamos
+				//   3. gmp-placeautocomplete-place-changed
+				// Si ocultamos ahora (display:none), el dropdown desaparece y el evento
+				// de selección nunca se completa, guardando solo el texto parcial escrito.
+				// El timer se cancela en el handler de selección para ocultar inmediatamente
+				// después de actualizar el valor, o se ejecuta si el usuario sale sin seleccionar.
+				focusOutTimerRef.current = setTimeout(() => {
+					focusOutTimerRef.current = null;
+					setActive(false);
+				}, 300);
+			});
 
 			// Capturar el texto del input interno del Web Component mientras el usuario escribe.
 			// Los eventos 'input' del shadow DOM son composed:true, por lo que burbujean
@@ -113,8 +136,18 @@ export function AddressAutocomplete({
 			element.addEventListener(
 				"gmp-placeautocomplete-place-changed",
 				async () => {
+					// Cancelar el timer de focusout para que el Web Component no se oculte
+					// mientras se procesa la selección (la ocultamos nosotros al terminar).
+					if (focusOutTimerRef.current) {
+						clearTimeout(focusOutTimerRef.current);
+						focusOutTimerRef.current = null;
+					}
+
 					const place = element.value;
-					if (!place) return;
+					if (!place) {
+						setActive(false);
+						return;
+					}
 
 					try {
 						// fetchFields obtiene la dirección normalizada (requiere billing)
@@ -137,6 +170,9 @@ export function AddressAutocomplete({
 					} catch (fetchErr) {
 						// Sin billing, fetchFields falla: el input nativo ya tiene el texto escrito
 						void fetchErr;
+					} finally {
+						// Ocultar el overlay ahora que la selección está completamente procesada
+						setActive(false);
 					}
 				},
 			);
@@ -152,6 +188,10 @@ export function AddressAutocomplete({
 		}
 
 		return () => {
+			// Limpiar el timer de focusout si el componente se desmonta
+			if (focusOutTimerRef.current) {
+				clearTimeout(focusOutTimerRef.current);
+			}
 			const el = elementRef.current;
 			if (el && containerNode?.contains(el)) {
 				try {
