@@ -60,12 +60,12 @@ export default function PerfilScreen() {
       {/* Acciones */}
       <View style={estilos.seccionCard}>
         <Text style={estilos.seccionTitulo}>Acciones</Text>
-        <TouchableOpacity style={estilos.filaAccion}>
+        <TouchableOpacity style={estilos.filaAccion} onPress={() => Alert.alert("Próximamente", "Cambio de contraseña estará disponible en la próxima versión.")}>
           <Text style={estilos.filaAccionIcono}>🔒</Text>
           <Text style={estilos.filaAccionTexto}>Cambiar contraseña</Text>
           <Text style={estilos.flecha}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={estilos.filaAccion}>
+        <TouchableOpacity style={estilos.filaAccion} onPress={() => Alert.alert("Próximamente", "Configuración de notificaciones estará disponible en la próxima versión.")}>
           <Text style={estilos.filaAccionIcono}>🔔</Text>
           <Text style={estilos.filaAccionTexto}>Notificaciones</Text>
           <Text style={estilos.flecha}>›</Text>

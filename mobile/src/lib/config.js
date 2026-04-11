@@ -1,7 +1,8 @@
 // Configuración global de la app móvil de Transportes Araucanía.
 // La URL del backend apunta al servidor en Render.com.
 
-// URL base del backend (Render.com). Ajustar si cambia el dominio.
+// URL base del backend (Render.com). El slug del dominio usa 'araucaria' (sin tilde),
+// que corresponde al nombre del repositorio/servicio en Render.com.
 export const BACKEND_URL =
   process.env.EXPO_PUBLIC_BACKEND_URL ||
   "https://transportes-araucaria.onrender.com";

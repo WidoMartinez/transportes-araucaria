@@ -54,8 +54,14 @@ export default function NuevaReservaScreen({ navigation }) {
     if (!telefono.trim()) return "El teléfono es obligatorio.";
     if (!origen.trim()) return "El origen es obligatorio.";
     if (!destino.trim()) return "El destino es obligatorio.";
-    if (!fecha.trim()) return "La fecha es obligatoria (formato YYYY-MM-DD).";
-    if (!hora.trim()) return "La hora es obligatoria (formato HH:MM).";
+    // Validar formato de fecha YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha.trim())) {
+      return "La fecha debe tener el formato YYYY-MM-DD (ej: 2025-06-15).";
+    }
+    // Validar formato de hora HH:MM
+    if (!/^\d{2}:\d{2}$/.test(hora.trim())) {
+      return "La hora debe tener el formato HH:MM (ej: 10:30).";
+    }
     const numPasajeros = parseInt(pasajeros, 10);
     if (isNaN(numPasajeros) || numPasajeros < 1 || numPasajeros > 10) {
       return "El número de pasajeros debe ser entre 1 y 10.";

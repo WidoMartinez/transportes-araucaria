@@ -2,7 +2,7 @@
 // Decide si mostrar la pantalla de login o el TabNavigator
 // según el estado de autenticación del usuario.
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../contexts/AuthContext";
@@ -67,13 +67,32 @@ export default function AppNavigator() {
 function DetalleReservaPlaceholder({ route }) {
   const { reserva } = route.params || {};
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: COLORES.fondo }}>
-      <Text style={{ fontSize: 18, fontWeight: "700", color: COLORES.texto, marginBottom: 12 }}>
+    <View style={estilosDetalle.contenedor}>
+      <Text style={estilosDetalle.titulo}>
         {reserva?.codigoReserva || "Reserva"}
       </Text>
-      <Text style={{ color: COLORES.textoSecundario }}>
+      <Text style={estilosDetalle.subtitulo}>
         Próximamente: Vista detallada de la reserva con estado en tiempo real.
       </Text>
     </View>
   );
 }
+
+const estilosDetalle = StyleSheet.create({
+  contenedor: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: COLORES.fondo,
+  },
+  titulo: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORES.texto,
+    marginBottom: 12,
+  },
+  subtitulo: {
+    color: COLORES.textoSecundario,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+});
