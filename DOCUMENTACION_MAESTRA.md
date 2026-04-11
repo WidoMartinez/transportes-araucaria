@@ -242,7 +242,7 @@ Para mejorar la claridad en reservas de ida y vuelta (donde la reserva se divide
 
 - **Google Ads**: Conversiones mejoradas implementadas en flujos de pago.
   - **Tracking Robusto**: El backend (`/api/payment-result`) inyecta el monto real de la transacción en la URL de retorno, garantizando que el tag de conversión (`gtag`) reciba el valor correcto incluso si falla la consulta de base de datos local.
-- **Google Maps**: Autocomplete V2 (`PlaceAutocompleteElement`) para direcciones.
+- **Google Maps**: Autocomplete de direcciones mediante `AddressAutocomplete`, implementado con Places API (New) por HTTP para mantener control total del input en React y evitar inconsistencias del Web Component en edición y selección de direcciones. El valor persistido debe conservar el texto seleccionado por el usuario desde Google cuando represente un lugar o hotel, para que los enlaces enviados a conductor apunten al sitio correcto y no solo a la calle formateada.
 
 ### 5.5 Lógica de Disponibilidad y Anticipación
 

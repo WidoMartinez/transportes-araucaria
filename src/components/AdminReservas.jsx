@@ -130,9 +130,12 @@ const generarTextoConductor = (reserva) => {
 	const addressEspecifica = esOrigenAero
 		? reserva.direccionDestino || reserva.destino || ""
 		: reserva.direccionOrigen || reserva.origen || "";
+	const mapsQuery = reserva.hotel
+		? `${reserva.hotel}, ${addressEspecifica}`
+		: addressEspecifica;
 
-	const mapsLink = addressEspecifica
-		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressEspecifica)}`
+	const mapsLink = mapsQuery
+		? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
 		: "";
 
 	// info adicional

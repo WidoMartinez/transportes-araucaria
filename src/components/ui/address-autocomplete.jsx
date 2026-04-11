@@ -1,19 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useGoogleMaps } from "../../hooks/useGoogleMaps";
 import { MapPin } from "lucide-react";
 
 /**
  * Componente de autocompletado de direcciones.
  *
- * Usa PlaceAutocompleteElement (API nueva, requerida desde marzo 2025).
- * El script de Google Maps se carga SIN v=beta para evitar ApiTargetBlockedMapError.
+	* Usa Places API (New) por HTTP para evitar inconsistencias del Web Component
+	* y dependencia de servicios legacy del SDK de Maps.
  *
  * Arquitectura:
- * - Cuando Google Maps está disponible, PlaceAutocompleteElement se monta en el DOM
- *   y se superpone visualmente sobre el input React.
- * - El input React queda visible (opacity:0) para que los formularios lean su valor.
- * - La selección de lugar actualiza el estado React vía onChangeRef (evita stale closure).
- * - Si Google Maps no está disponible, funciona como input de texto simple.
+	* - El input React sigue siendo la fuente de verdad del formulario.
+	* - Al escribir, se consultan sugerencias de Places API con debounce.
+	* - Al seleccionar, primero se guarda la direccion sugerida y luego se enriquece con Place Details.
+	* - Si no hay API key, funciona como input de texto simple.
  */
 export function AddressAutocomplete({
 	value,
@@ -28,14 +26,15 @@ export function AddressAutocomplete({
 	...props
 }) {
 	const inputRef = useRef(null);
-	const elementRef = useRef(null);
-	const containerRef = useRef(null);
-	const { isLoaded, isAvailable } = useGoogleMaps();
+	const debounceTimerRef = useRef(null);
+	const autocompleteAbortRef = useRef(null);
+	const detailsAbortRef = useRef(null);
+	const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+	const isAvailable = Boolean(apiKey);
 	const [active, setActive] = useState(false);
-	const [webComponentActive, setWebComponentActive] = useState(false);
+	const [suggestions, setSuggestions] = useState([]);
+	const [highlightedIndex, setHighlightedIndex] = useState(-1);
 	const focusOutTimerRef = useRef(null);
-	// Dirección seleccionada: se guarda al dispararse place-changed y se usa como
-	// fuente de verdad. Previene que eventos input posteriores la sobreescriban.
 	const selectedAddressRef = useRef(null);
 
 	// Refs para evitar stale closures: los event listeners se registran UNA SOLA VEZ
@@ -49,177 +48,244 @@ export function AddressAutocomplete({
 		nameRef.current = name;
 	});
 
-	const showWebComponent = webComponentActive && (!value || active);
-
 	useEffect(() => {
-		if (!isLoaded || !isAvailable) return;
-		if (elementRef.current) return;
-		if (!window.google?.maps?.places?.PlaceAutocompleteElement) return;
-
-		const containerNode = containerRef.current;
-		if (!containerNode) return;
-
-		const element = new window.google.maps.places.PlaceAutocompleteElement({
-			componentRestrictions: { country: "cl" },
-			types: ["address"],
-			...autocompleteOptions,
-		});
-
-		if (placeholder) element.setAttribute("placeholder", placeholder);
-		containerNode.appendChild(element);
-		elementRef.current = element;
-
-		// Foco: cancelar timer de ocultamiento si el usuario vuelve al campo
-		element.addEventListener("focusin", () => {
-			if (focusOutTimerRef.current) {
-				clearTimeout(focusOutTimerRef.current);
-				focusOutTimerRef.current = null;
-			}
-			selectedAddressRef.current = null; // Limpiar selección previa al re-enfocar
-			setActive(true);
-		});
-
-		// Desenfoque con delay para no ocultar el dropdown antes de que se procese
-		// el clic en la sugerencia (mousedown → focusout → place-changed)
-		element.addEventListener("focusout", () => {
-			focusOutTimerRef.current = setTimeout(() => {
-				focusOutTimerRef.current = null;
-				setActive(false);
-			}, 300);
-		});
-
-		// Escritura del usuario: solo propagar a React si NO hay una selección
-		// completada (evita que el Web Component sobreescriba la dirección elegida
-		// con el texto parcial escrito, que algunos navegadores disparan post-selección).
-		element.addEventListener("input", (evt) => {
-			if (selectedAddressRef.current !== null) return;
-			const innerTarget = evt.composedPath?.()[0];
-			const text = innerTarget?.value ?? evt.target?.value ?? "";
-			onChangeRef.current?.({ target: { name: nameRef.current, value: text } });
-		});
-
-		element.addEventListener("gmp-requesterror", () => {
-			setWebComponentActive(false);
-		});
-
-		// Selección de sugerencia
-		element.addEventListener(
-			"gmp-placeautocomplete-place-changed",
-			async () => {
-				// Cancelar ocultamiento para que el overlay no desaparezca durante el proceso
-				if (focusOutTimerRef.current) {
-					clearTimeout(focusOutTimerRef.current);
-					focusOutTimerRef.current = null;
-				}
-
-				// element.value es un PlacePrediction (NO un Place).
-				// PlacePrediction.text.text entrega el texto completo SINCRÓNICAMENTE
-				// sin llamadas adicionales: "Bordelago, Pucón - Camino Villarrica - Pucón, Chile".
-				const prediction = element.value;
-				if (!prediction) {
-					setActive(false);
-					return;
-				}
-
-				const fallbackAddress = prediction.text?.text?.trim() || "";
-				if (fallbackAddress) {
-					// Guardar de inmediato: bloquea que el listener de 'input' sobreescriba
-					// la dirección con el texto parcial que el usuario había escrito.
-					selectedAddressRef.current = fallbackAddress;
-					onChangeRef.current?.({
-						target: { name: nameRef.current, value: fallbackAddress },
-					});
-				}
-
-				try {
-					// Para llamar fetchFields se necesita un Place, no un PlacePrediction.
-					// prediction.toPlace() crea el objeto Place correspondiente.
-					// fetchFields da la dirección normalizada por Google (más precisa si hay billing).
-					const place = prediction.toPlace();
-					await place.fetchFields({
-						fields: ["formattedAddress", "addressComponents", "location"],
-					});
-					const address = place.formattedAddress?.trim();
-					if (address) {
-						selectedAddressRef.current = address;
-						onChangeRef.current?.({
-							target: { name: nameRef.current, value: address },
-						});
-						onPlaceSelectedRef.current?.({
-							address,
-							components: place.addressComponents,
-							geometry: place.location ? { location: place.location } : null,
-						});
-					}
-				} catch (err) {
-					// fetchFields falló (Places API no habilitada o sin billing):
-					// el fallbackAddress ya fue guardado arriba, no hay pérdida de dato.
-					console.warn(
-						"[AddressAutocomplete] fetchFields falló:",
-						err?.message ?? err,
-					);
-				} finally {
-					setActive(false);
-				}
-			},
-		);
-
-		setWebComponentActive(true);
-
 		return () => {
 			if (focusOutTimerRef.current) clearTimeout(focusOutTimerRef.current);
-			const el = elementRef.current;
-			if (el && containerNode?.contains(el)) {
-				try {
-					containerNode.removeChild(el);
-				} catch (e) {
-					void e;
-				}
-			}
-			elementRef.current = null;
+			if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+			autocompleteAbortRef.current?.abort();
+			detailsAbortRef.current?.abort();
 		};
-	}, [isLoaded, isAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, []);
+
+	useEffect(() => {
+		if (!isAvailable) return;
+		if (!active) {
+			setSuggestions([]);
+			setHighlightedIndex(-1);
+			return;
+		}
+
+		const query = value?.trim() || "";
+		if (!query) {
+			setSuggestions([]);
+			setHighlightedIndex(-1);
+			return;
+		}
+
+		if (selectedAddressRef.current === query) {
+			return;
+		}
+
+		if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+		debounceTimerRef.current = setTimeout(() => {
+			autocompleteAbortRef.current?.abort();
+			const controller = new AbortController();
+			autocompleteAbortRef.current = controller;
+
+			fetch("https://places.googleapis.com/v1/places:autocomplete", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Goog-Api-Key": apiKey,
+					"X-Goog-FieldMask": "suggestions.placePrediction.place,suggestions.placePrediction.placeId,suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat.mainText.text,suggestions.placePrediction.structuredFormat.secondaryText.text",
+				},
+				body: JSON.stringify({
+					input: query,
+					languageCode: "es",
+					regionCode: "CL",
+					includedRegionCodes: ["cl"],
+					...autocompleteOptions,
+				}),
+				signal: controller.signal,
+			})
+				.then(async (response) => {
+					if (!response.ok) {
+						throw new Error(`Autocomplete HTTP ${response.status}`);
+					}
+					return response.json();
+				})
+				.then((data) => {
+					const predictions = data?.suggestions
+						?.map((item) => item?.placePrediction)
+						.filter(Boolean) || [];
+
+					if (!predictions.length) {
+						setSuggestions([]);
+						setHighlightedIndex(-1);
+						return;
+					}
+
+					setSuggestions(predictions);
+					setHighlightedIndex(0);
+				})
+				.catch((error) => {
+					if (error.name === "AbortError") return;
+					console.warn("[AddressAutocomplete] No se pudieron obtener sugerencias:", error?.message ?? error);
+					setSuggestions([]);
+					setHighlightedIndex(-1);
+				});
+		}, 180);
+
+		return () => {
+			if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+		};
+	}, [active, apiKey, autocompleteOptions, isAvailable, value]);
+
+	const applyAddressValue = (address) => {
+		selectedAddressRef.current = address;
+		onChangeRef.current?.({ target: { name: nameRef.current, value: address } });
+	};
+
+	const handleSuggestionSelect = (prediction) => {
+		if (!prediction) return;
+
+		if (focusOutTimerRef.current) {
+			clearTimeout(focusOutTimerRef.current);
+			focusOutTimerRef.current = null;
+		}
+
+		const fallbackAddress =
+			prediction.text?.text?.trim() ||
+			prediction.structuredFormat?.mainText?.text?.trim() ||
+			"";
+		if (fallbackAddress) {
+			applyAddressValue(fallbackAddress);
+		}
+
+		setSuggestions([]);
+		setHighlightedIndex(-1);
+		setActive(false);
+
+		if (!prediction.place || !apiKey) return;
+
+		detailsAbortRef.current?.abort();
+		const controller = new AbortController();
+		detailsAbortRef.current = controller;
+
+		fetch(`https://places.googleapis.com/v1/${prediction.place}?languageCode=es&regionCode=CL`, {
+			headers: {
+				"X-Goog-Api-Key": apiKey,
+				"X-Goog-FieldMask": "formattedAddress,addressComponents,location",
+			},
+			signal: controller.signal,
+		})
+			.then(async (response) => {
+				if (!response.ok) {
+					throw new Error(`Place Details HTTP ${response.status}`);
+				}
+				return response.json();
+			})
+			.then((place) => {
+				const address = place?.formattedAddress?.trim();
+
+				onPlaceSelectedRef.current?.({
+					address: fallbackAddress || address || "",
+					components: place?.addressComponents || [],
+					geometry: place?.location ? { location: place.location } : null,
+					formattedAddress: address || "",
+					placeId: prediction.placeId || "",
+				});
+			})
+			.catch((error) => {
+				if (error.name === "AbortError") return;
+				console.warn("[AddressAutocomplete] No se pudieron obtener detalles del lugar:", error?.message ?? error);
+			});
+	};
 
 	return (
 		<div className="relative">
 			<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 
-			{/* Input React: fuente de verdad del formulario. Se oculta visualmente
-			    cuando el Web Component está activo, pero sigue en el DOM. */}
 			<input
 				ref={inputRef}
 				id={id}
 				name={name}
 				value={value || ""}
-				onChange={onChange}
+				onChange={(event) => {
+					selectedAddressRef.current = null;
+					onChange(event);
+				}}
 				placeholder={placeholder}
 				className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 pl-10 ${className}`}
 				required={required}
 				autoComplete="off"
 				onFocus={() => {
-					if (webComponentActive) {
-						setActive(true);
-						requestAnimationFrame(() => elementRef.current?.focus());
+					if (focusOutTimerRef.current) {
+						clearTimeout(focusOutTimerRef.current);
+						focusOutTimerRef.current = null;
+					}
+					selectedAddressRef.current = null;
+					setActive(true);
+				}}
+				onBlur={() => {
+					focusOutTimerRef.current = setTimeout(() => {
+						focusOutTimerRef.current = null;
+						setActive(false);
+						setSuggestions([]);
+						setHighlightedIndex(-1);
+					}, 180);
+				}}
+				onKeyDown={(event) => {
+					if (!suggestions.length) return;
+
+					if (event.key === "ArrowDown") {
+						event.preventDefault();
+						setHighlightedIndex((current) => (current + 1) % suggestions.length);
+						return;
+					}
+
+					if (event.key === "ArrowUp") {
+						event.preventDefault();
+						setHighlightedIndex((current) => (current <= 0 ? suggestions.length - 1 : current - 1));
+						return;
+					}
+
+					if (event.key === "Enter") {
+						if (highlightedIndex < 0 || highlightedIndex >= suggestions.length) return;
+						event.preventDefault();
+						handleSuggestionSelect(suggestions[highlightedIndex]);
+						return;
+					}
+
+					if (event.key === "Escape") {
+						setSuggestions([]);
+						setHighlightedIndex(-1);
+						setActive(false);
 					}
 				}}
-				style={
-					showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined
-				}
 				{...props}
 			/>
 
-			{/* Contenedor del PlaceAutocompleteElement */}
-			{isAvailable && (
-				<div
-					ref={containerRef}
-					className="gmp-autocomplete-wrapper"
-					style={{
-						position: "absolute",
-						inset: 0,
-						display: showWebComponent ? "block" : "none",
-						zIndex: 1,
-					}}
-				/>
+			{active && suggestions.length > 0 && (
+				<ul
+					className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-auto rounded-md border border-border bg-background shadow-lg"
+					role="listbox"
+				>
+					{suggestions.map((prediction, index) => {
+						const isHighlighted = index === highlightedIndex;
+						return (
+							<li key={prediction.placeId || prediction.place} role="option" aria-selected={isHighlighted}>
+								<button
+									type="button"
+									className={`w-full px-3 py-2 text-left text-sm ${isHighlighted ? "bg-muted" : "bg-background hover:bg-muted/60"}`}
+									onMouseDown={(event) => {
+										event.preventDefault();
+										handleSuggestionSelect(prediction);
+									}}
+								>
+									<div className="font-medium text-foreground">
+										{prediction.structuredFormat?.mainText?.text || prediction.text?.text}
+									</div>
+									{prediction.structuredFormat?.secondaryText?.text && (
+										<div className="text-xs text-muted-foreground">
+											{prediction.structuredFormat.secondaryText.text}
+										</div>
+									)}
+								</button>
+							</li>
+						);
+					})}
+				</ul>
 			)}
 		</div>
 	);
