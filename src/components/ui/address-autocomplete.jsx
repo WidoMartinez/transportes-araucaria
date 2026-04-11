@@ -103,53 +103,66 @@ export function AddressAutocomplete({
 		});
 
 		// Selección de sugerencia
-		element.addEventListener("gmp-placeautocomplete-place-changed", async () => {
-			// Cancelar ocultamiento para que el overlay no desaparezca durante el proceso
-			if (focusOutTimerRef.current) {
-				clearTimeout(focusOutTimerRef.current);
-				focusOutTimerRef.current = null;
-			}
+		element.addEventListener(
+			"gmp-placeautocomplete-place-changed",
+			async () => {
+				// Cancelar ocultamiento para que el overlay no desaparezca durante el proceso
+				if (focusOutTimerRef.current) {
+					clearTimeout(focusOutTimerRef.current);
+					focusOutTimerRef.current = null;
+				}
 
-			// element.value es un PlacePrediction (NO un Place).
-			// PlacePrediction.text.text entrega el texto completo SINCRÓNICAMENTE
-			// sin llamadas adicionales: "Bordelago, Pucón - Camino Villarrica - Pucón, Chile".
-			const prediction = element.value;
-			if (!prediction) { setActive(false); return; }
+				// element.value es un PlacePrediction (NO un Place).
+				// PlacePrediction.text.text entrega el texto completo SINCRÓNICAMENTE
+				// sin llamadas adicionales: "Bordelago, Pucón - Camino Villarrica - Pucón, Chile".
+				const prediction = element.value;
+				if (!prediction) {
+					setActive(false);
+					return;
+				}
 
-			const fallbackAddress = prediction.text?.text?.trim() || "";
-			if (fallbackAddress) {
-				// Guardar de inmediato: bloquea que el listener de 'input' sobreescriba
-				// la dirección con el texto parcial que el usuario había escrito.
-				selectedAddressRef.current = fallbackAddress;
-				onChangeRef.current?.({ target: { name: nameRef.current, value: fallbackAddress } });
-			}
-
-			try {
-				// Para llamar fetchFields se necesita un Place, no un PlacePrediction.
-				// prediction.toPlace() crea el objeto Place correspondiente.
-				// fetchFields da la dirección normalizada por Google (más precisa si hay billing).
-				const place = prediction.toPlace();
-				await place.fetchFields({
-					fields: ["formattedAddress", "addressComponents", "location"],
-				});
-				const address = place.formattedAddress?.trim();
-				if (address) {
-					selectedAddressRef.current = address;
-					onChangeRef.current?.({ target: { name: nameRef.current, value: address } });
-					onPlaceSelectedRef.current?.({
-						address,
-						components: place.addressComponents,
-						geometry: place.location ? { location: place.location } : null,
+				const fallbackAddress = prediction.text?.text?.trim() || "";
+				if (fallbackAddress) {
+					// Guardar de inmediato: bloquea que el listener de 'input' sobreescriba
+					// la dirección con el texto parcial que el usuario había escrito.
+					selectedAddressRef.current = fallbackAddress;
+					onChangeRef.current?.({
+						target: { name: nameRef.current, value: fallbackAddress },
 					});
 				}
-			} catch (err) {
-				// fetchFields falló (Places API no habilitada o sin billing):
-				// el fallbackAddress ya fue guardado arriba, no hay pérdida de dato.
-				console.warn("[AddressAutocomplete] fetchFields falló:", err?.message ?? err);
-			} finally {
-				setActive(false);
-			}
-		});
+
+				try {
+					// Para llamar fetchFields se necesita un Place, no un PlacePrediction.
+					// prediction.toPlace() crea el objeto Place correspondiente.
+					// fetchFields da la dirección normalizada por Google (más precisa si hay billing).
+					const place = prediction.toPlace();
+					await place.fetchFields({
+						fields: ["formattedAddress", "addressComponents", "location"],
+					});
+					const address = place.formattedAddress?.trim();
+					if (address) {
+						selectedAddressRef.current = address;
+						onChangeRef.current?.({
+							target: { name: nameRef.current, value: address },
+						});
+						onPlaceSelectedRef.current?.({
+							address,
+							components: place.addressComponents,
+							geometry: place.location ? { location: place.location } : null,
+						});
+					}
+				} catch (err) {
+					// fetchFields falló (Places API no habilitada o sin billing):
+					// el fallbackAddress ya fue guardado arriba, no hay pérdida de dato.
+					console.warn(
+						"[AddressAutocomplete] fetchFields falló:",
+						err?.message ?? err,
+					);
+				} finally {
+					setActive(false);
+				}
+			},
+		);
 
 		setWebComponentActive(true);
 
@@ -157,7 +170,11 @@ export function AddressAutocomplete({
 			if (focusOutTimerRef.current) clearTimeout(focusOutTimerRef.current);
 			const el = elementRef.current;
 			if (el && containerNode?.contains(el)) {
-				try { containerNode.removeChild(el); } catch (e) { void e; }
+				try {
+					containerNode.removeChild(el);
+				} catch (e) {
+					void e;
+				}
 			}
 			elementRef.current = null;
 		};
@@ -185,7 +202,9 @@ export function AddressAutocomplete({
 						requestAnimationFrame(() => elementRef.current?.focus());
 					}
 				}}
-				style={showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined}
+				style={
+					showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined
+				}
 				{...props}
 			/>
 
