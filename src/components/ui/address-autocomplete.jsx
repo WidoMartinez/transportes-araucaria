@@ -47,6 +47,10 @@ export function AddressAutocomplete({
 	const [active, setActive] = useState(false);
 	// Referencia al timer del focusout para poder cancelarlo si se selecciona una sugerencia
 	const focusOutTimerRef = useRef(null);
+	// Flag que indica que hay una selección en curso: bloquea los eventos "input" del
+	// Web Component que se disparan después de seleccionar (vacían o reemplazan el valor
+	// antes de que fetchFields haya terminado, sobreescribiendo la dirección completa).
+	const pendingSelectionRef = useRef(false);
 
 	// El overlay se muestra solo cuando: Web Component activo Y (campo vacío O usuario activo).
 	// Si ya hay una dirección guardada y el usuario no está editando, se muestra
@@ -113,6 +117,12 @@ export function AddressAutocomplete({
 			// hacia afuera. composedPath()[0] da acceso al elemento real (dentro del shadow DOM).
 			// Esto mantiene React state sincronizado aunque el billing no esté habilitado.
 			element.addEventListener("input", (evt) => {
+				// CRÍTICO: ignorar los eventos "input" que el Web Component dispara durante
+				// o justo después de seleccionar una sugerencia. Google Maps dispara estos
+				// eventos internamente (con texto vacío o con el texto parcial escrito),
+				// sobreescribiendo la dirección completa que fetchFields ya guardó.
+				if (pendingSelectionRef.current) return;
+
 				const innerTarget = evt.composedPath?.()[0];
 				const text = innerTarget?.value ?? evt.target?.value ?? "";
 				if (text !== undefined && onChange) {
@@ -136,6 +146,10 @@ export function AddressAutocomplete({
 			element.addEventListener(
 				"gmp-placeautocomplete-place-changed",
 				async () => {
+					// Bloquear eventos "input" para que no sobreescriban la dirección
+					// completa mientras se procesa fetchFields
+					pendingSelectionRef.current = true;
+
 					// Cancelar el timer de focusout para que el Web Component no se oculte
 					// mientras se procesa la selección (la ocultamos nosotros al terminar).
 					if (focusOutTimerRef.current) {
@@ -145,6 +159,7 @@ export function AddressAutocomplete({
 
 					const place = element.value;
 					if (!place) {
+						pendingSelectionRef.current = false;
 						setActive(false);
 						return;
 					}
@@ -171,7 +186,8 @@ export function AddressAutocomplete({
 						// Sin billing, fetchFields falla: el input nativo ya tiene el texto escrito
 						void fetchErr;
 					} finally {
-						// Ocultar el overlay ahora que la selección está completamente procesada
+						// Ocultar el overlay y liberar el bloqueo de eventos input
+						pendingSelectionRef.current = false;
 						setActive(false);
 					}
 				},
