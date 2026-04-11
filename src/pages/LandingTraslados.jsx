@@ -59,10 +59,13 @@ const trackCotizacionConversion = () => {
 // --- Tracker clic WhatsApp (con deduplicación por sesión) ---
 const WHATSAPP_CONV_KEY = "wa_conversion_fired";
 const trackWhatsAppTraslado = () => {
-	if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+	if (typeof window === "undefined" || typeof window.gtag !== "function")
+		return;
 	// Evitar disparar la conversión más de una vez por sesión de usuario
 	if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-		console.info("ℹ️ [LandingTraslados] Conversión WhatsApp ya registrada esta sesión, se omite.");
+		console.info(
+			"ℹ️ [LandingTraslados] Conversión WhatsApp ya registrada esta sesión, se omite.",
+		);
 		return;
 	}
 	sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");

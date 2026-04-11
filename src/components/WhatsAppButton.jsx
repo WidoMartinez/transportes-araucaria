@@ -24,7 +24,7 @@ const WhatsAppButton = ({
 
 	// Construir URL de WhatsApp con mensaje pre-cargado
 	const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
-		message
+		message,
 	)}`;
 
 	// Tracking de conversión de Google Ads — con deduplicación por sesión
@@ -34,7 +34,9 @@ const WhatsAppButton = ({
 	const handleClick = () => {
 		if (typeof window !== "undefined" && window.gtag) {
 			if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-				console.info("ℹ️ [WhatsAppButton] Conversión WhatsApp ya registrada esta sesión, se omite.");
+				console.info(
+					"ℹ️ [WhatsAppButton] Conversión WhatsApp ya registrada esta sesión, se omite.",
+				);
 				return;
 			}
 			sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
@@ -43,7 +45,9 @@ const WhatsAppButton = ({
 				value: 1.0,
 				currency: "CLP",
 			});
-			console.log("✅ [WhatsAppButton] Conversión de clic en WhatsApp enviada.");
+			console.log(
+				"✅ [WhatsAppButton] Conversión de clic en WhatsApp enviada.",
+			);
 		}
 	};
 

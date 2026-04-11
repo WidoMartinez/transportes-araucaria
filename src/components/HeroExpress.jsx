@@ -195,14 +195,10 @@ function HeroExpress({
 		}, 2000);
 
 		return () => clearTimeout(timer);
-	// Solo email y precio como disparadores — nombre/teléfono se omiten
-	// intencionalmente para evitar actualizaciones por cada tecla que presione el usuario
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [
-		currentStep,
-		formData.email,
-		pricing.totalConDescuento,
-	]);
+		// Solo email y precio como disparadores — nombre/teléfono se omiten
+		// intencionalmente para evitar actualizaciones por cada tecla que presione el usuario
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [currentStep, formData.email, pricing.totalConDescuento]);
 
 	// Determinar el "target" para mostrar info (Destino principal o Origen si es traslado hacia aeropuerto)
 	const targetName = useMemo(() => {

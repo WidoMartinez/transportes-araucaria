@@ -192,9 +192,9 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 		}, 2000);
 
 		return () => clearTimeout(timer);
-	// nombre/teléfono se omiten intencionalmente para evitar actualizaciones
-	// continuas mientras el usuario escribe — el email es el identificador único
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// nombre/teléfono se omiten intencionalmente para evitar actualizaciones
+		// continuas mientras el usuario escribe — el email es el identificador único
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		formData.email,
 		formData.fecha_ida,
