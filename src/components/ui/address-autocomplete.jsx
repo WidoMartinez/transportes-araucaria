@@ -4,14 +4,14 @@ import { MapPin } from "lucide-react";
 /**
  * Componente de autocompletado de direcciones.
  *
-	* Usa Places API (New) por HTTP para evitar inconsistencias del Web Component
-	* y dependencia de servicios legacy del SDK de Maps.
+ * Usa Places API (New) por HTTP para evitar inconsistencias del Web Component
+ * y dependencia de servicios legacy del SDK de Maps.
  *
  * Arquitectura:
-	* - El input React sigue siendo la fuente de verdad del formulario.
-	* - Al escribir, se consultan sugerencias de Places API con debounce.
-	* - Al seleccionar, primero se guarda la direccion sugerida y luego se enriquece con Place Details.
-	* - Si no hay API key, funciona como input de texto simple.
+ * - El input React sigue siendo la fuente de verdad del formulario.
+ * - Al escribir, se consultan sugerencias de Places API con debounce.
+ * - Al seleccionar, primero se guarda la direccion sugerida y luego se enriquece con Place Details.
+ * - Si no hay API key, funciona como input de texto simple.
  */
 export function AddressAutocomplete({
 	value,
@@ -87,7 +87,8 @@ export function AddressAutocomplete({
 				headers: {
 					"Content-Type": "application/json",
 					"X-Goog-Api-Key": apiKey,
-					"X-Goog-FieldMask": "suggestions.placePrediction.place,suggestions.placePrediction.placeId,suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat.mainText.text,suggestions.placePrediction.structuredFormat.secondaryText.text",
+					"X-Goog-FieldMask":
+						"suggestions.placePrediction.place,suggestions.placePrediction.placeId,suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat.mainText.text,suggestions.placePrediction.structuredFormat.secondaryText.text",
 				},
 				body: JSON.stringify({
 					input: query,
@@ -105,9 +106,10 @@ export function AddressAutocomplete({
 					return response.json();
 				})
 				.then((data) => {
-					const predictions = data?.suggestions
-						?.map((item) => item?.placePrediction)
-						.filter(Boolean) || [];
+					const predictions =
+						data?.suggestions
+							?.map((item) => item?.placePrediction)
+							.filter(Boolean) || [];
 
 					if (!predictions.length) {
 						setSuggestions([]);
@@ -120,7 +122,10 @@ export function AddressAutocomplete({
 				})
 				.catch((error) => {
 					if (error.name === "AbortError") return;
-					console.warn("[AddressAutocomplete] No se pudieron obtener sugerencias:", error?.message ?? error);
+					console.warn(
+						"[AddressAutocomplete] No se pudieron obtener sugerencias:",
+						error?.message ?? error,
+					);
 					setSuggestions([]);
 					setHighlightedIndex(-1);
 				});
@@ -133,7 +138,9 @@ export function AddressAutocomplete({
 
 	const applyAddressValue = (address) => {
 		selectedAddressRef.current = address;
-		onChangeRef.current?.({ target: { name: nameRef.current, value: address } });
+		onChangeRef.current?.({
+			target: { name: nameRef.current, value: address },
+		});
 	};
 
 	const handleSuggestionSelect = (prediction) => {
@@ -162,13 +169,16 @@ export function AddressAutocomplete({
 		const controller = new AbortController();
 		detailsAbortRef.current = controller;
 
-		fetch(`https://places.googleapis.com/v1/${prediction.place}?languageCode=es&regionCode=CL`, {
-			headers: {
-				"X-Goog-Api-Key": apiKey,
-				"X-Goog-FieldMask": "formattedAddress,addressComponents,location",
+		fetch(
+			`https://places.googleapis.com/v1/${prediction.place}?languageCode=es&regionCode=CL`,
+			{
+				headers: {
+					"X-Goog-Api-Key": apiKey,
+					"X-Goog-FieldMask": "formattedAddress,addressComponents,location",
+				},
+				signal: controller.signal,
 			},
-			signal: controller.signal,
-		})
+		)
 			.then(async (response) => {
 				if (!response.ok) {
 					throw new Error(`Place Details HTTP ${response.status}`);
@@ -188,7 +198,10 @@ export function AddressAutocomplete({
 			})
 			.catch((error) => {
 				if (error.name === "AbortError") return;
-				console.warn("[AddressAutocomplete] No se pudieron obtener detalles del lugar:", error?.message ?? error);
+				console.warn(
+					"[AddressAutocomplete] No se pudieron obtener detalles del lugar:",
+					error?.message ?? error,
+				);
 			});
 	};
 
@@ -230,18 +243,23 @@ export function AddressAutocomplete({
 
 					if (event.key === "ArrowDown") {
 						event.preventDefault();
-						setHighlightedIndex((current) => (current + 1) % suggestions.length);
+						setHighlightedIndex(
+							(current) => (current + 1) % suggestions.length,
+						);
 						return;
 					}
 
 					if (event.key === "ArrowUp") {
 						event.preventDefault();
-						setHighlightedIndex((current) => (current <= 0 ? suggestions.length - 1 : current - 1));
+						setHighlightedIndex((current) =>
+							current <= 0 ? suggestions.length - 1 : current - 1,
+						);
 						return;
 					}
 
 					if (event.key === "Enter") {
-						if (highlightedIndex < 0 || highlightedIndex >= suggestions.length) return;
+						if (highlightedIndex < 0 || highlightedIndex >= suggestions.length)
+							return;
 						event.preventDefault();
 						handleSuggestionSelect(suggestions[highlightedIndex]);
 						return;
@@ -264,7 +282,11 @@ export function AddressAutocomplete({
 					{suggestions.map((prediction, index) => {
 						const isHighlighted = index === highlightedIndex;
 						return (
-							<li key={prediction.placeId || prediction.place} role="option" aria-selected={isHighlighted}>
+							<li
+								key={prediction.placeId || prediction.place}
+								role="option"
+								aria-selected={isHighlighted}
+							>
 								<button
 									type="button"
 									className={`w-full px-3 py-2 text-left text-sm ${isHighlighted ? "bg-muted" : "bg-background hover:bg-muted/60"}`}
@@ -274,7 +296,8 @@ export function AddressAutocomplete({
 									}}
 								>
 									<div className="font-medium text-foreground">
-										{prediction.structuredFormat?.mainText?.text || prediction.text?.text}
+										{prediction.structuredFormat?.mainText?.text ||
+											prediction.text?.text}
 									</div>
 									{prediction.structuredFormat?.secondaryText?.text && (
 										<div className="text-xs text-muted-foreground">
