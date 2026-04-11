@@ -13671,11 +13671,13 @@ const startServer = async () => {
 				0;
 
 			// Actualizar estado de la reserva
+			// Nota: saldoPendiente se pone en 0 porque el pago fue aprobado y es por el total
 			await Reserva.update(
 				{
 					estadoPago: "pagado",
 					estado: "confirmada",
 					pagoMonto: montoPagado,
+					saldoPendiente: 0,
 					metodoPago: "mercadopago",
 					referenciaPagoExterno: String(paymentId),
 				},
