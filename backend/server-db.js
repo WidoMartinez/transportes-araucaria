@@ -13585,13 +13585,23 @@ const startServer = async () => {
 		try {
 			const { type, data, action } = req.body;
 
-			// Solo procesar notificaciones de tipo "payment"
-			if (type !== "payment" && action !== "payment.updated") {
-				console.log(`ℹ️ [MP-webhook] Notificación ignorada: type=${type}`);
+			// Soporte para IPN legacy de MP: el tipo llega como query param ?topic=payment&id=XXX
+			const topicQuery = req.query?.topic;
+			const idQuery = req.query?.id;
+
+			// Solo procesar notificaciones de tipo "payment" (body JSON o query param IPN)
+			const esPaymentBody = type === "payment" || action === "payment.updated";
+			const esPaymentQuery = topicQuery === "payment" && idQuery;
+
+			if (!esPaymentBody && !esPaymentQuery) {
+				console.log(
+					`ℹ️ [MP-webhook] Notificación ignorada: type=${type}, topic=${topicQuery}`,
+				);
 				return;
 			}
 
-			const paymentId = data?.id;
+			// Obtener el ID de pago desde el body (formato nuevo) o query param (IPN legacy)
+			const paymentId = data?.id || (esPaymentQuery ? idQuery : null);
 			if (!paymentId) {
 				console.warn("⚠️ [MP-webhook] No se recibió ID de pago");
 				return;
@@ -13717,8 +13727,9 @@ const startServer = async () => {
 			}
 
 			// Detectar y generar oportunidades de retorno (mismo que Flow)
+			// Nota: se pasa el objeto `reserva` (no solo el ID) porque la función necesita origen/destino
 			try {
-				await detectarYGenerarOportunidades(reservaId);
+				await detectarYGenerarOportunidades(reserva);
 			} catch (opErr) {
 				console.warn(
 					"⚠️ [MP-webhook] Error generando oportunidades:",

@@ -1,0 +1,19 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# --- Tipos MIME explícitos para assets generados por Vite ---
+# Evita el error: "MIME type ('text/html') is not a supported stylesheet MIME type"
+AddType text/css .css
+AddType application/javascript .js
+AddType application/json .json
+AddType image/svg+xml .svg
+AddType font/woff2 .woff2
+AddType font/woff .woff
+
+# --- SPA fallback para React Router ---
+# Si el archivo o directorio físico EXISTE en el servidor, se sirve directamente (assets, imágenes, etc.)
+# Solo si NO existe, redirige a index.html (rutas del frontend como /admin, /reserva, etc.)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [QSA,L]

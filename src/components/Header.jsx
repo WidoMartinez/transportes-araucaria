@@ -32,12 +32,18 @@ import { usePricingData } from "../hooks/usePricingData";
 import { getBackendUrl } from "../lib/backend";
 
 // --- Trackers ---
+// Tracking WhatsApp desde el Header — con deduplicación por sesión
+const WHATSAPP_CONV_KEY = "wa_conversion_fired";
 const trackWhatsAppClick = () => {
-	if (typeof window !== "undefined" && typeof window.gtag === "function") {
-		window.gtag("event", "conversion", {
-			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-		});
+	if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+	if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
+		console.info("ℹ️ [Header] Conversión WhatsApp ya registrada esta sesión, se omite.");
+		return;
 	}
+	sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
+	window.gtag("event", "conversion", {
+		send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
+	});
 };
 
 // --- Menu Items Data ---

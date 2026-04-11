@@ -56,17 +56,23 @@ const trackCotizacionConversion = () => {
 	}
 };
 
-// --- Tracker clic WhatsApp ---
+// --- Tracker clic WhatsApp (con deduplicación por sesión) ---
+const WHATSAPP_CONV_KEY = "wa_conversion_fired";
 const trackWhatsAppTraslado = () => {
-	if (typeof window !== "undefined" && typeof window.gtag === "function") {
-		window.gtag("event", "conversion", {
-			send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-		});
-		window.gtag("event", "click_whatsapp", {
-			event_category: "traslados_privados",
-			event_label: "whatsapp_traslado",
-		});
+	if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+	// Evitar disparar la conversión más de una vez por sesión de usuario
+	if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
+		console.info("ℹ️ [LandingTraslados] Conversión WhatsApp ya registrada esta sesión, se omite.");
+		return;
 	}
+	sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
+	window.gtag("event", "conversion", {
+		send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
+	});
+	window.gtag("event", "click_whatsapp", {
+		event_category: "traslados_privados",
+		event_label: "whatsapp_traslado",
+	});
 };
 
 // --- Estado inicial del formulario ---
