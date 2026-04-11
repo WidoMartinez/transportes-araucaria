@@ -35,7 +35,6 @@ import {
 	Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AddressAutocomplete } from "./ui/address-autocomplete";
 import WhatsAppButton from "./WhatsAppButton";
 import { useIsMobile } from "../hooks/use-mobile";
 import heroVan from "../assets/hero-van.png";
