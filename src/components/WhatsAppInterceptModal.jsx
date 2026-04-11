@@ -2,18 +2,18 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-	X, 
-	Zap, 
-	CheckCircle2, 
-	Mail, 
-	Clock, 
-	Percent, 
-	MessageCircle, 
+import {
+	X,
+	Zap,
+	CheckCircle2,
+	Mail,
+	Clock,
+	Percent,
+	MessageCircle,
 	ShieldCheck,
 	MousePointerClick,
 	CalendarCheck,
-	Sparkles
+	Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -35,20 +35,26 @@ export default function WhatsAppInterceptModal({
 		if (typeof window !== "undefined" && typeof window.gtag === "function") {
 			window.gtag("event", action, {
 				event_category: "whatsapp_intercept_modal",
-				event_label: hasDiscount ? `discount_${discountData.valor}` : "no_discount",
+				event_label: hasDiscount
+					? `discount_${discountData.valor}`
+					: "no_discount",
 			});
 
 			// Si es clic en WhatsApp, enviar conversión solo si no fue disparada esta sesión
 			if (action === "modal_whatsapp_selected") {
 				const WHATSAPP_CONV_KEY = "wa_conversion_fired";
 				if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-					console.info("ℹ️ [WhatsAppInterceptModal] Conversión WhatsApp ya registrada esta sesión, se omite.");
+					console.info(
+						"ℹ️ [WhatsAppInterceptModal] Conversión WhatsApp ya registrada esta sesión, se omite.",
+					);
 				} else {
 					sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
 					window.gtag("event", "conversion", {
 						send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
 					});
-					console.log("✅ [WhatsAppInterceptModal] Conversión de clic en WhatsApp enviada.");
+					console.log(
+						"✅ [WhatsAppInterceptModal] Conversión de clic en WhatsApp enviada.",
+					);
 				}
 			}
 		}
@@ -80,30 +86,30 @@ export default function WhatsAppInterceptModal({
 					description: "Exclusivo para reservas online",
 					highlight: true,
 					color: "text-amber-500",
-					bg: "bg-amber-500/10"
+					bg: "bg-amber-500/10",
 				},
 				{
 					icon: ShieldCheck,
 					title: "Confirmación Instantánea",
 					description: "Recibe tu comprobante al instante",
 					color: "text-emerald-500",
-					bg: "bg-emerald-500/10"
+					bg: "bg-emerald-500/10",
 				},
 				{
 					icon: Mail,
 					title: "Comprobante por Email",
 					description: "Toda la información en tu correo",
 					color: "text-blue-500",
-					bg: "bg-blue-500/10"
+					bg: "bg-blue-500/10",
 				},
 				{
 					icon: MousePointerClick,
 					title: "Sin Esperas",
 					description: "Reserva en menos de 2 minutos",
 					color: "text-purple-500",
-					bg: "bg-purple-500/10"
+					bg: "bg-purple-500/10",
 				},
-		  ]
+			]
 		: [
 				{
 					icon: Zap,
@@ -111,30 +117,30 @@ export default function WhatsAppInterceptModal({
 					description: "Sin esperar respuesta de WhatsApp",
 					highlight: true,
 					color: "text-amber-500",
-					bg: "bg-amber-500/10"
+					bg: "bg-amber-500/10",
 				},
 				{
 					icon: Sparkles,
 					title: "Disponibilidad en Tiempo Real",
 					description: "Ve horarios y precios actualizados",
 					color: "text-emerald-500",
-					bg: "bg-emerald-500/10"
+					bg: "bg-emerald-500/10",
 				},
 				{
 					icon: Mail,
 					title: "Comprobante Automático",
 					description: "Recibe tu reserva por email",
 					color: "text-blue-500",
-					bg: "bg-blue-500/10"
+					bg: "bg-blue-500/10",
 				},
 				{
 					icon: CalendarCheck,
 					title: "Disponible 24/7",
 					description: "Reserva a cualquier hora del día",
 					color: "text-rose-500",
-					bg: "bg-rose-500/10"
+					bg: "bg-rose-500/10",
 				},
-		  ];
+			];
 
 	return (
 		<AnimatePresence>
@@ -178,7 +184,7 @@ export default function WhatsAppInterceptModal({
 														initial={{ scale: 0, rotate: -15 }}
 														animate={{ scale: 1, rotate: 0 }}
 														transition={{ delay: 0.2, type: "spring" }}
-														className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4 backdrop-blur-md shadow-inner" 
+														className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl mb-4 backdrop-blur-md shadow-inner"
 													>
 														<Percent className="w-8 h-8" />
 													</motion.div>
@@ -221,22 +227,28 @@ export default function WhatsAppInterceptModal({
 											transition={{ delay: 0.1 * index }}
 											className={cn(
 												"flex items-center gap-4 p-4 rounded-2xl transition-all duration-300",
-												benefit.highlight 
+												benefit.highlight
 													? "bg-[#2a4e25]/5 border border-[#2a4e25]/20 shadow-sm"
-													: "hover:bg-gray-50 border border-transparent"
+													: "hover:bg-gray-50 border border-transparent",
 											)}
 										>
-											<div className={cn(
-												"p-2.5 rounded-xl border border-white shadow-sm flex items-center justify-center",
-												benefit.bg
-											)}>
-												<benefit.icon className={cn("w-5 h-5", benefit.color)} />
+											<div
+												className={cn(
+													"p-2.5 rounded-xl border border-white shadow-sm flex items-center justify-center",
+													benefit.bg,
+												)}
+											>
+												<benefit.icon
+													className={cn("w-5 h-5", benefit.color)}
+												/>
 											</div>
 											<div className="flex-1">
 												<h3 className="font-bold text-gray-900 leading-none mb-1">
 													{benefit.title}
 												</h3>
-												<p className="text-sm text-gray-500 font-medium">{benefit.description}</p>
+												<p className="text-sm text-gray-500 font-medium">
+													{benefit.description}
+												</p>
 											</div>
 										</motion.div>
 									))}
