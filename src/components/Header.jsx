@@ -35,12 +35,9 @@ import { getBackendUrl } from "../lib/backend";
 // Tracking WhatsApp desde el Header — con deduplicación por sesión
 const WHATSAPP_CONV_KEY = "wa_conversion_fired";
 const trackWhatsAppClick = () => {
-	if (typeof window === "undefined" || typeof window.gtag !== "function")
-		return;
+	if (typeof window === "undefined" || typeof window.gtag !== "function") return;
 	if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-		console.info(
-			"ℹ️ [Header] Conversión WhatsApp ya registrada esta sesión, se omite.",
-		);
+		console.info("ℹ️ [Header] Conversión WhatsApp ya registrada esta sesión, se omite.");
 		return;
 	}
 	sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
@@ -226,7 +223,9 @@ function Header() {
 								alt="Transportes Araucaria"
 								className={cn(
 									"transition-all duration-300 object-contain brightness-0 invert",
-									isScrolled ? "h-10 md:h-12" : "h-16 md:h-16 lg:h-20",
+									isScrolled
+										? "h-10 md:h-12"
+										: "h-16 md:h-16 lg:h-20",
 								)}
 								layout
 							/>
@@ -318,7 +317,9 @@ function Header() {
 										size="icon"
 										className={cn(
 											"h-10 w-10 rounded-full transition-colors text-white",
-											isScrolled ? "hover:bg-white/20" : "hover:bg-white/20",
+											isScrolled
+												? "hover:bg-white/20"
+												: "hover:bg-white/20",
 										)}
 									>
 										<Menu className="w-7 h-7" />
