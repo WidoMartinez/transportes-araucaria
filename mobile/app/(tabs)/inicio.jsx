@@ -1,7 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Número de WhatsApp de contacto de Transportes Araucaria
+const WHATSAPP_NUMERO = '56912345678';
 
 /**
  * Pantalla principal (Inicio) de la aplicación Transportes Araucaria.
@@ -9,6 +12,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  */
 export default function InicioScreen() {
   const router = useRouter();
+
+  // Abre WhatsApp con el número de soporte de Transportes Araucaria
+  const handleWhatsApp = async () => {
+    const url = `whatsapp://send?phone=${WHATSAPP_NUMERO}`;
+    const soportado = await Linking.canOpenURL(url);
+    if (soportado) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert('WhatsApp no disponible', 'Instala WhatsApp para usar esta función.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.contenedor} edges={['bottom']}>
@@ -58,7 +72,7 @@ export default function InicioScreen() {
         {/* Información de contacto */}
         <View style={styles.seccionContacto}>
           <Text style={styles.seccionTitulo}>¿Necesitas ayuda?</Text>
-          <TouchableOpacity style={styles.botonWhatsApp}>
+          <TouchableOpacity style={styles.botonWhatsApp} onPress={handleWhatsApp}>
             <Ionicons name="logo-whatsapp" size={22} color="#fff" />
             <Text style={styles.botonTexto}>Contactar por WhatsApp</Text>
           </TouchableOpacity>

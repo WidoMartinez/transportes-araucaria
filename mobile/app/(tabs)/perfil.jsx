@@ -1,6 +1,15 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// TODO: Reemplazar con datos reales del contexto de autenticación
+const USUARIO_PLACEHOLDER = {
+  nombre: 'Usuario',
+  email: 'usuario@example.com',
+};
+
+// Número de WhatsApp de contacto de Transportes Araucaria
+const WHATSAPP_NUMERO = '56912345678';
 
 /**
  * Pantalla de perfil del usuario.
@@ -8,46 +17,77 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  */
 export default function PerfilScreen() {
   // Maneja el cierre de sesión del usuario
+  // TODO: Implementar lógica real de cierre de sesión (limpiar tokens, navegar a login)
   const handleCerrarSesion = () => {
     Alert.alert(
       'Cerrar sesión',
       '¿Estás seguro de que deseas cerrar sesión?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar sesión', style: 'destructive', onPress: () => {} },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Limpiar AsyncStorage/SecureStore y redirigir a pantalla de login
+          },
+        },
       ]
     );
+  };
+
+  // Abre WhatsApp con el número de soporte de Transportes Araucaria
+  const handleWhatsApp = async () => {
+    const url = `whatsapp://send?phone=${WHATSAPP_NUMERO}`;
+    const soportado = await Linking.canOpenURL(url);
+    if (soportado) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert('WhatsApp no disponible', 'Instala WhatsApp para usar esta función.');
+    }
   };
 
   return (
     <SafeAreaView style={styles.contenedor} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Avatar y nombre del usuario */}
+        {/* TODO: Conectar con contexto de autenticación para mostrar datos reales */}
         <View style={styles.seccionPerfil}>
           <View style={styles.avatar}>
             <Ionicons name="person" size={48} color="#ffffff" />
           </View>
-          <Text style={styles.nombreUsuario}>Usuario</Text>
-          <Text style={styles.emailUsuario}>usuario@example.com</Text>
+          <Text style={styles.nombreUsuario}>{USUARIO_PLACEHOLDER.nombre}</Text>
+          <Text style={styles.emailUsuario}>{USUARIO_PLACEHOLDER.email}</Text>
         </View>
 
         {/* Opciones del menú */}
         <View style={styles.seccionMenu}>
           <Text style={styles.tituloSeccion}>Mi cuenta</Text>
 
-          <TouchableOpacity style={styles.itemMenu}>
+          {/* TODO: Implementar pantalla de datos personales */}
+          <TouchableOpacity
+            style={styles.itemMenu}
+            onPress={() => Alert.alert('Próximamente', 'Esta función estará disponible pronto.')}
+          >
             <Ionicons name="person-outline" size={22} color="#1a56db" />
             <Text style={styles.textoItemMenu}>Datos personales</Text>
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.itemMenu}>
+          {/* TODO: Implementar historial de reservas */}
+          <TouchableOpacity
+            style={styles.itemMenu}
+            onPress={() => Alert.alert('Próximamente', 'Esta función estará disponible pronto.')}
+          >
             <Ionicons name="calendar-outline" size={22} color="#1a56db" />
             <Text style={styles.textoItemMenu}>Historial de reservas</Text>
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.itemMenu}>
+          {/* TODO: Implementar configuración de notificaciones */}
+          <TouchableOpacity
+            style={styles.itemMenu}
+            onPress={() => Alert.alert('Próximamente', 'Esta función estará disponible pronto.')}
+          >
             <Ionicons name="notifications-outline" size={22} color="#1a56db" />
             <Text style={styles.textoItemMenu}>Notificaciones</Text>
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
@@ -57,13 +97,17 @@ export default function PerfilScreen() {
         <View style={styles.seccionMenu}>
           <Text style={styles.tituloSeccion}>Soporte</Text>
 
-          <TouchableOpacity style={styles.itemMenu}>
+          {/* TODO: Implementar pantalla de centro de ayuda */}
+          <TouchableOpacity
+            style={styles.itemMenu}
+            onPress={() => Alert.alert('Próximamente', 'Esta función estará disponible pronto.')}
+          >
             <Ionicons name="help-circle-outline" size={22} color="#1a56db" />
             <Text style={styles.textoItemMenu}>Centro de ayuda</Text>
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.itemMenu}>
+          <TouchableOpacity style={styles.itemMenu} onPress={handleWhatsApp}>
             <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
             <Text style={styles.textoItemMenu}>Contactar por WhatsApp</Text>
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
