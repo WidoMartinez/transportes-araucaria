@@ -56,9 +56,10 @@ export function useGoogleMaps() {
 
 		// Cargar el script
 		const script = document.createElement("script");
-		// Usar v=beta para asegurar acceso a PlaceAutocompleteElement (nueva API)
-		// Se mantiene loading=async y callback para detección de carga completa
-		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places,marker&v=beta&language=es&region=CL&callback=googleMapsCallback`;
+		// NOTA: Se quitó v=beta porque causaba ApiTargetBlockedMapError con claves que
+		// tienen restricciones de API target. PlaceAutocompleteElement está disponible
+		// en la versión estable desde 2024 (v=weekly es el default con loading=async).
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places&language=es&region=CL&callback=googleMapsCallback`;
 		script.async = true;
 		script.defer = true;
 

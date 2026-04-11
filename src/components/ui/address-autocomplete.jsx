@@ -1,28 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useGoogleMaps } from "../../hooks/useGoogleMaps";
-import { MapPin, Loader2 } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 /**
  * Componente de autocompletado de direcciones.
  *
- * Arquitectura:
- * - Un <input> controlado por React es SIEMPRE el elemento visible y la fuente de verdad.
- *   Esto garantiza que el formulario siempre funcione aunque la API de Google falle.
- * - Si la API de Google Maps está cargada y con billing habilitado, se activa
- *   PlaceAutocompleteElement como mejora: cuando el usuario selecciona una sugerencia,
- *   se actualiza el input controlado con la dirección normalizada.
- * - Si la API devuelve 403 (billing no habilitado) o cualquier otro error, el input
- *   de texto simple sigue funcionando sin interrupciones.
+ * Usa PlaceAutocompleteElement (API nueva, requerida desde marzo 2025).
+ * El script de Google Maps se carga SIN v=beta para evitar ApiTargetBlockedMapError.
  *
- * @param {string} props.value - Valor actual del campo
- * @param {Function} props.onChange - Callback cuando cambia el valor
- * @param {Function} props.onPlaceSelected - Callback opcional con datos completos del lugar
- * @param {string} props.placeholder - Texto de placeholder
- * @param {string} props.id - ID del input
- * @param {string} props.name - Nombre del campo
- * @param {string} props.className - Clases CSS adicionales
- * @param {boolean} props.required - Si el campo es requerido
- * @param {Object} props.autocompleteOptions - Opciones adicionales para PlaceAutocompleteElement
+ * Arquitectura:
+ * - Cuando Google Maps está disponible, PlaceAutocompleteElement se monta en el DOM
+ *   y se superpone visualmente sobre el input React.
+ * - El input React queda visible (opacity:0) para que los formularios lean su valor.
+ * - La selección de lugar actualiza el estado React vía onChangeRef (evita stale closure).
+ * - Si Google Maps no está disponible, funciona como input de texto simple.
  */
 export function AddressAutocomplete({
 	value,
@@ -40,181 +31,133 @@ export function AddressAutocomplete({
 	const elementRef = useRef(null);
 	const containerRef = useRef(null);
 	const { isLoaded, isAvailable } = useGoogleMaps();
-	const [isInitializing, setIsInitializing] = useState(false);
-	// Indica si el Web Component se creó correctamente (billing activo)
-	const [webComponentActive, setWebComponentActive] = useState(false);
-	// Indica si el usuario está interactuando activamente con el campo (React o Web Component)
 	const [active, setActive] = useState(false);
-	// Referencia al timer del focusout para poder cancelarlo si se selecciona una sugerencia
+	const [webComponentActive, setWebComponentActive] = useState(false);
 	const focusOutTimerRef = useRef(null);
-	// Flag que indica que hay una selección en curso: bloquea los eventos "input" del
-	// Web Component que se disparan después de seleccionar (vacían o reemplazan el valor
-	// antes de que fetchFields haya terminado, sobreescribiendo la dirección completa).
-	const pendingSelectionRef = useRef(false);
+	// Dirección seleccionada: se guarda al dispararse place-changed y se usa como
+	// fuente de verdad. Previene que eventos input posteriores la sobreescriban.
+	const selectedAddressRef = useRef(null);
 
-	// El overlay se muestra solo cuando: Web Component activo Y (campo vacío O usuario activo).
-	// Si ya hay una dirección guardada y el usuario no está editando, se muestra
-	// el input React con el valor existente, evitando el campo aparentemente vacío.
+	// Refs para evitar stale closures: los event listeners se registran UNA SOLA VEZ
+	// pero al ser async necesitan acceder siempre al callback MÁS RECIENTE del padre.
+	const onChangeRef = useRef(onChange);
+	const onPlaceSelectedRef = useRef(onPlaceSelected);
+	const nameRef = useRef(name);
+	useEffect(() => {
+		onChangeRef.current = onChange;
+		onPlaceSelectedRef.current = onPlaceSelected;
+		nameRef.current = name;
+	});
+
 	const showWebComponent = webComponentActive && (!value || active);
 
-	// Inicializar PlaceAutocompleteElement cuando la API esté lista
 	useEffect(() => {
-		if (!isAvailable || !isLoaded) return;
+		if (!isLoaded || !isAvailable) return;
 		if (elementRef.current) return;
+		if (!window.google?.maps?.places?.PlaceAutocompleteElement) return;
 
-		if (!window.google?.maps?.places?.PlaceAutocompleteElement) {
-			return;
-		}
-
-		// Capturar el nodo al inicio del efecto para usarlo en el cleanup
 		const containerNode = containerRef.current;
 		if (!containerNode) return;
 
-		setIsInitializing(true);
+		const element = new window.google.maps.places.PlaceAutocompleteElement({
+			componentRestrictions: { country: "cl" },
+			types: ["address"],
+			...autocompleteOptions,
+		});
 
-		try {
-			const element = new window.google.maps.places.PlaceAutocompleteElement({
-				componentRestrictions: { country: "cl" },
-				types: ["address"],
-				...autocompleteOptions,
-			});
+		if (placeholder) element.setAttribute("placeholder", placeholder);
+		containerNode.appendChild(element);
+		elementRef.current = element;
 
-			if (placeholder) element.setAttribute("placeholder", placeholder);
-
-			if (containerRef.current) {
-				containerRef.current.appendChild(element);
-				elementRef.current = element;
-			}
-
-			// Detectar foco/desenfoque del Web Component para activar/desactivar el overlay.
-			// focusin/focusout son eventos composed:true, burbujean desde el shadow DOM.
-			element.addEventListener("focusin", () => {
-				// Cancelar cualquier ocultamiento pendiente si el usuario vuelve al campo
-				if (focusOutTimerRef.current) {
-					clearTimeout(focusOutTimerRef.current);
-					focusOutTimerRef.current = null;
-				}
-				setActive(true);
-			});
-			element.addEventListener("focusout", () => {
-				// IMPORTANTE: NO ocultar el overlay inmediatamente.
-				// Cuando el usuario hace clic en una sugerencia, el orden es:
-				//   1. mousedown sobre la sugerencia
-				//   2. focusout del Web Component  <-- aquí estamos
-				//   3. gmp-placeautocomplete-place-changed
-				// Si ocultamos ahora (display:none), el dropdown desaparece y el evento
-				// de selección nunca se completa, guardando solo el texto parcial escrito.
-				// El timer se cancela en el handler de selección para ocultar inmediatamente
-				// después de actualizar el valor, o se ejecuta si el usuario sale sin seleccionar.
-				focusOutTimerRef.current = setTimeout(() => {
-					focusOutTimerRef.current = null;
-					setActive(false);
-				}, 300);
-			});
-
-			// Capturar el texto del input interno del Web Component mientras el usuario escribe.
-			// Los eventos 'input' del shadow DOM son composed:true, por lo que burbujean
-			// hacia afuera. composedPath()[0] da acceso al elemento real (dentro del shadow DOM).
-			// Esto mantiene React state sincronizado aunque el billing no esté habilitado.
-			element.addEventListener("input", (evt) => {
-				// CRÍTICO: ignorar los eventos "input" que el Web Component dispara durante
-				// o justo después de seleccionar una sugerencia. Google Maps dispara estos
-				// eventos internamente (con texto vacío o con el texto parcial escrito),
-				// sobreescribiendo la dirección completa que fetchFields ya guardó.
-				if (pendingSelectionRef.current) return;
-
-				const innerTarget = evt.composedPath?.()[0];
-				const text = innerTarget?.value ?? evt.target?.value ?? "";
-				if (text !== undefined && onChange) {
-					onChange({ target: { name, value: text } });
-				}
-			});
-
-			// Si hay error de billing o dominio bloqueado, ocultar el Web Component.
-			// El input nativo React sigue activo y captura el texto sin interrupciones.
-			// Como el evento 'input' ya sincronizó el valor, el input nativo mostrará
-			// el mismo texto que tenía el Web Component.
-			element.addEventListener("gmp-requesterror", (evt) => {
-				console.warn(
-					"[AddressAutocomplete] API no disponible (sin billing o dominio bloqueado).",
-					evt.error?.status || "",
-				);
-				setWebComponentActive(false);
-			});
-
-			// Cuando el usuario selecciona una sugerencia, actualizar el input nativo
-			element.addEventListener(
-				"gmp-placeautocomplete-place-changed",
-				async () => {
-					// Bloquear eventos "input" para que no sobreescriban la dirección
-					// completa mientras se procesa fetchFields
-					pendingSelectionRef.current = true;
-
-					// Cancelar el timer de focusout para que el Web Component no se oculte
-					// mientras se procesa la selección (la ocultamos nosotros al terminar).
-					if (focusOutTimerRef.current) {
-						clearTimeout(focusOutTimerRef.current);
-						focusOutTimerRef.current = null;
-					}
-
-					const place = element.value;
-					if (!place) {
-						pendingSelectionRef.current = false;
-						setActive(false);
-						return;
-					}
-
-					try {
-						// fetchFields obtiene la dirección normalizada (requiere billing)
-						await place.fetchFields({
-							fields: ["formattedAddress", "addressComponents", "location"],
-						});
-						const address = place.formattedAddress || "";
-						if (address) {
-							if (onChange) onChange({ target: { name, value: address } });
-							if (onPlaceSelected) {
-								onPlaceSelected({
-									address,
-									components: place.addressComponents,
-									geometry: place.location
-										? { location: place.location }
-										: null,
-								});
-							}
-						}
-					} catch (fetchErr) {
-						// Sin billing, fetchFields falla: el input nativo ya tiene el texto escrito
-						void fetchErr;
-					} finally {
-						// Ocultar el overlay y liberar el bloqueo de eventos input
-						pendingSelectionRef.current = false;
-						setActive(false);
-					}
-				},
-			);
-
-			setWebComponentActive(true);
-		} catch (error) {
-			console.error(
-				"[AddressAutocomplete] Error al crear PlaceAutocompleteElement:",
-				error,
-			);
-		} finally {
-			setIsInitializing(false);
-		}
-
-		return () => {
-			// Limpiar el timer de focusout si el componente se desmonta
+		// Foco: cancelar timer de ocultamiento si el usuario vuelve al campo
+		element.addEventListener("focusin", () => {
 			if (focusOutTimerRef.current) {
 				clearTimeout(focusOutTimerRef.current);
+				focusOutTimerRef.current = null;
 			}
+			selectedAddressRef.current = null; // Limpiar selección previa al re-enfocar
+			setActive(true);
+		});
+
+		// Desenfoque con delay para no ocultar el dropdown antes de que se procese
+		// el clic en la sugerencia (mousedown → focusout → place-changed)
+		element.addEventListener("focusout", () => {
+			focusOutTimerRef.current = setTimeout(() => {
+				focusOutTimerRef.current = null;
+				setActive(false);
+			}, 300);
+		});
+
+		// Escritura del usuario: solo propagar a React si NO hay una selección
+		// completada (evita que el Web Component sobreescriba la dirección elegida
+		// con el texto parcial escrito, que algunos navegadores disparan post-selección).
+		element.addEventListener("input", (evt) => {
+			if (selectedAddressRef.current !== null) return;
+			const innerTarget = evt.composedPath?.()[0];
+			const text = innerTarget?.value ?? evt.target?.value ?? "";
+			onChangeRef.current?.({ target: { name: nameRef.current, value: text } });
+		});
+
+		element.addEventListener("gmp-requesterror", () => {
+			setWebComponentActive(false);
+		});
+
+		// Selección de sugerencia
+		element.addEventListener("gmp-placeautocomplete-place-changed", async () => {
+			// Cancelar ocultamiento para que el overlay no desaparezca durante el proceso
+			if (focusOutTimerRef.current) {
+				clearTimeout(focusOutTimerRef.current);
+				focusOutTimerRef.current = null;
+			}
+
+			// element.value es un PlacePrediction (NO un Place).
+			// PlacePrediction.text.text entrega el texto completo SINCRÓNICAMENTE
+			// sin llamadas adicionales: "Bordelago, Pucón - Camino Villarrica - Pucón, Chile".
+			const prediction = element.value;
+			if (!prediction) { setActive(false); return; }
+
+			const fallbackAddress = prediction.text?.text?.trim() || "";
+			if (fallbackAddress) {
+				// Guardar de inmediato: bloquea que el listener de 'input' sobreescriba
+				// la dirección con el texto parcial que el usuario había escrito.
+				selectedAddressRef.current = fallbackAddress;
+				onChangeRef.current?.({ target: { name: nameRef.current, value: fallbackAddress } });
+			}
+
+			try {
+				// Para llamar fetchFields se necesita un Place, no un PlacePrediction.
+				// prediction.toPlace() crea el objeto Place correspondiente.
+				// fetchFields da la dirección normalizada por Google (más precisa si hay billing).
+				const place = prediction.toPlace();
+				await place.fetchFields({
+					fields: ["formattedAddress", "addressComponents", "location"],
+				});
+				const address = place.formattedAddress?.trim();
+				if (address) {
+					selectedAddressRef.current = address;
+					onChangeRef.current?.({ target: { name: nameRef.current, value: address } });
+					onPlaceSelectedRef.current?.({
+						address,
+						components: place.addressComponents,
+						geometry: place.location ? { location: place.location } : null,
+					});
+				}
+			} catch (err) {
+				// fetchFields falló (Places API no habilitada o sin billing):
+				// el fallbackAddress ya fue guardado arriba, no hay pérdida de dato.
+				console.warn("[AddressAutocomplete] fetchFields falló:", err?.message ?? err);
+			} finally {
+				setActive(false);
+			}
+		});
+
+		setWebComponentActive(true);
+
+		return () => {
+			if (focusOutTimerRef.current) clearTimeout(focusOutTimerRef.current);
 			const el = elementRef.current;
 			if (el && containerNode?.contains(el)) {
-				try {
-					containerNode.removeChild(el);
-				} catch (e) {
-					void e;
-				}
+				try { containerNode.removeChild(el); } catch (e) { void e; }
 			}
 			elementRef.current = null;
 		};
@@ -224,10 +167,8 @@ export function AddressAutocomplete({
 		<div className="relative">
 			<MapPin className="absolute left-3 top-3 h-5 w-5 text-muted-foreground pointer-events-none z-10" />
 
-			{/* Input nativo React: SIEMPRE en el DOM como fuente de verdad del formulario.
-			    Cuando el Web Component está activo, se vuelve invisible (opacity:0) para
-			    evitar la superposición de texto/placeholder, pero sigue recibiendo el valor
-			    y permite que la validación funcione correctamente. */}
+			{/* Input React: fuente de verdad del formulario. Se oculta visualmente
+			    cuando el Web Component está activo, pero sigue en el DOM. */}
 			<input
 				ref={inputRef}
 				id={id}
@@ -239,23 +180,16 @@ export function AddressAutocomplete({
 				required={required}
 				autoComplete="off"
 				onFocus={() => {
-					// Cuando el usuario hace focus en el input React y el Web Component
-					// está disponible, activar el overlay y delegar el foco al Web Component.
-					// Esto permite que se despliegue el autocompletado aunque el campo
-					// ya tenga un valor guardado (modo edición de reserva).
 					if (webComponentActive) {
 						setActive(true);
 						requestAnimationFrame(() => elementRef.current?.focus());
 					}
 				}}
-				style={
-					showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined
-				}
+				style={showWebComponent ? { opacity: 0, pointerEvents: "none" } : undefined}
 				{...props}
 			/>
 
-			{/* PlaceAutocompleteElement: superpuesto sobre el input nativo,
-			    solo cuando billing está activo y sin errores de red. */}
+			{/* Contenedor del PlaceAutocompleteElement */}
 			{isAvailable && (
 				<div
 					ref={containerRef}
@@ -267,10 +201,6 @@ export function AddressAutocomplete({
 						zIndex: 1,
 					}}
 				/>
-			)}
-
-			{isInitializing && (
-				<Loader2 className="absolute right-3 top-3 h-5 w-5 text-muted-foreground animate-spin pointer-events-none z-10" />
 			)}
 		</div>
 	);
