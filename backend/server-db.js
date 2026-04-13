@@ -6994,17 +6994,23 @@ app.post(
 			let tramos = [reservaPadre];
 
 			if (reservaPadre.tramoHijoId) {
-				const hijo = await Reserva.findByPk(reservaPadre.tramoHijoId, { transaction });
+				const hijo = await Reserva.findByPk(reservaPadre.tramoHijoId, {
+					transaction,
+				});
 				if (hijo) tramos.push(hijo);
 			}
 			if (reservaPadre.tramoPadreId) {
-				const padre = await Reserva.findByPk(reservaPadre.tramoPadreId, { transaction });
+				const padre = await Reserva.findByPk(reservaPadre.tramoPadreId, {
+					transaction,
+				});
 				if (padre) {
 					// Asegurar que el padre esté al inicio
 					tramos = [padre, ...tramos.filter((t) => t.id !== padre.id)];
 					// Si el padre tiene hijo, asegurarlo también
 					if (padre.tramoHijoId) {
-						const hijoDelPadre = await Reserva.findByPk(padre.tramoHijoId, { transaction });
+						const hijoDelPadre = await Reserva.findByPk(padre.tramoHijoId, {
+							transaction,
+						});
 						if (hijoDelPadre && !tramos.some((t) => t.id === hijoDelPadre.id)) {
 							tramos.push(hijoDelPadre);
 						}
@@ -7013,19 +7019,26 @@ app.post(
 			}
 
 			// Calcular totales del conjunto
-			const totalConjunto = tramos.reduce((s, t) => s + parseFloat(t.totalConDescuento || 0), 0);
+			const totalConjunto = tramos.reduce(
+				(s, t) => s + parseFloat(t.totalConDescuento || 0),
+				0,
+			);
 			// Calcular pago acumulado total (suma de pagoMonto de todos los tramos)
-			const pagoAcumuladoConjunto = tramos.reduce((s, t) => s + parseFloat(t.pagoMonto || 0), 0);
+			const pagoAcumuladoConjunto = tramos.reduce(
+				(s, t) => s + parseFloat(t.pagoMonto || 0),
+				0,
+			);
 
 			// Detectar doble acreditación: si el pago acumulado es ≈2x el total del viaje
 			// consideramos que el webhook se procesó dos veces
 			const esDoblePago =
-				totalConjunto > 0 && Math.round(pagoAcumuladoConjunto) >= Math.round(totalConjunto * 1.5);
+				totalConjunto > 0 &&
+				Math.round(pagoAcumuladoConjunto) >= Math.round(totalConjunto * 1.5);
 
 			if (esDoblePago) {
 				console.log(
 					`⚠️ [SYNC-TRAMOS] Posible doble acreditación detectada para conjunto de reserva ${id}. ` +
-					`Total viaje: $${totalConjunto}, Acumulado: $${pagoAcumuladoConjunto}. Redistribuyendo...`,
+						`Total viaje: $${totalConjunto}, Acumulado: $${pagoAcumuladoConjunto}. Redistribuyendo...`,
 				);
 			}
 
@@ -10547,7 +10560,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				return;
 			}
 		} catch (idempErr) {
-			console.error("[IDEMPOTENCIA] Error verificando duplicado:", idempErr.message);
+			console.error(
+				"[IDEMPOTENCIA] Error verificando duplicado:",
+				idempErr.message,
+			);
 			// No bloquear el flujo si falla la verificación, solo loguear
 		}
 		// ─────────────────────────────────────────────────────────────────────────
