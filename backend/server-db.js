@@ -6976,75 +6976,96 @@ app.delete("/api/pagos/:id", authAdmin, async (req, res) => {
 // Corregir saldos de tramos vinculados (ida/vuelta)
 // Útil cuando el split de pago dejó saldoPendiente residual por redondeo
 // ──────────────────────────────────────────────────────────────────
-app.post("/api/reservas/:id/sincronizar-tramos", authAdmin, async (req, res) => {
-	const { id } = req.params;
-	const transaction = await sequelize.transaction();
-	try {
-		const reservaPadre = await Reserva.findByPk(id, { transaction });
-		if (!reservaPadre) {
-			await transaction.rollback();
-			return res.status(404).json({ error: "Reserva no encontrada" });
-		}
+app.post(
+	"/api/reservas/:id/sincronizar-tramos",
+	authAdmin,
+	async (req, res) => {
+		const { id } = req.params;
+		const transaction = await sequelize.transaction();
+		try {
+			const reservaPadre = await Reserva.findByPk(id, { transaction });
+			if (!reservaPadre) {
+				await transaction.rollback();
+				return res.status(404).json({ error: "Reserva no encontrada" });
+			}
 
-		const resultados = [];
+			const resultados = [];
 
-		// Función interna: recalcula saldo de un tramo dado su pagoMonto actual
-		const corregirTramo = async (reserva) => {
-			const totalTramo = parseFloat(reserva.totalConDescuento || 0);
-			const pagado = parseFloat(reserva.pagoMonto || 0);
-			const saldoCorregido = Math.max(totalTramo - pagado, 0);
-			const estadoPago = pagado >= totalTramo && totalTramo > 0 ? "pagado" : (pagado > 0 ? "parcial" : "pendiente");
+			// Función interna: recalcula saldo de un tramo dado su pagoMonto actual
+			const corregirTramo = async (reserva) => {
+				const totalTramo = parseFloat(reserva.totalConDescuento || 0);
+				const pagado = parseFloat(reserva.pagoMonto || 0);
+				const saldoCorregido = Math.max(totalTramo - pagado, 0);
+				const estadoPago =
+					pagado >= totalTramo && totalTramo > 0
+						? "pagado"
+						: pagado > 0
+							? "parcial"
+							: "pendiente";
 
-			await reserva.update(
-				{
-					saldoPendiente: saldoCorregido,
+				await reserva.update(
+					{
+						saldoPendiente: saldoCorregido,
+						estadoPago,
+						abonoPagado: pagado > 0,
+						saldoPagado: pagado >= totalTramo && totalTramo > 0,
+						...(estadoPago === "pagado" &&
+						["pendiente", "pendiente_detalles"].includes(reserva.estado)
+							? { estado: "confirmada" }
+							: {}),
+					},
+					{ transaction },
+				);
+
+				resultados.push({
+					id: reserva.id,
+					codigoReserva: reserva.codigoReserva,
+					pagoMonto: pagado,
+					totalConDescuento: totalTramo,
+					saldoCorregido,
 					estadoPago,
-					abonoPagado: pagado > 0,
-					saldoPagado: pagado >= totalTramo && totalTramo > 0,
-					...(estadoPago === "pagado" && ["pendiente", "pendiente_detalles"].includes(reserva.estado)
-						? { estado: "confirmada" }
-						: {}),
-				},
-				{ transaction },
+				});
+			};
+
+			await corregirTramo(reservaPadre);
+
+			// Si tiene tramo hijo, corregirlo también
+			if (reservaPadre.tramoHijoId) {
+				const reservaHija = await Reserva.findByPk(reservaPadre.tramoHijoId, {
+					transaction,
+				});
+				if (reservaHija) {
+					await corregirTramo(reservaHija);
+				}
+			}
+
+			// Si es un tramo hijo, buscar el padre y corregirlo también
+			if (reservaPadre.tramoPadreId) {
+				const reservaPadreVinculado = await Reserva.findByPk(
+					reservaPadre.tramoPadreId,
+					{ transaction },
+				);
+				if (reservaPadreVinculado) {
+					await corregirTramo(reservaPadreVinculado);
+				}
+			}
+
+			await transaction.commit();
+			console.log(
+				`✅ [SYNC-TRAMOS] Tramos sincronizados para reserva ${id}:`,
+				resultados,
 			);
-
-			resultados.push({
-				id: reserva.id,
-				codigoReserva: reserva.codigoReserva,
-				pagoMonto: pagado,
-				totalConDescuento: totalTramo,
-				saldoCorregido,
-				estadoPago,
-			});
-		};
-
-		await corregirTramo(reservaPadre);
-
-		// Si tiene tramo hijo, corregirlo también
-		if (reservaPadre.tramoHijoId) {
-			const reservaHija = await Reserva.findByPk(reservaPadre.tramoHijoId, { transaction });
-			if (reservaHija) {
-				await corregirTramo(reservaHija);
-			}
+			res.json({ ok: true, tramos: resultados });
+		} catch (error) {
+			await transaction.rollback();
+			console.error(
+				`❌ [SYNC-TRAMOS] Error sincronizando tramos reserva ${id}:`,
+				error.message,
+			);
+			res.status(500).json({ error: "Error sincronizando tramos" });
 		}
-
-		// Si es un tramo hijo, buscar el padre y corregirlo también
-		if (reservaPadre.tramoPadreId) {
-			const reservaPadreVinculado = await Reserva.findByPk(reservaPadre.tramoPadreId, { transaction });
-			if (reservaPadreVinculado) {
-				await corregirTramo(reservaPadreVinculado);
-			}
-		}
-
-		await transaction.commit();
-		console.log(`✅ [SYNC-TRAMOS] Tramos sincronizados para reserva ${id}:`, resultados);
-		res.json({ ok: true, tramos: resultados });
-	} catch (error) {
-		await transaction.rollback();
-		console.error(`❌ [SYNC-TRAMOS] Error sincronizando tramos reserva ${id}:`, error.message);
-		res.status(500).json({ error: "Error sincronizando tramos" });
-	}
-});
+	},
+);
 
 // Actualizar campos generales de una reserva (admin)
 app.put("/api/reservas/:id", authAdmin, async (req, res) => {
