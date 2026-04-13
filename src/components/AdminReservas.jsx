@@ -346,7 +346,9 @@ function AdminReservas() {
 			);
 			if (resp.ok) {
 				const data = await resp.json();
-				setTransacciones(Array.isArray(data.transacciones) ? data.transacciones : []);
+				setTransacciones(
+					Array.isArray(data.transacciones) ? data.transacciones : [],
+				);
 			} else {
 				setTransacciones([]);
 			}
@@ -628,14 +630,14 @@ function AdminReservas() {
 		return suma;
 	}, [transacciones]);
 
-		const montoPagadoVisual = useMemo(() => {
-			const montoDB = Number(selectedReserva?.pagoMonto || 0) || 0;
-			const esFlow =
-				selectedReserva?.pagoGateway === "flow" ||
-				selectedReserva?.metodoPago === "flow";
-			if (esFlow && montoFlowUnico > 0) return montoFlowUnico;
-			return montoDB;
-		}, [selectedReserva, montoFlowUnico]);
+	const montoPagadoVisual = useMemo(() => {
+		const montoDB = Number(selectedReserva?.pagoMonto || 0) || 0;
+		const esFlow =
+			selectedReserva?.pagoGateway === "flow" ||
+			selectedReserva?.metodoPago === "flow";
+		if (esFlow && montoFlowUnico > 0) return montoFlowUnico;
+		return montoDB;
+	}, [selectedReserva, montoFlowUnico]);
 	const [dialogoCompletarOpciones, setDialogoCompletarOpciones] =
 		useState(null);
 
@@ -6264,8 +6266,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																		selectedReserva?.abonoSugerido || 0,
 																	) || 0;
 																const pagoPrevioNum =
-																	parseFloat(montoPagadoVisual || 0) ||
-																	0;
+																	parseFloat(montoPagadoVisual || 0) || 0;
 																const umbralAbono = Math.max(
 																	totalReservaNum * 0.4,
 																	abonoSugeridoNum || 0,
@@ -6398,11 +6399,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<strong>Aviso:</strong> El monto ingresado se{" "}
 													<strong>sumará</strong> al total ya registrado de{" "}
 													<span className="font-semibold text-amber-700">
-															{montoPagadoVisual
+														{montoPagadoVisual
 															? new Intl.NumberFormat("es-CL", {
 																	style: "currency",
 																	currency: "CLP",
-																  }).format(montoPagadoVisual)
+																}).format(montoPagadoVisual)
 															: "$0"}
 													</span>
 													.
@@ -6451,8 +6452,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											// Pre-rellenar con el saldo pendiente de la reserva
 											const saldo = Math.max(
 												(parseFloat(selectedReserva?.totalConDescuento || 0) ||
-													0) -
-													(parseFloat(montoPagadoVisual || 0) || 0),
+													0) - (parseFloat(montoPagadoVisual || 0) || 0),
 												0,
 											);
 											if (saldo > 0) setRegPagoMonto(String(Math.round(saldo)));
