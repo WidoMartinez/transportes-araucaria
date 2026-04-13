@@ -449,17 +449,24 @@ function AdminReservas() {
 					montoPagado: String(data.monto),
 					estadoPago: "pagado",
 				}));
-				const fuente = data.fuente === "flow_api_fallback" ? " (recuperado desde Flow API)" : "";
+				const fuente =
+					data.fuente === "flow_api_fallback"
+						? " (recuperado desde Flow API)"
+						: "";
 				toast.success(
 					`Pago recuperado: $${new Intl.NumberFormat("es-CL").format(data.monto)}${fuente}. Guarda la reserva para confirmar.`,
 				);
 			} else {
 				const estadoTexto = data.status || "pendiente";
-				toast.info(`El gateway reporta estado "${estadoTexto}". No se encontró pago confirmado.`);
+				toast.info(
+					`El gateway reporta estado "${estadoTexto}". No se encontró pago confirmado.`,
+				);
 			}
 		} catch (err) {
 			console.error("[RecuperarPago] Error consultando gateway:", err.message);
-			toast.error("No se pudo consultar el gateway de pago. Intenta nuevamente.");
+			toast.error(
+				"No se pudo consultar el gateway de pago. Intenta nuevamente.",
+			);
 		} finally {
 			setLoadingRecuperarPago(false);
 		}
@@ -6153,8 +6160,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														title="Consulta el estado real del pago en Flow o MercadoPago y recupera el monto confirmado"
 														onClick={handleRecuperarPagoGateway}
 													>
-														<RefreshCw className={`w-3 h-3 ${loadingRecuperarPago ? "animate-spin" : ""}`} />
-														{loadingRecuperarPago ? "Consultando..." : "Recuperar pago original"}
+														<RefreshCw
+															className={`w-3 h-3 ${loadingRecuperarPago ? "animate-spin" : ""}`}
+														/>
+														{loadingRecuperarPago
+															? "Consultando..."
+															: "Recuperar pago original"}
 													</Button>
 													{(selectedReserva?.pagoMonto || 0) > 0 && (
 														<Button
