@@ -308,7 +308,8 @@ function AdminReservas() {
 	// Estados para asignaciÃ³n de vehÃ­culo/conductor
 	const [showAsignarDialog, setShowAsignarDialog] = useState(false);
 	const [regPagoMonto, setRegPagoMonto] = useState("");
-	const [regPagoMetodo, setRegPagoMetodo] = useState("");
+	// 'efectivo' como método por defecto para evitar enviar metodo vacío al backend
+	const [regPagoMetodo, setRegPagoMetodo] = useState("efectivo");
 	const [regPagoReferencia, setRegPagoReferencia] = useState("");
 	const [pagoHistorial, setPagoHistorial] = useState([]);
 
@@ -3705,17 +3706,43 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														}),
 													},
 												);
-												if (!resp.ok) throw new Error("Error registrando pago");
+												if (!resp.ok) {
+													const errData = await resp.json().catch(() => ({}));
+													throw new Error(errData.error || `Error ${resp.status}`);
+												}
+												const montoRegistrado = Number(regPagoMonto);
+												const data = await resp.json();
+
+												// Limpiar y cerrar modal
 												setShowRegisterPayment(false);
 												setRegPagoMonto("");
-												setRegPagoMetodo("");
+												setRegPagoMetodo("efectivo");
 												setRegPagoReferencia("");
-												// recargar reserva y pagos
-												await fetchReservas();
+
+												// Actualizar selectedReserva con la reserva sincronizada que devuelve el backend
+												// Esto evita que el form de edicion quede con datos desactualizados (doble contabilizacion)
+												if (data.reserva) {
+													setSelectedReserva(data.reserva);
+													setReservas((prev) =>
+														prev.map((r) =>
+															r.id === data.reserva.id ? data.reserva : r,
+														),
+													);
+													// Limpiar montoPagado del formulario para evitar doble contabilizacion al guardar
+													setFormData((prev) => ({ ...prev, montoPagado: "" }));
+												}
+
+												// Recargar historial de pagos
 												await fetchPagoHistorial();
+
+												const montoFormateado = new Intl.NumberFormat("es-CL", {
+													style: "currency",
+													currency: "CLP",
+												}).format(montoRegistrado);
+												toast.success(`Pago de ${montoFormateado} registrado correctamente.`);
 											} catch (e) {
-												console.error(e);
-												alert("Error registrando pago: " + e.message);
+												console.error("[RegistrarPago]", e);
+												toast.error("Error registrando pago: " + e.message);
 											}
 										}}
 									>
@@ -6256,7 +6283,16 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									</div>
 									<Button
 										type="button"
-										onClick={() => setShowRegisterPayment(true)}
+										onClick={() => {
+											// Pre-rellenar con el saldo pendiente de la reserva
+											const saldo = Math.max(
+												(parseFloat(selectedReserva?.totalConDescuento || 0) || 0) -
+												(parseFloat(selectedReserva?.pagoMonto || 0) || 0),
+												0,
+											);
+											if (saldo > 0) setRegPagoMonto(String(Math.round(saldo)));
+											setShowRegisterPayment(true);
+										}}
 										className="gap-2"
 									>
 										<Plus className="w-4 h-4" />
@@ -6381,7 +6417,16 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												<Button
 													variant="link"
 													size="sm"
-													onClick={() => setShowRegisterPayment(true)}
+													onClick={() => {
+														// Pre-rellenar con el total de la reserva (primer pago)
+														const saldo = Math.max(
+															(parseFloat(selectedReserva?.totalConDescuento || 0) || 0) -
+															(parseFloat(selectedReserva?.pagoMonto || 0) || 0),
+															0,
+														);
+														if (saldo > 0) setRegPagoMonto(String(Math.round(saldo)));
+														setShowRegisterPayment(true);
+													}}
 													className="mt-2"
 												>
 													Registrar el primer pago
