@@ -6975,6 +6975,7 @@ app.delete("/api/pagos/:id", authAdmin, async (req, res) => {
 // ──────────────────────────────────────────────────────────────────
 // Corregir saldos de tramos vinculados (ida/vuelta)
 // Útil cuando el split de pago dejó saldoPendiente residual por redondeo
+// o cuando el webhook de Flow se procesó dos veces (doble acreditación)
 // ──────────────────────────────────────────────────────────────────
 app.post(
 	"/api/reservas/:id/sincronizar-tramos",
@@ -6989,26 +6990,65 @@ app.post(
 				return res.status(404).json({ error: "Reserva no encontrada" });
 			}
 
+			// Determinar qué tramos están involucrados
+			let tramos = [reservaPadre];
+
+			if (reservaPadre.tramoHijoId) {
+				const hijo = await Reserva.findByPk(reservaPadre.tramoHijoId, { transaction });
+				if (hijo) tramos.push(hijo);
+			}
+			if (reservaPadre.tramoPadreId) {
+				const padre = await Reserva.findByPk(reservaPadre.tramoPadreId, { transaction });
+				if (padre) {
+					// Asegurar que el padre esté al inicio
+					tramos = [padre, ...tramos.filter((t) => t.id !== padre.id)];
+					// Si el padre tiene hijo, asegurarlo también
+					if (padre.tramoHijoId) {
+						const hijoDelPadre = await Reserva.findByPk(padre.tramoHijoId, { transaction });
+						if (hijoDelPadre && !tramos.some((t) => t.id === hijoDelPadre.id)) {
+							tramos.push(hijoDelPadre);
+						}
+					}
+				}
+			}
+
+			// Calcular totales del conjunto
+			const totalConjunto = tramos.reduce((s, t) => s + parseFloat(t.totalConDescuento || 0), 0);
+			// Calcular pago acumulado total (suma de pagoMonto de todos los tramos)
+			const pagoAcumuladoConjunto = tramos.reduce((s, t) => s + parseFloat(t.pagoMonto || 0), 0);
+
+			// Detectar doble acreditación: si el pago acumulado es ≈2x el total del viaje
+			// consideramos que el webhook se procesó dos veces
+			const esDoblePago =
+				totalConjunto > 0 && Math.round(pagoAcumuladoConjunto) >= Math.round(totalConjunto * 1.5);
+
+			if (esDoblePago) {
+				console.log(
+					`⚠️ [SYNC-TRAMOS] Posible doble acreditación detectada para conjunto de reserva ${id}. ` +
+					`Total viaje: $${totalConjunto}, Acumulado: $${pagoAcumuladoConjunto}. Redistribuyendo...`,
+				);
+			}
+
 			const resultados = [];
 
-			// Función interna: recalcula saldo de un tramo dado su pagoMonto actual
-			const corregirTramo = async (reserva) => {
+			// Función interna: actualiza un tramo con el pagoMonto correcto
+			const corregirTramo = async (reserva, pagoMontoCorregido) => {
 				const totalTramo = parseFloat(reserva.totalConDescuento || 0);
-				const pagado = parseFloat(reserva.pagoMonto || 0);
-				const saldoCorregido = Math.max(totalTramo - pagado, 0);
+				const saldoCorregido = Math.max(totalTramo - pagoMontoCorregido, 0);
 				const estadoPago =
-					pagado >= totalTramo && totalTramo > 0
+					pagoMontoCorregido >= totalTramo && totalTramo > 0
 						? "pagado"
-						: pagado > 0
+						: pagoMontoCorregido > 0
 							? "parcial"
 							: "pendiente";
 
 				await reserva.update(
 					{
+						pagoMonto: pagoMontoCorregido,
 						saldoPendiente: saldoCorregido,
 						estadoPago,
-						abonoPagado: pagado > 0,
-						saldoPagado: pagado >= totalTramo && totalTramo > 0,
+						abonoPagado: pagoMontoCorregido > 0,
+						saldoPagado: pagoMontoCorregido >= totalTramo && totalTramo > 0,
 						...(estadoPago === "pagado" &&
 						["pendiente", "pendiente_detalles"].includes(reserva.estado)
 							? { estado: "confirmada" }
@@ -7020,42 +7060,51 @@ app.post(
 				resultados.push({
 					id: reserva.id,
 					codigoReserva: reserva.codigoReserva,
-					pagoMonto: pagado,
+					pagoMonto: pagoMontoCorregido,
 					totalConDescuento: totalTramo,
 					saldoCorregido,
 					estadoPago,
 				});
 			};
 
-			await corregirTramo(reservaPadre);
+			for (const tramo of tramos) {
+				const totalTramo = parseFloat(tramo.totalConDescuento || 0);
+				let pagoMontoCorregido;
 
-			// Si tiene tramo hijo, corregirlo también
-			if (reservaPadre.tramoHijoId) {
-				const reservaHija = await Reserva.findByPk(reservaPadre.tramoHijoId, {
-					transaction,
-				});
-				if (reservaHija) {
-					await corregirTramo(reservaHija);
+				if (esDoblePago && totalConjunto > 0) {
+					// Redistribuir proporcionalmente el pago real (la mitad del acumulado)
+					// El pago real es la mitad del acumulado (webhook duplicado)
+					const pagoReal = pagoAcumuladoConjunto / 2;
+					const factor = totalTramo / totalConjunto;
+					pagoMontoCorregido = Math.round(pagoReal * factor);
+				} else {
+					// Solo corregir saldo: mantener pagoMonto, ajustar saldoPendiente
+					pagoMontoCorregido = parseFloat(tramo.pagoMonto || 0);
 				}
+
+				await corregirTramo(tramo, pagoMontoCorregido);
 			}
 
-			// Si es un tramo hijo, buscar el padre y corregirlo también
-			if (reservaPadre.tramoPadreId) {
-				const reservaPadreVinculado = await Reserva.findByPk(
-					reservaPadre.tramoPadreId,
-					{ transaction },
-				);
-				if (reservaPadreVinculado) {
-					await corregirTramo(reservaPadreVinculado);
+			// En caso de esDoblePago con 2 tramos, asegurarse que la suma de pagoMontos
+			// sea exactamente el pagoReal (evitar diferencias de redondeo)
+			if (esDoblePago && tramos.length === 2 && resultados.length === 2) {
+				const pagoReal = Math.round(pagoAcumuladoConjunto / 2);
+				const sumaActual = resultados[0].pagoMonto + resultados[1].pagoMonto;
+				const diferencia = pagoReal - sumaActual;
+				if (diferencia !== 0) {
+					// Asignar diferencia al último tramo
+					const ultimoTramo = tramos[1];
+					const nuevoMonto = resultados[1].pagoMonto + diferencia;
+					await corregirTramo(ultimoTramo, nuevoMonto);
 				}
 			}
 
 			await transaction.commit();
 			console.log(
-				`✅ [SYNC-TRAMOS] Tramos sincronizados para reserva ${id}:`,
+				`✅ [SYNC-TRAMOS] Tramos sincronizados para reserva ${id}. Doble pago detectado: ${esDoblePago}. Resultados:`,
 				resultados,
 			);
-			res.json({ ok: true, tramos: resultados });
+			res.json({ ok: true, esDoblePago, tramos: resultados });
 		} catch (error) {
 			await transaction.rollback();
 			console.error(
@@ -10481,6 +10530,27 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		console.log(
 			`✅ Reserva encontrada: ID ${reserva.id}, Código ${reserva.codigoReserva}`,
 		);
+
+		// ── Idempotencia: evitar doble procesamiento del mismo flowOrder ──────────
+		// Si ya existe una transacción aprobada con este flowOrder, omitir el pago
+		try {
+			const transaccionExistente = await Transaccion.findOne({
+				where: {
+					transaccionId: payment.flowOrder.toString(),
+					estado: "aprobado",
+				},
+			});
+			if (transaccionExistente) {
+				console.warn(
+					`⚠️ [IDEMPOTENCIA] Flow Order ${payment.flowOrder} ya fue procesada (transacción ID: ${transaccionExistente.id}). Omitiendo para evitar doble acreditación.`,
+				);
+				return;
+			}
+		} catch (idempErr) {
+			console.error("[IDEMPOTENCIA] Error verificando duplicado:", idempErr.message);
+			// No bloquear el flujo si falla la verificación, solo loguear
+		}
+		// ─────────────────────────────────────────────────────────────────────────
 
 		// Reglas: parcial (>= 40% del total) => confirmada, total => confirmada (estado completada se gestiona manualmente)
 		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;

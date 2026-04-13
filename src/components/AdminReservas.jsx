@@ -490,8 +490,12 @@ function AdminReservas() {
 				setReservas((prev) => prev.map((r) => r.id === reservaActualizada.id ? reservaActualizada : r));
 			}
 			const tramos = data.tramos || [];
-			const resumen = tramos.map((tr) => `Reserva #${tr.id}: saldo corregido a $${tr.saldoCorregido.toLocaleString("es-CL")}`).join(", ");
-			toast.success(`Tramos sincronizados. ${resumen}`);
+			const resumen = tramos.map((tr) => `#${tr.id}: saldo $${tr.saldoCorregido.toLocaleString("es-CL")}`).join(" | ");
+			if (data.esDoblePago) {
+				toast.success(`✔ Doble acreditación corregida. Los pagos fueron redistribuidos: ${resumen}`);
+			} else {
+				toast.success(`✔ Saldos sincronizados. ${resumen}`);
+			}
 		} catch (err) {
 			console.error("[SincronizarTramos] Error:", err.message);
 			toast.error("No se pudo sincronizar los tramos. Intenta nuevamente.");
