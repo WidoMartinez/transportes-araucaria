@@ -337,6 +337,27 @@ function AdminReservas() {
 		}
 	}, [selectedReserva, apiUrl]);
 
+	const fetchTransaccionesHistorial = useCallback(async () => {
+		if (!selectedReserva) return;
+		setLoadingTransacciones(true);
+		try {
+			const resp = await authenticatedFetch(
+				`/api/reservas/${selectedReserva.id}/transacciones`,
+			);
+			if (resp.ok) {
+				const data = await resp.json();
+				setTransacciones(Array.isArray(data.transacciones) ? data.transacciones : []);
+			} else {
+				setTransacciones([]);
+			}
+		} catch (error) {
+			console.error("Error al cargar transacciones de reserva:", error);
+			setTransacciones([]);
+		} finally {
+			setLoadingTransacciones(false);
+		}
+	}, [selectedReserva, authenticatedFetch]);
+
 	// ELIMINAR PAGO INDIVIDUAL
 	const handleDeletePago = async (pagoId) => {
 		if (
@@ -449,7 +470,7 @@ function AdminReservas() {
 					Number(
 						selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0,
 					) || 0;
-				const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
+				const pagoPrevio = Number(montoPagadoVisual || 0) || 0;
 				const pendiente = Math.max(totalReserva - pagoPrevio, 0);
 				const montoGateway = Number(data.monto) || 0;
 				const montoARegistrar =
@@ -549,10 +570,12 @@ function AdminReservas() {
 	useEffect(() => {
 		if (selectedReserva) {
 			fetchPagoHistorial();
+			fetchTransaccionesHistorial();
 		} else {
 			setPagoHistorial([]);
+			setTransacciones([]);
 		}
-	}, [selectedReserva, fetchPagoHistorial]);
+	}, [selectedReserva, fetchPagoHistorial, fetchTransaccionesHistorial]);
 	const [vehiculos, setVehiculos] = useState([]);
 	const [conductores, setConductores] = useState([]);
 	const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState("");
@@ -579,6 +602,40 @@ function AdminReservas() {
 	const [loadingHistorial, setLoadingHistorial] = useState(false);
 	// Estados para diálogo de completar reservas vinculadas
 	const [showDialogoCompletar, setShowDialogoCompletar] = useState(false);
+
+	const montoFlowUnico = useMemo(() => {
+		const lista = Array.isArray(transacciones) ? transacciones : [];
+		const flowAprobadas = lista.filter(
+			(t) =>
+				String(t?.estado || "").toLowerCase() === "aprobado" &&
+				String(t?.gateway || "").toLowerCase() === "flow",
+		);
+
+		if (flowAprobadas.length === 0) return 0;
+
+		const unicas = new Map();
+		for (const tx of flowAprobadas) {
+			const clave = String(
+				tx?.transaccionId || tx?.referencia || tx?.id || Math.random(),
+			);
+			if (!unicas.has(clave)) {
+				unicas.set(clave, Number(tx?.monto || 0) || 0);
+			}
+		}
+
+		let suma = 0;
+		for (const monto of unicas.values()) suma += monto;
+		return suma;
+	}, [transacciones]);
+
+		const montoPagadoVisual = useMemo(() => {
+			const montoDB = Number(selectedReserva?.pagoMonto || 0) || 0;
+			const esFlow =
+				selectedReserva?.pagoGateway === "flow" ||
+				selectedReserva?.metodoPago === "flow";
+			if (esFlow && montoFlowUnico > 0) return montoFlowUnico;
+			return montoDB;
+		}, [selectedReserva, montoFlowUnico]);
 	const [dialogoCompletarOpciones, setDialogoCompletarOpciones] =
 		useState(null);
 
@@ -5200,7 +5257,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														Pagado hasta ahora
 													</p>
 													<p className="text-base font-black text-green-600">
-														{formatCurrency(selectedReserva.pagoMonto || 0)}
+														{formatCurrency(montoPagadoVisual || 0)}
 													</p>
 												</div>
 												<div
@@ -6207,7 +6264,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																		selectedReserva?.abonoSugerido || 0,
 																	) || 0;
 																const pagoPrevioNum =
-																	parseFloat(selectedReserva?.pagoMonto || 0) ||
+																	parseFloat(montoPagadoVisual || 0) ||
 																	0;
 																const umbralAbono = Math.max(
 																	totalReservaNum * 0.4,
@@ -6290,7 +6347,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															? "Consultando..."
 															: "Recuperar pago original"}
 													</Button>
-													{(selectedReserva?.pagoMonto || 0) > 0 && (
+													{(montoPagadoVisual || 0) > 0 && (
 														<Button
 															type="button"
 															variant="ghost"
@@ -6341,11 +6398,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													<strong>Aviso:</strong> El monto ingresado se{" "}
 													<strong>sumará</strong> al total ya registrado de{" "}
 													<span className="font-semibold text-amber-700">
-														{selectedReserva.pagoMonto
+															{montoPagadoVisual
 															? new Intl.NumberFormat("es-CL", {
 																	style: "currency",
 																	currency: "CLP",
-																}).format(selectedReserva.pagoMonto)
+																  }).format(montoPagadoVisual)
 															: "$0"}
 													</span>
 													.
@@ -6366,11 +6423,25 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										<p className="text-sm text-muted-foreground">
 											Total registrado:{" "}
 											<span className="font-medium">
-												{/* Usar pagoMonto (fuente de verdad): los pagos de gateway no
-												   quedan en reserva_pagos, por lo que el reduce daría $0 */}
-												{formatCurrency(
-													Number(selectedReserva?.pagoMonto) || 0,
-												)}
+												{(() => {
+													const totalManual = (pagoHistorial || []).reduce(
+														(sum, p) => sum + (Number(p?.amount || 0) || 0),
+														0,
+													);
+													const usaFlowDeducido =
+														montoFlowUnico > 0 &&
+														(selectedReserva?.pagoGateway === "flow" ||
+															selectedReserva?.metodoPago === "flow");
+													const totalAutomatico = usaFlowDeducido
+														? montoFlowUnico
+														: 0;
+													const totalVisual =
+														totalManual +
+														(totalAutomatico > 0
+															? totalAutomatico
+															: Number(montoPagadoVisual || 0) || 0);
+													return formatCurrency(totalVisual);
+												})()}
 											</span>
 										</p>
 									</div>
@@ -6381,7 +6452,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											const saldo = Math.max(
 												(parseFloat(selectedReserva?.totalConDescuento || 0) ||
 													0) -
-													(parseFloat(selectedReserva?.pagoMonto || 0) || 0),
+													(parseFloat(montoPagadoVisual || 0) || 0),
 												0,
 											);
 											if (saldo > 0) setRegPagoMonto(String(Math.round(saldo)));
@@ -6397,6 +6468,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									{(() => {
 										// Combinar pagos del historial con el pago principal de Flow si no está en el historial
 										const allPagos = [...(pagoHistorial || [])];
+										const montoFlowVisual =
+											montoFlowUnico > 0
+												? montoFlowUnico
+												: Number(montoPagadoVisual || 0) || 0;
 
 										// Si la reserva tiene un pago de Flow pero no aparece en el historial detallado, agregarlo virtualmente
 										const hasFlowInHistory = allPagos.some(
@@ -6406,13 +6481,13 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										);
 										if (
 											!hasFlowInHistory &&
-											(selectedReserva.pagoMonto || 0) > 0 &&
+											montoFlowVisual > 0 &&
 											(selectedReserva.pagoGateway === "flow" ||
 												selectedReserva.metodoPago === "flow")
 										) {
 											allPagos.push({
 												id: "virtual-flow",
-												amount: selectedReserva.pagoMonto,
+												amount: montoFlowVisual,
 												metodo: "Flow",
 												referencia:
 													selectedReserva.referenciaPago ||
