@@ -473,6 +473,33 @@ function AdminReservas() {
 		}
 	};
 
+	// Sincronizar saldos de tramos vinculados (resuelve saldos residuales por redondeo en split de pago)
+	const handleSincronizarTramos = async () => {
+		if (!selectedReserva?.id) return;
+		if (!confirm("¿Corregir los saldos de los tramos de esta reserva ida/vuelta? Esto recalculará saldoPendiente y estadoPago basándose en el pagoMonto actual.")) return;
+		setLoadingSincronizarTramos(true);
+		try {
+			const resp = await authenticatedFetch(`/api/reservas/${selectedReserva.id}/sincronizar-tramos`, { method: "POST" });
+			if (!resp.ok) throw new Error(`Error ${resp.status}`);
+			const data = await resp.json();
+			// Recargar la reserva actualizada
+			const respActualizada = await authenticatedFetch(`/api/reservas/${selectedReserva.id}?t=${Date.now()}`);
+			if (respActualizada.ok) {
+				const reservaActualizada = await respActualizada.json();
+				setSelectedReserva(reservaActualizada);
+				setReservas((prev) => prev.map((r) => r.id === reservaActualizada.id ? reservaActualizada : r));
+			}
+			const tramos = data.tramos || [];
+			const resumen = tramos.map((tr) => `Reserva #${tr.id}: saldo corregido a $${tr.saldoCorregido.toLocaleString("es-CL")}`).join(", ");
+			toast.success(`Tramos sincronizados. ${resumen}`);
+		} catch (err) {
+			console.error("[SincronizarTramos] Error:", err.message);
+			toast.error("No se pudo sincronizar los tramos. Intenta nuevamente.");
+		} finally {
+			setLoadingSincronizarTramos(false);
+		}
+	};
+
 	// Recargar historial de pagos cuando cambie la reserva seleccionada o se cierre el modal de registro
 	useEffect(() => {
 		if (selectedReserva) {
@@ -902,6 +929,7 @@ function AdminReservas() {
 
 	// Estado de carga para recuperar pago desde el gateway (Flow/MercadoPago)
 	const [loadingRecuperarPago, setLoadingRecuperarPago] = useState(false);
+	const [loadingSincronizarTramos, setLoadingSincronizarTramos] = useState(false);
 
 	// Estado para evaluación de conductor post-viaje
 	const [solicitudEvaluacion, setSolicitudEvaluacion] = useState({}); // { [reservaId]: { enviada, fecha, evaluada, promedio } }
@@ -5514,6 +5542,19 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											Ver Tramo Vuelta →
 										</Button>
 									)}
+									{/* Botón para corregir saldos residuales en tramos ida/vuelta */}
+									{(selectedReserva?.tramoHijoId || selectedReserva?.tramoPadreId) && (
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={loadingSincronizarTramos}
+											onClick={handleSincronizarTramos}
+											title="Recalcula saldoPendiente y estadoPago de cada tramo según su pagoMonto actual"
+										>
+											<RefreshCw className={`w-4 h-4 mr-2 ${loadingSincronizarTramos ? "animate-spin" : ""}`} />
+											{loadingSincronizarTramos ? "Sincronizando..." : "Sincronizar saldos"}
+										</Button>
+									)}
 									<Button
 										variant="outline"
 										size="sm"
@@ -6274,14 +6315,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										<p className="text-sm text-muted-foreground">
 											Total registrado:{" "}
 											<span className="font-medium">
-												{formatCurrency(
-													pagoHistorial
-														? pagoHistorial.reduce(
-																(sum, p) => sum + (p.amount || 0),
-																0,
-															)
-														: 0,
-												)}
+												{/* Usar pagoMonto (fuente de verdad): los pagos de gateway no
+												   quedan en reserva_pagos, por lo que el reduce daría $0 */}
+												{formatCurrency(Number(selectedReserva?.pagoMonto) || 0)}
 											</span>
 										</p>
 									</div>
