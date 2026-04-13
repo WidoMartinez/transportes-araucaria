@@ -161,12 +161,12 @@ Para confirmar que el sistema funciona correctamente:
 ### Solución aplicada
 
 - Frontend (`AdminReservas.jsx`):
-	- "Recuperar pago original" ahora propone solo el monto pendiente por registrar para evitar duplicados.
-	- Si el pago ya está totalmente acreditado, informa y no carga monto adicional.
-	- La actualización automática del tramo de vuelta ya no fuerza su estado.
+  - "Recuperar pago original" ahora propone solo el monto pendiente por registrar para evitar duplicados.
+  - Si el pago ya está totalmente acreditado, informa y no carga monto adicional.
+  - La actualización automática del tramo de vuelta ya no fuerza su estado.
 - Backend (`server-db.js`):
-	- `bulk-update` valida el estado `pendiente` usando el monto efectivo posterior al bloque de pago, permitiendo reseteos legítimos.
-	- `sincronizar-tramos` actualiza el ajuste final de redondeo sin duplicar filas en `resultados`.
+  - `bulk-update` valida el estado `pendiente` usando el monto efectivo posterior al bloque de pago, permitiendo reseteos legítimos.
+  - `sincronizar-tramos` actualiza el ajuste final de redondeo sin duplicar filas en `resultados`.
 
 ### Resultado esperado
 

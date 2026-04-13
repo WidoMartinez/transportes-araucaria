@@ -452,7 +452,8 @@ function AdminReservas() {
 				const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
 				const pendiente = Math.max(totalReserva - pagoPrevio, 0);
 				const montoGateway = Number(data.monto) || 0;
-				const montoARegistrar = pendiente > 0 ? Math.min(montoGateway, pendiente) : 0;
+				const montoARegistrar =
+					pendiente > 0 ? Math.min(montoGateway, pendiente) : 0;
 
 				if (montoARegistrar <= 0) {
 					toast.info(
@@ -495,23 +496,44 @@ function AdminReservas() {
 	// Sincronizar saldos de tramos vinculados (resuelve saldos residuales por redondeo en split de pago)
 	const handleSincronizarTramos = async () => {
 		if (!selectedReserva?.id) return;
-		if (!confirm("¿Corregir los saldos de los tramos de esta reserva ida/vuelta? Esto recalculará saldoPendiente y estadoPago basándose en el pagoMonto actual.")) return;
+		if (
+			!confirm(
+				"¿Corregir los saldos de los tramos de esta reserva ida/vuelta? Esto recalculará saldoPendiente y estadoPago basándose en el pagoMonto actual.",
+			)
+		)
+			return;
 		setLoadingSincronizarTramos(true);
 		try {
-			const resp = await authenticatedFetch(`/api/reservas/${selectedReserva.id}/sincronizar-tramos`, { method: "POST" });
+			const resp = await authenticatedFetch(
+				`/api/reservas/${selectedReserva.id}/sincronizar-tramos`,
+				{ method: "POST" },
+			);
 			if (!resp.ok) throw new Error(`Error ${resp.status}`);
 			const data = await resp.json();
 			// Recargar la reserva actualizada
-			const respActualizada = await authenticatedFetch(`/api/reservas/${selectedReserva.id}?t=${Date.now()}`);
+			const respActualizada = await authenticatedFetch(
+				`/api/reservas/${selectedReserva.id}?t=${Date.now()}`,
+			);
 			if (respActualizada.ok) {
 				const reservaActualizada = await respActualizada.json();
 				setSelectedReserva(reservaActualizada);
-				setReservas((prev) => prev.map((r) => r.id === reservaActualizada.id ? reservaActualizada : r));
+				setReservas((prev) =>
+					prev.map((r) =>
+						r.id === reservaActualizada.id ? reservaActualizada : r,
+					),
+				);
 			}
 			const tramos = data.tramos || [];
-			const resumen = tramos.map((tr) => `#${tr.id}: saldo $${tr.saldoCorregido.toLocaleString("es-CL")}`).join(" | ");
+			const resumen = tramos
+				.map(
+					(tr) =>
+						`#${tr.id}: saldo $${tr.saldoCorregido.toLocaleString("es-CL")}`,
+				)
+				.join(" | ");
 			if (data.esDoblePago) {
-				toast.success(`✔ Doble acreditación corregida. Los pagos fueron redistribuidos: ${resumen}`);
+				toast.success(
+					`✔ Doble acreditación corregida. Los pagos fueron redistribuidos: ${resumen}`,
+				);
 			} else {
 				toast.success(`✔ Saldos sincronizados. ${resumen}`);
 			}
@@ -952,7 +974,8 @@ function AdminReservas() {
 
 	// Estado de carga para recuperar pago desde el gateway (Flow/MercadoPago)
 	const [loadingRecuperarPago, setLoadingRecuperarPago] = useState(false);
-	const [loadingSincronizarTramos, setLoadingSincronizarTramos] = useState(false);
+	const [loadingSincronizarTramos, setLoadingSincronizarTramos] =
+		useState(false);
 
 	// Estado para evaluación de conductor post-viaje
 	const [solicitudEvaluacion, setSolicitudEvaluacion] = useState({}); // { [reservaId]: { enviada, fecha, evaluada, promedio } }
@@ -2311,7 +2334,7 @@ function AdminReservas() {
 							pasajeros:
 								Number(formData.pasajeros) || selectedReserva.pasajeros,
 						},
-							// No forzar estado en el tramo de vuelta: puede tener ciclo operativo independiente
+						// No forzar estado en el tramo de vuelta: puede tener ciclo operativo independiente
 						observaciones: formData.observaciones,
 					};
 
@@ -5566,7 +5589,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										</Button>
 									)}
 									{/* Botón para corregir saldos residuales en tramos ida/vuelta */}
-									{(selectedReserva?.tramoHijoId || selectedReserva?.tramoPadreId) && (
+									{(selectedReserva?.tramoHijoId ||
+										selectedReserva?.tramoPadreId) && (
 										<Button
 											variant="outline"
 											size="sm"
@@ -5574,8 +5598,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											onClick={handleSincronizarTramos}
 											title="Recalcula saldoPendiente y estadoPago de cada tramo según su pagoMonto actual"
 										>
-											<RefreshCw className={`w-4 h-4 mr-2 ${loadingSincronizarTramos ? "animate-spin" : ""}`} />
-											{loadingSincronizarTramos ? "Sincronizando..." : "Sincronizar saldos"}
+											<RefreshCw
+												className={`w-4 h-4 mr-2 ${loadingSincronizarTramos ? "animate-spin" : ""}`}
+											/>
+											{loadingSincronizarTramos
+												? "Sincronizando..."
+												: "Sincronizar saldos"}
 										</Button>
 									)}
 									<Button
@@ -6340,7 +6368,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											<span className="font-medium">
 												{/* Usar pagoMonto (fuente de verdad): los pagos de gateway no
 												   quedan en reserva_pagos, por lo que el reduce daría $0 */}
-												{formatCurrency(Number(selectedReserva?.pagoMonto) || 0)}
+												{formatCurrency(
+													Number(selectedReserva?.pagoMonto) || 0,
+												)}
 											</span>
 										</p>
 									</div>
