@@ -427,6 +427,44 @@ function AdminReservas() {
 		}
 	};
 
+	/**
+	 * Consulta el estado real del pago en el gateway (Flow/MercadoPago)
+	 * y actualiza el campo montoPagado con el monto confirmado.
+	 * Útil para recuperar pagos cuyo webhook se perdió (cold start de Render).
+	 */
+	const handleRecuperarPagoGateway = async () => {
+		if (!selectedReserva?.id) return;
+		setLoadingRecuperarPago(true);
+		try {
+			const resp = await fetch(
+				`${apiUrl}/api/payment-status?reserva_id=${selectedReserva.id}`,
+			);
+			if (!resp.ok) throw new Error(`Error ${resp.status}`);
+			const data = await resp.json();
+
+			if (data.pagado && data.monto > 0) {
+				// Rellenar el formulario con el monto real confirmado por el gateway
+				setFormData((prev) => ({
+					...prev,
+					montoPagado: String(data.monto),
+					estadoPago: "pagado",
+				}));
+				const fuente = data.fuente === "flow_api_fallback" ? " (recuperado desde Flow API)" : "";
+				toast.success(
+					`Pago recuperado: $${new Intl.NumberFormat("es-CL").format(data.monto)}${fuente}. Guarda la reserva para confirmar.`,
+				);
+			} else {
+				const estadoTexto = data.status || "pendiente";
+				toast.info(`El gateway reporta estado "${estadoTexto}". No se encontró pago confirmado.`);
+			}
+		} catch (err) {
+			console.error("[RecuperarPago] Error consultando gateway:", err.message);
+			toast.error("No se pudo consultar el gateway de pago. Intenta nuevamente.");
+		} finally {
+			setLoadingRecuperarPago(false);
+		}
+	};
+
 	// Recargar historial de pagos cuando cambie la reserva seleccionada o se cierre el modal de registro
 	useEffect(() => {
 		if (selectedReserva) {
@@ -853,6 +891,9 @@ function AdminReservas() {
 
 	// Estado para mostrar el modal de registro de pago manual
 	const [showRegisterPayment, setShowRegisterPayment] = useState(false);
+
+	// Estado de carga para recuperar pago desde el gateway (Flow/MercadoPago)
+	const [loadingRecuperarPago, setLoadingRecuperarPago] = useState(false);
 
 	// Estado para evaluación de conductor post-viaje
 	const [solicitudEvaluacion, setSolicitudEvaluacion] = useState({}); // { [reservaId]: { enviada, fecha, evaluada, promedio } }
@@ -6097,35 +6138,50 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 
 										{/* Monto del pago */}
 										<div className="space-y-2">
-											<div className="flex justify-between items-center">
+											<div className="flex justify-between items-center flex-wrap gap-1">
 												<Label htmlFor="montoPagado">
 													Monto a registrar (CLP)
 												</Label>
-												{(selectedReserva?.pagoMonto || 0) > 0 && (
+												<div className="flex gap-1">
+													{/* Botón para recuperar el pago real desde el gateway (Flow/MP) */}
 													<Button
 														type="button"
 														variant="ghost"
 														size="sm"
-														className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
-														onClick={() => {
-															if (
-																confirm(
-																	"¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.",
-																)
-															) {
-																setFormData({
-																	...formData,
-																	montoPagado: "0",
-																	estadoPago: "pendiente",
-																	estado: "pendiente",
-																});
-															}
-														}}
+														className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 gap-1"
+														disabled={loadingRecuperarPago}
+														title="Consulta el estado real del pago en Flow o MercadoPago y recupera el monto confirmado"
+														onClick={handleRecuperarPagoGateway}
 													>
-														<RefreshCw className="w-3 h-3" />
-														Resetear Pago (Volver a $0)
+														<RefreshCw className={`w-3 h-3 ${loadingRecuperarPago ? "animate-spin" : ""}`} />
+														{loadingRecuperarPago ? "Consultando..." : "Recuperar pago original"}
 													</Button>
-												)}
+													{(selectedReserva?.pagoMonto || 0) > 0 && (
+														<Button
+															type="button"
+															variant="ghost"
+															size="sm"
+															className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+															onClick={() => {
+																if (
+																	confirm(
+																		"¿Estás seguro de que deseas resetear los pagos de esta reserva? Esto volverá el monto a $0 y el estado a pendiente.",
+																	)
+																) {
+																	setFormData({
+																		...formData,
+																		montoPagado: "0",
+																		estadoPago: "pendiente",
+																		estado: "pendiente",
+																	});
+																}
+															}}
+														>
+															<RefreshCw className="w-3 h-3" />
+															Resetear Pago (Volver a $0)
+														</Button>
+													)}
+												</div>
 											</div>
 											<Input
 												id="montoPagado"
