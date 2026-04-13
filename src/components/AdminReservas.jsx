@@ -444,18 +444,37 @@ function AdminReservas() {
 			const data = await resp.json();
 
 			if (data.pagado && data.monto > 0) {
-				// Rellenar el formulario con el monto real confirmado por el gateway
+				// Evitar doble acreditación: solo sugerir el monto pendiente por registrar
+				const totalReserva =
+					Number(
+						selectedReserva?.totalConDescuento ?? selectedReserva?.total ?? 0,
+					) || 0;
+				const pagoPrevio = Number(selectedReserva?.pagoMonto || 0) || 0;
+				const pendiente = Math.max(totalReserva - pagoPrevio, 0);
+				const montoGateway = Number(data.monto) || 0;
+				const montoARegistrar = pendiente > 0 ? Math.min(montoGateway, pendiente) : 0;
+
+				if (montoARegistrar <= 0) {
+					toast.info(
+						"El pago ya está acreditado en su totalidad. No se requiere registrar monto adicional.",
+					);
+					return;
+				}
+
 				setFormData((prev) => ({
 					...prev,
-					montoPagado: String(data.monto),
-					estadoPago: "pagado",
+					montoPagado: String(montoARegistrar),
+					estadoPago:
+						pagoPrevio + montoARegistrar >= totalReserva && totalReserva > 0
+							? "pagado"
+							: "parcial",
 				}));
 				const fuente =
 					data.fuente === "flow_api_fallback"
 						? " (recuperado desde Flow API)"
 						: "";
 				toast.success(
-					`Pago recuperado: $${new Intl.NumberFormat("es-CL").format(data.monto)}${fuente}. Guarda la reserva para confirmar.`,
+					`Pago recuperado: $${new Intl.NumberFormat("es-CL").format(montoGateway)}${fuente}. Se cargó $${new Intl.NumberFormat("es-CL").format(montoARegistrar)} para evitar doble contabilización. Guarda la reserva para confirmar.`,
 				);
 			} else {
 				const estadoTexto = data.status || "pendiente";
@@ -2292,7 +2311,7 @@ function AdminReservas() {
 							pasajeros:
 								Number(formData.pasajeros) || selectedReserva.pasajeros,
 						},
-						estado: estadoFinal, // Sincronizar estado con la reserva de ida
+							// No forzar estado en el tramo de vuelta: puede tener ciclo operativo independiente
 						observaciones: formData.observaciones,
 					};
 

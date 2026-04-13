@@ -7105,10 +7105,54 @@ app.post(
 				const sumaActual = resultados[0].pagoMonto + resultados[1].pagoMonto;
 				const diferencia = pagoReal - sumaActual;
 				if (diferencia !== 0) {
-					// Asignar diferencia al último tramo
+					// Asignar diferencia al último tramo sin duplicar elementos en resultados
 					const ultimoTramo = tramos[1];
-					const nuevoMonto = resultados[1].pagoMonto + diferencia;
-					await corregirTramo(ultimoTramo, nuevoMonto);
+					const idxResultado = resultados.findIndex(
+						(item) => item.id === ultimoTramo.id,
+					);
+					const montoBase =
+						idxResultado >= 0
+							? resultados[idxResultado].pagoMonto
+							: parseFloat(ultimoTramo.pagoMonto || 0);
+					const nuevoMonto = Math.max(montoBase + diferencia, 0);
+					const totalTramo = parseFloat(ultimoTramo.totalConDescuento || 0);
+					const saldoCorregido = Math.max(totalTramo - nuevoMonto, 0);
+					const estadoPago =
+						nuevoMonto >= totalTramo && totalTramo > 0
+							? "pagado"
+							: nuevoMonto > 0
+								? "parcial"
+								: "pendiente";
+
+					await ultimoTramo.update(
+						{
+							pagoMonto: nuevoMonto,
+							saldoPendiente: saldoCorregido,
+							estadoPago,
+							abonoPagado: nuevoMonto > 0,
+							saldoPagado: nuevoMonto >= totalTramo && totalTramo > 0,
+							...(estadoPago === "pagado" &&
+							["pendiente", "pendiente_detalles"].includes(ultimoTramo.estado)
+								? { estado: "confirmada" }
+								: {}),
+						},
+						{ transaction },
+					);
+
+					const resultadoAjustado = {
+						id: ultimoTramo.id,
+						codigoReserva: ultimoTramo.codigoReserva,
+						pagoMonto: nuevoMonto,
+						totalConDescuento: totalTramo,
+						saldoCorregido,
+						estadoPago,
+					};
+
+					if (idxResultado >= 0) {
+						resultados[idxResultado] = resultadoAjustado;
+					} else {
+						resultados.push(resultadoAjustado);
+					}
 				}
 			}
 
@@ -7340,6 +7384,8 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			);
 		}
 
+		let pagoMontoParaValidacion = parseFloat(reserva.pagoMonto || 0) || 0;
+
 		// 4. Actualizar pago (si se proporciona)
 		if (pago) {
 			const {
@@ -7422,6 +7468,8 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 				{ transaction },
 			);
 
+			pagoMontoParaValidacion = pagoTotalNuevo;
+
 			console.log(
 				`✅ [BULK-UPDATE] Pago actualizado: ${nuevoEstadoPago}, monto: ${pagoTotalNuevo}`,
 			);
@@ -7440,7 +7488,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 			// Validar que no se pueda cambiar a pendiente si ya hay pagos
 			if (
 				nuevoEstado === "pendiente" &&
-				(reserva.pagoMonto || 0) > 0 &&
+				pagoMontoParaValidacion > 0 &&
 				reserva.estado !== "pendiente"
 			) {
 				await transaction.rollback();

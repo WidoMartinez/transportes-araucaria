@@ -147,6 +147,36 @@ Para confirmar que el sistema funciona correctamente:
 
 ---
 
+## 1.2. Flujo Editar Reserva: doble contabilización y reseteo de pago
+
+**Implementado: 12 Abril 2026**
+
+### Problemas detectados
+
+- Al usar "Recuperar pago original" podía cargarse el monto total del gateway y volver a sumarse al guardar, generando doble contabilización.
+- Al usar "Resetear Pago (Volver a $0)", el backend podía rechazar el guardado por una validación que miraba el monto previo en vez del monto ya reseteado.
+- En reservas ida/vuelta, al editar la ida se arrastraba el estado al tramo de vuelta aunque la vuelta tuviera ciclo operativo distinto.
+- El endpoint de sincronización de tramos podía devolver resultados duplicados cuando ajustaba diferencias de redondeo.
+
+### Solución aplicada
+
+- Frontend (`AdminReservas.jsx`):
+	- "Recuperar pago original" ahora propone solo el monto pendiente por registrar para evitar duplicados.
+	- Si el pago ya está totalmente acreditado, informa y no carga monto adicional.
+	- La actualización automática del tramo de vuelta ya no fuerza su estado.
+- Backend (`server-db.js`):
+	- `bulk-update` valida el estado `pendiente` usando el monto efectivo posterior al bloque de pago, permitiendo reseteos legítimos.
+	- `sincronizar-tramos` actualiza el ajuste final de redondeo sin duplicar filas en `resultados`.
+
+### Resultado esperado
+
+- El admin puede recuperar pagos sin riesgo de sumar dos veces el mismo monto.
+- El reseteo de pago a `$0` funciona de forma consistente.
+- La vuelta no cambia de estado automáticamente al editar la ida.
+- El resumen de sincronización muestra una sola línea por tramo.
+
+---
+
 ## 1.1. División de Pago Proporcional para Reservas Ida/Vuelta
 
 **Implementado: 18 Enero 2026**
