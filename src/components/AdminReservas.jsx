@@ -3708,7 +3708,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												);
 												if (!resp.ok) {
 													const errData = await resp.json().catch(() => ({}));
-													throw new Error(errData.error || `Error ${resp.status}`);
+													throw new Error(
+														errData.error || `Error ${resp.status}`,
+													);
 												}
 												const montoRegistrado = Number(regPagoMonto);
 												const data = await resp.json();
@@ -3739,7 +3741,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													style: "currency",
 													currency: "CLP",
 												}).format(montoRegistrado);
-												toast.success(`Pago de ${montoFormateado} registrado correctamente.`);
+												toast.success(
+													`Pago de ${montoFormateado} registrado correctamente.`,
+												);
 											} catch (e) {
 												console.error("[RegistrarPago]", e);
 												toast.error("Error registrando pago: " + e.message);
@@ -6286,8 +6290,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										onClick={() => {
 											// Pre-rellenar con el saldo pendiente de la reserva
 											const saldo = Math.max(
-												(parseFloat(selectedReserva?.totalConDescuento || 0) || 0) -
-												(parseFloat(selectedReserva?.pagoMonto || 0) || 0),
+												(parseFloat(selectedReserva?.totalConDescuento || 0) ||
+													0) -
+													(parseFloat(selectedReserva?.pagoMonto || 0) || 0),
 												0,
 											);
 											if (saldo > 0) setRegPagoMonto(String(Math.round(saldo)));
@@ -6420,11 +6425,15 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													onClick={() => {
 														// Pre-rellenar con el total de la reserva (primer pago)
 														const saldo = Math.max(
-															(parseFloat(selectedReserva?.totalConDescuento || 0) || 0) -
-															(parseFloat(selectedReserva?.pagoMonto || 0) || 0),
+															(parseFloat(
+																selectedReserva?.totalConDescuento || 0,
+															) || 0) -
+																(parseFloat(selectedReserva?.pagoMonto || 0) ||
+																	0),
 															0,
 														);
-														if (saldo > 0) setRegPagoMonto(String(Math.round(saldo)));
+														if (saldo > 0)
+															setRegPagoMonto(String(Math.round(saldo)));
 														setShowRegisterPayment(true);
 													}}
 													className="mt-2"
