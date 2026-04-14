@@ -175,6 +175,20 @@ const copiarInfoFinanzas = (reserva) => {
 💳 *Metodo:* ${reserva.metodoPago || "No especificado"}`;
 };
 
+const obtenerDatosVueltaReserva = (reserva) => {
+	if (!reserva) return null;
+
+	const vuelta = reserva.tramoVuelta || reserva.tramoHijo || null;
+	const fecha = vuelta?.fecha || reserva.fechaRegreso || "";
+	const hora = vuelta?.hora || reserva.horaRegreso || "";
+
+	if (!fecha && !hora) {
+		return null;
+	}
+
+	return { fecha, hora };
+};
+
 const copiarInfoItinerario = (reserva) => {
 	if (!reserva) return "";
 	const fechaStr = reserva.fecha
@@ -188,17 +202,16 @@ const copiarInfoItinerario = (reserva) => {
 🏁 *Destino:* ${reserva.destino}${reserva.direccionDestino ? ` (${reserva.direccionDestino})` : ""}
 👥 *Pax:* ${reserva.pasajeros || 1}`;
 
-	if (reserva.tramoVuelta || (reserva.fechaRegreso && reserva.horaRegreso)) {
-		const vuelta = reserva.tramoVuelta || {};
-		const fVuelta = vuelta.fecha || reserva.fechaRegreso;
-		const hVuelta = vuelta.hora || reserva.horaRegreso;
-		const fVueltaStr = fVuelta
-			? new Date(fVuelta + "T00:00:00").toLocaleDateString("es-CL")
+	const datosVuelta = obtenerDatosVueltaReserva(reserva);
+
+	if (datosVuelta) {
+		const fVueltaStr = datosVuelta.fecha
+			? new Date(datosVuelta.fecha + "T00:00:00").toLocaleDateString("es-CL")
 			: "Sin fecha";
 
 		text += `\n\n*REGRESO* 🔄
 🗓️ *Fecha:* ${fVueltaStr}
-⏰ *Hora:* ${hVuelta || "Sin hora"}`;
+⏰ *Hora:* ${datosVuelta.hora || "Sin hora"}`;
 	}
 
 	return text;
@@ -4333,8 +4346,12 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															<span>{reserva.hora || "-"}</span>
 														</div>
 														{/* Mostrar fecha de vuelta si existe y es roundtrip */}
-														{reserva.idaVuelta &&
-															(reserva.tramoHijo || reserva.fechaRegreso) && (
+														{(() => {
+															const datosVuelta = obtenerDatosVueltaReserva(reserva);
+
+															if (!datosVuelta) return null;
+
+															return (
 																<div className="mt-1 pt-1 border-t border-dashed border-gray-200">
 																	<div className="text-xs text-muted-foreground flex items-center gap-1">
 																		<span className="text-[10px] font-bold text-blue-600">
@@ -4344,22 +4361,18 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	<div className="flex items-center gap-1 text-xs">
 																		<Calendar className="w-3 h-3 text-blue-400" />
 																		<span>
-																			{formatDate(
-																				reserva.tramoHijo?.fecha ||
-																					reserva.fechaRegreso,
-																			)}
+																			{formatDate(datosVuelta.fecha)}
 																		</span>
 																	</div>
 																	<div className="flex items-center gap-1 text-xs">
 																		<Clock className="w-3 h-3 text-blue-400" />
 																		<span>
-																			{reserva.tramoHijo?.hora ||
-																				reserva.horaRegreso ||
-																				"-"}
+																			{datosVuelta.hora || "-"}
 																		</span>
 																	</div>
 																</div>
-															)}
+															);
+														})()}
 													</div>
 												</TableCell>
 											)}
