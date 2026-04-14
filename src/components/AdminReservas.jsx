@@ -4347,7 +4347,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														</div>
 														{/* Mostrar fecha de vuelta si existe y es roundtrip */}
 														{(() => {
-															const datosVuelta = obtenerDatosVueltaReserva(reserva);
+															const datosVuelta =
+																obtenerDatosVueltaReserva(reserva);
 
 															if (!datosVuelta) return null;
 
@@ -4360,15 +4361,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	</div>
 																	<div className="flex items-center gap-1 text-xs">
 																		<Calendar className="w-3 h-3 text-blue-400" />
-																		<span>
-																			{formatDate(datosVuelta.fecha)}
-																		</span>
+																		<span>{formatDate(datosVuelta.fecha)}</span>
 																	</div>
 																	<div className="flex items-center gap-1 text-xs">
 																		<Clock className="w-3 h-3 text-blue-400" />
-																		<span>
-																			{datosVuelta.hora || "-"}
-																		</span>
+																		<span>{datosVuelta.hora || "-"}</span>
 																	</div>
 																</div>
 															);
