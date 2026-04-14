@@ -168,10 +168,45 @@ Para minimizar el consumo de tokens y optimizar la velocidad de respuesta, el ag
 
 ---
 
+## � Skills disponibles
+
+Los skills son guías de conocimiento especializado que los agentes deben leer antes de actuar en su dominio:
+
+| Skill | Archivo | Cuándo usarlo |
+|-------|---------|---------------|
+| `shadcn-ui` | `.github/skills/shadcn-ui/SKILL.md` | Agregar/usar/personalizar componentes shadcn, formularios, tablas, modales, temas |
+| `optimizacion-movil-frontend` | `.github/skills/optimizacion-movil-frontend/SKILL.md` | Diseño mobile-first, UI/UX, responsive, Framer Motion |
+| `admin-precios` | `.github/skills/admin-precios/SKILL.md` | Tarifas, descuentos, precios dinámicos |
+| `auditoria-conversiones` | `.github/skills/auditoria-conversiones/SKILL.md` | Google Ads, Meta, tracking de conversiones |
+| `deploy-checklist` | `.github/skills/deploy-checklist/SKILL.md` | Verificación antes de deploy a producción |
+| `google-maps-autocomplete` | `.github/skills/google-maps-autocomplete/SKILL.md` | Autocompletado de direcciones con Google Maps |
+| `mercadopago-checkout-pro` | `.github/skills/mercadopago-checkout-pro/SKILL.md` | Integración y debug de Mercado Pago |
+| `optimizador-seo` | `.github/skills/optimizador-seo/SKILL.md` | SEO, keywords, meta tags, schema.org |
+
+---
+
+## 🤖 Agentes especializados disponibles
+
+| Agente | Archivo | Especialidad |
+|--------|---------|-------------|
+| `shadcn-ui` | `.github/agents/shadcn-ui.md` | **Componentes shadcn/ui** — instalar, usar, personalizar, formular con zod |
+| `frontend` | `.github/agents/frontend.md` | Validación y rendimiento de componentes React/Vite |
+| `optimizacion-movil-frontend` | `.github/agents/optimizacion-movil-frontend.md` | UI/UX mobile-first, Tailwind v4, Framer Motion |
+| `backend-php` | `.github/agents/backend-php.md` | PHP / Hostinger — validación y despliegue manual |
+| `pagos` | `.github/agents/pagos.md` | Flujos de pago Flow y Mercado Pago |
+| `correos-electronicos` | `.github/agents/correos-electronicos.md` | PHPMailer y notificaciones |
+| `migrador-bd` | `.github/agents/migrador-bd.md` | Migraciones Sequelize/MySQL |
+| `revisor-flujo-reservas` | `.github/agents/revisor-flujo-reservas.md` | Lógica del módulo de reservas |
+| `seguridad` | `.github/agents/seguridad.md` | Auditorías de seguridad OWASP |
+| `optimizador-seo` | `.github/agents/optimizador-seo.agent.md` | SEO y Quality Score Google Ads |
+
+---
+
 ## 🧰 Notas para agentes
 
 - Antes de iniciar, **leer este AGENTS.md** y revisar `.github/` para políticas adicionales.
 - **CRÍTICO:** Siempre consultar `DOCUMENTACION_MAESTRA.md` y `GUIA_SOLUCION_PROBLEMAS.md` como contexto antes de proponer soluciones, especialmente ante errores de backend o despliegue.
+- Para tareas de UI/componentes: **leer primero** `.github/skills/shadcn-ui/SKILL.md` para conocer el estado actual del proyecto.
 - Cuando completes una tarea:
   1. **Pregunta si se requiere commit.**
   2. Si la respuesta es sí, **sugiere un mensaje de commit breve en español** (ver formato).
