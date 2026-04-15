@@ -926,9 +926,18 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 					[Op.lte]: endDateInclusive,
 				},
 				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
-				// Filtrar solo reservas confirmadas
-				[Op.or]: [{ abonoPagado: true }, { saldoPagado: true }],
+				// Incluir reservas con pago registrado:
+				// - abonoPagado/saldoPagado: flags normales del webhook de Flow
+				// - estadoPago 'pagado'/'parcial': cubre casos en que el webhook falló
+				//   por cold start de Render.com y el admin marcó el pago manualmente
+				[Op.or]: [
+					{ abonoPagado: true },
+					{ saldoPagado: true },
+					{ estadoPago: "pagado" },
+					{ estadoPago: "parcial" },
+				],
 			},
+
 			include: [
 				{ model: Conductor, as: "conductor_asignado", required: false },
 				{ model: Vehiculo, as: "vehiculo_asignado", required: false },
@@ -950,7 +959,14 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 					[Op.lte]: endDateInclusive,
 				},
 				estado: { [Op.notIn]: ["cancelada", "rechazada"] },
-				[Op.or]: [{ abonoPagado: true }, { saldoPagado: true }],
+				// Mismo criterio ampliado: incluir por estadoPago para cubrir
+				// casos en que el webhook de Flow falló (cold start Render.com)
+				[Op.or]: [
+					{ abonoPagado: true },
+					{ saldoPagado: true },
+					{ estadoPago: "pagado" },
+					{ estadoPago: "parcial" },
+				],
 			},
 			include: [
 				{ model: Conductor, as: "conductor_asignado", required: false },
@@ -998,6 +1014,12 @@ app.get("/api/reservas/calendario", authAdmin, async (req, res) => {
 				saldoPendiente: r.saldoPendiente,
 				abonoPagado: r.abonoPagado,
 				saldoPagado: r.saldoPagado,
+				// Campos adicionales para enriquecer la planificación
+				estadoPago: r.estadoPago,
+				metodoPago: r.metodoPago,
+				referenciaPago: r.referenciaPago,
+				source: r.source,
+				sillaInfantil: r.sillaInfantil,
 				tramoPadreId: r.tramoPadreId, // Útil para agrupar visualmente
 			});
 		});

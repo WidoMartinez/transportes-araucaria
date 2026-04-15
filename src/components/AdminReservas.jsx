@@ -1107,73 +1107,114 @@ function AdminReservas() {
 					<head>
 						<title>Planificación de Viajes</title>
 						<style>
-						body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
-						h1 { text-align: center; margin-bottom: 20px; font-size: 18px; }
-						.dia-block { margin-bottom: 25px; page-break-inside: avoid; }
+						body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; color: #1a1a1a; }
+						h1 { text-align: center; margin-bottom: 4px; font-size: 18px; }
+						.subtitulo { text-align: center; color: #666; font-size: 11px; margin-bottom: 20px; }
+						.dia-block { margin-bottom: 28px; page-break-inside: avoid; }
 						.dia-header { 
-							background-color: #f0f0f0; 
-							padding: 8px; 
+							background-color: #2d2d2d; 
+							color: #fff;
+							padding: 8px 12px; 
 							font-weight: bold; 
-							font-size: 14px;
-							border-bottom: 2px solid #ccc;
-							margin-bottom: 10px;
+							font-size: 13px;
+							border-radius: 4px;
+							margin-bottom: 8px;
 						}
 						.direccion-header {
-						padding: 6px 8px;
-						font-weight: bold;
-						font-size: 12px;
-						margin-top: 10px;
-						margin-bottom: 5px;
-					}
-					.direccion-header.hacia-aero {
-						background-color: #d1f4e0;
-						color: #0d5c2e;
-						border-left: 4px solid #10b981;
-					}
-					.direccion-header.desde-aero {
-						background-color: #dbeafe;
-						color: #1e3a8a;
-						border-left: 4px solid #3b82f6;
-					}
-					.direccion-header.otros {
-						background-color: #f3f4f6;
-						color: #374151;
-						border-left: 4px solid #6b7280;
-					}	
-						table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-						th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
-						th { background-color: #f9f9f9; width: 15%; }
-						.reserva-row { page-break-inside: avoid; }
+							padding: 6px 10px;
+							font-weight: bold;
+							font-size: 11px;
+							margin-top: 10px;
+							margin-bottom: 4px;
+							border-radius: 3px;
+						}
+						.direccion-header.hacia-aero {
+							background-color: #d1f4e0;
+							color: #0d5c2e;
+							border-left: 4px solid #10b981;
+						}
+						.direccion-header.desde-aero {
+							background-color: #dbeafe;
+							color: #1e3a8a;
+							border-left: 4px solid #3b82f6;
+						}
+						.direccion-header.otros {
+							background-color: #f3f4f6;
+							color: #374151;
+							border-left: 4px solid #6b7280;
+						}
+						table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 11px; }
+						th { background-color: #f5f5f5; border: 1px solid #e0e0e0; padding: 6px 8px; text-align: left; font-size: 10px; text-transform: uppercase; color: #555; }
+						td { border: 1px solid #e8e8e8; padding: 7px 8px; vertical-align: top; }
+						.reserva-row:hover { background-color: #fafafa; }
 						.retorno-badge { 
 							background-color: #e6f7ff; 
 							color: #0050b3; 
 							border: 1px solid #91d5ff; 
-							padding: 2px 5px; 
-							border-radius: 4px; 
-							font-size: 10px; 
+							padding: 2px 6px; 
+							border-radius: 10px; 
+							font-size: 9px; 
 							font-weight: bold;
 							display: inline-block;
-							margin-left: 5px;
+							margin-left: 4px;
 						}
 						.ida-badge { 
 							background-color: #f6ffed;
 							color: #389e0d;
 							border: 1px solid #b7eb8f;
-							padding: 2px 5px;
-							border-radius: 4px; 
-							font-size: 10px; 
+							padding: 2px 6px;
+							border-radius: 10px; 
+							font-size: 9px; 
 							font-weight: bold;
 							display: inline-block;
-							margin-left: 5px;
+							margin-left: 4px;
 						}
+						.codigo-badge {
+							background-color: #fff7e6;
+							color: #d46b08;
+							border: 1px solid #ffd591;
+							padding: 2px 6px;
+							border-radius: 10px;
+							font-size: 9px;
+							font-weight: bold;
+							display: inline-block;
+							margin-top: 3px;
+						}
+						.saldo-badge {
+							background-color: #fff1f0;
+							color: #cf1322;
+							border: 1px solid #ffa39e;
+							padding: 2px 6px;
+							border-radius: 10px;
+							font-size: 9px;
+							font-weight: bold;
+							display: inline-block;
+							margin-top: 3px;
+						}
+						.silla-badge {
+							background-color: #f9f0ff;
+							color: #531dab;
+							border: 1px solid #d3adf7;
+							padding: 2px 6px;
+							border-radius: 10px;
+							font-size: 9px;
+							font-weight: bold;
+							display: inline-block;
+							margin-top: 3px;
+						}
+						.hora-col { font-size: 15px; font-weight: bold; white-space: nowrap; }
+						.monto { font-size: 10px; color: #555; margin-top: 3px; }
+						.monto-saldo { color: #cf1322; font-weight: bold; }
 						@media print {
 							.no-print { display: none; }
 							body { margin: 0; }
+							.dia-block { page-break-inside: avoid; }
 						}
 					</style>
 					</head>
 					<body>
-						<h1>Planificación de Viajes: ${new Date(calendarStartDate).toLocaleDateString("es-CL")} - ${new Date(calendarEndDate).toLocaleDateString("es-CL")}</h1>
+						<h1>Planificación de Viajes</h1>
+						<p class="subtitulo">${new Date(calendarStartDate).toLocaleDateString("es-CL")} — ${new Date(calendarEndDate).toLocaleDateString("es-CL")} &nbsp;·&nbsp; Generado el ${new Date().toLocaleDateString("es-CL", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
 				`;
 
 				if (fechasOrdenadas.length === 0) {
@@ -1228,10 +1269,10 @@ function AdminReservas() {
 						<thead>
 							<tr>
 								<th style="width: 80px;">Hora</th>
-								<th style="width: 120px;">Número Reserva</th>
-								<th>Cliente / Contacto</th>
+								<th style="width: 130px;">Nº Reserva</th>
+								<th style="width: 180px;">Cliente / Contacto</th>
 								<th>Ruta / Detalles</th>
-								<th style="width: 150px;">Vehículo / Conductor</th>
+								<th style="width: 160px;">Vehículo / Conductor</th>
 							</tr>
 						</thead>
 						<tbody>`;
@@ -1242,23 +1283,47 @@ function AdminReservas() {
 									? `<span class="retorno-badge">RETORNO</span>`
 									: `<span class="ida-badge">IDA</span>`;
 
+							// Badge de pago con código
+							const esCodigo = ev.source === "codigo_pago" || (ev.referenciaPago && /^[A-Z]{2,}-\d{4,}$/.test(ev.referenciaPago) === false && ev.referenciaPago.length < 20);
+							const codigoBadge = (ev.source === "codigo_pago")
+								? `<br><span class="codigo-badge">🎫 Cód. ${ev.referenciaPago || "pago"}</span>`
+								: "";
+
+							// Badge de saldo pendiente
+							const saldoNum = Number(ev.saldoPendiente || 0);
+							const saldoBadge = saldoNum > 0
+								? `<br><span class="saldo-badge">⚠ Saldo: $${saldoNum.toLocaleString("es-CL")}</span>`
+								: "";
+
+							// Badge silla infantil
+							const sillaBadge = ev.sillaInfantil
+								? `<br><span class="silla-badge">🪑 Silla infantil</span>`
+								: "";
+
+							// Monto total
+							const montoTotal = Number(ev.totalConDescuento || 0);
+							const montoTexto = montoTotal > 0
+								? `<div class="monto">Total: $${montoTotal.toLocaleString("es-CL")}${saldoNum > 0 ? ` | <span class="monto-saldo">Saldo: $${saldoNum.toLocaleString("es-CL")}</span>` : " ✓ Pagado"}</div>`
+								: "";
+
 							const contacto = `
 							<b>${ev.cliente}</b><br>
 							${ev.telefono || "-"}<br>
-							<small>${ev.email || ""}</small>
+							<small style="color:#777;">${ev.email || ""}</small>
+							${codigoBadge}${sillaBadge}
 						`;
 
 							const ruta = `
 							<b>Origen:</b> ${ev.direccionOrigen || ev.origen}<br>
 							<b>Destino:</b> ${ev.direccionDestino || ev.destino}<br>
-							<div style="margin-top:4px;">
-								<small>Pax: ${ev.pasajeros} | ${ev.numeroVuelo ? "Vuelo: " + ev.numeroVuelo : ""} ${ev.observaciones ? "<br>Obs: " + ev.observaciones : ""}</small>
+							<div style="margin-top:4px; color:#555;">
+								<small>Pax: ${ev.pasajeros}${ev.numeroVuelo ? " | Vuelo: " + ev.numeroVuelo : ""}${ev.observaciones ? "<br>Obs: " + ev.observaciones : ""}</small>
 							</div>
+							${montoTexto}${saldoBadge}
 						`;
 
-							let asignacion = `<span style="color:#999;">Sin asignar</span>`;
+							let asignacion = `<span style="color:#bbb;">Sin asignar</span>`;
 							if (ev.vehiculoPatente || ev.conductorNombre) {
-								// Construir información del vehículo
 								let vehiculoInfo = "";
 								if (ev.vehiculoPatente) {
 									vehiculoInfo = ev.vehiculoTipo
@@ -1267,21 +1332,17 @@ function AdminReservas() {
 								} else if (ev.vehiculo) {
 									vehiculoInfo = ev.vehiculo;
 								}
-
-								// Construir información del conductor
 								let conductorInfo = "";
 								if (ev.conductorNombre) {
 									conductorInfo = `👤 ${ev.conductorNombre}`;
 								} else if (ev.conductorId) {
 									conductorInfo = "(Conductor asignado)";
 								}
-
 								asignacion = `
 							${vehiculoInfo ? `🚗 ${vehiculoInfo}` : ""}<br>
 							${conductorInfo}
 						`;
 							} else if (ev.vehiculo || ev.conductorId) {
-								// Fallback a información genérica si no hay datos específicos
 								asignacion = `
 							${ev.vehiculo || ""}<br>
 							${ev.conductorId ? "(Conductor asignado)" : ""}
@@ -1290,8 +1351,8 @@ function AdminReservas() {
 
 							html += `
 							<tr class="reserva-row">
-								<td style="font-size:14px; font-weight:bold;">${ev.hora ? ev.hora.substring(0, 5) : "--:--"} ${tipoBadge}</td>
-								<td style="font-size:11px; color:#666;">${ev.codigoReserva || "-"}</td>
+								<td class="hora-col">${ev.hora ? ev.hora.substring(0, 5) : "--:--"}<br>${tipoBadge}</td>
+								<td style="font-size:11px; color:#555;">${ev.codigoReserva || "-"}</td>
 								<td>${contacto}</td>
 								<td>${ruta}</td>
 								<td>${asignacion}</td>
