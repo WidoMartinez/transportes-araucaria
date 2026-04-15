@@ -1284,16 +1284,22 @@ function AdminReservas() {
 									: `<span class="ida-badge">IDA</span>`;
 
 							// Badge de pago con código
-							const esCodigo = ev.source === "codigo_pago" || (ev.referenciaPago && /^[A-Z]{2,}-\d{4,}$/.test(ev.referenciaPago) === false && ev.referenciaPago.length < 20);
-							const codigoBadge = (ev.source === "codigo_pago")
-								? `<br><span class="codigo-badge">🎫 Cód. ${ev.referenciaPago || "pago"}</span>`
-								: "";
+							const esCodigo =
+								ev.source === "codigo_pago" ||
+								(ev.referenciaPago &&
+									/^[A-Z]{2,}-\d{4,}$/.test(ev.referenciaPago) === false &&
+									ev.referenciaPago.length < 20);
+							const codigoBadge =
+								ev.source === "codigo_pago"
+									? `<br><span class="codigo-badge">🎫 Cód. ${ev.referenciaPago || "pago"}</span>`
+									: "";
 
 							// Badge de saldo pendiente
 							const saldoNum = Number(ev.saldoPendiente || 0);
-							const saldoBadge = saldoNum > 0
-								? `<br><span class="saldo-badge">⚠ Saldo: $${saldoNum.toLocaleString("es-CL")}</span>`
-								: "";
+							const saldoBadge =
+								saldoNum > 0
+									? `<br><span class="saldo-badge">⚠ Saldo: $${saldoNum.toLocaleString("es-CL")}</span>`
+									: "";
 
 							// Badge silla infantil
 							const sillaBadge = ev.sillaInfantil
@@ -1302,9 +1308,10 @@ function AdminReservas() {
 
 							// Monto total
 							const montoTotal = Number(ev.totalConDescuento || 0);
-							const montoTexto = montoTotal > 0
-								? `<div class="monto">Total: $${montoTotal.toLocaleString("es-CL")}${saldoNum > 0 ? ` | <span class="monto-saldo">Saldo: $${saldoNum.toLocaleString("es-CL")}</span>` : " ✓ Pagado"}</div>`
-								: "";
+							const montoTexto =
+								montoTotal > 0
+									? `<div class="monto">Total: $${montoTotal.toLocaleString("es-CL")}${saldoNum > 0 ? ` | <span class="monto-saldo">Saldo: $${saldoNum.toLocaleString("es-CL")}</span>` : " ✓ Pagado"}</div>`
+									: "";
 
 							const contacto = `
 							<b>${ev.cliente}</b><br>
