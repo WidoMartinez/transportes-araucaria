@@ -13542,8 +13542,8 @@ const scheduleKeepAlive = () => {
 	if (!targetBase) {
 		console.warn(
 			"⚠️ [KEEP-ALIVE] Variable RENDER_KEEP_ALIVE_URL no configurada. " +
-			"El servidor puede dormirse después de 15 min de inactividad en Render.com. " +
-			"Configura la variable con la URL pública del backend.",
+				"El servidor puede dormirse después de 15 min de inactividad en Render.com. " +
+				"Configura la variable con la URL pública del backend.",
 		);
 		return;
 	}
