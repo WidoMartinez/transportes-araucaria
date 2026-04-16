@@ -91,7 +91,7 @@ export default function SelectorPasarela({
 						</button>
 					);
 				})}
-		</div>
+			</div>
 		</div>
 	);
 }

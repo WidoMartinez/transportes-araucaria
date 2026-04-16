@@ -151,7 +151,10 @@ router.put("/", apiLimiter, authJWT, async (req, res) => {
 		// Merge profundo por gateway
 		const configFinal = {};
 		for (const id of PASARELAS_SOPORTADAS) {
-			configFinal[id] = { ...CONFIG_DEFAULT[id], ...(configActual?.[id] || {}) };
+			configFinal[id] = {
+				...CONFIG_DEFAULT[id],
+				...(configActual?.[id] || {}),
+			};
 		}
 
 		for (const gatewayId of PASARELAS_SOPORTADAS) {
@@ -297,7 +300,10 @@ router.delete("/:gateway/imagen", apiLimiter, authJWT, async (req, res) => {
 		// Merge profundo por gateway
 		const configFinal = {};
 		for (const id of PASARELAS_SOPORTADAS) {
-			configFinal[id] = { ...CONFIG_DEFAULT[id], ...(configActual?.[id] || {}) };
+			configFinal[id] = {
+				...CONFIG_DEFAULT[id],
+				...(configActual?.[id] || {}),
+			};
 		}
 
 		const publicId = extractCloudinaryPublicId(
