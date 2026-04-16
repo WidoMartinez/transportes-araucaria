@@ -58,7 +58,6 @@ export const useAuthenticatedFetch = () => {
 					const newToken = await renewToken();
 
 					if (newToken) {
-
 						response = await fetch(`${getBackendUrl()}${url}`, {
 							...options,
 							headers: getHeaders(newToken),
@@ -67,14 +66,18 @@ export const useAuthenticatedFetch = () => {
 
 					// Si después de intentar renovar sigue siendo 401 (o 403), cerrar sesión
 					if (response.status === 401 || response.status === 403) {
-						console.error("Sesión expirada o inválida después de intento de renovación.");
+						console.error(
+							"Sesión expirada o inválida después de intento de renovación.",
+						);
 						logout();
 						throw new Error("Sesión expirada");
 					}
 
 					// Si newToken es null por un error temporal (ej. 429), no cerrar sesión
 					if (!newToken) {
-						throw new Error("No se pudo renovar el token por un error temporal del servidor.");
+						throw new Error(
+							"No se pudo renovar el token por un error temporal del servidor.",
+						);
 					}
 				}
 
@@ -84,62 +87,82 @@ export const useAuthenticatedFetch = () => {
 				throw error;
 			}
 		},
-		[getValidToken, logout, renewToken]
+		[getValidToken, logout, renewToken],
 	);
 
 	/**
 	 * GET autenticado
 	 */
-	const get = useCallback(async (url) => {
-		const response = await authenticatedFetch(url, { method: "GET" });
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
-			throw new Error(error.message || `HTTP ${response.status}`);
-		}
-		return response.json();
-	}, [authenticatedFetch]);
+	const get = useCallback(
+		async (url) => {
+			const response = await authenticatedFetch(url, { method: "GET" });
+			if (!response.ok) {
+				const error = await response
+					.json()
+					.catch(() => ({ message: "Error en la petición" }));
+				throw new Error(error.message || `HTTP ${response.status}`);
+			}
+			return response.json();
+		},
+		[authenticatedFetch],
+	);
 
 	/**
 	 * POST autenticado
 	 */
-	const post = useCallback(async (url, data) => {
-		const response = await authenticatedFetch(url, {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
-			throw new Error(error.message || `HTTP ${response.status}`);
-		}
-		return response.json();
-	}, [authenticatedFetch]);
+	const post = useCallback(
+		async (url, data) => {
+			const response = await authenticatedFetch(url, {
+				method: "POST",
+				body: JSON.stringify(data),
+			});
+			if (!response.ok) {
+				const error = await response
+					.json()
+					.catch(() => ({ message: "Error en la petición" }));
+				throw new Error(error.message || `HTTP ${response.status}`);
+			}
+			return response.json();
+		},
+		[authenticatedFetch],
+	);
 
 	/**
 	 * PUT autenticado
 	 */
-	const put = useCallback(async (url, data) => {
-		const response = await authenticatedFetch(url, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
-			throw new Error(error.message || `HTTP ${response.status}`);
-		}
-		return response.json();
-	}, [authenticatedFetch]);
+	const put = useCallback(
+		async (url, data) => {
+			const response = await authenticatedFetch(url, {
+				method: "PUT",
+				body: JSON.stringify(data),
+			});
+			if (!response.ok) {
+				const error = await response
+					.json()
+					.catch(() => ({ message: "Error en la petición" }));
+				throw new Error(error.message || `HTTP ${response.status}`);
+			}
+			return response.json();
+		},
+		[authenticatedFetch],
+	);
 
 	/**
 	 * DELETE autenticado
 	 */
-	const del = useCallback(async (url) => {
-		const response = await authenticatedFetch(url, { method: "DELETE" });
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ message: "Error en la petición" }));
-			throw new Error(error.message || `HTTP ${response.status}`);
-		}
-		return response.json();
-	}, [authenticatedFetch]);
+	const del = useCallback(
+		async (url) => {
+			const response = await authenticatedFetch(url, { method: "DELETE" });
+			if (!response.ok) {
+				const error = await response
+					.json()
+					.catch(() => ({ message: "Error en la petición" }));
+				throw new Error(error.message || `HTTP ${response.status}`);
+			}
+			return response.json();
+		},
+		[authenticatedFetch],
+	);
 
 	return {
 		authenticatedFetch,

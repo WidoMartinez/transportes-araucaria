@@ -254,8 +254,7 @@ function AdminConfiguracion() {
 				let errMessage = `Error al subir imagen (HTTP ${response.status})`;
 				if (contentType.includes("application/json")) {
 					const err = await response.json();
-					errMessage =
-						err?.error || err?.message || errMessage;
+					errMessage = err?.error || err?.message || errMessage;
 				} else {
 					const text = await response.text();
 					if (text) errMessage = `${errMessage}: ${text.slice(0, 180)}`;
