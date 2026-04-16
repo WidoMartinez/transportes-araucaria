@@ -2011,7 +2011,10 @@ function HeroExpress({
 								{mostrarPrecio && !requiereCotizacionManual ? (
 									<>
 										{/* Selector de pasarela dinámico con imágenes configurables */}
-										<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
+										<SelectorPasarela
+											pasarela={pasarela}
+											onChange={setPasarela}
+										/>
 										<Button
 											onClick={() => handleProcesarPago(pasarela, "total")}
 											disabled={isSubmitting || !!loadingGateway}

@@ -760,7 +760,10 @@ function ConsultarReserva() {
 											</div>
 										)}
 										{/* Selector de pasarela dinámico con imágenes configurables */}
-										<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
+										<SelectorPasarela
+											pasarela={pasarela}
+											onChange={setPasarela}
+										/>
 										<div className="flex flex-wrap gap-3">
 											{paymentOptions.map((option) => (
 												<Button
