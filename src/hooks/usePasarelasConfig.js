@@ -26,6 +26,43 @@ const CACHE_KEY = "config_pasarelas_pago_cache";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de caché
 // Evento para notificar a todas las instancias del hook que recarguen
 const REFRESH_EVENT = "pasarelas-config-refresh";
+// Clave para propagar refresco entre pestañas mediante evento "storage"
+const REFRESH_STORAGE_KEY = "config_pasarelas_pago_refresh_ts";
+
+/**
+ * Normaliza la configuración para garantizar ambas pasarelas y tipos consistentes.
+ * Evita que un caché o registro parcial deje una sola pasarela visible.
+ */
+const normalizarPasarelas = (entrada) => {
+	const origen = entrada && typeof entrada === "object" ? entrada : {};
+	const parsearHabilitado = (valor, fallback) => {
+		if (typeof valor === "boolean") return valor;
+		if (typeof valor === "string") {
+			if (valor.toLowerCase() === "true") return true;
+			if (valor.toLowerCase() === "false") return false;
+		}
+		return fallback;
+	};
+
+	return {
+		flow: {
+			...PASARELAS_DEFAULT.flow,
+			...(origen.flow || {}),
+			habilitado: parsearHabilitado(
+				origen.flow?.habilitado,
+				PASARELAS_DEFAULT.flow.habilitado,
+			),
+		},
+		mercadopago: {
+			...PASARELAS_DEFAULT.mercadopago,
+			...(origen.mercadopago || {}),
+			habilitado: parsearHabilitado(
+				origen.mercadopago?.habilitado,
+				PASARELAS_DEFAULT.mercadopago.habilitado,
+			),
+		},
+	};
+};
 
 /**
  * Devuelve la configuración de pasarelas y las pasarelas habilitadas como arreglo.
@@ -49,7 +86,7 @@ export function usePasarelasConfig() {
 				if (cached) {
 					const { data, ts } = JSON.parse(cached);
 					if (Date.now() - ts < CACHE_TTL_MS) {
-						setPasarelas(data);
+						setPasarelas(normalizarPasarelas(data));
 						setLoading(false);
 						return;
 					}
@@ -66,7 +103,7 @@ export function usePasarelasConfig() {
 			);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const json = await res.json();
-			const datos = json.pasarelas || PASARELAS_DEFAULT;
+			const datos = normalizarPasarelas(json.pasarelas);
 			setPasarelas(datos);
 			setError(null);
 			// Guardar en caché
@@ -97,8 +134,18 @@ export function usePasarelasConfig() {
 		// Escucha el evento de refresco: cuando el admin guarda/sube imagen,
 		// todas las instancias del hook (en los flujos de pago) recargan del backend
 		const onRefresh = () => cargar(true);
+		// Escucha refresco disparado desde otra pestaña
+		const onStorage = (event) => {
+			if (event.key === REFRESH_STORAGE_KEY) {
+				cargar(true);
+			}
+		};
 		window.addEventListener(REFRESH_EVENT, onRefresh);
-		return () => window.removeEventListener(REFRESH_EVENT, onRefresh);
+		window.addEventListener("storage", onStorage);
+		return () => {
+			window.removeEventListener(REFRESH_EVENT, onRefresh);
+			window.removeEventListener("storage", onStorage);
+		};
 	}, [cargar]);
 
 	// Arreglo memoizado con las pasarelas habilitadas en orden: flow primero.
@@ -128,6 +175,12 @@ export function usePasarelasConfig() {
 export function invalidarCachePasarelas() {
 	try {
 		sessionStorage.removeItem(CACHE_KEY);
+	} catch {
+		// ignorar
+	}
+	try {
+		// Dispara "storage" en otras pestañas para que también invaliden/recarguen
+		localStorage.setItem(REFRESH_STORAGE_KEY, String(Date.now()));
 	} catch {
 		// ignorar
 	}
