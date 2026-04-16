@@ -42,6 +42,7 @@ import fondovariante from "../assets/fondovariante.png";
 import { getBackendUrl } from "../lib/backend";
 import { motion, AnimatePresence } from "framer-motion";
 import { destinosInfo } from "../data/destinos";
+import SelectorPasarela from "./SelectorPasarela";
 import AlertaDescuentoRetorno from "./AlertaDescuentoRetorno";
 import {
 	calcularDescuentoEscalonado,
@@ -2009,36 +2010,8 @@ function HeroExpress({
 							<div className="pt-2 space-y-3 pb-[env(safe-area-inset-bottom,0px)]">
 								{mostrarPrecio && !requiereCotizacionManual ? (
 									<>
-										{/* Selector de pasarela */}
-										<div className="space-y-1">
-											<p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-												Método de pago
-											</p>
-											<div className="flex gap-2">
-												<button
-													type="button"
-													onClick={() => setPasarela("flow")}
-													className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-														pasarela === "flow"
-															? "border-primary bg-primary/5 text-primary"
-															: "border-input text-muted-foreground hover:border-primary/50"
-													}`}
-												>
-													💳 Flow
-												</button>
-												<button
-													type="button"
-													onClick={() => setPasarela("mercadopago")}
-													className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-														pasarela === "mercadopago"
-															? "border-primary bg-primary/5 text-primary"
-															: "border-input text-muted-foreground hover:border-primary/50"
-													}`}
-												>
-													🟦 Mercado Pago
-												</button>
-											</div>
-										</div>
+										{/* Selector de pasarela dinámico con imágenes configurables */}
+										<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
 										<Button
 											onClick={() => handleProcesarPago(pasarela, "total")}
 											disabled={isSubmitting || !!loadingGateway}

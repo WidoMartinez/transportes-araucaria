@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import { validatePaymentAmount } from "../utils/paymentValidation";
+import SelectorPasarela from "./SelectorPasarela";
 
 // Formateador de moneda para pesos chilenos
 const CURRENCY_FORMATTER = new Intl.NumberFormat("es-CL", {
@@ -1350,52 +1351,8 @@ function PagarConCodigo() {
 								</div>
 							)}
 
-							{/* Selector de pasarela de pago */}
-							<div className="space-y-2">
-								<Label className="text-sm font-semibold text-foreground">
-									Método de pago
-								</Label>
-								<div className="grid grid-cols-2 gap-2">
-									<button
-										type="button"
-										onClick={() => setPasarela("flow")}
-										className={`p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${
-											pasarela === "flow"
-												? "border-primary bg-primary/5"
-												: "border-input hover:border-primary/50"
-										}`}
-									>
-										<span className="text-lg">💳</span>
-										<div>
-											<p className="text-xs font-semibold leading-tight">
-												Flow
-											</p>
-											<p className="text-[10px] text-muted-foreground leading-tight">
-												Tarjeta / Débito
-											</p>
-										</div>
-									</button>
-									<button
-										type="button"
-										onClick={() => setPasarela("mercadopago")}
-										className={`p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${
-											pasarela === "mercadopago"
-												? "border-primary bg-primary/5"
-												: "border-input hover:border-primary/50"
-										}`}
-									>
-										<span className="text-lg">🟦</span>
-										<div>
-											<p className="text-xs font-semibold leading-tight">
-												Mercado Pago
-											</p>
-											<p className="text-[10px] text-muted-foreground leading-tight">
-												MP / Débito / Cuotas
-											</p>
-										</div>
-									</button>
-								</div>
-							</div>
+							{/* Selector de pasarela de pago dinámico con imágenes configurables */}
+							<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
 
 							{/* Botón de pago */}
 							<Button

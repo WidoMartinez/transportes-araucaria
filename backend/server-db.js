@@ -82,6 +82,7 @@ import {
 } from "./utils/evaluacionesHelper.js";
 import PromocionBanner from "./models/PromocionBanner.js";
 import promocionesBannerRoutes from "./routes/promociones-banner.routes.js";
+import configuracionPasarelasRoutes from "./routes/configuracion-pasarelas.routes.js";
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import setupOportunidadesRoutes from "./routes/oportunidades.js";
@@ -617,6 +618,10 @@ app.use(cotizacionRouter);
 // Configurar rutas de oportunidades
 // --- RUTAS DE PROMOCIONES BANNER ---
 app.use("/api/promociones-banner", promocionesBannerRoutes);
+
+// --- RUTAS DE CONFIGURACIÓN DE PASARELAS DE PAGO ---
+app.use("/api/configuracion/pasarelas-pago", configuracionPasarelasRoutes);
+
 setupOportunidadesRoutes(app, authAdmin);
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---

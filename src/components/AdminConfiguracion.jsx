@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Switch } from "./ui/switch";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card";
@@ -11,12 +11,18 @@ Loader2,
 AlertCircle,
 Target,
 Clock,
-Baby
+Baby,
+CreditCard,
+Upload,
+Trash2,
+ImageIcon
 } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { useAuthenticatedFetch } from "../hooks/useAuthenticatedFetch";
 import { getBackendUrl } from "../lib/backend";
+import { invalidarCachePasarelas } from "../hooks/usePasarelasConfig";
 
 
 /**
@@ -32,6 +38,17 @@ const [generandoOportunidades, setGenerandoOportunidades] = useState(false);
 const [resultadoOportunidades, setResultadoOportunidades] = useState(null);
 const [configOfertas, setConfigOfertas] = useState({ anticipacionRetorno: 2, anticipacionIda: 3 });
 const [configSillas, setConfigSillas] = useState({ habilitado: false, maxSillas: 2, precioPorSilla: 5000 });
+
+// Estado para la configuración de pasarelas de pago
+const [configPasarelas, setConfigPasarelas] = useState({
+  flow: { habilitado: true, nombre: "Flow", descripcion: "Tarjeta / Débito", imagen_url: null },
+  mercadopago: { habilitado: true, nombre: "Mercado Pago", descripcion: "MP / Débito / Cuotas", imagen_url: null },
+});
+const [savingPasarelas, setSavingPasarelas] = useState(false);
+const [uploadingImagen, setUploadingImagen] = useState(null); // id de pasarela en proceso de subida
+const inputFlowRef = useRef(null);
+const inputMpRef = useRef(null);
+
 const { authenticatedFetch } = useAuthenticatedFetch();
 
 
@@ -61,6 +78,13 @@ if (resExtra.ok) {
     const dataExtra = await resExtra.json();
     if (dataExtra.ofertas) setConfigOfertas(dataExtra.ofertas);
     if (dataExtra.sillas) setConfigSillas(dataExtra.sillas);
+}
+
+// Cargar configuración de pasarelas de pago
+const resPasarelas = await fetch(`${getBackendUrl()}/api/configuracion/pasarelas-pago`);
+if (resPasarelas.ok) {
+    const dataPasarelas = await resPasarelas.json();
+    if (dataPasarelas.pasarelas) setConfigPasarelas(dataPasarelas.pasarelas);
 }
 } catch (error) {
 console.error("Error cargando configuración:", error);
@@ -132,6 +156,89 @@ const handleToggleWhatsApp = async () => {
 const showFeedback = (type, message) => {
 setFeedback({ type, message });
 setTimeout(() => setFeedback(null), 5000);
+};
+
+// --- Funciones de Pasarelas de Pago ---
+
+/**
+ * Guarda la configuración general de las pasarelas (habilitado, nombre, descripción).
+ */
+const handleSavePasarelas = async () => {
+  try {
+    setSavingPasarelas(true);
+    const response = await authenticatedFetch("/api/configuracion/pasarelas-pago", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(configPasarelas),
+    });
+    if (!response.ok) throw new Error("Error al guardar pasarelas");
+    const data = await response.json();
+    if (data.pasarelas) setConfigPasarelas(data.pasarelas);
+    invalidarCachePasarelas();
+    showFeedback("success", "Configuración de pasarelas guardada correctamente");
+  } catch (error) {
+    console.error("Error guardando pasarelas:", error);
+    showFeedback("error", "Error al guardar la configuración de pasarelas");
+  } finally {
+    setSavingPasarelas(false);
+  }
+};
+
+/**
+ * Sube la imagen de una pasarela a Cloudinary.
+ */
+const handleSubirImagenPasarela = async (gatewayId, archivo) => {
+  if (!archivo) return;
+  try {
+    setUploadingImagen(gatewayId);
+    const token = localStorage.getItem("adminToken") || sessionStorage.getItem("adminToken");
+    const formData = new FormData();
+    formData.append("imagen", archivo);
+    const response = await fetch(
+      `${getBackendUrl()}/api/configuracion/pasarelas-pago/${gatewayId}/imagen`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      },
+    );
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Error al subir imagen");
+    }
+    const data = await response.json();
+    if (data.pasarelas) setConfigPasarelas(data.pasarelas);
+    invalidarCachePasarelas();
+    showFeedback("success", `Imagen de ${configPasarelas[gatewayId]?.nombre} actualizada`);
+  } catch (error) {
+    console.error(`Error subiendo imagen para pasarela ${gatewayId}:`, error);
+    showFeedback("error", error.message || "Error al subir la imagen");
+  } finally {
+    setUploadingImagen(null);
+  }
+};
+
+/**
+ * Elimina la imagen de una pasarela de Cloudinary.
+ */
+const handleEliminarImagenPasarela = async (gatewayId) => {
+  try {
+    setUploadingImagen(gatewayId);
+    const response = await authenticatedFetch(
+      `/api/configuracion/pasarelas-pago/${gatewayId}/imagen`,
+      { method: "DELETE" },
+    );
+    if (!response.ok) throw new Error("Error al eliminar imagen");
+    const data = await response.json();
+    if (data.pasarelas) setConfigPasarelas(data.pasarelas);
+    invalidarCachePasarelas();
+    showFeedback("success", "Imagen eliminada correctamente");
+  } catch (error) {
+    console.error(`Error eliminando imagen de pasarela ${gatewayId}:`, error);
+    showFeedback("error", "Error al eliminar la imagen");
+  } finally {
+    setUploadingImagen(null);
+  }
 };
 
 const handleGenerarOportunidades = async () => {
@@ -550,6 +657,184 @@ className="text-sm text-green-700 hover:text-green-800 font-medium underline"
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
             Guardar Configuración de Sillas
         </Button>
+    </CardContent>
+</Card>
+
+{/* ===== Configuración de Pasarelas de Pago ===== */}
+<Card>
+    <CardHeader>
+        <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+                <CreditCard className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="flex-1">
+                <CardTitle>Pasarelas de Pago</CardTitle>
+                <CardDescription>
+                    Habilita o deshabilita cada pasarela y sube una imagen representativa que reemplazará al botón genérico en todos los flujos de pago.
+                </CardDescription>
+            </div>
+        </div>
+    </CardHeader>
+    <CardContent className="space-y-6">
+        {/* Sección por cada pasarela */}
+        {[
+            { id: "flow", label: "Flow", colorCls: "bg-blue-50 border-blue-200", badgeCls: "bg-blue-100 text-blue-800" },
+            { id: "mercadopago", label: "Mercado Pago", colorCls: "bg-sky-50 border-sky-200", badgeCls: "bg-sky-100 text-sky-800" },
+        ].map(({ id, label, colorCls, badgeCls }) => {
+            const cfg = configPasarelas[id] || {};
+            const inputRef = id === "flow" ? inputFlowRef : inputMpRef;
+            const estaSubiendo = uploadingImagen === id;
+            return (
+                <div key={id} className={`rounded-xl border p-4 space-y-4 ${colorCls}`}>
+                    {/* Encabezado pasarela */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>{label}</span>
+                            <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                    {cfg.habilitado ? "Habilitada" : "Deshabilitada"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {cfg.habilitado
+                                        ? "Aparece en los formularios de pago"
+                                        : "Oculta en todos los flujos de pago"}
+                                </p>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={Boolean(cfg.habilitado)}
+                            onCheckedChange={(val) =>
+                                setConfigPasarelas((prev) => ({
+                                    ...prev,
+                                    [id]: { ...prev[id], habilitado: val },
+                                }))
+                            }
+                            disabled={savingPasarelas}
+                            className="data-[state=checked]:bg-indigo-600"
+                        />
+                    </div>
+
+                    {/* Nombre y descripción personalizable */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <Label className="text-xs font-medium">Nombre visible</Label>
+                            <Input
+                                value={cfg.nombre || ""}
+                                onChange={(e) =>
+                                    setConfigPasarelas((prev) => ({
+                                        ...prev,
+                                        [id]: { ...prev[id], nombre: e.target.value },
+                                    }))
+                                }
+                                placeholder={label}
+                                className="bg-white text-sm"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs font-medium">Descripción breve</Label>
+                            <Input
+                                value={cfg.descripcion || ""}
+                                onChange={(e) =>
+                                    setConfigPasarelas((prev) => ({
+                                        ...prev,
+                                        [id]: { ...prev[id], descripcion: e.target.value },
+                                    }))
+                                }
+                                placeholder="Ej: Tarjeta / Débito"
+                                className="bg-white text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Imagen representativa */}
+                    <div className="space-y-2">
+                        <Label className="text-xs font-medium">Imagen representativa</Label>
+                        <div className="flex items-start gap-4">
+                            {/* Vista previa */}
+                            <div className="w-24 h-14 rounded-lg border bg-white flex items-center justify-center overflow-hidden shrink-0">
+                                {cfg.imagen_url ? (
+                                    <img
+                                        src={cfg.imagen_url}
+                                        alt={`Logo ${label}`}
+                                        className="w-full h-full object-contain p-1"
+                                    />
+                                ) : (
+                                    <ImageIcon className="w-8 h-8 text-gray-300" />
+                                )}
+                            </div>
+                            {/* Acciones */}
+                            <div className="flex flex-col gap-2 flex-1">
+                                <input
+                                    ref={inputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,image/webp"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const archivo = e.target.files?.[0];
+                                        if (archivo) handleSubirImagenPasarela(id, archivo);
+                                        e.target.value = ""; // resetear input
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => inputRef.current?.click()}
+                                    disabled={estaSubiendo}
+                                    className="gap-2 text-xs"
+                                >
+                                    {estaSubiendo ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                        <Upload className="w-3 h-3" />
+                                    )}
+                                    {cfg.imagen_url ? "Cambiar imagen" : "Subir imagen"}
+                                </Button>
+                                {cfg.imagen_url && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleEliminarImagenPasarela(id)}
+                                        disabled={estaSubiendo}
+                                        className="gap-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                        Eliminar imagen
+                                    </Button>
+                                )}
+                                <p className="text-[11px] text-gray-500">
+                                    JPG, PNG, WebP • Máx. 5MB • Se guarda en Cloudinary
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        })}
+
+        {/* Botón guardar configuración de pasarelas */}
+        <Button
+            onClick={handleSavePasarelas}
+            disabled={savingPasarelas}
+            className="w-full gap-2"
+        >
+            {savingPasarelas ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+                <CreditCard className="w-4 h-4" />
+            )}
+            Guardar Configuración de Pasarelas
+        </Button>
+
+        {/* Nota informativa */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+            <p className="text-xs text-indigo-900">
+                <strong>Nota:</strong> Los cambios se reflejan inmediatamente en todos los formularios de pago
+                (Hero de Reserva, Consultar Reserva y Pagar con Código). Al deshabilitar una pasarela
+                esta desaparece del selector de pago para los clientes.
+            </p>
+        </div>
     </CardContent>
 </Card>
 </div>
