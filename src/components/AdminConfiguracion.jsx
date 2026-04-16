@@ -232,24 +232,46 @@ function AdminConfiguracion() {
 		if (!archivo) return;
 		try {
 			setUploadingImagen(gatewayId);
-			const token =
-				localStorage.getItem("adminToken") ||
-				sessionStorage.getItem("adminToken");
 			const formData = new FormData();
 			formData.append("imagen", archivo);
-			const response = await fetch(
-				`${getBackendUrl()}/api/configuracion/pasarelas-pago/${gatewayId}/imagen`,
+
+			console.log("[PASARELAS] Subiendo imagen...", {
+				gatewayId,
+				nombre: archivo.name,
+				tipo: archivo.type,
+				size: archivo.size,
+			});
+
+			const response = await authenticatedFetch(
+				`/api/configuracion/pasarelas-pago/${gatewayId}/imagen`,
 				{
 					method: "POST",
-					headers: { Authorization: `Bearer ${token}` },
 					body: formData,
 				},
 			);
 			if (!response.ok) {
-				const err = await response.json();
-				throw new Error(err.error || "Error al subir imagen");
+				const contentType = response.headers.get("content-type") || "";
+				let errMessage = `Error al subir imagen (HTTP ${response.status})`;
+				if (contentType.includes("application/json")) {
+					const err = await response.json();
+					errMessage =
+						err?.error || err?.message || errMessage;
+				} else {
+					const text = await response.text();
+					if (text) errMessage = `${errMessage}: ${text.slice(0, 180)}`;
+				}
+				console.error("[PASARELAS] Falló subida de imagen", {
+					gatewayId,
+					status: response.status,
+					message: errMessage,
+				});
+				throw new Error(errMessage);
 			}
 			const data = await response.json();
+			console.log("[PASARELAS] Imagen subida correctamente", {
+				gatewayId,
+				imagen_url: data?.imagen_url,
+			});
 			if (data.pasarelas) setConfigPasarelas(data.pasarelas);
 			invalidarCachePasarelas();
 			showFeedback(

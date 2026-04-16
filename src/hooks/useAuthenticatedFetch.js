@@ -26,11 +26,26 @@ export const useAuthenticatedFetch = () => {
 				}
 
 				// Preparar headers y realizar petición
-				const getHeaders = (t) => ({
-					"Content-Type": "application/json",
-					...options.headers,
-					Authorization: `Bearer ${t}`,
-				});
+				// Si el body es FormData, NO se debe fijar Content-Type manualmente.
+				// El navegador agrega el boundary correcto para multipart/form-data.
+				const getHeaders = (t) => {
+					const headers = {
+						...options.headers,
+						Authorization: `Bearer ${t}`,
+					};
+
+					const isFormData =
+						typeof FormData !== "undefined" && options.body instanceof FormData;
+					const hasContentType = Object.keys(headers).some(
+						(k) => k.toLowerCase() === "content-type",
+					);
+
+					if (!isFormData && !hasContentType) {
+						headers["Content-Type"] = "application/json";
+					}
+
+					return headers;
+				};
 
 				let response = await fetch(`${getBackendUrl()}${url}`, {
 					...options,

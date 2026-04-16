@@ -103,6 +103,11 @@ const handleMulterError = (err, req, res, next) => {
 			.status(400)
 			.json({ error: `Error al subir imagen: ${err.message}` });
 	}
+	if (err instanceof Error) {
+		return res.status(400).json({
+			error: err.message || "Archivo inválido para subida de imagen",
+		});
+	}
 	next(err);
 };
 
@@ -201,6 +206,7 @@ router.post(
 	handleMulterError,
 	async (req, res) => {
 		const { gateway } = req.params;
+		console.log(`📤 [PASARELA] Inicio subida de imagen para ${gateway}`);
 
 		if (!PASARELAS_SOPORTADAS.includes(gateway)) {
 			return res
@@ -208,6 +214,9 @@ router.post(
 				.json({ error: `Pasarela no soportada: ${gateway}` });
 		}
 		if (!req.file) {
+			console.warn(
+				`⚠️ [PASARELA] No se recibió archivo para pasarela ${gateway}`,
+			);
 			return res
 				.status(400)
 				.json({ error: "Se requiere un archivo de imagen" });
