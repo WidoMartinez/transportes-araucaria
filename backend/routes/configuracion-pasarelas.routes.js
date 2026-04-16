@@ -115,8 +115,12 @@ router.get("/", async (req, res) => {
 			"config_pasarelas_pago",
 			CONFIG_DEFAULT,
 		);
-		// Garantizar que existan todas las claves esperadas (por si hay registros legacy)
-		const configCompleta = { ...CONFIG_DEFAULT, ...config };
+		// Merge profundo por gateway: garantiza que todos los campos existan
+		// incluso si el registro guardado tiene estructura parcial
+		const configCompleta = {};
+		for (const id of PASARELAS_SOPORTADAS) {
+			configCompleta[id] = { ...CONFIG_DEFAULT[id], ...(config?.[id] || {}) };
+		}
 		res.json({ success: true, pasarelas: configCompleta });
 	} catch (error) {
 		console.error("Error obteniendo configuración de pasarelas:", error);
@@ -144,7 +148,11 @@ router.put("/", apiLimiter, authJWT, async (req, res) => {
 			"config_pasarelas_pago",
 			CONFIG_DEFAULT,
 		);
-		const configFinal = { ...CONFIG_DEFAULT, ...configActual };
+		// Merge profundo por gateway
+		const configFinal = {};
+		for (const id of PASARELAS_SOPORTADAS) {
+			configFinal[id] = { ...CONFIG_DEFAULT[id], ...(configActual?.[id] || {}) };
+		}
 
 		for (const gatewayId of PASARELAS_SOPORTADAS) {
 			if (datosNuevos[gatewayId]) {
@@ -206,7 +214,14 @@ router.post(
 				"config_pasarelas_pago",
 				CONFIG_DEFAULT,
 			);
-			const configFinal = { ...CONFIG_DEFAULT, ...configActual };
+			// Merge profundo por gateway
+			const configFinal = {};
+			for (const id of PASARELAS_SOPORTADAS) {
+				configFinal[id] = {
+					...CONFIG_DEFAULT[id],
+					...(configActual?.[id] || {}),
+				};
+			}
 
 			// Eliminar imagen anterior de Cloudinary si existe
 			const oldPublicId = extractCloudinaryPublicId(
@@ -279,7 +294,11 @@ router.delete("/:gateway/imagen", apiLimiter, authJWT, async (req, res) => {
 			"config_pasarelas_pago",
 			CONFIG_DEFAULT,
 		);
-		const configFinal = { ...CONFIG_DEFAULT, ...configActual };
+		// Merge profundo por gateway
+		const configFinal = {};
+		for (const id of PASARELAS_SOPORTADAS) {
+			configFinal[id] = { ...CONFIG_DEFAULT[id], ...(configActual?.[id] || {}) };
+		}
 
 		const publicId = extractCloudinaryPublicId(
 			configFinal[gateway]?.imagen_url,

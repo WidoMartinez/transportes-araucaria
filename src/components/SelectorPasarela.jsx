@@ -6,7 +6,6 @@
  */
 import { useEffect } from "react";
 import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
-import { Loader2 } from "lucide-react";
 
 // Íconos de respaldo cuando no hay imagen configurada
 const EMOJI_DEFAULT = {
@@ -25,21 +24,22 @@ export default function SelectorPasarela({
 	onChange,
 	className = "",
 }) {
-	const { pasarelasHabilitadas, loading } = usePasarelasConfig();
+	const { pasarelasHabilitadas } = usePasarelasConfig();
 
-	// Si la pasarela activa queda deshabilitada, cambiar automáticamente a la primera disponible
+	// Si la pasarela activa queda deshabilitada por cambio de config, auto-cambiar a la primera disponible
 	useEffect(() => {
-		if (!loading && pasarelasHabilitadas.length > 0) {
+		if (pasarelasHabilitadas.length > 0) {
 			const estaActiva = pasarelasHabilitadas.some((p) => p.id === pasarela);
 			if (!estaActiva) {
 				onChange(pasarelasHabilitadas[0].id);
 			}
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [loading, pasarelasHabilitadas]);
+	}, [pasarelasHabilitadas]);
 
-	// Si solo hay una pasarela habilitada, no mostrar selector (ya está pre-seleccionada)
-	if (!loading && pasarelasHabilitadas.length <= 1) {
+	// Si la config ya cargó y solo hay una pasarela activa, no necesitamos selector
+	// (la selección automática ya se hizo en el useEffect de arriba)
+	if (pasarelasHabilitadas.length <= 1) {
 		return null;
 	}
 
@@ -49,55 +49,49 @@ export default function SelectorPasarela({
 				Método de pago
 			</p>
 
-			{loading ? (
-				<div className="flex items-center justify-center py-3">
-					<Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-				</div>
-			) : (
-				<div className="flex gap-2">
-					{pasarelasHabilitadas.map((p) => {
-						const activa = pasarela === p.id;
-						return (
-							<button
-								key={p.id}
-								type="button"
-								onClick={() => onChange(p.id)}
-								aria-pressed={activa}
-								className={`flex-1 py-2 px-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 min-h-[52px] ${
-									activa
-										? "border-primary bg-primary/5 text-primary"
-										: "border-input text-muted-foreground hover:border-primary/50"
-								}`}
-							>
-								{/* Imagen o emoji de respaldo */}
-								{p.imagen_url ? (
-									<img
-										src={p.imagen_url}
-										alt={p.nombre}
-										className="h-7 w-auto max-w-[60px] object-contain shrink-0"
-										loading="lazy"
-									/>
-								) : (
-									<span className="text-lg shrink-0">
-										{EMOJI_DEFAULT[p.id] ?? "💳"}
-									</span>
-								)}
-								{/* Textos */}
-								<div className="min-w-0">
-									<p className="text-xs font-semibold leading-tight truncate">
-										{p.nombre}
+			<div className="flex gap-2">
+				{pasarelasHabilitadas.map((p) => {
+					const activa = pasarela === p.id;
+					return (
+						<button
+							key={p.id}
+							type="button"
+							onClick={() => onChange(p.id)}
+							aria-pressed={activa}
+							className={`flex-1 py-2 px-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 min-h-[52px] ${
+								activa
+									? "border-primary bg-primary/5 text-primary"
+									: "border-input text-muted-foreground hover:border-primary/50"
+							}`}
+						>
+							{/* Imagen o emoji de respaldo */}
+							{p.imagen_url ? (
+								<img
+									src={p.imagen_url}
+									alt={p.nombre}
+									className="h-7 w-auto max-w-[60px] object-contain shrink-0"
+									loading="lazy"
+								/>
+							) : (
+								<span className="text-lg shrink-0">
+									{EMOJI_DEFAULT[p.id] ?? "💳"}
+								</span>
+							)}
+							{/* Textos */}
+							<div className="min-w-0">
+								<p className="text-xs font-semibold leading-tight truncate">
+									{p.nombre}
+								</p>
+								{p.descripcion && (
+									<p className="text-[10px] text-muted-foreground leading-tight truncate">
+										{p.descripcion}
 									</p>
-									{p.descripcion && (
-										<p className="text-[10px] text-muted-foreground leading-tight truncate">
-											{p.descripcion}
-										</p>
-									)}
-								</div>
-							</button>
-						);
-					})}
-				</div>
-			)}
+								)}
+							</div>
+						</button>
+					);
+				})}
+		</div>
 		</div>
 	);
 }

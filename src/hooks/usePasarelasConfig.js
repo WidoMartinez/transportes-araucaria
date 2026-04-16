@@ -3,7 +3,7 @@
  * Lee qué pasarelas están habilitadas y cuáles son sus imágenes configuradas.
  * Los datos se cachean en sessionStorage para evitar múltiples peticiones por página.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getBackendUrl } from "../lib/backend";
 
 // Configuración predeterminada si el backend no está disponible
@@ -93,10 +93,16 @@ export function usePasarelasConfig() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Arreglo con las pasarelas habilitadas en orden: flow primero
-	const pasarelasHabilitadas = ["flow", "mercadopago"]
-		.filter((id) => pasarelas[id]?.habilitado)
-		.map((id) => ({ id, ...pasarelas[id] }));
+	// Arreglo memoizado con las pasarelas habilitadas en orden: flow primero.
+	// useMemo estabiliza la referencia para que el useEffect en SelectorPasarela
+	// no se dispare en cada render, solo cuando el contenido real cambia.
+	const pasarelasHabilitadas = useMemo(
+		() =>
+			["flow", "mercadopago"]
+				.filter((id) => pasarelas[id]?.habilitado)
+				.map((id) => ({ id, ...pasarelas[id] })),
+		[pasarelas],
+	);
 
 	return {
 		pasarelas,
