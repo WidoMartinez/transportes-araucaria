@@ -3,7 +3,7 @@
  * Lee qué pasarelas están habilitadas y cuáles son sus imágenes configuradas.
  * Los datos se cachean en sessionStorage para evitar múltiples peticiones por página.
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getBackendUrl } from "../lib/backend";
 
 // Configuración predeterminada si el backend no está disponible
@@ -24,6 +24,8 @@ const PASARELAS_DEFAULT = {
 
 const CACHE_KEY = "config_pasarelas_pago_cache";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos de caché
+// Evento para notificar a todas las instancias del hook que recarguen
+const REFRESH_EVENT = "pasarelas-config-refresh";
 
 /**
  * Devuelve la configuración de pasarelas y las pasarelas habilitadas como arreglo.
@@ -38,7 +40,8 @@ export function usePasarelasConfig() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 
-	const cargar = async (forzar = false) => {
+	// useCallback estabiliza la referencia para usarla en el listener de eventos
+	const cargar = useCallback(async (forzar = false) => {
 		// Verificar caché en sessionStorage
 		if (!forzar) {
 			try {
@@ -86,12 +89,17 @@ export function usePasarelasConfig() {
 		} finally {
 			setLoading(false);
 		}
-	};
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	useEffect(() => {
 		cargar();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+		// Escucha el evento de refresco: cuando el admin guarda/sube imagen,
+		// todas las instancias del hook (en los flujos de pago) recargan del backend
+		const onRefresh = () => cargar(true);
+		window.addEventListener(REFRESH_EVENT, onRefresh);
+		return () => window.removeEventListener(REFRESH_EVENT, onRefresh);
+	}, [cargar]);
 
 	// Arreglo memoizado con las pasarelas habilitadas en orden: flow primero.
 	// useMemo estabiliza la referencia para que el useEffect en SelectorPasarela
@@ -123,4 +131,6 @@ export function invalidarCachePasarelas() {
 	} catch {
 		// ignorar
 	}
+	// Notificar a todas las instancias del hook montadas para que recarguen del backend
+	window.dispatchEvent(new CustomEvent(REFRESH_EVENT));
 }

@@ -51,8 +51,10 @@ const subirImagenPasarela = (buffer, mimetype, gatewayId) => {
 				folder: "transportes-araucaria/pasarelas",
 				public_id: `pasarela-${gatewayId}`,
 				overwrite: true,
+				invalidate: true, // invalida CDN cache de Cloudinary para mostrar la nueva imagen
 				resource_type: "image",
-				transformation: [{ quality: "auto", fetch_format: "auto" }],
+				format: "webp", // convertir a webp para mejor rendimiento
+				transformation: [{ quality: "auto" }],
 			},
 			(error, result) => {
 				if (error) return reject(error);
