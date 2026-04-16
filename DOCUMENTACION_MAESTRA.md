@@ -41,6 +41,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Almacenamiento Persistente de Imágenes (Cloudinary)](#525-almacenamiento-persistente-de-imágenes-cloudinary)
    - [Estrategia de Logs en Render](#526-estrategia-de-logs-en-render)
    - [Integración Mercado Pago Checkout Pro](#527-integración-mercado-pago-checkout-pro)
+   - [App Móvil (Expo/React Native)](#528-app-móvil-exporeact-native)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -56,7 +57,8 @@ Página web profesional y sistema de gestión para **Transportes Araucaria**, es
 
 ### Tecnologías Clave
 
-- **Frontend**: React 18, Vite, Tailwind CSS, Shadcn/UI.
+- **Frontend Web**: React 18, Vite, Tailwind CSS, Shadcn/UI.
+- **App Móvil**: Expo SDK 52, React Native, Expo Router (directorio `mobile/`).
 - **Backend**: Node.js + Express (hospedado en **Render.com**).
 - **Base de Datos**: MySQL (vía Sequelize).
 - **Infraestructura Legacy**: Scripts PHP para emails (hospedados en **Hostinger**).
@@ -1819,6 +1821,47 @@ En los tres puntos de entrada de pago se muestra un selector de 2 botones antes 
 - El webhook no confía en el monto enviado por MP en el IPN; siempre re-consulta el estado real al API de MP vía SDK
 - El monto de retorno es embebido por el backend en la `back_url` al crear la preferencia, nunca depende solo de lo que devuelve MP en el redirect
 - Idempotencia implementada en el webhook para evitar doble procesamiento
+
+---
+
+### 5.28 App Móvil (Expo/React Native)
+
+La aplicación móvil está ubicada en el directorio `mobile/` del repositorio y utiliza **Expo SDK 52** con **Expo Router** para navegación basada en archivos (file-based routing, similar a Next.js).
+
+#### Arquitectura
+
+```
+mobile/
+├── app/                        # Rutas (Expo Router)
+│   ├── _layout.jsx             # Layout raíz
+│   ├── (tabs)/                 # Tabs principales (Inicio, Reservas, Perfil)
+│   ├── reserva/[id].jsx        # Detalle de reserva (ruta dinámica)
+│   └── nueva-reserva.jsx       # Formulario de nueva reserva
+├── components/                 # Componentes reutilizables
+├── services/api.js             # Cliente HTTP → backend Render.com
+└── assets/                     # Recursos estáticos
+```
+
+#### Conexión al backend
+
+El servicio `services/api.js` centraliza todas las llamadas HTTP. La URL base se configura con la variable de entorno `EXPO_PUBLIC_BACKEND_URL` (ver `mobile/.env.example`).
+
+#### Desarrollo local
+
+```bash
+cd mobile
+npm install
+npm start        # Abre el QR para Expo Go
+npm run android  # Emulador Android
+npm run ios      # Emulador iOS
+```
+
+#### Criterios de calidad
+
+- Todo el código, comentarios y documentación en **español**.
+- Componentes en PascalCase, variables/funciones en camelCase.
+- Estilos con `StyleSheet.create()` al final de cada archivo.
+- Ver `mobile/README.md` para instrucciones completas.
 
 ---
 
