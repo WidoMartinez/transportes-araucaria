@@ -1,5 +1,4 @@
 /* eslint-env node */
-/* global process */
 /**
  * Rutas para configurar las pasarelas de pago habilitadas y sus imágenes.
  * Las imágenes se suben a Cloudinary (mismo proveedor que los banners).
@@ -70,7 +69,8 @@ const subirImagenPasarela = (buffer, mimetype, gatewayId) => {
  */
 const extractCloudinaryPublicId = (url) => {
 	if (!url || !url.includes("cloudinary.com")) return null;
-	const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/);
+	const cleanUrl = url.split("?")[0].split("#")[0];
+	const match = cleanUrl.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/);
 	return match ? match[1] : null;
 };
 
@@ -256,10 +256,19 @@ router.post(
 				`🖼️ [PASARELA] Imagen subida a Cloudinary: ${cloudResult.public_id}`,
 			);
 
+			// Usar URL versionada para evitar que frontend/CDN muestren el logo anterior por caché
+			const imagenVersionada = cloudinary.url(cloudResult.public_id, {
+				secure: true,
+				resource_type: "image",
+				version: cloudResult.version,
+				format: "webp",
+				transformation: [{ quality: "auto" }],
+			});
+
 			// Actualizar URL en la configuración
 			configFinal[gateway] = {
 				...configFinal[gateway],
-				imagen_url: cloudResult.secure_url,
+				imagen_url: imagenVersionada,
 			};
 
 			await Configuracion.setValor(
@@ -271,7 +280,7 @@ router.post(
 
 			res.json({
 				success: true,
-				imagen_url: cloudResult.secure_url,
+				imagen_url: imagenVersionada,
 				pasarelas: configFinal,
 			});
 		} catch (error) {
