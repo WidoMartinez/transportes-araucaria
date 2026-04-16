@@ -37,10 +37,45 @@ export default function SelectorPasarela({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pasarelasHabilitadas]);
 
-	// Si la config ya cargó y solo hay una pasarela activa, no necesitamos selector
-	// (la selección automática ya se hizo en el useEffect de arriba)
-	if (pasarelasHabilitadas.length <= 1) {
+	// Si no hay pasarelas activas, no renderizar nada
+	if (pasarelasHabilitadas.length === 0) {
 		return null;
+	}
+
+	// Si solo hay una pasarela activa, mostrarla en modo fijo (sin selector)
+	if (pasarelasHabilitadas.length === 1) {
+		const unica = pasarelasHabilitadas[0];
+		return (
+			<div className={`space-y-1 ${className}`}>
+				<p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+					Método de pago
+				</p>
+				<div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 flex items-center gap-2 min-h-[52px]">
+					{unica.imagen_url ? (
+						<img
+							src={unica.imagen_url}
+							alt={unica.nombre}
+							className="h-7 w-auto max-w-[60px] object-contain shrink-0"
+							loading="lazy"
+						/>
+					) : (
+						<span className="text-lg shrink-0">
+							{EMOJI_DEFAULT[unica.id] ?? "💳"}
+						</span>
+					)}
+					<div className="min-w-0">
+						<p className="text-xs font-semibold leading-tight truncate text-primary">
+							{unica.nombre}
+						</p>
+						{unica.descripcion && (
+							<p className="text-[10px] text-muted-foreground leading-tight truncate">
+								{unica.descripcion}
+							</p>
+						)}
+					</div>
+				</div>
+			</div>
+		);
 	}
 
 	return (
