@@ -13540,6 +13540,11 @@ const scheduleKeepAlive = () => {
 		process.env.RENDER_KEEP_ALIVE_URL || process.env.KEEP_ALIVE_URL || "";
 
 	if (!targetBase) {
+		console.warn(
+			"⚠️ [KEEP-ALIVE] Variable RENDER_KEEP_ALIVE_URL no configurada. " +
+			"El servidor puede dormirse después de 15 min de inactividad en Render.com. " +
+			"Configura la variable con la URL pública del backend.",
+		);
 		return;
 	}
 
