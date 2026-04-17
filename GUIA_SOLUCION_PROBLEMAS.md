@@ -200,12 +200,12 @@ La función `handleGuardarAsignacion` en `src/components/AdminReservas.jsx` vali
 
 - Se eliminó la validación obligatoria de vehículo para VUELTA en ese escenario.
 - Se agregó lógica `debeAsignarVuelta` para llamar al endpoint de asignación de VUELTA **solo** cuando:
-	- se marcó "asignar ambas", o
-	- se seleccionó explícitamente un vehículo para la VUELTA.
+  - se marcó "asignar ambas", o
+  - se seleccionó explícitamente un vehículo para la VUELTA.
 - Se agregó opción `Sin asignar` en el selector de vehículo de VUELTA.
 - Se mejoró el mensaje de éxito para distinguir:
-	- asignación de ambos tramos, o
-	- asignación solo de IDA.
+  - asignación de ambos tramos, o
+  - asignación solo de IDA.
 
 ### Resultado esperado
 

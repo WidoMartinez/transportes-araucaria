@@ -41,7 +41,9 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Almacenamiento Persistente de Imágenes (Cloudinary)](#525-almacenamiento-persistente-de-imágenes-cloudinary)
    - [Estrategia de Logs en Render](#526-estrategia-de-logs-en-render)
    - [Integración Mercado Pago Checkout Pro](#527-integración-mercado-pago-checkout-pro)
-  - [Configuración Dinámica de Pasarelas y Logos](#528-configuración-dinámica-de-pasarelas-y-logos-flowmercado-pago)
+
+- [Configuración Dinámica de Pasarelas y Logos](#528-configuración-dinámica-de-pasarelas-y-logos-flowmercado-pago)
+
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -1896,29 +1898,30 @@ Permitir que el panel admin controle, sin deploy, qué pasarelas de pago están 
 #### Consideraciones futuras para nuevas intervenciones
 
 1. **No romper multipart**:
-  En cualquier helper HTTP compartido, no forzar `Content-Type` cuando `body` sea `FormData`.
+   En cualquier helper HTTP compartido, no forzar `Content-Type` cuando `body` sea `FormData`.
 
 2. **Mantener sincronización cross-tab**:
-  Si se modifica el mecanismo de caché, conservar refresco local + refresco entre pestañas.
+   Si se modifica el mecanismo de caché, conservar refresco local + refresco entre pestañas.
 
 3. **Evitar regresión visual con pasarela única**:
-  No ocultar el bloque de método de pago cuando exista solo una pasarela activa; debe mostrarse el logo de referencia.
+   No ocultar el bloque de método de pago cuando exista solo una pasarela activa; debe mostrarse el logo de referencia.
 
 4. **Respetar merge profundo**:
-  Al agregar nuevas propiedades por pasarela, actualizar defaults y merge en backend y frontend para compatibilidad hacia atrás.
+   Al agregar nuevas propiedades por pasarela, actualizar defaults y merge en backend y frontend para compatibilidad hacia atrás.
 
 5. **Preservar observabilidad en Render**:
-  Mantener logs compactos de inicio/error/éxito para subida de imágenes y evitar logs verbosos en bucles.
+   Mantener logs compactos de inicio/error/éxito para subida de imágenes y evitar logs verbosos en bucles.
 
 6. **Compatibilidad local + producción**:
-  Validar flujo tanto en localhost como en backend Render, considerando latencia de wake-up y caché de CDN.
+   Validar flujo tanto en localhost como en backend Render, considerando latencia de wake-up y caché de CDN.
 
 7. **Checklist mínimo antes de cerrar cambios de pasarelas**:
-  - Admin guarda habilitación correctamente.
-  - Logo se sube y queda visible en vista previa admin.
-  - Logo se refleja en HeroExpress, ConsultarReserva y PagarConCodigo.
-  - Con 1 pasarela activa se muestra tarjeta fija con imagen.
-  - Con 2 pasarelas activas se muestran ambas opciones.
+
+- Admin guarda habilitación correctamente.
+- Logo se sube y queda visible en vista previa admin.
+- Logo se refleja en HeroExpress, ConsultarReserva y PagarConCodigo.
+- Con 1 pasarela activa se muestra tarjeta fija con imagen.
+- Con 2 pasarelas activas se muestran ambas opciones.
 
 ---
 

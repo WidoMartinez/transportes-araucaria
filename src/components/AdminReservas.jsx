@@ -8145,8 +8145,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										</SelectContent>
 									</Select>
 									<p className="text-xs text-muted-foreground">
-										Si dejas este tramo sin vehículo, se guardará solo la asignación de la
-										IDA.
+										Si dejas este tramo sin vehículo, se guardará solo la
+										asignación de la IDA.
 									</p>
 								</div>
 
