@@ -182,6 +182,7 @@ Los skills son guías de conocimiento especializado que los agentes deben leer a
 | `google-maps-autocomplete` | `.github/skills/google-maps-autocomplete/SKILL.md` | Autocompletado de direcciones con Google Maps |
 | `mercadopago-checkout-pro` | `.github/skills/mercadopago-checkout-pro/SKILL.md` | Integración y debug de Mercado Pago |
 | `optimizador-seo` | `.github/skills/optimizador-seo/SKILL.md` | SEO, keywords, meta tags, schema.org |
+| `estilos-ruta-araucaria` | `.github/skills/estilos-ruta-araucaria/SKILL.md` | Copiar el sistema de diseño de `ruta-araucaria`: tipografía Sora+Fraunces, paleta verde/café, Navbar flotante, Hero con grid, sidebar admin, footer oscuro |
 
 ---
 
