@@ -177,6 +177,44 @@ Para confirmar que el sistema funciona correctamente:
 
 ---
 
+## 1.3. Asignación obligatoria de ambos tramos en reservas Ida/Vuelta
+
+**Implementado: 16 Abril 2026**
+
+### Problema
+
+En el modal de asignación de `AdminReservas`, al trabajar con reservas vinculadas (IDA/VUELTA), el sistema exigía seleccionar vehículo también para la VUELTA cuando se desmarcaba "Asignar el mismo conductor y vehículo para ambos tramos".
+
+Esto impedía un caso operativo válido: asignar primero solo la IDA y dejar la VUELTA pendiente para más tarde.
+
+### Síntomas
+
+- Al intentar guardar solo la IDA en una reserva ida/vuelta, aparecía validación de VUELTA obligatoria.
+- El botón de guardar no permitía confirmar si VUELTA no tenía vehículo.
+
+### Causa raíz
+
+La función `handleGuardarAsignacion` en `src/components/AdminReservas.jsx` validaba de forma estricta `vueltaVehiculoSeleccionado` cuando existía `reservaVuelta` y `asignarAmbas` era `false`, forzando la asignación de ambos tramos.
+
+### Solución aplicada
+
+- Se eliminó la validación obligatoria de vehículo para VUELTA en ese escenario.
+- Se agregó lógica `debeAsignarVuelta` para llamar al endpoint de asignación de VUELTA **solo** cuando:
+	- se marcó "asignar ambas", o
+	- se seleccionó explícitamente un vehículo para la VUELTA.
+- Se agregó opción `Sin asignar` en el selector de vehículo de VUELTA.
+- Se mejoró el mensaje de éxito para distinguir:
+	- asignación de ambos tramos, o
+	- asignación solo de IDA.
+
+### Resultado esperado
+
+- En reservas ida/vuelta ahora se puede asignar únicamente la IDA sin bloquear el guardado.
+- La VUELTA puede quedar pendiente sin generar error.
+- Si luego se desea, se puede reasignar y completar la VUELTA en una segunda operación.
+
+---
+
 ## 1.1. División de Pago Proporcional para Reservas Ida/Vuelta
 
 **Implementado: 18 Enero 2026**

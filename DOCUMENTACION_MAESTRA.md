@@ -1,7 +1,7 @@
 # 📘 Documentación Maestra - Transportes Araucaria
 
-> **Última Actualización**: 8 Abril 2026
-> **Versión**: 2.0
+> **Última Actualización**: 16 Abril 2026
+> **Versión**: 2.1
 
 Este documento centraliza toda la información técnica, operativa y de usuario para el proyecto **Transportes Araucaria**. Reemplaza a la documentación fragmentada anterior.
 
@@ -41,6 +41,7 @@ Este documento centraliza toda la información técnica, operativa y de usuario 
    - [Almacenamiento Persistente de Imágenes (Cloudinary)](#525-almacenamiento-persistente-de-imágenes-cloudinary)
    - [Estrategia de Logs en Render](#526-estrategia-de-logs-en-render)
    - [Integración Mercado Pago Checkout Pro](#527-integración-mercado-pago-checkout-pro)
+  - [Configuración Dinámica de Pasarelas y Logos](#528-configuración-dinámica-de-pasarelas-y-logos-flowmercado-pago)
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
 7. [Solución de Problemas (Troubleshooting)](#7-solución-de-problemas-troubleshooting)
@@ -1819,6 +1820,105 @@ En los tres puntos de entrada de pago se muestra un selector de 2 botones antes 
 - El webhook no confía en el monto enviado por MP en el IPN; siempre re-consulta el estado real al API de MP vía SDK
 - El monto de retorno es embebido por el backend en la `back_url` al crear la preferencia, nunca depende solo de lo que devuelve MP en el redirect
 - Idempotencia implementada en el webhook para evitar doble procesamiento
+
+---
+
+### 5.28 Configuración Dinámica de Pasarelas y Logos (Flow/Mercado Pago)
+
+**Implementado: Abril 2026**
+
+#### Objetivo
+
+Permitir que el panel admin controle, sin deploy, qué pasarelas de pago están activas y qué logo se muestra para cada una en los flujos de pago del frontend.
+
+#### Alcance funcional
+
+- Habilitar/deshabilitar por pasarela: `flow`, `mercadopago`.
+- Personalizar nombre y descripción visible en el selector.
+- Subir y eliminar imagen de referencia (logo) por pasarela.
+- Reflejar cambios en tiempo real en los formularios de pago.
+
+#### Backend
+
+**Ruta dedicada**: `backend/routes/configuracion-pasarelas.routes.js`
+
+**Endpoints**:
+
+- `GET /api/configuracion/pasarelas-pago`: entrega configuración pública para frontend.
+- `PUT /api/configuracion/pasarelas-pago`: actualiza `habilitado`, `nombre`, `descripcion` (admin).
+- `POST /api/configuracion/pasarelas-pago/:gateway/imagen`: sube logo a Cloudinary (admin).
+- `DELETE /api/configuracion/pasarelas-pago/:gateway/imagen`: elimina logo de pasarela (admin).
+
+**Persistencia**:
+
+- Clave en tabla `configuracion`: `config_pasarelas_pago`.
+- Estructura base por pasarela: `habilitado`, `nombre`, `descripcion`, `imagen_url`.
+- Merge profundo por pasarela en lectura/escritura para tolerar registros parciales.
+
+**Cloudinary (pasarelas)**:
+
+- Carpeta: `transportes-araucaria/pasarelas`.
+- Subida en memoria (`multer.memoryStorage`) para compatibilidad con filesystem efímero en Render.
+- URL de imagen guardada en formato versionado para mitigar caché agresivo del CDN/navegador.
+- `invalidate: true` en overwrite para invalidación de caché.
+
+#### Frontend
+
+**Hook**: `src/hooks/usePasarelasConfig.js`
+
+- Carga configuración con fallback seguro (ambas pasarelas habilitadas por defecto).
+- Caché en `sessionStorage` con TTL de 5 minutos.
+- Normalización defensiva para garantizar presencia consistente de `flow` y `mercadopago`.
+- Sincronización inmediata tras cambios del admin:
+  - Evento local para instancias montadas.
+  - Señal en `localStorage` para refresco entre pestañas.
+
+**Componente**: `src/components/SelectorPasarela.jsx`
+
+- Si hay 2 pasarelas activas: muestra selector con botones y logos.
+- Si hay 1 pasarela activa: muestra tarjeta fija (solo lectura) con logo y datos.
+- Si no hay imagen: usa fallback visual por pasarela.
+
+**Panel admin**: `src/components/AdminConfiguracion.jsx`
+
+- Gestión completa de habilitación y branding visual de pasarelas.
+- Subida de imagen usando `authenticatedFetch` (JWT válido del contexto de auth).
+- Mensajes de éxito/error visibles para operación de subida/eliminación.
+
+#### Correcciones clave aplicadas durante la implementación
+
+- Se eliminó bloqueo por estado de carga en selector para no ocultar opciones mientras Render despierta.
+- Se corrigió merge superficial que podía perder campos por pasarela.
+- Se evitó fijar `Content-Type: application/json` en peticiones `FormData` autenticadas.
+- Se reemplazó uso de token legacy en subida por flujo estándar de autenticación.
+- Se agregó trazabilidad de errores de subida (frontend y backend) para diagnóstico rápido.
+
+#### Consideraciones futuras para nuevas intervenciones
+
+1. **No romper multipart**:
+  En cualquier helper HTTP compartido, no forzar `Content-Type` cuando `body` sea `FormData`.
+
+2. **Mantener sincronización cross-tab**:
+  Si se modifica el mecanismo de caché, conservar refresco local + refresco entre pestañas.
+
+3. **Evitar regresión visual con pasarela única**:
+  No ocultar el bloque de método de pago cuando exista solo una pasarela activa; debe mostrarse el logo de referencia.
+
+4. **Respetar merge profundo**:
+  Al agregar nuevas propiedades por pasarela, actualizar defaults y merge en backend y frontend para compatibilidad hacia atrás.
+
+5. **Preservar observabilidad en Render**:
+  Mantener logs compactos de inicio/error/éxito para subida de imágenes y evitar logs verbosos en bucles.
+
+6. **Compatibilidad local + producción**:
+  Validar flujo tanto en localhost como en backend Render, considerando latencia de wake-up y caché de CDN.
+
+7. **Checklist mínimo antes de cerrar cambios de pasarelas**:
+  - Admin guarda habilitación correctamente.
+  - Logo se sube y queda visible en vista previa admin.
+  - Logo se refleja en HeroExpress, ConsultarReserva y PagarConCodigo.
+  - Con 1 pasarela activa se muestra tarjeta fija con imagen.
+  - Con 2 pasarelas activas se muestran ambas opciones.
 
 ---
 

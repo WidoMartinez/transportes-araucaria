@@ -1725,11 +1725,10 @@ function AdminReservas() {
 			return;
 		}
 
-		// Validar que si hay VUELTA y NO está marcado "asignar ambas", debe tener vehículo seleccionado
-		if (reservaVuelta && !asignarAmbas && !vueltaVehiculoSeleccionado) {
-			alert("Debe seleccionar un vehículo para la VUELTA");
-			return;
-		}
+		const debeAsignarVuelta =
+			Boolean(reservaVuelta) &&
+			(asignarAmbas ||
+				(vueltaVehiculoSeleccionado && vueltaVehiculoSeleccionado !== "none"));
 
 		setLoadingAsignacion(true);
 		try {
@@ -1761,8 +1760,8 @@ function AdminReservas() {
 				);
 			}
 
-			// 2. Asignar VUELTA (si existe)
-			if (reservaVuelta) {
+			// 2. Asignar VUELTA solo cuando hay vehículo definido para ese tramo
+			if (debeAsignarVuelta && reservaVuelta) {
 				const vueltaVehiculo = asignarAmbas
 					? vehiculoSeleccionado
 					: vueltaVehiculoSeleccionado;
@@ -1803,7 +1802,9 @@ function AdminReservas() {
 
 			// Mensaje de éxito
 			const mensaje = reservaVuelta
-				? "Vehículo y conductor asignados correctamente para IDA y VUELTA"
+				? debeAsignarVuelta
+					? "Vehículo y conductor asignados correctamente para IDA y VUELTA"
+					: "Vehículo y conductor asignados correctamente para la IDA"
 				: "Vehículo y conductor asignados correctamente";
 			alert(mensaje);
 
@@ -8126,6 +8127,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 											<SelectValue placeholder="Selecciona un vehículo" />
 										</SelectTrigger>
 										<SelectContent>
+											<SelectItem value="none">Sin asignar</SelectItem>
 											{vehiculos
 												.filter(
 													(v) =>
@@ -8142,6 +8144,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 												))}
 										</SelectContent>
 									</Select>
+									<p className="text-xs text-muted-foreground">
+										Si dejas este tramo sin vehículo, se guardará solo la asignación de la
+										IDA.
+									</p>
 								</div>
 
 								{/* Selector de conductor VUELTA (opcional) */}
