@@ -174,6 +174,7 @@ Los skills son guías de conocimiento especializado que los agentes deben leer a
 
 | Skill | Archivo | Cuándo usarlo |
 |-------|---------|---------------|
+| `estilo-ui-corporativo` | `.github/skills/estilo-ui-corporativo/SKILL.md` | Estilos premium corporativos (colores #8C5E42, bordes redondeados, mallas, glassmorphism) |
 | `shadcn-ui` | `.github/skills/shadcn-ui/SKILL.md` | Agregar/usar/personalizar componentes shadcn, formularios, tablas, modales, temas |
 | `optimizacion-movil-frontend` | `.github/skills/optimizacion-movil-frontend/SKILL.md` | Diseño mobile-first, UI/UX, responsive, Framer Motion |
 | `admin-precios` | `.github/skills/admin-precios/SKILL.md` | Tarifas, descuentos, precios dinámicos |
@@ -207,6 +208,8 @@ Los skills son guías de conocimiento especializado que los agentes deben leer a
 - Antes de iniciar, **leer este AGENTS.md** y revisar `.github/` para políticas adicionales.
 - **CRÍTICO:** Siempre consultar `DOCUMENTACION_MAESTRA.md` y `GUIA_SOLUCION_PROBLEMAS.md` como contexto antes de proponer soluciones, especialmente ante errores de backend o despliegue.
 - Para tareas de UI/componentes: **leer primero** `.github/skills/shadcn-ui/SKILL.md` para conocer el estado actual del proyecto.
+- Para tareas de UI/componentes con shadcn: **priorizar el MCP del registry** antes de instalar nada. Flujo obligatorio: revisar `src/components/ui/`, consultar registry `@shadcn`, pedir ejemplos si hace falta, instalar solo lo que no exista y personalizar desde wrappers en `src/components/`.
+- Para estilos del frontend: usar **Tailwind CSS v4** sobre los tokens definidos en `src/App.css` (`bg-primary`, `bg-secondary`, `bg-accent`, `border-border`, etc.). Evitar colores hardcodeados salvo compatibilidad con módulos legacy.
 - Cuando completes una tarea:
   1. **Pregunta si se requiere commit.**
   2. Si la respuesta es sí, **sugiere un mensaje de commit breve en español** (ver formato).
