@@ -9,6 +9,8 @@ import {
 	ChevronLeft,
 	ChevronRight,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import ScrollReveal from "./animations/ScrollReveal";
 
 // Tarjetas de servicios — con los datos reales del negocio
 const services = [
@@ -96,9 +98,11 @@ function Servicios() {
 							Nuestros <em className="not-italic text-[#8C5E42]">servicios</em>
 						</h2>
 					</div>
-					<p className="max-w-sm text-sm leading-relaxed text-slate-500 md:text-right font-light italic">
-						"Cada traslado es coordinado con exactitud empresarial. Tu puntualidad es nuestra prioridad."
-					</p>
+					<ScrollReveal direction="right" delay={0.2}>
+						<p className="max-w-sm text-sm leading-relaxed text-slate-500 md:text-right font-light italic">
+							"Cada traslado es coordinado con exactitud empresarial. Tu puntualidad es nuestra prioridad."
+						</p>
+					</ScrollReveal>
 				</div>
 
 				{/* Slider con swipe táctil - Balanceado con PromocionBanners */}
@@ -107,99 +111,125 @@ function Servicios() {
 					onTouchStart={handleTouchStart}
 					onTouchEnd={handleTouchEnd}
 				>
-					<div
-						className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
-						style={{ transform: `translateX(-${active * 100}%)` }}
-					>
-						{services.map(
-							({ icon: Icon, tag, title, description, highlights, accent, bg }) => (
-								<div
-									key={title}
-									className="min-w-full"
-									style={{ background: bg }}
-								>
-									<div className="grid h-full md:aspect-[21/9] lg:aspect-square xl:aspect-[1.2/1] md:min-h-[520px] items-center gap-0 lg:grid-cols-1 xl:grid-cols-[1fr_380px]">
-										{/* Panel de texto */}
-										<div className="flex flex-col justify-center px-6 py-10 md:px-14 pb-32 md:pb-32">
+					<AnimatePresence initial={false} mode="wait">
+						<motion.div
+							key={active}
+							initial={{ opacity: 0, x: 50, filter: "blur(10px)" }}
+							animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+							exit={{ opacity: 0, x: -50, filter: "blur(10px)" }}
+							transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+							className="absolute h-full w-full"
+							style={{ background: services[active].bg }}
+						>
+							<div className="grid h-full md:aspect-[21/9] lg:aspect-square xl:aspect-[1.2/1] md:min-h-[520px] items-center gap-0 lg:grid-cols-1 xl:grid-cols-[1fr_380px]">
+								{/* Panel de texto */}
+								<div className="flex flex-col justify-center px-6 py-10 md:px-14 pb-32 md:pb-32">
+									<motion.span
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.2 }}
+										className="inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]"
+										style={{
+											borderColor: services[active].accent + "40",
+											color: services[active].accent,
+											backgroundColor: services[active].accent + "14",
+										}}
+									>
+										{services[active].tag}
+									</motion.span>
+
+									<motion.div
+										initial={{ opacity: 0, scale: 0.8 }}
+										animate={{ opacity: 1, scale: 1 }}
+										transition={{ delay: 0.3 }}
+										className="mt-6 flex h-14 w-14 items-center justify-center rounded-2xl"
+										style={{ backgroundColor: services[active].accent + "18" }}
+									>
+										{React.createElement(services[active].icon, {
+											className: "h-7 w-7",
+											style: { color: services[active].accent }
+										})}
+									</motion.div>
+
+									<motion.h3 
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.4 }}
+										className="mt-4 font-serif text-3xl font-medium text-white md:text-4xl"
+									>
+										{services[active].title}
+									</motion.h3>
+									<motion.p 
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										transition={{ delay: 0.5 }}
+										className="mt-3 max-w-lg text-base leading-relaxed text-slate-400"
+									>
+										{services[active].description}
+									</motion.p>
+
+									<motion.div 
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										transition={{ delay: 0.6 }}
+										className="mt-8 flex flex-wrap gap-2"
+									>
+										{services[active].highlights.map((h) => (
 											<span
-												className="inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em]"
-												style={{
-													borderColor: accent + "40",
-													color: accent,
-													backgroundColor: accent + "14",
-												}}
+												key={h}
+												className="rounded-full px-3.5 py-1.5 text-xs font-medium text-white/80"
+												style={{ backgroundColor: "rgba(255,255,255,0.07)" }}
 											>
-												{tag}
+												{h}
 											</span>
+										))}
+									</motion.div>
 
-											<div
-												className="mt-6 flex h-14 w-14 items-center justify-center rounded-2xl"
-												style={{ backgroundColor: accent + "18" }}
-											>
-												<Icon
-													className="h-7 w-7"
-													style={{ color: accent }}
-												/>
-											</div>
-
-											<h3 className="mt-4 font-serif text-3xl font-medium text-white md:text-4xl">
-												{title}
-											</h3>
-											<p className="mt-3 max-w-lg text-base leading-relaxed text-slate-400">
-												{description}
-											</p>
-
-											<div className="mt-8 flex flex-wrap gap-2">
-												{highlights.map((h) => (
-													<span
-														key={h}
-														className="rounded-full px-3.5 py-1.5 text-xs font-medium text-white/80"
-														style={{ backgroundColor: "rgba(255,255,255,0.07)" }}
-													>
-														{h}
-													</span>
-												))}
-											</div>
-
-											<div className="mt-10">
-												<a
-													href="#inicio"
-													className="inline-flex h-10 items-center rounded-full px-6 text-sm font-semibold text-slate-900 shadow-md transition-all hover:opacity-90 active:scale-95"
-													style={{ backgroundColor: accent }}
-												>
-													Solicitar este servicio
-												</a>
-											</div>
-										</div>
-
-										{/* Panel visual decorativo */}
-										<div
-											className="hidden h-full min-h-[520px] items-center justify-center md:flex lg:hidden xl:flex"
-											style={{ backgroundColor: accent + "0A" }}
+									<motion.div 
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.7 }}
+										className="mt-10"
+									>
+										<a
+											href="#inicio"
+											className="inline-flex h-10 items-center rounded-full px-6 text-sm font-semibold text-slate-900 shadow-md transition-all hover:opacity-90 active:scale-95"
+											style={{ backgroundColor: services[active].accent }}
 										>
-											<div
-												className="flex h-52 w-52 items-center justify-center rounded-full"
-												style={{
-													backgroundColor: accent + "15",
-													boxShadow: `0 0 90px 24px ${accent}20`,
-												}}
-											>
-												<div
-													className="flex h-28 w-28 items-center justify-center rounded-full"
-													style={{ backgroundColor: accent + "25" }}
-												>
-													<Icon
-														className="h-14 w-14"
-														style={{ color: accent }}
-													/>
-												</div>
-											</div>
-										</div>
-									</div>
+											Solicitar este servicio
+										</a>
+									</motion.div>
 								</div>
-							),
-						)}
-					</div>
+
+								{/* Panel visual decorativo */}
+								<div
+									className="hidden h-full min-h-[520px] items-center justify-center md:flex lg:hidden xl:flex"
+									style={{ backgroundColor: services[active].accent + "0A" }}
+								>
+									<motion.div
+										initial={{ opacity: 0, scale: 0.5 }}
+										animate={{ opacity: 1, scale: 1 }}
+										transition={{ delay: 0.4, type: "spring", stiffness: 100 }}
+										className="flex h-52 w-52 items-center justify-center rounded-full"
+										style={{
+											backgroundColor: services[active].accent + "15",
+											boxShadow: `0 0 90px 24px ${services[active].accent}20`,
+										}}
+									>
+										<div
+											className="flex h-28 w-28 items-center justify-center rounded-full"
+											style={{ backgroundColor: services[active].accent + "25" }}
+										>
+											{React.createElement(services[active].icon, {
+												className: "h-14 w-14",
+												style: { color: services[active].accent }
+											})}
+										</div>
+									</motion.div>
+								</div>
+							</div>
+						</motion.div>
+					</AnimatePresence>
 
 					{/* Navegación Interna Estandarizada */}
 					<div className="absolute bottom-6 md:bottom-8 left-6 md:left-8 right-6 md:right-8 z-30 flex items-center justify-between pointer-events-none gap-4">

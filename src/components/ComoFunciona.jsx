@@ -1,4 +1,5 @@
 import { Separator } from "@/components/ui/separator";
+import ScrollReveal from "./animations/ScrollReveal";
 
 const steps = [
 	{
@@ -22,18 +23,24 @@ function ComoFunciona() {
 	return (
 		<section className="overflow-hidden bg-[#1E3A14] px-6 py-16 lg:py-24 font-sans h-full flex flex-col justify-start">
 			<div className="w-full">
-				<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C4895E] mb-2">
-					¿Cómo funciona?
-				</p>
-				<h2 className="font-serif text-4xl lg:text-6xl font-medium text-white tracking-tight leading-tight">
-					Tres pasos,
-					<br />
-					<em className="not-italic text-[#C4895E]">sin complicaciones.</em>
-				</h2>
+				<ScrollReveal direction="down">
+					<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C4895E] mb-2">
+						¿Cómo funciona?
+					</p>
+					<h2 className="font-serif text-4xl lg:text-6xl font-medium text-white tracking-tight leading-tight">
+						Tres pasos,
+						<br />
+						<em className="not-italic text-[#C4895E]">sin complicaciones.</em>
+					</h2>
+				</ScrollReveal>
 
 				<div className="mt-14 space-y-0">
 					{steps.map(({ step, title, desc }, index) => (
-						<div key={step}>
+						<ScrollReveal 
+							key={step} 
+							direction="up" 
+							delay={0.2 + (index * 0.15)}
+						>
 							{index > 0 && (
 								<Separator className="bg-white/10 w-24 lg:w-32 my-2" />
 							)}
@@ -52,7 +59,7 @@ function ComoFunciona() {
 									</div>
 								</div>
 							</div>
-						</div>
+						</ScrollReveal>
 					))}
 				</div>
 			</div>

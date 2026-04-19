@@ -39,6 +39,7 @@ import Destacados from "./components/Destacados";
 import PaginaEvaluar from "./components/Evaluar/PaginaEvaluar";
 import SeccionComunidad from "./components/SeccionComunidad";
 import Contacto from "./components/Contacto";
+import ScrollReveal from "./components/animations/ScrollReveal";
 
 import Footer from "./components/Footer";
 import AdminDashboard from "./components/AdminDashboard";
@@ -2242,13 +2243,17 @@ function App() {
 				/>
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-0">
-					<PromocionBanners />
+					<ScrollReveal direction="left" delay={0.1}>
+						<PromocionBanners />
+					</ScrollReveal>
 					<Servicios />
 				</div>
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-0 bg-[#1E3A14]">
 					<ComoFunciona />
-					<Destacados destinos={destacadosData} />
+					<ScrollReveal direction="right" delay={0.2}>
+						<Destacados destinos={destacadosData} />
+					</ScrollReveal>
 				</div>
 
 				<SeccionComunidad />
