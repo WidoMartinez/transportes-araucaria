@@ -34,10 +34,10 @@ import PromocionBanners from "./components/PromocionBanners";
 // Hero eliminado - solo flujo express disponible
 import HeroExpress from "./components/HeroExpress";
 import Servicios from "./components/Servicios";
+import ComoFunciona from "./components/ComoFunciona";
 import Destacados from "./components/Destacados";
 import PaginaEvaluar from "./components/Evaluar/PaginaEvaluar";
-import SeccionTestimonios from "./components/Testimonios/SeccionTestimonios";
-import SeccionRedesSociales from "./components/SeccionRedesSociales";
+import SeccionComunidad from "./components/SeccionComunidad";
 import Contacto from "./components/Contacto";
 
 import Footer from "./components/Footer";
@@ -55,7 +55,6 @@ import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ad
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
-import fondovariantevan from "./assets/fondovariantevan.png";
 
 // --- Datos Iniciales y Lógica ---
 import { destinosBase, destacadosData } from "./data/destinos";
@@ -2151,13 +2150,7 @@ function App() {
 	}
 
 	return (
-		<div
-			className="min-h-screen text-foreground bg-cover bg-fixed"
-			style={{
-				backgroundImage: `url(${fondovariantevan})`,
-				backgroundPosition: "center 80%",
-			}}
-		>
+		<div className="min-h-screen text-foreground bg-[#F8F7F4]">
 			{loadingPrecios && (
 				<div className="fixed top-0 left-0 w-full h-full bg-black/50 z-[100] flex items-center justify-center text-white">
 					<LoaderCircle className="animate-spin mr-2" />
@@ -2248,12 +2241,17 @@ function App() {
 					configSillas={configSillas}
 				/>
 
-				<PromocionBanners />
+				<div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-0">
+					<PromocionBanners />
+					<Servicios />
+				</div>
 
-				<Servicios />
-				<Destacados destinos={destacadosData} />
-				<SeccionTestimonios />
-				<SeccionRedesSociales />
+				<div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-0 bg-[#1E3A14]">
+					<ComoFunciona />
+					<Destacados destinos={destacadosData} />
+				</div>
+
+				<SeccionComunidad />
 				<Contacto />
 			</main>
 

@@ -8,7 +8,7 @@ import corralcoImg from "../assets/corralco.jpg";
 import icalmaImg from "../assets/icalma.jpg";
 import lonquimayImg from "../assets/lonquimay.jpg";
 import conguillioImg from "../assets/conguilllio.jpg";
-import heroVan from "../assets/hero-van.png"; // Fix: Import heroVan
+import heroVan from "../assets/van-araucaria.png"; // Sustitución de furgoneta gris por versión premium con Araucarias
 
 /**
  * @typedef {object} PrecioVehiculo

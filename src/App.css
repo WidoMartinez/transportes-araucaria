@@ -1,3 +1,6 @@
+/* Importar tipografías del sistema de diseño Araucanía Executive Transfer */
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,700;9..144,1,400&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -8,6 +11,9 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	/* Tipografías del sistema de diseño */
+	--font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
+	--font-serif: "Fraunces", ui-serif, Georgia, serif;
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -40,105 +46,135 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
-	/* Paleta Chocolate personalizada */
-	--color-chocolate-50: #efebe9;
-	--color-chocolate-100: #d7ccc8;
-	--color-chocolate-200: #bcaaa4;
-	--color-chocolate-300: #a1887f;
-	--color-chocolate-400: #8d6e63;
-	--color-chocolate-500: #795548;
-	--color-chocolate-600: #6d4c41;
-	--color-chocolate-700: #5d4037;
-	--color-chocolate-800: #4e342e;
-	--color-chocolate-900: #3e2723;
-	--color-chocolate-950: #281916;
+	/* Paleta Araucanía — Verde Bosque + Café Madera */
+	--color-forest-50: #f0f4ec;
+	--color-forest-100: #d6e5cc;
+	--color-forest-200: #aecba0;
+	--color-forest-300: #7aab72;
+	--color-forest-400: #4d8d45;
+	--color-forest-500: #2D5219;
+	--color-forest-600: #1E3A14;
+	--color-forest-700: #162B0E;
+	--color-forest-800: #111F0A;
+	--color-forest-900: #0b1507;
+	--color-cafe-50: #f7f0eb;
+	--color-cafe-100: #edd9cd;
+	--color-cafe-200: #d9b49f;
+	--color-cafe-300: #C4895E;
+	--color-cafe-400: #B87D5A;
+	--color-cafe-500: #8C5E42;
+	--color-cafe-600: #7A5038;
+	--color-cafe-700: #6B4430;
+	--color-cafe-800: #4E3020;
+	--color-cafe-900: #321e13;
+
+	/* Alias de compatibilidad — los componentes Admin usan "chocolate".
+	   Se mapean a los tonos café para mantener coherencia visual sin reescribir nada. */
+	--color-chocolate-50: #f7f0eb;
+	--color-chocolate-100: #edd9cd;
+	--color-chocolate-200: #d9b49f;
+	--color-chocolate-300: #C4895E;
+	--color-chocolate-400: #B87D5A;
+	--color-chocolate-500: #8C5E42;
+	--color-chocolate-600: #7A5038;
+	--color-chocolate-700: #6B4430;
+	--color-chocolate-800: #4E3020;
+	--color-chocolate-900: #321e13;
+	--color-chocolate-950: #1e1109;
 }
 
 :root {
-	--radius: 0.625rem;
-	--background: oklch(0.98 0.01 240);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
+	--radius: 0.5rem;
+	--background: #ffffff;
+	--foreground: #1f2937;
+	--card: #ffffff;
+	--card-foreground: #1f2937;
+	--popover: #ffffff;
+	--popover-foreground: #1f2937;
 
-	/* Cambio a Chocolate - Reemplaza Azul */
-	--primary: #795548; /* Chocolate 500 */
+	/* Verde bosque como color primario - Araucanía Executive Transfer */
+	--primary: #1E3A14;
 	--primary-foreground: #ffffff;
 
-	--secondary: oklch(0.45 0.12 160);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.35 0.25 140); /* Verde más oscuro para mejor contraste */
-	--accent-foreground: oklch(0.98 0 0);
+	/* Café madera como color secundario */
+	--secondary: #8C5E42;
+	--secondary-foreground: #ffffff;
+	--muted: #f4f4f5;
+	--muted-foreground: #71717a;
+	/* Accent es el café claro usado en énfasis y badges */
+	--accent: #C4895E;
+	--accent-foreground: #ffffff;
 	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: #795548; /* Chocolate ring */
+	--border: #e4e4e7;
+	--input: #e4e4e7;
+	--ring: #1E3A14;
 
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.145 0 0);
-	--sidebar-primary: oklch(0.205 0 0);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.97 0 0);
-	--sidebar-accent-foreground: oklch(0.205 0 0);
-	--sidebar-border: oklch(0.922 0 0);
-	--sidebar-ring: oklch(0.708 0 0);
+	--sidebar: #1E3A14;
+	--sidebar-foreground: #ffffff;
+	--sidebar-primary: #8C5E42;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #2D5219;
+	--sidebar-accent-foreground: #ffffff;
+	--sidebar-border: rgba(255,255,255,0.1);
+	--sidebar-ring: #8C5E42;
 }
 
 .dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
+	--background: #111F0A;
+	--foreground: #f1f5f4;
+	--card: #1E3A14;
+	--card-foreground: #f1f5f4;
+	--popover: #1E3A14;
+	--popover-foreground: #f1f5f4;
 
-	/* Chocolate en modo oscuro */
-	--primary: #a1887f; /* Chocolate 300 (más claro para dark mode) */
-	--primary-foreground: #281916;
+	/* Modo oscuro: verde bosque como fondo, café madera como destacado */
+	--primary: #8C5E42;
+	--primary-foreground: #ffffff;
 
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.45 0.2 140);
-	--accent-foreground: oklch(0.98 0 0);
+	--secondary: #2D5219;
+	--secondary-foreground: #ffffff;
+	--muted: #1A3310;
+	--muted-foreground: #94a3b8;
+	--accent: #C4895E;
+	--accent-foreground: #ffffff;
 	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: #a1887f;
+	--border: rgba(255,255,255,0.08);
+	--input: rgba(255,255,255,0.12);
+	--ring: #8C5E42;
 
 	--chart-1: oklch(0.488 0.243 264.376);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
 	--chart-4: oklch(0.627 0.265 303.9);
 	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.205 0 0);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.556 0 0);
+	--sidebar: #111F0A;
+	--sidebar-foreground: #f1f5f4;
+	--sidebar-primary: #8C5E42;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #1E3A14;
+	--sidebar-accent-foreground: #f1f5f4;
+	--sidebar-border: rgba(255,255,255,0.06);
+	--sidebar-ring: #C4895E;
 }
 
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
+		box-sizing: border-box;
+	}
+	html {
+		scroll-behavior: smooth;
 	}
 	body {
 		@apply bg-background text-foreground;
-		/* Cambio: Fondo degradado sutilmente cálido en lugar de frío */
-		background-image: linear-gradient(to top, #f3f0f0, #ffffff);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		margin: 0;
 	}
 }
 
@@ -269,4 +305,61 @@
 
 .bg-white .btn-accent:hover {
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   PATRONES Y TEXTURAS DE FONDO
+   ============================================ */
+
+/* Patrón de malla técnica (grid) */
+.bg-pattern-mesh {
+	background-image: 
+		linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+	background-size: 45px 45px;
+}
+
+/* Patrón topográfico sutil */
+.bg-pattern-topo {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500' width='500' height='500'%3E%3Cpath d='M0 450 Q 100 400 200 450 T 400 400 T 500 450' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M0 400 Q 150 350 250 400 T 500 350' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M0 350 Q 100 300 200 350 T 400 300' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M0 300 Q 150 250 300 300 T 500 250' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M0 250 Q 100 200 200 250 T 400 200' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M0 200 Q 150 150 300 200 T 500 150' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3Cpath d='M0 150 Q 100 100 200 150 T 400 100' fill='none' stroke='white' stroke-width='0.5' opacity='0.07'/%3E%3C/svg%3E");
+	background-size: 600px 600px;
+}
+
+/* Patrón Premium que combina líneas de malla y topografía sutil */
+.bg-pattern-premium {
+    position: relative;
+    isolation: isolate;
+}
+
+.bg-pattern-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    
+    /* Malla técnica sutil (grid) */
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.bg-pattern-premium::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    
+    /* Líneas topográficas elegantes */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 800'%3E%3Cpath d='M0 700 Q 200 650 400 700 T 800 650' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3Cpath d='M0 600 Q 300 550 500 600 T 800 550' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3Cpath d='M0 500 Q 200 450 400 500 T 800 450' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3Cpath d='M0 400 Q 300 350 500 400 T 800 350' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3Cpath d='M0 300 Q 200 250 400 300 T 800 250' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3Cpath d='M0 200 Q 300 150 500 200 T 800 150' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3Cpath d='M0 100 Q 200 50 400 100 T 800 50' fill='none' stroke='white' stroke-width='0.5' opacity='0.08'/%3E%3C/svg%3E");
+    background-size: 800px 800px;
+    background-position: center;
+}
+
+/* Patrón de Iconos de Transporte (Autos y Aviones) */
+.bg-pattern-icons {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z' transform='translate(15, 15) scale(0.6)'/%3E%3Cpath d='M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z' transform='translate(70, 70) scale(0.8)'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 240px 240px;
 }

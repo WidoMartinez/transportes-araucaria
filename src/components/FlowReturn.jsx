@@ -609,12 +609,6 @@ function FlowReturn() {
 								>
 									📧 contacto@transportesaraucaria.cl
 								</a>
-								<a
-									href="tel:+56936643540"
-									className="text-chocolate-600 hover:underline"
-								>
-									📱 +569 3664 3540
-								</a>
 							</div>
 						</div>
 					</CardContent>

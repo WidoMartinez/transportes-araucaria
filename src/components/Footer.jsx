@@ -1,126 +1,162 @@
 import React from "react";
+import {
+	Phone,
+	Mail,
+	MapPin,
+	MessageCircle,
+	Facebook,
+	Instagram,
+} from "lucide-react";
 import logoBlanco from "../assets/logoblanco.png";
-import { Facebook, Instagram } from "lucide-react";
 
-// Componente interno para manejar los enlaces del footer de manera consistente
-const FooterLink = ({ href, children }) => (
-	<a
-		href={href}
-		className="text-muted-foreground hover:text-white transition-colors duration-300"
-	>
-		{children}
-	</a>
-);
-
-// Componente interno para los iconos de redes sociales
-const SocialIcon = ({ href, icon: Icon }) => (
-	<a
-		href={href}
-		target="_blank"
-		rel="noopener noreferrer"
-		className="text-muted-foreground hover:text-white transition-colors duration-300"
-	>
-		<Icon className="h-6 w-6" />
-	</a>
-);
+// Columnas de links del footer — preservando los del proyecto original
+const footerLinks = {
+	Servicios: [
+		{ label: "Traslado individual", href: "#servicios" },
+		{ label: "Grupos y eventos", href: "#servicios" },
+		{ label: "Tours a medida", href: "#tours" },
+		{ label: "Traslados privados", href: "/traslados" },
+	],
+	Destinos: [
+		{ label: "Pucón", href: "#destinos" },
+		{ label: "Villarrica", href: "#destinos" },
+		{ label: "Lican Ray", href: "#destinos" },
+		{ label: "Coñaripe", href: "#destinos" },
+		{ label: "Malalcahuello", href: "#destinos" },
+	],
+	Empresa: [
+		{ label: "Sobre nosotros", href: "#" },
+		{ label: "Conductores", href: "#" },
+		{ label: "Nuestra flota", href: "#" },
+		{ label: "Términos y condiciones", href: "#" },
+	],
+};
 
 function Footer() {
 	return (
-		<footer className="bg-chocolate-950 text-white">
-			<div className="container mx-auto px-4 py-16">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-					{/* Columna 1: Logo y Descripción */}
-					<div className="space-y-4">
-						<img
-							src={logoBlanco}
-							alt="Transportes Araucaria Logo"
-							className="h-20"
-						/>
-						<p className="text-muted-foreground">
-							Ofrecemos servicios de transporte privado de pasajeros con la más
-							alta calidad, seguridad y puntualidad en la Región de La
-							Araucanía.
+		<footer id="contacto" className="bg-[#111F0A] text-slate-400">
+			<div className="mx-auto max-w-7xl px-6 py-20">
+				<div className="grid gap-12 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
+					{/* Columna de marca */}
+					<div>
+						{/* Logo original con imagen PNG del proyecto */}
+						<a href="#inicio" className="flex items-center gap-3 text-white">
+							<img
+								src={logoBlanco}
+								alt="Transportes Araucaria"
+								className="h-16 object-contain"
+							/>
+						</a>
+
+						<p className="mt-5 max-w-xs text-sm leading-relaxed">
+							Servicio profesional de traslados privados entre el Aeropuerto
+							Araucanía y los principales destinos del sur de Chile. Puntualidad
+							y calidad garantizadas.
 						</p>
-					</div>
 
-					{/* Columna 2: Navegación */}
-					<div className="space-y-4">
-						<h3 className="font-semibold text-lg tracking-wider uppercase">
-							Navegación
-						</h3>
-						<nav className="flex flex-col space-y-2">
-							<FooterLink href="#servicios">Servicios</FooterLink>
-							<FooterLink href="#destinos">Destinos</FooterLink>
-							<FooterLink href="#contacto">Contacto</FooterLink>
-							<FooterLink href="#consultar-reserva">
-								Consultar Reserva
-							</FooterLink>
-							<FooterLink href="#">Términos y Condiciones</FooterLink>
-						</nav>
-					</div>
+						{/* Información de contacto */}
+						<ul className="mt-7 space-y-3 text-sm">
+							<li>
+								<a
+									href="mailto:contacto@transportesaraucaria.cl"
+									className="flex items-center gap-2.5 transition-colors hover:text-white"
+								>
+									<span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5">
+										<Mail className="h-3.5 w-3.5 text-[#8C5E42]" />
+									</span>
+									contacto@transportesaraucaria.cl
+								</a>
+							</li>
+							<li className="flex items-center gap-2.5">
+								<span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5">
+									<MapPin className="h-3.5 w-3.5 text-[#8C5E42]" />
+								</span>
+								Temuco, Región de La Araucanía
+							</li>
+						</ul>
 
-					{/* Columna 3: Contacto */}
-					<div className="space-y-4">
-						<h3 className="font-semibold text-lg tracking-wider uppercase">
-							Contacto
-						</h3>
-						<div className="flex flex-col space-y-2 text-muted-foreground">
-							<p>Temuco, Chile</p>
+						{/* Redes sociales */}
+						<div className="mt-6 flex gap-3">
 							<a
-								href="tel:+56936643540"
-								className="hover:text-white transition-colors duration-300"
-							>
-								+56 9 3664 3540
-							</a>
-							<a
-								href="mailto:contacto@transportesaraucaria.cl"
-								className="hover:text-white transition-colors duration-300"
-							>
-								contacto@transportesaraucaria.cl
-							</a>
-						</div>
-					</div>
-
-					{/* Columna 4: Redes Sociales */}
-					<div className="space-y-4">
-						<h3 className="font-semibold text-lg tracking-wider uppercase">
-							Síguenos
-						</h3>
-						<div className="flex space-x-4">
-							<SocialIcon
 								href="https://web.facebook.com/rutaaraucaria/"
-								icon={Facebook}
-							/>
-							<SocialIcon
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="Facebook"
+								className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 hover:text-white"
+							>
+								<Facebook className="h-4 w-4" />
+							</a>
+							<a
 								href="https://www.instagram.com/rutaaraucaria/"
-								icon={Instagram}
-							/>
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="Instagram"
+								className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 hover:text-white"
+							>
+								<Instagram className="h-4 w-4" />
+							</a>
+							<a
+								href="https://wa.me/56936643540"
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="WhatsApp"
+								className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 hover:text-white"
+							>
+								<MessageCircle className="h-4 w-4" />
+							</a>
 						</div>
-						<p className="text-muted-foreground text-sm">
-							Súmate a nuestra comunidad y comparte el viaje.
-						</p>
 					</div>
-				</div>
-			</div>
 
-			{/* Barra inferior del Footer */}
-			<div className="border-t border-chocolate-800">
-				<div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
+					{/* Columnas de links */}
+					{Object.entries(footerLinks).map(([title, links]) => (
+						<div key={title}>
+							<p className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-white font-serif">
+								{title}
+							</p>
+							<ul className="space-y-4 text-sm font-sans">
+								{links.map((link) => (
+									<li key={link.label}>
+										<a
+											href={link.href}
+											className="transition-all duration-300 hover:text-white hover:translate-x-1 inline-block"
+										>
+											{link.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+					))}
+				</div>
+
+				{/* Divisor */}
+				<div className="my-12 h-px bg-white/6" />
+
+				{/* Barra inferior */}
+				<div className="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-600">
 					<p>
-						&copy; {new Date().getFullYear()} Transportes Araucaria. Todos los
+						© {new Date().getFullYear()} Transportes Araucaria · Todos los
 						derechos reservados.
 					</p>
-					<p className="mt-4 md:mt-0">
-						Diseñado y desarrollado por{" "}
-						<a
-							href="https://anunciads.cl"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="hover:text-white font-semibold transition-colors duration-300"
-						>
-							anunciAds
+					<div className="flex items-center gap-6">
+						<a href="#" className="transition-colors hover:text-slate-400">
+							Política de privacidad
 						</a>
-					</p>
+						<a href="#" className="transition-colors hover:text-slate-400">
+							Términos de servicio
+						</a>
+						<span>
+							Diseñado por{" "}
+							<a
+								href="https://anunciads.cl"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="transition-colors hover:text-slate-400 font-medium"
+							>
+								anunciAds
+							</a>
+						</span>
+					</div>
 				</div>
 			</div>
 		</footer>
