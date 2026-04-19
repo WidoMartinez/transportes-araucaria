@@ -1,10 +1,7 @@
-// src/components/Testimonios/SeccionTestimonios.jsx
-// Sección pública de testimonios moderados por el administrador.
-// Muestra únicamente las evaluaciones que el admin ha aprobado para publicar.
-
 import { useState, useEffect } from "react";
 import { Star, Quote, UserCircle2 } from "lucide-react";
 import { getBackendUrl } from "../../lib/backend";
+import { motion } from "framer-motion";
 
 // Renderiza estrellas para una calificación
 function Estrellas({ valor }) {
@@ -31,6 +28,8 @@ function formatMesAnio(fechaStr) {
 	return fecha.toLocaleDateString("es-CL", { month: "long", year: "numeric" });
 }
 
+import { Card, CardContent } from "@/components/ui/card";
+
 function SeccionTestimonios() {
 	const apiUrl = getBackendUrl();
 	const [testimonios, setTestimonios] = useState([]);
@@ -55,82 +54,74 @@ function SeccionTestimonios() {
 		cargarTestimonios();
 	}, [apiUrl]);
 
-	// No mostrar nada mientras carga o si hay error o sin testimonios
 	if (cargando || error || testimonios.length === 0) {
 		return null;
 	}
 
 	return (
-		<section className="py-20 bg-transparent">
-			<div className="container mx-auto px-4">
+		<section className="py-24 bg-[#F8F7F4]">
+			<div className="container mx-auto px-6">
 				{/* Encabezado */}
-				<div className="text-center mb-14">
-					<div className="inline-block bg-amber-100 text-amber-800 text-sm font-semibold px-4 py-2 rounded-full mb-4">
-						⭐ Opiniones verificadas
-					</div>
-					<h2 className="text-4xl font-bold text-gray-900 mb-4">
-						Lo que dicen nuestros pasajeros
+				<div className="max-w-3xl mx-auto text-center mb-20">
+					<motion.div 
+						initial={{ opacity: 0, y: 10 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1E3A14]/5 border border-[#1E3A14]/10 text-[#1E3A14] text-[10px] font-bold tracking-widest uppercase mb-6"
+					>
+						<Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+						Opiniones Verificadas
+					</motion.div>
+					
+					<h2 className="font-serif text-4xl md:text-6xl font-medium text-[#1E3A14] mb-6 leading-tight">
+						Lo que dicen nuestros <em className="not-italic text-[#8C5E42]">pasajeros</em>
 					</h2>
-					<p className="text-xl text-gray-500 max-w-2xl mx-auto">
-						Experiencias reales de personas que viajaron con Transportes
-						Araucaria
+					<p className="text-lg text-slate-500 font-light leading-relaxed">
+						Experiencias reales de personas que confiaron en nuestro servicio de traslados locales.
 					</p>
 				</div>
 
 				{/* Grid de tarjetas */}
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{testimonios.map((t) => (
-						<div
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+					{testimonios.map((t, idx) => (
+						<motion.div
 							key={t.id}
-							className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow p-6 flex flex-col border border-amber-100"
+							initial={{ opacity: 0, y: 20 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							transition={{ delay: idx * 0.1 }}
 						>
-							{/* Comillas decorativas */}
-							<Quote className="h-8 w-8 text-amber-200 mb-3 flex-shrink-0" />
+							<Card className="h-full border-none shadow-[0_15px_50px_-20px_rgba(0,0,0,0.08)] bg-white rounded-[2rem] overflow-hidden hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.12)] transition-all duration-500">
+								<CardContent className="p-10 flex flex-col h-full">
+									<div className="mb-6 flex justify-between items-start">
+										<Quote className="h-10 w-10 text-[#8C5E42]/10" />
+										<Estrellas valor={t.calificacion} />
+									</div>
 
-							{/* Comentario */}
-							<p className="text-gray-700 text-base leading-relaxed flex-1 italic mb-4">
-								"{t.comentario}"
-							</p>
+									<p className="text-slate-600 text-lg leading-relaxed font-light italic mb-10 flex-1">
+										"{t.comentario}"
+									</p>
 
-							{/* Estrellas */}
-							<div className="mb-3">
-								<Estrellas valor={t.calificacion} />
-							</div>
-
-							{/* Divisor */}
-							<div className="border-t border-amber-100 pt-3">
-								{/* Avatar, nombre, ruta y fecha */}
-								<div className="flex items-center justify-between gap-2">
-									<div className="flex items-center gap-2">
-										{/* Avatar con inicial del nombre o ícono genérico */}
-										<div className="w-9 h-9 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
-											{t.nombre ? (
-												<span className="text-amber-700 font-bold text-sm uppercase">
-													{t.nombre.charAt(0)}
-												</span>
-											) : (
-												<UserCircle2 className="w-5 h-5 text-amber-400" />
-											)}
+									<div className="flex items-center gap-4 pt-8 border-t border-slate-50">
+										<div className="w-12 h-12 rounded-2xl bg-[#1E3A14]/5 flex items-center justify-center border border-[#1E3A14]/10">
+											<span className="text-[#1E3A14] font-bold text-lg uppercase">
+												{t.nombre?.charAt(0) || "U"}
+											</span>
 										</div>
-										<div>
-											<p className="font-semibold text-gray-900 text-sm leading-tight">
+										<div className="flex-1 min-w-0">
+											<p className="font-bold text-[#1E3A14] text-base truncate">
 												{t.nombre}
 											</p>
 											{t.origen && t.destino && (
-												<p className="text-xs text-amber-700 mt-0.5">
+												<p className="text-xs text-[#8C5E42] font-semibold uppercase tracking-wider mt-0.5">
 													{t.origen} → {t.destino}
 												</p>
 											)}
 										</div>
 									</div>
-									{t.fecha && (
-										<span className="text-xs text-gray-400 whitespace-nowrap capitalize">
-											{formatMesAnio(t.fecha)}
-										</span>
-									)}
-								</div>
-							</div>
-						</div>
+								</CardContent>
+							</Card>
+						</motion.div>
 					))}
 				</div>
 			</div>

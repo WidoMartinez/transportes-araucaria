@@ -1,4 +1,5 @@
-import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Facebook, Instagram, ExternalLink } from "lucide-react";
 
 // URLs oficiales de las redes sociales de Ruta Araucanía
@@ -6,97 +7,97 @@ const REDES_SOCIALES = [
 	{
 		nombre: "Facebook",
 		usuario: "@rutaaraucaria",
-		descripcion: "Publicamos noticias, ofertas y novedades de nuestros viajes.",
+		descripcion: "Noticias, ofertas y novedades de nuestros viajes.",
 		href: "https://web.facebook.com/rutaaraucaria/",
 		icon: Facebook,
-		colorFondo: "bg-[#1877F2]/10 hover:bg-[#1877F2]/20",
-		colorIcono: "text-[#1877F2]",
-		colorBorde: "border-[#1877F2]/20",
+		color: "#1877F2",
 	},
 	{
 		nombre: "Instagram",
 		usuario: "@rutaaraucaria",
-		descripcion: "Fotos, paisajes y momentos únicos de la Araucanía.",
+		descripcion: "Fotos, paisajes y momentos únicos de la región.",
 		href: "https://www.instagram.com/rutaaraucaria/",
 		icon: Instagram,
-		colorFondo: "bg-[#E1306C]/10 hover:bg-[#E1306C]/20",
-		colorIcono: "text-[#E1306C]",
-		colorBorde: "border-[#E1306C]/20",
+		color: "#E1306C",
 	},
 ];
-
-// Componente de tarjeta para cada red social
-const TarjetaRedSocial = ({
-	nombre,
-	usuario,
-	descripcion,
-	href,
-	icon,
-	colorFondo,
-	colorIcono,
-	colorBorde,
-}) => {
-	// Almacenar en variable con mayúscula para usarla como componente JSX
-	const Icon = icon;
-	return (
-		<a
-			href={href}
-			target="_blank"
-			rel="noopener noreferrer"
-			className={`flex items-start gap-4 p-5 rounded-2xl border transition-all duration-300 group cursor-pointer ${colorFondo} ${colorBorde}`}
-			aria-label={`Visitar ${nombre} de Transportes Araucaria`}
-		>
-			{/* Ícono */}
-			<div
-				className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center bg-white shadow-sm ${colorIcono}`}
-			>
-				<Icon className="w-6 h-6" />
-			</div>
-
-			{/* Texto */}
-			<div className="flex-1 min-w-0">
-				<div className="flex items-center gap-2">
-					<span className="font-semibold text-gray-800">{nombre}</span>
-					<ExternalLink className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-				</div>
-				<p className="text-sm text-gray-500 mt-0.5">{usuario}</p>
-				<p className="text-sm text-gray-600 mt-1 leading-snug">{descripcion}</p>
-			</div>
-		</a>
-	);
-};
 
 // Sección principal de redes sociales
 function SeccionRedesSociales() {
 	return (
-		<section className="w-full py-16 bg-amber-50/60" id="redes-sociales">
-			<div className="container mx-auto px-4 max-w-4xl">
+		<section className="py-24 bg-white" id="redes-sociales">
+			<div className="container mx-auto px-6 max-w-5xl">
 				{/* Encabezado */}
-				<div className="text-center mb-10">
-					<p className="text-sm font-semibold uppercase tracking-widest text-amber-700 mb-2">
+				<div className="max-w-3xl mx-auto text-center mb-16">
+					<motion.div 
+						initial={{ opacity: 0, y: 10 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8C5E42]/5 border border-[#8C5E42]/10 text-[#8C5E42] text-[10px] font-bold tracking-widest uppercase mb-6"
+					>
 						Comunidad
-					</p>
-					<h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-3">
-						Síguenos en redes sociales
+					</motion.div>
+					
+					<h2 className="font-serif text-4xl md:text-6xl font-medium text-[#1E3A14] mb-6 leading-tight">
+						Síguenos en <em className="not-italic text-[#8C5E42]">redes sociales</em>
 					</h2>
-					<p className="text-gray-500 max-w-lg mx-auto text-base">
-						Somos una empresa pequeña y en crecimiento. Cada follow nos ayuda a
-						llegar a más personas de La Araucanía.
+					<p className="text-lg text-slate-500 font-light leading-relaxed">
+						Únete a nuestra comunidad y descubre la belleza de La Araucanía a través de nuestros viajes.
 					</p>
 				</div>
 
 				{/* Tarjetas de redes sociales */}
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-					{REDES_SOCIALES.map((red) => (
-						<TarjetaRedSocial key={red.nombre} {...red} />
-					))}
+				<div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-4xl mx-auto">
+					{REDES_SOCIALES.map((red, idx) => {
+						const Icon = red.icon;
+						return (
+							<motion.div
+								key={red.nombre}
+								initial={{ opacity: 0, y: 20 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								transition={{ delay: idx * 0.1 }}
+							>
+								<a
+									href={red.href}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="block group"
+								>
+									<Card className="border-none shadow-[0_15px_50px_-20px_rgba(0,0,0,0.08)] bg-[#F8F7F4]/50 rounded-[2rem] overflow-hidden group-hover:bg-white group-hover:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.12)] transition-all duration-500 border border-transparent group-hover:border-slate-100">
+										<CardContent className="p-8 flex items-center gap-6">
+											<div 
+												className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white shadow-sm transition-transform duration-500 group-hover:scale-110"
+												style={{ color: red.color }}
+											>
+												<Icon className="w-8 h-8" />
+											</div>
+											
+											<div className="flex-1 min-w-0">
+												<div className="flex items-center justify-between">
+													<h3 className="font-bold text-[#1E3A14] text-xl">{red.nombre}</h3>
+													<ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-[#8C5E42] transition-colors" />
+												</div>
+												<p className="text-[#8C5E42] text-sm font-semibold tracking-wide uppercase mt-0.5">{red.usuario}</p>
+												<p className="text-slate-500 text-sm mt-2 font-light leading-snug">{red.descripcion}</p>
+											</div>
+										</CardContent>
+									</Card>
+								</a>
+							</motion.div>
+						);
+					})}
 				</div>
 
-				{/* Mensaje de cierre orgánico */}
-				<p className="text-center text-gray-400 text-sm mt-8">
-					✨ Compartimos experiencias reales de nuestros pasajeros y los
-					hermosos paisajes de la Araucanía.
-				</p>
+				{/* Mensaje de cierre */}
+				<motion.p 
+					initial={{ opacity: 0 }}
+					whileInView={{ opacity: 1 }}
+					viewport={{ once: true }}
+					className="text-center text-slate-400 text-sm mt-16 font-light"
+				>
+					✨ Compartimos experiencias reales y los paisajes más hermosos del sur de Chile.
+				</motion.p>
 			</div>
 		</section>
 	);

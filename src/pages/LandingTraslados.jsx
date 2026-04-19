@@ -31,7 +31,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import logoColor from "../assets/logo.png";
 import fondoTraslados from "../assets/fondotraslados.png";
 import fondomovil from "../assets/fondomovil.png";
-import fondovariante from "../assets/fondovariante.png";
 import { getBackendUrl } from "../lib/backend";
 import { cn } from "@/lib/utils";
 
@@ -555,15 +554,7 @@ function LandingTraslados() {
 			</section>
 
 			{/* ========== WRAPPER CON FONDO VARIANTE ========== */}
-			<div
-				className="relative bg-cover bg-center"
-				style={{
-					backgroundImage: `url(${fondovariante})`,
-					backgroundAttachment: "fixed",
-				}}
-			>
-				{/* Overlay oscuro para que el texto blanco sea legible sobre el fondo claro */}
-				<div className="absolute inset-0 bg-[#1a3317]/75 pointer-events-none" />
+			<div className="relative bg-[#1E3A14]">
 
 				{/* ========== TIPOS DE TRASLADO ========== */}
 				<section className="relative z-10 py-16 bg-white/5">
