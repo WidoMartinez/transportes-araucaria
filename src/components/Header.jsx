@@ -1,31 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	Tooltip,
+	TooltipTrigger,
+	TooltipContent,
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
 	Phone,
 	MessageCircle,
 	RotateCcw,
 	Menu,
-	X,
 	MapPin,
 	Calendar,
 	Briefcase,
 	Star,
+	ChevronRight,
 } from "lucide-react";
+import logo from "../assets/logo.png";
+import AvatarDropdown from "./AvatarDropdown";
 import {
 	motion,
-	AnimatePresence,
 	useScroll,
 	useMotionValueEvent,
 } from "framer-motion";
 import {
 	Sheet,
 	SheetContent,
-	SheetHeader,
 	SheetTitle,
 	SheetTrigger,
 	SheetClose,
 } from "@/components/ui/sheet";
-import logo from "../assets/logo.png";
 import { cn } from "@/lib/utils";
 import WhatsAppInterceptModal from "./WhatsAppInterceptModal";
 import { usePricingData } from "../hooks/usePricingData";
@@ -53,36 +59,37 @@ const trackWhatsAppClick = () => {
 const MENU_ITEMS = [
 	{ label: "Inicio", href: "#inicio", icon: Star },
 	{ label: "Servicios", href: "#servicios", icon: Briefcase },
+	{ label: "Traslados", href: "/traslados", icon: MapPin },
+	{ label: "Oportunidades", href: "/oportunidades", icon: Star },
 	{ label: "Destinos", href: "#destinos", icon: MapPin },
-	{ label: "Tours", href: "#tours", icon: Calendar },
-	{ label: "Temporada", href: "#destacados", icon: Star },
-	{
-		label: "Traslados Privados",
-		href: "/traslados",
-		external: true,
-		icon: Briefcase,
-	},
-	{
-		label: "Consultar Reserva",
-		href: "#consultar-reserva",
-		highlight: true,
-		icon: Calendar,
-	},
-	{
-		label: "Pagar con Código",
-		href: "#pagar-con-codigo",
-		highlight: true,
-		icon: Briefcase,
-	},
 	{ label: "Contacto", href: "#contacto", icon: Phone },
 ];
 
+// Detecta si un href corresponde a la ruta actual
+const matchesRoute = (href) => {
+	if (!href.startsWith("/")) return false;
+	return window.location.pathname === href || window.location.pathname.startsWith(href + "/");
+};
+
 function Header() {
+	const HeaderAnimado = motion.header;
+	const ContenedorAnimado = motion.div;
 	const [isScrolled, setIsScrolled] = useState(false);
 	const [isUpdating, setIsUpdating] = useState(false);
+	// Flag: solo detectar sección activa después de que el usuario haya scrolleado
+	const hasScrolled = useRef(false);
 	const [showModal, setShowModal] = useState(false);
 	const [whatsappInterceptEnabled, setWhatsappInterceptEnabled] =
 		useState(true);
+	// href del ítem activo (sección visible o ruta actual)
+	// Inicia en null para que ningún ítem esté marcado hasta que el IntersectionObserver detecte la sección visible
+	const [activeHref, setActiveHref] = useState(() => {
+		const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+		const routeItem = MENU_ITEMS.find(
+			(item) => item.href.startsWith("/") && pathname === item.href,
+		);
+		return routeItem ? routeItem.href : null;
+	});
 	const { scrollY } = useScroll();
 	const { discountOnline } = usePricingData();
 
@@ -95,16 +102,13 @@ function Header() {
 				if (cachedValue !== null) {
 					setWhatsappInterceptEnabled(cachedValue === "true");
 				}
-
 				// Consultar al backend para tener el valor más actualizado
 				const response = await fetch(
 					`${getBackendUrl()}/api/configuracion/whatsapp-intercept`,
 				);
-
 				if (response.ok) {
 					const data = await response.json();
 					setWhatsappInterceptEnabled(data.activo);
-					// Actualizar caché
 					localStorage.setItem(
 						"whatsapp_intercept_activo",
 						data.activo.toString(),
@@ -115,22 +119,53 @@ function Header() {
 					"Error cargando configuración WhatsApp intercept:",
 					error,
 				);
-				// En caso de error, mantener valor por defecto o del caché
 			}
 		};
-
 		cargarConfiguracion();
 	}, []);
 
-	// Detectar scroll para cambiar estilo
+	// Detectar scroll para cambiar estilo del header y habilitar detección de sección activa
 	useMotionValueEvent(scrollY, "change", (latest) => {
-		const previous = scrollY.getPrevious() || 0;
-		if (latest > 50 && !isScrolled) {
-			setIsScrolled(true);
-		} else if (latest <= 50 && isScrolled) {
+		if (latest > 20) {
+			hasScrolled.current = true;
+			if (!isScrolled) setIsScrolled(true);
+		} else if (latest <= 20 && isScrolled) {
 			setIsScrolled(false);
 		}
 	});
+
+	// Detectar sección activa con IntersectionObserver (solo para hash links)
+	useEffect(() => {
+		// Si estamos en una ruta específica, no observar secciones
+		const pathname = window.location.pathname;
+		const isRoutePage = MENU_ITEMS.some(
+			(item) => item.href.startsWith("/") && pathname === item.href,
+		);
+		if (isRoutePage) return;
+
+		// Obtener los ids de las secciones con hash
+		const hashItems = MENU_ITEMS.filter((item) => item.href.startsWith("#"));
+		const sectionIds = hashItems.map((item) => item.href.slice(1));
+
+		const observers = [];
+		sectionIds.forEach((id) => {
+			const el = document.getElementById(id);
+			if (!el) return;
+			const observer = new IntersectionObserver(
+				([entry]) => {
+					// Solo marcar activo si el usuario ya hizo scroll (evita que #inicio quede marcado al cargar)
+					if (entry.isIntersecting && hasScrolled.current) {
+						setActiveHref(`#${id}`);
+					}
+				},
+				{ rootMargin: "-40% 0px -50% 0px", threshold: 0 },
+			);
+			observer.observe(el);
+			observers.push(observer);
+		});
+
+		return () => observers.forEach((o) => o.disconnect());
+	}, []);
 
 	const handleUpdatePricing = async () => {
 		setIsUpdating(true);
@@ -148,24 +183,19 @@ function Header() {
 		}
 	};
 
-	// Handlers para modal de intercepción
+	// Handlers para modal de intercepción WhatsApp
 	const handleWhatsAppClick = (e) => {
 		e.preventDefault();
 		trackWhatsAppClick();
-
-		// Si el modal está desactivado, abrir WhatsApp directamente
 		if (!whatsappInterceptEnabled) {
 			window.open("https://wa.me/56936643540", "_blank", "noopener,noreferrer");
 			return;
 		}
-
-		// Si está activado, mostrar el modal
 		setShowModal(true);
 	};
 
 	const handleReserveFromModal = () => {
 		setShowModal(false);
-		// Scroll a la sección de reservas
 		const reservaSection = document.querySelector("#inicio");
 		if (reservaSection) {
 			reservaSection.scrollIntoView({ behavior: "smooth" });
@@ -176,227 +206,214 @@ function Header() {
 		setShowModal(false);
 	};
 
-	// Variantes para animaciones
-	const navItemVariants = {
-		hidden: { opacity: 0, y: -10 },
-		visible: (i) => ({
-			opacity: 1,
-			y: 0,
-			transition: {
-				delay: i * 0.05,
-				duration: 0.3,
-				type: "spring",
-				stiffness: 300,
-			},
-		}),
-	};
-
-	const mobileItemVariants = {
-		hidden: { opacity: 0, x: -20 },
-		visible: (i) => ({
-			opacity: 1,
-			x: 0,
-			transition: {
-				delay: i * 0.1,
-				duration: 0.4,
-				ease: "easeOut",
-			},
-		}),
-	};
-
 	return (
 		<>
-			<motion.header
+			<HeaderAnimado
 				className={cn(
-					"fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
+					// z-40: los Popovers y Dialogs de Radix usan Portal con z-50, así quedan siempre encima del nav
+					"fixed inset-x-0 top-0 z-40 transition-all duration-300",
 					isScrolled
-						? "bg-[#2a4e25]/95 backdrop-blur-md shadow-sm border-[#1a3317]/30 py-0.5 md:py-1.5"
-						: "bg-[#2a4e25] backdrop-blur-sm brder-transparent py-1.5 md:py-3",
+						? "bg-forest-600/95 shadow-lg shadow-black/20 backdrop-blur-md"
+						: "bg-forest-600",
 				)}
 				initial={{ y: -100 }}
 				animate={{ y: 0 }}
-				transition={{ duration: 0.5 }}
+				transition={{ duration: 0.4 }}
 			>
-				<div className="container mx-auto px-4 md:px-6 relative">
-					<div className="flex justify-between items-center">
-						{/* LOGO SECTION */}
-						<div className="flex items-center gap-4 relative z-50">
-							<motion.img
-								src={logo}
-								alt="Transportes Araucaria"
-								className={cn(
-									"transition-all duration-300 object-contain brightness-0 invert",
-									isScrolled ? "h-10 md:h-12" : "h-16 md:h-16 lg:h-20",
-								)}
-								layout
-							/>
+				<nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+					{/* Logo original con imagen PNG del proyecto */}
+					<a href="#inicio" className="flex items-center gap-3 text-white z-50">
+						<img
+							src={logo}
+							alt="Transportes Araucaria"
+							className={cn(
+								"transition-all duration-300 object-contain brightness-0 invert",
+								isScrolled ? "h-16 md:h-20" : "h-24 md:h-28",
+							)}
+						/>
+					</a>
+					{/* Botón de actualización de precios — invisible, accesible solo por teclado/admin */}
+					<button
+						onClick={handleUpdatePricing}
+						disabled={isUpdating}
+						className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:p-2 focus:rounded focus:bg-white/10 focus:text-white/60"
+						title="Actualizar precios"
+						tabIndex={-1}
+					>
+						<RotateCcw size={14} className={isUpdating ? "animate-spin" : ""} />
+					</button>
 
-							{/* Hidden Update Button */}
-							<button
-								onClick={handleUpdatePricing}
-								disabled={isUpdating}
-								className="opacity-0 hover:opacity-100 focus:opacity-100 transition-opacity p-2 rounded-full hover:bg-gray-100 text-gray-400 absolute -right-8 top-1/2 -translate-y-1/2"
-								title="Actualizar precios (Ctrl+Shift+U)"
-							>
-								<RotateCcw
-									size={16}
-									className={isUpdating ? "animate-spin" : ""}
-								/>
-							</button>
-						</div>
-
-						{/* DESKTOP NAVIGATION */}
-						<nav className="hidden xl:flex items-center space-x-1">
-							{MENU_ITEMS.map((item, i) => (
-								<motion.a
-									key={item.href}
-									href={item.href}
-									custom={i}
-									initial="hidden"
-									animate="visible"
-									variants={navItemVariants}
-									className={cn(
-										"relative px-4 py-2 text-sm font-medium rounded-full transition-colors group",
-										item.highlight
-											? "text-green-300 hover:text-white hover:bg-white/10"
-											: "text-white/80 hover:text-white",
-									)}
-								>
-									{/* Pill Hover Effect Background */}
-									<span className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 -z-10 scale-90 group-hover:scale-100" />
-
-									<span className="relative z-10 flex items-center gap-2">
-										{item.label}
-									</span>
-								</motion.a>
-							))}
-
-							{/* CTA Buttons */}
-							<motion.div
-								className="flex items-center space-x-3 ml-4 pl-4 border-l border-white/20"
-								initial={{ opacity: 0, x: 20 }}
-								animate={{ opacity: 1, x: 0 }}
-								transition={{ delay: 0.5 }}
-							>
-								<a
-									href="tel:+56936643540"
-									className="text-white hover:text-green-200 transition-colors p-2 rounded-full hover:bg-white/10"
-									title="Llamar ahora"
-								>
-									<Phone className="w-5 h-5" />
-								</a>
-
-								<motion.div
-									whileHover={{ scale: 1.05 }}
-									whileTap={{ scale: 0.95 }}
-								>
-									<Button
-										onClick={handleWhatsAppClick}
-										className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 shadow-lg shadow-green-600/20"
-									>
-										<MessageCircle className="w-4 h-4 mr-2" />
-										WhatsApp
-									</Button>
-								</motion.div>
-							</motion.div>
-						</nav>
-
-						{/* MOBILE MENU TRIGGER */}
-						<div className="xl:hidden flex items-center gap-4">
-							<Button
-								size="icon"
-								onClick={handleWhatsAppClick}
-								className="md:hidden bg-green-600 hover:bg-green-700 rounded-full h-10 w-10 shadow-md"
-							>
-								<MessageCircle className="w-5 h-5 text-white" />
-							</Button>
-
-							<Sheet>
-								<SheetTrigger asChild>
-									<Button
-										variant="ghost"
-										size="icon"
+					{/* Desktop Navigation — estilo ruta-araucaria: texto gris que ilumina al hover, activo con color del proyecto */}
+					<ul className="hidden items-center gap-7 xl:flex">
+						{MENU_ITEMS.filter((item) => !item.highlight).map((link) => {
+							const isActive = activeHref === link.href || matchesRoute(link.href);
+							return (
+								<li key={link.href}>
+									<a
+										href={link.href}
 										className={cn(
-											"h-10 w-10 rounded-full transition-colors text-white",
-											isScrolled ? "hover:bg-white/20" : "hover:bg-white/20",
+											"relative text-[13px] tracking-wide no-underline transition-colors duration-200",
+											isActive
+												? "text-[#C4895E] font-semibold"
+												: "text-white/55 font-medium hover:text-white",
 										)}
 									>
-										<Menu className="w-7 h-7" />
-									</Button>
-								</SheetTrigger>
-								<SheetContent
-									side="right"
-									className="w-[300px] sm:w-[400px] p-0 flex flex-col border-l-0 shadow-2xl"
-								>
-									{/* Mobile Header */}
-									<div className="p-6 border-b bg-gray-50/50 backdrop-blur-sm">
-										<SheetTitle className="text-left text-xl font-bold flex items-center gap-2 text-primary">
-											<img src={logo} alt="Logo" className="h-10 w-auto" />
-											Menú
-										</SheetTitle>
-									</div>
+										{link.label}
+									</a>
+								</li>
+							);
+						})}
+					</ul>
 
-									{/* Mobile Nav Links */}
-									<div className="flex-1 overflow-y-auto py-6 px-4">
-										<nav className="flex flex-col space-y-2">
-											{MENU_ITEMS.map((item, i) => (
-												<SheetClose key={item.href} asChild>
-													<motion.a
-														href={item.href}
-														custom={i}
-														initial="hidden"
-														animate="visible"
-														variants={mobileItemVariants}
-														className={cn(
-															"flex items-center gap-4 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200",
-															item.highlight
-																? "bg-primary/5 text-primary hover:bg-primary/10"
-																: "text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:translate-x-1",
-														)}
-													>
+					{/* Desktop CTAs — grupo reducido, mayoría en AvatarDropdown */}
+					<div className="hidden xl:flex items-center gap-2">
+
+
+						{/* WhatsApp — botón principal */}
+						<ContenedorAnimado whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+							<Button
+								onClick={handleWhatsAppClick}
+								className="rounded-full bg-[#8C5E42] text-white hover:bg-[#7A5038] shadow shadow-[#8C5E42]/30 hover:shadow-md hover:shadow-[#8C5E42]/40 transition-all font-semibold"
+								size="sm"
+							>
+								<MessageCircle className="w-4 h-4" />
+								WhatsApp
+							</Button>
+						</ContenedorAnimado>
+
+						{/* Separador vertical + accesos rápidos */}
+						<Separator orientation="vertical" className="h-5 bg-white/15 mx-1" />
+						<AvatarDropdown />
+					</div>
+
+					{/* Mobile Menu Trigger */}
+					<div className="xl:hidden flex items-center gap-2">
+						{/* Botón WhatsApp compacto en mobile */}
+						<Button
+							onClick={handleWhatsAppClick}
+							size="icon"
+							className="flex h-9 w-9 rounded-full bg-[#8C5E42] text-white hover:bg-[#7A5038] shadow-md shadow-[#8C5E42]/30 transition-all md:hidden"
+							aria-label="WhatsApp"
+						>
+							<MessageCircle className="w-4 h-4" />
+						</Button>
+						<div className="hidden md:block">
+							<AvatarDropdown />
+						</div>
+						<Sheet>
+							<SheetTrigger asChild>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="rounded-lg text-white hover:bg-white/10 hover:text-white"
+									aria-label="Abrir menú"
+								>
+									<Menu className="h-5 w-5" />
+								</Button>
+							</SheetTrigger>
+							<SheetContent
+								side="right"
+								className="w-[300px] sm:w-[360px] p-0 flex flex-col border-l-0 shadow-2xl bg-forest-600 text-white"
+							>
+								{/* Cabecera del panel mobile con logo */}
+								<div className="p-6 pb-4">
+									<SheetTitle className="text-left flex items-center gap-3 text-white">
+										<img
+											src={logo}
+											alt="Transportes Araucaria"
+											className="h-10 brightness-0 invert"
+										/>
+									</SheetTitle>
+								</div>
+
+								<Separator className="bg-white/10" />
+
+								{/* Links de navegación mobile */}
+								<div className="flex-1 overflow-y-auto py-4 px-3">
+									<p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/35 mb-2">
+										Navegación
+									</p>
+									<nav className="flex flex-col space-y-0.5">
+										{MENU_ITEMS.map((item) => (
+											<SheetClose key={item.href} asChild>
+												<a
+													href={item.href}
+													className={cn(
+														"group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+														item.highlight
+															? "bg-[#8C5E42]/15 text-[#C4895E] hover:bg-[#8C5E42]/25"
+															: "text-white/70 hover:bg-white/8 hover:text-white",
+													)}
+												>
+													<span className="flex items-center gap-3">
 														<div
 															className={cn(
-																"p-2 rounded-lg",
+																"flex h-8 w-8 items-center justify-center rounded-lg",
 																item.highlight
-																	? "bg-primary/10 text-primary"
-																	: "bg-gray-100 text-gray-500",
+																	? "bg-[#8C5E42]/20 text-[#C4895E]"
+																	: "bg-white/8 text-white/50 group-hover:bg-white/12 group-hover:text-white/80",
 															)}
 														>
-															<item.icon className="w-5 h-5" />
+															<item.icon className="w-3.5 h-3.5" />
 														</div>
 														{item.label}
-													</motion.a>
-												</SheetClose>
-											))}
-										</nav>
-									</div>
+													</span>
+													{item.highlight && (
+														<Badge
+															variant="secondary"
+															className="text-[9px] px-1.5 py-0.5 bg-[#8C5E42]/20 text-[#C4895E] border-0 font-semibold"
+														>
+															CTA
+														</Badge>
+													)}
+													{!item.highlight && (
+														<ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40 transition-colors" />
+													)}
+												</a>
+											</SheetClose>
+										))}
 
-									{/* Mobile Footer Actions */}
-									<div className="p-6 border-t bg-gray-50 space-y-3">
-										<a
-											href="tel:+56936643540"
-											className="flex items-center justify-center w-full gap-2 p-3 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-										>
-											<Phone className="w-4 h-4" />
-											+56 9 3664 3540
-										</a>
+										{/* Enlaces de gestión sutiles solicitado por el usuario */}
+										<div className="pt-4 mt-2 border-t border-white/5">
+											<p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/25 mb-1">
+												Mi Reserva
+											</p>
+											<SheetClose asChild>
+												<a href="#consultar-reserva" className="flex items-center gap-3 px-3 py-2 text-xs text-white/60 hover:text-[#C4895E] transition-colors">
+													<RotateCcw className="w-3 h-3" />
+													Consultar reserva
+												</a>
+											</SheetClose>
+											<SheetClose asChild>
+												<a href="#pagar-con-codigo" className="flex items-center gap-3 px-3 py-2 text-xs text-white/60 hover:text-[#C4895E] transition-colors">
+													<Briefcase className="w-3 h-3" />
+													Pagar con código
+												</a>
+											</SheetClose>
+										</div>
+									</nav>
+								</div>
 
-										<button
-											onClick={handleWhatsAppClick}
-											className="flex items-center justify-center w-full gap-2 p-3 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all"
-										>
-											<MessageCircle className="w-5 h-5" />
-											Chatear por WhatsApp
-										</button>
-									</div>
-								</SheetContent>
-							</Sheet>
-						</div>
+								<Separator className="bg-white/10" />
+
+								{/* Acciones rápidas en el footer del panel mobile */}
+								<div className="p-4 bg-forest-700 space-y-2">
+
+									<Button
+										onClick={handleWhatsAppClick}
+										className="w-full rounded-xl bg-[#8C5E42] text-white hover:bg-[#7A5038] font-semibold shadow-lg shadow-[#8C5E42]/20 transition-all"
+									>
+										<MessageCircle className="w-5 h-5" />
+										Chatear por WhatsApp
+									</Button>
+								</div>
+							</SheetContent>
+						</Sheet>
 					</div>
-				</div>
-			</motion.header>
+				</nav>
+			</HeaderAnimado>
 
-			{/* Modal de Intercepción WhatsApp - Fuera del header para evitar problemas de stacking context por transform */}
+			{/* Modal de Intercepción WhatsApp — fuera del header para evitar problemas de stacking */}
 			<WhatsAppInterceptModal
 				isOpen={showModal}
 				onClose={handleCloseModal}
