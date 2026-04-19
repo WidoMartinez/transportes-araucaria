@@ -4348,7 +4348,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																	Cliente
 																</>
 															) : (
-																"Cotizador"
+																reserva?.source || "Reserva Express"
 															)
 														}
 													</Badge>
@@ -7734,7 +7734,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 													Cliente
 												</Badge>
 											) : (
-												<Badge variant="secondary">Cotizador</Badge>
+												<Badge variant="secondary">{historialCliente.cliente.source || "Invitado"}</Badge>
 											)}
 										</div>
 									</div>

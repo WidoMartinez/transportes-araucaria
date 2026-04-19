@@ -270,10 +270,12 @@ function FlowReturn() {
 						);
 					}
 
-					// Usar sessionStorage para evitar duplicados en recargas
-					const conversionKey = `flow_conversion_${transactionId}`;
+					// Clave universal de sessionStorage para deduplicación
+					const conversionKey = id
+						? `conversion_sent_${id}`
+						: `flow_conversion_${transactionId}`;
 
-					if (!sessionStorage.getItem(conversionKey)) {
+					if (!sessionStorage.getItem(conversionKey) && !sessionStorage.getItem(`flow_conversion_${transactionId}`)) {
 						// Extraer datos de usuario de los parámetros URL para conversiones avanzadas
 						const urlParams = new URLSearchParams(window.location.search);
 
@@ -362,6 +364,10 @@ function FlowReturn() {
 						);
 						window.gtag("event", "conversion", conversionData);
 						sessionStorage.setItem(conversionKey, "true");
+						if (id) {
+							sessionStorage.setItem(`flow_conversion_express_${id}`, "true"); // legacy express compatibility
+						}
+						sessionStorage.setItem(`flow_conversion_${transactionId}`, "true"); // legacy flow compatibility
 					} else {
 						console.log(
 							"ℹ️ [FlowReturn] Conversión ya registrada para esta sesión:",

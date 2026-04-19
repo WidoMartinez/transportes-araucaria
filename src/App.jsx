@@ -617,9 +617,11 @@ function App() {
 					const transactionId = reservaId
 						? `${reservaId}_${uniqueSuffix}`
 						: `exp_${Date.now()}`;
-					const conversionKey = `flow_conversion_express_${transactionId}`;
+					const conversionKey = reservaId 
+						? `conversion_sent_${reservaId}` 
+						: `flow_conversion_express_${transactionId}`;
 
-					if (sessionStorage.getItem(conversionKey)) {
+					if (sessionStorage.getItem(conversionKey) || sessionStorage.getItem(`flow_conversion_express_${transactionId}`)) {
 						console.log(
 							"ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.",
 						);
@@ -727,7 +729,8 @@ function App() {
 
 					// Marcar como enviada para evitar duplicados
 					sessionStorage.setItem(conversionKey, "true");
-					// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también por ID de reserva
+					// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también con la clave antigua
+					sessionStorage.setItem(`flow_conversion_express_${transactionId}`, "true");
 					if (reservaId) {
 						sessionStorage.setItem(
 							`flow_conversion_express_${reservaId}`,

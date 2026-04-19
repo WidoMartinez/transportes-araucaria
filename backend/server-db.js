@@ -13924,30 +13924,76 @@ const startServer = async () => {
 			}
 
 			// Determinar el monto pagado
-			const montoPagado =
+			const montoActual =
 				Number(paymentData.transaction_amount) ||
 				Number(metadata.amount) ||
 				Number(reserva.totalConDescuento) ||
 				Number(reserva.precio) ||
 				0;
 
-			// Actualizar estado de la reserva
+			// --- LÓGICA DE DIVISIÓN DE PAGO (Split Payment) portado desde Flow ---
+			let montoIda = montoActual;
+			let montoVuelta = 0;
+			let reservaHija = null;
+
+			if (reserva.tramoHijoId) {
+				try {
+					reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
+					if (reservaHija) {
+						console.log(`🔄 [MP-webhook] Calculando división de pago para tramos vinculados (Ida/Vuelta)...`);
+						const totalIda = parseFloat(reserva.totalConDescuento || 0);
+						const totalVuelta = parseFloat(reservaHija.totalConDescuento || 0);
+						const totalConjunto = totalIda + totalVuelta;
+
+						if (totalConjunto > 0) {
+							const factorIda = totalIda / totalConjunto;
+							montoIda = Math.round(montoActual * factorIda);
+							montoVuelta = montoActual - montoIda;
+						} else {
+							montoIda = Math.round(montoActual / 2);
+							montoVuelta = montoActual - montoIda;
+						}
+					}
+				} catch (errSplit) {
+					console.error("⚠️ [MP-webhook] Error calculando split de pago:", errSplit.message);
+				}
+			}
+
+			// Actualizar estado de la reserva Padre (Ida)
 			// Nota: saldoPendiente se pone en 0 porque el pago fue aprobado y es por el total
-			await Reserva.update(
-				{
-					estadoPago: "pagado",
-					estado: "confirmada",
-					pagoMonto: montoPagado,
-					saldoPendiente: 0,
-					metodoPago: "mercadopago",
-					referenciaPagoExterno: String(paymentId),
-				},
-				{ where: { id: reservaId } },
-			);
+			await reserva.update({
+				estadoPago: "pagado",
+				estado: "confirmada",
+				pagoMonto: montoIda,
+				saldoPendiente: 0,
+				metodoPago: "mercadopago",
+				referenciaPagoExterno: String(paymentId),
+				abonoPagado: true,
+				saldoPagado: true,
+			});
 
 			console.log(
-				`✅ [MP-webhook] Reserva ${reservaId} actualizada a PAGADA. Monto: ${montoPagado}`,
+				`✅ [MP-webhook] Reserva Padre ${reservaId} actualizada a PAGADA. Monto: ${montoIda}`,
 			);
+
+			// Actualizar estado de la reserva Hija (Vuelta)
+			if (reservaHija && montoVuelta > 0) {
+				try {
+					await reservaHija.update({
+						estadoPago: "pagado",
+						estado: "confirmada",
+						pagoMonto: montoVuelta,
+						saldoPendiente: 0,
+						metodoPago: "mercadopago",
+						referenciaPagoExterno: String(paymentId),
+						abonoPagado: true,
+						saldoPagado: true,
+					});
+					console.log(`✅ [MP-webhook] Reserva Hija ${reservaHija.id} actualizada a PAGADA. Monto: ${montoVuelta}`);
+				} catch (errHija) {
+					console.error("⚠️ [MP-webhook] Error actualizando reserva hija:", errHija.message);
+				}
+			}
 
 			// Enviar correo de confirmación via PHPMailer (mismo sistema que Flow)
 			const frontendBase =

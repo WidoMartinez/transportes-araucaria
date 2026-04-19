@@ -145,10 +145,11 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 		});
 
 		const dispararConversionRespaldo = async () => {
-			// ✅ SINCRONIZACIÓN: Usar la misma clave que App.jsx para evitar duplicados
-			const conversionKey = `flow_conversion_express_${reservaId}`;
-			if (sessionStorage.getItem(conversionKey)) {
-				// La conversión ya se disparó en App.jsx (flujo Express), no volver a dispararla
+			// ✅ SINCRONIZACIÓN: Usar clave universal para evitar duplicados en toda la app
+			const conversionKey = `conversion_sent_${reservaId}`;
+			if (sessionStorage.getItem(conversionKey) || sessionStorage.getItem(`flow_conversion_express_${reservaId}`)) {
+				// La conversión ya se disparó en otra parte (MPReturn, App.jsx, etc.), no volver a dispararla
+				console.log(`[CompletarDetalles] Conversión ya registrada para la reserva ${reservaId}. Omitiendo duplicado.`);
 				return;
 			}
 
@@ -214,6 +215,7 @@ function CompletarDetalles({ reservaId, onComplete, onCancel, initialAmount }) {
 			console.log("📊 Disparando conversión de respaldo en CompletarDetalles con valor:", value);
 			window.gtag('event', 'conversion', conversionPayload);
 			sessionStorage.setItem(conversionKey, 'true');
+			sessionStorage.setItem(`flow_conversion_express_${reservaId}`, 'true');
 		};
 
 		dispararConversionRespaldo();

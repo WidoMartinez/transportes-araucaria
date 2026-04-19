@@ -133,11 +133,14 @@ function MercadoPagoReturn() {
 					);
 				}
 
-				// Clave de sessionStorage para deduplicación en recargas
-				const conversionKey = `mp_conversion_${transactionId}`;
-				if (sessionStorage.getItem(conversionKey)) {
+				// Clave universal de sessionStorage para deduplicación en recargas y cruzando componentes
+				const conversionKey = reservaId 
+					? `conversion_sent_${reservaId}` 
+					: `mp_conversion_${transactionId}`;
+					
+				if (sessionStorage.getItem(conversionKey) || sessionStorage.getItem(`mp_conversion_${transactionId}`)) {
 					console.log(
-						"ℹ️ [MPReturn] Conversión ya registrada para esta sesión:",
+						"ℹ️ [MPReturn] Conversión ya registrada para esta sesión (deduplicada):",
 						transactionId,
 					);
 					return;
@@ -216,6 +219,7 @@ function MercadoPagoReturn() {
 				);
 				window.gtag("event", "conversion", conversionData);
 				sessionStorage.setItem(conversionKey, "true");
+				sessionStorage.setItem(`mp_conversion_${transactionId}`, "true");
 			} catch (convErr) {
 				console.error(
 					"❌ [MPReturn] Error al disparar evento de conversión:",
