@@ -215,6 +215,32 @@ La función `handleGuardarAsignacion` en `src/components/AdminReservas.jsx` vali
 
 ---
 
+## 1.4. Calendario del Hero Express desalineado o en inglés
+
+**Implementado: 18 Abril 2026**
+
+### Problema
+
+El selector de fecha del bloque `HeroExpress` podía mostrar los encabezados de días desalineados, con la grilla rota o con el mes y los días en inglés.
+
+### Causa raíz
+
+El wrapper reutilizable `src/components/ui/calendar.jsx` seguía usando nombres de clases y componentes de una versión anterior de `react-day-picker`, mientras el proyecto ya estaba en `react-day-picker@9`.
+
+### Solución aplicada
+
+- Se actualizó el wrapper para usar la API de clases de DayPicker v9 (`month_caption`, `month_grid`, `weekdays`, `weekday`, `week`, `day_button`, `button_previous`, `button_next`).
+- Se reemplazó la navegación antigua (`IconLeft` / `IconRight`) por el componente `Chevron` esperado por DayPicker v9.
+- Se fijó el locale por defecto a español usando `date-fns/locale`.
+
+### Resultado esperado
+
+- El calendario vuelve a renderizar la grilla completa.
+- La navegación de meses se muestra correctamente.
+- Meses y días aparecen en español dentro del flujo de reserva.
+
+---
+
 ## 1.1. División de Pago Proporcional para Reservas Ida/Vuelta
 
 **Implementado: 18 Enero 2026**

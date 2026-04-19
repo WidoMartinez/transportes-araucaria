@@ -89,6 +89,15 @@ VITE_API_URL=https://transportes-araucaria.onrender.com
 # VITE_API_URL=http://localhost:3001
 ```
 
+### Sistema de diseño frontend: shadcn/ui + Tailwind v4
+
+- El frontend usa **shadcn/ui** con estilo `new-york`, React 18 en JSX y **Tailwind CSS v4**.
+- La configuración base de shadcn vive en `components.json` y apunta a `src/App.css` como archivo CSS principal.
+- Los componentes generados por shadcn deben mantenerse en `src/components/ui/` y la lógica de negocio debe componerse fuera de esa carpeta, en wrappers o componentes del dominio.
+- Los tokens visuales del proyecto se definen en `src/App.css` mediante `@theme inline {}`. Para nuevas interfaces se deben priorizar tokens semánticos como `bg-primary`, `bg-secondary`, `bg-accent`, `text-foreground` y `border-border`.
+- El proyecto tiene operativo el registry `@shadcn` vía MCP. Antes de agregar una pieza nueva, se debe revisar si ya existe un componente equivalente en `src/components/ui/` y luego consultar el registry para ejemplos o instalación.
+- Los alias `chocolate-*` se mantienen solo por compatibilidad con módulos legacy. El sistema visual actual prioriza la paleta `forest` + `cafe`.
+
 ### Reglas de Contribución (`AGENTS.md`)
 
 - **Idioma**: Todo en Español (código, commits, docs).
@@ -278,7 +287,9 @@ El sistema implementa una doble validación para evitar reservas de "último min
 1.  **Modelo de Datos**: Cada `Destino` tiene un campo `minHorasAnticipacion` (configurable desde el Admin). Por defecto 5 horas.
 2.  **Validación Frontend**:
     - **Filtrado Visual**: En `HeroExpress.jsx`, si el usuario selecciona HOY, se ocultan del selector las horas que violan la restricción.
+  - **Selectores Enriquecidos**: El flujo público usa `Select` de shadcn para origen, destino, hora y pasajeros, mostrando resúmenes dinámicos de trayecto y servicio sugerido según la ruta elegida.
     - **Bloqueo Lógico**: Al intentar avanzar al paso de pago, se recalcula la diferencia horaria y se bloquea el avance si no cumple.
+  - **Servicios Especiales**: Si `configSillas.habilitado` está activo, `HeroExpress.jsx` expone la solicitud de sillas infantiles y envía la cantidad seleccionada a la cotización backend.
 
 ### 5.6 Estándares de Flujos de Pago y Notificaciones
 
@@ -295,6 +306,7 @@ Para garantizar la consistencia operativa y del marketing (Google Ads), se han e
   1.  **Pago**: Webhook (`/api/flow-confirmation`) notifica el dinero recibido (Admin + Cliente).
   2.  **Logística**: Al guardar detalles en `PUT /completar-reserva-detalles`, se dispara la notificación logística (Admin + Cliente).
 - **Tracking**: La conversión se dispara en `App.jsx` al retornar de Flow, usando los parámetros `amount` y `d` (datos de usuario encriptados).
+- **Consentimiento Legal**: El paso de pago en `HeroExpress.jsx` debe mantener accesibles los modales de `Términos y Condiciones` y `Política de Privacidad` antes de aceptar la casilla de consentimiento.
 
 #### B. Pagar con Código
 

@@ -15,8 +15,9 @@ description: >
 ## ⚡ Capacidades principales
 
 - **Conocimiento total** de los 45+ componentes ya instalados en `src/components/ui/`
+- **Operación por MCP**: consulta registries, ejemplos y comandos de instalación antes de tocar el código
 - **CLI experto**: sabe exactamente qué comando `pnpm dlx shadcn@latest` usar en cada caso
-- **Tematización**: domina el sistema de CSS variables y la paleta Chocolate + Verde del proyecto
+- **Tematización**: domina el sistema de CSS variables y la paleta forest + cafe del proyecto
 - **Composición avanzada**: sabe combinar componentes con `cn()`, `cva()` y Radix UI
 - **Formularios complejos**: react-hook-form + zod + shadcn Form en JSX (sin TypeScript)
 - **Detección de duplicados**: verifica siempre si el componente ya existe antes de instalar
@@ -25,6 +26,7 @@ description: >
 ## 📋 Responsabilidades
 
 - Agregar nuevos componentes shadcn al proyecto con el CLI correcto
+- Consultar primero el registry configurado (`@shadcn`) mediante MCP
 - Construir interfaces (modales, formularios, tablas, paneles) usando los componentes existentes
 - Personalizar el tema: modificar tokens CSS sin romper el diseño actual
 - Crear componentes wrapper que extiendan los de shadcn para el dominio del negocio
@@ -60,19 +62,31 @@ description: >
 | Notificaciones | Sonner (ya instalado) |
 | Formularios | react-hook-form + zod |
 | Animaciones | Framer Motion |
-| Paleta primaria | Chocolate #795548 |
-| Paleta secundaria | Verde oklch(0.45 0.12 160) |
+| Paleta primaria | Forest #1E3A14 |
+| Paleta secundaria | Cafe #8C5E42 |
+| Registry MCP | `@shadcn` |
 
 ## 🎯 Reglas de oro
 
 1. **SIEMPRE verificar primero** si el componente ya está en `src/components/ui/` antes de instalar
-2. **NUNCA modificar** los archivos de `src/components/ui/` directamente para lógica de negocio — crear wrappers
-3. **SIEMPRE usar** `import { Componente } from "@/components/ui/componente"` (destructuring)
-4. **SIEMPRE usar** `cn()` de `@/lib/utils` para combinar clases condicionales
-5. **NUNCA crear** archivos `.tsx` — este proyecto usa `.jsx`
-6. **SIEMPRE comentar** el código en español
-7. **Sonner** para toasts, NO react-toastify ni otro
-8. Para Tailwind v4: usar `@theme inline {}` en CSS, NO `tailwind.config.js`
+2. **SIEMPRE consultar MCP/registry** antes de agregar un componente nuevo
+3. **SIEMPRE basarse en `src/App.css`** para tokens y variantes visuales del proyecto
+4. **NUNCA modificar** los archivos de `src/components/ui/` directamente para lógica de negocio — crear wrappers
+5. **SIEMPRE usar** `import { Componente } from "@/components/ui/componente"` (destructuring)
+6. **SIEMPRE usar** `cn()` de `@/lib/utils` para combinar clases condicionales
+7. **NUNCA crear** archivos `.tsx` — este proyecto usa `.jsx`
+8. **SIEMPRE comentar** el código en español
+9. **Sonner** para toasts, NO react-toastify ni otro
+10. Para Tailwind v4: usar `@theme inline {}` en CSS, NO `tailwind.config.js`
+
+## 🔄 Flujo operativo obligatorio
+
+1. Revisar `components.json`, `src/App.css` y `src/components/ui/`.
+2. Consultar el registry con MCP para buscar el componente o ejemplos.
+3. Instalar solo si no existe una pieza equivalente ya disponible.
+4. Crear wrappers o composiciones en componentes del dominio (`src/components/`).
+5. Resolver estilo con tokens semánticos (`bg-primary`, `bg-secondary`, `bg-accent`, `text-foreground`, etc.).
+6. Validar mobile-first y consistencia con Tailwind v4.
 
 ## 📤 Entradas que acepta
 

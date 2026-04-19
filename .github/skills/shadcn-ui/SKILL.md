@@ -44,6 +44,34 @@ Guía maestra de referencia rápida para instalar, usar, personalizar y extender
 
 ---
 
+## 🤖 Operativa MCP + Tailwind v4
+
+El proyecto ya tiene operativo el MCP de shadcn y el registry configurado es `@shadcn`.
+
+### Flujo recomendado para el agente
+1. **Revisar primero** si el componente ya existe en `src/components/ui/`.
+2. **Consultar el registry vía MCP** antes de instalar nada nuevo.
+3. **Pedir ejemplos o ver el item** si la composición no es obvia.
+4. **Agregar solo lo que falta** con el comando generado por shadcn.
+5. **Personalizar fuera de `ui/`** creando wrappers en componentes de negocio.
+6. **Aplicar estilos con Tailwind v4** usando tokens semánticos y `@theme inline {}` en `src/App.css`.
+
+### Herramientas MCP a priorizar
+```text
+mcp_shadcn_get_project_registries
+mcp_shadcn_search_items_in_registries
+mcp_shadcn_view_items_in_registries
+mcp_shadcn_get_item_examples_from_registries
+mcp_shadcn_get_add_command_for_items
+```
+
+### Regla de diseño del proyecto
+- Priorizar `bg-primary`, `text-primary-foreground`, `bg-secondary`, `bg-accent`, `border-border` y demás tokens semánticos antes que colores hardcodeados.
+- Usar la paleta `forest` y `cafe` definida en `src/App.css`.
+- Mantener `chocolate-*` solo como alias de compatibilidad donde el proyecto ya lo use.
+
+---
+
 ## ⚡ Comandos CLI de shadcn (pnpm)
 
 ### Agregar componentes
@@ -170,8 +198,8 @@ Todos ubicados en `src/components/ui/`:
 bg-background    text-foreground         // Superficie base de la app
 bg-card          text-card-foreground    // Tarjetas y paneles
 bg-popover       text-popover-foreground // Flotantes, dropdowns
-bg-primary       text-primary-foreground // Acciones principales (Chocolate #795548)
-bg-secondary     text-secondary-foreground // Acciones secundarias (Verde)
+bg-primary       text-primary-foreground // Acciones principales (Forest #1E3A14)
+bg-secondary     text-secondary-foreground // Acciones secundarias (Cafe #8C5E42)
 bg-muted         text-muted-foreground   // Texto y superficies sutiles
 bg-accent        text-accent-foreground  // Hover, focus (Verde oscuro)
 bg-destructive   text-destructive-foreground // Acciones peligrosas
@@ -183,12 +211,13 @@ ring-ring        // Anillos de foco
 ### Paleta personalizada del proyecto
 ```css
 /* Uso en Tailwind — colores del proyecto */
-bg-chocolate-500   /* #795548 — Primario */
-bg-chocolate-950   /* #281916 — Footer / fondo oscuro */
-text-chocolate-300 /* Chocolate claro para dark mode */
+bg-forest-600      /* #1E3A14 — Primario semántico actual */
+bg-cafe-500        /* #8C5E42 — Secundario actual */
+bg-accent          /* Usa el token accent del sistema */
+bg-chocolate-500   /* Alias de compatibilidad para módulos legacy */
 
 /* Ejemplo real en componente */
-<Button className="bg-chocolate-500 hover:bg-chocolate-600 text-white">
+<Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
   Reservar ahora
 </Button>
 ```
@@ -635,6 +664,7 @@ function TablaReservas({ reservas, cargando }) {
 | Crear componentes `.tsx` en este proyecto | Siempre `.jsx` (tsx: false en components.json) |
 | Modificar archivos en `src/components/ui/` directamente para lógica de negocio | Crear componentes propios que los envuelvan |
 | Usar `tailwind.config.js` para extensiones | Usar `@theme inline {}` en CSS (Tailwind v4) |
+| Crear UI nueva sin consultar el registry MCP | Buscar primero en MCP y luego decidir si instalar |
 | `react-toastify` para notificaciones | Usar `sonner` ya instalado |
 | Radix primitivas directas sin shadcn | Usar always los componentes shadcn |
 
