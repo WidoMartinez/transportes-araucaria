@@ -3637,30 +3637,6 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
-		// --- VALIDACIÓN DE LÍMITE DE PASAJEROS (NUEVO) ---
-		const tramoParaValidar = [datosReserva.origen, datosReserva.destino].find(
-			(lugar) => lugar && lugar !== "Aeropuerto La Araucanía",
-		);
-
-		if (tramoParaValidar) {
-			const destinoDB = await Destino.findOne({
-				where: { nombre: tramoParaValidar },
-			});
-			const limiteDinamico = destinoDB?.maxPasajeros || 7;
-			const pasajerosRecibidos = parseInt(datosReserva.pasajeros, 10) || 1;
-
-			if (pasajerosRecibidos > limiteDinamico) {
-				console.warn(
-					`⚠️ [RECHAZO] Reserva excede capacidad para ${tramoParaValidar}: ${pasajerosRecibidos} > ${limiteDinamico}`,
-				);
-				return res.status(400).json({
-					success: false,
-					message: `Límite de pasajeros excedido para ${tramoParaValidar}. El máximo permitido es ${limiteDinamico}.`,
-					maxPasajeros: limiteDinamico,
-				});
-			}
-		}
-
 		// � CORRECCIÓN AUTOMÁTICA: Si el cliente envió totalConDescuento=0 para una ruta real,
 		// recalcular en el servidor para evitar reservas con precio cero (race condition en frontend)
 		const totalRecibido = parseFloat(datosReserva.totalConDescuento) || 0;
@@ -13971,13 +13947,24 @@ const startServer = async () => {
 				return;
 			}
 
-			// Determinar el monto pagado
-			const montoActual =
+			// Determinar el monto pagado con lógica de fallbacks robusta (Gold Standard)
+			const SYMBOLIC_AMOUNT_CLP = 1000;
+			let montoActual =
 				Number(paymentData.transaction_amount) ||
-				Number(metadata.amount) ||
-				Number(reserva.totalConDescuento) ||
-				Number(reserva.precio) ||
-				0;
+				Number(paymentData.transaction_details?.total_paid_amount) ||
+				Number(metadata.amount) || 0;
+
+			// Si el monto sigue siendo 0, aplicar fallbacks desde la base de datos
+			if (montoActual <= 0) {
+				console.warn(`⚠️ [MP-webhook] Monto de pasarela es ${montoActual}, aplicando fallbacks desde DB...`);
+				montoActual = Number(reserva.pagoMonto) || Number(reserva.totalConDescuento) || Number(reserva.precio) || SYMBOLIC_AMOUNT_CLP;
+				console.log(`   ✅ Fallback aplicado: ${montoActual} CLP`);
+			}
+
+			// LOG DE CONVERSIÓN: Estándar para auditoría financiera
+			console.log(
+				`💳 [CONVERSIÓN MP] ${new Date().toISOString()} | Estado: ${paymentData.status} | Monto: $${montoActual} | MP-ID: ${paymentId} | Payer: ${reserva.email ? reserva.email.slice(0, 3) + "***" : "sin email"} | Origen: ${metadata.paymentOrigin || "web"}`,
+			);
 
 			// --- LÓGICA DE DIVISIÓN DE PAGO (Split Payment) portado desde Flow ---
 			let montoIda = montoActual;
@@ -14082,6 +14069,7 @@ const startServer = async () => {
 					mailError.message,
 				);
 			}
+
 
 			// Detectar y generar oportunidades de retorno (mismo que Flow)
 			// Nota: se pasa el objeto `reserva` (no solo el ID) porque la función necesita origen/destino
