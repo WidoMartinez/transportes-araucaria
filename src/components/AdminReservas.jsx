@@ -4471,10 +4471,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 															</span>
 														</div>
 														{reserva.sillaInfantil && (
-															<div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 w-fit">
+															<div className="flex items-center gap-1 text-amber-600 bg-amber-50 px-1 py-0.5 rounded border border-amber-200 w-fit" title={`${reserva.cantidadSillasInfantiles || 1} silla(s) infantil(es) requerida(s)`}>
 																<Baby className="w-3 h-3" />
 																<span className="text-[10px] font-medium">
-																	Silla
+																	Sillas: {reserva.cantidadSillasInfantiles || 1}
 																</span>
 															</div>
 														)}
@@ -5466,8 +5466,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										{selectedReserva.sillaInfantil && (
 											<div className="bg-orange-50 p-2.5 rounded-xl border border-orange-100 col-span-2 flex items-center gap-2">
 												<div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
-												<p className="text-xs font-bold text-orange-700 tracking-tight">
-													SILLA INFANTIL REQUERIDA
+												<Baby className="w-4 h-4 text-orange-600" />
+												<p className="text-xs font-bold text-orange-700 tracking-tight uppercase">
+													SILLA INFANTIL REQUERIDA (CANTIDAD: {selectedReserva.cantidadSillasInfantiles || 1})
 												</p>
 											</div>
 										)}

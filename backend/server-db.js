@@ -3907,6 +3907,12 @@ app.post("/enviar-reserva-express", async (req, res) => {
 					datosReserva.sillaInfantil !== undefined
 						? Boolean(datosReserva.sillaInfantil)
 						: reservaExistente.sillaInfantil,
+				cantidadSillasInfantiles:
+					datosReserva.cantidadSillasInfantiles !== undefined
+						? (Boolean(datosReserva.sillaInfantil)
+							? Math.max(1, parseInt(datosReserva.cantidadSillasInfantiles, 10) || 1)
+							: 0)
+						: reservaExistente.cantidadSillasInfantiles,
 				idaVuelta: Boolean(datosReserva.idaVuelta),
 				fechaRegreso:
 					datosReserva.fechaRegreso !== undefined
@@ -4066,6 +4072,10 @@ app.post("/enviar-reserva-express", async (req, res) => {
 						equipajeEspecial: equipajeEspecialCliente,
 						sillaInfantil:
 							sillaInfantilCliente !== undefined ? sillaInfantilCliente : false,
+						cantidadSillasInfantiles:
+							sillaInfantilCliente
+								? Math.max(1, parseInt(datosReserva.cantidadSillasInfantiles, 10) || 1)
+								: 0,
 						idaVuelta: Boolean(datosReserva.idaVuelta),
 						fechaRegreso: datosReserva.fechaRegreso || null,
 						horaRegreso: normalizeTimeGlobal(datosReserva.horaRegreso),
@@ -7220,6 +7230,7 @@ app.put("/api/reservas/:id", authAdmin, async (req, res) => {
 			hotel,
 			equipajeEspecial,
 			sillaInfantil,
+			cantidadSillasInfantiles,
 			idaVuelta,
 			fechaRegreso,
 			horaRegreso,
@@ -7255,6 +7266,12 @@ app.put("/api/reservas/:id", authAdmin, async (req, res) => {
 				sillaInfantil !== undefined
 					? Boolean(sillaInfantil)
 					: reserva.sillaInfantil,
+			cantidadSillasInfantiles:
+				cantidadSillasInfantiles !== undefined
+					? (Boolean(sillaInfantil !== undefined ? sillaInfantil : reserva.sillaInfantil)
+						? Math.max(1, parseInt(cantidadSillasInfantiles, 10) || 1)
+						: 0)
+					: reserva.cantidadSillasInfantiles,
 			idaVuelta:
 				idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
 			fechaRegreso:
@@ -7323,6 +7340,7 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 				hotel,
 				equipajeEspecial,
 				sillaInfantil,
+				cantidadSillasInfantiles,
 				idaVuelta,
 				fechaRegreso,
 				horaRegreso,
@@ -7361,6 +7379,12 @@ app.put("/api/reservas/:id/bulk-update", authAdmin, async (req, res) => {
 						sillaInfantil !== undefined
 							? Boolean(sillaInfantil)
 							: reserva.sillaInfantil,
+					cantidadSillasInfantiles:
+						cantidadSillasInfantiles !== undefined
+							? (Boolean(sillaInfantil !== undefined ? sillaInfantil : reserva.sillaInfantil)
+								? Math.max(1, parseInt(cantidadSillasInfantiles, 10) || 1)
+								: 0)
+							: reserva.cantidadSillasInfantiles,
 					idaVuelta:
 						idaVuelta !== undefined ? Boolean(idaVuelta) : reserva.idaVuelta,
 					fechaRegreso:
