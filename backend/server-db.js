@@ -14041,7 +14041,7 @@ const startServer = async () => {
 							destino: reservaActualizada?.destino || "",
 							fecha: reservaActualizada?.fecha || "",
 							hora: reservaActualizada?.hora || "",
-							monto: montoPagado,
+							monto: montoActual,
 							codigoReserva: reservaActualizada?.codigoReserva || "",
 							pasarela: "mercadopago",
 						},
