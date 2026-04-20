@@ -3637,6 +3637,30 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			});
 		}
 
+		// --- VALIDACIÓN DE LÍMITE DE PASAJEROS (NUEVO) ---
+		const tramoParaValidar = [datosReserva.origen, datosReserva.destino].find(
+			(lugar) => lugar && lugar !== "Aeropuerto La Araucanía",
+		);
+
+		if (tramoParaValidar) {
+			const destinoDB = await Destino.findOne({
+				where: { nombre: tramoParaValidar },
+			});
+			const limiteDinamico = destinoDB?.maxPasajeros || 7;
+			const pasajerosRecibidos = parseInt(datosReserva.pasajeros, 10) || 1;
+
+			if (pasajerosRecibidos > limiteDinamico) {
+				console.warn(
+					`⚠️ [RECHAZO] Reserva excede capacidad para ${tramoParaValidar}: ${pasajerosRecibidos} > ${limiteDinamico}`,
+				);
+				return res.status(400).json({
+					success: false,
+					message: `Límite de pasajeros excedido para ${tramoParaValidar}. El máximo permitido es ${limiteDinamico}.`,
+					maxPasajeros: limiteDinamico,
+				});
+			}
+		}
+
 		// � CORRECCIÓN AUTOMÁTICA: Si el cliente envió totalConDescuento=0 para una ruta real,
 		// recalcular en el servidor para evitar reservas con precio cero (race condition en frontend)
 		const totalRecibido = parseFloat(datosReserva.totalConDescuento) || 0;

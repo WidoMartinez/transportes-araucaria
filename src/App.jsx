@@ -1855,6 +1855,18 @@ function App() {
 			};
 		}
 
+		// Validar límite de pasajeros
+		if (
+			destinoSeleccionado &&
+			parseInt(formData.pasajeros, 10) > destinoSeleccionado.maxPasajeros
+		) {
+			return {
+				success: false,
+				error: "pasajeros_excedidos",
+				message: `Has seleccionado ${formData.pasajeros} pasajeros, pero el máximo permitido para ${destinoSeleccionado.nombre} es ${destinoSeleccionado.maxPasajeros}.`,
+			};
+		}
+
 		if (isSubmitting) return { success: false, error: "procesando" };
 
 		// Validar que el precio esté disponible antes de enviar (evita race condition con useCotizacion)
