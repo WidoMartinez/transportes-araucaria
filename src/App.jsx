@@ -540,7 +540,12 @@ function App() {
 						`🔄 [App.jsx] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`,
 					);
 
-					if (data.pagado) {
+					const transaccionConfirmada =
+						data?.transaccionConfirmada ||
+						data?.pagado ||
+						data?.status === "parcial";
+
+					if (transaccionConfirmada) {
 						clearInterval(pollingInterval);
 						cancelado = true;
 						// Redirigir a la misma URL pero con status=success y monto desde DB
@@ -1789,7 +1794,45 @@ function App() {
 			
 			setReviewChecklist({ viaje: false, contacto: false });
 			setShowConfirmationAlert(true);
+
+			const waitForGtagLead = (timeoutMs = 2000) =>
+				new Promise((resolve) => {
+					if (typeof window !== "undefined" && typeof window.gtag === "function") {
+						resolve(true);
+						return;
+					}
+					const startTime = Date.now();
+					const interval = setInterval(() => {
+						if (
+							typeof window !== "undefined" &&
+							typeof window.gtag === "function"
+						) {
+							clearInterval(interval);
+							resolve(true);
+						} else if (Date.now() - startTime >= timeoutMs) {
+							clearInterval(interval);
+							resolve(false);
+						}
+					}, 50);
+				});
+
+			await waitForGtagLead();
 			if (typeof window !== "undefined" && typeof window.gtag === "function") {
+				const userData = {};
+				if (formData.email) userData.email = formData.email.toLowerCase().trim();
+				if (formData.telefono)
+					userData.phone_number = normalizePhoneToE164(formData.telefono);
+				if (formData.nombre) {
+					const nameParts = formData.nombre.trim().split(" ");
+					userData.address = {
+						first_name: nameParts[0]?.toLowerCase() || "",
+						last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+						country: "CL",
+					};
+				}
+				if (Object.keys(userData).length > 0) {
+					window.gtag("set", "user_data", userData);
+				}
 				// Lead: intención de pago (sin valor para no duplicar con la compra final)
 				window.gtag("event", "conversion", {
 					send_to: `AW-17529712870/8GVlCLP-05MbEObh6KZB`,

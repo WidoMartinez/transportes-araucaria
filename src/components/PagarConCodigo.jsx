@@ -94,6 +94,24 @@ function PagarConCodigo() {
 	const backendUrl =
 		getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
+	const waitForGtag = (timeoutMs = 2000) =>
+		new Promise((resolve) => {
+			if (typeof window.gtag === "function") {
+				resolve(true);
+				return;
+			}
+			const inicio = Date.now();
+			const iv = setInterval(() => {
+				if (typeof window.gtag === "function") {
+					clearInterval(iv);
+					resolve(true);
+				} else if (Date.now() - inicio >= timeoutMs) {
+					clearInterval(iv);
+					resolve(false);
+				}
+			}, 50);
+		});
+
 	// Función para formatear moneda usando el formateador a nivel de módulo
 	const formatCurrency = (value) => CURRENCY_FORMATTER.format(value || 0);
 
@@ -486,13 +504,9 @@ function PagarConCodigo() {
 			const pj = await p.json();
 			if (p.ok && pj.url) {
 				// ✅ Lead: registrar intención de pago antes de redirigir a Flow
-				// Si el usuario no completa el pago, Google queda con el Lead; si completa, se suma el Purchase al regresar.
+				// con espera corta para evitar perder el evento por carga tardía de gtag.js.
+				await waitForGtag();
 				if (typeof window.gtag === "function") {
-					const conversionData = {
-						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-					};
-
-					// Enhanced Conversions
 					const userData = {};
 					if (formData.email)
 						userData.email = formData.email.toLowerCase().trim();
@@ -506,12 +520,12 @@ function PagarConCodigo() {
 							country: "CL",
 						};
 					}
-
 					if (Object.keys(userData).length > 0) {
-						conversionData.user_data = userData;
+						window.gtag("set", "user_data", userData);
 					}
-
-					window.gtag("event", "conversion", conversionData);
+					window.gtag("event", "conversion", {
+						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+					});
 				}
 				window.location.href = pj.url;
 			} else {
@@ -639,10 +653,9 @@ function PagarConCodigo() {
 			const pj = await p.json();
 			if (p.ok && pj.url) {
 				// Evento Lead de Google Ads antes de redirigir a MP
+				// con espera corta para evitar perder el evento por race condition.
+				await waitForGtag();
 				if (typeof window.gtag === "function") {
-					const conversionData = {
-						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
-					};
 					const userData = {};
 					if (formData.email)
 						userData.email = formData.email.toLowerCase().trim();
@@ -656,9 +669,12 @@ function PagarConCodigo() {
 							country: "CL",
 						};
 					}
-					if (Object.keys(userData).length > 0)
-						conversionData.user_data = userData;
-					window.gtag("event", "conversion", conversionData);
+					if (Object.keys(userData).length > 0) {
+						window.gtag("set", "user_data", userData);
+					}
+					window.gtag("event", "conversion", {
+						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+					});
 				}
 				window.location.href = pj.url;
 			} else {

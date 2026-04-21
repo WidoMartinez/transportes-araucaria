@@ -34,6 +34,15 @@ import ProductosReserva from "./ProductosReserva";
 
 const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
+const normalizePhoneToE164 = (phone) => {
+	if (!phone) return "";
+	let cleaned = phone.replace(/[\s\-()]/g, "");
+	if (cleaned.startsWith("+56")) return cleaned;
+	if (cleaned.startsWith("56")) return "+" + cleaned;
+	if (cleaned.startsWith("9") && cleaned.length >= 9) return "+56" + cleaned;
+	return "+56" + cleaned;
+};
+
 function ConsultarReserva() {
 	const [codigoReserva, setCodigoReserva] = useState("");
 	const [reserva, setReserva] = useState(null);
@@ -158,8 +167,42 @@ function ConsultarReserva() {
 			const data = await resp.json();
 			if (!data.url)
 				throw new Error("Respuesta inválida del servidor de pagos");
-			// Lead de Google Ads antes de redirigir
+			// Lead de Google Ads antes de redirigir (con espera corta para evitar race condition)
+			const waitForGtag = (timeoutMs = 2000) =>
+				new Promise((resolve) => {
+					if (typeof window.gtag === "function") {
+						resolve(true);
+						return;
+					}
+					const inicio = Date.now();
+					const iv = setInterval(() => {
+						if (typeof window.gtag === "function") {
+							clearInterval(iv);
+							resolve(true);
+						} else if (Date.now() - inicio >= timeoutMs) {
+							clearInterval(iv);
+							resolve(false);
+						}
+					}, 50);
+				});
+
+			await waitForGtag();
 			if (typeof window.gtag === "function") {
+				const userData = {};
+				if (reserva.email) userData.email = reserva.email.toLowerCase().trim();
+				if (reserva.telefono)
+					userData.phone_number = normalizePhoneToE164(reserva.telefono);
+				if (reserva.nombre) {
+					const nameParts = reserva.nombre.trim().split(" ");
+					userData.address = {
+						first_name: nameParts[0]?.toLowerCase() || "",
+						last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+						country: "CL",
+					};
+				}
+				if (Object.keys(userData).length > 0) {
+					window.gtag("set", "user_data", userData);
+				}
 				window.gtag("event", "conversion", {
 					send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 				});
