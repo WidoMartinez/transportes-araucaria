@@ -2030,7 +2030,7 @@ El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google 
 #### Arquitectura del Seguimiento
 
 1.  **Eventos de Lead (Intención de Pago)**:
-    - Se disparan inmediatamente antes de redirigir al usuario a la pasarela Flow (ej. en `PagarConCodigo.jsx`, `ReservaRapidaModal.jsx`, `OportunidadesTraslado.jsx`).
+    - Se disparan inmediatamente antes de redirigir al usuario a la pasarela (Flow o Mercado Pago) en los flujos principales (`App.jsx`/HeroExpress, `ConsultarReserva.jsx`, `PagarConCodigo.jsx`, `ReservaRapidaModal.jsx`, `OportunidadesTraslado.jsx`).
     - **ID de Conversión**: `AW-17529712870/8GVlCLP-05MbEObh6KZB`.
     - **Enhanced Conversions**: Captura y envía inmediatamente los datos del formulario (Email, Teléfono formateado a E.164, y Nombre dividido en first/last_name) mediante el objeto `user_data`.
     - **Patrón**: Usan `waitForGtag` con timeout de 2 segundos (el usuario disparó el click, así que el riesgo de carrera es bajo pero se protege igualmente).
@@ -2040,6 +2040,7 @@ El sistema utiliza Google gtag.js para el seguimiento de conversiones en Google 
     - **Enhanced Conversions**: El backend codifica estos datos en Base64 en el parámetro `d` de la URL de retorno, y el frontend los decodifica para pasarlos a `user_data` al disparar el evento.
 3.  **Protección de Duplicados (Purchase)**:
     - Se utiliza `sessionStorage` con una clave basada en el ID de la transacción (`id_reserva_token`) para evitar registrar la misma conversión repetida si el usuario recarga la página. Conversiones con un nuevo pago por el mismo cliente (abono + saldo pago restante) se registrarán como 2 transacciones diferentes (lo cual es correcto).
+    - En `FlowReturn.jsx` y `MercadoPagoReturn.jsx` la deduplicación **no debe** basarse solo en `reserva_id`, porque bloquearía pagos válidos adicionales sobre la misma reserva dentro de la misma sesión.
 
 #### Comportamiento del Gateway Flow: Doble Redirección (descubierto 15 Marzo 2026)
 
@@ -2063,8 +2064,17 @@ GET /api/payment-status?token=<flowToken>&reserva_id=<id>
 **Respuesta:**
 
 ```json
-{ "pagado": true, "status": "pagado", "monto": 59670 }
+{
+  "pagado": false,
+  "transaccionConfirmada": true,
+  "status": "parcial",
+  "monto": 25000,
+  "montoAcumulado": 50000
+}
 ```
+
+- `transaccionConfirmada` indica que el pago actual fue aprobado aunque la reserva haya quedado en estado `parcial`.
+- `monto` debe representar el valor de la transacción actual cuando exista token de pago; `montoAcumulado` queda como referencia administrativa.
 
 - Requiere `token` **o** `reserva_id` (al menos uno).
 - Si `token` está presente, busca el `FlowToken` para obtener el `reservaId` asociado.
@@ -2147,7 +2157,7 @@ if (gtagListo) {
 
 | Flujo               | `paymentOrigin`        | Componente Purchase  | Lead status          | Polling pending |
 | ------------------- | ---------------------- | -------------------- | -------------------- | --------------- |
-| PagarConCodigo      | `pagar_con_codigo`     | `FlowReturn.jsx`     | guard simple (click) | ✅ FlowReturn   |
+| PagarConCodigo      | `pagar_con_codigo`     | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
 | ConsultarReserva    | `consultar_reserva`    | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
 | Oportunidades       | `oportunidad_traslado` | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
 | Banners/Promociones | `banner_promocional`   | `FlowReturn.jsx`     | `waitForGtag` 2s     | ✅ FlowReturn   |
@@ -2173,6 +2183,22 @@ if (gtagListo) {
 | `src/components/ConsultarReserva.jsx`       | Lead → Pago                   | 2s      |
 | `src/pages/OportunidadesTraslado.jsx`       | Lead → Pago                   | 2s      |
 | `src/components/ReservaRapidaModal.jsx`     | Lead → Pago                   | 2s      |
+| `src/components/PagarConCodigo.jsx`         | Lead → Pago                   | 2s      |
+
+#### Pruebas sin pago real (QA)
+
+Para validar conversiones sin pagar una reserva, existe la vista `TestGoogleAds` en la ruta `/test-google-ads`:
+
+1. Configurar `token`, `reserva_id`, `amount`, `email`, `nombre` y `telefono`.
+2. Simular retorno exitoso en `FlowReturn`, `MercadoPagoReturn` o `HeroExpress` usando los botones del panel.
+3. Verificar en DevTools (Network) que el evento `conversion` se envía con `value=<amount>`.
+4. Verificar en consola del navegador los logs de `FlowReturn` / `MPReturn` que confirman `user_data` (Enhanced Conversions).
+
+Esta vista no confirma atribución en Google Ads productivo (no hay pago real), pero sí permite validar:
+
+- Estructura del payload.
+- Presencia de `user_data`.
+- Valor (`amount`) enviado en el evento.
 
 #### Especificaciones Técnicas
 

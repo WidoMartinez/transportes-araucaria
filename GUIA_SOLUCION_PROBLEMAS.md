@@ -3310,13 +3310,20 @@ Se implementó un mecanismo de **polling desde el frontend** que consulta perió
 app.get("/api/payment-status", async (req, res) => {
     const { token, reserva_id } = req.query;
     // Busca por token → FlowToken → Reserva, o directamente por reserva_id
-    const pagado = reserva.estadoPago === "pagado";
-    const monto = pagado ? Number(reserva.pagoMonto || ...) : null;
-    return res.json({ pagado, status: reserva.estadoPago, monto });
+    const transaccionConfirmada =
+        reserva.estadoPago === "pagado" || reserva.estadoPago === "parcial";
+    const monto = transaccionConfirmada ? Number(...) : null;
+    return res.json({
+        pagado: reserva.estadoPago === "pagado",
+        transaccionConfirmada,
+        status: reserva.estadoPago,
+        monto,
+    });
 });
 ```
 
 Endpoint público (sin autenticación), consultable por token de Flow o ID de reserva.
+Si `status === "parcial"`, el frontend debe tratarlo como pago confirmado para cerrar el polling y disparar la conversión de la transacción actual.
 
 #### 2. Polling en `FlowReturn.jsx`
 
@@ -3337,12 +3344,12 @@ if (statusParam === "pending") {
 			`${apiBase}/api/payment-status?token=${token}&reserva_id=${reservaId}`,
 		);
 		const data = await resp.json();
-		if (data.pagado) {
+		if (data.transaccionConfirmada || data.pagado || data.status === "parcial") {
 			clearInterval(pollingInterval);
 			setPaymentStatus("success");
 			await waitForGtag(); // esperar gtag antes de disparar
 			triggerConversion(
-				data.monto?.toString() || amountParam,
+				amountParam || data.monto?.toString(),
 				reservaId,
 				token,
 			);
@@ -3397,6 +3404,38 @@ Para verificar que el polling funciona, revisar en consola del navegador:
 
 > [!WARNING]
 > **Para nuevos flujos de pago**: Si el nuevo flujo puede recibir `status=1` (pendiente) al retornar de Flow, **siempre implementar el polling** usando `/api/payment-status`. No basta con detectar `status=2` en la URL de retorno porque Flow puede no enviarlo al navegador.
+
+---
+
+## 17. Pruebas de conversiones sin pagar una reserva (QA)
+
+### Objetivo
+
+Validar que los eventos de Google Ads (Lead y Purchase), Enhanced Conversions y el monto (`amount`) se envian correctamente sin ejecutar un pago real.
+
+### Herramienta interna
+
+Usar la vista de pruebas: `/test-google-ads` (componente `src/components/TestGoogleAds.jsx`).
+
+### Procedimiento rapido
+
+1. Abrir `/test-google-ads`.
+2. Configurar valores de prueba: `token`, `reserva_id`, `amount`, `email`, `nombre`, `telefono`.
+3. Hacer clic en:
+   - `Probar Purchase directo con monto` para validar payload directo.
+   - `Simular /flow-return success` para validar flujo `FlowReturn.jsx`.
+   - `Simular /mp-return success` para validar flujo `MercadoPagoReturn.jsx`.
+   - `Simular /?flow_payment=success` para validar flujo express en `App.jsx`.
+4. Revisar DevTools > Network y confirmar:
+   - Evento `conversion`.
+   - `send_to` correcto.
+   - `value=<amount>` configurado.
+5. Revisar consola y confirmar logs de `user_data` (Enhanced Conversions).
+
+### Notas
+
+- Si no aparece el evento, revisar bloqueadores (AdBlock) y carga de `gtag` en `index.html`.
+- Si se repite una prueba con el mismo token/reserva, limpiar claves de deduplicacion desde la misma vista para evitar bloqueos por `sessionStorage`.
 
 ---
 
