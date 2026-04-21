@@ -133,12 +133,11 @@ function MercadoPagoReturn() {
 					);
 				}
 
-				// Clave universal de sessionStorage para deduplicación en recargas y cruzando componentes
-				const conversionKey = reservaId 
-					? `conversion_sent_${reservaId}` 
-					: `mp_conversion_${transactionId}`;
-					
-				if (sessionStorage.getItem(conversionKey) || sessionStorage.getItem(`mp_conversion_${transactionId}`)) {
+				// Deduplicar por transacción real para permitir pagos múltiples
+				// sobre la misma reserva dentro de una misma sesión.
+				const conversionKey = `mp_conversion_${transactionId}`;
+
+				if (sessionStorage.getItem(conversionKey)) {
 					console.log(
 						"ℹ️ [MPReturn] Conversión ya registrada para esta sesión (deduplicada):",
 						transactionId,
@@ -219,7 +218,6 @@ function MercadoPagoReturn() {
 				);
 				window.gtag("event", "conversion", conversionData);
 				sessionStorage.setItem(conversionKey, "true");
-				sessionStorage.setItem(`mp_conversion_${transactionId}`, "true");
 			} catch (convErr) {
 				console.error(
 					"❌ [MPReturn] Error al disparar evento de conversión:",
@@ -279,10 +277,18 @@ function MercadoPagoReturn() {
 							`🔄 [MPReturn] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}`,
 						);
 
-						if (data.pagado) {
+						const transaccionConfirmada =
+							data?.transaccionConfirmada ||
+							data?.pagado ||
+							data?.status === "parcial";
+
+						if (transaccionConfirmada) {
 							cancelado = true;
 							setPaymentStatus("success");
-							const montoConfirmado = data.monto?.toString() || amountParam;
+							const montoConfirmado =
+								amountParam && Number(amountParam) > 0
+									? amountParam
+									: data.monto?.toString() || amountParam;
 							const gtagListo = await waitForGtag();
 							if (gtagListo) {
 								triggerConversion(

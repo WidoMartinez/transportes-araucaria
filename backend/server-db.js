@@ -9636,12 +9636,25 @@ app.get("/api/payment-status", async (req, res) => {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
 		}
 
-		// Si la reserva ya está pagada en DB, responder directamente sin ir a Flow
-		if (reserva.estadoPago === "pagado") {
-			const monto = Number(
-				reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,
-			);
-			return res.json({ pagado: true, status: "pagado", monto });
+		const estadoPagoActual = reserva.estadoPago || "pendiente";
+		const transaccionConfirmada =
+			estadoPagoActual === "pagado" || estadoPagoActual === "parcial";
+		const montoDb = Number(
+			reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,
+		);
+		const montoToken = Number(flowTokenRecord?.amount || 0);
+		const montoConfirmado = montoToken > 0 ? montoToken : montoDb;
+
+		// Si la reserva ya tiene un pago confirmado o parcial en DB, responder directamente
+		// para que el frontend pueda cerrar el polling y disparar la conversión correcta.
+		if (transaccionConfirmada) {
+			return res.json({
+				pagado: estadoPagoActual === "pagado",
+				transaccionConfirmada: true,
+				status: estadoPagoActual,
+				monto: montoConfirmado > 0 ? montoConfirmado : null,
+				montoAcumulado: montoDb > 0 ? montoDb : null,
+			});
 		}
 
 		// FALLBACK ROBUSTO: Si la reserva está pendiente y tenemos un token,
@@ -9831,10 +9844,14 @@ app.get("/api/payment-status", async (req, res) => {
 						const montoFinal =
 							pagoAcumulado ||
 							Number(reserva.totalConDescuento || reserva.precio || 0);
+						const montoConversion =
+							montoFlow > 0 ? montoFlow : montoFinal;
 						return res.json({
 							pagado: nuevoEstadoPago === "pagado",
+							transaccionConfirmada: true,
 							status: nuevoEstadoPago,
-							monto: montoFinal,
+							monto: montoConversion > 0 ? montoConversion : null,
+							montoAcumulado: montoFinal > 0 ? montoFinal : null,
 							fuente: "flow_api_fallback",
 						});
 					}
@@ -9869,17 +9886,15 @@ app.get("/api/payment-status", async (req, res) => {
 		}
 
 		// Retorno por defecto: estado de la DB
-		const pagado = reserva.estadoPago === "pagado";
-		const monto = pagado
-			? Number(
-					reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,
-				)
-			: null;
+		const pagado = estadoPagoActual === "pagado";
+		const monto = transaccionConfirmada ? montoConfirmado : null;
 
 		return res.json({
 			pagado,
-			status: reserva.estadoPago || "pendiente",
+			transaccionConfirmada,
+			status: estadoPagoActual,
 			monto,
+			montoAcumulado: transaccionConfirmada && montoDb > 0 ? montoDb : null,
 		});
 	} catch (error) {
 		console.error("[payment-status] Error consultando estado:", error.message);
@@ -10321,9 +10336,9 @@ app.post("/api/payment-result", async (req, res) => {
 
 					return res.redirect(
 						303,
-						`${frontendBase}/flow-return?token=${token}&status=success&amount=${
-							recordedToken.amount
-						}&d=${encodeURIComponent(
+						`${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${
+							recordedToken.reservaId || ""
+						}&amount=${recordedToken.amount}&d=${encodeURIComponent(
 							userDataEncoded,
 						)}&warning=api_failure_db_fallback`,
 					);

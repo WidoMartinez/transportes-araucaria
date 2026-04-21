@@ -479,7 +479,12 @@ function AdminReservas() {
 			if (!resp.ok) throw new Error(`Error ${resp.status}`);
 			const data = await resp.json();
 
-			if (data.pagado && data.monto > 0) {
+			const transaccionConfirmada =
+				data?.transaccionConfirmada ||
+				data?.pagado ||
+				data?.status === "parcial";
+
+			if (transaccionConfirmada && data.monto > 0) {
 				// Evitar doble acreditación: solo sugerir el monto pendiente por registrar
 				const totalReserva =
 					Number(

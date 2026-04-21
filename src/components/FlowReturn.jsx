@@ -173,11 +173,19 @@ function FlowReturn() {
 							`🔄 [FlowReturn] Polling intento ${intentos}/${MAX_INTENTOS}: pagado=${data.pagado}, status=${data.status}, fuente=${data.fuente || "db"}`,
 						);
 
-						if (data.pagado) {
+						const transaccionConfirmada =
+							data?.transaccionConfirmada ||
+							data?.pagado ||
+							data?.status === "parcial";
+
+						if (transaccionConfirmada) {
 							cancelado = true;
 							setPaymentStatus("success");
 							// Usar monto retornado por el backend (desde DB o Flow API) o el que vino en URL
-							const montoConfirmado = data.monto?.toString() || amountParam;
+							const montoConfirmado =
+								amountParam && Number(amountParam) > 0
+									? amountParam
+									: data.monto?.toString() || amountParam;
 							const gtagListo = await waitForGtag();
 							if (gtagListo) {
 								triggerConversion(montoConfirmado, reservaIdParam, token);
@@ -270,12 +278,11 @@ function FlowReturn() {
 						);
 					}
 
-					// Clave universal de sessionStorage para deduplicación
-					const conversionKey = id
-						? `conversion_sent_${id}`
-						: `flow_conversion_${transactionId}`;
+					// Deduplicar por transacción real para no bloquear pagos distintos
+					// del mismo `reserva_id` (por ejemplo abono + saldo) en la misma sesión.
+					const conversionKey = `flow_conversion_${transactionId}`;
 
-					if (!sessionStorage.getItem(conversionKey) && !sessionStorage.getItem(`flow_conversion_${transactionId}`)) {
+					if (!sessionStorage.getItem(conversionKey)) {
 						// Extraer datos de usuario de los parámetros URL para conversiones avanzadas
 						const urlParams = new URLSearchParams(window.location.search);
 
@@ -367,7 +374,6 @@ function FlowReturn() {
 						if (id) {
 							sessionStorage.setItem(`flow_conversion_express_${id}`, "true"); // legacy express compatibility
 						}
-						sessionStorage.setItem(`flow_conversion_${transactionId}`, "true"); // legacy flow compatibility
 					} else {
 						console.log(
 							"ℹ️ [FlowReturn] Conversión ya registrada para esta sesión:",
