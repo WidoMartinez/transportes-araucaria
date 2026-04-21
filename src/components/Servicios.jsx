@@ -50,7 +50,7 @@ const services = [
 			"Atención prioritaria",
 			"Tarifas preferenciales",
 		],
-		accent: "#8C5E42",
+		accent: "#B87D5A",
 		bg: "#1E3A14",
 	},
 	{
@@ -91,7 +91,8 @@ function Servicios() {
 			<div className="w-full max-w-7xl mx-auto lg:mx-0 lg:max-w-none px-6">
 				<div className="mb-12 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
 					<div className="max-w-xl">
-						<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8C5E42] mb-3">
+						<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8C5E42] mb-3 flex items-center gap-3">
+							<span className="w-6 h-px bg-[#8C5E42] inline-block shrink-0" />
 							Lo que ofrecemos
 						</p>
 						<h2 className="font-serif text-3xl md:text-5xl lg:text-5xl font-medium text-[#1E3A14] leading-tight tracking-tight">

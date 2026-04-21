@@ -21,10 +21,11 @@ const steps = [
 
 function ComoFunciona() {
 	return (
-		<section className="overflow-hidden bg-[#1E3A14] px-6 py-16 lg:py-24 font-sans h-full flex flex-col justify-start">
+		<section className="overflow-hidden bg-linear-to-br from-forest-600 via-forest-700 to-[#0d1a0a] px-6 py-16 lg:py-24 font-sans h-full flex flex-col justify-start">
 			<div className="w-full">
 				<ScrollReveal direction="down">
-					<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C4895E] mb-2">
+					<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C4895E] mb-2 flex items-center gap-3">
+						<span className="w-6 h-px bg-[#C4895E] inline-block shrink-0" />
 						¿Cómo funciona?
 					</p>
 					<h2 className="font-serif text-4xl lg:text-6xl font-medium text-white tracking-tight leading-tight">
@@ -36,15 +37,15 @@ function ComoFunciona() {
 
 				<div className="mt-14 space-y-0">
 					{steps.map(({ step, title, desc }, index) => (
-						<ScrollReveal 
-							key={step} 
-							direction="up" 
+						<ScrollReveal
+							key={step}
+							direction="up"
 							delay={0.2 + (index * 0.15)}
 						>
 							{index > 0 && (
 								<Separator className="bg-white/10 w-24 lg:w-32 my-2" />
 							)}
-							<div className="bg-[#1E3A14] py-8">
+							<div className="py-8">
 								<div className="flex items-start gap-8">
 									<p className="font-serif text-6xl font-medium text-white/10 leading-none">
 										{step}

@@ -19,6 +19,7 @@ import {
 	Baby,
 	LoaderCircle,
 	ArrowLeft,
+	ArrowRight,
 	MapPin,
 	Calendar,
 	Clock,
@@ -667,11 +668,17 @@ function HeroExpress({
 
 									{stepError && <p className="text-xs text-red-500 font-bold bg-red-50 p-3 rounded-xl border border-red-100 flex items-center gap-2">⚠️ {stepError}</p>}
 
-									<Button onClick={handleStepOneNext} disabled={verificandoDisponibilidad} className="w-full h-14 bg-forest-600 hover:bg-forest-700 text-white rounded-2xl text-lg font-bold shadow-xl transition-all active:scale-[0.98]">
-										{verificandoDisponibilidad ? <LoaderCircle className="h-5 w-5 animate-spin" /> : "Obtener Tarifa"}
+									<Button onClick={handleStepOneNext} disabled={verificandoDisponibilidad} className="w-full h-14 bg-forest-600 hover:bg-forest-500 text-white rounded-2xl text-lg font-bold shadow-xl hover:shadow-[0_8px_24px_rgba(30,58,20,0.35)] transition-all active:scale-[0.98] group">
+										{verificandoDisponibilidad
+											? <LoaderCircle className="h-5 w-5 animate-spin" />
+											: <span className="flex items-center gap-2">
+												Obtener Tarifa
+												<ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+											</span>
+										}
 									</Button>
 								</div>
-							</MotionDiv>
+						</MotionDiv>
 						) : (
 							<MotionDiv key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="relative bg-white p-8 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-gray-100">
 								<div className="flex items-center gap-4 mb-8">
@@ -736,11 +743,28 @@ function HeroExpress({
 										</div>
 									)}
 								</div>
-							</MotionDiv>
+						</MotionDiv>
 						)}
 					</AnimatePresence>
 				</div>
 			</div>
+
+			{/* Scroll indicator */}
+			<MotionDiv
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				transition={{ delay: 1.8 }}
+				className="absolute bottom-20 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-2 z-10 pointer-events-none"
+			>
+				<span className="text-[10px] uppercase tracking-widest text-white/25 font-semibold">Explorar</span>
+				<motion.div
+					animate={{ y: [0, 6, 0] }}
+					transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+					className="w-5 h-8 rounded-full border border-white/20 flex justify-center pt-1.5"
+				>
+					<div className="w-1 h-2 rounded-full bg-white/35" />
+				</motion.div>
+			</MotionDiv>
 
 			{/* Divisor de onda (Wave SVG) - Ajustado para eliminar línea negra y mejorar solapamiento */}
 			<div className="absolute bottom-0 left-0 w-full overflow-hidden leading-0 transform rotate-180 pointer-events-none mb-[-1px]">

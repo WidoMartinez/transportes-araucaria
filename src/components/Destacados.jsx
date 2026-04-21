@@ -24,7 +24,8 @@ function Destacados({ destinos }) {
 		<section id="destacados" className="py-16 lg:py-24 bg-transparent overflow-hidden h-full flex flex-col justify-start">
 			<div className="w-full px-6 lg:pl-12 lg:pr-6">
 				<div className="mb-12 lg:mb-16">
-					<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C4895E] mb-2">
+					<p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C4895E] mb-2 flex items-center gap-3">
+						<span className="w-6 h-px bg-[#C4895E] inline-block shrink-0" />
 						Experiencias únicas
 					</p>
 					<h2 className="font-serif text-4xl lg:text-6xl font-medium text-white tracking-tight leading-tight">
