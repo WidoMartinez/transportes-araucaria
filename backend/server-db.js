@@ -9658,14 +9658,76 @@ app.get("/api/payment-status", async (req, res) => {
 		}
 
 		// FALLBACK ROBUSTO: Si la reserva está pendiente y tenemos un token,
-		// consultar directamente a la API de Flow para verificar el estado real.
+		// consultar directamente a la API de Flow (o MP) para verificar el estado real.
 		// Esto compensa el problema del cold start de Render (el webhook pudo haberse perdido
 		// si el servidor estaba dormido cuando Flow intentó notificar la confirmación).
 		if (
 			reserva.estadoPago === "pendiente" ||
 			reserva.estadoPago === "parcial"
 		) {
-			if (tokenResuelto) {
+			const esPagoMP = flowTokenRecord?.gateway === "mercadopago";
+
+			// Fallback para pagos de Mercado Pago: buscar pago aprobado por external_reference
+			if (esPagoMP) {
+				try {
+					const externalRef = `reserva_${reservaId}_${reserva.codigoReserva || ""}`;
+					console.log(
+						`🔄 [payment-status] Reserva MP ${reservaId} pendiente en DB. Consultando estado real en MP API (external_ref: ${externalRef})...`,
+					);
+					const mpClientStatus = new MercadoPagoConfig({
+						accessToken: process.env.MP_ACCESS_TOKEN,
+						options: { timeout: 5000 },
+					});
+					const mpPaymentClient = new MpPayment(mpClientStatus);
+					const mpSearchResult = await mpPaymentClient.search({
+						options: {
+							external_reference: externalRef,
+							status: "approved",
+							sort: "date_created",
+							criteria: "desc",
+						},
+					});
+					const mpPayment = (mpSearchResult?.results || []).find(
+						(p) => p.status === "approved",
+					);
+					if (mpPayment) {
+						const montoMP =
+							Number(mpPayment.transaction_amount) ||
+							Number(reserva.pagoMonto) ||
+							Number(reserva.totalConDescuento) ||
+							Number(reserva.precio) ||
+							0;
+						await reserva.update({
+							estadoPago: "pagado",
+							estado: "confirmada",
+							pagoMonto: montoMP,
+							saldoPendiente: 0,
+							metodoPago: "mercadopago",
+							referenciaPagoExterno: String(mpPayment.id),
+							abonoPagado: true,
+							saldoPagado: true,
+						});
+						console.log(
+							`✅ [payment-status] Reserva MP ${reservaId} actualizada a PAGADA vía MP API fallback. Monto: ${montoMP}`,
+						);
+						return res.json({
+							pagado: true,
+							transaccionConfirmada: true,
+							status: "pagado",
+							monto: montoMP > 0 ? montoMP : null,
+							montoAcumulado: montoMP > 0 ? montoMP : null,
+							fuente: "mp_api_fallback",
+						});
+					}
+					console.log(
+						`ℹ️ [payment-status] MP API no encontró pago aprobado para reserva ${reservaId}`,
+					);
+				} catch (mpErr) {
+					console.warn(
+						`⚠️ [payment-status] Error consultando MP API: ${mpErr.message}`,
+					);
+				}
+			} else if (tokenResuelto) {
 				try {
 					console.log(
 						`🔄 [payment-status] Reserva ${reservaId} pendiente en DB. Consultando estado real en Flow API...`,

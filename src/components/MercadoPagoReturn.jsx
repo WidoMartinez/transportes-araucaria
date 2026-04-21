@@ -121,12 +121,12 @@ function MercadoPagoReturn() {
 				}
 
 				if (conversionValue <= 0) {
-					console.warn(
-						"⚠️ [MPReturn] Monto inválido para conversión. Usando valor 1.0 como fallback.",
-						"amount recibido:",
-						amount,
+					console.error(
+						"❌ [GA-ALERTA] Conversión MP omitida: monto inválido.",
+						"amount recibido:", amount,
+						"— verificar que backend pase amount en back_url.",
 					);
-					conversionValue = 1.0;
+					return;
 				} else {
 					console.log(
 						`✅ [MPReturn] Valor de conversión: ${conversionValue}, Transaction ID: ${transactionId}`,

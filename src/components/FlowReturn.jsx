@@ -259,19 +259,14 @@ function FlowReturn() {
 						}
 					}
 
-					// Log de advertencia si el monto es inválido
+					// Si el monto es inválido, no disparar la conversión (evita distorsionar métricas)
 					if (conversionValue <= 0) {
-						console.warn(
-							"⚠️ [FlowReturn] No se recibió monto válido en la URL. Usando valor por defecto 1.0.",
-							"amount recibido:",
-							amount,
-						);
-						// ALERTA: si este log aparece en producción, el backend no está pasando 'amount' en la URL de retorno
-						// Esto distorsiona el valor promedio de conversión en Google Ads → revisar /api/payment-result en Render
 						console.error(
-							"❌ [GA-ALERTA] Conversión disparada con value=1.0 (fallback). Verificar que backend pase amount en URL.",
+							"❌ [GA-ALERTA] Conversión omitida: monto inválido en URL.",
+							"amount recibido:", amount,
+							"— verificar que backend pase amount en URL de retorno (/api/payment-result en Render).",
 						);
-						conversionValue = 1.0;
+						return;
 					} else {
 						console.log(
 							`✅ [FlowReturn] Valor total de conversión: ${conversionValue}, Transaction ID: ${transactionId}`,

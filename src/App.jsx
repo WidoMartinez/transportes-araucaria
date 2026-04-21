@@ -654,15 +654,25 @@ function App() {
 					}
 
 					if (conversionValue <= 0) {
-						console.warn(
-							"⚠️ [App.jsx] Monto inválido o no encontrado. Usando valor por defecto 1.0 para conversión.",
-						);
+						// Intentar recuperar monto desde localStorage antes de usar fallback
+						try {
+							const pendingRaw = localStorage.getItem("ga_pending_conversion_express");
+							if (pendingRaw) {
+								const pending = JSON.parse(pendingRaw);
+								if (pending.reservaId === String(reservaId) && Number(pending.amount) > 0) {
+									conversionValue = Number(pending.amount);
+									console.log(`✅ [App.jsx] Monto recuperado desde localStorage: ${conversionValue}`);
+								}
+							}
+						} catch (e) { /* ignorar */ }
+					}
+
+					if (conversionValue <= 0) {
 						// ALERTA: si este log aparece en producción, el backend no está pasando 'amount' en la URL de retorno Express
-						// Esto distorsiona el valor promedio de conversión en Google Ads → revisar /api/payment-result en Render
 						console.error(
-							"❌ [GA-ALERTA] Conversión Express disparada con value=1.0 (fallback). Verificar que backend pase amount en URL.",
+							"❌ [GA-ALERTA] Conversión Express sin monto válido. Verificar que backend pase amount en URL de retorno.",
 						);
-						conversionValue = 1.0;
+						return; // No disparar conversión con monto cero — distorsiona métricas Google Ads
 					}
 
 					let userEmail = "";
