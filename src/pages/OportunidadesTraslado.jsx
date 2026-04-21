@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Alert, AlertDescription } from "../components/ui/alert";
@@ -43,7 +43,7 @@ import { TERMINOS_CONDICIONES } from "../data/legal";
 import imagenOportunidades from "../assets/imagenoportunidades.png";
 const vansBg = imagenOportunidades;
 
-// Normaliza un número de teléfono al formato E.164 internacional
+// Normaliza un nÃºmero de telÃ©fono al formato E.164 internacional
 const normalizePhoneToE164 = (phone) => {
   if (!phone) return "";
   let cleaned = phone.replace(/[\s\-()]/g, "");
@@ -113,7 +113,7 @@ setError(data.error || "Error al cargar oportunidades");
 }
 } catch (err) {
 console.error("Error:", err);
-setError("Error de conexión. Por favor intenta nuevamente.");
+setError("Error de conexiÃ³n. Por favor intenta nuevamente.");
 } finally {
 setLoading(false);
 }
@@ -125,7 +125,7 @@ cargarOportunidades();
 
 useEffect(() => {
 const intervalId = setInterval(() => {
-console.log("Actualizando oportunidades automáticamente...");
+console.log("Actualizando oportunidades automÃ¡ticamente...");
 cargarOportunidades();
 }, 120000);
 return () => clearInterval(intervalId);
@@ -181,16 +181,16 @@ return () => clearInterval(intervalId);
     }
 
     if (!aceptaTerminos) {
-      setTerminosError("Debes aceptar los términos y condiciones para continuar.");
+      setTerminosError("Debes aceptar los tÃ©rminos y condiciones para continuar.");
       return;
     }
 
     if (!validarTelefono(reservaFormData.telefono)) {
-      setPhoneError("Formato inválido (ej: +56 9 1234 5678)");
+      setPhoneError("Formato invÃ¡lido (ej: +56 9 1234 5678)");
       return;
     }
 
-    // Validación de rango horario
+    // ValidaciÃ³n de rango horario
     const opHora = oportunidadSeleccionada.hora;
     const salidaHora = reservaFormData.horaSalida;
     const esIda = oportunidadSeleccionada.tipo === "ida_vacia";
@@ -226,7 +226,7 @@ return () => clearInterval(intervalId);
       const data = await response.json();
 
       if (data.success) {
-        // Validación del precio antes de generar pago
+        // ValidaciÃ³n del precio antes de generar pago
         const precioValidado = validatePaymentAmount(data.precio);
         
         if (precioValidado <= 0) {
@@ -234,7 +234,7 @@ return () => clearInterval(intervalId);
           return;
         }
         
-        console.log(`💰 [Oportunidades] Iniciando pago:`, {
+        console.log(`ðŸ’° [Oportunidades] Iniciando pago:`, {
           precioOriginal: data.precio,
           precioValidado: precioValidado,
           oportunidadId: oportunidadSeleccionada.id,
@@ -243,7 +243,7 @@ return () => clearInterval(intervalId);
           email: reservaFormData.email
         });
         
-        // Proceder al pago automáticamente (Flow Total)
+        // Proceder al pago automÃ¡ticamente (Flow Total)
         const paymentResponse = await fetch(`${getBackendUrl()}/create-payment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -255,21 +255,21 @@ return () => clearInterval(intervalId);
             reservaId: data.reservaId,
             codigoReserva: data.codigoReserva,
             tipoPago: "total",
-            paymentOrigin: "oportunidad_traslado", // Identificador para redirección y conversiones GA
+            paymentOrigin: "oportunidad_traslado", // Identificador para redirecciÃ³n y conversiones GA
           }),
         });
 
         const paymentData = await paymentResponse.json();
         if (paymentData.url) {
-          // ✅ Lead: registrar intención de pago antes de redirigir a Flow
-          // Usar waitForGtag para garantizar que el evento se envíe incluso si gtag.js
-          // aún no terminó de cargar (poco probable tras el tiempo del formulario + API, pero seguro).
+          // âœ… Lead: registrar intenciÃ³n de pago antes de redirigir a Flow
+          // Usar waitForGtag para garantizar que el evento se envÃ­e incluso si gtag.js
+          // aÃºn no terminÃ³ de cargar (poco probable tras el tiempo del formulario + API, pero seguro).
           const waitForGtag = () => new Promise((resolve) => {
             if (typeof window.gtag === "function") { resolve(); return; }
             const inicio = Date.now();
             const iv = setInterval(() => {
               if (typeof window.gtag === "function") { clearInterval(iv); resolve(); }
-              else if (Date.now() - inicio >= 2000) { clearInterval(iv); resolve(); } // 2s máx para no bloquear la navegación
+              else if (Date.now() - inicio >= 2000) { clearInterval(iv); resolve(); } // 2s mÃ¡x para no bloquear la navegaciÃ³n
             }, 50);
           });
 
@@ -307,7 +307,7 @@ return () => clearInterval(intervalId);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error de conexión. Intenta nuevamente.");
+      alert("Error de conexiÃ³n. Intenta nuevamente.");
     } finally {
       setSubmittingReserva(false);
     }
@@ -317,134 +317,134 @@ const origenes = [...new Set(oportunidades.map((op) => op.origen))];
 const destinos = [...new Set(oportunidades.map((op) => op.destino))];
 
 return (
-<div className="min-h-screen bg-gray-50">
-<section className="relative bg-chocolate-700 text-white py-20 md:py-32 overflow-hidden">
+<div className="min-h-screen bg-background">
+<section className="relative overflow-hidden bg-primary bg-pattern-mesh py-20 text-primary-foreground md:py-28">
+  <div className="absolute inset-0 bg-primary/75" />
   <div 
-    className="absolute inset-0 z-0 opacity-50 md:opacity-40 bg-center md:bg-[center_80%]"
+    className="absolute inset-0 z-0 bg-center opacity-45 md:bg-[center_80%] md:opacity-35"
     style={{
-      backgroundImage: vansBg ? `url(${vansBg})` : 'none',
-      backgroundSize: 'cover',
-      mixBlendMode: 'overlay'
+      backgroundImage: vansBg ? `url(${vansBg})` : "none",
+      backgroundSize: "cover",
+      mixBlendMode: "overlay"
     }}
   ></div>
-<div className="container mx-auto px-4 relative z-10">
-<div className="max-w-4xl mx-auto text-center">
-<Badge className="mb-4 bg-yellow-400 text-chocolate-900 text-lg px-4 py-2">
-<Sparkles className="h-5 w-5 mr-2 inline" />
-Ofertas Exclusivas
+  <div className="absolute -right-44 -top-44 h-[380px] w-[380px] rounded-full bg-secondary/30 blur-[120px]" />
+  <div className="absolute -left-52 bottom-[-120px] h-[320px] w-[320px] rounded-full bg-accent/25 blur-[130px]" />
+<div className="container relative z-10 mx-auto px-4">
+<div className="mx-auto max-w-4xl text-center">
+<Badge className="mb-5 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground md:text-base">
+<Sparkles className="mr-2 inline h-4 w-4 md:h-5 md:w-5" />
+Ofertas exclusivas
 </Badge>
-<h1 className="text-5xl md:text-6xl font-bold mb-6">
-Traslados Privados con hasta{" "}
-<span className="text-yellow-400">60% de Descuento</span>
+<h1 className="font-serif text-4xl font-semibold leading-tight md:text-6xl">
+Traslados privados con hasta{" "}
+<span className="text-cafe-200">60% de descuento</span>
 </h1>
-<p className="text-xl md:text-2xl mb-8 text-chocolate-100">
-Aprovecha nuestros retornos disponibles. Mismo servicio premium,
-mejor precio.
+<p className="mx-auto mt-6 max-w-3xl text-base text-primary-foreground/90 md:text-xl">
+Aprovecha retornos disponibles con el mismo estándar premium de Transportes Araucaria y una tarifa más conveniente.
 </p>
-<div className="flex flex-wrap justify-center gap-6 text-lg">
-<div className="flex items-center gap-2">
-<CheckCircle2 className="h-6 w-6 text-green-400" />
-<span>100% Privado</span>
+<div className="mt-8 flex flex-wrap justify-center gap-4 text-sm md:text-base">
+<div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 backdrop-blur-md">
+<CheckCircle2 className="h-5 w-5 text-cafe-200" />
+<span>100% privado</span>
 </div>
-<div className="flex items-center gap-2">
-<CheckCircle2 className="h-6 w-6 text-green-400" />
-<span>Vehículo Completo</span>
+<div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 backdrop-blur-md">
+<CheckCircle2 className="h-5 w-5 text-cafe-200" />
+<span>Vehículo completo</span>
 </div>
-<div className="flex items-center gap-2">
-<CheckCircle2 className="h-6 w-6 text-green-400" />
-<span>Conductor Certificado</span>
+<div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 backdrop-blur-md">
+<CheckCircle2 className="h-5 w-5 text-cafe-200" />
+<span>Conductor certificado</span>
 </div>
 </div>
 </div>
 </div>
 </section>
 
-<section className="py-16 bg-white">
+<section className="bg-background py-16">
 <div className="container mx-auto px-4">
-<h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
-¿Cómo Funciona?
+<h2 className="mb-12 text-center font-serif text-4xl font-semibold text-foreground">
+¿Cómo funciona?
 </h2>
-<div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-<div className="text-center">
-<div className="bg-chocolate-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-<Car className="h-10 w-10 text-chocolate-600" />
+<div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 md:grid-cols-3">
+<div className="rounded-[2rem] border border-border/70 bg-card p-6 text-center shadow-sm">
+<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+<Car className="h-8 w-8 text-primary" />
 </div>
-<h3 className="text-xl font-bold mb-2">Retornos Vacíos</h3>
-<p className="text-muted-foreground">
-Cuando dejamos un cliente en su destino, el vehículo está
-disponible para el retorno
+<h3 className="mb-2 text-lg font-semibold text-foreground">Retornos vacíos</h3>
+<p className="text-sm text-muted-foreground">
+Cuando dejamos un cliente en destino, ese regreso puede convertirse en una oportunidad con precio preferente.
 </p>
 </div>
-<div className="text-center">
-<div className="bg-chocolate-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-<TrendingDown className="h-10 w-10 text-chocolate-600" />
+<div className="rounded-[2rem] border border-border/70 bg-card p-6 text-center shadow-sm">
+<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/15">
+<TrendingDown className="h-8 w-8 text-secondary" />
 </div>
-<h3 className="text-xl font-bold mb-2">Precio Especial</h3>
-<p className="text-muted-foreground">
-Ofrecemos hasta 60% de descuento para aprovechar ese traslado
-vacío
+<h3 className="mb-2 text-lg font-semibold text-foreground">Precio especial</h3>
+<p className="text-sm text-muted-foreground">
+Publicamos descuentos de hasta 60% para optimizar traslados vacíos sin comprometer calidad.
 </p>
 </div>
-<div className="text-center">
-<div className="bg-chocolate-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-<CheckCircle2 className="h-10 w-10 text-chocolate-600" />
+<div className="rounded-[2rem] border border-border/70 bg-card p-6 text-center shadow-sm">
+<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/15">
+<CheckCircle2 className="h-8 w-8 text-accent" />
 </div>
-<h3 className="text-xl font-bold mb-2">Servicio Premium</h3>
-<p className="text-muted-foreground">
-Mismo traslado privado, mismo conductor profesional, mejor
-precio
+<h3 className="mb-2 text-lg font-semibold text-foreground">Servicio premium</h3>
+<p className="text-sm text-muted-foreground">
+Mantienes traslado privado, conductor profesional y seguimiento operativo en tiempo real.
 </p>
 </div>
 </div>
 </div>
 </section>
 
-<section className="py-16 bg-gray-50">
+<section className="bg-muted/35 py-16">
 <div className="container mx-auto px-4">
-<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 <div>
-<h2 className="text-4xl font-bold text-gray-800">
-Oportunidades Activas
+<h2 className="font-serif text-4xl font-semibold text-foreground">
+Oportunidades activas
 </h2>
-<p className="text-muted-foreground mt-2">
-Actualización automática cada 2 minutos
+<p className="mt-2 text-sm text-muted-foreground">
+Actualización automática cada 2 minutos.
 </p>
 </div>
 						<div className="flex items-center gap-2">
 							<Button
 								variant="ghost"
-								className="text-gray-600 hover:text-chocolate-600 font-medium"
+								className="font-medium hover:bg-muted"
 								onClick={() => (window.location.href = "/")}
 							>
-								<ArrowLeft className="h-4 w-4 mr-2" />
-								Volver al Inicio
+								<ArrowLeft className="mr-2 h-4 w-4" />
+								Volver al inicio
 							</Button>
 							<Button
 								onClick={() => cargarOportunidades()}
 								variant="outline"
 								disabled={loading}
+								className="rounded-xl"
 							>
 								<RefreshCw
-									className={"h-4 w-4 mr-2 " + (loading ? "animate-spin" : "")}
+									className={"mr-2 h-4 w-4 " + (loading ? "animate-spin" : "")}
 								/>
 								Actualizar
 							</Button>
 						</div>
 </div>
 
-<div className="bg-white p-6 rounded-lg shadow-sm mb-8">
-<div className="flex items-center gap-2 mb-4">
-<Filter className="h-5 w-5 text-chocolate-600" />
-<h3 className="font-semibold text-lg">Filtrar Oportunidades</h3>
+<div className="mb-8 rounded-[2rem] border border-border/70 bg-card p-5 shadow-sm md:p-6">
+<div className="mb-4 flex items-center gap-2">
+<Filter className="h-5 w-5 text-secondary" />
+<h3 className="text-lg font-semibold text-foreground">Filtrar oportunidades</h3>
 </div>
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 <Select
 value={filtros.origen}
 onValueChange={(value) =>
 setFiltros({ ...filtros, origen: value })
 }
 >
-<SelectTrigger>
+<SelectTrigger className="h-11 rounded-xl border-input">
 <SelectValue placeholder="Origen" />
 </SelectTrigger>
 <SelectContent>
@@ -463,7 +463,7 @@ onValueChange={(value) =>
 setFiltros({ ...filtros, destino: value })
 }
 >
-<SelectTrigger>
+<SelectTrigger className="h-11 rounded-xl border-input">
 <SelectValue placeholder="Destino" />
 </SelectTrigger>
 <SelectContent>
@@ -476,13 +476,13 @@ setFiltros({ ...filtros, destino: value })
 </SelectContent>
 </Select>
 
-<input
+<Input
 type="date"
 value={filtros.fecha}
 onChange={(e) =>
 setFiltros({ ...filtros, fecha: e.target.value })
 }
-className="border rounded-md px-3 py-2"
+className="h-11 rounded-xl border-input"
 min={new Date().toISOString().split("T")[0]}
 />
 </div>
@@ -490,7 +490,7 @@ min={new Date().toISOString().split("T")[0]}
 <Button
 onClick={() => setFiltros({ origen: "", destino: "", fecha: "" })}
 variant="link"
-className="mt-2"
+className="mt-2 h-auto p-0 text-secondary"
 >
 Limpiar filtros
 </Button>
@@ -498,36 +498,35 @@ Limpiar filtros
 </div>
 
 {loading && (
-<div className="text-center py-12">
-<RefreshCw className="h-12 w-12 animate-spin mx-auto text-chocolate-600 mb-4" />
-<p className="text-lg text-muted-foreground">
+<div className="rounded-[2rem] border border-border/60 bg-card py-12 text-center shadow-sm">
+<RefreshCw className="mx-auto mb-4 h-12 w-12 animate-spin text-secondary" />
+<p className="text-base text-muted-foreground">
 Cargando oportunidades...
 </p>
 </div>
 )}
 
 {error && (
-<Alert variant="destructive" className="mb-8">
+<Alert variant="destructive" className="mb-8 rounded-2xl">
 <AlertCircle className="h-4 w-4" />
 <AlertDescription>{error}</AlertDescription>
 </Alert>
 )}
 
 {!loading && !error && oportunidades.length === 0 && (
-<div className="text-center py-12">
-<AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-<p className="text-lg text-muted-foreground mb-4">
-No hay oportunidades disponibles en este momento
+<div className="rounded-[2rem] border border-dashed border-border bg-card py-12 text-center">
+<AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+<p className="mb-2 text-lg text-foreground">
+No hay oportunidades disponibles por ahora
 </p>
 <p className="text-sm text-muted-foreground">
-Suscríbete abajo para recibir alertas cuando haya nuevas
-oportunidades
+Suscríbete más abajo y te avisaremos apenas haya nuevas opciones.
 </p>
 </div>
 )}
 
 {!loading && !error && oportunidades.length > 0 && (
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 {oportunidades.map((oportunidad) => (
 <OportunidadCard
 key={oportunidad.id}
@@ -540,48 +539,48 @@ onReservar={handleReservar}
 </div>
 </section>
 
-<section className="py-16 bg-white">
+<section className="bg-background py-16">
 <div className="container mx-auto px-4">
 <SuscripcionOportunidades />
 </div>
 </section>
 
-      <section className="py-16 bg-chocolate-50">
+      <section className="bg-muted/45 py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
-            Nuestras Garantías
+          <h2 className="mb-12 text-center font-serif text-4xl font-semibold text-foreground">
+            Nuestras garantías
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            <div className="text-center">
-              <Badge className="mb-4 bg-green-500 text-white text-base px-4 py-2">
-                100% Privado
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-5 md:grid-cols-4">
+            <div className="rounded-3xl border border-border/70 bg-card p-5 text-center shadow-sm">
+              <Badge className="mb-4 rounded-full bg-primary text-primary-foreground">
+                100% privado
               </Badge>
-              <p className="text-sm text-gray-700 font-medium">
-                El vehículo es solo para ti y tu grupo
+              <p className="text-sm text-muted-foreground">
+                El vehículo es solo para ti y tu grupo.
               </p>
             </div>
-            <div className="text-center">
-              <Badge className="mb-4 bg-blue-500 text-white text-base px-4 py-2">
-                Mismo Servicio
+            <div className="rounded-3xl border border-border/70 bg-card p-5 text-center shadow-sm">
+              <Badge className="mb-4 rounded-full bg-secondary text-secondary-foreground">
+                Mismo servicio
               </Badge>
-              <p className="text-sm text-gray-700 font-medium">
-                Calidad premium sin diferencias
+              <p className="text-sm text-muted-foreground">
+                Mantienes la calidad premium del traslado.
               </p>
             </div>
-            <div className="text-center">
-              <Badge className="mb-4 bg-purple-500 text-white text-base px-4 py-2">
-                Conductores Pro
+            <div className="rounded-3xl border border-border/70 bg-card p-5 text-center shadow-sm">
+              <Badge className="mb-4 rounded-full bg-accent text-accent-foreground">
+                Conductores pro
               </Badge>
-              <p className="text-sm text-gray-700 font-medium">
-                Certificados y con experiencia
+              <p className="text-sm text-muted-foreground">
+                Conductores certificados y con experiencia.
               </p>
             </div>
-            <div className="text-center">
-              <Badge className="mb-4 bg-yellow-500 text-white text-base px-4 py-2">
-                 Mejor Precio
+            <div className="rounded-3xl border border-border/70 bg-card p-5 text-center shadow-sm">
+              <Badge className="mb-4 rounded-full bg-primary/90 text-primary-foreground">
+                 Mejor precio
               </Badge>
-              <p className="text-sm text-gray-700 font-medium">
-                Hasta 60% de ahorro garantizado
+              <p className="text-sm text-muted-foreground">
+                Hasta 60% de ahorro en ventanas seleccionadas.
               </p>
             </div>
           </div>
@@ -590,191 +589,188 @@ onReservar={handleReservar}
 
       {/* Modal de Reserva Expedita */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[520px] p-0 overflow-hidden rounded-t-2xl sm:rounded-2xl border-none shadow-2xl max-h-[95vh] flex flex-col">
-          <DialogHeader className="bg-chocolate-600 p-4 sm:p-6 text-white relative shrink-0">
-            <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
-              <Sparkles className="h-5 w-5 sm:h-6 sm:h-6 text-yellow-400 animate-pulse" />
-              ¡Reserva tu Oferta!
+        <DialogContent className="flex max-h-[95vh] flex-col overflow-hidden rounded-3xl border border-border p-0 shadow-2xl sm:max-w-[520px]">
+          <DialogHeader className="relative shrink-0 bg-primary p-4 text-primary-foreground sm:p-6">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold sm:gap-3 sm:text-2xl">
+              <Sparkles className="h-5 w-5 text-cafe-200 sm:h-6 sm:w-6" />
+              ¡Reserva tu oferta!
             </DialogTitle>
-            <DialogDescription className="text-chocolate-100 text-xs sm:text-base opacity-90 mt-0.5 sm:mt-1">
+            <DialogDescription className="mt-1 text-xs text-primary-foreground/85 sm:text-sm">
               Completa los datos para asegurar tu traslado con descuento.
             </DialogDescription>
-            <div className="absolute top-4 sm:top-6 right-10 sm:right-6 bg-yellow-400 text-chocolate-900 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
+            <div className="absolute right-10 top-4 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground shadow-lg sm:right-6 sm:top-6 sm:px-3 sm:py-1 sm:text-xs">
               {oportunidadSeleccionada && `${Math.round((1 - oportunidadSeleccionada.precioFinal / oportunidadSeleccionada.precioOriginal) * 100)}% DCTO.`}
             </div>
           </DialogHeader>
 
-          <div className="p-4 sm:p-5 space-y-3 bg-white overflow-y-auto max-h-[75vh] sm:max-h-[60vh] flex-grow">
-
-            {/* Resumen de viaje consolidado con fecha y hora */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-chocolate-50 p-3 rounded-xl border border-chocolate-100">
-                <p className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider mb-0.5">Ruta</p>
-                <p className="text-sm font-semibold text-chocolate-900 line-clamp-1">
-                  {oportunidadSeleccionada?.origen} → {oportunidadSeleccionada?.destino}
-                </p>
-              </div>
-              <div className="bg-chocolate-50 p-3 rounded-xl border border-chocolate-100">
-                <p className="text-[10px] text-chocolate-600 font-bold uppercase tracking-wider mb-0.5">Precio Oferta</p>
-                <p className="text-lg font-bold text-chocolate-700 leading-tight">
-                  ${oportunidadSeleccionada?.precioFinal.toLocaleString()}
-                </p>
-              </div>
-              {oportunidadSeleccionada?.fecha && (
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-200 col-span-2 relative">
-                  <p className="text-[10px] text-blue-700 font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> Fecha y Hora del Servicio
-                  </p>
-                  <p className="text-sm font-bold text-blue-900">
-                    {new Date(`${oportunidadSeleccionada.fecha}T00:00:00`).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
-                    {oportunidadSeleccionada?.hora && ` — ${oportunidadSeleccionada.hora} hrs`}
-                  </p>
-                  <div className="flex items-start gap-1.5 mt-1.5 pt-1.5 border-t border-blue-100">
-                    <ShieldAlert className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-blue-700 font-medium leading-tight">
-                      <strong>Precio exclusivo:</strong> Válido solo para esta fecha y hora.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
+          <ScrollArea className="max-h-[72vh] flex-grow bg-background p-4 sm:max-h-[60vh] sm:p-5">
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="nombre" className="text-xs font-bold text-gray-700">Tu Nombre Completo</Label>
-                <Input
-                  id="nombre"
-                  name="nombre"
-                  placeholder="Ej: Juan Pérez"
-                  value={reservaFormData.nombre}
-                  onChange={handleReservaInputChange}
-                  className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs font-bold text-gray-700">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="tucorreo@ejemplo.com"
-                    value={reservaFormData.email}
-                    onChange={handleReservaInputChange}
-                    className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm"
-                  />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-border/70 bg-muted/50 p-3">
+                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ruta</p>
+                  <p className="line-clamp-1 text-sm font-semibold text-foreground">
+                    {oportunidadSeleccionada?.origen} → {oportunidadSeleccionada?.destino}
+                  </p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="telefono" className="text-xs font-bold text-gray-700">Teléfono (WhatsApp)</Label>
-                  <Input
-                    id="telefono"
-                    name="telefono"
-                    placeholder="+56 9 1234 5678"
-                    value={reservaFormData.telefono}
-                    onChange={handleReservaInputChange}
-                    className={`h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm ${phoneError ? 'border-red-500' : ''}`}
-                  />
-                  {phoneError && <p className="text-[10px] text-red-500 font-medium">{phoneError}</p>}
+                <div className="rounded-xl border border-secondary/30 bg-secondary/10 p-3">
+                  <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary">Precio oferta</p>
+                  <p className="text-lg font-bold leading-tight text-secondary">
+                    ${oportunidadSeleccionada?.precioFinal.toLocaleString()}
+                  </p>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pasajeros" className="text-xs font-bold text-gray-700">Pasajeros</Label>
-                  <Select
-                    value={reservaFormData.pasajeros}
-                    onValueChange={(value) => setReservaFormData(prev => ({ ...prev, pasajeros: value }))}
-                  >
-                    <SelectTrigger className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm">
-                      <SelectValue placeholder="Cuántos son" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...Array(parseInt(oportunidadSeleccionada?.capacidad.match(/\d+/) || 7))].map((_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {i + 1} {i === 0 ? "persona" : "personas"}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="direccion" className="text-xs font-bold text-gray-700">
-                    {oportunidadSeleccionada?.tipo === "retorno_vacio" ? "Recogida" : "Llegada"}
-                  </Label>
-                  <Input
-                    id="direccion"
-                    name="direccion"
-                    placeholder="Hotel, Calle, etc."
-                    value={reservaFormData.direccion}
-                    onChange={handleReservaInputChange}
-                    className="h-10 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Nueva Fila: Hora de Salida con Validación */}
-              <div className="space-y-1.5">
-                <Label htmlFor="horaSalida" className="text-xs font-bold text-gray-700">
-                  Hora de Salida Solicitada <span className="text-chocolate-600 font-medium text-[10px]">(Rango sugerido: {
-                    oportunidadSeleccionada?.hora ? (() => {
-                      const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
-                      const t = h * 60 + m;
-                      const esIda = oportunidadSeleccionada.tipo === "ida_vacia";
-                      const minT = esIda ? Math.max(0, t - 60) : t;
-                      const maxT = esIda ? t : t + 60;
-                      const format = (tm) => `${Math.floor(tm/60).toString().padStart(2,"0")}:${(tm%60).toString().padStart(2,"0")}`;
-                      return `${format(minT)}h - ${format(maxT)}h`;
-                    })() : "--:--"
-                  })</span>
-                </Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400 z-10" />
-                  <Select
-                    value={reservaFormData.horaSalida}
-                    onValueChange={(value) => {
-                      setReservaFormData(prev => ({ ...prev, horaSalida: value }));
-                      setHoraError("");
-                    }}
-                  >
-                    <SelectTrigger className={`h-10 pl-9 border-gray-200 focus:ring-chocolate-500 rounded-xl text-sm ${horaError ? 'border-red-500' : ''}`}>
-                      <SelectValue placeholder="Selecciona la hora" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {generarOpcionesHora(oportunidadSeleccionada?.hora, oportunidadSeleccionada?.tipo).map((hora) => (
-                        <SelectItem key={hora} value={hora}>
-                          {hora} hrs
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {horaError && (
-                  <p className="text-[10px] text-red-500 font-medium">{horaError}</p>
+                {oportunidadSeleccionada?.fecha && (
+                  <div className="col-span-2 rounded-xl border border-accent/30 bg-accent/10 p-3">
+                    <p className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+                      <Calendar className="h-3 w-3" /> Fecha y hora del servicio
+                    </p>
+                    <p className="text-sm font-bold text-foreground">
+                      {new Date(`${oportunidadSeleccionada.fecha}T00:00:00`).toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })}
+                      {oportunidadSeleccionada?.hora && ` - ${oportunidadSeleccionada.hora} hrs`}
+                    </p>
+                    <div className="mt-1.5 flex items-start gap-1.5 border-t border-accent/30 pt-1.5">
+                      <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" />
+                      <p className="text-[11px] font-medium leading-tight text-foreground/85">
+                        <strong>Precio exclusivo:</strong> válido solo para esta fecha y hora.
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
 
-          <DialogFooter className="p-4 sm:p-5 pt-0 bg-white flex flex-col items-stretch space-y-2 sm:flex-col sm:space-x-0 shrink-0">
-            {/* Política de cancelación resumida */}
-            <div className="w-full bg-gray-50 rounded-xl border border-gray-200 p-3">
-              <p className="text-[10px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                <Info className="h-3 w-3 text-gray-500" />
-                Política de Cancelación
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nombre" className="text-xs font-bold text-foreground">Tu nombre completo</Label>
+                  <Input
+                    id="nombre"
+                    name="nombre"
+                    placeholder="Ej: Juan Pérez"
+                    value={reservaFormData.nombre}
+                    onChange={handleReservaInputChange}
+                    className="h-10 rounded-xl border-input text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-xs font-bold text-foreground">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="tucorreo@ejemplo.com"
+                      value={reservaFormData.email}
+                      onChange={handleReservaInputChange}
+                      className="h-10 rounded-xl border-input text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telefono" className="text-xs font-bold text-foreground">Teléfono (WhatsApp)</Label>
+                    <Input
+                      id="telefono"
+                      name="telefono"
+                      placeholder="+56 9 1234 5678"
+                      value={reservaFormData.telefono}
+                      onChange={handleReservaInputChange}
+                      className={`h-10 rounded-xl border-input text-sm ${phoneError ? "border-destructive" : ""}`}
+                    />
+                    {phoneError && <p className="text-[10px] font-medium text-destructive">{phoneError}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pasajeros" className="text-xs font-bold text-foreground">Pasajeros</Label>
+                    <Select
+                      value={reservaFormData.pasajeros}
+                      onValueChange={(value) => setReservaFormData(prev => ({ ...prev, pasajeros: value }))}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl border-input text-sm">
+                        <SelectValue placeholder="Cuántos son" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[...Array(parseInt(oportunidadSeleccionada?.capacidad.match(/\d+/) || 7))].map((_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>
+                            {i + 1} {i === 0 ? "persona" : "personas"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="direccion" className="text-xs font-bold text-foreground">
+                      {oportunidadSeleccionada?.tipo === "retorno_vacio" ? "Recogida" : "Llegada"}
+                    </Label>
+                    <Input
+                      id="direccion"
+                      name="direccion"
+                      placeholder="Hotel, calle, etc."
+                      value={reservaFormData.direccion}
+                      onChange={handleReservaInputChange}
+                      className="h-10 rounded-xl border-input text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="horaSalida" className="text-xs font-bold text-foreground">
+                    Hora de salida solicitada <span className="text-[10px] font-medium text-secondary">(Rango sugerido: {
+                      oportunidadSeleccionada?.hora ? (() => {
+                        const [h, m] = oportunidadSeleccionada.hora.split(":").map(Number);
+                        const t = h * 60 + m;
+                        const esIda = oportunidadSeleccionada.tipo === "ida_vacia";
+                        const minT = esIda ? Math.max(0, t - 60) : t;
+                        const maxT = esIda ? t : t + 60;
+                        const format = (tm) => `${Math.floor(tm/60).toString().padStart(2,"0")}:${(tm%60).toString().padStart(2,"0")}`;
+                        return `${format(minT)}h - ${format(maxT)}h`;
+                      })() : "--:--"
+                    })</span>
+                  </Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-2.5 z-10 h-4 w-4 text-muted-foreground" />
+                    <Select
+                      value={reservaFormData.horaSalida}
+                      onValueChange={(value) => {
+                        setReservaFormData(prev => ({ ...prev, horaSalida: value }));
+                        setHoraError("");
+                      }}
+                    >
+                      <SelectTrigger className={`h-10 rounded-xl border-input pl-9 text-sm ${horaError ? "border-destructive" : ""}`}>
+                        <SelectValue placeholder="Selecciona la hora" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {generarOpcionesHora(oportunidadSeleccionada?.hora, oportunidadSeleccionada?.tipo).map((hora) => (
+                          <SelectItem key={hora} value={hora}>
+                            {hora} hrs
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {horaError && (
+                    <p className="text-[10px] font-medium text-destructive">{horaError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="flex shrink-0 flex-col items-stretch gap-2 border-t border-border bg-background p-4 sm:p-5">
+            <div className="w-full rounded-xl border border-border/70 bg-muted/45 p-3">
+              <p className="mb-1 flex items-center gap-1.5 text-[10px] font-bold text-foreground">
+                <Info className="h-3 w-3 text-muted-foreground" />
+                Política de cancelación
               </p>
-              <ul className="text-[10px] text-gray-600 space-y-0.5">
+              <ul className="space-y-0.5 text-[10px] text-muted-foreground">
                 {TERMINOS_CONDICIONES.find(t => t.titulo === "Cambios y Cancelaciones")?.contenido.slice(0, 2).map((item, i) => (
                   <li key={i} className="flex items-start gap-1">
-                    <span className="text-chocolate-500 shrink-0">•</span>
+                    <span className="shrink-0 text-secondary">-</span>
                     {item}
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* Checkbox de consentimiento */}
-            <div className="w-full flex items-start gap-2.5">
+            <div className="flex w-full items-start gap-2.5">
               <Checkbox
                 id="aceptaTerminos"
                 checked={aceptaTerminos}
@@ -784,25 +780,25 @@ onReservar={handleReservar}
                 }}
                 className="mt-0.5 h-4 w-4"
               />
-              <label htmlFor="aceptaTerminos" className="text-[10px] text-gray-600 cursor-pointer leading-tight">
+              <label htmlFor="aceptaTerminos" className="cursor-pointer text-[10px] leading-tight text-muted-foreground">
                 Acepto los <strong>Términos y Condiciones</strong> y la política de exclusividad de precio para esta fecha/hora.
               </label>
             </div>
             {terminosError && (
-              <p className="w-full text-[10px] text-red-500 font-medium flex items-center gap-1">
+              <p className="flex w-full items-center gap-1 text-[10px] font-medium text-destructive">
                 <AlertCircle className="h-3 w-3" />
                 {terminosError}
               </p>
             )}
 
             <Button
-              className="w-full h-12 text-lg font-bold bg-chocolate-600 hover:bg-chocolate-700 text-white rounded-xl shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-12 w-full rounded-xl bg-secondary text-base font-bold text-secondary-foreground shadow-md transition-all hover:bg-secondary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={handleConfirmarReserva}
               disabled={submittingReserva || !aceptaTerminos}
             >
               {submittingReserva ? (
                 <>
-                  <RefreshCw className="mr-2 h-5 w-5 animate-spin text-white" />
+                  <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
                   Procesando...
                 </>
               ) : (
@@ -820,3 +816,4 @@ onReservar={handleReservar}
 }
 
 export default OportunidadesTraslado;
+

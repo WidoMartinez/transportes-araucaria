@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+﻿import React, { useState, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -56,7 +56,7 @@ function ConsultarReserva() {
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
-			setError("Por favor ingresa un código de reserva");
+			setError("Por favor ingresa un cÃ³digo de reserva");
 			return;
 		}
 
@@ -71,7 +71,7 @@ function ConsultarReserva() {
 
 			if (!response.ok) {
 				if (response.status === 404) {
-					throw new Error("No se encontró ninguna reserva con ese código");
+					throw new Error("No se encontrÃ³ ninguna reserva con ese cÃ³digo");
 				}
 				throw new Error("Error al buscar la reserva");
 			}
@@ -93,14 +93,14 @@ function ConsultarReserva() {
 			const apiBase =
 				getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
-			// Validación más robusta del monto
+			// ValidaciÃ³n mÃ¡s robusta del monto
 			const montoValidado = validatePaymentAmount(monto);
 
 			if (montoValidado <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
 
-			console.log(`💰 [ConsultarReserva] Iniciando pago (${pasarela}):`, {
+			console.log(`ðŸ’° [ConsultarReserva] Iniciando pago (${pasarela}):`, {
 				tipo,
 				montoOriginal: monto,
 				montoValidado: montoValidado,
@@ -118,7 +118,7 @@ function ConsultarReserva() {
 							? `Pago saldo total y productos de reserva ${reserva.codigoReserva}`
 							: `Abono 40% reserva ${reserva.codigoReserva} (${reserva.destino})`;
 
-			// Endpoint y cuerpo según pasarela seleccionada
+			// Endpoint y cuerpo segÃºn pasarela seleccionada
 			const endpoint =
 				pasarela === "mercadopago"
 					? `${apiBase}/api/create-payment-mp`
@@ -166,7 +166,7 @@ function ConsultarReserva() {
 			}
 			const data = await resp.json();
 			if (!data.url)
-				throw new Error("Respuesta inválida del servidor de pagos");
+				throw new Error("Respuesta invÃ¡lida del servidor de pagos");
 			// Lead de Google Ads antes de redirigir (con espera corta para evitar race condition)
 			const waitForGtag = (timeoutMs = 2000) =>
 				new Promise((resolve) => {
@@ -209,7 +209,7 @@ function ConsultarReserva() {
 			}
 			window.location.href = data.url;
 		} catch (e) {
-			console.error(`❌ [ConsultarReserva] Error en pago:`, e);
+			console.error(`âŒ [ConsultarReserva] Error en pago:`, e);
 			setPayError(e.message || "No se pudo iniciar el pago");
 		} finally {
 			setPaying(false);
@@ -232,7 +232,7 @@ function ConsultarReserva() {
 		}).format(amount || 0);
 	};
 
-	// CORRECCIÓN: Calcular el precio base real considerando ida+vuelta
+	// CORRECCIÃ“N: Calcular el precio base real considerando ida+vuelta
 	const precioBaseReal = useMemo(() => {
 		if (!reserva) return 0;
 		// Si es ida y vuelta, el backend divide el precio total en 2 tramos
@@ -278,18 +278,38 @@ function ConsultarReserva() {
 
 	const getEstadoPagoBadge = (estadoPago) => {
 		const estados = {
-			pendiente: { variant: "secondary", label: "Pendiente" },
-			aprobado: { variant: "outline", label: "Aprobado" },
-			parcial: { variant: "outline", label: "Pago parcial" },
-			pagado: { variant: "default", label: "Pago completado" },
-			fallido: { variant: "destructive", label: "Fallido" },
-			reembolsado: { variant: "outline", label: "Reembolsado" },
+			pendiente: {
+				variant: "secondary",
+				label: "Pendiente",
+				className: "bg-muted text-muted-foreground",
+			},
+			aprobado: {
+				variant: "outline",
+				label: "Aprobado",
+				className: "border-secondary/40 text-secondary",
+			},
+			parcial: {
+				variant: "outline",
+				label: "Pago parcial",
+				className: "border-secondary/40 text-secondary",
+			},
+			pagado: { variant: "default", label: "Pago completado", className: "" },
+			fallido: { variant: "destructive", label: "Fallido", className: "" },
+			reembolsado: {
+				variant: "outline",
+				label: "Reembolsado",
+				className: "border-border text-foreground",
+			},
 		};
 
 		const key = (estadoPago || "").toLowerCase();
 		const config = estados[key] || estados.pendiente;
 
-		return <Badge variant={config.variant}>{config.label}</Badge>;
+		return (
+			<Badge variant={config.variant} className={`rounded-full ${config.className}`}>
+				{config.label}
+			</Badge>
+		);
 	};
 
 	const getPaymentOptions = () => {
@@ -314,7 +334,7 @@ function ConsultarReserva() {
 						saldoTotalGeneral,
 					)})`,
 					variant: "default",
-					className: "bg-chocolate-600 hover:bg-chocolate-700 animate-pulse",
+					className: "bg-secondary hover:bg-secondary/90",
 				},
 			];
 		}
@@ -347,7 +367,7 @@ function ConsultarReserva() {
 					monto: reserva.abonoSugerido,
 					texto: "Continuar con el pago (40%)",
 					variant: "default",
-					className: "bg-green-600 hover:bg-green-700",
+					className: "bg-primary hover:bg-primary/90",
 				});
 			}
 			if (reserva.totalConDescuento > 0) {
@@ -367,57 +387,61 @@ function ConsultarReserva() {
 	const paymentOptions = getPaymentOptions();
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
-			<div className="max-w-4xl mx-auto">
-				{/* Encabezado */}
-				<div className="text-center mb-8">
-					<h1 className="text-4xl font-bold text-slate-900 mb-2">
+		<div className="min-h-screen bg-background">
+			<section className="relative overflow-hidden bg-primary bg-pattern-mesh py-14 text-primary-foreground md:py-16">
+				<div className="absolute inset-0 bg-primary/75" />
+				<div className="absolute -right-40 -top-36 h-[300px] w-[300px] rounded-full bg-secondary/35 blur-[110px]" />
+				<div className="absolute -left-40 bottom-[-110px] h-[260px] w-[260px] rounded-full bg-accent/30 blur-[110px]" />
+				<div className="container relative z-10 mx-auto px-4 text-center">
+					<Badge className="mb-4 rounded-full bg-accent px-4 py-1.5 text-accent-foreground">
+						<Search className="mr-2 h-4 w-4" />
+						Consulta en línea
+					</Badge>
+					<h1 className="font-serif text-4xl font-semibold leading-tight md:text-5xl">
 						Consultar Reserva
 					</h1>
-					<p className="text-slate-600">
-						Ingresa tu código de reserva para ver los detalles de tu viaje
+					<p className="mx-auto mt-3 max-w-2xl text-sm text-primary-foreground/90 md:text-base">
+						Ingresa tu código para ver estado, detalles del viaje y opciones de pago disponibles.
 					</p>
 				</div>
+			</section>
 
-				{/* Buscador */}
-				<Card className="mb-8">
+			<div className="container mx-auto max-w-5xl space-y-6 px-4 py-8 md:py-10">
+				<Card className="rounded-[2rem] border-border/70 bg-card py-5 shadow-sm">
 					<CardHeader>
-						<CardTitle>Buscar por Código de Reserva</CardTitle>
+						<CardTitle>Buscar por código de reserva</CardTitle>
 						<CardDescription>
-							El código tiene el formato: AR-YYYYMMDD-XXXX (Ej:
-							AR-20251015-0001)
+							Formato esperado: AR-YYYYMMDD-XXXX (ejemplo: AR-20251015-0001).
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="flex gap-4">
-							<div className="flex-1">
-								<Label htmlFor="codigo">Código de Reserva</Label>
+						<div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
+							<div className="space-y-2">
+								<Label htmlFor="codigo">Código de reserva</Label>
 								<Input
 									id="codigo"
 									placeholder="AR-20251015-0001"
 									value={codigoReserva}
-									onChange={(e) =>
-										setCodigoReserva(e.target.value.toUpperCase())
-									}
+									onChange={(e) => setCodigoReserva(e.target.value.toUpperCase())}
 									onKeyPress={(e) => e.key === "Enter" && buscarReserva()}
-									className="font-mono"
+									className="h-11 rounded-xl border-input font-mono"
 								/>
 							</div>
 							<div className="flex items-end">
 								<Button
 									onClick={buscarReserva}
 									disabled={loading}
-									className="gap-2"
+									className="h-11 w-full gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 md:w-auto"
 								>
 									{loading ? (
 										<>
-											<Loader2 className="w-4 h-4 animate-spin" />
+											<Loader2 className="h-4 w-4 animate-spin" />
 											Buscando...
 										</>
 									) : (
 										<>
-											<Search className="w-4 h-4" />
-											Buscar
+											<Search className="h-4 w-4" />
+											Buscar reserva
 										</>
 									)}
 								</Button>
@@ -426,34 +450,31 @@ function ConsultarReserva() {
 					</CardContent>
 				</Card>
 
-				{/* Error */}
 				{error && (
-					<Card className="mb-8 border-red-200 bg-red-50">
-						<CardContent className="pt-6">
-							<div className="flex items-center gap-2 text-red-800">
-								<AlertCircle className="w-5 h-5" />
+					<Card className="rounded-2xl border-destructive/30 bg-destructive/5 py-4">
+						<CardContent className="pt-0">
+							<div className="flex items-center gap-2 text-destructive">
+								<AlertCircle className="h-5 w-5" />
 								<p>{error}</p>
 							</div>
 						</CardContent>
 					</Card>
 				)}
 
-				{/* Resultado */}
 				{reserva && (
 					<div className="space-y-6">
-						{/* Código de Reserva Destacado */}
-						<Card className="border-2 border-chocolate-200 bg-chocolate-50">
-							<CardContent className="pt-6">
-								<div className="flex items-center justify-between">
+						<Card className="rounded-[2rem] border-secondary/25 bg-secondary/10 py-5 shadow-sm">
+							<CardContent className="pt-0">
+								<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 									<div>
-										<Label className="text-chocolate-700 text-sm font-medium">
-											Código de Reserva
+										<Label className="text-xs font-semibold uppercase tracking-wider text-secondary">
+											Código de reserva
 										</Label>
-										<p className="text-3xl font-bold text-chocolate-900 tracking-wider font-mono">
+										<p className="mt-1 font-mono text-2xl font-bold tracking-wider text-foreground md:text-3xl">
 											{reserva.codigoReserva}
 										</p>
 									</div>
-									<div className="flex gap-2">
+									<div className="flex flex-wrap gap-2">
 										{getEstadoBadge(reserva.estado)}
 										{getEstadoPagoBadge(reserva.estadoPago)}
 									</div>
@@ -461,331 +482,229 @@ function ConsultarReserva() {
 							</CardContent>
 						</Card>
 
-						{/* Alerta de Detalles Incompletos */}
 						{!reserva.detallesCompletos && (
-							<Card className="border-l-4 border-l-red-500 bg-red-50">
-								<CardContent className="pt-6">
-									<div className="flex flex-col md:flex-row items-center gap-4 justify-between">
-										<div className="flex items-center gap-3">
-											<div className="bg-red-100 p-2 rounded-full">
-												<MapPin className="w-6 h-6 text-red-600 animate-bounce" />
+							<Card className="rounded-2xl border-destructive/35 bg-destructive/5 py-4">
+								<CardContent className="pt-0">
+									<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+										<div className="flex items-start gap-3">
+											<div className="rounded-full bg-destructive/15 p-2">
+												<MapPin className="h-5 w-5 text-destructive" />
 											</div>
 											<div>
-												<h3 className="font-bold text-red-900">
-													⚠️ ¡Dirección faltante!
-												</h3>
-												<p className="text-sm text-red-700">
-													Aún no has proporcionado la dirección exacta para tu
-													reserva. Pulsa el botón para completarla.
+												<h3 className="font-semibold text-destructive">Dirección faltante</h3>
+												<p className="text-sm text-destructive/85">
+													Aún no has proporcionado la dirección exacta. Completa el formulario para finalizar los datos operativos.
 												</p>
 											</div>
 										</div>
 										<Button
-											className="bg-red-600 hover:bg-red-700 text-white font-bold"
+											variant="destructive"
+											className="rounded-xl"
 											onClick={() => {
 												window.location.hash = `#completar-detalles?id=${reserva.id}`;
 											}}
 										>
-											📍 Completar Dirección Ahora
+											Completar dirección
 										</Button>
 									</div>
 								</CardContent>
 							</Card>
 						)}
 
-						{/* Información del Cliente */}
-						<Card>
+						<Card className="rounded-[2rem] border-border/70 py-5 shadow-sm">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
-									<User className="w-5 h-5" />
-									Información del Cliente
+									<User className="h-5 w-5 text-secondary" />
+									Información del cliente
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 									<div>
 										<Label className="text-muted-foreground">Nombre</Label>
-										<p className="font-medium">{reserva.nombre}</p>
+										<p className="font-medium text-foreground">{reserva.nombre}</p>
 									</div>
 									<div>
 										<Label className="text-muted-foreground">Email</Label>
-										<p className="font-medium flex items-center gap-2">
-											<Mail className="w-4 h-4 text-muted-foreground" />
+										<p className="flex items-center gap-2 font-medium text-foreground">
+											<Mail className="h-4 w-4 text-muted-foreground" />
 											{reserva.email}
 										</p>
 									</div>
 									<div>
 										<Label className="text-muted-foreground">Teléfono</Label>
-										<p className="font-medium flex items-center gap-2">
-											<Phone className="w-4 h-4 text-muted-foreground" />
+										<p className="flex items-center gap-2 font-medium text-foreground">
+											<Phone className="h-4 w-4 text-muted-foreground" />
 											{reserva.telefono}
 										</p>
 									</div>
 									{reserva.rut && (
 										<div>
 											<Label className="text-muted-foreground">RUT</Label>
-											<p className="font-medium">{reserva.rut}</p>
+											<p className="font-medium text-foreground">{reserva.rut}</p>
 										</div>
 									)}
 								</div>
 							</CardContent>
 						</Card>
 
-						{/* Detalles del Viaje */}
-						<Card>
+						<Card className="rounded-[2rem] border-border/70 py-5 shadow-sm">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
-									<MapPin className="w-5 h-5" />
-									Detalles del Viaje
+									<MapPin className="h-5 w-5 text-secondary" />
+									Detalles del viaje
 								</CardTitle>
 							</CardHeader>
-							<CardContent>
-								{/* Indicador del tipo de viaje */}
+							<CardContent className="space-y-4">
 								{reserva.idaVuelta && (
-									<div className="mb-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
-										<svg
-											className="w-4 h-4"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-											/>
-										</svg>
-										<span className="font-semibold text-sm">
-											Viaje Ida y Vuelta
-										</span>
-									</div>
+									<Badge className="rounded-full bg-accent px-3 py-1 text-accent-foreground">
+										Viaje ida y vuelta
+									</Badge>
 								)}
 
-								{/* Viaje de Ida */}
-								<div className="bg-gradient-to-r from-green-50 to-green-100 border-l-4 border-green-500 rounded-lg p-4 mb-4">
-									<h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
-										<svg
-											className="w-5 h-5"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												strokeLinecap="round"
-												strokeLinejoin="round"
-												strokeWidth={2}
-												d="M17 8l4 4m0 0l-4 4m4-4H3"
-											/>
-										</svg>
-										VIAJE DE IDA
-									</h4>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
+									<h4 className="mb-3 font-semibold text-primary">Viaje de ida</h4>
+									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 										<div>
-											<Label className="text-green-700 font-medium">
-												Origen
-											</Label>
-											<p className="font-semibold text-gray-900">
+											<Label className="text-primary/80">Origen</Label>
+											<p className="font-semibold text-foreground">
 												{reserva.origen}
 												{reserva.direccionOrigen && (
-													<span className="block text-sm font-normal text-gray-600 italic">
+													<span className="mt-0.5 block text-sm font-normal italic text-muted-foreground">
 														({reserva.direccionOrigen})
 													</span>
 												)}
 											</p>
 										</div>
 										<div>
-											<Label className="text-green-700 font-medium">
-												Destino
-											</Label>
-											<p className="font-semibold text-gray-900">
+											<Label className="text-primary/80">Destino</Label>
+											<p className="font-semibold text-foreground">
 												{reserva.destino}
 												{reserva.direccionDestino && (
-													<span className="block text-sm font-normal text-gray-600 italic">
+													<span className="mt-0.5 block text-sm font-normal italic text-muted-foreground">
 														({reserva.direccionDestino})
 													</span>
 												)}
 											</p>
 										</div>
 										<div>
-											<Label className="text-green-700 font-medium">
-												📅 Fecha
-											</Label>
-											<p className="font-semibold text-gray-900 flex items-center gap-2">
-												<Calendar className="w-4 h-4 text-green-700" />
+											<Label className="text-primary/80">Fecha</Label>
+											<p className="flex items-center gap-2 font-semibold text-foreground">
+												<Calendar className="h-4 w-4 text-primary" />
 												{formatDate(reserva.fecha)}
 											</p>
 										</div>
 										<div>
-											<Label className="text-green-700 font-medium">
-												🕐 Hora de Recogida
-											</Label>
-											<p className="font-semibold text-gray-900 flex items-center gap-2">
-												<Clock className="w-4 h-4 text-green-700" />
+											<Label className="text-primary/80">Hora de recogida</Label>
+											<p className="flex items-center gap-2 font-semibold text-foreground">
+												<Clock className="h-4 w-4 text-primary" />
 												{reserva.hora || "No especificada"}
 											</p>
 										</div>
 									</div>
 								</div>
 
-								{/* Viaje de Vuelta - SOLO si es ida y vuelta */}
 								{reserva.idaVuelta && (
-									<div className="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
-										<h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-											<svg
-												className="w-5 h-5"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													strokeWidth={2}
-													d="M7 16l-4-4m0 0l4-4m-4 4h18"
-												/>
-											</svg>
-											VIAJE DE VUELTA
-										</h4>
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="rounded-2xl border border-secondary/25 bg-secondary/10 p-4">
+										<h4 className="mb-3 font-semibold text-secondary">Viaje de vuelta</h4>
+										<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 											<div>
-												<Label className="text-blue-700 font-medium">
-													Origen
-												</Label>
-												<p className="font-semibold text-gray-900">
+												<Label className="text-secondary/80">Origen</Label>
+												<p className="font-semibold text-foreground">
 													{reserva.destino}
 													{reserva.direccionDestino && (
-														<span className="block text-sm font-normal text-gray-600 italic">
+														<span className="mt-0.5 block text-sm font-normal italic text-muted-foreground">
 															({reserva.direccionDestino})
 														</span>
 													)}
 												</p>
 											</div>
 											<div>
-												<Label className="text-blue-700 font-medium">
-													Destino
-												</Label>
-												<p className="font-semibold text-gray-900">
+												<Label className="text-secondary/80">Destino</Label>
+												<p className="font-semibold text-foreground">
 													{reserva.origen}
 													{reserva.direccionOrigen && (
-														<span className="block text-sm font-normal text-gray-600 italic">
+														<span className="mt-0.5 block text-sm font-normal italic text-muted-foreground">
 															({reserva.direccionOrigen})
 														</span>
 													)}
 												</p>
 											</div>
 											<div>
-												<Label className="text-blue-700 font-medium">
-													📅 Fecha de Regreso
-												</Label>
-												<p className="font-semibold text-gray-900 flex items-center gap-2">
-													<Calendar className="w-4 h-4 text-blue-700" />
-													{reserva.fechaRegreso
-														? formatDate(reserva.fechaRegreso)
-														: "⚠️ No especificada"}
+												<Label className="text-secondary/80">Fecha de regreso</Label>
+												<p className="flex items-center gap-2 font-semibold text-foreground">
+													<Calendar className="h-4 w-4 text-secondary" />
+													{reserva.fechaRegreso ? formatDate(reserva.fechaRegreso) : "No especificada"}
 												</p>
 											</div>
 											<div>
-												<Label className="text-blue-700 font-medium">
-													🕐 Hora de Recogida
-												</Label>
-												<p className="font-semibold text-gray-900 flex items-center gap-2">
-													<Clock className="w-4 h-4 text-blue-700" />
-													{reserva.horaRegreso || "⚠️ No especificada"}
+												<Label className="text-secondary/80">Hora de recogida</Label>
+												<p className="flex items-center gap-2 font-semibold text-foreground">
+													<Clock className="h-4 w-4 text-secondary" />
+													{reserva.horaRegreso || "No especificada"}
 												</p>
 											</div>
 										</div>
 
-										{/* Advertencia si falta información */}
 										{(!reserva.fechaRegreso || !reserva.horaRegreso) && (
-											<div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
-												<svg
-													className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-													/>
-												</svg>
-												<div>
-													<p className="text-sm font-semibold text-yellow-800">
-														Información Incompleta del Viaje de Vuelta
-													</p>
-													<p className="text-xs text-yellow-700 mt-1">
-														Nos comunicaremos contigo para confirmar la fecha y
-														hora del regreso.
-													</p>
-												</div>
+											<div className="mt-3 rounded-xl border border-accent/35 bg-accent/10 p-3">
+												<p className="text-sm font-semibold text-foreground">
+													Información incompleta del viaje de vuelta
+												</p>
+												<p className="mt-1 text-xs text-muted-foreground">
+													Nos comunicaremos contigo para confirmar fecha y hora del regreso.
+												</p>
 											</div>
 										)}
 									</div>
 								)}
 
-								{/* Información de pasajeros y vehículo */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+								<div className="grid grid-cols-1 gap-4 border-t border-border pt-4 md:grid-cols-2">
 									<div>
-										<Label className="text-muted-foreground">
-											👥 Pasajeros
-										</Label>
-										<p className="font-medium flex items-center gap-2">
-											<Users className="w-4 h-4 text-muted-foreground" />
+										<Label className="text-muted-foreground">Pasajeros</Label>
+										<p className="flex items-center gap-2 font-medium text-foreground">
+											<Users className="h-4 w-4 text-muted-foreground" />
 											{reserva.pasajeros}
 										</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">🚙 Vehículo</Label>
-										<p className="font-medium">
-											{reserva.vehiculo || "Por asignar"}
-										</p>
+										<Label className="text-muted-foreground">Vehículo</Label>
+										<p className="font-medium text-foreground">{reserva.vehiculo || "Por asignar"}</p>
 									</div>
 								</div>
 							</CardContent>
 						</Card>
 
-						{/* Información de Pago */}
-						<Card>
+						<Card className="rounded-[2rem] border-border/70 py-5 shadow-sm">
 							<CardHeader>
 								<CardTitle className="flex items-center gap-2">
-									<DollarSign className="w-5 h-5" />
-									Información de Pago
+									<DollarSign className="h-5 w-5 text-secondary" />
+									Información de pago
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 									<div>
-										<Label className="text-muted-foreground">Precio Base</Label>
-										<p className="font-medium">
-											{formatCurrency(precioBaseReal)}
-										</p>
+										<Label className="text-muted-foreground">Precio base</Label>
+										<p className="font-medium text-foreground">{formatCurrency(precioBaseReal)}</p>
 									</div>
 									<div>
-										<Label className="text-muted-foreground">
-											Total a Pagar
-										</Label>
-										<p className="font-medium text-lg text-green-600">
+										<Label className="text-muted-foreground">Total a pagar</Label>
+										<p className="text-lg font-semibold text-secondary">
 											{formatCurrency(reserva.totalConDescuento)}
 										</p>
 									</div>
 									{reserva.abonoSugerido > 0 && (
 										<>
 											<div>
-												<Label className="text-muted-foreground">
-													Abono Sugerido
-												</Label>
-												<p className="font-medium">
+												<Label className="text-muted-foreground">Abono sugerido</Label>
+												<p className="font-medium text-foreground">
 													{formatCurrency(reserva.abonoSugerido)}
 												</p>
 											</div>
 											<div>
-												<Label className="text-muted-foreground">
-													Saldo Pendiente
-												</Label>
-												<p className="font-medium">
+												<Label className="text-muted-foreground">Saldo pendiente</Label>
+												<p className="font-medium text-foreground">
 													{formatCurrency(reserva.saldoPendiente)}
 												</p>
 											</div>
@@ -793,39 +712,35 @@ function ConsultarReserva() {
 									)}
 								</div>
 
-								{/* Acciones de pago si está pendiente */}
 								{reserva.estadoPago !== "pagado" && (
 									<div className="mt-6 space-y-3">
 										{payError && (
-											<div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded p-3 text-sm">
-												<AlertCircle className="w-4 h-4" />
-												<span>{payError}</span>
+											<div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+												<div className="flex items-center gap-2">
+													<AlertCircle className="h-4 w-4" />
+													<span>{payError}</span>
+												</div>
 											</div>
 										)}
-										{/* Selector de pasarela dinámico con imágenes configurables */}
-										<SelectorPasarela
-											pasarela={pasarela}
-											onChange={setPasarela}
-										/>
+
+										<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
 										<div className="flex flex-wrap gap-3">
 											{paymentOptions.map((option) => (
 												<Button
 													key={option.tipo}
-													onClick={() =>
-														continuarPago(option.tipo, option.monto)
-													}
+													onClick={() => continuarPago(option.tipo, option.monto)}
 													disabled={paying}
 													variant={option.variant}
-													className={`gap-2 ${option.className || ""}`}
+													className={`gap-2 rounded-xl ${option.className || ""}`}
 												>
 													{paying ? (
 														<>
-															<Loader2 className="w-4 h-4 animate-spin" />
+															<Loader2 className="h-4 w-4 animate-spin" />
 															Generando pago...
 														</>
 													) : (
 														<>
-															<CreditCard className="w-4 h-4" />
+															<CreditCard className="h-4 w-4" />
 															{option.texto}
 														</>
 													)}
@@ -833,68 +748,51 @@ function ConsultarReserva() {
 											))}
 										</div>
 										<p className="text-xs text-muted-foreground">
-											Se abrirá una ventana para completar el pago de forma
-											segura con{" "}
-											{pasarela === "mercadopago" ? "Mercado Pago" : "Flow"}.
+											Se abrirá una ventana para completar el pago seguro con {pasarela === "mercadopago" ? "Mercado Pago" : "Flow"}.
 										</p>
 									</div>
 								)}
 							</CardContent>
 						</Card>
 
-						{/* Productos Adicionales - Similar a Uber Eats */}
 						<ProductosReserva
 							reservaId={reserva.id}
 							reserva={reserva}
 							onTotalProductosChange={setTotalProductos}
 						/>
 
-						{/* Servicios Adicionales */}
-						{(reserva.numeroVuelo ||
-							reserva.hotel ||
-							reserva.equipajeEspecial ||
-							reserva.sillaInfantil) && (
-							<Card>
+						{(reserva.numeroVuelo || reserva.hotel || reserva.equipajeEspecial || reserva.sillaInfantil) && (
+							<Card className="rounded-[2rem] border-border/70 py-5 shadow-sm">
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2">
-										<FileText className="w-5 h-5" />
-										Servicios Adicionales
+										<FileText className="h-5 w-5 text-secondary" />
+										Servicios adicionales
 									</CardTitle>
 								</CardHeader>
 								<CardContent>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 										{reserva.numeroVuelo && (
 											<div>
-												<Label className="text-muted-foreground">
-													Número de Vuelo
-												</Label>
-												<p className="font-medium">{reserva.numeroVuelo}</p>
+												<Label className="text-muted-foreground">Número de vuelo</Label>
+												<p className="font-medium text-foreground">{reserva.numeroVuelo}</p>
 											</div>
 										)}
 										{reserva.hotel && (
 											<div>
-												<Label className="text-muted-foreground">
-													Referencia / Hotel
-												</Label>
-												<p className="font-medium">{reserva.hotel}</p>
+												<Label className="text-muted-foreground">Referencia / Hotel</Label>
+												<p className="font-medium text-foreground">{reserva.hotel}</p>
 											</div>
 										)}
 										{reserva.equipajeEspecial && (
 											<div>
-												<Label className="text-muted-foreground">
-													Equipaje Especial
-												</Label>
-												<p className="font-medium">
-													{reserva.equipajeEspecial}
-												</p>
+												<Label className="text-muted-foreground">Equipaje especial</Label>
+												<p className="font-medium text-foreground">{reserva.equipajeEspecial}</p>
 											</div>
 										)}
 										{reserva.sillaInfantil && (
 											<div>
-												<Label className="text-muted-foreground">
-													Silla Infantil
-												</Label>
-												<p className="font-medium">✅ Requerida</p>
+												<Label className="text-muted-foreground">Silla infantil</Label>
+												<p className="font-medium text-foreground">Requerida</p>
 											</div>
 										)}
 									</div>
@@ -902,14 +800,13 @@ function ConsultarReserva() {
 							</Card>
 						)}
 
-						{/* Observaciones */}
 						{reserva.mensaje && (
-							<Card>
+							<Card className="rounded-[2rem] border-border/70 py-5 shadow-sm">
 								<CardHeader>
 									<CardTitle>Observaciones</CardTitle>
 								</CardHeader>
 								<CardContent>
-									<p className="text-slate-700">{reserva.mensaje}</p>
+									<p className="text-foreground/85">{reserva.mensaje}</p>
 								</CardContent>
 							</Card>
 						)}
@@ -921,3 +818,4 @@ function ConsultarReserva() {
 }
 
 export default ConsultarReserva;
+
