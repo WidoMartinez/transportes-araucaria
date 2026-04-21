@@ -3,6 +3,14 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import {
 	Card,
 	CardContent,
 	CardHeader,
@@ -25,6 +33,11 @@ import {
 	Loader2,
 	FileText,
 	CreditCard,
+	ShieldCheck,
+	LifeBuoy,
+	ReceiptText,
+	ArrowRight,
+	ChevronDown,
 } from "lucide-react";
 
 import { getBackendUrl } from "../lib/backend";
@@ -48,11 +61,58 @@ function ConsultarReserva() {
 	const [reserva, setReserva] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+	const [feedbackAccion, setFeedbackAccion] = useState("");
 	const [paying, setPaying] = useState(false);
 	const [payError, setPayError] = useState(null);
 	const [totalProductos, setTotalProductos] = useState(0);
 	// Pasarela de pago seleccionada: "flow" | "mercadopago"
 	const [pasarela, setPasarela] = useState("flow");
+
+	const mostrarFeedbackAccion = (mensaje) => {
+		setFeedbackAccion(mensaje);
+		window.setTimeout(() => setFeedbackAccion(""), 2800);
+	};
+
+	const limpiarConsulta = () => {
+		setCodigoReserva("");
+		setReserva(null);
+		setError(null);
+		setPayError(null);
+		setFeedbackAccion("");
+	};
+
+	const copiarCodigo = async (codigo) => {
+		if (!codigo) {
+			mostrarFeedbackAccion("No hay un código disponible para copiar.");
+			return;
+		}
+		if (!navigator?.clipboard?.writeText) {
+			mostrarFeedbackAccion("Tu navegador no permite copiar automáticamente.");
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(codigo);
+			mostrarFeedbackAccion("Código copiado al portapapeles.");
+		} catch {
+			mostrarFeedbackAccion("No se pudo copiar el código.");
+		}
+	};
+
+	const pegarCodigoDesdePortapapeles = async () => {
+		if (!navigator?.clipboard?.readText) {
+			mostrarFeedbackAccion("Tu navegador no permite pegar automáticamente.");
+			return;
+		}
+		try {
+			const texto = await navigator.clipboard.readText();
+			setCodigoReserva(texto.toUpperCase().trim());
+			setError(null);
+			setReserva(null);
+			mostrarFeedbackAccion("Código pegado desde el portapapeles.");
+		} catch {
+			mostrarFeedbackAccion("No se pudo leer el portapapeles.");
+		}
+	};
 
 	const buscarReserva = async () => {
 		if (!codigoReserva.trim()) {
@@ -385,6 +445,27 @@ function ConsultarReserva() {
 	};
 
 	const paymentOptions = getPaymentOptions();
+	const opcionPagoRecomendada = paymentOptions[0] || null;
+	const bloquesInformativos = [
+		{
+			icono: ReceiptText,
+			titulo: "Consulta inmediata",
+			texto:
+				"Visualiza estado del viaje, datos de pasajeros y detalle de pago en un solo lugar.",
+		},
+		{
+			icono: ShieldCheck,
+			titulo: "Pago seguro",
+			texto:
+				"Continúa tu pago con Flow o Mercado Pago según disponibilidad del flujo.",
+		},
+		{
+			icono: LifeBuoy,
+			titulo: "Soporte disponible",
+			texto:
+				"Si hay datos pendientes, podrás completarlos o recibir asistencia operativa rápida.",
+		},
+	];
 
 	return (
 		<div className="min-h-screen bg-background">
@@ -426,12 +507,18 @@ function ConsultarReserva() {
 									onKeyPress={(e) => e.key === "Enter" && buscarReserva()}
 									className="h-11 rounded-xl border-input font-mono"
 								/>
+								<p className="text-xs text-muted-foreground">
+									Ejemplo: AR-20251015-0001
+								</p>
+								{feedbackAccion && (
+									<p className="text-xs text-secondary">{feedbackAccion}</p>
+								)}
 							</div>
-							<div className="flex items-end">
+							<div className="flex flex-wrap items-end gap-2">
 								<Button
 									onClick={buscarReserva}
 									disabled={loading}
-									className="h-11 w-full gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 md:w-auto"
+									className="h-11 gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
 								>
 									{loading ? (
 										<>
@@ -445,10 +532,177 @@ function ConsultarReserva() {
 										</>
 									)}
 								</Button>
+
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											className="h-11 rounded-xl border-secondary/35"
+										>
+											Acciones rápidas
+											<ChevronDown className="ml-2 h-4 w-4" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end" className="w-64">
+										<DropdownMenuLabel>Menú inteligente</DropdownMenuLabel>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={pegarCodigoDesdePortapapeles}>
+											Pegar código desde portapapeles
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={() => copiarCodigo(codigoReserva.trim())}
+										>
+											Copiar código ingresado
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={() => {
+												setCodigoReserva("AR-20260420-0007");
+												setError(null);
+												setReserva(null);
+												mostrarFeedbackAccion("Código de ejemplo cargado.");
+											}}
+										>
+											Usar código de ejemplo
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={limpiarConsulta}
+										>
+											Limpiar búsqueda
+										</DropdownMenuItem>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											onClick={() => {
+												window.location.hash = "#contacto";
+											}}
+										>
+											Ir a soporte
+										</DropdownMenuItem>
+										{reserva && (
+											<>
+												<DropdownMenuSeparator />
+												<DropdownMenuLabel>Con reserva cargada</DropdownMenuLabel>
+												<DropdownMenuItem
+													onClick={() => copiarCodigo(reserva.codigoReserva)}
+												>
+													Copiar código de reserva
+												</DropdownMenuItem>
+												{!reserva.detallesCompletos && (
+													<DropdownMenuItem
+														onClick={() => {
+															window.location.hash = `#completar-detalles?id=${reserva.id}`;
+														}}
+													>
+														Completar detalles pendientes
+													</DropdownMenuItem>
+												)}
+												{reserva.estadoPago !== "pagado" && opcionPagoRecomendada && (
+													<DropdownMenuItem
+														onClick={() =>
+															continuarPago(
+																opcionPagoRecomendada.tipo,
+																opcionPagoRecomendada.monto,
+															)
+														}
+													>
+														Pagar opción recomendada
+													</DropdownMenuItem>
+												)}
+											</>
+										)}
+									</DropdownMenuContent>
+								</DropdownMenu>
 							</div>
 						</div>
 					</CardContent>
 				</Card>
+
+				{!reserva && (
+					<div className="space-y-5">
+						<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+							{bloquesInformativos.map((bloque) => {
+								const Icono = bloque.icono;
+								return (
+									<Card
+										key={bloque.titulo}
+										className="rounded-3xl border-border/70 bg-card py-4 shadow-sm"
+									>
+										<CardContent className="pt-0">
+											<div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+												<Icono className="h-5 w-5 text-primary" />
+											</div>
+											<h3 className="text-base font-semibold text-foreground">
+												{bloque.titulo}
+											</h3>
+											<p className="mt-1 text-sm text-muted-foreground">
+												{bloque.texto}
+											</p>
+										</CardContent>
+									</Card>
+								);
+							})}
+						</div>
+
+						<Card className="rounded-[2rem] border-secondary/20 bg-secondary/10 py-5 shadow-sm">
+							<CardHeader>
+								<CardTitle className="text-xl">
+									¿Dónde encuentro mi código de reserva?
+								</CardTitle>
+								<CardDescription>
+									Usa estas referencias rápidas antes de consultar:
+								</CardDescription>
+							</CardHeader>
+							<CardContent className="space-y-4">
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+									<div className="rounded-2xl border border-secondary/25 bg-background/80 p-3">
+										<p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+											1. Correo de confirmación
+										</p>
+										<p className="mt-1 text-sm text-foreground/90">
+											Busca el asunto con la confirmación de tu reserva y copia el
+											código.
+										</p>
+									</div>
+									<div className="rounded-2xl border border-secondary/25 bg-background/80 p-3">
+										<p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+											2. Formato esperado
+										</p>
+										<p className="mt-1 text-sm text-foreground/90">
+											Siempre debe verse como <strong>AR-YYYYMMDD-XXXX</strong>.
+										</p>
+									</div>
+									<div className="rounded-2xl border border-secondary/25 bg-background/80 p-3">
+										<p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+											3. ¿No lo encuentras?
+										</p>
+										<p className="mt-1 text-sm text-foreground/90">
+											Contáctanos por los canales de soporte para recuperar tu
+											referencia.
+										</p>
+									</div>
+								</div>
+
+								<div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-secondary/30 bg-background/85 p-3">
+									<p className="text-sm text-muted-foreground">
+										Ejemplo válido:{" "}
+										<span className="font-mono font-semibold text-foreground">
+											AR-20260420-0007
+										</span>
+									</p>
+									<Button
+										variant="outline"
+										className="rounded-xl border-secondary/35 bg-background"
+										onClick={() => {
+											window.location.hash = "#contacto";
+										}}
+									>
+										Ir a soporte
+										<ArrowRight className="ml-2 h-4 w-4" />
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					</div>
+				)}
 
 				{error && (
 					<Card className="rounded-2xl border-destructive/30 bg-destructive/5 py-4">

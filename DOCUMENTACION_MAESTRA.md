@@ -748,7 +748,10 @@ Se implementÃ³ un **diseÃ±o visual mejorado con separaciÃ³n por colores** 
   - **Ida**: `bg-primary/5 border-primary/25`
   - **Vuelta**: `bg-secondary/10 border-secondary/25`
   - **Advertencia**: `bg-accent/10 border-accent/35`
-- Mensaje de advertencia adaptado: "Nos comunicaremos contigo para confirmar la fecha y hora del regreso".- **Base de Datos**: TransacciÃ³n atÃ³mica que crea la `Reserva` y marca la `Oportunidad` como `reservada`.
+- Mensaje de advertencia adaptado: "Nos comunicaremos contigo para confirmar la fecha y hora del regreso".
+- Entrada de código con máscara inteligente y validación en tiempo real (`AR-YYYYMMDD-XXXX`) para reducir errores de consulta.
+- Se añadieron bloques informativos previos al resultado (consulta inmediata, pago seguro y soporte) para mejorar contexto y reducir sensación de pantalla vacía.
+- Se incorporó botón de **Acciones rápidas** con menú inteligente contextual (pegar/copiar código, ejemplo, limpieza, soporte y atajos según estado de la reserva).
 
 #### ArmonizaciÃ³n UI (Abril 2026)
 
