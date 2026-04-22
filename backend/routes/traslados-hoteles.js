@@ -133,6 +133,8 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 			const horaVuelta = normalizarTexto(req.body?.horaVuelta);
 			const observaciones = normalizarTexto(req.body?.observaciones).slice(0, 500);
 			const pasajeros = Number.parseInt(req.body?.pasajeros, 10) || 1;
+			const sillaInfantil = Boolean(req.body?.sillaInfantil);
+			const cantidadSillasInfantiles = Number.parseInt(req.body?.cantidadSillasInfantiles, 10) || 0;
 
 			if (!nombre || !email || !telefono || !hotelCodigo || !origenTipo) {
 				return res.status(400).json({
@@ -220,7 +222,8 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				}
 			}
 
-			const configPrecioSilla = await Configuracion.getValorParseado("hotel_precio_silla", 5000);
+			const configSillas = await Configuracion.getValorParseado("config_sillas", { precioPorSilla: 5000 });
+			const configPrecioSilla = Number(configSillas?.precioPorSilla) || 5000;
 			const baseMonto =
 				tipoServicio === "ida_vuelta"
 					? hotel.tarifaIdaVuelta
