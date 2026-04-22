@@ -282,31 +282,53 @@ function HeroExpress({
 	useEffect(() => {
 		if (!esModoHoteles || catalogoHoteles || catalogoLoading) return;
 		let cancelado = false;
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
+
 		const cargar = async () => {
+			const backendUrl = getBackendUrl();
+			const fullUrl = `${backendUrl}/api/traslados-hoteles/catalogo`;
+			
+			console.log(`[Diagnostic] Cargando catálogo de hoteles desde: ${fullUrl}`);
+			
 			setCatalogoLoading(true);
 			setCatalogoError("");
 			try {
-				const response = await fetch(
-					`${getBackendUrl()}/api/traslados-hoteles/catalogo`,
-				);
-				const data = await response.json();
+				const response = await fetch(fullUrl, { signal: controller.signal });
+
+				// Verificar si la respuesta es exitosa
 				if (!response.ok) {
-					throw new Error(data.error || "No se pudo cargar el catálogo.");
+					throw new Error(`Error del servidor (${response.status}): ${response.statusText}`);
 				}
+
+				// Verificar si el contenido es JSON antes de parsear
+				const contentType = response.headers.get("content-type");
+				if (!contentType || !contentType.includes("application/json")) {
+					console.error("[Diagnostic] Respuesta no es JSON. Recibido:", contentType);
+					throw new Error("El servidor no devolvió una respuesta válida (formato incorrecto).");
+				}
+
+				const data = await response.json();
 				if (!cancelado) setCatalogoHoteles(data);
 			} catch (err) {
 				if (!cancelado) {
-					setCatalogoError(
-						err.message || "No fue posible cargar el catálogo de hoteles.",
-					);
+					const errorMsg = err.name === 'AbortError' 
+						? "Tiempo de espera agotado. El servidor tardó demasiado en responder."
+						: (err.message || "No fue posible cargar el catálogo de hoteles.");
+					
+					console.error("[Diagnostic] Error cargando hoteles:", err);
+					setCatalogoError(errorMsg);
 				}
 			} finally {
+				clearTimeout(timeoutId);
 				if (!cancelado) setCatalogoLoading(false);
 			}
 		};
 		cargar();
 		return () => {
 			cancelado = true;
+			controller.abort();
+			clearTimeout(timeoutId);
 		};
 	}, [esModoHoteles, catalogoHoteles, catalogoLoading]);
 

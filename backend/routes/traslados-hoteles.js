@@ -106,13 +106,24 @@ const serializarCatalogo = async () => {
 const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 	// Catálogo público del servicio con hoteles y tarifas fijas
 	app.get("/api/traslados-hoteles/catalogo", async (_req, res) => {
+		const startTime = Date.now();
+		console.log("[Backend Diagnostic] Iniciando carga de catálogo de hoteles...");
 		try {
 			const catalogo = await serializarCatalogo();
+			const duration = Date.now() - startTime;
+			console.log(`[Backend Diagnostic] Catálogo cargado exitosamente en ${duration}ms. Hoteles encontrados: ${catalogo.hoteles?.length || 0}`);
 			return res.json(catalogo);
 		} catch (error) {
-			console.error("❌ Error cargando catálogo Aeropuerto-Hoteles:", error);
+			const duration = Date.now() - startTime;
+			console.error(`[Backend Diagnostic] ❌ Error tras ${duration}ms:`, {
+				message: error.message,
+				code: error.code,
+				name: error.name,
+				stack: error.stack?.split('\n')[1] // Solo la primera línea del stack para brevedad
+			});
 			return res.status(500).json({
 				error: "No se pudo cargar el catálogo de hoteles.",
+				details: process.env.NODE_ENV === 'development' ? error.message : undefined
 			});
 		}
 	});
