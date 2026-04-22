@@ -289,36 +289,27 @@ function HeroExpress({
 			const backendUrl = getBackendUrl();
 			const fullUrl = `${backendUrl}/api/traslados-hoteles/catalogo`;
 			
-			console.log(`[Diagnostic] Cargando catálogo de hoteles desde: ${fullUrl}`);
-			
 			setCatalogoLoading(true);
 			setCatalogoError("");
 			try {
 				const response = await fetch(fullUrl, { signal: controller.signal });
 
-				// Verificar si la respuesta es exitosa
 				if (!response.ok) {
-					throw new Error(`Error del servidor (${response.status}): ${response.statusText}`);
+					throw new Error(`Error del servidor (${response.status})`);
 				}
 
-				// Verificar si el contenido es JSON antes de parsear
 				const contentType = response.headers.get("content-type");
 				if (!contentType || !contentType.includes("application/json")) {
-					console.error("[Diagnostic] Respuesta no es JSON. Recibido:", contentType);
-					throw new Error("El servidor no devolvió una respuesta válida (formato incorrecto).");
+					throw new Error("Respuesta del servidor inválida.");
 				}
 
 				const data = await response.json();
-				console.log("[Diagnostic] Catálogo de hoteles recibido con éxito:", data);
-				
 				if (!cancelado) setCatalogoHoteles(data);
 			} catch (err) {
 				if (!cancelado) {
 					const errorMsg = err.name === 'AbortError' 
 						? "Tiempo de espera agotado. El servidor tardó demasiado en responder."
 						: (err.message || "No fue posible cargar el catálogo de hoteles.");
-					
-					console.error("[Diagnostic] Error cargando hoteles:", err);
 					setCatalogoError(errorMsg);
 				}
 			} finally {
@@ -332,7 +323,7 @@ function HeroExpress({
 			controller.abort();
 			clearTimeout(timeoutId);
 		};
-	}, [esModoHoteles]); // Solo depende de si el modo cambia o hay un reset manual de catalogoHoteles
+	}, [esModoHoteles]);
 
 	const hotelSeleccionado = useMemo(() => {
 		if (!catalogoHoteles?.hoteles) return null;
