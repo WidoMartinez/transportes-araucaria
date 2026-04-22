@@ -4,6 +4,7 @@
 import { Op } from "sequelize";
 import TrasladoHotelAeropuerto from "../models/TrasladoHotelAeropuerto.js";
 import HotelTraslado from "../models/HotelTraslado.js";
+import Configuracion from "../models/Configuracion.js";
 
 const AEROPUERTO_NOMBRE = "Aeropuerto La Araucanía";
 
@@ -152,9 +153,15 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				});
 			}
 
-			if (fechaIda < fechaHoyISO()) {
+			// Validaciones de anticipación y reglas de negocio
+			const configAnticipacion = await Configuracion.getValorParseado("hotel_anticipacion_horas", 3);
+			const fechaViaje = new Date(`${fechaIda}T${horaIda}`);
+			const ahora = new Date();
+			const diffHoras = (fechaViaje - ahora) / (1000 * 60 * 60);
+
+			if (diffHoras < configAnticipacion) {
 				return res.status(400).json({
-					error: "La fecha de ida no puede ser en el pasado.",
+					error: `Para este servicio debes reservar con al menos ${configAnticipacion} horas de anticipación.`,
 				});
 			}
 
@@ -170,9 +177,10 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				});
 			}
 
-			if (pasajeros < 1 || pasajeros > 7) {
+			const configMaxPax = await Configuracion.getValorParseado("hotel_max_pasajeros", 8);
+			if (pasajeros < 1 || pasajeros > configMaxPax) {
 				return res.status(400).json({
-					error: "Este servicio permite entre 1 y 7 pasajeros.",
+					error: `Este servicio permite entre 1 y ${configMaxPax} pasajeros.`,
 				});
 			}
 
@@ -212,10 +220,14 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				}
 			}
 
-			const montoTotal =
+			const configPrecioSilla = await Configuracion.getValorParseado("hotel_precio_silla", 5000);
+			const baseMonto =
 				tipoServicio === "ida_vuelta"
 					? hotel.tarifaIdaVuelta
 					: hotel.tarifaSoloIda;
+
+			const extraSillas = sillaInfantil ? (Number(cantidadSillasInfantiles) || 0) * configPrecioSilla : 0;
+			const montoTotal = Number(baseMonto) + extraSillas;
 
 			const origen =
 				origenTipo === "aeropuerto" ? AEROPUERTO_NOMBRE : hotel.nombre;
@@ -240,6 +252,8 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				fechaVuelta: tipoServicio === "ida_vuelta" ? fechaVuelta : null,
 				horaVuelta: tipoServicio === "ida_vuelta" ? horaVuelta : null,
 				pasajeros,
+				sillaInfantil: !!sillaInfantil,
+				cantidadSillasInfantiles: sillaInfantil ? (Number(cantidadSillasInfantiles) || 0) : 0,
 				montoTotal,
 				moneda: "CLP",
 				observaciones: observaciones || null,

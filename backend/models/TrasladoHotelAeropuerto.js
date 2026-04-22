@@ -84,6 +84,17 @@ const TrasladoHotelAeropuerto = sequelize.define(
 			allowNull: false,
 			defaultValue: 1,
 		},
+		sillaInfantil: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
+			field: "silla_infantil",
+		},
+		cantidadSillasInfantiles: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			defaultValue: 0,
+			field: "cantidad_sillas_infantiles",
+		},
 		montoTotal: {
 			type: DataTypes.DECIMAL(10, 2),
 			allowNull: false,
@@ -107,6 +118,42 @@ const TrasladoHotelAeropuerto = sequelize.define(
 			type: DataTypes.STRING(80),
 			allowNull: false,
 			defaultValue: "web_hoteles",
+		},
+		estadoPago: {
+			type: DataTypes.ENUM(
+				"pendiente",
+				"aprobado",
+				"pagado",
+				"fallido",
+				"reembolsado",
+			),
+			defaultValue: "pendiente",
+			field: "estado_pago",
+		},
+		pagoId: {
+			type: DataTypes.STRING(255),
+			allowNull: true,
+			field: "pago_id",
+		},
+		pagoGateway: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "pago_gateway",
+		},
+		pagoMonto: {
+			type: DataTypes.DECIMAL(10, 2),
+			allowNull: true,
+			field: "pago_monto",
+		},
+		pagoFecha: {
+			type: DataTypes.DATE,
+			allowNull: true,
+			field: "pago_fecha",
+		},
+		metodoPago: {
+			type: DataTypes.STRING(50),
+			allowNull: true,
+			field: "metodo_pago",
 		},
 	},
 	{

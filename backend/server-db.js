@@ -9425,6 +9425,15 @@ app.post("/create-payment", async (req, res) => {
 		`🚀 [INICIO PAGO] ${new Date().toISOString()} | Pasarela: ${gateway} | Monto: $${amountNum} | Reserva: ${codigoReserva || reservaId || "sin código"} | Tipo: ${tipoPago || "total"} | Origen: ${paymentOrigin || "directo"}`,
 	);
 
+	// No se aceptan pagos parciales para Hoteles
+	if (paymentOrigin === "hotel" && tipoPago === "abono") {
+		return res.status(400).json({
+			success: false,
+			error: "Pago parcial no permitido",
+			message: "Las reservas de hoteles solo aceptan pago total.",
+		});
+	}
+
 	const frontendBase =
 		process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
 	const backendBase =
@@ -9611,12 +9620,23 @@ app.get("/api/payment-status", async (req, res) => {
 			}
 		}
 
+		const isHotel = flowTokenRecord?.paymentOrigin === "hotel";
+
 		if (!reservaId) {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
 		}
 
-		// Cargar la reserva completa (sin restricción de atributos) para poder actualizarla si es necesario
-		const reserva = await Reserva.findByPk(reservaId);
+		// Cargar la reserva según el modelo identificado
+		let reserva = null;
+		if (isHotel) {
+			reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+		} else {
+			reserva = await Reserva.findByPk(reservaId);
+			// Fallback: si no es hotel pero no se encuentra en Reserva, buscar en TrasladoHotelAeropuerto
+			if (!reserva) {
+				reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+			}
+		}
 
 		if (!reserva) {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
@@ -9626,7 +9646,7 @@ app.get("/api/payment-status", async (req, res) => {
 		const transaccionConfirmada =
 			estadoPagoActual === "pagado" || estadoPagoActual === "parcial";
 		const montoDb = Number(
-			reserva.pagoMonto || reserva.totalConDescuento || reserva.precio || 0,
+			reserva.pagoMonto || reserva.totalConDescuento || reserva.montoTotal || reserva.precio || 0,
 		);
 		const montoToken = Number(flowTokenRecord?.amount || 0);
 		const montoConfirmado = montoToken > 0 ? montoToken : montoDb;
@@ -9683,16 +9703,22 @@ app.get("/api/payment-status", async (req, res) => {
 							Number(reserva.totalConDescuento) ||
 							Number(reserva.precio) ||
 							0;
-						await reserva.update({
+						const updateData = {
 							estadoPago: "pagado",
 							estado: "confirmada",
 							pagoMonto: montoMP,
 							saldoPendiente: 0,
 							metodoPago: "mercadopago",
 							referenciaPagoExterno: String(mpPayment.id),
-							abonoPagado: true,
-							saldoPagado: true,
-						});
+						};
+						
+						// Campos solo para traslados privados
+						if (!isHotel) {
+							updateData.abonoPagado = true;
+							updateData.saldoPagado = true;
+						}
+						
+						await reserva.update(updateData);
 						console.log(
 							`✅ [payment-status] Reserva MP ${reservaId} actualizada a PAGADA vía MP API fallback. Monto: ${montoMP}`,
 						);
@@ -9769,7 +9795,7 @@ app.get("/api/payment-status", async (req, res) => {
 
 						try {
 							// Reserva ya fue cargada completa (sin restricción de atributos), actualizar directo
-							await reserva.update({
+							const updateDataFlow = {
 								estadoPago: nuevoEstadoPago,
 								pagoId: flowData.flowOrder?.toString() || null,
 								pagoGateway: "flow",
@@ -9778,9 +9804,15 @@ app.get("/api/payment-status", async (req, res) => {
 								pagoFecha: new Date(flowData.paymentDate || new Date()),
 								estado: nuevoEstadoReserva,
 								saldoPendiente: nuevoSaldoPendiente,
-								abonoPagado,
-								saldoPagado,
-							});
+							};
+							
+							// Campos solo para traslados privados
+							if (!isHotel) {
+								updateDataFlow.abonoPagado = abonoPagado;
+								updateDataFlow.saldoPagado = saldoPagado;
+							}
+
+							await reserva.update(updateDataFlow);
 							console.log(
 								`✅ [payment-status] Reserva ${reservaId} actualizada a estadoPago="${nuevoEstadoPago}" vía fallback Flow API.`,
 							);
@@ -10033,17 +10065,26 @@ app.post("/api/payment-result", async (req, res) => {
 				}
 			}
 
+			const isHotel = optionalData?.paymentOrigin === "hotel";
+
 			// Si no tenemos reservaId pero sí codigoReserva, buscar la reserva por código
 			if (!reservaId && codigoReserva) {
 				try {
-					const reservaByCodigo = await Reserva.findOne({
-						where: { codigoReserva: codigoReserva },
-					});
-					if (reservaByCodigo) {
-						reservaId = reservaByCodigo.id;
-						console.log(
-							`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`,
-						);
+					if (isHotel) {
+						const hotelReserva = await TrasladoHotelAeropuerto.findOne({
+							where: { codigoReserva: codigoReserva },
+						});
+						if (hotelReserva) reservaId = hotelReserva.id;
+					} else {
+						const reservaByCodigo = await Reserva.findOne({
+							where: { codigoReserva: codigoReserva },
+						});
+						if (reservaByCodigo) {
+							reservaId = reservaByCodigo.id;
+							console.log(
+								`✅ Reserva encontrada por código: ${codigoReserva} → ID ${reservaId}`,
+							);
+						}
 					}
 				} catch (e) {
 					console.warn("⚠️ Error buscando reserva por código:", e.message);
@@ -10072,7 +10113,20 @@ app.post("/api/payment-result", async (req, res) => {
 			// Si tenemos reservaId y el pago fue exitoso (2)
 			if (reservaId && flowData.status === 2) {
 				// Buscar la reserva en la base de datos para determinar el flujo de redirección
-				const reserva = await Reserva.findByPk(reservaId);
+				const isHotel = optionalData?.paymentOrigin === "hotel";
+				let reserva = null;
+				if (isHotel) {
+					reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+				} else {
+					reserva = await Reserva.findByPk(reservaId);
+				}
+
+				if (isHotel) {
+					console.log(`✅ Pago de HOTEL CONFIRMADO (Reserva ${reservaId}). Redirigiendo a FlowReturn con hotel=1.`);
+					const montoFinalHotel = montoFlowActual > 0 ? montoFlowActual : (reserva?.montoTotal || SYMBOLIC_AMOUNT_CLP);
+					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoFinalHotel}&hotel=1`;
+					return res.redirect(303, returnUrl);
+				}
 
 				// Re-parsear optional data para asegurar acceso en este scope
 				let optionalDataSafe = optionalData || {};
@@ -10175,8 +10229,9 @@ app.post("/api/payment-result", async (req, res) => {
 						JSON.stringify(userData),
 					).toString("base64");
 
-					// ✅ FIX: Escapar Base64 para URL (caracteres +, /, = pueden causar problemas)
-					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}&d=${encodeURIComponent(
+					// ✅ FIX: Escapar Base64 para URL
+					const hotelParam = isHotel ? "&hotel=1" : "";
+					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoParaConversion}${hotelParam}&d=${encodeURIComponent(
 						userDataEncoded,
 					)}`;
 
@@ -10270,7 +10325,13 @@ app.post("/api/payment-result", async (req, res) => {
 				// Re-parsear optional data para determinar el flujo
 				let optionalDataSafe = optionalData || {};
 				const paymentOrigin = optionalDataSafe?.paymentOrigin;
-				const reserva = await Reserva.findByPk(reservaId);
+				const isHotel = optionalDataSafe?.paymentOrigin === "hotel";
+				let reserva = null;
+				if (isHotel) {
+					reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+				} else {
+					reserva = await Reserva.findByPk(reservaId);
+				}
 
 				const isCodigoPago =
 					(reserva && reserva.source === "codigo_pago") ||
@@ -10291,6 +10352,12 @@ app.post("/api/payment-result", async (req, res) => {
 					return res.redirect(
 						303,
 						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`,
+					);
+				} else if (isHotel) {
+					// Hotel pendiente - redirigir a FlowReturn
+					return res.redirect(
+						303,
+						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}&hotel=1`,
 					);
 				} else {
 					// Reserva Express - redirigir a home con estado pendiente
@@ -10548,81 +10615,34 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			optionalMetadata.referenciaPago.trim().length > 0
 				? optionalMetadata.referenciaPago.trim().toUpperCase()
 				: null;
-		const codigoPagoId =
-			optionalMetadata.codigoPagoId !== undefined &&
-			optionalMetadata.codigoPagoId !== null &&
-			optionalMetadata.codigoPagoId !== ""
-				? Number(optionalMetadata.codigoPagoId)
-				: null;
 
-		// --- Detección y procesamiento de propina de evaluación ---
-		// Si el origen del pago es una propina, procesarlo por separado y no continuar con el flujo normal
-		if (
-			optionalMetadata.paymentOrigin === "propina_evaluacion" &&
-			payment.status === 2
-		) {
-			const evaluacionId = optionalMetadata.evaluacionId
-				? Number(optionalMetadata.evaluacionId)
-				: null;
-
-			if (evaluacionId && !isNaN(evaluacionId)) {
-				try {
-					// Verificar que la evaluación existe antes de actualizar
-					const evaluacion = await EvaluacionConductor.findByPk(evaluacionId);
-					if (evaluacion) {
-						await evaluacion.update({
-							propinaPagada: true,
-							propinaPaymentId: String(
-								payment.flowOrder || payment.commerceOrder || "",
-							),
-						});
-						console.log(
-							`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}. FlowOrder: ${payment.flowOrder}`,
-						);
-					} else {
-						console.warn(
-							`⚠️ [Propina] No se encontró la evaluación ${evaluacionId} en la BD`,
-						);
-					}
-				} catch (propinaErr) {
-					console.error(
-						`❌ [Propina] Error al actualizar propina para evaluación ${evaluacionId}:`,
-						propinaErr.message,
-					);
-				}
-			} else {
-				console.warn(
-					"⚠️ [Propina] Pago de propina confirmado sin evaluacionId válido en metadata",
-				);
-			}
-			return; // No continuar con el flujo normal de reservas
-		}
-
-		if (
-			!commerceOrder &&
-			!optionalReservaId &&
-			!optionalCodigoReserva &&
-			!email
-		) {
-			console.log(
-				"⚠️  No se puede identificar la reserva (falta metadata suficiente)",
-			);
-			return;
-		}
-
+		const isHotel = optionalMetadata?.paymentOrigin === "hotel";
 		let reserva = null;
 
+		// 1. Búsqueda por ID (Prioridad Alta)
 		if (optionalReservaId && !Number.isNaN(optionalReservaId)) {
-			reserva = await Reserva.findByPk(optionalReservaId);
+			if (isHotel) {
+				reserva = await TrasladoHotelAeropuerto.findByPk(optionalReservaId).catch(() => null);
+			} else {
+				reserva = await Reserva.findByPk(optionalReservaId).catch(() => null);
+			}
 		}
 
+		// 2. Búsqueda por Código de Reserva
 		if (!reserva && optionalCodigoReserva) {
-			reserva = await Reserva.findOne({
-				where: { codigoReserva: optionalCodigoReserva },
-			});
+			if (isHotel) {
+				reserva = await TrasladoHotelAeropuerto.findOne({
+					where: { codigoReserva: optionalCodigoReserva },
+				}).catch(() => null);
+			} else {
+				reserva = await Reserva.findOne({
+					where: { codigoReserva: optionalCodigoReserva },
+				}).catch(() => null);
+			}
 		}
 
-		if (!reserva && commerceOrder) {
+		// 3. Fallback por Commerce Order (Solo privados)
+		if (!reserva && !isHotel && commerceOrder) {
 			const partesCommerce = commerceOrder.split("-");
 			if (partesCommerce.length > 2) {
 				const posibleCodigo = partesCommerce.slice(0, -1).join("-");
@@ -10634,22 +10654,78 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			}
 		}
 
-		if (!reserva && email) {
-			reserva = await Reserva.findOne({
-				where: { email: email },
-				order: [["created_at", "DESC"]],
-			});
-		}
-
-		if (!reserva && emailOptional && emailOptional !== email) {
-			reserva = await Reserva.findOne({
-				where: { email: emailOptional },
-				order: [["created_at", "DESC"]],
-			});
+		// 4. Fallback por Email
+		if (!reserva && (email || emailOptional)) {
+			const targetEmail = email || emailOptional;
+			if (isHotel) {
+				reserva = await TrasladoHotelAeropuerto.findOne({
+					where: { email: targetEmail },
+					order: [["created_at", "DESC"]],
+				}).catch(() => null);
+			} else {
+				reserva = await Reserva.findOne({
+					where: { email: targetEmail },
+					order: [["created_at", "DESC"]],
+				}).catch(() => null);
+			}
 		}
 
 		if (!reserva) {
-			console.log("⚠️  Reserva no encontrada en la base de datos");
+			console.log(`⚠️  No se pudo encontrar la reserva (${isHotel ? "hotel" : "privada"}) en la BD`);
+			return;
+		}
+
+		const codigoPagoId =
+			optionalMetadata.codigoPagoId !== undefined &&
+			optionalMetadata.codigoPagoId !== null &&
+			optionalMetadata.codigoPagoId !== ""
+				? Number(optionalMetadata.codigoPagoId)
+				: null;
+
+		// --- Detección y procesamiento de propina de evaluación ---
+		if (
+			optionalMetadata.paymentOrigin === "propina_evaluacion" &&
+			payment.status === 2
+		) {
+			const evaluacionId = optionalMetadata.evaluacionId
+				? Number(optionalMetadata.evaluacionId)
+				: null;
+
+			if (evaluacionId && !isNaN(evaluacionId)) {
+				try {
+					const evaluacion = await EvaluacionConductor.findByPk(evaluacionId);
+					if (evaluacion) {
+						await evaluacion.update({
+							propinaPagada: true,
+							propinaPaymentId: String(payment.flowOrder || payment.commerceOrder || ""),
+						});
+						console.log(`💰 [Propina] Pago confirmado para evaluación ${evaluacionId}`);
+					}
+				} catch (err) { /* ignore */ }
+			}
+			return;
+		}
+
+		// Registrar transacción fallida si el pago fue rechazado o anulado
+		if (payment.status === 3 || payment.status === 4) {
+			const statusLabel = payment.status === 3 ? "Rechazado" : "Anulado";
+			console.log(`❌ Pago ${statusLabel} para reserva ${reserva.id}`);
+
+			try {
+				await Transaccion.create({
+					reservaId: !isHotel ? reserva.id : null, 
+					// Nota: el modelo Transaccion asume reservaId de la tabla Reserva. 
+					// Para hoteles podríamos necesitar un campo extra o usar notas.
+					monto: Number(payment.amount) || 0,
+					gateway: "flow",
+					transaccionId: payment.flowOrder.toString(),
+					referencia: optionalReferenciaPago,
+					tipoPago: optionalTipoPago,
+					estado: "fallido",
+					emailPagador: email,
+					notas: `${isHotel ? '[HOTEL] ' : ''}Pago ${statusLabel} via Flow.`,
+				});
+			} catch (err) { /* ignore */ }
 			return;
 		}
 
@@ -10730,53 +10806,53 @@ app.post("/api/flow-confirmation", async (req, res) => {
 		}
 		// ─────────────────────────────────────────────────────────────────────────
 
-		// Reglas: parcial (>= 40% del total) => confirmada, total => confirmada (estado completada se gestiona manualmente)
-		const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
-		const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
 		const montoActual = Number(payment.amount) || 0;
-		// --- LÓGICA DE DIVISIÓN DE PAGO (Split Payment) ---
-		// Validar si es una reserva vinculada para dividir el monto
-		let montoIda = montoActual;
-		let montoVuelta = 0;
-		let reservaHija = null;
 
-		if (reserva.tramoHijoId) {
-			try {
-				reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
-				if (reservaHija) {
-					console.log(
-						`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`,
-					);
+		// --- ACTUALIZACIÓN DE ESTADOS ---
+		if (isHotel) {
+			await reserva.update({
+				estadoPago: "pagado",
+				estado: "confirmada",
+				pagoId: payment.flowOrder.toString(),
+				pagoGateway: "flow",
+				metodoPago: "flow",
+				pagoMonto: montoActual,
+				pagoFecha: new Date(payment.paymentDate || new Date()),
+			});
+			console.log(`✅ [HOTEL] Reserva ${reserva.id} actualizada a PAGADA`);
+		} else {
+			// Lógica para reservas privadas (pestaña 'Traslados')
+			const totalReserva = parseFloat(reserva.totalConDescuento || 0) || 0;
+			const pagoPrevio = parseFloat(reserva.pagoMonto || 0) || 0;
 
-					// Calcular totales para proporción
-					const totalIda = parseFloat(reserva.totalConDescuento || 0);
-					const totalVuelta = parseFloat(reservaHija.totalConDescuento || 0);
-					const totalConjunto = totalIda + totalVuelta;
+			// --- LÓGICA DE DIVISIÓN DE PAGO (Split Payment) ---
+			// Validar si es una reserva vinculada para dividir el monto
+			let montoIda = montoActual;
+			let montoVuelta = 0;
+			let reservaHija = null;
 
-					if (totalConjunto > 0) {
-						// Calcular factores (si el total es 0, evitar división por cero)
-						const factorIda = totalIda / totalConjunto;
+			if (reserva.tramoHijoId) {
+				try {
+					reservaHija = await Reserva.findByPk(reserva.tramoHijoId);
+					if (reservaHija) {
+						console.log(`🔄 Calculando división de pago para tramos vinculados (Ida/Vuelta)...`);
+						const totalIda = parseFloat(reserva.totalConDescuento || 0);
+						const totalVuelta = parseFloat(reservaHija.totalConDescuento || 0);
+						const totalConjunto = totalIda + totalVuelta;
 
-						// Dividir el monto del pago actual
-						montoIda = Math.round(montoActual * factorIda);
-						montoVuelta = montoActual - montoIda; // El resto va a la vuelta para evitar problemas de redondeo
-
-						console.log(
-							`📊 División aplicada (Total Pago: ${montoActual}): Ida $${montoIda} (${(
-								factorIda * 100
-							).toFixed(1)}%) | Vuelta $${montoVuelta}`,
-						);
-					} else {
-						// Si son reservas gratuitas o precio 0, dividir a la mitad
-						montoIda = Math.round(montoActual / 2);
-						montoVuelta = montoActual - montoIda;
+						if (totalConjunto > 0) {
+							const factorIda = totalIda / totalConjunto;
+							montoIda = Math.round(montoActual * factorIda);
+							montoVuelta = montoActual - montoIda;
+						} else {
+							montoIda = Math.round(montoActual / 2);
+							montoVuelta = montoActual - montoIda;
+						}
 					}
+				} catch (errSplit) {
+					console.error("⚠️ Error calculando split de pago:", errSplit.message);
 				}
-			} catch (errSplit) {
-				console.error("⚠️ Error calculando split de pago:", errSplit.message);
-				// En caso de error, el montoIda se mantiene como el total (fallback seguro)
 			}
-		}
 
 		// Definir variables comunes y umbrales para IDA
 		const umbralAbono = Math.max(
@@ -10947,6 +11023,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				);
 			}
 		}
+	} // Fin del bloque else (private transfers)
+
+	const pagoAcumuladoFinal = isHotel ? montoActual : (typeof pagoAcumulado !== 'undefined' ? pagoAcumulado : montoActual);
+	const tipoPagoFinalFinal = isHotel ? "total" : (typeof tipoPagoFinal !== 'undefined' ? tipoPagoFinal : (optionalTipoPago || "total"));
 
 		// CREAR REGISTRO DE TRANSACCIÓN
 		try {
@@ -10958,7 +11038,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				gateway: "flow",
 				transaccionId: payment.flowOrder.toString(),
 				referencia: optionalReferenciaPago,
-				tipoPago: tipoPagoFinal,
+				tipoPago: tipoPagoFinalFinal,
 				estado: "aprobado",
 				emailPagador: email,
 				metadata: {
@@ -10969,7 +11049,7 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					commerceOrder: payment.commerceOrder,
 					payer: payment.payer,
 				},
-				notas: `Pago procesado vía Flow. Acumulado: $${pagoAcumulado}`,
+				notas: `Pago procesado vía Flow. Acumulado: $${pagoAcumuladoFinal}`,
 			});
 			console.log(
 				`💾 Transacción registrada: ID Flow ${payment.flowOrder}, Monto $${montoActual}`,
@@ -11121,20 +11201,21 @@ app.post("/api/flow-confirmation", async (req, res) => {
 				codigoReserva: reserva.codigoReserva,
 				origen: reserva.origen,
 				destino: reserva.destino,
-				fecha: reserva.fecha,
-				hora: reserva.hora,
+				fecha: reserva.fecha || (reserva.fechaIda || ""),
+				hora: reserva.hora || (reserva.horaIda || ""),
 				pasajeros: reserva.pasajeros,
-				vehiculo: reserva.vehiculo,
-				hotel: reserva.hotel || "",
+				vehiculo: reserva.vehiculo || "Estándar",
+				hotel: reserva.hotel || (isHotel ? reserva.destino : ""),
 				monto: payment.amount,
 				gateway: "Flow",
 				paymentId: payment.flowOrder.toString(),
 				estadoPago: "approved",
-				idaVuelta: reserva.idaVuelta,
-				fechaRegreso: reserva.fechaRegreso || "",
-				horaRegreso: reserva.horaRegreso || "",
-				upgradeVan: reserva.upgradeVan,
+				idaVuelta: reserva.idaVuelta || (reserva.tipoServicio === "ida_vuelta"),
+				fechaRegreso: reserva.fechaRegreso || (reserva.fechaVuelta || ""),
+				horaRegreso: reserva.horaRegreso || (reserva.horaVuelta || ""),
+				upgradeVan: reserva.upgradeVan || false,
 				motivo: reserva.motivoPago || "",
+				isHotel: isHotel
 			};
 
 			const phpUrl =
@@ -11172,8 +11253,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 					nombre: reserva.nombre,
 					monto: payment.amount,
 					metodo: "Flow",
-					fecha: reserva.fecha,
-					hora: reserva.hora,
+					fecha: reserva.fecha || (reserva.fechaIda || ""),
+					hora: reserva.hora || (reserva.horaIda || ""),
 					origen: reserva.origen,
 					destino:
 						(reserva.motivoPago
@@ -11182,9 +11263,10 @@ app.post("/api/flow-confirmation", async (req, res) => {
 						(reservaHija
 							? ` | 🔄 RETORNO: ${reservaHija.fecha} ${reservaHija.hora} (${reservaHija.origen} ➝ ${reservaHija.destino})`
 							: ""),
-					idaVuelta: reserva.idaVuelta,
-					upgradeVan: reserva.upgradeVan,
+					idaVuelta: reserva.idaVuelta || (reserva.tipoServicio === "ida_vuelta"),
+					upgradeVan: reserva.upgradeVan || false,
 					motivo: reserva.motivoPago || "",
+					isHotel: isHotel
 				},
 				{
 					headers: { "Content-Type": "application/json" },
@@ -13921,7 +14003,6 @@ const startServer = async () => {
 		}
 	});
 
-	// ─────────────────────────────────────────────────────────────
 	// MERCADO PAGO - WEBHOOK (IPN / Notifications)
 	// Recibe la confirmación de pago de Mercado Pago
 	// Actualiza el estado de la reserva y envía el correo de confirmación
@@ -13980,6 +14061,7 @@ const startServer = async () => {
 			// Extraer reservaId de la referencia externa
 			const externalRef = paymentData.external_reference || "";
 			const metadata = paymentData.metadata || {};
+			const isHotel = metadata.paymentOrigin === "hotel";
 			let reservaId = metadata.reserva_id || metadata.reservaId || null;
 
 			if (!reservaId && externalRef.startsWith("reserva_")) {
@@ -13995,10 +14077,16 @@ const startServer = async () => {
 				return;
 			}
 
-			// Buscar la reserva en la DB
-			const reserva = await Reserva.findByPk(reservaId);
+			// Buscar la reserva en la DB (modelo según origen)
+			let reserva = null;
+			if (isHotel) {
+				reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+			} else {
+				reserva = await Reserva.findByPk(reservaId);
+			}
+
 			if (!reserva) {
-				console.warn(`⚠️ [MP-webhook] Reserva ID=${reservaId} no encontrada`);
+				console.warn(`⚠️ [MP-webhook] Reserva ID=${reservaId} (${isHotel ? 'hotel' : 'privada'}) no encontrada`);
 				return;
 			}
 
@@ -14026,8 +14114,23 @@ const startServer = async () => {
 
 			// LOG DE CONVERSIÓN: Estándar para auditoría financiera
 			console.log(
-				`💳 [CONVERSIÓN MP] ${new Date().toISOString()} | Estado: ${paymentData.status} | Monto: $${montoActual} | MP-ID: ${paymentId} | Payer: ${reserva.email ? reserva.email.slice(0, 3) + "***" : "sin email"} | Origen: ${metadata.paymentOrigin || "web"}`,
+				`💳 [CONVERSIÓN MP] ${new Date().toISOString()} | Estado: ${paymentData.status} | Monto: $${montoActual} | MP-ID: ${paymentId} | Payer: ${reserva.email ? reserva.email.slice(0, 3) + "***" : "sin email"} | Origen: ${isHotel ? 'hotel' : (metadata.paymentOrigin || "web")}`,
 			);
+
+			if (isHotel) {
+				// Lógica simplificada para hoteles
+				await reserva.update({
+					estadoPago: "pagado",
+					estado: "confirmada",
+					pagoId: paymentId.toString(),
+					pagoGateway: "mercadopago",
+					metodoPago: paymentData.payment_method_id || "mercadopago",
+					pagoMonto: montoActual,
+					pagoFecha: new Date(),
+				});
+				console.log(`✅ [HOTEL] Reserva ${reserva.id} actualizada a PAGADA vía MP`);
+				return; // Terminar aquí para hoteles
+			}
 
 			// --- LÓGICA DE DIVISIÓN DE PAGO (Split Payment) portado desde Flow ---
 			let montoIda = montoActual;
@@ -14057,23 +14160,6 @@ const startServer = async () => {
 				}
 			}
 
-			// Actualizar estado de la reserva Padre (Ida)
-			// Nota: saldoPendiente se pone en 0 porque el pago fue aprobado y es por el total
-			await reserva.update({
-				estadoPago: "pagado",
-				estado: "confirmada",
-				pagoMonto: montoIda,
-				saldoPendiente: 0,
-				metodoPago: "mercadopago",
-				referenciaPagoExterno: String(paymentId),
-				abonoPagado: true,
-				saldoPagado: true,
-			});
-
-			console.log(
-				`✅ [MP-webhook] Reserva Padre ${reservaId} actualizada a PAGADA. Monto: ${montoIda}`,
-			);
-
 			// Actualizar estado de la reserva Hija (Vuelta)
 			if (reservaHija && montoVuelta > 0) {
 				try {
@@ -14099,7 +14185,13 @@ const startServer = async () => {
 			const phpMailerUrl = `${frontendBase}/enviar_confirmacion_pago.php`;
 
 			try {
-				const reservaActualizada = await Reserva.findByPk(reservaId);
+				let reservaActualizada = null;
+				if (isHotel) {
+					reservaActualizada = await TrasladoHotelAeropuerto.findByPk(reservaId);
+				} else {
+					reservaActualizada = await Reserva.findByPk(reservaId);
+				}
+				
 				const emailDestino = sanitizarEmailRobusto(
 					reservaActualizada?.email || "",
 				);
@@ -14113,16 +14205,17 @@ const startServer = async () => {
 							nombre: reservaActualizada?.nombre || "",
 							origen: reservaActualizada?.origen || "",
 							destino: reservaActualizada?.destino || "",
-							fecha: reservaActualizada?.fecha || "",
-							hora: reservaActualizada?.hora || "",
+							fecha: reservaActualizada?.fecha || (reservaActualizada?.fechaIda || ""),
+							hora: reservaActualizada?.hora || (reservaActualizada?.horaIda || ""),
 							monto: montoActual,
 							codigoReserva: reservaActualizada?.codigoReserva || "",
 							pasarela: "mercadopago",
+							isHotel: isHotel
 						},
 						{ timeout: 10000 },
 					);
 					console.log(
-						`📧 [MP-webhook] Correo de confirmación enviado a ${emailDestino}`,
+						`📧 [MP-webhook] Correo de confirmación enviado a ${emailDestino} (isHotel: ${isHotel})`,
 					);
 				}
 			} catch (mailError) {
@@ -14137,7 +14230,9 @@ const startServer = async () => {
 			// Detectar y generar oportunidades de retorno (mismo que Flow)
 			// Nota: se pasa el objeto `reserva` (no solo el ID) porque la función necesita origen/destino
 			try {
-				await detectarYGenerarOportunidades(reserva);
+				if (!isHotel) {
+					await detectarYGenerarOportunidades(reserva);
+				}
 			} catch (opErr) {
 				console.warn(
 					"⚠️ [MP-webhook] Error generando oportunidades:",

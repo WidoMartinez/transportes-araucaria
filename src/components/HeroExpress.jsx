@@ -336,10 +336,17 @@ function HeroExpress({
 
 	const montoHotelCalculado = useMemo(() => {
 		if (!hotelSeleccionado) return 0;
-		return hotelForm.tipoServicio === "ida_vuelta"
+		const baseMonto = hotelForm.tipoServicio === "ida_vuelta"
 			? hotelSeleccionado.tarifaIdaVuelta
 			: hotelSeleccionado.tarifaSoloIda;
-	}, [hotelSeleccionado, hotelForm.tipoServicio]);
+		
+		// Añadir costo de sillas infantiles si aplica
+		const extraSillas = formData.sillaInfantil 
+			? (Number.parseInt(formData.cantidadSillasInfantiles, 10) || 0) * childSeatUnitPrice 
+			: 0;
+			
+		return baseMonto + extraSillas;
+	}, [hotelSeleccionado, hotelForm.tipoServicio, formData.sillaInfantil, formData.cantidadSillasInfantiles, childSeatUnitPrice]);
 
 	const actualizarHotelForm = (campo, valor) => {
 		setHotelForm((prev) => ({ ...prev, [campo]: valor }));
@@ -456,9 +463,22 @@ function HeroExpress({
 				setStepError("Completa la fecha y la hora del viaje.");
 				return;
 			}
+			
+			// Validar ANTICIPACIÓN (Mínimo 3 horas)
+			const hotelAnticipacionHoras = 3; // Valor manual o desde config si se pasara como prop
+			const fechaViaje = new Date(`${formData.fecha}T${formData.hora}`);
+			const ahora = new Date();
+			const msAnticipacion = hotelAnticipacionHoras * 60 * 60 * 1000;
+			
+			if (fechaViaje.getTime() - ahora.getTime() < msAnticipacion) {
+				setStepError(`Las reservas de hotel requieren al menos ${hotelAnticipacionHoras} horas de anticipación.`);
+				return;
+			}
+
 			const pax = Number.parseInt(formData.pasajeros, 10) || 0;
-			if (pax < 1 || pax > 7) {
-				setStepError("Este servicio permite entre 1 y 7 pasajeros.");
+			const maxPaxHotel = 8; // Capacidad máxima según requerimiento
+			if (pax < 1 || pax > maxPaxHotel) {
+				setStepError(`Este servicio permite entre 1 y ${maxPaxHotel} pasajeros.`);
 				return;
 			}
 			if (hotelForm.tipoServicio === "ida_vuelta") {
@@ -558,6 +578,9 @@ function HeroExpress({
 						horaVuelta: hotelForm.horaVuelta || undefined,
 						pasajeros: Number(formData.pasajeros) || 1,
 						observaciones: hotelForm.observaciones || undefined,
+						// Nuevos campos de sillas infantiles
+						sillaInfantil: formData.sillaInfantil,
+						cantidadSillasInfantiles: formData.sillaInfantil ? (Number.parseInt(formData.cantidadSillasInfantiles, 10) || 0) : 0,
 					}),
 				},
 			);
@@ -565,7 +588,13 @@ function HeroExpress({
 			if (!response.ok) {
 				throw new Error(data.error || "No se pudo crear la reserva.");
 			}
+			
+			// Si la reserva se creó exitosamente, avanzar al paso de pago (opcional pero recomendado)
+			// Guardamos la reserva creada para mostrar el resumen y permitir el pago
 			setReservaHotelCreada(data.reserva);
+			
+			// Opcional: mover a un "paso de pago" específico si queremos una interfaz más limpia
+			// setCurrentStep(2); 
 		} catch (err) {
 			setStepError(
 				err.message || "Ocurrió un error al enviar la reserva. Reintenta.",
@@ -940,7 +969,6 @@ function HeroExpress({
 											}),
 										)}
 									/>
-
 									{esModoHoteles && hotelForm.tipoServicio === "ida_vuelta" ? (
 										<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 											<div className="space-y-1.5">
@@ -984,8 +1012,8 @@ function HeroExpress({
 											/>
 										</div>
 									) : null}
-
-									{!esModoHoteles && hasChildSeatOption ? (
+									
+									{hasChildSeatOption ? (
 										<div className={cn(
 											"rounded-[1.75rem] border p-4 transition-all",
 											formData.sillaInfantil ? "border-[#8C5E42]/20 bg-[#8C5E42]/6" : "border-slate-200 bg-slate-50/80",
@@ -1142,8 +1170,58 @@ function HeroExpress({
 									</div>
 								</div>
 								<p className="mt-4 text-[11px] leading-5 text-slate-500">
-									Guarda tu código para consultar el estado de la reserva. Un administrador revisará tu solicitud y te confirmará el servicio.
+									Guarda tu código para consultar el estado. Para garantizar tu cupo, <strong>debes realizar el pago total</strong> del servicio a continuación.
 								</p>
+
+								{/* SELECTOR DE PASARELA PARA HOTELES */}
+								<div className="mt-6 space-y-4 pt-6 border-t border-slate-100">
+									<div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+										<div className="flex items-start gap-3">
+											<Checkbox id="terms-hotel" checked={paymentConsent} onCheckedChange={(checked) => setPaymentConsent(Boolean(checked))} className="mt-1" />
+											<div className="space-y-2">
+												<label htmlFor="terms-hotel" className="block cursor-pointer text-xs font-medium leading-5 text-slate-700">
+													He leído y acepto los términos para procesar el pago.
+												</label>
+												<div className="flex flex-wrap gap-2">
+													<LegalDialog
+														triggerLabel="Términos"
+														title="Términos y Condiciones"
+														description="Revisa las condiciones del servicio."
+														sections={TERMINOS_CONDICIONES}
+													/>
+												</div>
+											</div>
+										</div>
+									</div>
+
+									<div className="flex flex-col gap-1">
+										<Label className="text-[10px] uppercase tracking-widest text-[#8C5E42] font-bold">Pagar con</Label>
+										<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
+									</div>
+
+									<Button 
+										onClick={() => {
+											if (!paymentConsent) {
+												setStepError("Debes aceptar los términos y condiciones.");
+												return;
+											}
+											handlePayment(pasarela, "total", {
+												reservaId: reservaHotelCreada.id,
+												codigoReserva: reservaHotelCreada.codigoReserva,
+												paymentOrigin: "hotel",
+												amount: reservaHotelCreada.montoTotal
+											});
+										}}
+										disabled={loadingGateway || !paymentConsent}
+										className="w-full h-12 bg-forest-600 hover:bg-forest-500 text-white rounded-xl font-bold shadow-lg transition-all"
+									>
+										{loadingGateway === pasarela ? (
+											<LoaderCircle className="h-5 w-5 animate-spin" />
+										) : (
+											`Pagar ${formatCurrency(reservaHotelCreada.montoTotal)} ahora`
+										)}
+									</Button>
+								</div>
 								<Button
 									onClick={() => {
 										setReservaHotelCreada(null);
