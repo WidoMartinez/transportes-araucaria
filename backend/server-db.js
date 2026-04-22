@@ -78,6 +78,7 @@ import addAdvancedPromoConfig from "./migrations/add-advanced-promo-config.js";
 import addUltimaSolicitudDetalles from "./migrations/add-ultima-solicitud-detalles.js";
 import updateVehiculosMinibusToSuv from "./migrations/update-vehiculos-minibus-to-suv.js";
 import addEvaluacionesConductorTable from "./migrations/add-evaluaciones-conductor-table.js";
+import addPaymentAndSillasToHoteles from "./migrations/add-payment-and-sillas-to-hoteles.js";
 import EvaluacionConductor from "./models/EvaluacionConductor.js";
 import {
 	generarTokenEvaluacion,
@@ -720,6 +721,7 @@ const initializeDatabase = async () => {
 		await addDuracionMinutosToReservas();
 		await addTransaccionesTable();
 		await addUltimaSolicitudDetalles();
+		await addPaymentAndSillasToHoteles();
 
 		await syncDatabase(false, [
 			AdminUser, // Primero los usuarios admin
