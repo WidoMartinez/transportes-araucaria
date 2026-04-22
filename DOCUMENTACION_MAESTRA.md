@@ -43,6 +43,7 @@ Este documento centraliza toda la informaciÃ³n tÃ©cnica, operativa y de usua
    - [IntegraciÃ³n Mercado Pago Checkout Pro](#527-integraciÃ³n-mercado-pago-checkout-pro)
 
 - [ConfiguraciÃ³n DinÃ¡mica de Pasarelas y Logos](#528-configuraciÃ³n-dinÃ¡mica-de-pasarelas-y-logos-flowmercado-pago)
+- [MÃ³dulo Aeropuerto-Hoteles](#529-mÃ³dulo-aeropuerto-hoteles-con-reserva-y-admin-dedicados)
 
 6. [Mantenimiento y Despliegue](#6-mantenimiento-y-despliegue)
    - [Acceso SSH a Hostinger](#61-acceso-ssh-a-hostinger-hosting-compartido)
@@ -1190,6 +1191,95 @@ Permitir que el panel admin controle, sin deploy, quÃ© pasarelas de pago estÃ
 - Logo se refleja en HeroExpress, ConsultarReserva y PagarConCodigo.
 - Con 1 pasarela activa se muestra tarjeta fija con imagen.
 - Con 2 pasarelas activas se muestran ambas opciones.
+
+---
+
+### 5.29 MÃ³dulo Aeropuerto-Hoteles con Reserva y Admin Dedicados
+
+**Implementado: Abril 2026**
+
+#### Objetivo
+
+Crear un servicio paralelo al flujo principal, orientado exclusivamente a traslados entre **Aeropuerto La AraucanÃ­a** y hoteles relevantes de la regiÃ³n, con:
+
+- Tarifas fijas por hotel.
+- Reglas de viaje propias.
+- Reserva pÃºblica especializada.
+- Panel administrativo independiente.
+
+#### Reglas de negocio implementadas
+
+1. Si el origen es **aeropuerto**, el cliente puede reservar:
+   - `solo_ida`, o
+   - `ida_vuelta`.
+2. Si el origen es **hotel**, solo puede reservar:
+   - `solo_ida` hacia aeropuerto.
+3. Para `ida_vuelta` se exige `fechaVuelta` y `horaVuelta`.
+4. El rango operativo del mÃ³dulo se limita a 1â€“7 pasajeros.
+
+#### Backend (Render.com)
+
+**Modelo dedicado**:
+
+- `backend/models/TrasladoHotelAeropuerto.js`
+- Tabla: `traslados_hoteles`
+- `backend/models/HotelTraslado.js`
+- Tabla: `hoteles_traslado` (catálogo administrable de hoteles y tarifas)
+
+**MigraciÃ³n dedicada**:
+
+- `backend/migrations/add-traslados-hoteles-table.js`
+- `backend/migrations/add-hoteles-traslado-table.js`
+
+**Rutas del mÃ³dulo**:
+
+- `backend/routes/traslados-hoteles.js`
+- Registro en `backend/server-db.js` con `setupTrasladosHotelesRoutes(app, authAdmin)`.
+
+**Endpoints pÃºblicos**:
+
+- `GET /api/traslados-hoteles/catalogo`: devuelve hoteles y tarifario fijo.
+- `POST /api/traslados-hoteles/reservas`: crea reserva del servicio.
+
+**Endpoints administrativos** (requieren JWT admin):
+
+- `GET /api/admin/traslados-hoteles/reservas`: listado con filtros y resumen.
+- `PATCH /api/admin/traslados-hoteles/reservas/:id/estado`: cambio de estado.
+- `GET /api/admin/traslados-hoteles/hoteles`: listado completo del catálogo.
+- `POST /api/admin/traslados-hoteles/hoteles`: crear hotel/tarifas.
+- `PUT /api/admin/traslados-hoteles/hoteles/:id`: editar hotel/tarifas/estado/orden.
+
+#### Frontend pÃºblico
+
+**PÃ¡gina dedicada**:
+
+- `src/pages/TrasladosAeropuertoHoteles.jsx`
+- Ruta: `/aeropuerto-hoteles` (y hash `#aeropuerto-hoteles`).
+
+**IntegraciÃ³n de navegaciÃ³n**:
+
+- `src/App.jsx`: resoluciÃ³n de vista y render de la nueva pÃ¡gina.
+- `src/components/Header.jsx`: acceso directo en menÃº principal.
+- `src/components/Servicios.jsx`: tarjeta especÃ­fica del nuevo servicio.
+
+#### Admin especializado
+
+**Componente dedicado**:
+
+- `src/components/admin/AdminTrasladosHoteles.jsx`
+  - Incluye submódulo de catálogo para administrar hoteles, tarifas solo ida, tarifas ida/vuelta, orden y estado activo.
+
+**IntegraciÃ³n en panel**:
+
+- `src/components/AdminDashboard.jsx`: panel `traslados-hoteles`.
+- `src/components/admin/layout/AdminSidebar.jsx`: item "Aeropuerto-Hoteles" en Operaciones.
+
+#### Consideraciones tÃ©cnicas
+
+- Este mÃ³dulo no reemplaza ni altera la lÃ³gica de `Reserva` del sistema principal; opera como subsistema independiente.
+- Mantiene compatibilidad con arquitectura actual: frontend React/Vite, backend Node/Express en Render.com.
+- No modifica el sistema de correos PHPMailer en Hostinger.
+- El formulario público consume solo hoteles activos desde `hoteles_traslado`, evitando depender de valores hardcodeados.
 
 ---
 

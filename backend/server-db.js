@@ -30,6 +30,8 @@ import BloqueoAgenda from "./models/BloqueoAgenda.js";
 import Configuracion from "./models/Configuracion.js";
 import Oportunidad from "./models/Oportunidad.js";
 import SuscripcionOportunidad from "./models/SuscripcionOportunidad.js";
+import TrasladoHotelAeropuerto from "./models/TrasladoHotelAeropuerto.js";
+import HotelTraslado from "./models/HotelTraslado.js";
 import addPaymentFields from "./migrations/add-payment-fields.js";
 import addCodigosPagoTable from "./migrations/add-codigos-pago-table.js";
 import addPermitirAbonoColumn from "./migrations/add-permitir-abono-column.js";
@@ -65,6 +67,8 @@ import addDuracionMinutosToReservas from "./migrations/add-duracion-minutos-to-r
 import addTransaccionesTable from "./migrations/add-transacciones-table.js";
 import addOportunidadesTable from "./migrations/add-oportunidades-table.js";
 import addSuscripcionesOportunidadesTable from "./migrations/add-suscripciones-oportunidades-table.js";
+import addTrasladosHotelesTable from "./migrations/add-traslados-hoteles-table.js";
+import addHotelesTrasladoTable from "./migrations/add-hoteles-traslado-table.js";
 import addUpgradeVanToReservas from "./migrations/add-upgrade-van-to-reservas.js";
 
 import addAddressColumns from "./migrations/add-address-columns.js";
@@ -86,6 +90,7 @@ import configuracionPasarelasRoutes from "./routes/configuracion-pasarelas.route
 import setupAssociations from "./models/associations.js";
 import authRoutes from "./routes/auth.js";
 import setupOportunidadesRoutes from "./routes/oportunidades.js";
+import setupTrasladosHotelesRoutes from "./routes/traslados-hoteles.js";
 import { authJWT } from "./middleware/authJWT.js";
 import AdminUser from "./models/AdminUser.js";
 import AdminAuditLog from "./models/AdminAuditLog.js";
@@ -623,6 +628,7 @@ app.use("/api/promociones-banner", promocionesBannerRoutes);
 app.use("/api/configuracion/pasarelas-pago", configuracionPasarelasRoutes);
 
 setupOportunidadesRoutes(app, authAdmin);
+setupTrasladosHotelesRoutes(app, authAdmin);
 
 // --- INICIALIZACIÓN DE BASE DE DATOS ---
 // Función para ejecutar migración automática del código de reserva
@@ -753,6 +759,8 @@ const initializeDatabase = async () => {
 			FlowToken,
 			Oportunidad,
 			SuscripcionOportunidad,
+			TrasladoHotelAeropuerto,
+			HotelTraslado,
 		]); // false = no forzar recreación
 
 		// Crear o actualizar usuario admin por defecto
@@ -834,6 +842,8 @@ const initializeDatabase = async () => {
 		await addTramosFields(); // Migración para campos de tramos (ida/vuelta)
 		await addOportunidadesTable(); // Migración para tabla de oportunidades de traslado
 		await addSuscripcionesOportunidadesTable(); // Migración para tabla de suscripciones a oportunidades
+		await addHotelesTrasladoTable(); // Migración para catálogo administrable de hoteles
+		await addTrasladosHotelesTable(); // Migración para tabla del módulo Aeropuerto-Hoteles
 		await addSillaInfantilCountToReservas(); // Migración para columna cantidad_sillas_infantiles en reservas
 		await addUpgradeVanToReservas(); // Migración para columna upgrade_van en reservas
 		await updateVehiculosMinibusToSuv(); // Migración para renombrar tipo minibus → suv en vehículos

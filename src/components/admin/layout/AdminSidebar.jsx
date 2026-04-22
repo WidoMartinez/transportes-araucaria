@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronRight,
   Truck,
+  Plane,
   Receipt,
   TrendingUp,
   Calendar,
@@ -73,6 +74,7 @@ function AdminSidebar({ activePanel, onPanelChange, userRole, isCollapsed, onTog
       bgColor: "bg-green-50",
       items: [
         { id: "reservas", label: "Reservas", icon: Calendar },
+        { id: "traslados-hoteles", label: "Aeropuerto-Hoteles", icon: Plane },
         { id: "vehiculos", label: "Vehículos", icon: Car },
         { id: "conductores", label: "Conductores", icon: Users },
         { id: "evaluaciones", label: "Evaluaciones", icon: Star }

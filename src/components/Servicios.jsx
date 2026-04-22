@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import {
 	Users,
 	MapPin,
+	Plane,
 	Star,
 	Briefcase,
 	ArrowLeft,
@@ -15,6 +16,22 @@ import ScrollReveal from "./animations/ScrollReveal";
 // Tarjetas de servicios — con los datos reales del negocio
 const services = [
 	{
+		icon: Plane,
+		tag: "Nuevo servicio",
+		title: "Aeropuerto ↔ Hoteles",
+		description:
+			"Servicio dedicado con valores fijos para hoteles principales de La Araucanía. Desde aeropuerto puedes reservar ida y vuelta; desde hotel, solo ida.",
+		highlights: [
+			"Tarifa fija por hotel",
+			"Módulo especializado",
+			"Admin dedicado",
+		],
+		accent: "#C4895E",
+		bg: "#162B0E",
+		ctaHref: "/aeropuerto-hoteles",
+		ctaLabel: "Reservar Aeropuerto-Hoteles",
+	},
+	{
 		icon: MapPin,
 		tag: "Traslado privado",
 		title: "Individual y familiar",
@@ -23,6 +40,8 @@ const services = [
 		highlights: ["Seguimiento de vuelo", "Espera sin costo", "Hasta 4 pasajeros"],
 		accent: "#C4895E",
 		bg: "#1E3A14",
+		ctaHref: "#inicio",
+		ctaLabel: "Solicitar este servicio",
 	},
 	{
 		icon: Users,
@@ -38,6 +57,8 @@ const services = [
 		],
 		accent: "#D4A373",
 		bg: "#162B0E",
+		ctaHref: "#inicio",
+		ctaLabel: "Solicitar este servicio",
 	},
 	{
 		icon: Briefcase,
@@ -52,6 +73,8 @@ const services = [
 		],
 		accent: "#B87D5A",
 		bg: "#1E3A14",
+		ctaHref: "#inicio",
+		ctaLabel: "Solicitar este servicio",
 	},
 	{
 		icon: Star,
@@ -66,6 +89,8 @@ const services = [
 		],
 		accent: "#C4895E",
 		bg: "#1C3812",
+		ctaHref: "#inicio",
+		ctaLabel: "Solicitar este servicio",
 	},
 ];
 
@@ -193,11 +218,11 @@ function Servicios() {
 										className="mt-10"
 									>
 										<a
-											href="#inicio"
+											href={services[active].ctaHref || "#inicio"}
 											className="inline-flex h-10 items-center rounded-full px-6 text-sm font-semibold text-slate-900 shadow-md transition-all hover:opacity-90 active:scale-95"
 											style={{ backgroundColor: services[active].accent }}
 										>
-											Solicitar este servicio
+											{services[active].ctaLabel || "Solicitar este servicio"}
 										</a>
 									</motion.div>
 								</div>

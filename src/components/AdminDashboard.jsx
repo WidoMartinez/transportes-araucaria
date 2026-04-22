@@ -28,6 +28,9 @@ const AdminUsuarios = lazy(() => import("./AdminUsuarios"));
 const AdminPerfil = lazy(() => import("./AdminPerfil"));
 const AdminConfiguracion = lazy(() => import("./AdminConfiguracion"));
 const AdminEvaluaciones = lazy(() => import("./Admin/AdminEvaluaciones"));
+const AdminTrasladosHoteles = lazy(
+	() => import("./admin/AdminTrasladosHoteles"),
+);
 
 /**
  * Panel de Administración Principal
@@ -135,7 +138,7 @@ function AdminDashboard() {
         {/* Área de contenido */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
           <div className={`
-            ${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "disponibilidad", "festivos", "usuarios", "evaluaciones"].includes(active) ? "max-w-full" : "max-w-7xl mx-auto"} 
+            ${["reservas", "vehiculos", "conductores", "gastos", "estadisticas", "productos", "tarifa-dinamica", "disponibilidad", "festivos", "usuarios", "evaluaciones", "traslados-hoteles"].includes(active) ? "max-w-full" : "max-w-7xl mx-auto"} 
             px-6 py-6
           `}>
             {/* Renderizar el componente activo */}
@@ -184,6 +187,8 @@ function AdminDashboard() {
                 <AdminConfiguracion />
               ) : active === "evaluaciones" ? (
                 <AdminEvaluaciones />
+              ) : active === "traslados-hoteles" ? (
+                <AdminTrasladosHoteles />
               ) : (
                 // Fallback al dashboard si el panel no existe
                 <DashboardHome onNavigate={setPanel} />
