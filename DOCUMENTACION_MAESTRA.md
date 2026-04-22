@@ -1,4 +1,4 @@
-﻿# ðŸ“˜ DocumentaciÃ³n Maestra - Transportes Araucaria
+# ðŸ“˜ DocumentaciÃ³n Maestra - Transportes Araucaria
 
 > **Ãšltima ActualizaciÃ³n**: 16 Abril 2026
 > **VersiÃ³n**: 2.1
@@ -1703,11 +1703,54 @@ Este sistema garantiza que no se pierdan datos de conversiÃ³n de Google Ads ni
 #### Flujos Cubiertos
 
 - **Express**: Home â†’ CotizaciÃ³n â†’ Pago.
-- **Pagar con CÃ³digo**: Uso de cÃ³digos de prepago.
+- **Pagar con Código**: Uso de códigos de prepago.
 - **Consulta de Reserva**: Pago de saldos pendientes.
 - **Oportunidades**: Compra de retornos con descuento.
 - **Banners**: Reservas desde promociones destacadas.
-- **Productos**: AdiciÃ³n de servicios extras (cafÃ©, WiFi, etc.) post-reserva.
+- **Productos**: Adición de servicios extras (café, WiFi, etc.) post-reserva.
+- **Hoteles**: Traslados compartidos/privados entre Aeropuerto y Hoteles seleccionados.
+
+---
+
+### 5.29 Módulo Aeropuerto-Hoteles (con Reserva y Admin Dedicados)
+
+**Implementado: Abril 2026**
+
+Este módulo proporciona un flujo especializado para traslados entre el Aeropuerto de La Araucanía y una lista predefinida de hoteles, operando con reglas de negocio distintas al flujo de traslados privados estándar.
+
+#### A. Reglas de Negocio Específicas
+
+1.  **Anticipación de Reserva**: Se requiere un mínimo de **3 horas** de anticipación para cualquier reserva de hotel.
+2.  **Capacidad Máxima**: El límite estricto es de **8 pasajeros** por reserva.
+3.  **Modelo de Pago**: Solo se acepta **Pago Total** (100%). No se permiten abonos o pagos parciales para este módulo.
+4.  **Accesorios (Sillas Infantiles)**: Se permite solicitar hasta 2 sillas infantiles, con un cargo adicional configurable que se suma al valor base del traslado.
+
+#### B. Integración de Pagos y Webhooks
+
+El sistema utiliza una arquitectura polimórfica para procesar pagos de hoteles utilizando las mismas pasarelas (Flow y Mercado Pago) que el resto del sitio:
+
+- **Identificación**: Se utiliza el metadato `paymentOrigin: 'hotel'` en el inicio de la transacción.
+- **Procesamiento de Webhooks**:
+    - El sistema detecta el origen 'hotel' y busca el registro en la tabla `TrasladoHotelAeropuerto` en lugar de la tabla `Reserva`.
+    - Actualiza campos específicos: `estadoPago`, `pagoMonto`, `pagoFecha`, `metodoPago`, `referenciaPagoExterno`.
+- **Fallback de Estado**: El endpoint `/api/payment-status` verifica dinámicamente ambos modelos para asegurar que el frontend reciba la confirmación correcta tras el retorno de la pasarela.
+
+#### C. Flujo del Usuario (Frontend)
+
+1.  **Cotización**: Selector de hotel, fecha, hora y cantidad de pasajeros (con límite dinámico).
+2.  **Sillas Infantiles**: Selector integrado que actualiza el precio final inmediatamente.
+3.  **Checkout**: 
+    - Formulario simplificado (Nombre, Email, Teléfono, Vuelo).
+    - Casilla de consentimiento obligatoria para Términos y Condiciones.
+    - Selector de pasarela (Flow / Mercado Pago).
+4.  **Confirmación**: Redirección a `/flow-return?hotel=1` para mostrar la confirmación especializada y disparar el tracking de conversión.
+
+#### D. Base de Datos y Modelos
+
+- **Modelo**: `TrasladoHotelAeropuerto`.
+- **Campos de Pago**: `estadoPago`, `pagoId`, `pagoGateway`, `pagoMonto`, `pagoFecha`, `metodoPago`.
+- **Campos de Servicio**: `fechaIda`, `horaIda`, `fechaVuelta`, `horaVuelta`, `tipoServicio` (Ida / Ida y Vuelta).
+- **Accesorios**: `sillasInfantiles` (cantidad).
 
 ---
 
@@ -1715,9 +1758,9 @@ Este sistema garantiza que no se pierdan datos de conversiÃ³n de Google Ads ni
 
 ### 6.1 Acceso SSH a Hostinger (Hosting Compartido)
 
-El frontend React (build) y los scripts PHP se alojan en el hosting compartido de Hostinger. A continuaciÃ³n se documentan los datos de conexiÃ³n y el flujo de trabajo para administrar el servidor de forma remota.
+El frontend React (build) y los scripts PHP se alojan en el hosting compartido de Hostinger. A continuación se documentan los datos de conexión y el flujo de trabajo para administrar el servidor de forma remota.
 
-#### Datos de ConexiÃ³n SSH
+#### Datos de Conexión SSH
 
 | Campo          | Valor            |
 | -------------- | ---------------- |

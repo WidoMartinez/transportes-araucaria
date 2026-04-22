@@ -453,6 +453,49 @@ Se movió la lógica de filtrado del Cliente al Servidor.
 
 ---
 
+## 1.5. Errores de Pago y Webhooks en Módulo de Hoteles
+
+**Implementado: Abril 2026**
+
+### Problema
+
+Al introducir el módulo de hoteles, los webhooks de pago (Flow/Mercado Pago) no sabían inicialmente en qué tabla buscar la reserva (si en `Reserva` o en `TrasladoHotelAeropuerto`), lo que causaba que los pagos de hoteles no se marcaran como "pagados" en la base de datos.
+
+### Síntomas
+
+- El usuario paga exitosamente en Flow/MP, pero el registro de hotel sigue apareciendo como "pendiente".
+- Errores de "Reserva no encontrada" en los logs de los webhooks.
+- El fallback de `/api/payment-status` devuelve error 404 para reservas de hoteles.
+
+### Causa Raíz
+
+Los webhooks estaban hardcodeados para usar el modelo `Reserva`. Al existir un segundo modelo (`TrasladoHotelAeropuerto`), se requería una lógica polimórfica basada en metadatos.
+
+### Solución
+
+Se implementó el uso de `paymentOrigin` dentro de los metadatos de la transacción:
+
+1.  **Metadata en Pasarela**: Al crear el pago desde el frontend, se envía `paymentOrigin: 'hotel'`.
+2.  **Lógica Polimórfica en Backend**:
+    ```javascript
+    const isHotel = optionalData?.paymentOrigin === "hotel";
+    let reserva = null;
+    if (isHotel) {
+        reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+    } else {
+        reserva = await Reserva.findByPk(reservaId);
+    }
+    ```
+3.  **Adaptación de Campos**: Se evitaron campos exclusivos de traslados privados (como `abonoPagado` o `saldoPagado`) al actualizar registros de hoteles.
+
+### Verificación
+
+- Revisar logs con el prefijo `[Flow Webhook]` o `[MP-webhook]`.
+- Confirmar que aparezca el mensaje: `✅ Pago de HOTEL procesado para ID X`.
+- Verificar que el endpoint `/api/payment-status?token=XXX` retorne los datos del hotel correctamente.
+
+---
+
 ## 2. Problemas de Rutas y Backend (Error 500)
 
 ### Síntoma

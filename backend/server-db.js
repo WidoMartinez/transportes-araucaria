@@ -113,6 +113,9 @@ import {
 
 dotenv.config();
 
+// Alias de middleware para compatibilidad con rutas heredadas
+const authAdmin = authJWT;
+
 // Configurar asociaciones entre modelos para habilitar includes en consultas
 setupAssociations();
 
