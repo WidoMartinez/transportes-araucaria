@@ -294,6 +294,11 @@ function AdminTrasladosHoteles() {
 				return;
 			}
 
+			if (payload.tarifaIdaVuelta < payload.tarifaSoloIda) {
+				toast.error("La tarifa ida y vuelta no puede ser menor que la tarifa solo ida.");
+				return;
+			}
+
 			setGuardandoHotel(true);
 
 			const url = hotelEditando
@@ -637,15 +642,18 @@ function AdminTrasladosHoteles() {
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={filtros.page <= 1}
+							disabled={filtros.page <= 1 || loading}
 							onClick={() => actualizarFiltro("page", filtros.page - 1)}
 						>
 							Anterior
 						</Button>
+						<span className="text-sm text-muted-foreground px-2">
+							{filtros.page} / {totalPages}
+						</span>
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={filtros.page >= totalPages}
+							disabled={filtros.page >= totalPages || loading}
 							onClick={() => actualizarFiltro("page", filtros.page + 1)}
 						>
 							Siguiente

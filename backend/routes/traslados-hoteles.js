@@ -11,6 +11,8 @@ const ESTADOS_VALIDOS = ["pendiente", "confirmada", "completada", "cancelada"];
 const TIPOS_SERVICIO_VALIDOS = ["solo_ida", "ida_vuelta"];
 
 const normalizarTexto = (value = "") => String(value || "").trim();
+const esEmailValido = (email = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const fechaHoyISO = () => new Date().toISOString().split("T")[0];
 const normalizarCodigo = (value = "") =>
 	normalizarTexto(value)
 		.toLowerCase()
@@ -128,7 +130,7 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 			const horaIda = normalizarTexto(req.body?.horaIda);
 			const fechaVuelta = normalizarTexto(req.body?.fechaVuelta);
 			const horaVuelta = normalizarTexto(req.body?.horaVuelta);
-			const observaciones = normalizarTexto(req.body?.observaciones);
+			const observaciones = normalizarTexto(req.body?.observaciones).slice(0, 500);
 			const pasajeros = Number.parseInt(req.body?.pasajeros, 10) || 1;
 
 			if (!nombre || !email || !telefono || !hotelCodigo || !origenTipo) {
@@ -138,9 +140,21 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				});
 			}
 
+			if (!esEmailValido(email)) {
+				return res.status(400).json({
+					error: "El formato del email no es válido.",
+				});
+			}
+
 			if (!fechaIda || !horaIda) {
 				return res.status(400).json({
 					error: "La fecha y hora de ida son obligatorias.",
+				});
+			}
+
+			if (fechaIda < fechaHoyISO()) {
+				return res.status(400).json({
+					error: "La fecha de ida no puede ser en el pasado.",
 				});
 			}
 
@@ -189,6 +203,11 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 					return res.status(400).json({
 						error:
 							"Para ida y vuelta debes indicar fecha y hora de retorno desde el hotel.",
+					});
+				}
+				if (fechaVuelta < fechaIda) {
+					return res.status(400).json({
+						error: "La fecha de vuelta no puede ser anterior a la fecha de ida.",
 					});
 				}
 			}

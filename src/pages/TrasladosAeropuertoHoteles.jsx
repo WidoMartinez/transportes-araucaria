@@ -47,6 +47,10 @@ const formatearCLP = (monto) =>
 		maximumFractionDigits: 0,
 	}).format(Number(monto || 0));
 
+const hoyISO = () => new Date().toISOString().split("T")[0];
+
+const emailValido = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 function TrasladosAeropuertoHoteles() {
 	const [catalogo, setCatalogo] = useState(null);
 	const [loadingCatalogo, setLoadingCatalogo] = useState(true);
@@ -143,13 +147,28 @@ function TrasladosAeropuertoHoteles() {
 			return;
 		}
 
+		if (!emailValido(form.email)) {
+			setErrorFormulario("El email ingresado no tiene un formato válido.");
+			return;
+		}
+
 		if (!form.fechaIda || !form.horaIda) {
 			setErrorFormulario("Debes indicar fecha y hora de ida.");
 			return;
 		}
 
+		if (form.fechaIda < hoyISO()) {
+			setErrorFormulario("La fecha de ida no puede ser en el pasado.");
+			return;
+		}
+
 		if (form.tipoServicio === "ida_vuelta" && (!form.fechaVuelta || !form.horaVuelta)) {
 			setErrorFormulario("Debes completar fecha y hora de vuelta.");
+			return;
+		}
+
+		if (form.tipoServicio === "ida_vuelta" && form.fechaVuelta < form.fechaIda) {
+			setErrorFormulario("La fecha de vuelta no puede ser anterior a la fecha de ida.");
 			return;
 		}
 
@@ -380,6 +399,7 @@ function TrasladosAeropuertoHoteles() {
 										<Input
 											id="fecha-ida"
 											type="date"
+											min={hoyISO()}
 											value={form.fechaIda}
 											onChange={(e) => cambiarCampo("fechaIda", e.target.value)}
 										/>
@@ -402,6 +422,7 @@ function TrasladosAeropuertoHoteles() {
 											<Input
 												id="fecha-vuelta"
 												type="date"
+												min={form.fechaIda || hoyISO()}
 												value={form.fechaVuelta}
 												onChange={(e) => cambiarCampo("fechaVuelta", e.target.value)}
 											/>
@@ -423,9 +444,20 @@ function TrasladosAeropuertoHoteles() {
 									<Textarea
 										id="observaciones"
 										value={form.observaciones}
-										onChange={(e) => cambiarCampo("observaciones", e.target.value)}
+										onChange={(e) =>
+											cambiarCampo(
+												"observaciones",
+												e.target.value.slice(0, 500),
+											)
+										}
 										placeholder="Ej: equipaje voluminoso, silla infantil, etc."
+										maxLength={500}
 									/>
+									{form.observaciones.length > 400 && (
+										<p className="text-xs text-muted-foreground text-right">
+											{form.observaciones.length}/500
+										</p>
+									)}
 								</div>
 
 								{errorFormulario && (
@@ -499,16 +531,26 @@ function TrasladosAeropuertoHoteles() {
 					</Card>
 
 					{reservaCreada && (
-						<Alert className="border-primary/30 bg-primary/5">
-							<AlertTitle>Reserva creada correctamente</AlertTitle>
-							<AlertDescription className="space-y-1">
+						<Alert className="border-emerald-400/40 bg-emerald-50 dark:bg-emerald-950/20">
+							<ShieldCheck className="h-4 w-4 text-emerald-600" />
+							<AlertTitle className="text-emerald-800 dark:text-emerald-400">
+								Reserva creada correctamente
+							</AlertTitle>
+							<AlertDescription className="space-y-1 text-sm">
 								<p>
-									Código: <strong>{reservaCreada.codigoReserva}</strong>
+									Código:{" "}
+									<strong className="font-mono">{reservaCreada.codigoReserva}</strong>
 								</p>
 								<p>
-									Monto: <strong>{formatearCLP(reservaCreada.montoTotal)}</strong>
+									Trayecto: {reservaCreada.origen} → {reservaCreada.destino}
 								</p>
-								<p>Estado inicial: {reservaCreada.estado}</p>
+								<p>
+									Monto:{" "}
+									<strong>{formatearCLP(reservaCreada.montoTotal)}</strong>
+								</p>
+								<p className="text-muted-foreground text-xs mt-1">
+									Guarda tu código para consultar el estado de tu reserva.
+								</p>
 							</AlertDescription>
 						</Alert>
 					)}
