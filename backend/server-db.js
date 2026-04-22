@@ -153,6 +153,14 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Configuración crítica para Render y express-rate-limit
+app.set("trust proxy", 1);
+
+// Middlewares de parseo de cuerpo (JSON y URL Encoded)
+// Se aumenta el límite para soportar operaciones de bulk-update pesadas
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
 // Servir archivos estáticos de banners
 app.use("/banners", express.static(path.join(__dirname, "../public/banners")));
 
