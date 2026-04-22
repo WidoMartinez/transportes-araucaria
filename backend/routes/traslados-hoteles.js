@@ -261,11 +261,13 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				moneda: "CLP",
 				observaciones: observaciones || null,
 				estado: "pendiente",
+				// Se guarda como cotizador hasta que el pago sea confirmado
+				source: "cotizador",
 			});
 
 			return res.status(201).json({
 				success: true,
-				message: "Reserva creada exitosamente para el servicio Aeropuerto-Hoteles.",
+				message: "Cotización registrada. Completa el pago para confirmar tu reserva.",
 				reserva: {
 					id: reservaCreada.id,
 					codigoReserva: reservaCreada.codigoReserva,
@@ -320,6 +322,12 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 					];
 				}
 
+				const sourceFiltro = normalizarTexto(req.query.source);
+				const SOURCES_VALIDOS = ["cotizador", "web_hoteles", "admin"];
+				if (sourceFiltro && SOURCES_VALIDOS.includes(sourceFiltro)) {
+					where.source = sourceFiltro;
+				}
+
 				const estadoPagoFiltro = normalizarTexto(req.query.estadoPago);
 				const ESTADOS_PAGO_VALIDOS = ["pendiente", "aprobado", "pagado", "fallido", "reembolsado"];
 				if (estadoPagoFiltro && ESTADOS_PAGO_VALIDOS.includes(estadoPagoFiltro)) {
@@ -371,12 +379,22 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 					}
 				});
 
+				// Conteo global de cotizadores (sin importar filtros activos)
+				const totalCotizadores = await TrasladoHotelAeropuerto.count({
+					where: { source: "cotizador" },
+				});
+				const totalReservasConfirmadas = await TrasladoHotelAeropuerto.count({
+					where: { source: "web_hoteles" },
+				});
+
 				return res.json({
 					page,
 					limit,
 					total: count,
 					totalPages: Math.max(Math.ceil(count / limit), 1),
 					resumen,
+					totalCotizadores,
+					totalReservasConfirmadas,
 					hoteles: await obtenerCatalogoHoteles({ soloActivos: false }),
 					reservas: rows,
 				});
@@ -689,7 +707,8 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				const campos = {};
 				const { nombre, email, telefono, pasajeros, sillaInfantil,
 					cantidadSillasInfantiles, fechaIda, horaIda, fechaVuelta,
-					horaVuelta, observaciones, montoTotal, hotelCodigo, tipoServicio, origenTipo } = req.body || {};
+					horaVuelta, observaciones, montoTotal, hotelCodigo, tipoServicio, origenTipo,
+					source } = req.body || {};
 
 				if (nombre !== undefined) campos.nombre = normalizarTexto(nombre);
 				if (email !== undefined) {
@@ -707,6 +726,11 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				if (horaVuelta !== undefined) campos.horaVuelta = normalizarTexto(horaVuelta) || null;
 				if (observaciones !== undefined) campos.observaciones = normalizarTexto(observaciones).slice(0, 500) || null;
 				if (montoTotal !== undefined && Number(montoTotal) > 0) campos.montoTotal = Number(montoTotal);
+
+				const SOURCES_PERMITIDOS = ["cotizador", "web_hoteles", "admin"];
+				if (source !== undefined && SOURCES_PERMITIDOS.includes(normalizarTexto(source))) {
+					campos.source = normalizarTexto(source);
+				}
 
 				if (hotelCodigo !== undefined) {
 					const hotel = await obtenerHotelPorCodigo(normalizarTexto(hotelCodigo), { soloActivos: false });

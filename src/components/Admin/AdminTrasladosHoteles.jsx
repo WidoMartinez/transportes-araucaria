@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	RefreshCw, Plane, Hotel, CircleDollarSign, Users, Plus, Pencil,
 	Eye, CheckCircle, XCircle, Download, MessageCircle, Clock, CreditCard,
+	TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -27,6 +28,11 @@ import { useAuthenticatedFetch } from "../../hooks/useAuthenticatedFetch";
 // ─── Constantes ─────────────────────────────────────────────────────────────
 const ESTADOS = ["pendiente", "confirmada", "completada", "cancelada"];
 const ESTADOS_PAGO = ["pendiente", "aprobado", "pagado", "fallido", "reembolsado"];
+const SOURCES = [
+	{ value: "cotizador", label: "Cotizadores (sin pago)" },
+	{ value: "web_hoteles", label: "Reservas confirmadas (web)" },
+	{ value: "admin", label: "Creadas por admin" },
+];
 
 const CLASES_ESTADO = {
 	pendiente: "bg-amber-100 text-amber-800 border-amber-300",
@@ -112,9 +118,11 @@ function AdminTrasladosHoteles() {
 	const [resumen, setResumen] = useState({ total: 0, pendiente: 0, confirmada: 0, completada: 0, cancelada: 0 });
 	const [total, setTotal] = useState(0);
 	const [totalPages, setTotalPages] = useState(1);
+	const [totalCotizadores, setTotalCotizadores] = useState(0);
+	const [totalReservasConfirmadas, setTotalReservasConfirmadas] = useState(0);
 	const [filtros, setFiltros] = useState({
 		q: "", estado: "todos", estadoPago: "todos", hotelCodigo: "todos",
-		fechaDesde: "", fechaHasta: "", page: 1,
+		source: "todos", fechaDesde: "", fechaHasta: "", page: 1,
 	});
 
 	// Estado de hoteles catálogo
@@ -161,6 +169,7 @@ function AdminTrasladosHoteles() {
 			if (filtros.estado !== "todos") params.set("estado", filtros.estado);
 			if (filtros.estadoPago !== "todos") params.set("estadoPago", filtros.estadoPago);
 			if (filtros.hotelCodigo !== "todos") params.set("hotelCodigo", filtros.hotelCodigo);
+			if (filtros.source !== "todos") params.set("source", filtros.source);
 			if (filtros.fechaDesde) params.set("fechaDesde", filtros.fechaDesde);
 			if (filtros.fechaHasta) params.set("fechaHasta", filtros.fechaHasta);
 
@@ -173,6 +182,8 @@ function AdminTrasladosHoteles() {
 			setHotelesFiltroFallback(data.hoteles || []);
 			setTotal(data.total || 0);
 			setTotalPages(data.totalPages || 1);
+			if (data.totalCotizadores !== undefined) setTotalCotizadores(data.totalCotizadores);
+			if (data.totalReservasConfirmadas !== undefined) setTotalReservasConfirmadas(data.totalReservasConfirmadas);
 		} catch (error) {
 			toast.error(error.message || "No se pudo cargar el módulo Aeropuerto-Hoteles.");
 		} finally {
@@ -218,7 +229,7 @@ function AdminTrasladosHoteles() {
 		setFiltros((prev) => ({ ...prev, [campo]: valor, page: campo === "page" ? valor : 1 }));
 
 	const limpiarFiltros = () =>
-		setFiltros({ q: "", estado: "todos", estadoPago: "todos", hotelCodigo: "todos", fechaDesde: "", fechaHasta: "", page: 1 });
+		setFiltros({ q: "", estado: "todos", estadoPago: "todos", hotelCodigo: "todos", source: "todos", fechaDesde: "", fechaHasta: "", page: 1 });
 
 	// ── Handlers reserva ────────────────────────────────────────────────────
 	const cambiarEstado = async (reservaId, nuevoEstado) => {
@@ -481,13 +492,51 @@ function AdminTrasladosHoteles() {
 				</Button>
 			</div>
 
-			{/* Cards resumen */}
-			<div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-				<TarjetaResumen titulo="Total" valor={resumen.total} icon={Plane} color="text-primary" />
+			{/* Cards resumen — Cotizadores clickeables como filtro rápido */}
+			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+				{/* Cotizadores */}
+				<button
+					type="button"
+					className="sm:col-span-2 xl:col-span-2 text-left w-full"
+					onClick={() => actualizarFiltro("source", filtros.source === "cotizador" ? "todos" : "cotizador")}
+				>
+					<Card className={`cursor-pointer border-2 transition-colors h-full ${filtros.source === "cotizador" ? "border-orange-400 bg-orange-50" : "border-transparent hover:border-orange-200"}`}>
+						<CardContent className="pt-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-xs uppercase tracking-wide text-muted-foreground">Cotizadores</p>
+									<p className="text-2xl font-semibold mt-1 text-orange-600">{totalCotizadores}</p>
+									<p className="text-xs text-muted-foreground mt-0.5">sin pago aún</p>
+								</div>
+								<div className="rounded-full p-2 bg-orange-100 text-orange-600"><TrendingUp className="h-5 w-5" /></div>
+							</div>
+						</CardContent>
+					</Card>
+				</button>
+				{/* Reservas confirmadas */}
+				<button
+					type="button"
+					className="sm:col-span-2 xl:col-span-2 text-left w-full"
+					onClick={() => actualizarFiltro("source", filtros.source === "web_hoteles" ? "todos" : "web_hoteles")}
+				>
+					<Card className={`cursor-pointer border-2 transition-colors h-full ${filtros.source === "web_hoteles" ? "border-emerald-400 bg-emerald-50" : "border-transparent hover:border-emerald-200"}`}>
+						<CardContent className="pt-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-xs uppercase tracking-wide text-muted-foreground">Con pago</p>
+									<p className="text-2xl font-semibold mt-1 text-emerald-600">{totalReservasConfirmadas}</p>
+									<p className="text-xs text-muted-foreground mt-0.5">pago recibido</p>
+								</div>
+								<div className="rounded-full p-2 bg-emerald-100 text-emerald-600"><CheckCircle className="h-5 w-5" /></div>
+							</div>
+						</CardContent>
+					</Card>
+				</button>
 				<TarjetaResumen titulo="Pendientes" valor={resumen.pendiente} icon={Clock} color="text-amber-600" />
 				<TarjetaResumen titulo="Confirmadas" valor={resumen.confirmada} icon={CheckCircle} color="text-blue-600" />
 				<TarjetaResumen titulo="Completadas" valor={resumen.completada} icon={CheckCircle} color="text-emerald-600" />
 				<TarjetaResumen titulo="Canceladas" valor={resumen.cancelada} icon={XCircle} color="text-rose-600" />
+				<TarjetaResumen titulo="Total" valor={resumen.total} icon={Plane} color="text-primary" />
 				<TarjetaResumen titulo="Monto (página)" valor={formatearCLP(totalFacturado)} icon={CircleDollarSign} color="text-violet-600" />
 			</div>
 
@@ -525,6 +574,16 @@ function AdminTrasladosHoteles() {
 										<SelectContent>
 											<SelectItem value="todos">Todos</SelectItem>
 											{ESTADOS_PAGO.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-1">
+									<Label>Tipo</Label>
+									<Select value={filtros.source} onValueChange={(v) => actualizarFiltro("source", v)}>
+										<SelectTrigger><SelectValue /></SelectTrigger>
+										<SelectContent>
+											<SelectItem value="todos">Todos</SelectItem>
+											{SOURCES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
 										</SelectContent>
 									</Select>
 								</div>
@@ -593,11 +652,22 @@ function AdminTrasladosHoteles() {
 										) : reservas.length === 0 ? (
 											<TableRow><TableCell colSpan={10} className="py-10 text-center text-muted-foreground">No hay reservas para los filtros seleccionados.</TableCell></TableRow>
 										) : reservas.map((r) => (
-											<TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => abrirDetalle(r)}>
+											<TableRow
+												key={r.id}
+												className={`cursor-pointer hover:bg-muted/50 ${r.source === "cotizador" ? "bg-orange-50/40" : ""}`}
+												onClick={() => abrirDetalle(r)}
+											>
 												<TableCell>
 													<div className="font-medium text-xs">{r.codigoReserva}</div>
 													<div className="text-xs text-muted-foreground">{r.hotelNombre}</div>
-													{r.source === "admin" && <Badge variant="outline" className="text-[10px] mt-0.5">admin</Badge>}
+													{r.source === "cotizador" && (
+														<Badge variant="outline" className="text-[10px] mt-0.5 border-orange-400 text-orange-700 bg-orange-50">
+															cotizador
+														</Badge>
+													)}
+													{r.source === "admin" && (
+														<Badge variant="outline" className="text-[10px] mt-0.5">admin</Badge>
+													)}
 												</TableCell>
 												<TableCell>
 													<div className="font-medium text-sm">{r.nombre}</div>
@@ -736,6 +806,46 @@ function AdminTrasladosHoteles() {
 
 					{reservaDetalle && !modoEdicion && (
 						<div className="space-y-5">
+							{/* Banner de cotizador */}
+							{reservaDetalle.source === "cotizador" && (
+								<div className="flex items-center justify-between rounded-lg border border-orange-300 bg-orange-50 px-4 py-3">
+									<div className="flex items-center gap-2">
+										<TrendingUp className="h-4 w-4 text-orange-600 shrink-0" />
+										<div>
+											<p className="text-sm font-semibold text-orange-800">Lead / Cotizador</p>
+											<p className="text-xs text-orange-600">Formulario web sin pago confirmado</p>
+										</div>
+									</div>
+									<Button
+										size="sm"
+										variant="outline"
+										className="border-emerald-400 text-emerald-700 hover:bg-emerald-50 ml-3 shrink-0"
+										disabled={updatingId === reservaDetalle.id}
+										onClick={async () => {
+											try {
+												setUpdatingId(reservaDetalle.id);
+												const resp = await authenticatedFetch(
+													`/api/admin/traslados-hoteles/reservas/${reservaDetalle.id}`,
+													{ method: "PUT", body: JSON.stringify({ source: "web_hoteles" }) },
+												);
+												const d = await resp.json();
+												if (!resp.ok) throw new Error(d.error);
+												toast.success("Convertido a reserva confirmada.");
+												setReservaDetalle((prev) => ({ ...prev, source: "web_hoteles" }));
+												await fetchReservas();
+											} catch (e) {
+												toast.error(e.message || "Error al convertir.");
+											} finally {
+												setUpdatingId(null);
+											}
+										}}
+									>
+										<CheckCircle className="h-3.5 w-3.5 mr-1" />
+										Confirmar
+									</Button>
+								</div>
+							)}
+
 							{/* Badges de estado */}
 							<div className="flex flex-wrap gap-2">
 								<Badge variant="outline" className={`${CLASES_ESTADO[reservaDetalle.estado] || ""}`}>

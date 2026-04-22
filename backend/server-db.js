@@ -10826,6 +10826,8 @@ app.post("/api/flow-confirmation", async (req, res) => {
 			await reserva.update({
 				estadoPago: "pagado",
 				estado: "confirmada",
+				// Promover de cotizador a reserva confirmada al recibir pago
+				source: "web_hoteles",
 				pagoId: payment.flowOrder.toString(),
 				pagoGateway: "flow",
 				metodoPago: "flow",
@@ -14135,6 +14137,8 @@ const startServer = async () => {
 				await reserva.update({
 					estadoPago: "pagado",
 					estado: "confirmada",
+					// Promover de cotizador a reserva confirmada al recibir pago
+					source: "web_hoteles",
 					pagoId: paymentId.toString(),
 					pagoGateway: "mercadopago",
 					metodoPago: paymentData.payment_method_id || "mercadopago",
