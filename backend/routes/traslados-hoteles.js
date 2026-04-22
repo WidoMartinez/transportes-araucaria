@@ -320,6 +320,20 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 					];
 				}
 
+				const estadoPagoFiltro = normalizarTexto(req.query.estadoPago);
+				const ESTADOS_PAGO_VALIDOS = ["pendiente", "aprobado", "pagado", "fallido", "reembolsado"];
+				if (estadoPagoFiltro && ESTADOS_PAGO_VALIDOS.includes(estadoPagoFiltro)) {
+					where.estadoPago = estadoPagoFiltro;
+				}
+
+				const fechaDesde = normalizarTexto(req.query.fechaDesde);
+				const fechaHasta = normalizarTexto(req.query.fechaHasta);
+				if (fechaDesde || fechaHasta) {
+					where.fechaIda = {};
+					if (fechaDesde) where.fechaIda[Op.gte] = fechaDesde;
+					if (fechaHasta) where.fechaIda[Op.lte] = fechaHasta;
+				}
+
 				const { count, rows } = await TrasladoHotelAeropuerto.findAndCountAll({
 					where,
 					limit,
@@ -535,6 +549,224 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				return res.status(500).json({
 					error: "No se pudo actualizar el hotel.",
 				});
+			}
+		},
+	);
+
+	// Detalle completo de una reserva (admin)
+	app.get(
+		"/api/admin/traslados-hoteles/reservas/:id",
+		authAdmin,
+		async (req, res) => {
+			try {
+				const id = Number.parseInt(req.params.id, 10);
+				if (!Number.isFinite(id)) {
+					return res.status(400).json({ error: "ID de reserva inválido." });
+				}
+				const reserva = await TrasladoHotelAeropuerto.findByPk(id);
+				if (!reserva) {
+					return res.status(404).json({ error: "Reserva no encontrada." });
+				}
+				return res.json({ reserva });
+			} catch (error) {
+				console.error("❌ Error obteniendo detalle reserva hotel:", error);
+				return res.status(500).json({ error: "No se pudo obtener la reserva." });
+			}
+		},
+	);
+
+	// Crear reserva desde el panel admin (sin restricción de anticipación)
+	app.post(
+		"/api/admin/traslados-hoteles/reservas",
+		authAdmin,
+		async (req, res) => {
+			try {
+				const nombre = normalizarTexto(req.body?.nombre);
+				const email = normalizarTexto(req.body?.email).toLowerCase();
+				const telefono = normalizarTexto(req.body?.telefono);
+				const hotelCodigo = normalizarTexto(req.body?.hotelCodigo);
+				const origenTipo = normalizarTexto(req.body?.origenTipo);
+				const tipoServicio = normalizarTexto(req.body?.tipoServicio || "solo_ida");
+				const fechaIda = normalizarTexto(req.body?.fechaIda);
+				const horaIda = normalizarTexto(req.body?.horaIda);
+				const fechaVuelta = normalizarTexto(req.body?.fechaVuelta);
+				const horaVuelta = normalizarTexto(req.body?.horaVuelta);
+				const observaciones = normalizarTexto(req.body?.observaciones).slice(0, 500);
+				const pasajeros = Number.parseInt(req.body?.pasajeros, 10) || 1;
+				const sillaInfantil = Boolean(req.body?.sillaInfantil);
+				const cantidadSillasInfantiles = Number.parseInt(req.body?.cantidadSillasInfantiles, 10) || 0;
+				const montoManual = req.body?.montoTotal != null ? Number(req.body.montoTotal) : null;
+
+				if (!nombre || !email || !telefono || !hotelCodigo || !origenTipo) {
+					return res.status(400).json({ error: "Faltan campos obligatorios." });
+				}
+				if (!esEmailValido(email)) {
+					return res.status(400).json({ error: "El formato del email no es válido." });
+				}
+				if (!fechaIda || !horaIda) {
+					return res.status(400).json({ error: "La fecha y hora de ida son obligatorias." });
+				}
+				if (!["aeropuerto", "hotel"].includes(origenTipo)) {
+					return res.status(400).json({ error: "El origen debe ser 'aeropuerto' o 'hotel'." });
+				}
+				if (!TIPOS_SERVICIO_VALIDOS.includes(tipoServicio)) {
+					return res.status(400).json({ error: "Tipo de servicio inválido." });
+				}
+				if (origenTipo === "hotel" && tipoServicio !== "solo_ida") {
+					return res.status(400).json({ error: "Desde hotel solo se permite ida al aeropuerto." });
+				}
+				if (tipoServicio === "ida_vuelta" && (!fechaVuelta || !horaVuelta)) {
+					return res.status(400).json({ error: "Para ida y vuelta se requiere fecha y hora de vuelta." });
+				}
+
+				const hotel = await obtenerHotelPorCodigo(hotelCodigo, { soloActivos: false });
+				if (!hotel) {
+					return res.status(400).json({ error: "Hotel no encontrado en el catálogo." });
+				}
+
+				const configSillas = await Configuracion.getValorParseado("config_sillas", { precioPorSilla: 5000 });
+				const configPrecioSilla = Number(configSillas?.precioPorSilla) || 5000;
+				const baseMonto = tipoServicio === "ida_vuelta" ? hotel.tarifaIdaVuelta : hotel.tarifaSoloIda;
+				const extraSillas = sillaInfantil ? (Number(cantidadSillasInfantiles) || 0) * configPrecioSilla : 0;
+				const montoTotal = montoManual != null && montoManual > 0 ? montoManual : Number(baseMonto) + extraSillas;
+
+				const origen = origenTipo === "aeropuerto" ? AEROPUERTO_NOMBRE : hotel.nombre;
+				const destino = origenTipo === "aeropuerto" ? hotel.nombre : AEROPUERTO_NOMBRE;
+				const codigoReserva = await generarCodigoTraslado();
+
+				const reservaCreada = await TrasladoHotelAeropuerto.create({
+					codigoReserva,
+					nombre,
+					email,
+					telefono,
+					hotelCodigo: hotel.codigo,
+					hotelNombre: hotel.nombre,
+					origenTipo,
+					origen,
+					destino,
+					tipoServicio,
+					fechaIda,
+					horaIda,
+					fechaVuelta: tipoServicio === "ida_vuelta" ? fechaVuelta : null,
+					horaVuelta: tipoServicio === "ida_vuelta" ? horaVuelta : null,
+					pasajeros,
+					sillaInfantil: !!sillaInfantil,
+					cantidadSillasInfantiles: sillaInfantil ? (Number(cantidadSillasInfantiles) || 0) : 0,
+					montoTotal,
+					moneda: "CLP",
+					observaciones: observaciones || null,
+					estado: "confirmada",
+					source: "admin",
+				});
+
+				return res.status(201).json({
+					success: true,
+					message: "Reserva creada desde admin.",
+					reserva: reservaCreada,
+				});
+			} catch (error) {
+				console.error("❌ Error creando reserva hotel desde admin:", error);
+				return res.status(500).json({ error: "No se pudo crear la reserva." });
+			}
+		},
+	);
+
+	// Actualizar datos de una reserva (admin)
+	app.put(
+		"/api/admin/traslados-hoteles/reservas/:id",
+		authAdmin,
+		async (req, res) => {
+			try {
+				const id = Number.parseInt(req.params.id, 10);
+				if (!Number.isFinite(id)) {
+					return res.status(400).json({ error: "ID de reserva inválido." });
+				}
+				const reserva = await TrasladoHotelAeropuerto.findByPk(id);
+				if (!reserva) {
+					return res.status(404).json({ error: "Reserva no encontrada." });
+				}
+
+				const campos = {};
+				const { nombre, email, telefono, pasajeros, sillaInfantil,
+					cantidadSillasInfantiles, fechaIda, horaIda, fechaVuelta,
+					horaVuelta, observaciones, montoTotal, hotelCodigo, tipoServicio, origenTipo } = req.body || {};
+
+				if (nombre !== undefined) campos.nombre = normalizarTexto(nombre);
+				if (email !== undefined) {
+					const emailNorm = normalizarTexto(email).toLowerCase();
+					if (!esEmailValido(emailNorm)) return res.status(400).json({ error: "Email inválido." });
+					campos.email = emailNorm;
+				}
+				if (telefono !== undefined) campos.telefono = normalizarTexto(telefono);
+				if (pasajeros !== undefined) campos.pasajeros = Number.parseInt(pasajeros, 10) || 1;
+				if (sillaInfantil !== undefined) campos.sillaInfantil = Boolean(sillaInfantil);
+				if (cantidadSillasInfantiles !== undefined) campos.cantidadSillasInfantiles = Number.parseInt(cantidadSillasInfantiles, 10) || 0;
+				if (fechaIda !== undefined) campos.fechaIda = normalizarTexto(fechaIda);
+				if (horaIda !== undefined) campos.horaIda = normalizarTexto(horaIda);
+				if (fechaVuelta !== undefined) campos.fechaVuelta = normalizarTexto(fechaVuelta) || null;
+				if (horaVuelta !== undefined) campos.horaVuelta = normalizarTexto(horaVuelta) || null;
+				if (observaciones !== undefined) campos.observaciones = normalizarTexto(observaciones).slice(0, 500) || null;
+				if (montoTotal !== undefined && Number(montoTotal) > 0) campos.montoTotal = Number(montoTotal);
+
+				if (hotelCodigo !== undefined) {
+					const hotel = await obtenerHotelPorCodigo(normalizarTexto(hotelCodigo), { soloActivos: false });
+					if (!hotel) return res.status(400).json({ error: "Hotel no encontrado." });
+					campos.hotelCodigo = hotel.codigo;
+					campos.hotelNombre = hotel.nombre;
+					const tipoSvc = tipoServicio || reserva.tipoServicio;
+					const origenT = origenTipo || reserva.origenTipo;
+					campos.origen = origenT === "aeropuerto" ? AEROPUERTO_NOMBRE : hotel.nombre;
+					campos.destino = origenT === "aeropuerto" ? hotel.nombre : AEROPUERTO_NOMBRE;
+					campos.tipoServicio = tipoSvc;
+					campos.origenTipo = origenT;
+				}
+
+				await reserva.update(campos);
+				return res.json({ success: true, message: "Reserva actualizada.", reserva });
+			} catch (error) {
+				console.error("❌ Error actualizando reserva hotel:", error);
+				return res.status(500).json({ error: "No se pudo actualizar la reserva." });
+			}
+		},
+	);
+
+	// Actualizar estado de pago de una reserva (admin)
+	app.patch(
+		"/api/admin/traslados-hoteles/reservas/:id/pago",
+		authAdmin,
+		async (req, res) => {
+			try {
+				const id = Number.parseInt(req.params.id, 10);
+				if (!Number.isFinite(id)) {
+					return res.status(400).json({ error: "ID de reserva inválido." });
+				}
+				const reserva = await TrasladoHotelAeropuerto.findByPk(id);
+				if (!reserva) {
+					return res.status(404).json({ error: "Reserva no encontrada." });
+				}
+
+				const ESTADOS_PAGO = ["pendiente", "aprobado", "pagado", "fallido", "reembolsado"];
+				const estadoPago = normalizarTexto(req.body?.estadoPago);
+				if (!ESTADOS_PAGO.includes(estadoPago)) {
+					return res.status(400).json({ error: "Estado de pago inválido." });
+				}
+
+				const campos = /** @type {Record<string, unknown>} */ ({ estadoPago });
+				if (req.body?.metodoPago !== undefined) campos.metodoPago = normalizarTexto(req.body.metodoPago) || null;
+				if (req.body?.pagoId !== undefined) campos.pagoId = normalizarTexto(req.body.pagoId) || null;
+				if (req.body?.pagoGateway !== undefined) campos.pagoGateway = normalizarTexto(req.body.pagoGateway) || null;
+				if (req.body?.pagoMonto !== undefined && Number(req.body.pagoMonto) > 0) {
+					campos.pagoMonto = Number(req.body.pagoMonto);
+				}
+				if (estadoPago === "pagado" && !reserva.pagoFecha) {
+					campos.pagoFecha = new Date();
+				}
+
+				await reserva.update(campos);
+				return res.json({ success: true, message: `Pago actualizado a ${estadoPago}.`, reserva });
+			} catch (error) {
+				console.error("❌ Error actualizando pago reserva hotel:", error);
+				return res.status(500).json({ error: "No se pudo actualizar el pago." });
 			}
 		},
 	);
