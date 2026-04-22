@@ -11,7 +11,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 import {
-	Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+	Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter,
 } from "../ui/dialog";
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -802,6 +802,9 @@ function AdminTrasladosHoteles() {
 							<Plane className="h-5 w-5" />
 							{reservaDetalle?.codigoReserva || "Detalle de reserva"}
 						</DialogTitle>
+						<DialogDescription>
+							Revisa la información completa del traslado, actualiza su estado y gestiona el pago desde este panel.
+						</DialogDescription>
 					</DialogHeader>
 
 					{reservaDetalle && !modoEdicion && (
@@ -1030,6 +1033,9 @@ function AdminTrasladosHoteles() {
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
 						<DialogTitle><CreditCard className="inline h-4 w-4 mr-1" />Gestionar pago — {reservaDetalle?.codigoReserva}</DialogTitle>
+						<DialogDescription>
+							Actualiza el estado del pago, el método utilizado y la referencia asociada a esta reserva.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-2">
 						<div className="space-y-1">
@@ -1064,6 +1070,9 @@ function AdminTrasladosHoteles() {
 				<DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle><Plus className="inline h-4 w-4 mr-1" />Nueva reserva (admin)</DialogTitle>
+						<DialogDescription>
+							Crea manualmente una reserva Aeropuerto-Hoteles con tarifas del catálogo y datos operativos completos.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4 py-2">
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1132,6 +1141,9 @@ function AdminTrasladosHoteles() {
 				<DialogContent className="sm:max-w-lg">
 					<DialogHeader>
 						<DialogTitle>{hotelEditando ? "Editar hotel y tarifas" : "Nuevo hotel y tarifas"}</DialogTitle>
+						<DialogDescription>
+							Administra el catálogo operativo de hoteles, incluyendo tarifas, orden de visualización y estado de venta.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="grid gap-4 py-2">
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-3">

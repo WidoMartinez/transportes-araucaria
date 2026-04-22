@@ -3028,6 +3028,15 @@ const oportunidad = await Oportunidad.findOne({
 **Causa**: Componentes de `ui/dialog.jsx` consumidos por Radix UI/Framer Motion sin soporte para `refs`.
 **Solución**: Envolver `DialogOverlay`, `DialogContent`, `DialogTitle` y `DialogDescription` con `React.forwardRef`.
 
+### D. Error CORS: "Method PATCH is not allowed by Access-Control-Allow-Methods in preflight response"
+
+**Causa**: El backend respondía el preflight CORS sin incluir `PATCH` en `Access-Control-Allow-Methods`, aunque rutas administrativas como `/api/admin/traslados-hoteles/reservas/:id/estado` sí usan ese método.
+**Solución**:
+
+1. Mantener `PATCH` dentro de la lista central de métodos permitidos en `backend/server-db.js`.
+2. Reutilizar esa misma lista tanto en `corsOptions.methods` como en la respuesta manual de `app.options("*", ...)`.
+3. Si el error aparece solo en desarrollo local, confirmar que el frontend realmente esté apuntando al backend actualizado en Render o al backend local correcto.
+
 ---
 
 ## 14. Descuentos por Retorno Aplicados Incorrectamente
