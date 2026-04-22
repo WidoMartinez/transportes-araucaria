@@ -60,7 +60,6 @@ const MENU_ITEMS = [
 	{ label: "Inicio", href: "#inicio", icon: Star },
 	{ label: "Servicios", href: "#servicios", icon: Briefcase },
 	{ label: "Traslados", href: "/traslados", icon: MapPin },
-	{ label: "Aeropuerto-Hoteles", href: "/aeropuerto-hoteles", icon: MapPin },
 	{ label: "Oportunidades", href: "/oportunidades", icon: Star },
 	{ label: "Destinos", href: "#destinos", icon: MapPin },
 	{ label: "Contacto", href: "#contacto", icon: Phone },

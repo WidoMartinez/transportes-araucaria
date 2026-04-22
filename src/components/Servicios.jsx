@@ -23,12 +23,12 @@ const services = [
 			"Servicio dedicado con valores fijos para hoteles principales de La Araucanía. Desde aeropuerto puedes reservar ida y vuelta; desde hotel, solo ida.",
 		highlights: [
 			"Tarifa fija por hotel",
-			"Módulo especializado",
+			"Disponible en el formulario principal",
 			"Admin dedicado",
 		],
 		accent: "#C4895E",
 		bg: "#162B0E",
-		ctaHref: "/aeropuerto-hoteles",
+		ctaHref: "#inicio",
 		ctaLabel: "Reservar Aeropuerto-Hoteles",
 	},
 	{

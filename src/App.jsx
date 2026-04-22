@@ -53,7 +53,6 @@ import MercadoPagoReturn from "./components/MercadoPagoReturn"; // Página de re
 import TestGoogleAds from "./components/TestGoogleAds"; // Página de prueba para Google Ads
 import OportunidadesTraslado from "./pages/OportunidadesTraslado"; // Página de oportunidades de traslado
 import LandingTraslados from "./pages/LandingTraslados"; // Landing de Google Ads para traslados privados
-import TrasladosAeropuertoHoteles from "./pages/TrasladosAeropuertoHoteles"; // Servicio dedicado Aeropuerto <-> Hoteles
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getBackendUrl } from "./lib/backend";
@@ -234,18 +233,6 @@ const resolveIsTrasladosView = () => {
 	return pathname === "/traslados" || pathname.startsWith("/traslados/");
 };
 
-// Resolver si la URL es la página del nuevo servicio Aeropuerto <-> Hoteles
-const resolveIsAeropuertoHotelesView = () => {
-	if (typeof window === "undefined") return false;
-	const pathname = window.location.pathname.toLowerCase();
-	const hash = window.location.hash.toLowerCase();
-	return (
-		pathname === "/aeropuerto-hoteles" ||
-		pathname.startsWith("/aeropuerto-hoteles/") ||
-		hash === "#aeropuerto-hoteles"
-	);
-};
-
 // Resolver si la URL es la página de oportunidades
 const resolveIsOportunidadesView = () => {
 	const pathname = window.location.pathname.toLowerCase();
@@ -276,9 +263,6 @@ const resolveIsEvaluarView = () => {
 function App() {
 	const [isTrasladosView, setIsTrasladosView] = useState(
 		resolveIsTrasladosView,
-	);
-	const [isAeropuertoHotelesView, setIsAeropuertoHotelesView] = useState(
-		resolveIsAeropuertoHotelesView,
 	);
 	const [isAdminView, setIsAdminView] = useState(resolveIsAdminView);
 	const [isConsultaView, setIsConsultaView] = useState(resolveIsConsultaView);
@@ -491,18 +475,6 @@ function App() {
 		return () => {
 			window.removeEventListener("hashchange", syncEvaluar);
 			window.removeEventListener("popstate", syncEvaluar);
-		};
-	}, []);
-
-	// Sincronizar vista del servicio Aeropuerto-Hoteles
-	useEffect(() => {
-		const syncAeropuertoHoteles = () =>
-			setIsAeropuertoHotelesView(resolveIsAeropuertoHotelesView());
-		window.addEventListener("hashchange", syncAeropuertoHoteles);
-		window.addEventListener("popstate", syncAeropuertoHoteles);
-		return () => {
-			window.removeEventListener("hashchange", syncAeropuertoHoteles);
-			window.removeEventListener("popstate", syncAeropuertoHoteles);
 		};
 	}, []);
 
@@ -2180,10 +2152,6 @@ function App() {
 
 	if (isTrasladosView) {
 		return <LandingTraslados />;
-	}
-
-	if (isAeropuertoHotelesView) {
-		return <TrasladosAeropuertoHoteles />;
 	}
 
 	if (isAdminView) {
