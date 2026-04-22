@@ -152,30 +152,6 @@ const app = express();
 // Servir archivos estáticos de banners
 app.use("/banners", express.static(path.join(__dirname, "../public/banners")));
 
-// También servir desde la raíz por si acaso
-app.use(express.static(path.join(__dirname, "../public")));
-
-// Configurar trust proxy para que Express confíe en los proxies (Render.com, nginx, etc.)
-// Esto es necesario para que express-rate-limit y otras librerías puedan leer correctamente
-// los headers X-Forwarded-For, X-Forwarded-Proto, etc.
-app.set("trust proxy", 1);
-
-// Configurar CORS para permitir todos los métodos (incluyendo PATCH)
-app.use(
-	cors({
-		origin: true, // Permite cualquier origen (o especifica URLs específicas)
-		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-		credentials: true,
-		allowedHeaders: ["Content-Type", "Authorization"],
-	}),
-);
-
-app.use(express.json());
-
-// Middleware de autenticación para rutas administrativas
-// Usar sistema de autenticación JWT moderno
-const authAdmin = authJWT;
-
 app.get("/health", (req, res) => {
 	res.json({ status: "ok", timestamp: new Date().toISOString() });
 });

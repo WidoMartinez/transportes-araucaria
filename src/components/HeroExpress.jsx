@@ -280,7 +280,7 @@ function HeroExpress({
 
 	// Cargar catálogo de hoteles (lazy: solo cuando el usuario activa el modo)
 	useEffect(() => {
-		if (!esModoHoteles || catalogoHoteles || catalogoLoading) return;
+		if (!esModoHoteles || catalogoHoteles) return;
 		let cancelado = false;
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
@@ -309,6 +309,8 @@ function HeroExpress({
 				}
 
 				const data = await response.json();
+				console.log("[Diagnostic] Catálogo de hoteles recibido con éxito:", data);
+				
 				if (!cancelado) setCatalogoHoteles(data);
 			} catch (err) {
 				if (!cancelado) {
@@ -330,7 +332,7 @@ function HeroExpress({
 			controller.abort();
 			clearTimeout(timeoutId);
 		};
-	}, [esModoHoteles, catalogoHoteles, catalogoLoading]);
+	}, [esModoHoteles]); // Solo depende de si el modo cambia o hay un reset manual de catalogoHoteles
 
 	const hotelSeleccionado = useMemo(() => {
 		if (!catalogoHoteles?.hoteles) return null;
