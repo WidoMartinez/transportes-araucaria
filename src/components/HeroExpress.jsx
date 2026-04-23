@@ -585,13 +585,24 @@ function HeroExpress({
 				},
 			);
 			const data = await response.json();
+			if (response.status === 409 && data.reserva) {
+				setReservaHotelCreada({
+					...data.reserva,
+					reutilizada: true,
+				});
+				setStepError("");
+				return;
+			}
 			if (!response.ok) {
 				throw new Error(data.error || "No se pudo crear la reserva.");
 			}
 			
 			// Si la reserva se creó exitosamente, avanzar al paso de pago (opcional pero recomendado)
 			// Guardamos la reserva creada para mostrar el resumen y permitir el pago
-			setReservaHotelCreada(data.reserva);
+			setReservaHotelCreada({
+				...data.reserva,
+				reutilizada: Boolean(data.duplicate),
+			});
 			
 			// Opcional: mover a un "paso de pago" específico si queremos una interfaz más limpia
 			// setCurrentStep(2); 
@@ -1147,8 +1158,14 @@ function HeroExpress({
 										<CheckCircle2 className="h-6 w-6" />
 									</span>
 									<div>
-										<h2 className="text-xl font-bold text-slate-900">¡Reserva creada!</h2>
-										<p className="text-sm text-slate-500">Te contactaremos para confirmar los detalles.</p>
+										<h2 className="text-xl font-bold text-slate-900">
+											{reservaHotelCreada.reutilizada ? "Reserva pendiente encontrada" : "¡Reserva creada!"}
+										</h2>
+										<p className="text-sm text-slate-500">
+											{reservaHotelCreada.reutilizada
+												? "Ya tenías una reserva activa para este hotel y horario. Continúa con el pago para asegurarla."
+												: "Te contactaremos para confirmar los detalles."}
+										</p>
 									</div>
 								</div>
 								<div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm">

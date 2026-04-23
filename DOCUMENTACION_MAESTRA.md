@@ -1281,6 +1281,10 @@ Crear un servicio paralelo al flujo principal, orientado exclusivamente a trasla
 - No modifica el sistema de correos PHPMailer en Hostinger.
 - El formulario público consume solo hoteles activos desde `hoteles_traslado`, evitando depender de valores hardcodeados.
 
+**Prevención de duplicados**:
+
+- Para evitar reservas duplicadas, `POST /api/traslados-hoteles/reservas` reutiliza y actualiza una reserva activa cuando coinciden email o teléfono, hotel, origen, tipo de servicio, fecha y hora. En ese caso conserva el código original y devuelve la reserva existente para que el frontend continúe el pago.
+
 ---
 
 ## 6. Mantenimiento y Despliegue

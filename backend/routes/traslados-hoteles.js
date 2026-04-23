@@ -104,6 +104,60 @@ const serializarCatalogo = async () => {
 	};
 };
 
+const serializarReservaBasica = (reserva) => ({
+	id: reserva.id,
+	codigoReserva: reserva.codigoReserva,
+	hotel: reserva.hotelNombre,
+	origen: reserva.origen,
+	destino: reserva.destino,
+	tipoServicio: reserva.tipoServicio,
+	fechaIda: reserva.fechaIda,
+	horaIda: reserva.horaIda,
+	fechaVuelta: reserva.fechaVuelta,
+	horaVuelta: reserva.horaVuelta,
+	montoTotal: Number(reserva.montoTotal),
+	estado: reserva.estado,
+	estadoPago: reserva.estadoPago || "pendiente",
+});
+
+const buscarReservaActivaSimilar = async ({
+	email,
+	telefono,
+	hotelCodigo,
+	origenTipo,
+	tipoServicio,
+	fechaIda,
+	horaIda,
+	fechaVuelta,
+	horaVuelta,
+}) => {
+	const identidadPasajero = [];
+	if (email) identidadPasajero.push({ email });
+	if (telefono) identidadPasajero.push({ telefono });
+	if (identidadPasajero.length === 0) return null;
+
+	const where = {
+		hotelCodigo,
+		origenTipo,
+		tipoServicio,
+		fechaIda,
+		horaIda,
+		estado: { [Op.in]: ["pendiente", "confirmada"] },
+		estadoPago: { [Op.in]: ["pendiente", "aprobado"] },
+		[Op.or]: identidadPasajero,
+	};
+
+	if (tipoServicio === "ida_vuelta") {
+		where.fechaVuelta = fechaVuelta;
+		where.horaVuelta = horaVuelta;
+	}
+
+	return TrasladoHotelAeropuerto.findOne({
+		where,
+		order: [["created_at", "DESC"]],
+	});
+};
+
 const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 	// Catálogo público del servicio con hoteles y tarifas fijas
 	app.get("/api/traslados-hoteles/catalogo", async (_req, res) => {
@@ -237,6 +291,41 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 			const destino =
 				origenTipo === "aeropuerto" ? hotel.nombre : AEROPUERTO_NOMBRE;
 
+			const reservaActivaSimilar = await buscarReservaActivaSimilar({
+				email,
+				telefono,
+				hotelCodigo: hotel.codigo,
+				origenTipo,
+				tipoServicio,
+				fechaIda,
+				horaIda,
+				fechaVuelta: tipoServicio === "ida_vuelta" ? fechaVuelta : null,
+				horaVuelta: tipoServicio === "ida_vuelta" ? horaVuelta : null,
+			});
+
+			if (reservaActivaSimilar) {
+				console.log(
+					`🔁 Reserva Aeropuerto-Hoteles activa actualizada: ${reservaActivaSimilar.codigoReserva} (${email})`,
+				);
+				await reservaActivaSimilar.update({
+					nombre,
+					email,
+					telefono,
+					pasajeros,
+					sillaInfantil: !!sillaInfantil,
+					cantidadSillasInfantiles: sillaInfantil ? (Number(cantidadSillasInfantiles) || 0) : 0,
+					montoTotal,
+					observaciones: observaciones || reservaActivaSimilar.observaciones,
+				});
+				return res.status(200).json({
+					success: true,
+					duplicate: true,
+					message:
+						"Ya existía una reserva activa para este pasajero, hotel y horario. Actualizamos sus datos y puedes continuar con el pago.",
+					reserva: serializarReservaBasica(reservaActivaSimilar),
+				});
+			}
+
 			const codigoReserva = await generarCodigoTraslado();
 
 			const reservaCreada = await TrasladoHotelAeropuerto.create({
@@ -268,16 +357,7 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 			return res.status(201).json({
 				success: true,
 				message: "Cotización registrada. Completa el pago para confirmar tu reserva.",
-				reserva: {
-					id: reservaCreada.id,
-					codigoReserva: reservaCreada.codigoReserva,
-					hotel: reservaCreada.hotelNombre,
-					origen: reservaCreada.origen,
-					destino: reservaCreada.destino,
-					tipoServicio: reservaCreada.tipoServicio,
-					montoTotal: Number(reservaCreada.montoTotal),
-					estado: reservaCreada.estado,
-				},
+				reserva: serializarReservaBasica(reservaCreada),
 			});
 		} catch (error) {
 			console.error("❌ Error creando reserva Aeropuerto-Hoteles:", error);

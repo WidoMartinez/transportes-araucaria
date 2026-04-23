@@ -3039,6 +3039,61 @@ const oportunidad = await Oportunidad.findOne({
 
 ---
 
+## 13.1. Pago de Aeropuerto-Hoteles muestra "Aún no tenemos un valor para generar el enlace de pago"
+
+**Implementado: 22 Abril 2026**
+
+### Problema
+
+Al confirmar una reserva del módulo Aeropuerto-Hoteles y presionar el botón de pago, el frontend mostraba la alerta **"Aún no tenemos un valor para generar el enlace de pago"** y no abría la pasarela.
+
+### Causa Raíz
+
+La función global `handlePayment` en `src/App.jsx` calculaba el monto usando solo `pricing.totalConDescuento` o `abono`, que pertenecen al flujo express principal.
+
+El flujo de hoteles sí enviaba `identificadores.amount` y `paymentOrigin: "hotel"`, pero el frontend ignoraba ambos valores y forzaba `paymentOrigin: "reserva_express"`.
+
+### Solución aplicada
+
+- Priorizar `identificadores.amount` cuando el flujo llamador entrega un monto explícito.
+- Respetar `identificadores.paymentOrigin` en el payload enviado a Flow o Mercado Pago.
+- Generar una descripción específica para el pago del módulo Aeropuerto-Hoteles usando el código de reserva cuando exista.
+
+### Resultado esperado
+
+- El botón de pago del módulo Aeropuerto-Hoteles abre correctamente la pasarela.
+- El backend recibe el monto real del traslado hotel.
+- El retorno de pago conserva el origen `hotel` y aplica la lógica especializada del módulo.
+
+---
+
+## 13.2. Reservas duplicadas del mismo pasajero en Aeropuerto-Hoteles
+
+**Implementado: 22 Abril 2026**
+
+### Problema
+
+Un pasajero podía confirmar varias veces el mismo traslado Aeropuerto-Hoteles antes de pagar, generando múltiples reservas pendientes para el mismo hotel, fecha y horario.
+
+### Causa Raíz
+
+El módulo Aeropuerto-Hoteles creaba siempre una nueva fila en `traslados_hoteles` desde `POST /api/traslados-hoteles/reservas`, sin verificar si ya existía una reserva activa equivalente para el mismo pasajero.
+
+### Solución aplicada
+
+- El backend busca una reserva activa similar antes de crear una nueva.
+- La coincidencia considera email o teléfono, hotel, origen, tipo de servicio, fecha y hora de ida; en ida y vuelta también considera fecha y hora de vuelta.
+- Si encuentra una reserva activa con pago pendiente o aprobado, la actualiza con los últimos datos del formulario, responde `duplicate: true` y conserva el código original.
+- `HeroExpress.jsx` interpreta `duplicate: true` como reutilización y muestra la reserva pendiente para continuar el pago.
+
+### Resultado esperado
+
+- El doble clic, refresh o reintento del pasajero no crea N reservas iguales.
+- El cliente puede seguir pagando la reserva existente.
+- Reservas legítimas para otro hotel, fecha u horario no quedan bloqueadas.
+
+---
+
 ## 14. Descuentos por Retorno Aplicados Incorrectamente
 
 **Implementado: 14 Febrero 2026**

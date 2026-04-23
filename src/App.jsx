@@ -1612,7 +1612,9 @@ function App() {
 		const destinoFinal =
 			formData.destino === "Otro" ? formData.otroDestino : formData.destino;
 		const { vehiculo } = cotizacion;
-		const amount = type === "total" ? totalConDescuento : abono;
+		const amount =
+			Number(identificadores.amount) ||
+			(type === "total" ? Number(totalConDescuento) : Number(abono));
 
 		if (!amount) {
 			alert("Aún no tenemos un valor para generar el enlace de pago.");
@@ -1623,15 +1625,20 @@ function App() {
 		const reservaIdParaPago = identificadores.reservaId ?? reservationId;
 		const codigoReservaParaPago =
 			identificadores.codigoReserva ?? codigoReservaCreada;
+		const paymentOrigin =
+			identificadores.paymentOrigin ?? "reserva_express";
 
 		const description =
-			type === "total"
-				? `Pago total con descuento para ${destinoFinal} (${
-						vehiculo || "A confirmar"
-					})`
-				: `Abono reserva (40%) para ${destinoFinal} (${
-						vehiculo || "A confirmar"
-					})`;
+			identificadores.description ??
+			(paymentOrigin === "hotel"
+				? `Reserva Aeropuerto-Hoteles ${codigoReservaParaPago || ""}`.trim()
+				: type === "total"
+					? `Pago total con descuento para ${destinoFinal} (${
+							vehiculo || "A confirmar"
+						})`
+					: `Abono reserva (40%) para ${destinoFinal} (${
+							vehiculo || "A confirmar"
+						})`);
 
 		const apiUrl =
 			getBackendUrl() || "https://transportes-araucaria.onrender.com";
@@ -1661,7 +1668,7 @@ function App() {
 						reservaId: reservaIdParaPago || null,
 						codigoReserva: codigoReservaParaPago || null,
 						tipoPago: type,
-						paymentOrigin: "reserva_express",
+						paymentOrigin,
 					}
 				: {
 						gateway,
@@ -1671,7 +1678,7 @@ function App() {
 						reservaId: reservaIdParaPago || null,
 						codigoReserva: codigoReservaParaPago || null,
 						tipoPago: type,
-						paymentOrigin: "reserva_express",
+						paymentOrigin,
 					};
 
 			const response = await fetch(endpoint, {
