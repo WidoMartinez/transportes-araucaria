@@ -39,6 +39,7 @@ import OportunidadCard from "../components/OportunidadCard";
 import SuscripcionOportunidades from "../components/SuscripcionOportunidades";
 import { getBackendUrl } from "../lib/backend";
 import { validatePaymentAmount } from "../utils/paymentValidation";
+import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
 import { TERMINOS_CONDICIONES } from "../data/legal";
 import imagenOportunidades from "../assets/imagenoportunidades.png";
 const vansBg = imagenOportunidades;
@@ -54,6 +55,7 @@ const normalizePhoneToE164 = (phone) => {
 };
 
 function OportunidadesTraslado() {
+const { pasarelasHabilitadas } = usePasarelasConfig();
 const [oportunidades, setOportunidades] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
@@ -243,20 +245,46 @@ return () => clearInterval(intervalId);
           email: reservaFormData.email
         });
         
-        // Proceder al pago automÃ¡ticamente (Flow Total)
-        const paymentResponse = await fetch(`${getBackendUrl()}/create-payment`, {
+        // Proceder al pago automáticamente según la pasarela habilitada en configuración
+        const gatewayActivo = pasarelasHabilitadas[0]?.id;
+        if (!gatewayActivo) {
+          alert("No hay pasarelas de pago disponibles. Contacta a soporte.");
+          return;
+        }
+
+        const description = `Reserva Oportunidad ${oportunidadSeleccionada.codigo} - ${oportunidadSeleccionada.origen} a ${oportunidadSeleccionada.destino}`;
+        const endpoint =
+          gatewayActivo === "mercadopago"
+            ? `${getBackendUrl()}/api/create-payment-mp`
+            : `${getBackendUrl()}/create-payment`;
+        const paymentBody =
+          gatewayActivo === "mercadopago"
+            ? {
+                amount: precioValidado,
+                description,
+                email: reservaFormData.email,
+                nombre: reservaFormData.nombre,
+                telefono: reservaFormData.telefono,
+                reservaId: data.reservaId,
+                codigoReserva: data.codigoReserva,
+                tipoPago: "total",
+                paymentOrigin: "oportunidad_traslado",
+              }
+            : {
+                gateway: "flow",
+                amount: precioValidado,
+                description,
+                email: reservaFormData.email,
+                reservaId: data.reservaId,
+                codigoReserva: data.codigoReserva,
+                tipoPago: "total",
+                paymentOrigin: "oportunidad_traslado",
+              };
+
+        const paymentResponse = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            gateway: "flow",
-            amount: precioValidado,
-            description: `Reserva Oportunidad ${oportunidadSeleccionada.codigo} - ${oportunidadSeleccionada.origen} a ${oportunidadSeleccionada.destino}`,
-            email: reservaFormData.email,
-            reservaId: data.reservaId,
-            codigoReserva: data.codigoReserva,
-            tipoPago: "total",
-            paymentOrigin: "oportunidad_traslado", // Identificador para redirecciÃ³n y conversiones GA
-          }),
+          body: JSON.stringify(paymentBody),
         });
 
         const paymentData = await paymentResponse.json();

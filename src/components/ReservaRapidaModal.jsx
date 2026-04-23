@@ -13,6 +13,7 @@ import { Switch } from "./ui/switch";
 import { Calendar, Clock, Users, MapPin, ArrowRight } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import WhatsAppButton from "./WhatsAppButton";
+import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 10:00 PM)
 const generateTimeOptions = () => {
@@ -45,6 +46,7 @@ const normalizePhoneToE164 = (phone) => {
  * Solicita solo datos mínimos del cliente y fechas
  */
 export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
+	const { pasarelasHabilitadas } = usePasarelasConfig();
 	const [loading, setLoading] = useState(false);
 	const [rutaInvertida, setRutaInvertida] = useState(false);
 	const [formData, setFormData] = useState({
@@ -237,20 +239,47 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 
 			const data = await response.json();
 
-			// Proceder al pago automáticamente con Flow
-			const paymentResponse = await fetch(`${getBackendUrl()}/create-payment`, {
+			// Proceder al pago según la pasarela habilitada en configuración
+			const gatewayActivo = pasarelasHabilitadas[0]?.id;
+			if (!gatewayActivo) {
+				alert("No hay pasarelas de pago disponibles. Contacta a soporte.");
+				setLoading(false);
+				return;
+			}
+
+			const description = `Promoción ${promocion.nombre} - ${promocion.origen} a ${promocion.destino}`;
+			const endpoint =
+				gatewayActivo === "mercadopago"
+					? `${getBackendUrl()}/api/create-payment-mp`
+					: `${getBackendUrl()}/create-payment`;
+			const paymentBody =
+				gatewayActivo === "mercadopago"
+					? {
+							amount: precioTotal,
+							description,
+							email: formData.email,
+							nombre: formData.nombre,
+							telefono: formData.telefono,
+							reservaId: data.reserva.id,
+							codigoReserva: data.reserva.codigo_reserva,
+							tipoPago: "total",
+							paymentOrigin: "banner_promocional",
+						}
+					: {
+							gateway: "flow",
+							amount: precioTotal,
+							description,
+							email: formData.email,
+							reservaId: data.reserva.id,
+							codigoReserva: data.reserva.codigo_reserva,
+							tipoPago: "total",
+							paymentOrigin: "banner_promocional",
+						};
+
+			const paymentResponse = await fetch(endpoint, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					gateway: "flow",
-					amount: precioTotal, // Usar total calculado
-					description: `Promoción ${promocion.nombre} - ${promocion.origen} a ${promocion.destino}`,
-					email: formData.email,
-					reservaId: data.reserva.id,
-					codigoReserva: data.reserva.codigo_reserva,
-					tipoPago: "total",
-					paymentOrigin: "banner_promocional", // Identificar origen para conversiones GA
-				}),
+				body: JSON.stringify(paymentBody),
 			});
 
 			const paymentData = await paymentResponse.json();
