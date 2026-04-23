@@ -278,6 +278,61 @@ function HeroExpress({
 		}
 	}, [childSeatLimit, formData.cantidadSillasInfantiles, formData.sillaInfantil, hasChildSeatOption, setFormData]);
 
+	// --- CAPTURA DE LEAD (REMARKETING) ---
+	useEffect(() => {
+		if (esModoHoteles || !formData.email) return;
+
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(formData.email)) return;
+
+		const timer = setTimeout(async () => {
+			try {
+				const apiUrl = getBackendUrl();
+				const leadData = {
+					nombre: formData.nombre || "Cliente Interesado",
+					email: formData.email,
+					telefono: formData.telefono,
+					origen: formData.origen,
+					destino: formData.destino === "Otro" ? formData.otroDestino : formData.destino,
+					fecha: formData.fecha,
+					hora: formData.hora,
+					pasajeros: formData.pasajeros,
+					precio: pricing?.precioBase || 0,
+					totalConDescuento: pricing?.totalConDescuento || 0,
+					source: "lead_hero_abandonado",
+				};
+
+				const response = await fetch(`${apiUrl}/api/reservas/capturar-lead`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(leadData),
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					console.log("🎯 Lead HeroExpress capturado:", data.codigoReserva);
+				}
+			} catch (error) {
+				console.error("❌ Error capturando lead desde HeroExpress:", error);
+			}
+		}, 2000);
+
+		return () => clearTimeout(timer);
+	}, [
+		formData.email,
+		formData.nombre,
+		formData.telefono,
+		formData.origen,
+		formData.destino,
+		formData.otroDestino,
+		formData.fecha,
+		formData.hora,
+		formData.pasajeros,
+		pricing?.totalConDescuento,
+		esModoHoteles
+	]);
+
+
 	// Cargar catálogo de hoteles (lazy: solo cuando el usuario activa el modo)
 	useEffect(() => {
 		if (!esModoHoteles || catalogoHoteles) return;
