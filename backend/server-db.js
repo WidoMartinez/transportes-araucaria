@@ -10164,9 +10164,18 @@ app.post("/api/payment-result", async (req, res) => {
 				}
 
 				if (isHotel) {
-					console.log(`✅ Pago de HOTEL CONFIRMADO (Reserva ${reservaId}). Redirigiendo a FlowReturn con hotel=1.`);
+					// Datos de usuario para Enhanced Conversions
+					const userData = {
+						email: reserva?.email || optionalData?.email || "",
+						nombre: reserva?.nombre || "",
+						telefono: reserva?.telefono || "",
+					};
+					const userDataEncoded = Buffer.from(JSON.stringify(userData)).toString("base64");
+					const dParam = "&d=" + encodeURIComponent(userDataEncoded);
+
+					console.log("✅ Pago de HOTEL CONFIRMADO (Reserva " + reservaId + "). Redirigiendo a FlowReturn con hotel=1.");
 					const montoFinalHotel = montoFlowActual > 0 ? montoFlowActual : (reserva?.montoTotal || SYMBOLIC_AMOUNT_CLP);
-					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoFinalHotel}&hotel=1`;
+					const returnUrl = `${frontendBase}/flow-return?token=${token}&status=success&reserva_id=${reservaId}&amount=${montoFinalHotel}&hotel=1${dParam}`;
 					return res.redirect(303, returnUrl);
 				}
 
@@ -13914,11 +13923,14 @@ const startServer = async () => {
 				);
 			}
 
+			// Identificar si es una reserva de hotel para añadir el flag correspondiente
+			const isHotelMP = paymentOrigin === "hotel";
+			const hotelParamMP = isHotelMP ? "&hotel=1" : "";
+
 			// URL de retorno exitoso: incluye todos los datos necesarios para tracking de conversión
-			// collection_id y collection_status son parámetros que MP añade automáticamente a la URL
-			const successUrl = `${frontendBase}/mp-return?status=success&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
-			const pendingUrl = `${frontendBase}/mp-return?status=pending&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
-			const failureUrl = `${frontendBase}/mp-return?status=error&reserva_id=${reservaId || ""}`;
+			const successUrl = `${frontendBase}/mp-return?status=success&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
+			const pendingUrl = `${frontendBase}/mp-return?status=pending&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
+			const failureUrl = `${frontendBase}/mp-return?status=error&reserva_id=${reservaId || ""}${hotelParamMP}`;
 
 			// Separar nombre en first/last para el checklist de calidad de MP
 			const nameParts = (nombre || "Cliente").trim().split(" ");
