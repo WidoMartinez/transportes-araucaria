@@ -1025,7 +1025,7 @@ Campos de la preferencia que cumplen el checklist de calidad MP (14 campos reque
 - `metadata`: campos completos de la reserva
 - `expires`: `true` con ventana de 2 horas
 
-Guarda el `preference.id` en tabla `FlowToken` con `gateway: "mercadopago"`.
+Guarda el `preference.id` en tabla `FlowToken` con `gateway: "mercadopago"` dentro de `metadata`. El fallback de `/api/payment-status` normaliza esa metadata aunque MySQL/Sequelize la devuelva como texto JSON y, como defensa adicional, reconoce el formato de `preference.id` para no consultar Flow con tokens de Mercado Pago.
 
 En desarrollo (`NODE_ENV=development` o `MP_SANDBOX=true`) usa `sandbox_init_point`.
 

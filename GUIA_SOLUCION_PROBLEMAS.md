@@ -3111,12 +3111,15 @@ Después de generar una preferencia de Mercado Pago para una reserva Aeropuerto-
 
 `MercadoPagoReturn.jsx` consultaba `/api/payment-status` solo con `reserva_id`, sin indicar que el gateway era Mercado Pago. El backend intentaba resolver un token Flow o inferir la pasarela desde `FlowToken`, pero los tokens de Mercado Pago no quedaban marcados en `metadata.gateway`.
 
+En algunos entornos MySQL/Sequelize, `FlowToken.metadata` puede volver como texto JSON en vez de objeto. Si no se normaliza, `metadata.gateway` queda como `undefined` y el backend trata el `preference.id` de Mercado Pago como si fuera un token Flow, generando errores 400 contra Flow API.
+
 En paralelo, las horas del módulo Aeropuerto-Hoteles podían llegar como `HH:mm` desde el frontend y guardarse/compararse como `HH:mm:ss`, debilitando la detección de reservas activas equivalentes.
 
 ### Solución aplicada
 
 - `MercadoPagoReturn.jsx` envía `gateway=mercadopago` al polling de `/api/payment-status`.
 - `/api/payment-status` usa ese gateway o `FlowToken.metadata.gateway` para consultar Mercado Pago en vez de Flow.
+- `/api/payment-status` normaliza `FlowToken.metadata` aunque llegue como texto JSON y usa el formato de `preference.id` de Mercado Pago como fallback defensivo.
 - Las preferencias Mercado Pago se guardan en `FlowToken` con `paymentOrigin` y `metadata.gateway = "mercadopago"`.
 - `backend/routes/traslados-hoteles.js` normaliza horas a `HH:mm:ss` para creación, edición y detección de duplicados.
 

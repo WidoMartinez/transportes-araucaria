@@ -9587,6 +9587,21 @@ app.post("/create-payment", async (req, res) => {
 // Endpoint público para consultar el estado de un pago por token o ID de reserva.
 // Usado por FlowReturn.jsx para hacer polling cuando el pago llega como "pendiente"
 // y necesita confirmarse después (Flow envía primero status=1 al navegador y luego status=2 vía webhook).
+const normalizarMetadataTokenPago = (metadata) => {
+	if (!metadata) return {};
+	if (typeof metadata === "string") {
+		try {
+			return JSON.parse(metadata);
+		} catch {
+			return {};
+		}
+	}
+	return typeof metadata === "object" ? metadata : {};
+};
+
+const parecePreferenciaMercadoPago = (tokenValue) =>
+	/^\d+-[0-9a-f-]{36}$/i.test(String(tokenValue || ""));
+
 app.get("/api/payment-status", async (req, res) => {
 	try {
 		const { token, reserva_id, gateway } = req.query;
@@ -9635,9 +9650,11 @@ app.get("/api/payment-status", async (req, res) => {
 			}
 		}
 
+		const gatewayNormalizado = String(gateway || "").toLowerCase();
+		const tokenMetadata = normalizarMetadataTokenPago(flowTokenRecord?.metadata);
 		let isHotel =
 			flowTokenRecord?.paymentOrigin === "hotel" ||
-			flowTokenRecord?.metadata?.paymentOrigin === "hotel";
+			tokenMetadata.paymentOrigin === "hotel";
 
 		if (!reservaId) {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
@@ -9690,8 +9707,9 @@ app.get("/api/payment-status", async (req, res) => {
 			reserva.estadoPago === "parcial"
 		) {
 			const esPagoMP =
-				gateway === "mercadopago" ||
-				flowTokenRecord?.metadata?.gateway === "mercadopago";
+				gatewayNormalizado === "mercadopago" ||
+				tokenMetadata.gateway === "mercadopago" ||
+				parecePreferenciaMercadoPago(tokenResuelto);
 
 			// Fallback para pagos de Mercado Pago: buscar pago aprobado por external_reference
 			if (esPagoMP) {
