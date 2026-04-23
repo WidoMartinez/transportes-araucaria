@@ -9589,7 +9589,7 @@ app.post("/create-payment", async (req, res) => {
 // y necesita confirmarse después (Flow envía primero status=1 al navegador y luego status=2 vía webhook).
 app.get("/api/payment-status", async (req, res) => {
 	try {
-		const { token, reserva_id } = req.query;
+		const { token, reserva_id, gateway } = req.query;
 
 		if (!token && !reserva_id) {
 			return res.status(400).json({ error: "Se requiere token o reserva_id" });
@@ -9635,7 +9635,9 @@ app.get("/api/payment-status", async (req, res) => {
 			}
 		}
 
-		const isHotel = flowTokenRecord?.paymentOrigin === "hotel";
+		let isHotel =
+			flowTokenRecord?.paymentOrigin === "hotel" ||
+			flowTokenRecord?.metadata?.paymentOrigin === "hotel";
 
 		if (!reservaId) {
 			return res.json({ pagado: false, status: "desconocido", monto: null });
@@ -9650,6 +9652,7 @@ app.get("/api/payment-status", async (req, res) => {
 			// Fallback: si no es hotel pero no se encuentra en Reserva, buscar en TrasladoHotelAeropuerto
 			if (!reserva) {
 				reserva = await TrasladoHotelAeropuerto.findByPk(reservaId);
+				if (reserva) isHotel = true;
 			}
 		}
 
@@ -9686,7 +9689,9 @@ app.get("/api/payment-status", async (req, res) => {
 			reserva.estadoPago === "pendiente" ||
 			reserva.estadoPago === "parcial"
 		) {
-			const esPagoMP = flowTokenRecord?.gateway === "mercadopago";
+			const esPagoMP =
+				gateway === "mercadopago" ||
+				flowTokenRecord?.metadata?.gateway === "mercadopago";
 
 			// Fallback para pagos de Mercado Pago: buscar pago aprobado por external_reference
 			if (esPagoMP) {
@@ -9722,13 +9727,17 @@ app.get("/api/payment-status", async (req, res) => {
 							estadoPago: "pagado",
 							estado: "confirmada",
 							pagoMonto: montoMP,
-							saldoPendiente: 0,
 							metodoPago: "mercadopago",
-							referenciaPagoExterno: String(mpPayment.id),
 						};
 						
-						// Campos solo para traslados privados
-						if (!isHotel) {
+						if (isHotel) {
+							updateData.source = "web_hoteles";
+							updateData.pagoId = String(mpPayment.id);
+							updateData.pagoGateway = "mercadopago";
+							updateData.pagoFecha = new Date();
+						} else {
+							updateData.saldoPendiente = 0;
+							updateData.referenciaPagoExterno = String(mpPayment.id);
 							updateData.abonoPagado = true;
 							updateData.saldoPagado = true;
 						}
@@ -13984,10 +13993,17 @@ const startServer = async () => {
 					await FlowToken.create({
 						token: preference.id,
 						reservaId,
-						gateway: "mercadopago",
 						amount: amountNum,
 						email: email || "",
-						status: "pending",
+						paymentOrigin: paymentOrigin || "web",
+						metadata: {
+							gateway: "mercadopago",
+							preferenceId: preference.id,
+							externalReference: externalRef,
+							paymentOrigin: paymentOrigin || "web",
+							codigoReserva: codigoReserva || null,
+							tipoPago: tipoPago || "total",
+						},
 						// La preferencia MP expira en 2 horas (configurado en expires_in)
 						expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
 					});

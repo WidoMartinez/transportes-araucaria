@@ -268,7 +268,7 @@ function MercadoPagoReturn() {
 					if (cancelado) return;
 					intentos++;
 					try {
-						const url = `${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(reservaIdParam || "")}`;
+						const url = `${apiBase}/api/payment-status?reserva_id=${encodeURIComponent(reservaIdParam || "")}&gateway=mercadopago`;
 						const resp = await fetch(url);
 						if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 						const data = await resp.json();

@@ -14,6 +14,14 @@ const TIPOS_SERVICIO_VALIDOS = ["solo_ida", "ida_vuelta"];
 const normalizarTexto = (value = "") => String(value || "").trim();
 const esEmailValido = (email = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const fechaHoyISO = () => new Date().toISOString().split("T")[0];
+const normalizarHora = (value = "") => {
+	const hora = normalizarTexto(value);
+	if (!hora) return "";
+	const match = hora.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+	if (!match) return hora;
+	const [, horas, minutos, segundos = "00"] = match;
+	return `${horas.padStart(2, "0")}:${minutos}:${segundos}`;
+};
 const normalizarCodigo = (value = "") =>
 	normalizarTexto(value)
 		.toLowerCase()
@@ -182,9 +190,9 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 			const origenTipo = normalizarTexto(req.body?.origenTipo);
 			const tipoServicio = normalizarTexto(req.body?.tipoServicio || "solo_ida");
 			const fechaIda = normalizarTexto(req.body?.fechaIda);
-			const horaIda = normalizarTexto(req.body?.horaIda);
+			const horaIda = normalizarHora(req.body?.horaIda);
 			const fechaVuelta = normalizarTexto(req.body?.fechaVuelta);
-			const horaVuelta = normalizarTexto(req.body?.horaVuelta);
+			const horaVuelta = normalizarHora(req.body?.horaVuelta);
 			const observaciones = normalizarTexto(req.body?.observaciones).slice(0, 500);
 			const pasajeros = Number.parseInt(req.body?.pasajeros, 10) || 1;
 			const sillaInfantil = Boolean(req.body?.sillaInfantil);
@@ -686,9 +694,9 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				const origenTipo = normalizarTexto(req.body?.origenTipo);
 				const tipoServicio = normalizarTexto(req.body?.tipoServicio || "solo_ida");
 				const fechaIda = normalizarTexto(req.body?.fechaIda);
-				const horaIda = normalizarTexto(req.body?.horaIda);
+				const horaIda = normalizarHora(req.body?.horaIda);
 				const fechaVuelta = normalizarTexto(req.body?.fechaVuelta);
-				const horaVuelta = normalizarTexto(req.body?.horaVuelta);
+				const horaVuelta = normalizarHora(req.body?.horaVuelta);
 				const observaciones = normalizarTexto(req.body?.observaciones).slice(0, 500);
 				const pasajeros = Number.parseInt(req.body?.pasajeros, 10) || 1;
 				const sillaInfantil = Boolean(req.body?.sillaInfantil);
@@ -801,9 +809,9 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				if (sillaInfantil !== undefined) campos.sillaInfantil = Boolean(sillaInfantil);
 				if (cantidadSillasInfantiles !== undefined) campos.cantidadSillasInfantiles = Number.parseInt(cantidadSillasInfantiles, 10) || 0;
 				if (fechaIda !== undefined) campos.fechaIda = normalizarTexto(fechaIda);
-				if (horaIda !== undefined) campos.horaIda = normalizarTexto(horaIda);
+				if (horaIda !== undefined) campos.horaIda = normalizarHora(horaIda);
 				if (fechaVuelta !== undefined) campos.fechaVuelta = normalizarTexto(fechaVuelta) || null;
-				if (horaVuelta !== undefined) campos.horaVuelta = normalizarTexto(horaVuelta) || null;
+				if (horaVuelta !== undefined) campos.horaVuelta = normalizarHora(horaVuelta) || null;
 				if (observaciones !== undefined) campos.observaciones = normalizarTexto(observaciones).slice(0, 500) || null;
 				if (montoTotal !== undefined && Number(montoTotal) > 0) campos.montoTotal = Number(montoTotal);
 

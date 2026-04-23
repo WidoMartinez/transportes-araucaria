@@ -3094,6 +3094,40 @@ El módulo Aeropuerto-Hoteles creaba siempre una nueva fila en `traslados_hotele
 
 ---
 
+## 13.3. Mercado Pago en Aeropuerto-Hoteles queda pendiente y `payment-status` dice que no hay token Flow
+
+**Implementado: 22 Abril 2026**
+
+### Problema
+
+Después de generar una preferencia de Mercado Pago para una reserva Aeropuerto-Hoteles, los logs podían mostrar:
+
+```text
+ℹ️ [payment-status] Reserva X pendiente en DB pero no hay token para consultar Flow.
+✅ [MP] Preferencia creada: ... para reserva Y
+```
+
+### Causa Raíz
+
+`MercadoPagoReturn.jsx` consultaba `/api/payment-status` solo con `reserva_id`, sin indicar que el gateway era Mercado Pago. El backend intentaba resolver un token Flow o inferir la pasarela desde `FlowToken`, pero los tokens de Mercado Pago no quedaban marcados en `metadata.gateway`.
+
+En paralelo, las horas del módulo Aeropuerto-Hoteles podían llegar como `HH:mm` desde el frontend y guardarse/compararse como `HH:mm:ss`, debilitando la detección de reservas activas equivalentes.
+
+### Solución aplicada
+
+- `MercadoPagoReturn.jsx` envía `gateway=mercadopago` al polling de `/api/payment-status`.
+- `/api/payment-status` usa ese gateway o `FlowToken.metadata.gateway` para consultar Mercado Pago en vez de Flow.
+- Las preferencias Mercado Pago se guardan en `FlowToken` con `paymentOrigin` y `metadata.gateway = "mercadopago"`.
+- `backend/routes/traslados-hoteles.js` normaliza horas a `HH:mm:ss` para creación, edición y detección de duplicados.
+
+### Resultado esperado
+
+- El polling de Mercado Pago deja de caer en el mensaje de token Flow faltante.
+- Si el webhook de Mercado Pago se retrasa, `payment-status` puede consultar MP por `external_reference`.
+- La reutilización de reservas activas de hoteles es más consistente entre reintentos.
+
+---
+
 ## 14. Descuentos por Retorno Aplicados Incorrectamente
 
 **Implementado: 14 Febrero 2026**
