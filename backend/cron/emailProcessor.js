@@ -60,7 +60,7 @@ export const processPendingEmails = async () => {
 
 		const leadsSinTarea = await Reserva.findAll({
 			where: {
-				source: { [Op.in]: ["lead_hero_abandonado", "lead_banner_abandonado"] },
+				source: { [Op.in]: ["lead_hero_abandonado", "lead_banner_abandonado", "lead_hotel_abandonado"] },
 				estado: "pendiente",
 				estadoPago: "pendiente",
 				created_at: {

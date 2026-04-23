@@ -280,7 +280,7 @@ function HeroExpress({
 
 	// --- CAPTURA DE LEAD (REMARKETING) ---
 	useEffect(() => {
-		if (esModoHoteles || !formData.email) return;
+		if (!formData.email) return;
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		if (!emailRegex.test(formData.email)) return;
@@ -288,7 +288,23 @@ function HeroExpress({
 		const timer = setTimeout(async () => {
 			try {
 				const apiUrl = getBackendUrl();
-				const leadData = {
+				
+				// Determinar los datos según el modo, pero siempre usando el endpoint global de leads
+				const endpoint = `${apiUrl}/api/reservas/capturar-lead`;
+
+				const leadData = esModoHoteles ? {
+					nombre: formData.nombre || "Cliente Interesado (Hotel)",
+					email: formData.email,
+					telefono: formData.telefono,
+					origen: hotelForm.origenTipo === "aeropuerto" ? "Aeropuerto La Araucanía" : (hotelSeleccionado?.nombre || "Hotel"),
+					destino: hotelForm.origenTipo === "aeropuerto" ? (hotelSeleccionado?.nombre || "Hotel") : "Aeropuerto La Araucanía",
+					fecha: formData.fecha,
+					hora: formData.hora,
+					pasajeros: Number(formData.pasajeros) || 1,
+					precio: montoHotelCalculado || 0,
+					totalConDescuento: montoHotelCalculado || 0,
+					source: "lead_hotel_abandonado",
+				} : {
 					nombre: formData.nombre || "Cliente Interesado",
 					email: formData.email,
 					telefono: formData.telefono,
@@ -302,7 +318,10 @@ function HeroExpress({
 					source: "lead_hero_abandonado",
 				};
 
-				const response = await fetch(`${apiUrl}/api/reservas/capturar-lead`, {
+				// Para hoteles, solo capturamos si ya eligió un hotel
+				if (esModoHoteles && !hotelForm.hotelCodigo) return;
+
+				const response = await fetch(endpoint, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(leadData),
@@ -310,10 +329,10 @@ function HeroExpress({
 
 				if (response.ok) {
 					const data = await response.json();
-					console.log("🎯 Lead HeroExpress capturado:", data.codigoReserva);
+					console.log(`🎯 Lead ${esModoHoteles ? 'Hoteles' : 'HeroExpress'} capturado:`, data.reserva?.codigoReserva || data.codigoReserva);
 				}
 			} catch (error) {
-				console.error("❌ Error capturando lead desde HeroExpress:", error);
+				console.error("❌ Error capturando lead:", error);
 			}
 		}, 2000);
 
@@ -701,21 +720,43 @@ function HeroExpress({
 
 		setStepError("");
 
-		// Primero crear la reserva en el sistema
-		const result = await onSubmitWizard();
+		// --- LÓGICA DIFERENCIADA SEGÚN MODO ---
+		if (esModoHoteles) {
+			// En modo hoteles, la reserva ya se creó en el paso anterior (handleConfirmarReservaHotel)
+			if (!reservaHotelCreada) {
+				setStepError("Error: No se encontró la reserva de hotel. Por favor, reintenta.");
+				return;
+			}
 
-		if (!result?.success) {
-			setStepError(
-				result?.message || "No se pudo crear la reserva. Intenta nuevamente."
-			);
-			return;
+			console.log("🏨 Procesando pago para reserva de HOTEL:", reservaHotelCreada.codigoReserva);
+
+			// Con la reserva ya existente, procesar el pago pasando los identificadores y el origen hotel
+			handlePayment(p, t, {
+				reservaId: reservaHotelCreada.id,
+				codigoReserva: reservaHotelCreada.codigoReserva,
+				paymentOrigin: "hotel",
+				amount: montoHotelCalculado,
+				description: `Reserva Aeropuerto-Hoteles ${reservaHotelCreada.codigoReserva}`
+			});
+		} else {
+			// Flujo Express original (traslados privados)
+			// Primero crear la reserva en el sistema
+			const result = await onSubmitWizard();
+
+			if (!result?.success) {
+				setStepError(
+					result?.message || "No se pudo crear la reserva. Intenta nuevamente."
+				);
+				return;
+			}
+
+			// Con la reserva creada, procesar el pago pasando los identificadores
+			handlePayment(p, t, {
+				reservaId: result.reservaId,
+				codigoReserva: result.codigoReserva,
+				paymentOrigin: "reserva_express"
+			});
 		}
-
-		// Con la reserva creada, procesar el pago pasando los identificadores
-		handlePayment(p, t, {
-			reservaId: result.reservaId,
-			codigoReserva: result.codigoReserva,
-		});
 	};
 
 	return (

@@ -1705,6 +1705,11 @@ function App() {
 						}),
 					);
 				}
+				if (typeof window.gtag === "function") {
+					window.gtag("event", "conversion", {
+						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
+					});
+				}
 				window.open(data.url, "_blank");
 			} else {
 				throw new Error(

@@ -358,8 +358,8 @@ const setupTrasladosHotelesRoutes = (app, authAdmin) => {
 				moneda: "CLP",
 				observaciones: observaciones || null,
 				estado: "pendiente",
-				// Se guarda como cotizador hasta que el pago sea confirmado
-				source: "cotizador",
+				// Se guarda con el source proporcionado (ej: lead_hotel_abandonado) o cotizador por defecto
+				source: req.body?.source || "cotizador",
 			});
 
 			return res.status(201).json({
