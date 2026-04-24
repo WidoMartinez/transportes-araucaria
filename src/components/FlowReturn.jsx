@@ -281,7 +281,9 @@ function FlowReturn() {
 					// del mismo `reserva_id` (por ejemplo abono + saldo) en la misma sesión.
 					const conversionKey = `flow_conversion_${transactionId}`;
 
-					if (!sessionStorage.getItem(conversionKey)) {
+					if (!sessionStorage.getItem(conversionKey) && 
+						!sessionStorage.getItem(`flow_conversion_express_${id}`) &&
+						!sessionStorage.getItem(`conversion_sent_${id}`)) {
 						// Extraer datos de usuario de los parámetros URL para conversiones avanzadas
 						const urlParams = new URLSearchParams(window.location.search);
 
@@ -334,11 +336,15 @@ function FlowReturn() {
 						}
 
 						// Preparar datos de conversión básicos
+						// Detectar si es una reserva de hotel
+						const isHotel = urlParams.get("hotel") === "1";
+
 						const conversionData = {
 							send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
 							value: conversionValue,
 							currency: "CLP",
 							transaction_id: transactionId,
+							hotel_transfer: isHotel ? 1 : 0
 						};
 
 						// ✅ Enhanced Conversions: usar gtag('set', 'user_data', ...) para máxima compatibilidad
@@ -371,7 +377,8 @@ function FlowReturn() {
 						window.gtag("event", "conversion", conversionData);
 						sessionStorage.setItem(conversionKey, "true");
 						if (id) {
-							sessionStorage.setItem(`flow_conversion_express_${id}`, "true"); // legacy express compatibility
+							sessionStorage.setItem(`conversion_sent_${id}`, "true");
+							sessionStorage.setItem(`flow_conversion_express_${id}`, "true"); 
 						}
 					} else {
 						console.log(

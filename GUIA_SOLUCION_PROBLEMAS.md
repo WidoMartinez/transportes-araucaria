@@ -3121,6 +3121,8 @@ En paralelo, las horas del módulo Aeropuerto-Hoteles podían llegar como `HH:mm
 - `/api/payment-status` usa ese gateway o `FlowToken.metadata.gateway` para consultar Mercado Pago en vez de Flow.
 - `/api/payment-status` normaliza `FlowToken.metadata` aunque llegue como texto JSON y usa el formato de `preference.id` de Mercado Pago como fallback defensivo.
 - Las preferencias Mercado Pago se guardan en `FlowToken` con `paymentOrigin` y `metadata.gateway = "mercadopago"`.
+- `POST /api/create-payment-mp` debe calcular `payUrl` antes de guardar `FlowToken`; si `payUrl` se usa antes de declararse, el pago redirige pero se pierde la metadata de pasarela y se debilita el fallback.
+- Las consultas administrativas de recuperación de pago deben enviar `gateway=mercadopago` cuando la reserva ya tiene `metodoPago`/`pagoGateway` de Mercado Pago.
 - `backend/routes/traslados-hoteles.js` normaliza horas a `HH:mm:ss` para creación, edición y detección de duplicados.
 
 ### Resultado esperado

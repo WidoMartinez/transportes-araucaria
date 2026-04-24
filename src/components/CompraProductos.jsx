@@ -6,6 +6,7 @@ import { AlertCircle, Loader2, CreditCard } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import ProductosReserva from "./ProductosReserva";
 import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
+import SelectorPasarela from "./SelectorPasarela";
 
 const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
@@ -16,6 +17,7 @@ function CompraProductos() {
 	const [paying, setPaying] = useState(false);
 	const [payError, setPayError] = useState(null);
 	const [totalProductos, setTotalProductos] = useState(0);
+	const [pasarela, setPasarela] = useState("flow");
 
 	useEffect(() => {
 		const hash = window.location.hash;
@@ -72,7 +74,9 @@ function CompraProductos() {
 				throw new Error("Cargando opciones de pago, intenta nuevamente en un momento.");
 			}
 
-			const gatewayActivo = pasarelasHabilitadas[0]?.id;
+			const gatewayActivo = pasarelasHabilitadas.some((p) => p.id === pasarela)
+				? pasarela
+				: pasarelasHabilitadas[0]?.id;
 			if (!gatewayActivo) {
 				throw new Error("No hay pasarelas de pago disponibles. Contacta a soporte.");
 			}
@@ -209,6 +213,7 @@ function CompraProductos() {
 												<span>{payError}</span>
 											</div>
 										)}
+										<SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
 										<div className="flex flex-wrap gap-3">
 											{paymentOptions.map((option) => (
 												<Button
@@ -216,7 +221,7 @@ function CompraProductos() {
 													onClick={() =>
 														continuarPago(option.tipo, option.monto)
 													}
-													disabled={paying}
+													disabled={paying || loadingPasarelas}
 													variant={option.variant}
 													className={`gap-2 ${option.className || ""}`}
 												>
@@ -236,7 +241,7 @@ function CompraProductos() {
 										</div>
 										<p className="text-xs text-muted-foreground">
 											Se abrirá una ventana para completar el pago de forma
-											segura con Flow.
+											segura con {pasarela === "mercadopago" ? "Mercado Pago" : "Flow"}.
 										</p>
 									</div>
 								</CardContent>

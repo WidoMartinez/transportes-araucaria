@@ -627,7 +627,9 @@ function App() {
 						? `conversion_sent_${reservaId}` 
 						: `flow_conversion_express_${transactionId}`;
 
-					if (sessionStorage.getItem(conversionKey) || sessionStorage.getItem(`flow_conversion_express_${transactionId}`)) {
+					if (sessionStorage.getItem(conversionKey) || 
+						sessionStorage.getItem(`flow_conversion_express_${transactionId}`) ||
+						sessionStorage.getItem(`flow_conversion_${transactionId}`)) {
 						console.log(
 							"ℹ️ [App.jsx] Conversión ya registrada previamente en esta sesión.",
 						);
@@ -707,11 +709,16 @@ function App() {
 						}
 					}
 
+					// Detectar si es una reserva de hotel desde la URL
+					const urlParams = new URLSearchParams(window.location.search);
+					const isHotel = urlParams.get("hotel") === "1";
+
 					const conversionData = {
 						send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB", // Etiqueta conversión compra
 						value: conversionValue,
 						currency: "CLP",
 						transaction_id: transactionId,
+						hotel_transfer: isHotel ? 1 : 0 // Parámetro personalizado para segmentación
 					};
 					const gtagListoCompra = await waitForGtag();
 					if (!gtagListoCompra) return;
@@ -748,7 +755,10 @@ function App() {
 					// Marcar como enviada para evitar duplicados
 					sessionStorage.setItem(conversionKey, "true");
 					// ✅ PREVENCIÓN DE DUPLICADOS: Marcar también con la clave antigua
-					sessionStorage.setItem(`flow_conversion_express_${transactionId}`, "true");
+					sessionStorage.setItem(
+						`flow_conversion_express_${transactionId}`,
+						"true",
+					);
 					if (reservaId) {
 						sessionStorage.setItem(
 							`flow_conversion_express_${reservaId}`,

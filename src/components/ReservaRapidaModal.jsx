@@ -14,6 +14,7 @@ import { Calendar, Clock, Users, MapPin, ArrowRight } from "lucide-react";
 import { getBackendUrl } from "../lib/backend";
 import WhatsAppButton from "./WhatsAppButton";
 import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
+import SelectorPasarela from "./SelectorPasarela";
 
 // Función para generar opciones de hora en intervalos de 15 minutos (6:00 AM - 10:00 PM)
 const generateTimeOptions = () => {
@@ -48,6 +49,7 @@ const normalizePhoneToE164 = (phone) => {
 export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 	const { pasarelasHabilitadas, loading: loadingPasarelas } = usePasarelasConfig();
 	const [loading, setLoading] = useState(false);
+	const [pasarela, setPasarela] = useState("flow");
 	const [rutaInvertida, setRutaInvertida] = useState(false);
 	const [formData, setFormData] = useState({
 		nombre: "",
@@ -245,7 +247,9 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 				setLoading(false);
 				return;
 			}
-			const gatewayActivo = pasarelasHabilitadas[0]?.id;
+			const gatewayActivo = pasarelasHabilitadas.some((p) => p.id === pasarela)
+				? pasarela
+				: pasarelasHabilitadas[0]?.id;
 			if (!gatewayActivo) {
 				alert("No hay pasarelas de pago disponibles. Contacta a soporte.");
 				setLoading(false);
@@ -824,6 +828,12 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 						</div>
 					</div>
 
+					<SelectorPasarela
+						pasarela={pasarela}
+						onChange={setPasarela}
+						className="pt-4 border-t"
+					/>
+
 					{/* Botones de acción - Stacked en Móvil, Row en PC */}
 					<div className="flex flex-col-reverse md:flex-row gap-3 pt-4 border-t md:justify-end sticky md:relative bottom-0 bg-white/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none pb-1 mt-6">
 						<Button
@@ -845,7 +855,7 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 						</WhatsAppButton>
 						<Button
 							type="submit"
-							disabled={loading}
+							disabled={loading || loadingPasarelas}
 							className="w-full md:w-auto md:px-10 h-12 md:h-11 bg-green-600 hover:bg-green-700 text-white font-bold text-lg md:text-base shadow-md transition-all active:scale-[0.98]"
 						>
 							{loading

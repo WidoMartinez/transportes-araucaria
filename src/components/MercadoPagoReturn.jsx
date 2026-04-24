@@ -141,7 +141,8 @@ function MercadoPagoReturn() {
 				// sobre la misma reserva dentro de una misma sesión.
 				const conversionKey = `mp_conversion_${transactionId}`;
 
-				if (sessionStorage.getItem(conversionKey)) {
+				if (sessionStorage.getItem(conversionKey) || 
+					(reservaId && sessionStorage.getItem(`conversion_sent_${reservaId}`))) {
 					console.log(
 						"ℹ️ [MPReturn] Conversión ya registrada para esta sesión (deduplicada):",
 						transactionId,
@@ -209,11 +210,15 @@ function MercadoPagoReturn() {
 				}
 
 				// Disparar evento de conversión Purchase de Google Ads
+				// Detectar si es una reserva de hotel
+				const isHotel = urlParams.get("hotel") === "1";
+
 				const conversionData = {
 					send_to: "AW-17529712870/yZz-CJqiicUbEObh6KZB",
 					value: conversionValue,
 					currency: "CLP",
 					transaction_id: transactionId,
+					hotel_transfer: isHotel ? 1 : 0
 				};
 
 				console.log(
@@ -222,6 +227,9 @@ function MercadoPagoReturn() {
 				);
 				window.gtag("event", "conversion", conversionData);
 				sessionStorage.setItem(conversionKey, "true");
+				if (reservaId) {
+					sessionStorage.setItem(`conversion_sent_${reservaId}`, "true");
+				}
 			} catch (convErr) {
 				console.error(
 					"❌ [MPReturn] Error al disparar evento de conversión:",

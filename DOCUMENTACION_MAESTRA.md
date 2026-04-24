@@ -986,6 +986,9 @@ Frontend (selector UI)
 | `src/components/PagarConCodigo.jsx`    | Modificado | Estado `pasarela`, funciÃ³n `procesarPagoConCodigoMP()`, selector UI                            |
 | `src/components/ConsultarReserva.jsx`  | Modificado | Estado `pasarela`, lÃ³gica bifurcada en `continuarPago()`, selector UI                          |
 | `src/components/HeroExpress.jsx`       | Modificado | Estado `pasarela`, selector UI, `handleProcesarPago(pasarela, ...)`                            |
+| `src/pages/OportunidadesTraslado.jsx`  | Modificado | Selector UI y uso de la pasarela elegida para reservas de oportunidades                         |
+| `src/components/ReservaRapidaModal.jsx`| Modificado | Selector UI y uso de la pasarela elegida para banners/promociones                               |
+| `src/components/CompraProductos.jsx`   | Modificado | Selector UI y uso de la pasarela elegida para pagos de productos y saldo                        |
 | `backend/server-db.js`                 | Modificado | Endpoints `POST /api/create-payment-mp` y `POST /api/mp-confirmation` + import SDK             |
 | `backend/package.json`                 | Modificado | Dependencia `mercadopago` SDK v2 instalada                                                     |
 
@@ -1025,7 +1028,7 @@ Campos de la preferencia que cumplen el checklist de calidad MP (14 campos reque
 - `metadata`: campos completos de la reserva
 - `expires`: `true` con ventana de 2 horas
 
-Guarda el `preference.id` en tabla `FlowToken` con `gateway: "mercadopago"` dentro de `metadata`. El fallback de `/api/payment-status` normaliza esa metadata aunque MySQL/Sequelize la devuelva como texto JSON y, como defensa adicional, reconoce el formato de `preference.id` para no consultar Flow con tokens de Mercado Pago.
+Guarda el `preference.id` en tabla `FlowToken` con `gateway: "mercadopago"` dentro de `metadata` y la URL efectiva de pago (`payUrl`) ya resuelta. El fallback de `/api/payment-status` normaliza esa metadata aunque MySQL/Sequelize la devuelva como texto JSON y, como defensa adicional, reconoce el formato de `preference.id` para no consultar Flow con tokens de Mercado Pago.
 
 En desarrollo (`NODE_ENV=development` o `MP_SANDBOX=true`) usa `sandbox_init_point`.
 
@@ -1076,7 +1079,7 @@ MP_SANDBOX=false                                       # Omitir o false en produ
 
 #### Selector de pasarela (UI)
 
-En los tres puntos de entrada de pago se muestra un selector de 2 botones antes del botÃ³n de pago:
+En todos los puntos de entrada de pago con atribuciÃ³n de pasarela se muestra o respeta el selector antes del botÃ³n de pago:
 
 ```
 [ ðŸ’³ Flow ]  [ ðŸŸ¦ Mercado Pago ]
@@ -1085,6 +1088,8 @@ En los tres puntos de entrada de pago se muestra un selector de 2 botones antes 
 - Por defecto: `Flow` (sin cambio de comportamiento para usuarios existentes)
 - El texto del indicador de seguridad se adapta dinÃ¡micamente a la pasarela seleccionada
 - La lÃ³gica en `handlePayment` (App.jsx) selecciona el endpoint correcto segÃºn `gateway`
+- Superficies cubiertas: reserva express/hoteles (`HeroExpress`), pago con cÃ³digo, consultar reserva, oportunidades, banners/promociones y compra de productos/saldo.
+- Si una pasarela queda deshabilitada desde admin, `SelectorPasarela` cambia automÃ¡ticamente a la primera pasarela habilitada antes de crear el pago.
 
 #### Consideraciones de seguridad
 
@@ -1188,7 +1193,7 @@ Permitir que el panel admin controle, sin deploy, quÃ© pasarelas de pago estÃ
 
 - Admin guarda habilitaciÃ³n correctamente.
 - Logo se sube y queda visible en vista previa admin.
-- Logo se refleja en HeroExpress, ConsultarReserva y PagarConCodigo.
+- Logo se refleja en HeroExpress, ConsultarReserva, PagarConCodigo, OportunidadesTraslado, ReservaRapidaModal y CompraProductos.
 - Con 1 pasarela activa se muestra tarjeta fija con imagen.
 - Con 2 pasarelas activas se muestran ambas opciones.
 

@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import OportunidadCard from "../components/OportunidadCard";
 import SuscripcionOportunidades from "../components/SuscripcionOportunidades";
+import SelectorPasarela from "../components/SelectorPasarela";
 import { getBackendUrl } from "../lib/backend";
 import { validatePaymentAmount } from "../utils/paymentValidation";
 import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
@@ -69,6 +70,7 @@ const [filtros, setFiltros] = useState({
 const [modalOpen, setModalOpen] = useState(false);
 const [oportunidadSeleccionada, setOportunidadSeleccionada] = useState(null);
 const [submittingReserva, setSubmittingReserva] = useState(false);
+const [pasarela, setPasarela] = useState("flow");
   const [reservaFormData, setReservaFormData] = useState({
     nombre: "",
     email: "",
@@ -245,13 +247,15 @@ return () => clearInterval(intervalId);
           email: reservaFormData.email
         });
         
-        // Proceder al pago automáticamente según la pasarela habilitada en configuración
+        // Proceder al pago con la pasarela seleccionada y validada contra la configuracion vigente
         if (loadingPasarelas) {
           alert("Cargando opciones de pago, intenta nuevamente en un momento.");
           setSubmittingReserva(false);
           return;
         }
-        const gatewayActivo = pasarelasHabilitadas[0]?.id;
+        const gatewayActivo = pasarelasHabilitadas.some((p) => p.id === pasarela)
+          ? pasarela
+          : pasarelasHabilitadas[0]?.id;
         if (!gatewayActivo) {
           alert("No hay pasarelas de pago disponibles. Contacta a soporte.");
           return;
@@ -824,10 +828,12 @@ onReservar={handleReservar}
               </p>
             )}
 
+            <SelectorPasarela pasarela={pasarela} onChange={setPasarela} />
+
             <Button
               className="h-12 w-full rounded-xl bg-secondary text-base font-bold text-secondary-foreground shadow-md transition-all hover:bg-secondary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={handleConfirmarReserva}
-              disabled={submittingReserva || !aceptaTerminos}
+              disabled={submittingReserva || loadingPasarelas || !aceptaTerminos}
             >
               {submittingReserva ? (
                 <>

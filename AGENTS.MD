@@ -180,6 +180,7 @@ Los skills son guías de conocimiento especializado que los agentes deben leer a
 | `admin-precios` | `.github/skills/admin-precios/SKILL.md` | Tarifas, descuentos, precios dinámicos |
 | `auditoria-conversiones` | `.github/skills/auditoria-conversiones/SKILL.md` | Google Ads, Meta, tracking de conversiones |
 | `deploy-checklist` | `.github/skills/deploy-checklist/SKILL.md` | Verificación antes de deploy a producción |
+| `gestion-infraestructura-render` | `.github/skills/gestion-infraestructura-render/SKILL.md` | Diagnóstico y consultas de servicios, logs, métricas, deploys, DB y variables en Render.com vía MCP oficial |
 | `google-maps-autocomplete` | `.github/skills/google-maps-autocomplete/SKILL.md` | Autocompletado de direcciones con Google Maps |
 | `mercadopago-checkout-pro` | `.github/skills/mercadopago-checkout-pro/SKILL.md` | Integración y debug de Mercado Pago |
 | `optimizador-seo` | `.github/skills/optimizador-seo/SKILL.md` | SEO, keywords, meta tags, schema.org |

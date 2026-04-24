@@ -630,8 +630,20 @@ function AdminReservas() {
 		if (!selectedReserva?.id) return;
 		setLoadingRecuperarPago(true);
 		try {
+			const metodoPagoReserva = String(
+				selectedReserva?.pagoGateway || selectedReserva?.metodoPago || "",
+			).toLowerCase();
+			const gatewayReserva =
+				metodoPagoReserva.includes("mercado") || metodoPagoReserva === "mp"
+					? "mercadopago"
+					: metodoPagoReserva.includes("flow")
+						? "flow"
+						: "";
+			const gatewayParam = gatewayReserva
+				? `&gateway=${encodeURIComponent(gatewayReserva)}`
+				: "";
 			const resp = await fetch(
-				`${apiUrl}/api/payment-status?reserva_id=${selectedReserva.id}`,
+				`${apiUrl}/api/payment-status?reserva_id=${selectedReserva.id}${gatewayParam}`,
 			);
 			if (!resp.ok) throw new Error(`Error ${resp.status}`);
 			const data = await resp.json();

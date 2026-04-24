@@ -9510,6 +9510,7 @@ app.post("/create-payment", async (req, res) => {
 		if (referenciaPago) optionalPayload.referenciaPago = referenciaPago;
 		if (paymentOrigin) optionalPayload.paymentOrigin = paymentOrigin;
 		if (codigoPagoId) optionalPayload.codigoPagoId = codigoPagoId;
+		optionalPayload.gateway = "flow";
 
 		const params = {
 			apiKey: process.env.FLOW_API_KEY,
@@ -13950,10 +13951,17 @@ const startServer = async () => {
 					},
 					order: [["created_at", "DESC"]],
 				});
-				if (tokenExistente && tokenExistente.metadata?.gateway === "mercadopago") {
+				const metadataExistente = normalizarMetadataTokenPago(
+					tokenExistente?.metadata,
+				);
+				if (
+					tokenExistente &&
+					metadataExistente.gateway === "mercadopago" &&
+					(metadataExistente.payUrl || metadataExistente.initPoint)
+				) {
 					console.log(`ℹ️ [MP] Reutilizando preferencia existente ${tokenExistente.token} para reserva ${reservaId}`);
 					return res.json({
-						url: tokenExistente.metadata?.payUrl || tokenExistente.metadata?.initPoint || null,
+						url: metadataExistente.payUrl || metadataExistente.initPoint,
 						preferenceId: tokenExistente.token,
 					});
 				}
@@ -13981,11 +13989,12 @@ const startServer = async () => {
 			// Identificar si es una reserva de hotel para añadir el flag correspondiente
 			const isHotelMP = paymentOrigin === "hotel";
 			const hotelParamMP = isHotelMP ? "&hotel=1" : "";
+			const userDataParamMP = encodedUserData ? `&d=${encodedUserData}` : "";
 
 			// URL de retorno exitoso: incluye todos los datos necesarios para tracking de conversión
-			const successUrl = `${frontendBase}/mp-return?status=success&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
-			const pendingUrl = `${frontendBase}/mp-return?status=pending&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${encodedUserData ? `&d=${encodedUserData}` : ""}`;
-			const failureUrl = `${frontendBase}/mp-return?status=error&reserva_id=${reservaId || ""}${hotelParamMP}`;
+			const successUrl = `${frontendBase}/mp-return?status=success&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${userDataParamMP}`;
+			const pendingUrl = `${frontendBase}/mp-return?status=pending&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${userDataParamMP}`;
+			const failureUrl = `${frontendBase}/mp-return?status=error&amount=${amountNum}&reserva_id=${reservaId || ""}&codigo=${codigoReserva || ""}${hotelParamMP}${userDataParamMP}`;
 
 			// Separar nombre en first/last para el checklist de calidad de MP
 			const nameParts = (nombre || "Cliente").trim().split(" ");
@@ -14039,6 +14048,8 @@ const startServer = async () => {
 				statement_descriptor: "TRANSPORTES ARAUCANIA",
 				// 8. Metadata adicional (origen del pago)
 				metadata: {
+					gateway: "mercadopago",
+					amount: amountNum,
 					reservaId: reservaId || null,
 					codigoReserva: codigoReserva || null,
 					tipoPago: tipoPago || "total",
@@ -14071,6 +14082,14 @@ const startServer = async () => {
 				`✅ [MP] Preferencia creada: ${preference.id} para reserva ${reservaId}`,
 			);
 
+			// Usar sandbox en test/development, init_point en producción
+			const useSandbox =
+				process.env.NODE_ENV === "development" ||
+				process.env.MP_SANDBOX === "true";
+			const payUrl = useSandbox
+				? preference.sandbox_init_point
+				: preference.init_point;
+
 			// Guardar el ID de preferencia en FlowToken para poder rastrearlo después
 			// (reutilizamos el modelo FlowToken con gateway=mercadopago)
 			if (reservaId) {
@@ -14090,6 +14109,7 @@ const startServer = async () => {
 							paymentOrigin: paymentOrigin || "web",
 							codigoReserva: codigoReserva || null,
 							tipoPago: tipoPago || "total",
+							amount: amountNum,
 						},
 						// La preferencia MP expira en 2 horas (configurado en expires_in)
 						expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
@@ -14102,14 +14122,6 @@ const startServer = async () => {
 					);
 				}
 			}
-
-			// Usar sandbox en test/development, init_point en producción
-			const useSandbox =
-				process.env.NODE_ENV === "development" ||
-				process.env.MP_SANDBOX === "true";
-			const payUrl = useSandbox
-				? preference.sandbox_init_point
-				: preference.init_point;
 
 			return res.json({
 				url: payUrl,
