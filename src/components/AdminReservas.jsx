@@ -258,6 +258,11 @@ const BADGE_CANAL_TONO = {
 
 const SOURCE_LABELS = {
 	admin: { label: "Admin", tone: "suave", icon: Tag },
+	banner_promocional: {
+		label: "Banner promocional",
+		tone: "cafe",
+		icon: Tag,
+	},
 	codigo_pago: { label: "Cliente con codigo", tone: "cafe", icon: CreditCard },
 	cotizador: { label: "Cotizador", tone: "suave", icon: Tag },
 	lead_banner_abandonado: {
@@ -276,6 +281,11 @@ const SOURCE_LABELS = {
 		icon: MessageSquare,
 	},
 	manual: { label: "Manual / Web", tone: "suave", icon: Tag },
+	oportunidad: {
+		label: "Oportunidad de traslado",
+		tone: "especial",
+		icon: Tag,
+	},
 	web: { label: "Web", tone: "suave", icon: Tag },
 	web_app: { label: "Web App", tone: "suave", icon: Tag },
 	web_hoteles: { label: "Web Hoteles", tone: "suave", icon: Tag },

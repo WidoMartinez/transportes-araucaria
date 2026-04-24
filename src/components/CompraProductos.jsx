@@ -5,10 +5,12 @@ import { AlertCircle, Loader2, CreditCard } from "lucide-react";
 
 import { getBackendUrl } from "../lib/backend";
 import ProductosReserva from "./ProductosReserva";
+import { usePasarelasConfig } from "../hooks/usePasarelasConfig";
 
 const API_URL = getBackendUrl() || "https://transportes-araucaria.onrender.com";
 
 function CompraProductos() {
+	const { pasarelasHabilitadas, loading: loadingPasarelas } = usePasarelasConfig();
 	const [reserva, setReserva] = useState(null);
 	const [error, setError] = useState(null);
 	const [paying, setPaying] = useState(false);
@@ -65,19 +67,49 @@ function CompraProductos() {
 			if (!monto || monto <= 0) {
 				throw new Error("No hay monto disponible para generar el pago");
 			}
-			const description = `Pago de productos para la reserva ${reserva.codigoReserva}`;
 
-			const resp = await fetch(`${apiBase}/create-payment`, {
+			if (loadingPasarelas) {
+				throw new Error("Cargando opciones de pago, intenta nuevamente en un momento.");
+			}
+
+			const gatewayActivo = pasarelasHabilitadas[0]?.id;
+			if (!gatewayActivo) {
+				throw new Error("No hay pasarelas de pago disponibles. Contacta a soporte.");
+			}
+
+			const description = `Pago de productos para la reserva ${reserva.codigoReserva}`;
+			const endpoint =
+				gatewayActivo === "mercadopago"
+					? `${apiBase}/api/create-payment-mp`
+					: `${apiBase}/create-payment`;
+			const body =
+				gatewayActivo === "mercadopago"
+					? {
+							amount: monto,
+							description,
+							email: reserva.email,
+							nombre: reserva.nombre,
+							telefono: reserva.telefono,
+							reservaId: reserva.id,
+							codigoReserva: reserva.codigoReserva,
+							tipoPago: "total",
+							paymentOrigin: "compra_productos",
+						}
+					: {
+							gateway: "flow",
+							amount: monto,
+							description,
+							email: reserva.email,
+							reservaId: reserva.id,
+							codigoReserva: reserva.codigoReserva,
+							tipoPago: "total",
+							paymentOrigin: "compra_productos",
+						};
+
+			const resp = await fetch(endpoint, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					gateway: "flow",
-					amount: monto,
-					description,
-					email: reserva.email,
-					reservationId: reserva.id,
-					paymentOrigin: "compra_productos",
-				}),
+				body: JSON.stringify(body),
 			});
 			if (!resp.ok) {
 				const detail = await resp.text().catch(() => "");
