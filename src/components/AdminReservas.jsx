@@ -4744,9 +4744,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 																		: "Asignar vehÃ­culo y conductor"
 																}
 															>
-																<span role="img" aria-label="auto">
-																	ðŸš—
-																</span>
+																<Car className="w-4 h-4" aria-hidden="true" />
 															</Button>
 														)}
 
@@ -8046,21 +8044,21 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 				</AlertDialogContent>
 			</AlertDialog>
 
-			{/* Dialog para asignar vehÃƒÂ­culo y conductor */}
+			{/* Dialog para asignar vehiculo y conductor */}
 			<Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
 				<DialogContent className="max-w-lg">
 					<DialogHeader>
 						<DialogTitle>
-							Asignar VehÃ­culo y Conductor - Reserva #{selectedReserva?.id}
+							Asignar vehiculo y conductor - Reserva #{selectedReserva?.id}
 						</DialogTitle>
 						<DialogDescription>
-							Asigna un vehÃ­culo y opcionalmente un conductor a esta reserva
+							Asigna un vehiculo y opcionalmente un conductor a esta reserva
 							pagada
 						</DialogDescription>
 					</DialogHeader>
 
 					<div className="space-y-4 py-4">
-						{/* InformaciÃƒÂ³n de la reserva */}
+						{/* Informacion de la reserva */}
 						<div className="bg-muted p-3 rounded-lg space-y-1 text-sm">
 							<p>
 								<strong>Cliente:</strong> {selectedReserva?.nombre}
@@ -8102,7 +8100,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									</span>
 								</div>
 								<p className="text-sm text-blue-700 mb-3">
-									Vuelta: {reservaVuelta.origen} â†’ {reservaVuelta.destino} el{" "}
+									Vuelta: {reservaVuelta.origen} {"->"} {reservaVuelta.destino} el{" "}
 									{reservaVuelta.fecha
 										? new Date(reservaVuelta.fecha).toLocaleDateString("es-CL")
 										: ""}
@@ -8119,13 +8117,13 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										htmlFor="asignar-ambas"
 										className="text-sm cursor-pointer text-blue-900"
 									>
-										Asignar el mismo conductor y vehÃ­culo para ambos tramos
+										Asignar el mismo conductor y vehiculo para ambos tramos
 									</label>
 								</div>
 							</div>
 						)}
 
-						{/* SecciÃ³n IDA */}
+						{/* Seccion IDA */}
 						<div className="space-y-4">
 							{reservaVuelta && (
 								<div className="font-medium flex items-center gap-2">
@@ -8135,21 +8133,21 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									>
 										IDA
 									</Badge>
-									{selectedReserva?.origen} â†’ {selectedReserva?.destino}
+									{selectedReserva?.origen} {"->"} {selectedReserva?.destino}
 								</div>
 							)}
 
-							{/* Selector de vehÃ­culo */}
+							{/* Selector de vehiculo */}
 							<div className="space-y-2">
 								<Label htmlFor="vehiculo">
-									VehÃ­culo <span className="text-red-500">*</span>
+									Vehiculo <span className="text-red-500">*</span>
 								</Label>
 								<Select
 									value={vehiculoSeleccionado}
 									onValueChange={setVehiculoSeleccionado}
 								>
 									<SelectTrigger id="vehiculo">
-										<SelectValue placeholder="Selecciona un vehÃ­culo" />
+										<SelectValue placeholder="Selecciona un vehiculo" />
 									</SelectTrigger>
 									<SelectContent>
 										{vehiculos
@@ -8202,7 +8200,7 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							</div>
 						</div>
 
-						{/* SecciÃ³n VUELTA (solo si existe y NO estÃ¡ marcado "asignar ambas") */}
+						{/* Seccion VUELTA (solo si existe y NO esta marcado "asignar ambas") */}
 						{reservaVuelta && !asignarAmbas && (
 							<div className="space-y-4 pt-4 border-t">
 								<div className="font-medium flex items-center gap-2">
@@ -8212,20 +8210,20 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 									>
 										VUELTA
 									</Badge>
-									{reservaVuelta.origen} â†’ {reservaVuelta.destino}
+									{reservaVuelta.origen} {"->"} {reservaVuelta.destino}
 								</div>
 
-								{/* Selector de vehÃ­culo VUELTA */}
+								{/* Selector de vehiculo VUELTA */}
 								<div className="space-y-2">
 									<Label htmlFor="vehiculo-vuelta">
-										VehÃ­culo <span className="text-red-500">*</span>
+										Vehiculo <span className="text-red-500">*</span>
 									</Label>
 									<Select
 										value={vueltaVehiculoSeleccionado}
 										onValueChange={setVueltaVehiculoSeleccionado}
 									>
 										<SelectTrigger id="vehiculo-vuelta">
-											<SelectValue placeholder="Selecciona un vehÃ­culo" />
+											<SelectValue placeholder="Selecciona un vehiculo" />
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="none">Sin asignar</SelectItem>
@@ -8246,8 +8244,8 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										</SelectContent>
 									</Select>
 									<p className="text-xs text-muted-foreground">
-										Si dejas este tramo sin vehÃ­culo, se guardarÃ¡ solo la
-										asignaciÃ³n de la IDA.
+										Si dejas este tramo sin vehiculo, se guardara solo la
+										asignacion de la IDA.
 									</p>
 								</div>
 
@@ -8274,9 +8272,9 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 							</div>
 						)}
 
-						{/* Sin ediciÃƒÂ³n de ruta en reasignaciÃƒÂ³n */}
+						{/* Sin edicion de ruta en reasignacion */}
 
-						{/* Enviar notificaciÃ³n */}
+						{/* Enviar notificacion */}
 						<div className="flex items-center gap-2 pt-2">
 							<Checkbox
 								id="enviar-notificacion"
@@ -8287,11 +8285,11 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								htmlFor="enviar-notificacion"
 								className="text-sm text-muted-foreground cursor-pointer"
 							>
-								Enviar notificaciÃ³n por correo al cliente
+								Enviar notificacion por correo al cliente
 							</label>
 						</div>
 
-						{/* Enviar notificaciÃ³n al conductor */}
+						{/* Enviar notificacion al conductor */}
 						<div className="flex items-center gap-2">
 							<Checkbox
 								id="enviar-notificacion-conductor"
@@ -8304,42 +8302,53 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 								htmlFor="enviar-notificacion-conductor"
 								className="text-sm text-muted-foreground cursor-pointer"
 							>
-								Enviar notificaciÃ³n por correo al conductor
+								Enviar notificacion por correo al conductor
 							</label>
 						</div>
 
-						{/* Mostrar info de asignaciÃ³n solo si la reserva confirmada ya tiene vehÃ­culo */}
+						{/* Mostrar info de asignacion solo si la reserva confirmada ya tiene vehiculo */}
 						{selectedReserva?.estado === "confirmada" &&
 							hasVehiculoAsignado && (
 								<div className="bg-chocolate-50 p-3 rounded-lg space-y-2 text-sm">
-									<p className="font-semibold">AsignaciÃ³n actual:</p>
+									<p className="font-semibold">Asignacion actual:</p>
 
 									{/* IDA */}
 									<div className={reservaVuelta ? "border-b pb-2" : ""}>
 										{reservaVuelta && (
 											<p className="text-xs font-medium text-green-700 mb-1">
-												â†— IDA
+												IDA
 											</p>
 										)}
 										{selectedReserva.vehiculo_asignado ? (
-											<p>
-												ðŸš— VehÃ­culo: {selectedReserva.vehiculo_asignado.tipo} (
+											<p className="flex items-center gap-1">
+												<Car className="h-3.5 w-3.5" aria-hidden="true" />
+												Vehiculo: {selectedReserva.vehiculo_asignado.tipo} (
 												{selectedReserva.vehiculo_asignado.patente})
 											</p>
 										) : selectedReserva?.vehiculo ? (
-											<p>ðŸš— VehÃ­culo: {selectedReserva.vehiculo}</p>
+											<p className="flex items-center gap-1">
+												<Car className="h-3.5 w-3.5" aria-hidden="true" />
+												Vehiculo: {selectedReserva.vehiculo}
+											</p>
 										) : null}
 										{hasConductorAsignado ? (
 											selectedReserva.conductor_asignado ? (
-												<p>
-													ðŸ‘¤ Conductor:{" "}
+												<p className="flex items-center gap-1">
+													<User className="h-3.5 w-3.5" aria-hidden="true" />
+													Conductor:{" "}
 													{selectedReserva.conductor_asignado.nombre}
 												</p>
 											) : selectedReserva?.conductor &&
 											  selectedReserva.conductor !== "Por asignar" ? (
-												<p>ðŸ‘¤ Conductor: {selectedReserva.conductor}</p>
+												<p className="flex items-center gap-1">
+													<User className="h-3.5 w-3.5" aria-hidden="true" />
+													Conductor: {selectedReserva.conductor}
+												</p>
 											) : conductorEnObsIda ? (
-												<p>ðŸ‘¤ Conductor: {conductorEnObsIda}</p>
+												<p className="flex items-center gap-1">
+													<User className="h-3.5 w-3.5" aria-hidden="true" />
+													Conductor: {conductorEnObsIda}
+												</p>
 											) : null
 										) : (
 											<p className="text-muted-foreground">
@@ -8353,10 +8362,13 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 										(reservaVuelta.vehiculo || reservaVuelta.vehiculoId) && (
 											<div className="pt-1">
 												<p className="text-xs font-medium text-blue-700 mb-1">
-													â†© VUELTA
+													VUELTA
 												</p>
 												{reservaVuelta.vehiculo ? (
-													<p>ðŸš— VehÃ­culo: {reservaVuelta.vehiculo}</p>
+													<p className="flex items-center gap-1">
+														<Car className="h-3.5 w-3.5" aria-hidden="true" />
+														Vehiculo: {reservaVuelta.vehiculo}
+													</p>
 												) : null}
 												{(() => {
 													const conductorEnObsVuelta = getConductorFromObs(
@@ -8369,7 +8381,10 @@ Vimos que estabas cotizando un traslado de *${reserva.origen}* a *${reserva.dest
 														reservaVuelta?.conductor ||
 														conductorEnObsVuelta;
 													return nombreConductorVuelta ? (
-														<p>ðŸ‘¤ Conductor: {nombreConductorVuelta}</p>
+														<p className="flex items-center gap-1">
+															<User className="h-3.5 w-3.5" aria-hidden="true" />
+															Conductor: {nombreConductorVuelta}
+														</p>
 													) : (
 														<p className="text-muted-foreground">
 															No hay conductor asignado actualmente.
