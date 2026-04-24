@@ -1694,13 +1694,26 @@ function App() {
 
 			const data = await response.json();
 			if (data.url) {
+				// Para Flow: guardar en localStorage como red de seguridad por si el browser
+				// se cierra antes del redirect. El recovery en App.jsx lo detecta al volver.
+				// Para MP no es necesario: /mp-return dispara la conversión de forma garantizada.
+				if (!isMercadoPago && reservaIdParaPago) {
+					localStorage.setItem(
+						"ga_pending_conversion_express",
+						JSON.stringify({
+							reservaId: String(reservaIdParaPago),
+							amount: String(amount),
+							timestamp: Date.now(),
+						}),
+					);
+				}
 				if (typeof window.gtag === "function") {
 					window.gtag("event", "conversion", {
 						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 					});
 				}
-				// Redirigir en la misma pestaña para que el cliente pase por /mp-return
-				// y la conversión de compra se registre de forma garantizada
+				// Misma pestaña para ambas pasarelas: garantiza que el usuario pase
+				// por la página de retorno donde se dispara la conversión de compra
 				window.location.href = data.url;
 			} else {
 				throw new Error(

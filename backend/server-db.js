@@ -13936,8 +13936,8 @@ const startServer = async () => {
 				if (tokenExistente && tokenExistente.metadata?.gateway === "mercadopago") {
 					console.log(`ℹ️ [MP] Reutilizando preferencia existente ${tokenExistente.token} para reserva ${reservaId}`);
 					return res.json({
-						preference_id: tokenExistente.token,
-						init_point: tokenExistente.metadata?.initPoint || null,
+						url: tokenExistente.metadata?.payUrl || tokenExistente.metadata?.initPoint || null,
+						preferenceId: tokenExistente.token,
 					});
 				}
 			}
@@ -14067,6 +14067,7 @@ const startServer = async () => {
 						metadata: {
 							gateway: "mercadopago",
 							preferenceId: preference.id,
+							payUrl: payUrl,
 							initPoint: preference.init_point || null,
 							externalReference: externalRef,
 							paymentOrigin: paymentOrigin || "web",

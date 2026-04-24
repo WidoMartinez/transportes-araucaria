@@ -44,6 +44,10 @@ function MercadoPagoReturn() {
 	// estados: processing | success | pending | error
 	const [paymentStatus, setPaymentStatus] = useState("processing");
 
+	// Extraer reservaId aquí para usarlo en el render (botón completar dirección)
+	const urlParamsGlobal = new URLSearchParams(window.location.search);
+	const reservaIdGlobal = urlParamsGlobal.get("reserva_id");
+
 	useEffect(() => {
 		const urlParams = new URLSearchParams(window.location.search);
 
@@ -515,9 +519,21 @@ function MercadoPagoReturn() {
 						<div className="flex flex-col sm:flex-row gap-3 pt-4">
 							{paymentStatus === "success" && (
 								<>
-									<Button onClick={handleGoHome} className="flex-1" size="lg">
-										Volver al Inicio
-									</Button>
+									{reservaIdGlobal ? (
+										<Button
+											onClick={() => {
+												window.location.href = `/#completar-detalles?id=${reservaIdGlobal}`;
+											}}
+											className="flex-1"
+											size="lg"
+										>
+											Completar dirección de viaje
+										</Button>
+									) : (
+										<Button onClick={handleGoHome} className="flex-1" size="lg">
+											Volver al Inicio
+										</Button>
+									)}
 									<Button
 										onClick={handleContactSupport}
 										variant="outline"
