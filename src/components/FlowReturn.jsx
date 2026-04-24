@@ -55,6 +55,10 @@ function normalizePhoneToE164(phone) {
 function FlowReturn() {
 	const [paymentStatus, setPaymentStatus] = useState("processing"); // processing, success, error
 
+	// Extraer reservaId a nivel de componente para usarlo en el botón "Completar dirección"
+	const urlParamsGlobal = new URLSearchParams(window.location.search);
+	const reservaIdGlobal = urlParamsGlobal.get("reserva_id");
+
 	useEffect(() => {
 		// Extraer token de Flow de los parámetros de URL
 		const urlParams = new URLSearchParams(window.location.search);
@@ -569,9 +573,21 @@ function FlowReturn() {
 						<div className="flex flex-col sm:flex-row gap-3 pt-4">
 							{paymentStatus === "success" && (
 								<>
-									<Button onClick={handleGoHome} className="flex-1" size="lg">
-										Volver al Inicio
-									</Button>
+									{reservaIdGlobal ? (
+										<Button
+											onClick={() => {
+												window.location.href = `/#completar-detalles?id=${reservaIdGlobal}`;
+											}}
+											className="flex-1"
+											size="lg"
+										>
+											Completar dirección de viaje
+										</Button>
+									) : (
+										<Button onClick={handleGoHome} className="flex-1" size="lg">
+											Volver al Inicio
+										</Button>
+									)}
 									<Button
 										onClick={handleContactSupport}
 										variant="outline"
