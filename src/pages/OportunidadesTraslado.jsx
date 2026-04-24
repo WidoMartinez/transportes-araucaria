@@ -44,7 +44,7 @@ import { TERMINOS_CONDICIONES } from "../data/legal";
 import imagenOportunidades from "../assets/imagenoportunidades.png";
 const vansBg = imagenOportunidades;
 
-// Normaliza un nÃºmero de telÃ©fono al formato E.164 internacional
+// Normaliza un numero de telefono al formato E.164 internacional
 const normalizePhoneToE164 = (phone) => {
   if (!phone) return "";
   let cleaned = phone.replace(/[\s\-()]/g, "");
@@ -115,7 +115,7 @@ setError(data.error || "Error al cargar oportunidades");
 }
 } catch (err) {
 console.error("Error:", err);
-setError("Error de conexiÃ³n. Por favor intenta nuevamente.");
+setError("Error de conexion. Por favor intenta nuevamente.");
 } finally {
 setLoading(false);
 }
@@ -127,7 +127,7 @@ cargarOportunidades();
 
 useEffect(() => {
 const intervalId = setInterval(() => {
-console.log("Actualizando oportunidades automÃ¡ticamente...");
+console.log("Actualizando oportunidades automaticamente...");
 cargarOportunidades();
 }, 120000);
 return () => clearInterval(intervalId);
@@ -183,16 +183,16 @@ return () => clearInterval(intervalId);
     }
 
     if (!aceptaTerminos) {
-      setTerminosError("Debes aceptar los tÃ©rminos y condiciones para continuar.");
+      setTerminosError("Debes aceptar los terminos y condiciones para continuar.");
       return;
     }
 
     if (!validarTelefono(reservaFormData.telefono)) {
-      setPhoneError("Formato invÃ¡lido (ej: +56 9 1234 5678)");
+      setPhoneError("Formato invalido (ej: +56 9 1234 5678)");
       return;
     }
 
-    // ValidaciÃ³n de rango horario
+    // Validacion de rango horario
     const opHora = oportunidadSeleccionada.hora;
     const salidaHora = reservaFormData.horaSalida;
     const esIda = oportunidadSeleccionada.tipo === "ida_vacia";
@@ -228,7 +228,7 @@ return () => clearInterval(intervalId);
       const data = await response.json();
 
       if (data.success) {
-        // ValidaciÃ³n del precio antes de generar pago
+        // Validacion del precio antes de generar pago
         const precioValidado = validatePaymentAmount(data.precio);
         
         if (precioValidado <= 0) {
@@ -236,7 +236,7 @@ return () => clearInterval(intervalId);
           return;
         }
         
-        console.log(`ðŸ’° [Oportunidades] Iniciando pago:`, {
+        console.log("[Oportunidades] Iniciando pago:", {
           precioOriginal: data.precio,
           precioValidado: precioValidado,
           oportunidadId: oportunidadSeleccionada.id,
@@ -294,15 +294,15 @@ return () => clearInterval(intervalId);
 
         const paymentData = await paymentResponse.json();
         if (paymentData.url) {
-          // âœ… Lead: registrar intenciÃ³n de pago antes de redirigir a Flow
-          // Usar waitForGtag para garantizar que el evento se envÃ­e incluso si gtag.js
-          // aÃºn no terminÃ³ de cargar (poco probable tras el tiempo del formulario + API, pero seguro).
+          // Lead: registrar intencion de pago antes de redirigir a Flow
+          // Usar waitForGtag para garantizar que el evento se envie incluso si gtag.js
+          // aun no termino de cargar (poco probable tras el tiempo del formulario + API, pero seguro).
           const waitForGtag = () => new Promise((resolve) => {
             if (typeof window.gtag === "function") { resolve(); return; }
             const inicio = Date.now();
             const iv = setInterval(() => {
               if (typeof window.gtag === "function") { clearInterval(iv); resolve(); }
-              else if (Date.now() - inicio >= 2000) { clearInterval(iv); resolve(); } // 2s mÃ¡x para no bloquear la navegaciÃ³n
+              else if (Date.now() - inicio >= 2000) { clearInterval(iv); resolve(); } // 2s max para no bloquear la navegacion
             }, 50);
           });
 
@@ -340,7 +340,7 @@ return () => clearInterval(intervalId);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error de conexiÃ³n. Intenta nuevamente.");
+      alert("Error de conexion. Intenta nuevamente.");
     } finally {
       setSubmittingReserva(false);
     }
