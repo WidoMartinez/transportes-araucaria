@@ -713,6 +713,8 @@ function App() {
 						currency: "CLP",
 						transaction_id: transactionId,
 					};
+					const gtagListoCompra = await waitForGtag();
+					if (!gtagListoCompra) return;
 
 					// ✅ Enhanced Conversions: usar gtag('set', 'user_data', ...) para máxima compatibilidad
 					const userData = {};
@@ -1707,7 +1709,47 @@ function App() {
 						}),
 					);
 				}
-				if (typeof window.gtag === "function") {
+				const waitForGtagLeadPago = (timeoutMs = 2000) =>
+					new Promise((resolve) => {
+						if (
+							typeof window !== "undefined" &&
+							typeof window.gtag === "function"
+						) {
+							resolve(true);
+							return;
+						}
+						const startTime = Date.now();
+						const interval = setInterval(() => {
+							if (
+								typeof window !== "undefined" &&
+								typeof window.gtag === "function"
+							) {
+								clearInterval(interval);
+								resolve(true);
+							} else if (Date.now() - startTime >= timeoutMs) {
+								clearInterval(interval);
+								resolve(false);
+							}
+						}, 50);
+					});
+
+				const gtagLeadListo = await waitForGtagLeadPago();
+				if (gtagLeadListo && typeof window.gtag === "function") {
+					const userData = {};
+					if (formData.email) userData.email = formData.email.toLowerCase().trim();
+					if (formData.telefono)
+						userData.phone_number = normalizePhoneToE164(formData.telefono);
+					if (formData.nombre) {
+						const nameParts = formData.nombre.trim().split(" ");
+						userData.address = {
+							first_name: nameParts[0]?.toLowerCase() || "",
+							last_name: nameParts.slice(1).join(" ")?.toLowerCase() || "",
+							country: "CL",
+						};
+					}
+					if (Object.keys(userData).length > 0) {
+						window.gtag("set", "user_data", userData);
+					}
 					window.gtag("event", "conversion", {
 						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 					});

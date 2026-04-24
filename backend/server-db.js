@@ -10410,6 +10410,23 @@ app.post("/api/payment-result", async (req, res) => {
 				const isCompraProductos = paymentOrigin === "compra_productos";
 				const isOportunidad = paymentOrigin === "oportunidad_traslado";
 				const isBanner = paymentOrigin === "banner_promocional";
+				const montoPendiente =
+					montoFlowActual > 0
+						? montoFlowActual
+						: Number(reserva?.pagoMonto) ||
+							Number(reserva?.montoTotal) ||
+							Number(reserva?.totalConDescuento) ||
+							Number(reserva?.precio) ||
+							SYMBOLIC_AMOUNT_CLP;
+				const pendingUserData = {
+					email: reserva?.email || optionalDataSafe?.email || "",
+					nombre: reserva?.nombre || "",
+					telefono: reserva?.telefono || "",
+				};
+				const pendingUserDataEncoded = encodeURIComponent(
+					Buffer.from(JSON.stringify(pendingUserData)).toString("base64"),
+				);
+				const pendingTrackingParams = `&amount=${montoPendiente}&d=${pendingUserDataEncoded}`;
 
 				if (
 					isCodigoPago ||
@@ -10418,22 +10435,22 @@ app.post("/api/payment-result", async (req, res) => {
 					isOportunidad ||
 					isBanner
 				) {
-					// Redirigir a FlowReturn con estado pendiente (sin monto para evitar conversión)
+					// Redirigir a FlowReturn con estado pendiente; la conversion espera a payment-status.
 					return res.redirect(
 						303,
-						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}`,
+						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}${pendingTrackingParams}`,
 					);
 				} else if (isHotel) {
 					// Hotel pendiente - redirigir a FlowReturn
 					return res.redirect(
 						303,
-						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}&hotel=1`,
+						`${frontendBase}/flow-return?token=${token}&status=pending&reserva_id=${reservaId}&hotel=1${pendingTrackingParams}`,
 					);
 				} else {
 					// Reserva Express - redirigir a home con estado pendiente
 					return res.redirect(
 						303,
-						`${frontendBase}/?flow_payment=pending&reserva_id=${reservaId}`,
+						`${frontendBase}/?flow_payment=pending&token=${token}&reserva_id=${reservaId}${pendingTrackingParams}`,
 					);
 				}
 			} else if (flowData.status === 3 || flowData.status === 4) {

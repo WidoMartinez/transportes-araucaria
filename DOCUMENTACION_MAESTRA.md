@@ -1432,6 +1432,8 @@ GET /api/payment-status?token=<flowToken>&reserva_id=<id>
 
 #### PatrÃ³n de Polling para `status=pending` (Implementado: 15 Marzo 2026)
 
+Los retornos `pending` deben conservar `amount` y `d` cuando esten disponibles. La conversion no se dispara hasta confirmar con `/api/payment-status`, pero esos parametros permiten mantener el monto y las conversiones avanzadas al pasar de `pending` a `success`.
+
 Cuando el backend redirige al frontend con `status=pending`, el componente React inicia un polling a `/api/payment-status`:
 
 ```javascript
@@ -1520,6 +1522,8 @@ if (gtagListo) {
 | `src/components/FlowReturn.jsx`        | Todos los flujos no-express       | `verifyPayment()` / polling â†’ `waitForGtag()`    |
 | `src/App.jsx`                          | Reserva Express (retorno al Home) | `dispararConversionExpress()` â†’ `waitForGtag()`  |
 | `src/components/CompletarDetalles.jsx` | Flujo Normal (respaldo)           | `dispararConversionRespaldo()` â†’ `waitForGtag()` |
+
+En Reserva Express, `App.jsx` debe esperar `waitForGtag()` antes de ejecutar `gtag("set", "user_data", ...)` y antes del evento Purchase. Esto evita perder conversiones avanzadas cuando `gtag.js` aun no termina de cargar al volver desde la pasarela.
 
 #### Archivos de Lead que usan `waitForGtag`
 
