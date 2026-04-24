@@ -9454,24 +9454,6 @@ app.post("/create-payment", async (req, res) => {
 	const backendBase =
 		process.env.BACKEND_URL || "https://transportes-araucaria.onrender.com";
 
-	// Validar que la pasarela solicitada esté habilitada en configuración
-	try {
-		const configPasarelas = await Configuracion.getValorParseado(
-			"config_pasarelas_pago",
-			{ flow: { habilitado: true }, mercadopago: { habilitado: true } },
-		);
-		if (configPasarelas?.[gateway]?.habilitado === false) {
-			console.warn(`[create-payment] Pasarela "${gateway}" está deshabilitada en configuración.`);
-			return res.status(400).json({
-				success: false,
-				error: `Pasarela ${gateway} deshabilitada`,
-				message: `La pasarela de pago "${gateway}" no está disponible actualmente.`,
-			});
-		}
-	} catch (configErr) {
-		console.warn("[create-payment] No se pudo verificar config de pasarela:", configErr.message);
-	}
-
 	if (gateway === "flow") {
 		const flowApiUrl = process.env.FLOW_API_URL || "https://www.flow.cl/api";
 		const codigoReservaNormalizado =

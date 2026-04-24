@@ -46,7 +46,7 @@ const normalizePhoneToE164 = (phone) => {
  * Solicita solo datos mínimos del cliente y fechas
  */
 export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
-	const { pasarelasHabilitadas } = usePasarelasConfig();
+	const { pasarelasHabilitadas, loading: loadingPasarelas } = usePasarelasConfig();
 	const [loading, setLoading] = useState(false);
 	const [rutaInvertida, setRutaInvertida] = useState(false);
 	const [formData, setFormData] = useState({
@@ -240,6 +240,11 @@ export default function ReservaRapidaModal({ isOpen, onClose, promocion }) {
 			const data = await response.json();
 
 			// Proceder al pago según la pasarela habilitada en configuración
+			if (loadingPasarelas) {
+				alert("Cargando opciones de pago, intenta nuevamente en un momento.");
+				setLoading(false);
+				return;
+			}
 			const gatewayActivo = pasarelasHabilitadas[0]?.id;
 			if (!gatewayActivo) {
 				alert("No hay pasarelas de pago disponibles. Contacta a soporte.");

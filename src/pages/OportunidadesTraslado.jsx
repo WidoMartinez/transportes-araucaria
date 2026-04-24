@@ -55,7 +55,7 @@ const normalizePhoneToE164 = (phone) => {
 };
 
 function OportunidadesTraslado() {
-const { pasarelasHabilitadas } = usePasarelasConfig();
+const { pasarelasHabilitadas, loading: loadingPasarelas } = usePasarelasConfig();
 const [oportunidades, setOportunidades] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
@@ -246,6 +246,11 @@ return () => clearInterval(intervalId);
         });
         
         // Proceder al pago automáticamente según la pasarela habilitada en configuración
+        if (loadingPasarelas) {
+          alert("Cargando opciones de pago, intenta nuevamente en un momento.");
+          setSubmittingReserva(false);
+          return;
+        }
         const gatewayActivo = pasarelasHabilitadas[0]?.id;
         if (!gatewayActivo) {
           alert("No hay pasarelas de pago disponibles. Contacta a soporte.");
