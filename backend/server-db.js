@@ -14245,6 +14245,53 @@ const startServer = async () => {
 				}
 			}
 
+			// Actualizar estado de pago en la reserva PRINCIPAL (Ida)
+			const pagoPrevio = parseFloat(reserva.pagoMonto || 0);
+			const pagoAcumulado = pagoPrevio + montoIda;
+			const totalReserva = parseFloat(reserva.totalConDescuento || 0);
+			const nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
+			const nuevoEstadoPago = pagoAcumulado >= totalReserva && totalReserva > 0 ? "pagado" : "parcial";
+
+			await reserva.update({
+				estadoPago: nuevoEstadoPago,
+				estado: nuevoEstadoPago === "pagado" ? "confirmada" : reserva.estado,
+				pagoMonto: pagoAcumulado,
+				pagoFecha: new Date(),
+				saldoPendiente: nuevoSaldoPendiente,
+				metodoPago: "mercadopago",
+				referenciaPagoExterno: String(paymentId),
+				pagoGateway: "mercadopago",
+				abonoPagado: true,
+				saldoPagado: nuevoEstadoPago === "pagado",
+			});
+			console.log(`✅ [MP-webhook] Reserva principal ${reserva.id} actualizada: estadoPago=${nuevoEstadoPago}, saldoPendiente=${nuevoSaldoPendiente}`);
+
+			// Crear registro de auditoría en tabla Transaccion
+			try {
+				await Transaccion.create({
+					reservaId: reserva.id,
+					codigoPagoId: null,
+					monto: montoActual,
+					gateway: "mercadopago",
+					transaccionId: String(paymentId),
+					referencia: externalRef,
+					tipoPago: nuevoEstadoPago === "pagado" ? "total" : "abono",
+					estado: "aprobado",
+					emailPagador: paymentData.payer?.email || reserva.email || null,
+					metadata: {
+						mpPaymentId: paymentId,
+						status: paymentData.status,
+						amount: montoActual,
+						paymentMethodId: paymentData.payment_method_id,
+						externalReference: externalRef,
+					},
+					notas: `Pago procesado vía MercadoPago. Acumulado: $${pagoAcumulado}`,
+				});
+				console.log(`💾 [MP-webhook] Transacción registrada: ID MP ${paymentId}, Monto $${montoActual}`);
+			} catch (transError) {
+				console.error("⚠️ [MP-webhook] Error registrando transacción:", transError.message);
+			}
+
 			// Enviar correo de confirmación via PHPMailer (mismo sistema que Flow)
 			const frontendBase =
 				process.env.FRONTEND_URL || "https://www.transportesaraucaria.cl";
