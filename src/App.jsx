@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import "./App.css";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useCotizacion } from "./hooks/useCotizacion";
 
 // --- UTILIDADES ---
@@ -332,6 +332,7 @@ function App() {
 		codigoOportunidad: null, // Código de oportunidad si la reserva viene de una oportunidad
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const isSubmittingRef = useRef(false);
 	const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 	const [codigoReservaCreada, setCodigoReservaCreada] = useState("");
 	const [phoneError, setPhoneError] = useState("");
@@ -1693,24 +1694,14 @@ function App() {
 
 			const data = await response.json();
 			if (data.url) {
-				// Guardar intención de conversión en localStorage ANTES de abrir Flow
-				// Permite recuperar la conversión si la nueva pestaña se cierra antes del redirect
-				if (reservaIdParaPago) {
-					localStorage.setItem(
-						"ga_pending_conversion_express",
-						JSON.stringify({
-							reservaId: String(reservaIdParaPago),
-							amount: String(amount),
-							timestamp: Date.now(),
-						}),
-					);
-				}
 				if (typeof window.gtag === "function") {
 					window.gtag("event", "conversion", {
 						send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 					});
 				}
-				window.open(data.url, "_blank");
+				// Redirigir en la misma pestaña para que el cliente pase por /mp-return
+				// y la conversión de compra se registre de forma garantizada
+				window.location.href = data.url;
 			} else {
 				throw new Error(
 					data.message || "No se pudo generar el enlace de pago.",
@@ -1932,7 +1923,7 @@ function App() {
 			};
 		}
 
-		if (isSubmitting) return { success: false, error: "procesando" };
+		if (isSubmittingRef.current) return { success: false, error: "procesando" };
 
 		// Validar que el precio esté disponible antes de enviar (evita race condition con useCotizacion)
 		const esRutaEstandar =
@@ -1958,6 +1949,7 @@ function App() {
 			}
 		}
 
+		isSubmittingRef.current = true;
 		setIsSubmitting(true);
 
 		const destinoFinal =
@@ -2121,6 +2113,7 @@ function App() {
 			console.error("Error al enviar reserva express:", error);
 			return { success: false, error: "server", message: error.message };
 		} finally {
+			isSubmittingRef.current = false;
 			setIsSubmitting(false);
 		}
 	};

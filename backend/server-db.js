@@ -3480,6 +3480,16 @@ function validarYSanitizarFecha(fecha, nombreCampo = "fecha") {
 	return fechaStr;
 }
 
+// Cache de deduplicación para /enviar-reserva-express: { email -> { timestamp, result } }
+const expressRecentRequests = new Map();
+const EXPRESS_DEBOUNCE_MS = 8000;
+setInterval(() => {
+	const cutoff = Date.now() - EXPRESS_DEBOUNCE_MS * 2;
+	for (const [key, val] of expressRecentRequests) {
+		if (val.timestamp < cutoff) expressRecentRequests.delete(key);
+	}
+}, 60000);
+
 // Endpoint para recibir reservas express (flujo simplificado)
 app.post("/enviar-reserva-express", async (req, res) => {
 	try {
@@ -3551,6 +3561,13 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			? formatearRUT(datosReserva.rut)
 			: null;
 		const emailNormalizado = sanitizarEmailRobusto(datosReserva.email);
+
+		// Deduplicar solicitudes idénticas en una ventana de 8 segundos
+		const cachedRequest = expressRecentRequests.get(emailNormalizado);
+		if (cachedRequest && Date.now() - cachedRequest.timestamp < EXPRESS_DEBOUNCE_MS) {
+			console.log(`⚠️ [express-debounce] Solicitud duplicada para ${emailNormalizado}. Devolviendo resultado cacheado.`);
+			return res.json(cachedRequest.result);
+		}
 
 		console.log("Reserva express recibida:", {
 			nombre: datosReserva.nombre,
@@ -4487,7 +4504,7 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			}
 		}
 
-		return res.json({
+		const resultadoExpress = {
 			success: true,
 			message: esModificacion
 				? "Reserva modificada correctamente"
@@ -4496,7 +4513,9 @@ app.post("/enviar-reserva-express", async (req, res) => {
 			codigoReserva: reservaExpress.codigoReserva,
 			tipo: "express",
 			esModificacion: esModificacion,
-		});
+		};
+		expressRecentRequests.set(emailNormalizado, { timestamp: Date.now(), result: resultadoExpress });
+		return res.json(resultadoExpress);
 	} catch (error) {
 		console.error("Error al procesar la reserva express:", error);
 		return res.status(500).json({
@@ -13905,6 +13924,24 @@ const startServer = async () => {
 				process.env.RENDER_EXTERNAL_URL ||
 				"https://transportes-araucaria.onrender.com";
 
+			// Si ya existe una preferencia MP válida para esta reserva, reutilizarla
+			if (reservaId) {
+				const tokenExistente = await FlowToken.findOne({
+					where: {
+						reservaId,
+						expiresAt: { [Op.gt]: new Date() },
+					},
+					order: [["created_at", "DESC"]],
+				});
+				if (tokenExistente && tokenExistente.metadata?.gateway === "mercadopago") {
+					console.log(`ℹ️ [MP] Reutilizando preferencia existente ${tokenExistente.token} para reserva ${reservaId}`);
+					return res.json({
+						preference_id: tokenExistente.token,
+						init_point: tokenExistente.metadata?.initPoint || null,
+					});
+				}
+			}
+
 			// Inicializar cliente de Mercado Pago con el access token del entorno
 			const mpClient = new MercadoPagoConfig({
 				accessToken: process.env.MP_ACCESS_TOKEN,
@@ -14030,6 +14067,7 @@ const startServer = async () => {
 						metadata: {
 							gateway: "mercadopago",
 							preferenceId: preference.id,
+							initPoint: preference.init_point || null,
 							externalReference: externalRef,
 							paymentOrigin: paymentOrigin || "web",
 							codigoReserva: codigoReserva || null,
@@ -14252,18 +14290,31 @@ const startServer = async () => {
 			const nuevoSaldoPendiente = Math.max(totalReserva - pagoAcumulado, 0);
 			const nuevoEstadoPago = pagoAcumulado >= totalReserva && totalReserva > 0 ? "pagado" : "parcial";
 
-			await reserva.update({
-				estadoPago: nuevoEstadoPago,
-				estado: nuevoEstadoPago === "pagado" ? "confirmada" : reserva.estado,
-				pagoMonto: pagoAcumulado,
-				pagoFecha: new Date(),
-				saldoPendiente: nuevoSaldoPendiente,
-				metodoPago: "mercadopago",
-				referenciaPagoExterno: String(paymentId),
-				pagoGateway: "mercadopago",
-				abonoPagado: true,
-				saldoPagado: nuevoEstadoPago === "pagado",
-			});
+			// UPDATE atómico: solo actualiza si la reserva aún no fue procesada por otro webhook
+			const [rowsUpdated] = await Reserva.update(
+				{
+					estadoPago: nuevoEstadoPago,
+					estado: nuevoEstadoPago === "pagado" ? "confirmada" : reserva.estado,
+					pagoMonto: pagoAcumulado,
+					pagoFecha: new Date(),
+					saldoPendiente: nuevoSaldoPendiente,
+					metodoPago: "mercadopago",
+					referenciaPagoExterno: String(paymentId),
+					pagoGateway: "mercadopago",
+					abonoPagado: true,
+					saldoPagado: nuevoEstadoPago === "pagado",
+				},
+				{
+					where: {
+						id: reserva.id,
+						estadoPago: { [Op.notIn]: ["pagado", "parcial"] },
+					},
+				}
+			);
+			if (rowsUpdated === 0) {
+				console.log(`ℹ️ [MP-webhook] Pago ${paymentId} ya fue procesado por otro webhook para reserva ${reserva.id}. Omitiendo.`);
+				return;
+			}
 			console.log(`✅ [MP-webhook] Reserva principal ${reserva.id} actualizada: estadoPago=${nuevoEstadoPago}, saldoPendiente=${nuevoSaldoPendiente}`);
 
 			// Crear registro de auditoría en tabla Transaccion

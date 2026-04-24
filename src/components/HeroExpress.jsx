@@ -347,7 +347,6 @@ function HeroExpress({
 		formData.fecha,
 		formData.hora,
 		formData.pasajeros,
-		pricing?.totalConDescuento,
 		esModoHoteles
 	]);
 
