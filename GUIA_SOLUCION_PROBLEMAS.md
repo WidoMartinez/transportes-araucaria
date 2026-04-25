@@ -2904,6 +2904,33 @@ node scripts/test-db-connection.js
    - **Plan premium**: 50-100 conexiones
 3. Contactar soporte de Hostinger para aumentar límite de conexiones.
 
+#### Caso C.1: Hostinger acepta todas las IPs, pero aparecen `Too many connections` y `ETIMEDOUT`
+
+**Síntoma**: El acceso remoto MySQL está abierto para todas las IPs (`%`), pero Render registra errores alternados:
+
+- `mensaje: 'Too many connections'`
+- `codigo: 'ETIMEDOUT'`
+- `SequelizeConnectionError` en reservas, configuración de precios o `config_sillas`
+
+**Causa**: Límite de conexiones simultáneas o saturación temporal del MySQL compartido de Hostinger. Si una conexión tarda hasta 90s en fallar, el cron de correos cada 60s puede solaparse con el ciclo anterior y agregar presión al pool.
+
+**Solución implementada**:
+
+1. `backend/config/database.js` usa un pool más conservador por defecto:
+   ```bash
+   DB_POOL_MAX=2
+   DB_POOL_ACQUIRE_MS=90000
+   DB_CONNECT_TIMEOUT_MS=90000
+   DB_RETRY_MAX=3
+   ```
+2. `backend/cron/emailProcessor.js` evita ciclos concurrentes del procesador de correos. Si el ciclo anterior sigue activo, el siguiente se omite y queda registro en logs.
+3. Si el problema persiste, reducir temporalmente:
+   ```bash
+   DB_POOL_MAX=1
+   DB_RETRY_MAX=1
+   ```
+   y solicitar a Hostinger revisión de `max_user_connections` / límite de conexiones del usuario MySQL.
+
 #### Caso D: Error persiste incluso con todos los ajustes
 
 **Síntoma**: ETIMEDOUT constante independiente de configuración.  

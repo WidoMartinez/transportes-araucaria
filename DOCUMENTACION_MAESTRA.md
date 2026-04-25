@@ -65,6 +65,19 @@ PÃ¡gina web profesional y sistema de gestiÃ³n para **Transportes Araucaria**
 - **Base de Datos**: MySQL (vÃ­a Sequelize).
 - **Infraestructura Legacy**: Scripts PHP para emails (hospedados en **Hostinger**).
 
+#### Conexión MySQL Render -> Hostinger
+
+La conexión Sequelize se centraliza en `backend/config/database.js`. Para no saturar MySQL compartido en Hostinger, el pool usa valores conservadores y configurables por variables de entorno:
+
+```env
+DB_POOL_MAX=2
+DB_POOL_ACQUIRE_MS=90000
+DB_CONNECT_TIMEOUT_MS=90000
+DB_RETRY_MAX=3
+```
+
+El procesador de correos (`backend/cron/emailProcessor.js`) se ejecuta cada 60s, pero bloquea ciclos concurrentes: si el ciclo anterior sigue activo por lentitud o timeout de BD, el siguiente se omite. Esto evita acumular conexiones cuando Hostinger responde con `Too many connections` o `ETIMEDOUT`.
+
 ---
 
 ## 2. GuÃ­a para Desarrolladores

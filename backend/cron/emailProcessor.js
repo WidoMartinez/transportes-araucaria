@@ -7,6 +7,7 @@ import sequelize from "../config/database.js";
 // Constantes para reintentos de conexión
 const MAX_CONNECTION_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 2000; // 2 segundos
+let processingPendingEmails = false;
 
 /**
  * Función helper para reintentos con backoff exponencial
@@ -32,6 +33,15 @@ async function retryWithBackoff(fn, retries = MAX_CONNECTION_RETRIES) {
 
 // Función para procesar correos pendientes
 export const processPendingEmails = async () => {
+	if (processingPendingEmails) {
+		console.log(
+			"⏭️ Ciclo de correos omitido: el proceso anterior sigue en ejecución",
+		);
+		return;
+	}
+
+	processingPendingEmails = true;
+
 	try {
 		// VERIFICAR CONEXIÓN A BD ANTES DE CONSULTAS
 		await retryWithBackoff(async () => {
@@ -323,5 +333,7 @@ export const processPendingEmails = async () => {
 
 		// Otros errores globales
 		console.error("❌ Error global en processPendingEmails:", globalError);
+	} finally {
+		processingPendingEmails = false;
 	}
 };

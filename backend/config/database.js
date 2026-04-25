@@ -4,6 +4,19 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const parsePositiveInt = (value, fallback) => {
+	const parsed = Number.parseInt(value, 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const DB_POOL_MAX = parsePositiveInt(process.env.DB_POOL_MAX, 2);
+const DB_POOL_ACQUIRE_MS = parsePositiveInt(process.env.DB_POOL_ACQUIRE_MS, 90000);
+const DB_CONNECT_TIMEOUT_MS = parsePositiveInt(
+	process.env.DB_CONNECT_TIMEOUT_MS,
+	90000,
+);
+const DB_RETRY_MAX = parsePositiveInt(process.env.DB_RETRY_MAX, 3);
+
 // Configuración de la base de datos MySQL en Hostinger
 const sequelize = new Sequelize({
 	database: process.env.DB_NAME || "u419311572_transportes_araucaria",
@@ -15,19 +28,19 @@ const sequelize = new Sequelize({
 	// Habilitar logging condicional para diagnóstico (DB_LOGGING=true en .env)
 	logging: process.env.DB_LOGGING === 'true' ? console.log : false,
 	pool: {
-		max: 5,
+		max: DB_POOL_MAX,
 		min: 0,
-		acquire: 90000, // Aumentado a 90 segundos para Render
+		acquire: DB_POOL_ACQUIRE_MS, // Ajustable para no saturar MySQL compartido en Hostinger
 		idle: 10000,
 	},
 	// Evitar conversiones automáticas de zona horaria que pueden desplazar DATE/DATEONLY
 	timezone: process.env.DB_TIMEZONE || "-04:00",
 	dialectOptions: {
-		connectTimeout: 90000, // Timeout de conexión: 90 segundos para Render
+		connectTimeout: DB_CONNECT_TIMEOUT_MS, // Ajustable para Render -> Hostinger
 		timezone: process.env.DB_TIMEZONE || "-04:00",
 	},
 	retry: {
-		max: 5, // Aumentado a 5 reintentos para mayor tolerancia en Render/Hostinger
+		max: DB_RETRY_MAX, // Ajustable para evitar ráfagas si Hostinger limita conexiones
 	},
 	define: {
 		timestamps: true,

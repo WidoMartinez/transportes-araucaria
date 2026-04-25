@@ -8,6 +8,7 @@
 		"start": "node server-db.js",
 		"migrate": "node migrations/add-cliente-fields.js",
 		"start:migrate": "node migrations/add-cliente-fields.js && node server-db.js || (echo 'MIGRACIÓN FALLÓ - ABORTANDO' && exit 1)",
+		"diagnose-db": "node scripts/test-db-connection.js",
 		"test:db": "node test-db.js",
 		"test:modificacion": "node test-reserva-modificacion.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
