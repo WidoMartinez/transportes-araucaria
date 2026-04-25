@@ -9,6 +9,7 @@ import {
 } from "./ui/card";
 import { Button } from "./ui/button";
 import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 // AVISO: Este archivo se despliega manualmente en Hostinger (frontend y PHP en Hostinger).
 // Cualquier cambio local debe subirse manualmente al servidor.
@@ -122,6 +123,7 @@ function Contacto() {
 											href="https://wa.me/56936643540" 
 											target="_blank" 
 											rel="noopener noreferrer"
+											onClick={() => void trackWhatsAppConversion("Contacto")}
 										>
 											<MessageCircle className="h-5 w-5 fill-current" />
 											Contactar por WhatsApp

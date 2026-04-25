@@ -679,7 +679,57 @@ else if (ev.vehiculo || ev.conductorId) {
 
 **Nota**: Si el problema persiste, revisar la carpeta `docs/legacy/` para bitácoras históricas más específicas.
 
-## 8. Configuración de Modal de WhatsApp
+## 9. Conversiones de WhatsApp No Se Marcan
+
+**Implementado: Abril 2026**
+
+### Problema
+
+Las conversiones de WhatsApp en Google Ads no se estaban registrando de forma consistente. Los síntomas incluían:
+- Discrepancia entre clics reales y conversiones en el dashboard de Ads.
+- Falta de tracking en puntos de contacto críticos (links de ayuda en retornos de pago).
+- Uso de etiquetas de conversión incorrectas en algunas páginas de aterrizaje.
+
+### Causa Raíz
+
+- **Fragmentación**: La lógica de `gtag` estaba dispersa en múltiples componentes, lo que dificultaba el mantenimiento y aumentaba el riesgo de errores.
+- **Falta de Deduplicación**: No había control para evitar múltiples disparos de conversión en la misma sesión, lo que podía ensuciar las métricas o ser bloqueado por Google.
+- **Scripts No Cargados**: Intentos de disparar conversiones antes de que el script de Google Ads estuviera totalmente cargado.
+
+### Solución Aplicada
+
+Se centralizó toda la lógica de tracking en una utilidad robusta.
+
+**1. Centralización (`src/lib/tracking.js`)**:
+Se creó una función `trackWhatsAppConversion` que:
+- Verifica la disponibilidad de `gtag` con reintentos durante 2 segundos.
+- Implementa deduplicación por sesión usando `sessionStorage` (`wa_conversion_fired`) solo después de confirmar que `gtag` está disponible.
+- Unifica el ID (`AW-17529712870`) y el Label (`M7-iCN_HtZUbEObh6KZB`).
+- Devuelve `true` si envió una conversión nueva y `false` si se omitió por deduplicación o falta de `gtag`.
+
+**2. Cobertura Total**:
+Se integró el tracking en todos los componentes que inician contacto por WhatsApp:
+- `WhatsAppButton.jsx` (Componente base usado en modales y soporte).
+- `Header.jsx` y `Footer.jsx` (Enlaces persistentes).
+- `Contacto.jsx` (Sección de contacto).
+- `LandingTraslados.jsx` (Landing page de Ads - se corrigió además el label de Lead).
+- `FlowReturn.jsx` y `MercadoPagoReturn.jsx` (Botones de ayuda tras fallo/éxito de pago).
+- `WhatsAppInterceptModal.jsx` (Modal de persuasión).
+
+**Comportamiento del Header**:
+Cuando el modal de intercepción está activo, `Header.jsx` no marca conversión al abrir el modal. La conversión se dispara recién si el usuario elige continuar por WhatsApp en `WhatsAppInterceptModal.jsx`. Si el modal está desactivado, `Header.jsx` marca la conversión antes de abrir WhatsApp directo.
+
+### Verificación
+
+Para confirmar que el tracking funciona:
+1. Abrir la consola del navegador (F12).
+2. Hacer clic en cualquier botón de WhatsApp.
+3. Debe aparecer el log: `[Source] Conversion de clic en WhatsApp enviada.` (Solo la primera vez por sesión).
+4. En la pestaña **Network**, filtrar por `collect?v=2` para ver el envío a Google Analytics / Ads.
+
+---
+
+## 10. Configuración de Modal de WhatsApp
 
 ### Problema
 
@@ -783,14 +833,15 @@ localStorage.getItem("token"); // Debe retornar un token válido
 
 **Verificación**:
 
-- El tracking debe dispararse en `handleWhatsAppClick()` en `Header.jsx`
+- Con modal activo, el tracking debe dispararse en `WhatsAppInterceptModal.jsx` cuando el usuario confirma WhatsApp.
+- Con modal inactivo, `Header.jsx` debe llamar a `trackWhatsAppConversion("Header")` antes de abrir WhatsApp directo.
 - Verificar en Network tab del navegador que se envía la petición a Google Ads
 - ID de conversión: `AW-17529712870/M7-iCN_HtZUbEObh6KZB`
 
 **Solución**:
 
-- El tracking está implementado antes de verificar la configuración, por lo que debería funcionar siempre
-- Si no funciona, revisar que la función `trackWhatsAppClick()` se esté ejecutando
+- El helper central es `src/lib/tracking.js`; espera `gtag` hasta 2 segundos y solo deduplica después de confirmar disponibilidad.
+- Si no funciona, revisar que `trackWhatsAppConversion()` se esté ejecutando desde el punto de contacto correspondiente.
 
 ### Verificación de Estado Correcto
 

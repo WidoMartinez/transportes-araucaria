@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 /**
  * Modal de intercepción para WhatsApp
@@ -39,24 +40,6 @@ export default function WhatsAppInterceptModal({
 					? `discount_${discountData.valor}`
 					: "no_discount",
 			});
-
-			// Si es clic en WhatsApp, enviar conversión solo si no fue disparada esta sesión
-			if (action === "modal_whatsapp_selected") {
-				const WHATSAPP_CONV_KEY = "wa_conversion_fired";
-				if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-					console.info(
-						"ℹ️ [WhatsAppInterceptModal] Conversión WhatsApp ya registrada esta sesión, se omite.",
-					);
-				} else {
-					sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
-					window.gtag("event", "conversion", {
-						send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-					});
-					console.log(
-						"✅ [WhatsAppInterceptModal] Conversión de clic en WhatsApp enviada.",
-					);
-				}
-			}
 		}
 	};
 
@@ -71,8 +54,9 @@ export default function WhatsAppInterceptModal({
 		onReserve();
 	};
 
-	const handleWhatsApp = () => {
+	const handleWhatsApp = async () => {
 		trackEvent("modal_whatsapp_selected");
+		await trackWhatsAppConversion("WhatsAppInterceptModal");
 		// Abrir WhatsApp en nueva pestaña
 		window.open("https://wa.me/56936643540", "_blank", "noopener,noreferrer");
 		onClose();

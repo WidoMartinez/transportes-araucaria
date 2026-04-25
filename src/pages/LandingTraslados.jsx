@@ -33,6 +33,7 @@ import fondoTraslados from "../assets/fondotraslados.png";
 import fondomovil from "../assets/fondomovil.png";
 import { getBackendUrl } from "../lib/backend";
 import { cn } from "@/lib/utils";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 // --- Constantes ---
 const WHATSAPP_NUMBER = "+56936643540";
@@ -43,7 +44,7 @@ const trackCotizacionConversion = () => {
 	if (typeof window !== "undefined" && typeof window.gtag === "function") {
 		// Evento de conversión específico para la campaña de traslados privados
 		window.gtag("event", "conversion", {
-			send_to: "AW-17529712870/traslados-cotizacion",
+			send_to: "AW-17529712870/8GVlCLP-05MbEObh6KZB",
 			event_category: "lead",
 			event_label: "cotizacion_traslado_privado",
 		});
@@ -55,27 +56,6 @@ const trackCotizacionConversion = () => {
 	}
 };
 
-// --- Tracker clic WhatsApp (con deduplicación por sesión) ---
-const WHATSAPP_CONV_KEY = "wa_conversion_fired";
-const trackWhatsAppTraslado = () => {
-	if (typeof window === "undefined" || typeof window.gtag !== "function")
-		return;
-	// Evitar disparar la conversión más de una vez por sesión de usuario
-	if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-		console.info(
-			"ℹ️ [LandingTraslados] Conversión WhatsApp ya registrada esta sesión, se omite.",
-		);
-		return;
-	}
-	sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
-	window.gtag("event", "conversion", {
-		send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-	});
-	window.gtag("event", "click_whatsapp", {
-		event_category: "traslados_privados",
-		event_label: "whatsapp_traslado",
-	});
-};
 
 // --- Estado inicial del formulario ---
 const FORM_INICIAL = {
@@ -194,6 +174,7 @@ function LandingTraslados() {
 				setEnviado(true);
 			} else {
 				// Fallback: abrir WhatsApp con los datos del formulario
+				await trackWhatsAppConversion("LandingTrasladosFallback");
 				window.open(
 					`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${mensaje}`,
 					"_blank",
@@ -212,6 +193,7 @@ function LandingTraslados() {
 					`👤 ${form.nombre} | ${form.telefono}`,
 			);
 			trackCotizacionConversion();
+			await trackWhatsAppConversion("LandingTrasladosFallback");
 			window.open(
 				`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${mensaje}`,
 				"_blank",
@@ -224,7 +206,7 @@ function LandingTraslados() {
 	};
 
 	const abrirWhatsApp = () => {
-		trackWhatsAppTraslado();
+		void trackWhatsAppConversion("LandingTraslados");
 		window.open(
 			`https://wa.me/${WHATSAPP_NUMBER.replace("+", "")}?text=${encodeURIComponent("Hola, necesito cotizar un traslado privado.")}`,
 			"_blank",

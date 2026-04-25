@@ -1547,11 +1547,11 @@ En Reserva Express, `App.jsx` debe esperar `waitForGtag()` antes de ejecutar `gt
 
 | Archivo                                     | Evento                        | Timeout |
 | ------------------------------------------- | ----------------------------- | ------- |
-| `src/components/Header/index.jsx`           | Lead â†’ WhatsApp               | 2s      |
-| `src/pages/FletesLanding.jsx`               | Lead â†’ WhatsApp               | 2s      |
+| `src/lib/tracking.js`                       | Lead â†’ WhatsApp               | 2s      |
+| `src/components/Header.jsx`                 | Lead â†’ WhatsApp directo       | 2s      |
+| `src/pages/LandingTraslados.jsx`            | Lead â†’ WhatsApp               | 2s      |
 | `src/components/WhatsAppButton.jsx`         | Lead â†’ WhatsApp               | 2s      |
-| `src/components/WhatsAppInterceptModal.jsx` | Lead â†’ WhatsApp               | 2s      |
-| `src/App.jsx`                               | Lead â†’ WhatsApp (HeroExpress) | 2s      |
+| `src/components/WhatsAppInterceptModal.jsx` | Lead â†’ WhatsApp confirmado    | 2s      |
 | `src/components/ConsultarReserva.jsx`       | Lead â†’ Pago                   | 2s      |
 | `src/pages/OportunidadesTraslado.jsx`       | Lead â†’ Pago                   | 2s      |
 | `src/components/ReservaRapidaModal.jsx`     | Lead â†’ Pago                   | 2s      |

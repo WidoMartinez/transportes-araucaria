@@ -8,6 +8,7 @@ import {
 	Instagram,
 } from "lucide-react";
 import logoBlanco from "../assets/logoblanco.png";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 // Columnas de links del footer — preservando los del proyecto original
 const footerLinks = {
@@ -100,6 +101,7 @@ function Footer() {
 								target="_blank"
 								rel="noopener noreferrer"
 								aria-label="WhatsApp"
+								onClick={() => void trackWhatsAppConversion("Footer")}
 								className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 transition-colors hover:bg-white/10 hover:text-white"
 							>
 								<MessageCircle className="h-4 w-4" />

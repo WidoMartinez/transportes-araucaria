@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { CheckCircle, Loader2, AlertCircle, Clock } from "lucide-react";
 import logo from "../assets/logo.png";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 // Constantes de polling (misma estrategia adaptativa que FlowReturn)
 const GTAG_POLL_INTERVAL_MS = 100;
@@ -360,6 +361,7 @@ function MercadoPagoReturn() {
 	};
 
 	const handleContactSupport = () => {
+		void trackWhatsAppConversion("MercadoPagoReturn");
 		window.open(
 			"https://wa.me/56936643540?text=Hola,%20necesito%20ayuda%20con%20mi%20pago%20en%20Mercado%20Pago",
 			"_blank",

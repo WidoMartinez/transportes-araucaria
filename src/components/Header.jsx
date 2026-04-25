@@ -36,24 +36,9 @@ import { cn } from "@/lib/utils";
 import WhatsAppInterceptModal from "./WhatsAppInterceptModal";
 import { usePricingData } from "../hooks/usePricingData";
 import { getBackendUrl } from "../lib/backend";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 // --- Trackers ---
-// Tracking WhatsApp desde el Header — con deduplicación por sesión
-const WHATSAPP_CONV_KEY = "wa_conversion_fired";
-const trackWhatsAppClick = () => {
-	if (typeof window === "undefined" || typeof window.gtag !== "function")
-		return;
-	if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-		console.info(
-			"ℹ️ [Header] Conversión WhatsApp ya registrada esta sesión, se omite.",
-		);
-		return;
-	}
-	sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
-	window.gtag("event", "conversion", {
-		send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-	});
-};
 
 // --- Menu Items Data ---
 const MENU_ITEMS = [
@@ -186,8 +171,8 @@ function Header() {
 	// Handlers para modal de intercepción WhatsApp
 	const handleWhatsAppClick = (e) => {
 		e.preventDefault();
-		trackWhatsAppClick();
 		if (!whatsappInterceptEnabled) {
+			void trackWhatsAppConversion("Header");
 			window.open("https://wa.me/56936643540", "_blank", "noopener,noreferrer");
 			return;
 		}

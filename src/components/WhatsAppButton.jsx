@@ -1,7 +1,7 @@
-// src/components/WhatsAppButton.jsx
 import React from "react";
 import { MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
+import { trackWhatsAppConversion } from "../lib/tracking";
 
 /**
  * Componente reutilizable para botón de contacto por WhatsApp
@@ -27,28 +27,8 @@ const WhatsAppButton = ({
 		message,
 	)}`;
 
-	// Tracking de conversión de Google Ads — con deduplicación por sesión
-	// Si el componente se usa en una vista que ya tiene su propio tracker (p.ej. LandingTraslados),
-	// la sesión ya tendrá la clave seteada y no se vuelve a disparar.
-	const WHATSAPP_CONV_KEY = "wa_conversion_fired";
 	const handleClick = () => {
-		if (typeof window !== "undefined" && window.gtag) {
-			if (sessionStorage.getItem(WHATSAPP_CONV_KEY)) {
-				console.info(
-					"ℹ️ [WhatsAppButton] Conversión WhatsApp ya registrada esta sesión, se omite.",
-				);
-				return;
-			}
-			sessionStorage.setItem(WHATSAPP_CONV_KEY, "1");
-			window.gtag("event", "conversion", {
-				send_to: "AW-17529712870/M7-iCN_HtZUbEObh6KZB",
-				value: 1.0,
-				currency: "CLP",
-			});
-			console.log(
-				"✅ [WhatsAppButton] Conversión de clic en WhatsApp enviada.",
-			);
-		}
+		void trackWhatsAppConversion("WhatsAppButton");
 	};
 
 	return (
